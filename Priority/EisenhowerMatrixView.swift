@@ -1,14 +1,24 @@
 import PriorityCore
 import SwiftUI
 
-struct EisenhowerMatrixView: View {
-  private struct MatrixPlotPoint {
-    let task: CheckvistTask
-    let position: CGPoint
-  }
+/// A dot's identity and where it sits, resolved once per layout.
+///
+/// `Equatable` by what the dot actually draws — its id, its place, and whether
+/// the coordinate is its own. The task's text never reaches the plot, so
+/// comparing it would only cost a string compare per dot per pointer move.
+private struct MatrixPlotPoint: Equatable {
+  let task: CheckvistTask
+  let position: CGPoint
+  let isInherited: Bool
 
+  static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.task.id == rhs.task.id && lhs.position == rhs.position
+      && lhs.isInherited == rhs.isInherited
+  }
+}
+
+struct EisenhowerMatrixView: View {
   @Environment(AppCoordinator.self) var manager
-  @Environment(NavigationState.self) var navigationState
   @Environment(TaskListViewModel.self) var taskListViewModel
   @Environment(TaskRepository.self) var repository
   @State private var hoveredTaskId: Int?
@@ -19,58 +29,17 @@ struct EisenhowerMatrixView: View {
   }
 
   /// Every open task the current scope covers, whether or not it has a
-  /// coordinate. The view used to filter placed-only right here, which is what
-  /// made the matrix unable to show you the work it exists to help you sort:
-  /// the tasks needing a placement were the exact set it declined to draw.
-  private var scopeMode: TaskScopeMode {
-    TaskScopeResolver.mode(showChildrenInMenus: taskListViewModel.showChildrenInMenus)
-  }
-
-  /// Everything both halves of this view need, resolved in one pass.
+  /// coordinate, split by whether it has one. The view used to filter
+  /// placed-only right here, which is what made the matrix unable to show you
+  /// the work it exists to help you sort: the tasks needing a placement were
+  /// the exact set it declined to draw.
   ///
-  /// It used to be two computed properties that each called the other's inputs:
-  /// `plot` and `unplacedRail` both asked for the scope *and* the levels, and
-  /// resolving the levels asked for the scope again. Four scope passes and two
-  /// inheritance resolutions per render, each walking every task's ancestor
-  /// chain — and `onContinuousHover` re-renders on every pointer move, so the
-  /// whole lot ran at mouse-move frequency. That is the lag.
-  private struct Snapshot {
-    var placed: [CheckvistTask] = []
-    var unplaced: [CheckvistTask] = []
-    var levels: [Int: EffectiveEisenhowerLevel] = [:]
-  }
-
-  private var snapshot: Snapshot {
-    let scopeId = navigationState.currentParentId
-    let open = repository.tasks.filter { $0.status == 0 }
-    let scoped = TaskScopeResolver.scoped(
-      open,
-      currentLevelTasks: open.filter { ($0.parentId ?? 0) == scopeId },
-      parentId: scopeId,
-      mode: scopeMode,
-      isDescendant: { task, parentId in
-        taskListViewModel.isDescendant(task, of: parentId)
-      }
-    )
-    let stored = repository.taskEisenhowerLevels
-    let levels = EisenhowerInheritance.effectiveLevels(
-      for: scoped,
-      taskById: taskListViewModel.cache.taskById,
-      ownLevel: { taskId in
-        guard let level = stored[taskId] else { return nil }
-        return (urgency: level.urgency, importance: level.importance)
-      }
-    )
-    var snapshot = Snapshot(levels: levels)
-    for task in scoped {
-      if levels[task.id] == nil {
-        snapshot.unplaced.append(task)
-      } else {
-        snapshot.placed.append(task)
-      }
-    }
-    return snapshot
-  }
+  /// Both halves now arrive pre-resolved from `TaskListViewModel.cache`. They
+  /// used to be computed in `body` — four scope passes and two inheritance
+  /// resolutions, each walking every task's ancestor chain — and
+  /// `onContinuousHover` re-runs `body` on every pointer move. That was the
+  /// lag. The cache rebuilds on the inputs that actually change these: the
+  /// task list, the stored coordinates, and the scope.
 
   /// Commit a coordinate. Both axes are written together because a drop names
   /// a point, not an axis — writing one at a time would leave a card briefly
@@ -85,11 +54,11 @@ struct EisenhowerMatrixView: View {
   }
 
   var body: some View {
-    let snapshot = snapshot
+    let cache = taskListViewModel.cache
     return HStack(spacing: 0) {
-      plot(snapshot)
+      plot(cache)
       Divider()
-      unplacedRail(snapshot)
+      unplacedRail(cache)
         .frame(width: 190)
     }
     .background(themeColor(.panelSurface))
@@ -97,9 +66,9 @@ struct EisenhowerMatrixView: View {
 
   // MARK: - The plot
 
-  private func plot(_ snapshot: Snapshot) -> some View {
-    let levels = snapshot.levels
-    let placed = snapshot.placed
+  private func plot(_ cache: CacheState) -> some View {
+    let levels = cache.effectiveEisenhowerLevels
+    let placed = cache.matrixPlacedTasks
     let currentSelectedId = taskListViewModel.currentTask?.id
 
     return GeometryReader { proxy in
@@ -111,7 +80,8 @@ struct EisenhowerMatrixView: View {
           urgency: level?.urgency ?? 0, importance: level?.importance ?? 0, plotSize: size)
         return MatrixPlotPoint(
           task: task,
-          position: CGPoint(x: center.x + offset.x, y: center.y + offset.y)
+          position: CGPoint(x: center.x + offset.x, y: center.y + offset.y),
+          isInherited: level?.isInherited ?? false
         )
       }
 
@@ -146,25 +116,29 @@ struct EisenhowerMatrixView: View {
             .position(x: center.x - 12, y: 40)
         }
 
-        ForEach(plotPoints, id: \.task.id) { point in
-          TaskDotView(
-            task: point.task,
-            isSelected: point.task.id == currentSelectedId,
-            isHovered: point.task.id == hoveredTaskId,
-            isInherited: levels[point.task.id]?.isInherited ?? false
-          )
-          .position(point.position)
-          .onTapGesture {
-            manager.taskNavigationService.navigate(to: point.task)
-          }
-          // A placed dot is draggable too, so refining a coordinate is the
-          // same gesture as setting one.
-          .draggable(TaskDragPayload(taskId: point.task.id))
-        }
+        MatrixDotLayer(
+          points: plotPoints,
+          selectedTaskId: currentSelectedId,
+          onTap: { manager.taskNavigationService.navigate(to: $0) }
+        )
+        .equatable()
 
-        if let hoveredTaskId, let task = placed.first(where: { $0.id == hoveredTaskId }) {
-          hoverDetail(task: task, level: levels[task.id])
+        // The pointer's mark is drawn here rather than inside the dot, so that
+        // moving it changes this overlay instead of every dot on the plot.
+        if let hoveredTaskId,
+          let point = plotPoints.first(where: { $0.task.id == hoveredTaskId })
+        {
+          Circle()
+            .stroke(themeColor(.link), lineWidth: 1.5)
+            .frame(width: 16, height: 16)
+            .position(point.position)
+            .allowsHitTesting(false)
+
+          hoverDetail(task: point.task, level: levels[hoveredTaskId])
             .position(x: center.x, y: proxy.size.height - 40)
+            // It sits over the plot; without this it would take the hover it
+            // exists to report, and flicker itself away.
+            .allowsHitTesting(false)
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -213,10 +187,10 @@ struct EisenhowerMatrixView: View {
   /// What is left to sort, and the thing you drag from. Also the honest answer
   /// to "is this view doing anything" — an empty matrix with 200 unplaced
   /// tasks now says so, rather than rendering a blank grid.
-  private func unplacedRail(_ snapshot: Snapshot) -> some View {
+  private func unplacedRail(_ cache: CacheState) -> some View {
     // Inherited counts as placed. Place the seven goals and this empties,
     // which is the honest report: everything below them is now classified.
-    let unplaced = snapshot.unplaced
+    let unplaced = cache.matrixUnplacedTasks
 
     return VStack(alignment: .leading, spacing: 0) {
       HStack(spacing: 6) {
@@ -355,10 +329,40 @@ struct EisenhowerMatrixView: View {
   }
 }
 
+/// Every dot on the plot, and nothing that changes when the pointer moves.
+///
+/// The `Equatable` conformance is the whole point of the type. Hovering writes
+/// `hoveredTaskId` on the parent, which re-runs its `body`; without a
+/// comparison to skip on, that rebuilt two hundred dots — each carrying a drag
+/// source and two animations — at pointer-move frequency.
+private struct MatrixDotLayer: View, Equatable {
+  let points: [MatrixPlotPoint]
+  let selectedTaskId: Int?
+  let onTap: (CheckvistTask) -> Void
+
+  static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.selectedTaskId == rhs.selectedTaskId && lhs.points == rhs.points
+  }
+
+  var body: some View {
+    ForEach(points, id: \.task.id) { point in
+      TaskDotView(
+        task: point.task,
+        isSelected: point.task.id == selectedTaskId,
+        isInherited: point.isInherited
+      )
+      .position(point.position)
+      .onTapGesture { onTap(point.task) }
+      // A placed dot is draggable too, so refining a coordinate is the same
+      // gesture as setting one.
+      .draggable(TaskDragPayload(taskId: point.task.id))
+    }
+  }
+}
+
 struct TaskDotView: View {
   let task: CheckvistTask
   let isSelected: Bool
-  let isHovered: Bool
   /// A coordinate taken from an ancestor rather than chosen for this task.
   /// Drawn hollow: it is a real position, but not one anybody decided on, and
   /// it moves the moment its goal does.
@@ -385,14 +389,17 @@ struct TaskDotView: View {
     let phase = manager.celebration.phase(for: kind)
     let reduceMotion = manager.celebration.prefersReducedMotion
     let isCelebrating = phase == .celebrating
-    let emphasised = isSelected || isHovered
+    // Hover is not in here deliberately: it is drawn as a ring by the plot, so
+    // that the pointer moving does not invalidate every dot. See
+    // `MatrixDotLayer`.
+    let emphasised = isSelected
 
     let tint =
       isCelebrating && treatment != .none
         ? themeColor(.success)
         : isSelected
           ? themeColor(.link)
-          : (isHovered ? themeColor(.textPrimary) : themeColor(.textSecondary).opacity(0.6))
+          : themeColor(.textSecondary).opacity(0.6)
 
     Circle()
       .fill(isInherited ? Color.clear : tint)

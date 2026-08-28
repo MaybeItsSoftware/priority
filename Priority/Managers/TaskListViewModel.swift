@@ -171,6 +171,7 @@ import PriorityCore
       rankByTaskId: rankByTaskId,
       taskById: cacheStorage.taskById
     )
+    rebuildMatrixCache(tasks: tasks)
     cacheStorage.dirty = false
     let visibility = computeVisibility()
     // Children revealed by expansion are ordered the same way the view orders
@@ -198,6 +199,38 @@ import PriorityCore
     cacheStorage.rolledUpElapsed = TimerStore.rolledUpElapsedByTaskId(
       nodes: nodes, ownElapsed: hostTimerElapsedByTaskId)
     cacheStorage.rootLevelTagNames = computeRootLevelTagNames(limit: 30)
+  }
+
+  /// The matrix's two halves, resolved with the rest of the derived state.
+  ///
+  /// This lives here rather than in `EisenhowerMatrixView` because its inputs
+  /// are the ones this cache already watches — the task list, the stored
+  /// coordinates, the scope — while its *reader* re-renders on every pointer
+  /// move. Computing it in `body` tied an ancestor walk per task to the mouse.
+  private func rebuildMatrixCache(tasks: [CheckvistTask]) {
+    let open = tasks.filter { $0.status == 0 }
+    let stored = repository.taskEisenhowerLevels
+    let levels = EisenhowerInheritance.effectiveLevels(
+      for: open,
+      taskById: cacheStorage.taskById,
+      ownLevel: { taskId in
+        guard let level = stored[taskId] else { return nil }
+        return (urgency: level.urgency, importance: level.importance)
+      }
+    )
+    let parentId = hostCurrentParentId
+    let scoped = TaskScopeResolver.scoped(
+      open,
+      currentLevelTasks: open.filter { ($0.parentId ?? 0) == parentId },
+      parentId: parentId,
+      mode: TaskScopeResolver.mode(showChildrenInMenus: showChildrenInMenus),
+      isDescendant: { task, rootId in
+        TaskFilterEngine.isDescendant(task, of: rootId, taskById: self.cacheStorage.taskById)
+      }
+    )
+    cacheStorage.effectiveEisenhowerLevels = levels
+    cacheStorage.matrixPlacedTasks = scoped.filter { levels[$0.id] != nil }
+    cacheStorage.matrixUnplacedTasks = scoped.filter { levels[$0.id] == nil }
   }
 
   private func computeVisibility() -> TaskVisibilityEngine.Result<CheckvistTask> {
