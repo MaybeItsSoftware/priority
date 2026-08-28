@@ -68,11 +68,6 @@ final class KanbanTaskDataSourceAdapter: KanbanTaskDataSource {
     return taskListViewModel.cache.priorityPath[task.id]
   }
 
-  func eisenhowerCoordinate(for task: CheckvistTask) -> (urgency: Double, importance: Double)? {
-    guard let level = repository.taskEisenhowerLevels[task.id] else { return nil }
-    return (urgency: level.urgency, importance: level.importance)
-  }
-
   func childCountByTaskId() -> [Int: Int] {
     taskListViewModel.childCountByTaskId()
   }

@@ -171,7 +171,7 @@ import PriorityCore
       rankByTaskId: rankByTaskId,
       taskById: cacheStorage.taskById
     )
-    rebuildMatrixCache(tasks: tasks)
+    rebuildEisenhowerCaches(tasks: tasks)
     cacheStorage.dirty = false
     let visibility = computeVisibility()
     // Children revealed by expansion are ordered the same way the view orders
@@ -201,23 +201,29 @@ import PriorityCore
     cacheStorage.rootLevelTagNames = computeRootLevelTagNames(limit: 30)
   }
 
-  /// The matrix's two halves, resolved with the rest of the derived state.
+  /// Where every task sits on the matrix, and the two halves of the matrix
+  /// view, resolved with the rest of the derived state.
   ///
   /// This lives here rather than in `EisenhowerMatrixView` because its inputs
   /// are the ones this cache already watches — the task list, the stored
-  /// coordinates, the scope — while its *reader* re-renders on every pointer
-  /// move. Computing it in `body` tied an ancestor walk per task to the mouse.
-  private func rebuildMatrixCache(tasks: [CheckvistTask]) {
-    let open = tasks.filter { $0.status == 0 }
+  /// coordinates, the scope — while its *readers* recompute far more often
+  /// than those change. Computing it in the matrix's `body` tied an ancestor
+  /// walk per task to the pointer; `KanbanManager.membershipInputs()` rebuilt
+  /// it once per task per column.
+  ///
+  /// Resolved for *every* task rather than the open ones, so a caller that
+  /// asks about a completed task gets an answer rather than a silent `nil`.
+  private func rebuildEisenhowerCaches(tasks: [CheckvistTask]) {
     let stored = repository.taskEisenhowerLevels
     let levels = EisenhowerInheritance.effectiveLevels(
-      for: open,
+      for: tasks,
       taskById: cacheStorage.taskById,
       ownLevel: { taskId in
         guard let level = stored[taskId] else { return nil }
         return (urgency: level.urgency, importance: level.importance)
       }
     )
+    let open = tasks.filter { $0.status == 0 }
     let parentId = hostCurrentParentId
     let scoped = TaskScopeResolver.scoped(
       open,

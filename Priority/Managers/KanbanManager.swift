@@ -22,9 +22,6 @@ protocol KanbanTaskDataSource: AnyObject {
   func absolutePriorityRank(for task: CheckvistTask) -> Int?
   func priorityRank(for task: CheckvistTask) -> Int?
   func priorityPath(for task: CheckvistTask) -> String?
-  /// `nil` when the task has no coordinate. Needed by quadrant columns and
-  /// by the board's own matrix inbox.
-  func eisenhowerCoordinate(for task: CheckvistTask) -> (urgency: Double, importance: Double)?
   func childCountByTaskId() -> [Int: Int]
 }
 
@@ -178,8 +175,12 @@ enum KanbanMoveOutcome {
         return Calendar.current.startOfDay(for: dueDate) <= Calendar.current.startOfDay(for: tomorrow)
       }
     }    
+    // Resolved once for the whole pool. `columnForTask` builds its own inputs,
+    // so calling it per task made a column cost the tree over again for every
+    // card in it.
+    guard let inputs = membershipInputs() else { return [] }
     let eligible = pool.filter { task in
-      columnForTask(task, in: allColumns)?.id == column.id
+      KanbanFilter.column(for: task, in: allColumns, inputs: inputs)?.id == column.id
     }
     let naturallySorted = sortedForKanban(eligible, sortOrder: column.sortOrder)
     return applyManualOrder(naturallySorted, column: column)
@@ -196,8 +197,9 @@ enum KanbanMoveOutcome {
     guard swimlanesByGoal, let ds = dataSource else { return [] }
     ds.ensureVisibleTasksCacheValid()
     let columns = kanbanColumns
+    guard let inputs = membershipInputs() else { return [] }
     let placed = ds.tasks.filter { task in
-      task.status == 0 && columnForTask(task, in: columns) != nil
+      task.status == 0 && KanbanFilter.column(for: task, in: columns, inputs: inputs) != nil
     }
     return KanbanSwimlanes.lanes(
       for: placed,
@@ -277,20 +279,20 @@ enum KanbanMoveOutcome {
   /// Assembled once per query rather than per condition. Three call sites used
   /// to build their own argument list, which is how two of them would end up
   /// answering the same question differently.
+  ///
+  /// Cheap enough to build per query, but only since the inheritance
+  /// resolution moved into the cache. It used to walk every task's ancestor
+  /// chain right here — and every caller below looped over tasks calling it,
+  /// so a board render resolved the whole tree a couple of thousand times.
   private func membershipInputs() -> KanbanFilter.MembershipInputs<CheckvistTask>? {
     guard let ds = dataSource else { return nil }
-    // Inherited coordinates count here exactly as they do on the matrix. If the
-    // board read only own-coordinates, placing a goal would fill the matrix and
-    // leave every quadrant column empty — two views disagreeing about where the
-    // same task is.
-    let ownById = Dictionary(
-      uniqueKeysWithValues: ds.tasks.compactMap { task in
-        ds.eisenhowerCoordinate(for: task).map { (task.id, $0) }
-      })
-    let resolved = EisenhowerInheritance.effectiveLevels(
-      for: ds.tasks, taskById: ds.cache.taskById, ownLevel: { ownById[$0] })
+    // Inherited coordinates count here exactly as they do on the matrix — it is
+    // literally the same resolution, read from the same cache. If the board
+    // read only own-coordinates, placing a goal would fill the matrix and leave
+    // every quadrant column empty: two views disagreeing about where the same
+    // task is.
     var eisenhower: [Int: (urgency: Double, importance: Double)] = [:]
-    for (taskId, level) in resolved {
+    for (taskId, level) in ds.cache.effectiveEisenhowerLevels {
       eisenhower[taskId] = (urgency: level.urgency, importance: level.importance)
     }
     var priorities: [Int: Int] = [:]
