@@ -155,7 +155,9 @@ struct EisenhowerMatrixView: View {
         if let hoveredTaskId,
           let point = plotPoints.first(where: { $0.task.id == hoveredTaskId })
         {
-          let ring = MatrixClustering.dotDiameter(count: point.count) + 10
+          // The ring *is* the catchment, drawn: what lights up is exactly the
+          // area that answers to the pointer.
+          let ring = MatrixClustering.hitRadius(count: point.count) * 2
           Circle()
             .stroke(themeColor(.link), lineWidth: 1.5)
             .frame(width: ring, height: ring)
@@ -177,7 +179,7 @@ struct EisenhowerMatrixView: View {
           // Only when the answer actually changes. Writing the same id back on
           // every pointer move re-renders the view for no visible difference,
           // which is most of what the pointer does inside one dot's catchment.
-          let nearest = nearestTaskId(to: location, in: plotPoints)
+          let nearest = dotUnderPointer(at: location, in: plotPoints)
           if nearest != hoveredTaskId { hoveredTaskId = nearest }
         case .ended:
           if hoveredTaskId != nil { hoveredTaskId = nil }
@@ -349,10 +351,18 @@ struct EisenhowerMatrixView: View {
     return String(format: "%.1f", value)
   }
 
-  private func nearestTaskId(to location: CGPoint, in points: [MatrixPlotPoint]) -> Int? {
+  /// The dot under the pointer, or nothing.
+  ///
+  /// Nearest-dot, but only within the dot's own catchment. Unbounded, this
+  /// named a task wherever the pointer went — including across an empty
+  /// quadrant — so the plot appeared to be reporting on something the pointer
+  /// was nowhere near.
+  private func dotUnderPointer(at location: CGPoint, in points: [MatrixPlotPoint]) -> Int? {
     guard let nearest = points.min(by: {
       squaredDistance($0.position, location) < squaredDistance($1.position, location)
     }) else { return nil }
+    let radius = MatrixClustering.hitRadius(count: nearest.count)
+    guard squaredDistance(nearest.position, location) <= radius * radius else { return nil }
     return nearest.task.id
   }
 

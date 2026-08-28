@@ -110,4 +110,19 @@ final class MatrixClusteringTests: XCTestCase {
     XCTAssertEqual(MatrixClustering.dotDiameter(count: 9), 18, accuracy: 0.001)
     XCTAssertEqual(MatrixClustering.dotDiameter(count: 200), 18, accuracy: 0.001)
   }
+
+  /// A 6pt dot is a small target, so the catchment has to be bigger than the
+  /// dot — but bounded, which is the whole point: an unbounded nearest-dot
+  /// search names something no matter where the pointer is.
+  func testTheCatchmentIsWiderThanTheDotItCovers() {
+    for count in [1, 4, 44] {
+      let radius = MatrixClustering.hitRadius(count: count)
+      XCTAssertGreaterThan(radius, MatrixClustering.dotDiameter(count: count) / 2)
+    }
+  }
+
+  func testTheCatchmentGrowsWithThePile() {
+    XCTAssertLessThan(
+      MatrixClustering.hitRadius(count: 1), MatrixClustering.hitRadius(count: 44))
+  }
 }

@@ -97,4 +97,16 @@ public enum MatrixClustering {
     guard count > 1 else { return base }
     return min(maximum, base * Double(count).squareRoot())
   }
+
+  /// How close the pointer has to be before a dot claims it.
+  ///
+  /// The plot used to take the nearest dot with no limit, so the pointer
+  /// anywhere on the grid named *something* — a ring lighting up half a plot
+  /// away from the cursor, which reads as the view answering a question nobody
+  /// asked. A catchment is the dot's own radius plus a margin: wide enough that
+  /// a 6pt dot is still easy to hit, narrow enough that the empty grid stays
+  /// empty.
+  public static func hitRadius(count: Int, slack: Double = 8) -> Double {
+    dotDiameter(count: count) / 2 + slack
+  }
 }
