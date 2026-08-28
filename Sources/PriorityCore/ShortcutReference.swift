@@ -138,6 +138,7 @@ public enum ShortcutReference {
         )
       } + [
         literal("m00", "Take off the matrix"),
+        entry(.matrixToggleUnplaced),
         entry(.sequenceMatrixCoord),
       ]
 

@@ -50,6 +50,14 @@ import PriorityCore
     didSet { preferencesStore.set(showsDailyCompletions, for: .dailyCompletionsVisible) }
   }
 
+  /// Whether the Matrix view opens its unplaced list under the plot. Off makes
+  /// the matrix a square grid and nothing else, which is what it is for; on
+  /// gives you the thing you drag from, and grows the panel by the list's own
+  /// height rather than squaring the plot off.
+  var showsMatrixUnplaced: Bool {
+    didSet { preferencesStore.set(showsMatrixUnplaced, for: .matrixUnplacedVisible) }
+  }
+
   /// Whether the keyboard reference sheet is up. Deliberately *not* persisted:
   /// it is something you consult, not a mode you work in, and a popover that
   /// reopened showing its own help would be one you had to dismiss every
@@ -69,6 +77,7 @@ import PriorityCore
     self.showsDailyChart = preferencesStore.bool(.dailyChartVisible, default: true)
     self.showsDailyCompletions = preferencesStore.bool(
       .dailyCompletionsVisible, default: false)
+    self.showsMatrixUnplaced = preferencesStore.bool(.matrixUnplacedVisible, default: false)
 
     let stored = preferencesStore.doubleDictionary(.panelHeightOverridesByRootView)
     var overrides: [RootTaskView: CGFloat] = [:]

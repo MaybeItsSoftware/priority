@@ -241,6 +241,23 @@ final class ShortcutSequenceBufferHintTests: XCTestCase {
     }
   }
 
+  /// The drawer is off by default, so the keypress that opens it has to be
+  /// reachable from the same hint the placement letters are — there is no
+  /// permanent chrome naming it.
+  func testTheStarterAlsoNamesTheUnplacedList() {
+    XCTAssertEqual(hint("m")?.contains("Unplaced"), true)
+  }
+
+  /// `l` is not a quadrant letter, a sign or a digit, so the matrix parser has
+  /// to decline it and let the ordinary two-key lookup claim `ml`.
+  func testTheUnplacedToggleFallsThroughToTheSequenceLookup() {
+    let outcome = ShortcutSequenceBuffer.advance(
+      buffer: "m", characters: "l", starters: ["m"], matrixStarters: ["m"],
+      isTextEntryFocused: false, shift: false, ctrl: false)
+    XCTAssertEqual(outcome.effect, .attempt(sequence: "ml"))
+    XCTAssertEqual(outcome.buffer, "")
+  }
+
   func testAPendingCoordinateShowsWhatHasBeenTakenSoFar() {
     XCTAssertEqual(hint("m5"), "Matrix: (5, _)")
     XCTAssertEqual(hint("m-5"), "Matrix: (-5, _)")

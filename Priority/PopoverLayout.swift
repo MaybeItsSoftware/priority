@@ -11,6 +11,12 @@ enum PopoverLayout {
   /// things worth seeing together — so it gets more room than the single
   /// scrolling list the shared cap was sized for.
   static let dailyMaxHeight: CGFloat = 680
+  /// The Matrix view's unplaced drawer, when the dock has it open.
+  ///
+  /// Fixed rather than content-sized: it is a scrolling list, and a block whose
+  /// height tracked its contents would resize the plot above it every time you
+  /// placed something — the grid moving under the pointer mid-sort.
+  static let matrixUnplacedDrawerHeight: CGFloat = 170
 
   @MainActor
   static func preferredWidth(for manager: AppCoordinator) -> CGFloat {
@@ -178,13 +184,30 @@ enum PopoverLayout {
     )
   }
 
+  /// What the Matrix view's dock toggle is worth in height. The drawer opens
+  /// *under* a square plot rather than out of it, so the panel grows by exactly
+  /// this and the grid keeps the size it had.
+  @MainActor
+  static func matrixToggleableBlockHeight(for manager: AppCoordinator) -> CGFloat {
+    manager.popoverChrome.showsMatrixUnplaced ? matrixUnplacedDrawerHeight : 0
+  }
+
+  /// Every block the dock can switch on and off in whichever root view is up.
+  @MainActor
+  static func toggleableBlockHeight(for manager: AppCoordinator) -> CGFloat {
+    switch manager.taskListViewModel.rootTaskView {
+    case .daily: return dailyToggleableBlockHeight(for: manager)
+    case .eisenhower: return matrixToggleableBlockHeight(for: manager)
+    default: return 0
+    }
+  }
+
   /// Converts a height the user has just dragged the panel to into the value
-  /// that gets stored. The Daily view keeps its height free of the dock's
-  /// optional blocks, so toggling one moves the panel rather than the checklist.
+  /// that gets stored. A view keeps its stored height free of the dock's
+  /// optional blocks, so toggling one moves the panel rather than the content.
   @MainActor
   static func storedHeight(forDisplayed height: CGFloat, in manager: AppCoordinator) -> CGFloat {
-    guard manager.taskListViewModel.rootTaskView == .daily else { return height }
-    return height - dailyToggleableBlockHeight(for: manager)
+    height - toggleableBlockHeight(for: manager)
   }
 
   @MainActor
@@ -198,10 +221,11 @@ enum PopoverLayout {
     // sizing is a good default and a bad argument once the user has said what
     // they want.
     if let override = manager.popoverChrome.height(for: manager.taskListViewModel.rootTaskView) {
-      // The Daily view's height is stored *without* its toggleable blocks, so
-      // switching the graph or the done-today list on grows the panel by exactly
-      // that block's height instead of taking the room out of the checklist.
-      return override + dailyToggleableBlockHeight(for: manager)
+      // A view's height is stored *without* its toggleable blocks, so switching
+      // the graph, the done-today list or the matrix's unplaced drawer on grows
+      // the panel by exactly that block's height instead of taking the room out
+      // of the content.
+      return override + toggleableBlockHeight(for: manager)
     }
 
     let fixedHeight = fixedChromeHeight(for: manager)
@@ -211,7 +235,10 @@ enum PopoverLayout {
     }
 
     if manager.taskListViewModel.rootTaskView == .eisenhower {
-      return min(maxHeight, fixedHeight + width)
+      // `+ width` is the plot asking to be square. The drawer is added after
+      // the cap rather than inside it, so opening the list lengthens the panel
+      // instead of flattening the grid.
+      return min(maxHeight, fixedHeight + width) + matrixToggleableBlockHeight(for: manager)
     }
 
     // Sized to its own content rather than the task count: the dailies

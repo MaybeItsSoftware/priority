@@ -122,11 +122,19 @@ bar, so the vocabulary is one keypress away rather than something to memorise.
 | `me` | Eliminate — neither |
 | `m<u><i>` | An exact coordinate, each axis `-9` to `9`. `-` before a digit makes it negative: `m-3 5`, `m5-2`, `m-4-4` |
 | `m00` | Take the task off the matrix |
-| *drag* | Drop a task anywhere on the grid to place it there. Drag from the unplaced rail on the right, or drag a placed dot to move it. Dropping a dot back on the rail unplaces it |
+| `ml` | Show or hide the unplaced list (also the dock's tray button) |
+| *drag* | Drop a task anywhere on the grid to place it there. Drag from the unplaced list, or drag a placed dot to move it. Dropping a dot back into the list unplaces it |
 
 With the Matrix view open, placing a task steps the selection to the next
 unplaced one, so a backlog is sorted by typing `md` `ms` `me` down it without
-moving the cursor by hand. The rail shows how many are left.
+moving the cursor by hand.
+
+The unplaced list is a drawer under the grid rather than a column beside it,
+and it is **off by default** — as a permanent rail it took 190 of the panel's
+400 points, which left the grid as the narrower half of its own view. Opening
+it lengthens the panel by the drawer's own height, so the grid stays the square
+it was. `m` on its own names the key in the status bar, along with the
+placement letters.
 
 A task with no coordinate of its own takes its nearest placed ancestor's, so
 placing a handful of goals classifies everything beneath them. Because that
@@ -230,7 +238,7 @@ Due values understand natural language and times: `due today 14:30`, `due tomorr
 | **Tags** | `e` | Grouped by tag |
 | **Priority** | `r` | Your ranked queue |
 | **Kanban** | `t` | Configurable columns, optionally in a row per goal |
-| **Matrix** | `y` | Eisenhower quadrants by importance and urgency, with everything still unplaced listed alongside |
+| **Matrix** | `y` | Eisenhower quadrants by importance and urgency, with what is still unplaced a keypress away underneath |
 | **Daily** | `u` | Dailies, the chart, and what you finished |
 
 Kanban cards show the task text with tags stripped, a `P1`–`P9` priority badge, the due date with overdue/today highlighting, inline tags, and a subtask count. Columns are configured in Preferences and reorder by drag. Cards drag between and within columns; a hairline marks where the card will land.

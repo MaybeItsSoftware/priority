@@ -73,6 +73,22 @@ struct PopoverDockRow: View {
         }
       }
 
+      // The list the matrix used to keep permanently open beside itself. Same
+      // shape as the Daily view's toggles: a block this view can do without,
+      // switched from the dock and remembered.
+      if taskListViewModel.rootTaskView == .eisenhower {
+        DockButton(
+          systemName: "tray.full",
+          isActive: chrome.showsMatrixUnplaced,
+          help: chrome.showsMatrixUnplaced
+            ? "Hide what's unplaced"
+            : "Show what's unplaced",
+          accessibilityLabel: "Toggle the unplaced list"
+        ) {
+          chrome.showsMatrixUnplaced.toggle()
+        }
+      }
+
       // A window has a resize corner and a title bar to drag. The strip exists
       // only because the panel has neither.
       if chromeShows(.resizeDockButton) {

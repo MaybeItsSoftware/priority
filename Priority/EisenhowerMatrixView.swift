@@ -53,7 +53,7 @@ struct EisenhowerMatrixView: View {
       + MatrixGeometry.quadrant(urgency: urgency, importance: importance).title
   }
 
-  /// Both halves — the plot and the rail — come pre-resolved from
+  /// Both halves — the plot and the unplaced drawer — come pre-resolved from
   /// `TaskListViewModel.cache`.
   ///
   /// They used to be computed right here: four scope passes and two
@@ -64,11 +64,19 @@ struct EisenhowerMatrixView: View {
   /// coordinates, the scope — and on nothing else.
   var body: some View {
     let cache = taskListViewModel.cache
-    return HStack(spacing: 0) {
+    return VStack(spacing: 0) {
       plot(cache)
-      Divider()
-      unplacedRail(cache)
-        .frame(width: 190)
+        .frame(maxHeight: .infinity)
+      // Under the plot rather than beside it, and only when asked for. As a
+      // permanent rail it took 190 of the panel's 400 points, which left the
+      // grid — the thing the view is for — as the narrower half of its own
+      // screen. Opening it lengthens the panel by exactly its own height, so
+      // the plot stays the square it was.
+      if manager.popoverChrome.showsMatrixUnplaced {
+        Divider()
+        unplacedDrawer(cache)
+          .frame(height: PopoverLayout.matrixUnplacedDrawerHeight)
+      }
     }
     .background(themeColor(.panelSurface))
   }
@@ -128,6 +136,19 @@ struct EisenhowerMatrixView: View {
           onTap: { manager.taskNavigationService.navigate(to: $0) }
         )
         .equatable()
+
+        // With the drawer closed there is nothing else on screen to explain an
+        // empty grid, and "no dots" and "nothing placed yet" look identical.
+        if plotPoints.isEmpty {
+          Text(
+            cache.matrixUnplacedTasks.isEmpty
+              ? "Nothing here to place."
+              : "\(cache.matrixUnplacedTasks.count) unplaced — press m l to list them"
+          )
+          .font(.system(size: 11))
+          .foregroundColor(themeColor(.textSecondary))
+          .allowsHitTesting(false)
+        }
 
         // The pointer's mark is drawn here rather than inside the dot, so that
         // moving it changes this overlay instead of every dot on the plot.
@@ -189,12 +210,12 @@ struct EisenhowerMatrixView: View {
     }
   }
 
-  // MARK: - The unplaced rail
+  // MARK: - The unplaced drawer
 
   /// What is left to sort, and the thing you drag from. Also the honest answer
   /// to "is this view doing anything" — an empty matrix with 200 unplaced
-  /// tasks now says so, rather than rendering a blank grid.
-  private func unplacedRail(_ cache: CacheState) -> some View {
+  /// tasks says so, rather than rendering a blank grid.
+  private func unplacedDrawer(_ cache: CacheState) -> some View {
     // Inherited counts as placed. Place the seven goals and this empties,
     // which is the honest report: everything below them is now classified.
     let unplaced = cache.matrixUnplacedTasks
@@ -239,8 +260,9 @@ struct EisenhowerMatrixView: View {
     }
     .frame(maxHeight: .infinity, alignment: .top)
     .background(themeColor(.panelBackground))
-    // Dropping a placed card back onto the rail unplaces it, which is the only
-    // way to undo a placement without knowing the clear-coordinate command.
+    // Dropping a placed card back into the drawer unplaces it, which is the
+    // only way to undo a placement without knowing the clear-coordinate
+    // command.
     .dropDestination(for: TaskDragPayload.self) { payloads, _ in
       guard let payload = payloads.first else { return false }
       repository.setUrgency(taskId: payload.taskId, level: 0)
@@ -258,8 +280,7 @@ struct EisenhowerMatrixView: View {
         .foregroundColor(
           isSelected ? themeColor(.selectionForeground) : themeColor(.textPrimary)
         )
-        .lineLimit(2)
-        .fixedSize(horizontal: false, vertical: true)
+        .lineLimit(1)
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 10)

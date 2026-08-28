@@ -849,6 +849,21 @@ struct KeyboardShortcutRouter {
         manager.quickEntry.isQuickEntryFocused = true
         return true
       }
+      // Not a command-palette prefix like its neighbours: this one switches a
+      // block of the view on, so it acts and reports rather than opening a
+      // field to type into.
+      if manager.taskListViewModel.rootTaskView == .eisenhower,
+        manager.preferences.shortcutMatchesSequence(
+          action: .matrixToggleUnplaced, sequence: sequence)
+      {
+        let chrome = manager.popoverChrome
+        chrome.showsMatrixUnplaced.toggle()
+        manager.statusMessage =
+          chrome.showsMatrixUnplaced
+          ? "Unplaced: \(manager.taskListViewModel.cache.matrixUnplacedTasks.count)"
+          : "Unplaced list hidden."
+        return true
+      }
       if manager.preferences.shortcutMatchesSequence(action: .sequenceMatrixCoord, sequence: sequence)
       {
         manager.quickEntry.quickEntryMode = .command

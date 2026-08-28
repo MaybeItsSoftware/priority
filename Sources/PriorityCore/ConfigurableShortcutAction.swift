@@ -73,6 +73,10 @@ public enum ConfigurableShortcutAction: String, CaseIterable, Identifiable, Send
   case sequenceUrgency
   case sequenceImportance
   case sequenceMatrixCoord
+  /// Shows or hides the Matrix view's list of what has no coordinate yet.
+  /// Spelled as an `m` sequence because that is where you already look for the
+  /// matrix's vocabulary, and the pending-`m` hint can then teach it.
+  case matrixToggleUnplaced
   case copyTask
   case indentTask
   case rootTabDaily
@@ -160,6 +164,7 @@ public enum ConfigurableShortcutAction: String, CaseIterable, Identifiable, Send
     case .sequenceUrgency: return "Sequence: urgency"
     case .sequenceImportance: return "Sequence: importance"
     case .sequenceMatrixCoord: return "Sequence: matrix coordinates"
+    case .matrixToggleUnplaced: return "Matrix: show or hide what's unplaced"
     case .copyTask: return "Copy task to clipboard"
     case .indentTask: return "Indent task"
     case .rootTabDaily: return "Jump to root tab: Daily"
@@ -178,7 +183,7 @@ public enum ConfigurableShortcutAction: String, CaseIterable, Identifiable, Send
       .rootFilter5, .rootFilter6, .rootFilter7, .rootTabKanban,
       .kanbanFocusLeft, .kanbanFocusRight, .kanbanShowInAll,
       .kanbanEnterTaskChildren, .kanbanExitToTaskParent, .kanbanFocusMode, .rootTabMatrix,
-      .rootTabDaily:
+      .matrixToggleUnplaced, .rootTabDaily:
       return "Navigation"
     case .markDone, .invalidateTask, .addSibling, .addChild, .unindentTask, .editTaskAtEnd,
       .editTaskAtStart, .deleteTask, .moveTaskUp, .moveTaskDown, .undo, .clearPriority,
@@ -210,7 +215,7 @@ public enum ConfigurableShortcutAction: String, CaseIterable, Identifiable, Send
     switch self {
     case .sequenceDue, .sequenceDueToday, .sequenceStart, .sequenceRepeat, .sequenceOpenLink,
       .sequenceGoogleCalendar, .sequenceTag, .sequenceUntag, .sequenceToggleContext,
-      .sequenceUrgency, .sequenceImportance, .sequenceMatrixCoord:
+      .sequenceUrgency, .sequenceImportance, .sequenceMatrixCoord, .matrixToggleUnplaced:
       return true
     default:
       return false
@@ -301,6 +306,7 @@ public enum ConfigurableShortcutAction: String, CaseIterable, Identifiable, Send
     case .sequenceUrgency: return "mu"
     case .sequenceImportance: return "mi"
     case .sequenceMatrixCoord: return "mm"
+    case .matrixToggleUnplaced: return "ml"
     case .copyTask: return "cmd+c"
     case .indentTask: return "cmd+right,tab"
     // `u` continues the `q w e r t y` row the other root tabs sit on, so the

@@ -63,6 +63,11 @@ final class PreferencesStore {
     /// Off by default — the Daily view is about dailies, and the task list is
     /// reachable from the dock when you do want it.
     case dailyCompletionsVisible
+    /// Whether the Matrix view opens its list of unplaced tasks below the plot.
+    /// Off by default: the panel is 400pt wide and the list used to take 190 of
+    /// them permanently, which left the grid — the thing the view is for — as
+    /// the narrower half of its own screen.
+    case matrixUnplacedVisible
     /// `pluginIdentifier` of the chosen completion celebration preset. Empty or
     /// unrecognised falls back to whatever `PluginRegistry.nativeFirst()`
     /// activated.

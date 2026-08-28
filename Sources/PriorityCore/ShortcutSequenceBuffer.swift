@@ -200,7 +200,8 @@ public enum ShortcutSequenceBuffer {
 
     switch matrixState(String(pending.dropFirst())) {
     case .awaitingUrgency:
-      return "Matrix — d Do · s Schedule · g Delegate · e Eliminate · or ±urgency ±importance"
+      return "Matrix — d Do · s Schedule · g Delegate · e Eliminate · l Unplaced list"
+        + " · or ±urgency ±importance"
     case .awaitingUrgencyDigit:
       return "Matrix: (-_, _)"
     case .awaitingImportance(let urgency):

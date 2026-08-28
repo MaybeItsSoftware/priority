@@ -494,6 +494,7 @@ class MenuBarController: NSObject {
       _ = self.manager.popoverChrome.isResizeHandleVisible
       _ = self.manager.popoverChrome.showsDailyChart
       _ = self.manager.popoverChrome.showsDailyCompletions
+      _ = self.manager.popoverChrome.showsMatrixUnplaced
     } onChange: {
       Task { @MainActor [weak self] in
         self?.reanchorPopoverToStatusItem()
