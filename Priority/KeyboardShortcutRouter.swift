@@ -377,6 +377,11 @@ struct KeyboardShortcutRouter {
         }
         return true
       }
+      if manager.taskListViewModel.rootTaskView == .eisenhower {
+        _ = moveMatrixSelection(.down)
+        updateTitle()
+        return true
+      }
       if manager.taskListViewModel.rootTaskView == .kanban {
         manager.kanban.nextKanbanTask()
       } else {
@@ -389,6 +394,17 @@ struct KeyboardShortcutRouter {
       if rootScopeFocused {
         if manager.navigationState.rootScopeFocusLevel == 2 {
           manager.navigationState.rootScopeFocusLevel = 1
+        }
+        return true
+      }
+      // The matrix has no list to walk off the top of, so ↑ moves up the plot
+      // and only reaches the tab strip once there is no dot above.
+      if manager.taskListViewModel.rootTaskView == .eisenhower {
+        if moveMatrixSelection(.up) {
+          updateTitle()
+        } else if manager.taskListViewModel.shouldShowRootScopeSection {
+          manager.navigationState.rootScopeFocusLevel =
+            manager.taskListViewModel.rootScopeShowsFilterControls ? 2 : 1
         }
         return true
       }
@@ -469,6 +485,11 @@ struct KeyboardShortcutRouter {
     if claims(.enterChildren) {
       if isFocused { return false }
       manager.navigationState.rootScopeFocusLevel = 0
+      if manager.taskListViewModel.rootTaskView == .eisenhower {
+        _ = moveMatrixSelection(.right)
+        updateTitle()
+        return true
+      }
       manager.taskNavigationService.expandOrDescend()
       updateTitle()
       return true
@@ -477,6 +498,11 @@ struct KeyboardShortcutRouter {
     if claims(.exitToParent) {
       if isFocused { return false }
       manager.navigationState.rootScopeFocusLevel = 0
+      if manager.taskListViewModel.rootTaskView == .eisenhower {
+        _ = moveMatrixSelection(.left)
+        updateTitle()
+        return true
+      }
       manager.taskNavigationService.collapseOrAscend()
       updateTitle()
       return true
@@ -1061,6 +1087,36 @@ extension KeyboardShortcutRouter {
   /// Wrapping matters: placements land tasks anywhere in the order, so a strict
   /// forward search would strand the ones above the cursor and the pass would
   /// look finished while the rail still had entries in it.
+  /// Move the selection one dot across the matrix.
+  ///
+  /// Returns false when there is nothing that way, so the caller can decide
+  /// what the key means at the edge of the plot — ↑ reaches the tab strip,
+  /// everything else simply stops rather than falling through to the list
+  /// navigation underneath, which would move the selection to a dot with no
+  /// relationship to the one you were on.
+  @MainActor private func moveMatrixSelection(_ direction: MatrixDirection) -> Bool {
+    let cache = manager.taskListViewModel.cache
+    // An inherited task navigates from its ancestor's coordinate, which is the
+    // one its dot is drawn on. A task with no coordinate at all passes nil and
+    // joins the plot at the middle.
+    let coordinate = manager.taskListViewModel.currentTask
+      .flatMap { cache.effectiveEisenhowerLevels[$0.id] }
+      .map { (urgency: $0.urgency, importance: $0.importance) }
+    guard
+      let target = MatrixNavigation.target(
+        from: coordinate, direction: direction, in: cache.matrixClusters)
+    else { return false }
+
+    manager.taskNavigationService.navigate(to: target.representative)
+    let place =
+      "(\(Int(target.urgency.rounded())), \(Int(target.importance.rounded())))"
+    manager.statusMessage =
+      target.count > 1
+      ? "\(target.representative.content.strippingTags) — \(place), \(target.count) here"
+      : "\(target.representative.content.strippingTags) — \(place)"
+    return true
+  }
+
   @MainActor private func advanceToNextUnplacedTask(after task: CheckvistTask) {
     let levels = manager.repository.taskEisenhowerLevels
     let scopeId = manager.navigationState.currentParentId

@@ -137,6 +137,16 @@ public enum ShortcutReference {
           note: quadrantNote(quadrant)
         )
       } + [
+        // One row, not four: the directions are `nextTask` and its neighbours
+        // wearing a different hat here, so none of them has an action of its
+        // own to print — and an `Entry` with no action is identified by its
+        // title, which four rows called "Move between dots" would collide on.
+        Entry(
+          action: nil,
+          keys: ["up", "down", "left", "right"].map { display(token: $0) },
+          title: "Move between dots",
+          note: "One coordinate at a time, nearest on the other axis first"
+        ),
         literal("m00", "Take off the matrix"),
         entry(.matrixToggleUnplaced),
         entry(.sequenceMatrixCoord),

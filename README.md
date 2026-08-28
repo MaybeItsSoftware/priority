@@ -123,11 +123,21 @@ bar, so the vocabulary is one keypress away rather than something to memorise.
 | `m<u><i>` | An exact coordinate, each axis `-9` to `9`. `-` before a digit makes it negative: `m-3 5`, `m5-2`, `m-4-4` |
 | `m00` | Take the task off the matrix |
 | `ml` | Show or hide the unplaced list (also the dock's tray button) |
+| `↑` `↓` `←` `→` | Move the selection between dots — one coordinate at a time, nearest on the other axis breaking the tie. `j` `k` `h` `l` do the same. `↑` with nothing above it reaches the tab strip |
 | *drag* | Drop a task anywhere on the grid to place it there. Drag from the unplaced list, or drag a placed dot to move it. Dropping a dot back into the list unplaces it |
 
 With the Matrix view open, placing a task steps the selection to the next
 unplaced one, so a backlog is sorted by typing `md` `ms` `me` down it without
 moving the cursor by hand.
+
+The arrows step by *level* rather than by distance, so repeated presses walk
+every distinct row and column of the plot and no dot is stranded — a
+nearest-neighbour rule leaves a dot alone in a corner that nothing can reach.
+From a task with no coordinate the first press joins the plot at the dot
+nearest the middle. The card along the bottom names whatever the keyboard is
+on, or whatever the pointer is on when it is over a dot; hovering elsewhere
+names nothing, because a dot only answers to a pointer inside its own
+catchment.
 
 The unplaced list is a drawer under the grid rather than a column beside it,
 and it is **off by default** — as a permanent rail it took 190 of the panel's

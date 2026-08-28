@@ -152,9 +152,7 @@ struct EisenhowerMatrixView: View {
 
         // The pointer's mark is drawn here rather than inside the dot, so that
         // moving it changes this overlay instead of every dot on the plot.
-        if let hoveredTaskId,
-          let point = plotPoints.first(where: { $0.task.id == hoveredTaskId })
-        {
+        if let point = plotPoints.first(where: { $0.task.id == hoveredTaskId }) {
           // The ring *is* the catchment, drawn: what lights up is exactly the
           // area that answers to the pointer.
           let ring = MatrixClustering.hitRadius(count: point.count) * 2
@@ -163,8 +161,15 @@ struct EisenhowerMatrixView: View {
             .frame(width: ring, height: ring)
             .position(point.position)
             .allowsHitTesting(false)
+        }
 
-          hoverDetail(point)
+        // Whatever the pointer is on, or — with the pointer off the plot — the
+        // dot the keyboard is on, so arrow navigation is not a silent move
+        // between identical grey circles.
+        if let described = plotPoints.first(where: { $0.task.id == hoveredTaskId })
+          ?? plotPoints.first(where: { $0.taskIdsContain(currentSelectedId) })
+        {
+          detailCard(described)
             .position(x: center.x, y: proxy.size.height - 40)
             // It sits over the plot; without this it would take the hover it
             // exists to report, and flicker itself away.
@@ -309,7 +314,7 @@ struct EisenhowerMatrixView: View {
   /// Names the pile, not just its representative — a dot standing for thirty
   /// tasks that says only one of their titles is a dot that lies about what it
   /// is.
-  private func hoverDetail(_ point: MatrixPlotPoint) -> some View {
+  private func detailCard(_ point: MatrixPlotPoint) -> some View {
     VStack(spacing: 4) {
       Text(point.task.content.strippingTags)
         .font(.system(size: 11, weight: .semibold))
