@@ -41,19 +41,6 @@ struct EisenhowerMatrixView: View {
     manager.preferences.themeColor(for: token)
   }
 
-  /// Every open task the current scope covers, whether or not it has a
-  /// coordinate, split by whether it has one. The view used to filter
-  /// placed-only right here, which is what made the matrix unable to show you
-  /// the work it exists to help you sort: the tasks needing a placement were
-  /// the exact set it declined to draw.
-  ///
-  /// Both halves now arrive pre-resolved from `TaskListViewModel.cache`. They
-  /// used to be computed in `body` — four scope passes and two inheritance
-  /// resolutions, each walking every task's ancestor chain — and
-  /// `onContinuousHover` re-runs `body` on every pointer move. That was the
-  /// lag. The cache rebuilds on the inputs that actually change these: the
-  /// task list, the stored coordinates, and the scope.
-
   /// Commit a coordinate. Both axes are written together because a drop names
   /// a point, not an axis — writing one at a time would leave a card briefly
   /// sitting in a quadrant nobody chose.
@@ -66,6 +53,15 @@ struct EisenhowerMatrixView: View {
       + MatrixGeometry.quadrant(urgency: urgency, importance: importance).title
   }
 
+  /// Both halves — the plot and the rail — come pre-resolved from
+  /// `TaskListViewModel.cache`.
+  ///
+  /// They used to be computed right here: four scope passes and two
+  /// inheritance resolutions, each walking every task's ancestor chain. And
+  /// `onContinuousHover` re-runs `body` on every pointer move, so the whole
+  /// lot ran at mouse-move frequency. That was the lag. The cache rebuilds on
+  /// the inputs that actually change them — the task list, the stored
+  /// coordinates, the scope — and on nothing else.
   var body: some View {
     let cache = taskListViewModel.cache
     return HStack(spacing: 0) {
