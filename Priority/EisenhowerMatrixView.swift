@@ -1,19 +1,32 @@
 import PriorityCore
 import SwiftUI
 
-/// A dot's identity and where it sits, resolved once per layout.
+/// A dot: one cluster, and where on the plot it sits.
 ///
-/// `Equatable` by what the dot actually draws — its id, its place, and whether
-/// the coordinate is its own. The task's text never reaches the plot, so
-/// comparing it would only cost a string compare per dot per pointer move.
+/// `Equatable` by what the dot actually draws — the pile's identity, its size,
+/// its place, and whether the coordinate is its own. The tasks' text never
+/// reaches the plot, so comparing it would only cost a string compare per dot
+/// per pointer move.
 private struct MatrixPlotPoint: Equatable {
-  let task: CheckvistTask
+  let cluster: MatrixCluster<CheckvistTask>
   let position: CGPoint
-  let isInherited: Bool
+
+  var task: CheckvistTask { cluster.representative }
+  var count: Int { cluster.count }
+  var isInherited: Bool { cluster.isInherited }
+
+  /// A pile is the selected dot when the selection is anywhere inside it —
+  /// otherwise selecting a descendant would light up nothing at all.
+  func taskIdsContain(_ taskId: Int?) -> Bool {
+    guard let taskId else { return false }
+    return cluster.taskIds.contains(taskId)
+  }
 
   static func == (lhs: Self, rhs: Self) -> Bool {
-    lhs.task.id == rhs.task.id && lhs.position == rhs.position
-      && lhs.isInherited == rhs.isInherited
+    lhs.cluster.representative.id == rhs.cluster.representative.id
+      && lhs.cluster.taskIds == rhs.cluster.taskIds
+      && lhs.position == rhs.position
+      && lhs.cluster.isInherited == rhs.cluster.isInherited
   }
 }
 
@@ -67,21 +80,18 @@ struct EisenhowerMatrixView: View {
   // MARK: - The plot
 
   private func plot(_ cache: CacheState) -> some View {
-    let levels = cache.effectiveEisenhowerLevels
-    let placed = cache.matrixPlacedTasks
+    let clusters = cache.matrixClusters
     let currentSelectedId = taskListViewModel.currentTask?.id
 
     return GeometryReader { proxy in
       let size = min(proxy.size.width, proxy.size.height) - 40
       let center = CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2)
-      let plotPoints = placed.map { task -> MatrixPlotPoint in
-        let level = levels[task.id]
+      let plotPoints = clusters.map { cluster -> MatrixPlotPoint in
         let offset = MatrixGeometry.offset(
-          urgency: level?.urgency ?? 0, importance: level?.importance ?? 0, plotSize: size)
+          urgency: cluster.urgency, importance: cluster.importance, plotSize: size)
         return MatrixPlotPoint(
-          task: task,
-          position: CGPoint(x: center.x + offset.x, y: center.y + offset.y),
-          isInherited: level?.isInherited ?? false
+          cluster: cluster,
+          position: CGPoint(x: center.x + offset.x, y: center.y + offset.y)
         )
       }
 
@@ -128,13 +138,14 @@ struct EisenhowerMatrixView: View {
         if let hoveredTaskId,
           let point = plotPoints.first(where: { $0.task.id == hoveredTaskId })
         {
+          let ring = MatrixClustering.dotDiameter(count: point.count) + 10
           Circle()
             .stroke(themeColor(.link), lineWidth: 1.5)
-            .frame(width: 16, height: 16)
+            .frame(width: ring, height: ring)
             .position(point.position)
             .allowsHitTesting(false)
 
-          hoverDetail(task: point.task, level: levels[hoveredTaskId])
+          hoverDetail(point)
             .position(x: center.x, y: proxy.size.height - 40)
             // It sits over the plot; without this it would take the hover it
             // exists to report, and flicker itself away.
@@ -276,17 +287,23 @@ struct EisenhowerMatrixView: View {
       .padding(30)
   }
 
-  private func hoverDetail(
-    task: CheckvistTask, level: EffectiveEisenhowerLevel?
-  ) -> some View {
+  /// Names the pile, not just its representative — a dot standing for thirty
+  /// tasks that says only one of their titles is a dot that lies about what it
+  /// is.
+  private func hoverDetail(_ point: MatrixPlotPoint) -> some View {
     VStack(spacing: 4) {
-      Text(task.content.strippingTags)
+      Text(point.task.content.strippingTags)
         .font(.system(size: 11, weight: .semibold))
         .lineLimit(1)
       HStack(spacing: 12) {
-        Text("Urgency: \(formatCoordinate(level?.urgency ?? 0))")
-        Text("Importance: \(formatCoordinate(level?.importance ?? 0))")
-        if level?.isInherited == true {
+        Text("Urgency: \(formatCoordinate(point.cluster.urgency))")
+        Text("Importance: \(formatCoordinate(point.cluster.importance))")
+        if point.count > 1 {
+          Text("+\(point.count - 1) MORE HERE")
+            .font(.system(size: 9, weight: .bold))
+            .tracking(1)
+        }
+        if point.isInherited {
           Text("INHERITED")
             .font(.system(size: 9, weight: .bold))
             .tracking(1)
@@ -348,13 +365,15 @@ private struct MatrixDotLayer: View, Equatable {
     ForEach(points, id: \.task.id) { point in
       TaskDotView(
         task: point.task,
-        isSelected: point.task.id == selectedTaskId,
-        isInherited: point.isInherited
+        isSelected: point.taskIdsContain(selectedTaskId),
+        isInherited: point.isInherited,
+        count: point.count
       )
       .position(point.position)
       .onTapGesture { onTap(point.task) }
       // A placed dot is draggable too, so refining a coordinate is the same
-      // gesture as setting one.
+      // gesture as setting one. Dragging a pile drags the task that put it
+      // there, so everything inheriting the coordinate follows.
       .draggable(TaskDragPayload(taskId: point.task.id))
     }
   }
@@ -367,6 +386,10 @@ struct TaskDotView: View {
   /// Drawn hollow: it is a real position, but not one anybody decided on, and
   /// it moves the moment its goal does.
   var isInherited: Bool = false
+  /// How many tasks share this exact coordinate, this one included. The dot
+  /// grows with it and carries the number, because inheritance puts whole
+  /// subtrees on one point and a plain dot would claim to be a single task.
+  var count: Int = 1
   @Environment(AppCoordinator.self) var manager
 
   private func themeColor(_ token: AppThemeColorToken) -> Color {
@@ -401,12 +424,28 @@ struct TaskDotView: View {
           ? themeColor(.link)
           : themeColor(.textSecondary).opacity(0.6)
 
+    let diameter = MatrixClustering.dotDiameter(count: count) + (emphasised ? 4 : 0)
+
     Circle()
       .fill(isInherited ? Color.clear : tint)
-      .frame(width: emphasised ? 10 : 6, height: emphasised ? 10 : 6)
+      .frame(width: diameter, height: diameter)
       .overlay(
-        Circle().stroke(isInherited ? tint : Color.white, lineWidth: isInherited ? 1.5 : (emphasised ? 2 : 0))
+        Circle().stroke(
+          isInherited ? tint : Color.white, lineWidth: isInherited ? 1.5 : (emphasised ? 2 : 0))
       )
+      // Outside the dot rather than inside it: a 6pt dot has no room for a
+      // numeral, and a pile of two should still read as a dot with a note
+      // beside it rather than as a badge.
+      .overlay(alignment: .leading) {
+        if count > 1 {
+          Text("\(count)")
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundColor(themeColor(.textSecondary))
+            .fixedSize()
+            .offset(x: diameter + 3)
+            .allowsHitTesting(false)
+        }
+      }
       .scaleEffect(treatment.iconScale(for: phase))
       .opacity(treatment.fades(at: phase) ? 0 : 1)
       .animation(.spring(response: 0.2), value: emphasised)

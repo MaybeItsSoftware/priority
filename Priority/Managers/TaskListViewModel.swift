@@ -229,7 +229,7 @@ import PriorityCore
       }
     )
     cacheStorage.effectiveEisenhowerLevels = levels
-    cacheStorage.matrixPlacedTasks = scoped.filter { levels[$0.id] != nil }
+    cacheStorage.matrixClusters = MatrixClustering.clusters(for: scoped, levels: levels)
     cacheStorage.matrixUnplacedTasks = scoped.filter { levels[$0.id] == nil }
   }
 

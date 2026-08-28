@@ -41,9 +41,12 @@ struct CacheState {
   /// to compute it inside `body`, which meant every pointer move over the plot
   /// re-walked two hundred chains.
   var effectiveEisenhowerLevels: [Int: EffectiveEisenhowerLevel] = [:]
-  /// The current scope's open tasks that have a coordinate, and those that do
-  /// not — the matrix's plot and its unplaced rail, partitioned once.
-  var matrixPlacedTasks: [CheckvistTask] = []
+  /// The matrix's plot: the current scope's placed tasks, grouped by the exact
+  /// coordinate they resolve to. One entry per point rather than per task,
+  /// because inheritance shares a coordinate exactly — see `MatrixClustering`.
+  var matrixClusters: [MatrixCluster<CheckvistTask>] = []
+  /// The matrix's rail: the current scope's open tasks with no coordinate at
+  /// all, inherited or otherwise.
   var matrixUnplacedTasks: [CheckvistTask] = []
 
   mutating func invalidate() {

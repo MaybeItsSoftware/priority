@@ -128,6 +128,14 @@ With the Matrix view open, placing a task steps the selection to the next
 unplaced one, so a backlog is sorted by typing `md` `ms` `me` down it without
 moving the cursor by hand. The rail shows how many are left.
 
+A task with no coordinate of its own takes its nearest placed ancestor's, so
+placing a handful of goals classifies everything beneath them. Because that
+coordinate is shared *exactly*, the plot draws **one dot per point, not per
+task**: the dot grows with the size of the pile and carries the count beside
+it, and hovering it reports how many are there. A hollow dot is a pile with no
+owner in view — every task on it is borrowing the coordinate. Dragging a dot
+moves the task that put it there, so the whole pile follows.
+
 ### Dailies
 
 | Key | Action |
