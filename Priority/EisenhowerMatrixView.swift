@@ -378,20 +378,29 @@ private struct MatrixDotLayer: View, Equatable {
     lhs.selectedTaskId == rhs.selectedTaskId && lhs.points == rhs.points
   }
 
+  /// The `ZStack` is load-bearing. A custom view whose body is a bare `ForEach`
+  /// is not flattened into the enclosing stack — it is laid out as one element,
+  /// and a multi-view body with no container of its own stacks *vertically*. So
+  /// every dot kept its correct x and was pushed down by its own index times a
+  /// seventh of the plot: the coordinates were right, the drawing was not, and
+  /// the hover ring — an ordinary child of the real ZStack — sat at the true
+  /// position with no dot under it.
   var body: some View {
-    ForEach(points, id: \.task.id) { point in
-      TaskDotView(
-        task: point.task,
-        isSelected: point.taskIdsContain(selectedTaskId),
-        isInherited: point.isInherited,
-        count: point.count
-      )
-      .position(point.position)
-      .onTapGesture { onTap(point.task) }
-      // A placed dot is draggable too, so refining a coordinate is the same
-      // gesture as setting one. Dragging a pile drags the task that put it
-      // there, so everything inheriting the coordinate follows.
-      .draggable(TaskDragPayload(taskId: point.task.id))
+    ZStack {
+      ForEach(points, id: \.task.id) { point in
+        TaskDotView(
+          task: point.task,
+          isSelected: point.taskIdsContain(selectedTaskId),
+          isInherited: point.isInherited,
+          count: point.count
+        )
+        .position(point.position)
+        .onTapGesture { onTap(point.task) }
+        // A placed dot is draggable too, so refining a coordinate is the same
+        // gesture as setting one. Dragging a pile drags the task that put it
+        // there, so everything inheriting the coordinate follows.
+        .draggable(TaskDragPayload(taskId: point.task.id))
+      }
     }
   }
 }
