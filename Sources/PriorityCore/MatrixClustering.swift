@@ -1,5 +1,21 @@
 import Foundation
 
+/// One point of the matrix, as something that can be compared and remembered.
+///
+/// A pile is identified by where it is rather than by who is in it. That is
+/// what makes an *open* pile survive a sync: the members can change underneath
+/// it and the drawer still has something to show, while a pile whose goal has
+/// moved away simply stops existing and closes itself.
+public struct MatrixPileKey: Hashable, Sendable {
+  public let urgency: Double
+  public let importance: Double
+
+  public init(urgency: Double, importance: Double) {
+    self.urgency = urgency
+    self.importance = importance
+  }
+}
+
 /// Everything sitting on one point of the matrix.
 ///
 /// Inheritance means a coordinate is shared exactly, not approximately: place
@@ -36,17 +52,14 @@ public struct MatrixCluster<Task: VisibilityTask> {
   }
 
   public var count: Int { taskIds.count }
+
+  public var key: MatrixPileKey {
+    MatrixPileKey(urgency: urgency, importance: importance)
+  }
 }
 
 /// One dot per coordinate rather than one dot per task.
 public enum MatrixClustering {
-
-  /// A coordinate, as something a dictionary can key on. Nested types cannot
-  /// live inside a generic function, so it sits out here.
-  private struct Key: Hashable {
-    let urgency: Double
-    let importance: Double
-  }
 
   /// Groups placed tasks by the exact coordinate they resolve to.
   ///
@@ -62,11 +75,11 @@ public enum MatrixClustering {
     // ordinarily listed before its descendants, but nothing guarantees it, and
     // picking the wrong representative means dragging the cluster moves an
     // inherited task instead of the coordinate everything else follows.
-    var order: [Key] = []
-    var members: [Key: [Task]] = [:]
+    var order: [MatrixPileKey] = []
+    var members: [MatrixPileKey: [Task]] = [:]
     for task in tasks {
       guard let level = levels[task.id] else { continue }
-      let key = Key(urgency: level.urgency, importance: level.importance)
+      let key = MatrixPileKey(urgency: level.urgency, importance: level.importance)
       if members[key] == nil {
         members[key] = []
         order.append(key)

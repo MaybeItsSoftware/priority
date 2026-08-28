@@ -128,6 +128,70 @@ final class MatrixNavigationTests: XCTestCase {
     XCTAssertEqual(nextUnplaced(after: 99, [2, 3], [1, 2, 3]), 2)
   }
 
+  // MARK: - Opening a pile
+
+  func testAPileIsFoundByAnyOfItsMembers() {
+    let clusters = [
+      MatrixCluster(
+        representative: Node(id: 1), taskIds: [1, 7, 9],
+        urgency: 6, importance: 6, isInherited: false),
+      MatrixCluster(
+        representative: Node(id: 2), taskIds: [2],
+        urgency: -2, importance: 6, isInherited: false),
+    ]
+    for member in [1, 7, 9] {
+      XCTAssertEqual(
+        MatrixNavigation.pile(containing: member, in: clusters)?.representative.id, 1)
+    }
+    XCTAssertNil(MatrixNavigation.pile(containing: 99, in: clusters))
+  }
+
+  /// An open pile is remembered as its point, so tasks arriving in it or
+  /// leaving it do not close it.
+  func testAPileSurvivesItsMembershipChanging() {
+    let key = MatrixPileKey(urgency: 6, importance: 6)
+    let before = plot([(1, 6, 6)])
+    let after = [
+      MatrixCluster(
+        representative: Node(id: 1), taskIds: [1, 4, 5],
+        urgency: 6, importance: 6, isInherited: false)
+    ]
+    XCTAssertEqual(MatrixNavigation.pile(at: key, in: before)?.count, 1)
+    XCTAssertEqual(MatrixNavigation.pile(at: key, in: after)?.count, 3)
+  }
+
+  /// The goal moved, so there is nothing at that point any more — the drawer
+  /// has to close rather than list tasks that are now somewhere else.
+  func testAPileWhoseGoalMovedIsGone() {
+    let key = MatrixPileKey(urgency: 6, importance: 6)
+    XCTAssertNil(MatrixNavigation.pile(at: key, in: plot([(1, 5, 5)])))
+    XCTAssertNil(MatrixNavigation.pile(at: key, in: plot([])))
+  }
+
+  // MARK: - Stepping inside an open pile
+
+  func testStepsRunThroughThePileInOrder() {
+    XCTAssertEqual(MatrixNavigation.member(from: 1, by: 1, in: [1, 2, 3]), 2)
+    XCTAssertEqual(MatrixNavigation.member(from: 3, by: -1, in: [1, 2, 3]), 2)
+  }
+
+  /// The ends stop rather than wrap: a pile is a list being read, and running
+  /// off it should be a dead end, not a loop.
+  func testTheEndsOfAPileAreDeadEnds() {
+    XCTAssertNil(MatrixNavigation.member(from: 3, by: 1, in: [1, 2, 3]))
+    XCTAssertNil(MatrixNavigation.member(from: 1, by: -1, in: [1, 2, 3]))
+  }
+
+  func testAStepFromOutsideThePileEntersAtTheNearEnd() {
+    XCTAssertEqual(MatrixNavigation.member(from: 99, by: 1, in: [1, 2, 3]), 1)
+    XCTAssertEqual(MatrixNavigation.member(from: 99, by: -1, in: [1, 2, 3]), 3)
+    XCTAssertEqual(MatrixNavigation.member(from: nil, by: 1, in: [1, 2, 3]), 1)
+  }
+
+  func testAnEmptyPileHasNoMembersToStepTo() {
+    XCTAssertNil(MatrixNavigation.member(from: nil, by: 1, in: []))
+  }
+
   /// Every dot has to be reachable: walking up from the bottom must visit each
   /// distinct importance rather than stalling on one.
   func testRepeatedPressesWalkEveryLevel() {

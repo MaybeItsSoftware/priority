@@ -97,6 +97,57 @@ public enum MatrixNavigation {
     return unplaced.first { rank[$0.id].map { $0 > from } ?? false } ?? unplaced.first
   }
 
+  // MARK: - Opening a pile
+
+  /// The pile a task is standing in.
+  ///
+  /// Every task on the plot is inside exactly one, since a cluster is a
+  /// coordinate and a task resolves to one coordinate. A task with no
+  /// coordinate at all — one still in the unplaced drawer — is in none.
+  public static func pile<Task: VisibilityTask>(
+    containing taskId: Int,
+    in clusters: [MatrixCluster<Task>]
+  ) -> MatrixCluster<Task>? {
+    clusters.first { $0.taskIds.contains(taskId) }
+  }
+
+  /// The pile still standing at a remembered point.
+  ///
+  /// An open pile is held as its coordinate rather than as a list of members,
+  /// so it survives a sync that adds or completes tasks underneath it. When the
+  /// goal that made the pile moves or is cleared there is no cluster there any
+  /// more and this returns nothing, which is how the drawer closes itself
+  /// rather than listing tasks that have gone somewhere else.
+  public static func pile<Task: VisibilityTask>(
+    at key: MatrixPileKey,
+    in clusters: [MatrixCluster<Task>]
+  ) -> MatrixCluster<Task>? {
+    clusters.first { $0.key == key }
+  }
+
+  /// Stepping through an open pile.
+  ///
+  /// Stops at the ends rather than wrapping. A pile is a list being read, and
+  /// where it stops is information — wrapping would make forty inherited tasks
+  /// that all share one coordinate into a loop with no edges, which is exactly
+  /// the thing the plot already fails to distinguish.
+  ///
+  /// A `taskId` that is not in the pile — the selection moved elsewhere while
+  /// the drawer stayed open — enters at whichever end the step is coming from.
+  public static func member(
+    from taskId: Int?,
+    by offset: Int,
+    in taskIds: [Int]
+  ) -> Int? {
+    guard !taskIds.isEmpty else { return nil }
+    guard let taskId, let index = taskIds.firstIndex(of: taskId) else {
+      return offset < 0 ? taskIds.last : taskIds.first
+    }
+    let next = index + offset
+    guard taskIds.indices.contains(next) else { return nil }
+    return taskIds[next]
+  }
+
   /// The pair of axes as "along" and "across", with `up` and `right` positive,
   /// so one comparison serves all four directions.
   private static func axes(
