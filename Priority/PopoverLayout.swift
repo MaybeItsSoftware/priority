@@ -189,7 +189,7 @@ enum PopoverLayout {
   /// this and the grid keeps the size it had.
   @MainActor
   static func matrixToggleableBlockHeight(for manager: AppCoordinator) -> CGFloat {
-    manager.popoverChrome.showsMatrixUnplaced ? matrixUnplacedDrawerHeight : 0
+    manager.popoverChrome.showsMatrixDrawer ? matrixUnplacedDrawerHeight : 0
   }
 
   /// Every block the dock can switch on and off in whichever root view is up.

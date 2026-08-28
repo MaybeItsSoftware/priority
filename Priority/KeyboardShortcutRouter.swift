@@ -378,7 +378,7 @@ struct KeyboardShortcutRouter {
         return true
       }
       if manager.taskListViewModel.rootTaskView == .eisenhower {
-        _ = moveMatrixSelection(.down)
+        if !stepOpenMatrixPile(by: 1) { _ = moveMatrixSelection(.down) }
         updateTitle()
         return true
       }
@@ -400,7 +400,12 @@ struct KeyboardShortcutRouter {
       // The matrix has no list to walk off the top of, so ↑ moves up the plot
       // and only reaches the tab strip once there is no dot above.
       if manager.taskListViewModel.rootTaskView == .eisenhower {
-        if moveMatrixSelection(.up) {
+        // An open pile takes the arrows first: it is the list you are reading,
+        // and moving the plot underneath it would leave the drawer describing
+        // somewhere you are not.
+        if stepOpenMatrixPile(by: -1) {
+          updateTitle()
+        } else if moveMatrixSelection(.up) {
           updateTitle()
         } else if manager.taskListViewModel.shouldShowRootScopeSection {
           manager.navigationState.rootScopeFocusLevel =
@@ -486,7 +491,11 @@ struct KeyboardShortcutRouter {
       if isFocused { return false }
       manager.navigationState.rootScopeFocusLevel = 0
       if manager.taskListViewModel.rootTaskView == .eisenhower {
-        _ = moveMatrixSelection(.right)
+        // Inert while a pile is open rather than moving the plot behind the
+        // drawer. ← is the way back out, so → has nowhere further to go.
+        if manager.popoverChrome.openMatrixPile == nil {
+          _ = moveMatrixSelection(.right)
+        }
         updateTitle()
         return true
       }
@@ -499,7 +508,9 @@ struct KeyboardShortcutRouter {
       if isFocused { return false }
       manager.navigationState.rootScopeFocusLevel = 0
       if manager.taskListViewModel.rootTaskView == .eisenhower {
-        _ = moveMatrixSelection(.left)
+        // Out of the pile before out along the plot — the same ordering ← has
+        // everywhere else, where it shuts what is open before it moves.
+        if !closeOpenMatrixPile() { _ = moveMatrixSelection(.left) }
         updateTitle()
         return true
       }
@@ -535,6 +546,14 @@ struct KeyboardShortcutRouter {
         return true
       }
       if isFocused { return false }
+      // On the matrix, Enter opens the pile under the selection — the plot's
+      // four arrows are spent on moving across it, so descending into a dot
+      // needs a key of its own. With the selection on no dot at all there is
+      // nothing to open and this falls through to adding a task.
+      if manager.taskListViewModel.rootTaskView == .eisenhower, openMatrixPileUnderSelection() {
+        updateTitle()
+        return true
+      }
       // In kanban mode, Enter opens the inline add field in the focused column.
       if manager.taskListViewModel.rootTaskView == .kanban {
         let columns = manager.kanban.kanbanColumns
@@ -650,6 +669,9 @@ struct KeyboardShortcutRouter {
         manager.dailyLog.cancelDailyEdit()
         return true
       }
+      // An open matrix pile is the innermost thing on screen, so it unwinds
+      // before the scope focus and before the window.
+      if closeOpenMatrixPile() { return true }
       if rootScopeFocused {
         manager.navigationState.rootScopeFocusLevel = 0
         return true
@@ -883,6 +905,13 @@ struct KeyboardShortcutRouter {
           action: .matrixToggleUnplaced, sequence: sequence)
       {
         let chrome = manager.popoverChrome
+        // `ml` asks for the unplaced list by name, so a pile sitting in the
+        // drawer is what it is asking to replace.
+        if closeOpenMatrixPile(), chrome.showsMatrixUnplaced {
+          manager.statusMessage =
+            "Unplaced: \(manager.taskListViewModel.cache.matrixUnplacedTasks.count)"
+          return true
+        }
         chrome.showsMatrixUnplaced.toggle()
         manager.statusMessage =
           chrome.showsMatrixUnplaced
@@ -1108,6 +1137,57 @@ extension KeyboardShortcutRouter {
   /// everything else simply stops rather than falling through to the list
   /// navigation underneath, which would move the selection to a dot with no
   /// relationship to the one you were on.
+  /// Open the pile the selection is standing in.
+  ///
+  /// Returns whether there was one. The selection can be on no dot at all — an
+  /// unplaced task, or nothing selected — and that is not a failure worth a
+  /// message, it is Enter meaning what it means everywhere else.
+  @MainActor private func openMatrixPileUnderSelection() -> Bool {
+    guard let taskId = manager.taskListViewModel.currentTask?.id,
+      let pile = MatrixNavigation.pile(
+        containing: taskId, in: manager.taskListViewModel.cache.matrixClusters)
+    else { return false }
+
+    manager.popoverChrome.openMatrixPile = pile.key
+    manager.statusMessage =
+      "\(pile.count) at (\(Int(pile.urgency.rounded())), \(Int(pile.importance.rounded())))"
+      + " — Esc closes"
+    return true
+  }
+
+  /// Shut the drawer's pile, if one is open. Returns whether it did anything,
+  /// so a caller can fall through to what the key otherwise means.
+  @MainActor private func closeOpenMatrixPile() -> Bool {
+    guard manager.popoverChrome.openMatrixPile != nil else { return false }
+    manager.popoverChrome.openMatrixPile = nil
+    return true
+  }
+
+  /// Move the selection within an open pile. Returns whether it moved.
+  ///
+  /// A pile that no longer exists — its goal moved while the drawer was open —
+  /// closes itself here rather than swallowing the arrow key, so the plot gets
+  /// it instead and the keyboard never goes dead.
+  @MainActor private func stepOpenMatrixPile(by offset: Int) -> Bool {
+    guard let key = manager.popoverChrome.openMatrixPile else { return false }
+    let cache = manager.taskListViewModel.cache
+    guard let pile = MatrixNavigation.pile(at: key, in: cache.matrixClusters) else {
+      manager.popoverChrome.openMatrixPile = nil
+      return false
+    }
+    guard
+      let next = MatrixNavigation.member(
+        from: manager.taskListViewModel.currentTask?.id, by: offset, in: pile.taskIds),
+      let task = cache.taskById[next]
+    else {
+      // The end of the pile. Still handled: running off a list you opened
+      // should stop, not silently move the plot behind it.
+      return true
+    }
+    manager.taskNavigationService.navigate(to: task)
+    return true
+  }
+
   @MainActor private func moveMatrixSelection(_ direction: MatrixDirection) -> Bool {
     let cache = manager.taskListViewModel.cache
     // An inherited task navigates from its ancestor's coordinate, which is the

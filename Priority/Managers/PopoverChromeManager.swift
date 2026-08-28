@@ -58,6 +58,25 @@ import PriorityCore
     didSet { preferencesStore.set(showsMatrixUnplaced, for: .matrixUnplacedVisible) }
   }
 
+  /// The pile the Matrix drawer is currently listing, if any.
+  ///
+  /// Held as the point rather than as the members, so tasks arriving in the
+  /// pile or being completed out of it do not close what you were reading. A
+  /// pile whose goal has moved no longer exists at that point, and the drawer
+  /// falls back to the unplaced list.
+  ///
+  /// Not persisted, for the same reason as the sheets below: it is somewhere
+  /// you are looking, not a mode you work in, and a popover that reopened
+  /// inside one pile of forty would be hiding the plot for a reason you would
+  /// not remember by morning.
+  var openMatrixPile: MatrixPileKey?
+
+  /// Whether the Matrix view draws its drawer at all.
+  ///
+  /// An open pile shows the drawer without touching the toggle, so closing the
+  /// pile leaves the drawer exactly as you had it rather than switched on.
+  var showsMatrixDrawer: Bool { showsMatrixUnplaced || openMatrixPile != nil }
+
   /// Whether the keyboard reference sheet is up. Deliberately *not* persisted:
   /// it is something you consult, not a mode you work in, and a popover that
   /// reopened showing its own help would be one you had to dismiss every

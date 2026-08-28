@@ -53,6 +53,20 @@ struct EisenhowerMatrixView: View {
       + MatrixGeometry.quadrant(urgency: urgency, importance: importance).title
   }
 
+  /// Show a pile in the drawer, and put the selection inside it.
+  ///
+  /// Selecting as well as opening matters: the drawer's rows are the app's
+  /// ordinary selection, so landing on the goal means the next key you press —
+  /// done, due, a tag — lands on something rather than on whatever was
+  /// selected before you looked.
+  private func openPile(_ cluster: MatrixCluster<CheckvistTask>) {
+    manager.popoverChrome.openMatrixPile = cluster.key
+    manager.taskNavigationService.navigate(to: cluster.representative)
+    manager.statusMessage =
+      "\(cluster.count) at (\(formatCoordinate(cluster.urgency)), "
+      + "\(formatCoordinate(cluster.importance))) — Esc closes"
+  }
+
   /// Both halves — the plot and the unplaced drawer — come pre-resolved from
   /// `TaskListViewModel.cache`.
   ///
@@ -72,9 +86,9 @@ struct EisenhowerMatrixView: View {
       // grid — the thing the view is for — as the narrower half of its own
       // screen. Opening it lengthens the panel by exactly its own height, so
       // the plot stays the square it was.
-      if manager.popoverChrome.showsMatrixUnplaced {
+      if manager.popoverChrome.showsMatrixDrawer {
         Divider()
-        unplacedDrawer(cache)
+        drawer(cache)
           .frame(height: PopoverLayout.matrixUnplacedDrawerHeight)
       }
     }
@@ -133,7 +147,8 @@ struct EisenhowerMatrixView: View {
         MatrixDotLayer(
           points: plotPoints,
           selectedTaskId: currentSelectedId,
-          onTap: { manager.taskNavigationService.navigate(to: $0) }
+          onTap: { manager.taskNavigationService.navigate(to: $0) },
+          onOpen: openPile
         )
         .equatable()
 
@@ -217,6 +232,76 @@ struct EisenhowerMatrixView: View {
     }
   }
 
+  // MARK: - The drawer
+
+  /// One drawer, two things to put in it: the pile you have opened, or what is
+  /// still unsorted.
+  ///
+  /// An open pile wins because it is the more specific question — you asked for
+  /// it, and the unplaced list is where the drawer sits the rest of the time.
+  /// A remembered pile whose point no longer has a cluster on it has been
+  /// emptied or moved away underneath you, and falls back rather than showing
+  /// an empty box that claims to be somewhere.
+  @ViewBuilder
+  private func drawer(_ cache: CacheState) -> some View {
+    if let key = manager.popoverChrome.openMatrixPile,
+      let pile = MatrixNavigation.pile(at: key, in: cache.matrixClusters)
+    {
+      pileDrawer(pile, cache)
+    } else {
+      unplacedDrawer(cache)
+    }
+  }
+
+  /// Everything standing on one point.
+  ///
+  /// The plot cannot draw these apart — inheritance gives a goal and all of its
+  /// descendants the *same* coordinate, so forty tasks are one dot and "+39
+  /// MORE HERE" was the whole of what the view could say about thirty-nine of
+  /// them. This is the list that dot was standing for, with the tasks in it
+  /// reachable: selecting one here selects it everywhere, so the ordinary keys
+  /// — done, due, tag, timer — apply to it without leaving the matrix.
+  private func pileDrawer(_ pile: MatrixCluster<CheckvistTask>, _ cache: CacheState) -> some View {
+    let quadrant = MatrixGeometry.quadrant(urgency: pile.urgency, importance: pile.importance)
+    let members = pile.taskIds.compactMap { cache.taskById[$0] }
+
+    return VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: 6) {
+        Text(quadrant.title.uppercased())
+          .font(.system(size: 10, weight: .bold))
+          .tracking(1.5)
+          .foregroundColor(themeColor(.link))
+        Text(
+          "(\(formatCoordinate(pile.urgency)), \(formatCoordinate(pile.importance)))"
+        )
+        .font(.system(size: 10, weight: .bold, design: .monospaced))
+        .foregroundColor(themeColor(.textSecondary))
+        Spacer()
+        Text("\(pile.count)")
+          .font(.system(size: 10, weight: .bold, design: .monospaced))
+          .foregroundColor(themeColor(.textSecondary))
+      }
+      .padding(.horizontal, 10)
+      .padding(.vertical, 8)
+
+      Divider()
+
+      ScrollView {
+        LazyVStack(spacing: 0) {
+          ForEach(members, id: \.id) { task in
+            // The one task in the pile that chose the coordinate is worth
+            // marking: it is the one dragging the dot moves, and the reason
+            // every other row is here at all.
+            drawerRow(task, isSource: task.id == pile.representative.id && !pile.isInherited)
+            Divider()
+          }
+        }
+      }
+    }
+    .frame(maxHeight: .infinity, alignment: .top)
+    .background(themeColor(.panelBackground))
+  }
+
   // MARK: - The unplaced drawer
 
   /// What is left to sort, and the thing you drag from. Also the honest answer
@@ -258,7 +343,7 @@ struct EisenhowerMatrixView: View {
         ScrollView {
           LazyVStack(spacing: 0) {
             ForEach(unplaced, id: \.id) { task in
-              unplacedRow(task)
+              drawerRow(task, isSource: false)
               Divider()
             }
           }
@@ -279,7 +364,9 @@ struct EisenhowerMatrixView: View {
     }
   }
 
-  private func unplacedRow(_ task: CheckvistTask) -> some View {
+  /// - Parameter isSource: this row set the coordinate the rest of its pile is
+  ///   borrowing. Only ever true in the pile drawer.
+  private func drawerRow(_ task: CheckvistTask, isSource: Bool) -> some View {
     let isSelected = task.id == taskListViewModel.currentTask?.id
     return HStack(spacing: 6) {
       Text(task.content.strippingTags)
@@ -288,6 +375,12 @@ struct EisenhowerMatrixView: View {
           isSelected ? themeColor(.selectionForeground) : themeColor(.textPrimary)
         )
         .lineLimit(1)
+      if isSource {
+        Text("GOAL")
+          .font(.system(size: 9, weight: .bold))
+          .tracking(1)
+          .foregroundColor(themeColor(.link))
+      }
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 10)
@@ -323,7 +416,10 @@ struct EisenhowerMatrixView: View {
         Text("Urgency: \(formatCoordinate(point.cluster.urgency))")
         Text("Importance: \(formatCoordinate(point.cluster.importance))")
         if point.count > 1 {
-          Text("+\(point.count - 1) MORE HERE")
+          // Says what to press rather than only how many there are. The count
+          // on its own was a dead end for as long as there was nothing to do
+          // about it; now there is, and this is where you would be looking.
+          Text("+\(point.count - 1) MORE — ⏎ OPENS")
             .font(.system(size: 9, weight: .bold))
             .tracking(1)
         }
@@ -388,6 +484,7 @@ private struct MatrixDotLayer: View, Equatable {
   let points: [MatrixPlotPoint]
   let selectedTaskId: Int?
   let onTap: (CheckvistTask) -> Void
+  let onOpen: (MatrixCluster<CheckvistTask>) -> Void
 
   static func == (lhs: Self, rhs: Self) -> Bool {
     lhs.selectedTaskId == rhs.selectedTaskId && lhs.points == rhs.points
@@ -410,6 +507,10 @@ private struct MatrixDotLayer: View, Equatable {
           count: point.count
         )
         .position(point.position)
+        // Double-click before single, or the double never fires. Opening is the
+        // pointer's half of ⏎: a dot standing for forty tasks has to be
+        // reachable by the thing you are already holding.
+        .onTapGesture(count: 2) { onOpen(point.cluster) }
         .onTapGesture { onTap(point.task) }
         // A placed dot is draggable too, so refining a coordinate is the same
         // gesture as setting one. Dragging a pile drags the task that put it

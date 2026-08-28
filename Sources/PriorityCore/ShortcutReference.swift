@@ -147,6 +147,14 @@ public enum ShortcutReference {
           title: "Move between dots",
           note: "One coordinate at a time, nearest on the other axis first"
         ),
+        // Enter rather than →, which is spent: a plot needs all four arrows
+        // to move across, so descending into a dot needs a key of its own.
+        Entry(
+          action: nil,
+          keys: [display(token: "enter")],
+          title: "Open the dot",
+          note: "Lists everything standing on that point — ← or Esc closes it"
+        ),
         literal("m00", "Take off the matrix"),
         entry(.matrixToggleUnplaced),
         entry(.sequenceMatrixCoord),

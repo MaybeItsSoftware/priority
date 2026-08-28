@@ -124,6 +124,7 @@ bar, so the vocabulary is one keypress away rather than something to memorise.
 | `m00` | Take the task off the matrix |
 | `ml` | Show or hide the unplaced list (also the dock's tray button) |
 | `↑` `↓` `←` `→` | Move the selection between dots — one coordinate at a time, nearest on the other axis breaking the tie. `j` `k` `h` `l` do the same. `↑` with nothing above it reaches the tab strip |
+| `⏎` | Open the dot the selection is on — lists everything standing on that point in the drawer. `↑` `↓` walk it, `←` or `Esc` closes it. Double-clicking a dot does the same |
 | *drag* | Drop a task anywhere on the grid to place it there. Drag from the unplaced list, or drag a placed dot to move it. Dropping a dot back into the list unplaces it |
 
 With the Matrix view open, placing a task steps the selection to the next
@@ -131,6 +132,13 @@ unplaced one — the next entry in the drawer, wrapping once — so a backlog is
 sorted by typing `md` `ms` `me` down it without moving the cursor by hand. It
 walks the drawer's own list, so the count you can see is the number of presses
 left; an inherited coordinate counts as placed for both.
+
+A dot is usually a pile rather than a task. Inheritance gives a goal and its
+whole subtree the *same* coordinate, so forty tasks draw as one dot and the plot
+has no way to tell them apart — which is what opening a dot is for. The drawer
+lists the pile, marks the one task that chose the coordinate as `GOAL`, and
+selects whatever you move to, so the ordinary keys — done, due, tag, timer —
+apply without leaving the matrix.
 
 The arrows step by *level* rather than by distance, so repeated presses walk
 every distinct row and column of the plot and no dot is stranded — a
