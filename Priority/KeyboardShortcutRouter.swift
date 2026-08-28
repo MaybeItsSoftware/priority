@@ -1081,12 +1081,26 @@ extension KeyboardShortcutRouter {
     updateTitle()
   }
 
-  /// The next task in the current scope with no coordinate, searched forward
-  /// from the one just placed and wrapping once.
+  /// Step to the next task the drawer is still asking about.
   ///
-  /// Wrapping matters: placements land tasks anywhere in the order, so a strict
-  /// forward search would strand the ones above the cursor and the pass would
-  /// look finished while the rail still had entries in it.
+  /// It takes the drawer's own list rather than deciding again what counts as
+  /// unplaced. The two used to disagree: the drawer treats a coordinate
+  /// inherited from an ancestor as placed — that being the point of
+  /// inheritance — while this searched for tasks with no coordinate *of their
+  /// own*, so the drawer would say two and `md` `ms` `me` would walk you
+  /// through two hundred. It also hand-rolled a fourth scope pass, which is
+  /// the thing `TaskScopeResolver` exists to stop.
+  @MainActor private func advanceToNextUnplacedTask(after task: CheckvistTask) {
+    guard
+      let next = MatrixNavigation.nextUnplaced(
+        after: task.id,
+        unplaced: manager.taskListViewModel.cache.matrixUnplacedTasks,
+        order: manager.repository.tasks.map(\.id)
+      )
+    else { return }
+    manager.taskNavigationService.navigate(to: next)
+  }
+
   /// Move the selection one dot across the matrix.
   ///
   /// Returns false when there is nothing that way, so the caller can decide
@@ -1115,29 +1129,5 @@ extension KeyboardShortcutRouter {
       ? "\(target.representative.content.strippingTags) — \(place), \(target.count) here"
       : "\(target.representative.content.strippingTags) — \(place)"
     return true
-  }
-
-  @MainActor private func advanceToNextUnplacedTask(after task: CheckvistTask) {
-    let levels = manager.repository.taskEisenhowerLevels
-    let scopeId = manager.navigationState.currentParentId
-    let showChildren = manager.taskListViewModel.showChildrenInMenus
-    let scoped = manager.repository.tasks.filter { candidate in
-      guard candidate.status == 0 else { return false }
-      if showChildren {
-        return manager.taskListViewModel.isDescendant(candidate, of: scopeId)
-      }
-      return (candidate.parentId ?? 0) == scopeId
-    }
-    guard let placedIndex = scoped.firstIndex(where: { $0.id == task.id }) else { return }
-
-    let following = scoped[(placedIndex + 1)...]
-    let preceding = scoped[..<placedIndex]
-    let isUnplaced: (CheckvistTask) -> Bool = { candidate in
-      let level = levels[candidate.id] ?? .zero
-      return !MatrixGeometry.isPlaced(urgency: level.urgency, importance: level.importance)
-    }
-    guard let next = following.first(where: isUnplaced) ?? preceding.first(where: isUnplaced)
-    else { return }
-    manager.taskNavigationService.navigate(to: next)
   }
 }

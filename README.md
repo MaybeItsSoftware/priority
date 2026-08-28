@@ -127,8 +127,10 @@ bar, so the vocabulary is one keypress away rather than something to memorise.
 | *drag* | Drop a task anywhere on the grid to place it there. Drag from the unplaced list, or drag a placed dot to move it. Dropping a dot back into the list unplaces it |
 
 With the Matrix view open, placing a task steps the selection to the next
-unplaced one, so a backlog is sorted by typing `md` `ms` `me` down it without
-moving the cursor by hand.
+unplaced one — the next entry in the drawer, wrapping once — so a backlog is
+sorted by typing `md` `ms` `me` down it without moving the cursor by hand. It
+walks the drawer's own list, so the count you can see is the number of presses
+left; an inherited coordinate counts as placed for both.
 
 The arrows step by *level* rather than by distance, so repeated presses walk
 every distinct row and column of the plot and no dot is stranded — a

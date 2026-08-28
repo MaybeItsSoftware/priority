@@ -96,6 +96,38 @@ final class MatrixNavigationTests: XCTestCase {
     }
   }
 
+  // MARK: - Triage order
+
+  private func nextUnplaced(after id: Int, _ unplaced: [Int], _ order: [Int]) -> Int? {
+    MatrixNavigation.nextUnplaced(
+      after: id, unplaced: unplaced.map { Node(id: $0) }, order: order
+    )?.id
+  }
+
+  func testTriageGoesForwardFromTheTaskJustPlaced() {
+    XCTAssertEqual(nextUnplaced(after: 2, [1, 3, 4], [1, 2, 3, 4]), 3)
+  }
+
+  /// Placements land tasks anywhere in the order, so a pass that only ever
+  /// searched forward would report itself finished with the drawer still full.
+  func testTriageWrapsRatherThanStrandingWhatIsAboveTheCursor() {
+    XCTAssertEqual(nextUnplaced(after: 4, [1, 2], [1, 2, 3, 4]), 1)
+  }
+
+  /// The task just placed is no longer unplaced, so its position has to come
+  /// from the full order rather than from the unplaced list.
+  func testTheJustPlacedTaskNeedNotBeInTheUnplacedList() {
+    XCTAssertEqual(nextUnplaced(after: 3, [4], [1, 2, 3, 4]), 4)
+  }
+
+  func testNothingLeftToTriageIsNoMove() {
+    XCTAssertNil(nextUnplaced(after: 1, [], [1, 2]))
+  }
+
+  func testATaskMissingFromTheOrderStartsAtTheTop() {
+    XCTAssertEqual(nextUnplaced(after: 99, [2, 3], [1, 2, 3]), 2)
+  }
+
   /// Every dot has to be reachable: walking up from the bottom must visit each
   /// distinct importance rather than stalling on one.
   func testRepeatedPressesWalkEveryLevel() {
