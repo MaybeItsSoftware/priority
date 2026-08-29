@@ -213,6 +213,40 @@ public enum ShortcutSequenceBuffer {
     }
   }
 
+  /// What a pending *non*-matrix sequence should say.
+  ///
+  /// The matrix starter has spelled its own vocabulary out since it was built;
+  /// every other one said `Sequence: d…`, which names the key you just pressed
+  /// and nothing you could do with it. So the four due-and-start sequences were
+  /// discoverable only by reading the manual, in an app whose whole premise is
+  /// that you do not have to.
+  ///
+  /// Derived from the configured bindings and the actions' own titles, so a
+  /// rebound sequence prints its real key and a renamed action its real name.
+  ///
+  /// - Parameter sequences: every two-key binding in force, paired with what it
+  ///   does. Bindings that are not two keys are ignored — a hint can only offer
+  ///   a second key if there is exactly one.
+  public static func hint(
+    forBuffer buffer: String,
+    sequences: [(keys: String, label: String)]
+  ) -> String? {
+    let pending = buffer.lowercased()
+    guard pending.count == 1, let starter = pending.first else { return nil }
+
+    var seen: Set<String> = []
+    let options =
+      sequences
+      .filter { $0.keys.count == 2 && $0.keys.lowercased().first == starter }
+      .compactMap { sequence -> String? in
+        let second = String(sequence.keys.lowercased().dropFirst()).uppercased()
+        guard seen.insert(second).inserted else { return nil }
+        return "\(second) \(sequence.label)"
+      }
+    guard !options.isEmpty else { return nil }
+    return String(starter).uppercased() + " — " + options.joined(separator: " · ")
+  }
+
   /// The first character of each configured binding. Tokens shorter than two
   /// characters are not sequences and are skipped, so a malformed binding
   /// cannot claim every press of a single letter.

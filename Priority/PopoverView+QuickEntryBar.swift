@@ -126,16 +126,22 @@ extension PopoverView {
         .foregroundColor(themeColor(.danger))
         .padding(.horizontal, 14)
         .padding(.bottom, 6)
-    } else if let status = manager.statusMessage {
-      Text(status)
-        .font(.caption2)
-        .foregroundColor(themeColor(.link))
-        .padding(.horizontal, 14)
-        .padding(.bottom, 6)
+      // A half-typed sequence outranks the status line, which used to win and
+      // so hid the hint entirely: the status message is sticky, and anything
+      // that had set one — a placement, an arrow key on the matrix — meant
+      // pressing `m` afterwards spelled out nothing at all. One is a live
+      // question about the key you are holding, the other a report about
+      // something already finished.
     } else if let sequenceHint = sequenceInputHint {
       Text(sequenceHint)
         .font(.caption2)
         .foregroundColor(themeColor(.textSecondary))
+        .padding(.horizontal, 14)
+        .padding(.bottom, 6)
+    } else if let status = manager.statusMessage {
+      Text(status)
+        .font(.caption2)
+        .foregroundColor(themeColor(.link))
         .padding(.horizontal, 14)
         .padding(.bottom, 6)
     }
@@ -208,14 +214,17 @@ extension PopoverView {
       return hint
     }
 
-    let tagStarters: Set<String> = Set(
-      manager.preferences.shortcutBinding(for: .sequenceTag).split(separator: ",").compactMap {
-        let token = String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard token.count >= 2 else { return nil }
-        return String(token.prefix(1))
-      })
-    if buffer.count == 1, tagStarters.contains(buffer) {
-      return "Tag sequence…"
+    // Every other starter spells its own vocabulary out too, from the bindings
+    // in force. `Tag sequence…` used to be the only non-matrix hint, and it
+    // named the starter rather than anything you could press next.
+    let sequences = ConfigurableShortcutAction.twoKeySequenceActions.flatMap { action -> [(keys: String, label: String)] in
+      guard let label = action.sequenceHintLabel else { return [] }
+      return manager.preferences.shortcutBinding(for: action)
+        .split(separator: ",")
+        .map { (keys: String($0).trimmingCharacters(in: .whitespacesAndNewlines), label: label) }
+    }
+    if let hint = ShortcutSequenceBuffer.hint(forBuffer: buffer, sequences: sequences) {
+      return hint
     }
 
     return "Sequence: \(buffer)…"

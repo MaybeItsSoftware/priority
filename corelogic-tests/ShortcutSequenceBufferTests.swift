@@ -269,4 +269,56 @@ final class ShortcutSequenceBufferHintTests: XCTestCase {
     XCTAssertNil(hint("d"))
     XCTAssertNil(hint(""))
   }
+
+  // MARK: - What a pending sequence offers
+
+  private let sequences: [(keys: String, label: String)] = [
+    (keys: "dd", label: "due"),
+    (keys: "dt", label: "due today"),
+    (keys: "ds", label: "start date"),
+    (keys: "dr", label: "repeat"),
+    (keys: "gt", label: "tag"),
+  ]
+
+  func testAPendingStarterSpellsOutEverySequenceUnderIt() {
+    XCTAssertEqual(
+      ShortcutSequenceBuffer.hint(forBuffer: "d", sequences: sequences),
+      "D — D due · T due today · S start date · R repeat")
+  }
+
+  func testTheHintOnlyOffersSequencesSharingTheStarter() {
+    XCTAssertEqual(
+      ShortcutSequenceBuffer.hint(forBuffer: "g", sequences: sequences), "G — T tag")
+  }
+
+  func testAStarterNothingIsBoundToOffersNothing() {
+    XCTAssertNil(ShortcutSequenceBuffer.hint(forBuffer: "z", sequences: sequences))
+    XCTAssertNil(ShortcutSequenceBuffer.hint(forBuffer: "", sequences: sequences))
+  }
+
+  /// The buffer runs past one character only for the matrix, which has its own
+  /// hint. Offering second keys for a sequence already past its second key
+  /// would be describing a press that has happened.
+  func testOnlyTheFirstKeyGetsAHint() {
+    XCTAssertNil(ShortcutSequenceBuffer.hint(forBuffer: "dd", sequences: sequences))
+  }
+
+  /// Two bindings can land on the same second key; the hint says it once.
+  func testARepeatedSecondKeyIsListedOnce() {
+    XCTAssertEqual(
+      ShortcutSequenceBuffer.hint(
+        forBuffer: "d",
+        sequences: [(keys: "dd", label: "due"), (keys: "dd", label: "due again")]),
+      "D — D due")
+  }
+
+  /// The labels come from the actions themselves, so a hint cannot drift from
+  /// what the key does.
+  func testEverySequenceActionCanNameItselfInAHint() {
+    for action in ConfigurableShortcutAction.twoKeySequenceActions
+    where action.title.hasPrefix("Sequence: ") {
+      XCTAssertNotNil(action.sequenceHintLabel, "\(action.rawValue)")
+      XCTAssertFalse(action.sequenceHintLabel?.isEmpty ?? true, "\(action.rawValue)")
+    }
+  }
 }

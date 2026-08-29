@@ -222,6 +222,18 @@ public enum ConfigurableShortcutAction: String, CaseIterable, Identifiable, Send
     }
   }
 
+  /// The action's name with the `Sequence: ` prefix off — what a pending
+  /// sequence should print beside the key that completes it.
+  ///
+  /// `nil` for anything that is not spelled that way, which is the point: a
+  /// hint listing an action whose title does not name the sequence would read
+  /// as a key that does something else.
+  public var sequenceHintLabel: String? {
+    let prefix = "Sequence: "
+    guard title.hasPrefix(prefix) else { return nil }
+    return String(title.dropFirst(prefix.count))
+  }
+
   /// Every two-key-sequence action, in the order the router tries them.
   public static let twoKeySequenceActions: [ConfigurableShortcutAction] =
     allCases.filter(\.isTwoKeySequence)

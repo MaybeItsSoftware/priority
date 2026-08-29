@@ -113,6 +113,9 @@ Onboarding boxes guide the Checkvist, Obsidian and Google Calendar setup. Each o
 
 Placement is two keystrokes. `m` on its own spells the rest out in the status
 bar, so the vocabulary is one keypress away rather than something to memorise.
+Every sequence starter does this — `d` lists the due and start sequences, `g`
+the tag and link ones — built from the bindings in force, so a rebound sequence
+still names its real key.
 
 | Key | Action |
 | --- | --- |

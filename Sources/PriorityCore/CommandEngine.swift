@@ -126,48 +126,56 @@ public enum Command: Equatable, Sendable {
 
 // swiftlint:disable type_body_length
 public enum CommandEngine {
+  /// A row's `keybind` is the key that performs *that row*, or nothing.
+  ///
+  /// Four due rows and five start rows used to print `dd` and `ds`, which are
+  /// the sequences that *open* those lists rather than anything that picks one
+  /// from them — so the palette showed one shortcut against nine different
+  /// commands, which is worse than showing none: it reads as a collision.
+  /// `CommandEngineSuggestionTests` pins it, and the pending-sequence hint is
+  /// where "what does `d` offer" is answered now.
   public static let suggestions: [CommandPaletteSuggestion] = [
     .init(
       label: "Mark done", command: "done", preview: "Close selected task", keybind: "Space",
       submitImmediately: true),
     .init(
-      label: "Mark undone", command: "undone", preview: "Undo last completion/action", keybind: "u",
+      label: "Mark undone", command: "undone", preview: "Undo last completion/action", keybind: "⌘Z",
       submitImmediately: true),
     .init(
       label: "Invalidate task", command: "invalidate", preview: "Invalidate selected task",
       keybind: "Shift+Space", submitImmediately: true),
     .init(
-      label: "Due today", command: "due today", preview: "Set due date to today", keybind: "dd",
+      label: "Due today", command: "due today", preview: "Set due date to today", keybind: nil,
       submitImmediately: true),
     .init(
       label: "Due tomorrow", command: "due tomorrow", preview: "Set due date to tomorrow",
-      keybind: "dd", submitImmediately: true),
+      keybind: nil, submitImmediately: true),
     .init(
       label: "Due next week", command: "due next week", preview: "Set due date to next week",
-      keybind: "dd", submitImmediately: true),
+      keybind: nil, submitImmediately: true),
     .init(
       label: "Due today at time", command: "due today ",
       preview: "Set due date with time (for example 14:30 or 9am)", keybind: "dt",
       submitImmediately: false),
     .init(
-      label: "Clear due date", command: "clear due", preview: "Remove due date", keybind: "dd",
+      label: "Clear due date", command: "clear due", preview: "Remove due date", keybind: nil,
       submitImmediately: true),
     .init(
       label: "Start today", command: "start today", preview: "Set start date to today",
-      keybind: "ds", submitImmediately: true),
+      keybind: nil, submitImmediately: true),
     .init(
       label: "Start tomorrow", command: "start tomorrow", preview: "Set start date to tomorrow",
-      keybind: "ds", submitImmediately: true),
+      keybind: nil, submitImmediately: true),
     .init(
       label: "Start next week", command: "start next week",
-      preview: "Set start date to next week", keybind: "ds", submitImmediately: true),
+      preview: "Set start date to next week", keybind: nil, submitImmediately: true),
     .init(
       label: "Start at time", command: "start today ",
       preview: "Set start date with time (e.g. 9am, 14:30, next mon 9am)",
-      keybind: "ds", submitImmediately: false),
+      keybind: nil, submitImmediately: false),
     .init(
       label: "Clear start date", command: "clear start", preview: "Remove start date",
-      keybind: "ds", submitImmediately: true),
+      keybind: nil, submitImmediately: true),
     .init(
       label: "Add tag", command: "tag ", preview: "Append #tag to task", keybind: "gt",
       submitImmediately: false),
@@ -215,27 +223,27 @@ public enum CommandEngine {
       submitImmediately: true),
     .init(
       label: "Repeat daily", command: "repeat daily",
-      preview: "Schedule this task to recur every day", keybind: "dr",
+      preview: "Schedule this task to recur every day", keybind: nil,
       submitImmediately: true),
     .init(
       label: "Repeat weekdays", command: "repeat weekdays",
-      preview: "Schedule this task to recur every weekday (Mon–Fri)", keybind: "dr",
+      preview: "Schedule this task to recur every weekday (Mon–Fri)", keybind: nil,
       submitImmediately: true),
     .init(
       label: "Repeat weekly", command: "repeat weekly",
-      preview: "Schedule this task to recur every week on the same day", keybind: "dr",
+      preview: "Schedule this task to recur every week on the same day", keybind: nil,
       submitImmediately: true),
     .init(
       label: "Repeat every N days/weeks", command: "repeat every ",
-      preview: "e.g. repeat every 3 days, repeat every 2 weeks", keybind: "dr",
+      preview: "e.g. repeat every 3 days, repeat every 2 weeks", keybind: nil,
       submitImmediately: false),
     .init(
       label: "Repeat every weekday", command: "repeat every monday",
-      preview: "Recur on a specific weekday (e.g. every monday)", keybind: "dr",
+      preview: "Recur on a specific weekday (e.g. every monday)", keybind: nil,
       submitImmediately: false),
     .init(
       label: "Clear repeat", command: "clear repeat",
-      preview: "Remove recurring rule from task", keybind: "dr",
+      preview: "Remove recurring rule from task", keybind: nil,
       submitImmediately: true),
     .init(
       label: "Reload Checkvist lists", command: "reload checkvist lists",
