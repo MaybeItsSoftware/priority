@@ -699,6 +699,19 @@ final class SyncService {
 
   // MARK: - Indent / Unindent
 
+  /// Put the cursor back on a task that has just moved in the tree.
+  ///
+  /// Selection is an index into the *visible* list, so reparenting a task
+  /// leaves that index pointing at whatever has taken its place — indenting
+  /// with Tab appeared to lose focus for exactly this reason. The reorder path
+  /// has anchored selection this way since it was written; the indent pair
+  /// never did.
+  private func anchorSelection(to taskId: Int) {
+    guard let host, let index = host.visibleTasks.firstIndex(where: { $0.id == taskId })
+    else { return }
+    host.currentSiblingIndex = index
+  }
+
   func indentTask(_ task: CheckvistTask) async {
     let siblings =
       repository.tasks.filter { ($0.parentId ?? 0) == (task.parentId ?? 0) }
@@ -721,6 +734,7 @@ final class SyncService {
       },
       onSuccess: { [weak self] in
         await self?.fetchTopTask()
+        self?.anchorSelection(to: task.id)
       }
     )
   }
@@ -743,6 +757,7 @@ final class SyncService {
       },
       onSuccess: { [weak self] in
         await self?.fetchTopTask()
+        self?.anchorSelection(to: task.id)
       }
     )
   }
