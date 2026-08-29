@@ -187,7 +187,7 @@ final class TaskRepositoryTests: XCTestCase {
     XCTAssertEqual(repo.absolutePriorityTaskIds, [2])
   }
 
-  func testRemoveTasksFromPriorityQueueDropsAcrossAllScopes() {
+  func testRemoveTasksFromPriorityQueueDropsRanksButKeepsMatrixPlacements() {
     let repo = makeRepository(initialListId: "list-a")
     repo.savePriorityQueue([0: [1, 2, 3], 5: [10, 11]])
     repo.saveAbsolutePriorityQueue([1, 10])
@@ -206,8 +206,12 @@ final class TaskRepositoryTests: XCTestCase {
     XCTAssertEqual(repo.priorityTaskIdsByParentId[0], [2, 3])
     XCTAssertEqual(repo.priorityTaskIdsByParentId[5], [11])
     XCTAssertEqual(repo.absolutePriorityTaskIds, [])
-    XCTAssertNil(repo.taskEisenhowerLevels[1])
-    XCTAssertNil(repo.taskEisenhowerLevels[10])
+    // But *not* their place on the matrix. This runs on an optimistic
+    // completion, and dropping the coordinate there made ticking a task a
+    // silent destructive edit to the matrix that undo could not reach: the
+    // reopen brought the task back and left it unplaced.
+    XCTAssertNotNil(repo.taskEisenhowerLevels[1])
+    XCTAssertNotNil(repo.taskEisenhowerLevels[10])
   }
 
   func testReconcilePriorityQueueDropsClosedTasksAndReScopesByParent() {

@@ -1,6 +1,7 @@
 import Foundation
 import OSLog
 import Observation
+import PriorityCore
 
 /// A task creation that was attempted while offline and is awaiting replay.
 struct PendingTaskCreate: Sendable, Codable {
@@ -863,8 +864,9 @@ extension TaskRepository {
   }
 
   @MainActor func reconcileEisenhowerLevels() {
-    let openTaskIds = Set(tasks.map(\.id))
-    let filtered = taskEisenhowerLevels.filter { openTaskIds.contains($0.key) }
+    let retained = MatrixLevelRetention.retained(
+      storedIds: taskEisenhowerLevels.keys, openTaskIds: Set(tasks.map(\.id)))
+    let filtered = taskEisenhowerLevels.filter { retained.contains($0.key) }
     if filtered.count != taskEisenhowerLevels.count {
       saveEisenhowerLevels(filtered)
     }
