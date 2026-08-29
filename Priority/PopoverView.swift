@@ -349,6 +349,8 @@ struct PopoverView: View {
         }
       }
 
+      statusLine
+
       if chromeShows(.resizeStrip) && manager.popoverChrome.isResizeHandleVisible {
         resizeStrip
       }
@@ -380,6 +382,35 @@ struct PopoverView: View {
       } else {
         deactivateEmptyListComposerModeIfNeeded()
       }
+    }
+  }
+
+  /// The panel's one line of feedback: an error, a half-typed sequence's hint,
+  /// or a status message.
+  ///
+  /// Panel-level rather than part of the quick-entry bar, which renders only
+  /// while the prompt is open — so in the ordinary case, a list with nothing
+  /// typed, this had nowhere to appear and every message written to it went
+  /// nowhere. `PopoverLayout.statusLineHeight` reserves exactly what this
+  /// draws, so it lengthens the panel instead of shortening the list.
+  @ViewBuilder
+  private var statusLine: some View {
+    if let line = PopoverLayout.statusLine(for: manager) {
+      Text(line.text)
+        .font(.caption2)
+        .lineLimit(2)
+        .foregroundColor(
+          {
+            switch line {
+            case .error: return themeColor(.danger)
+            case .hint: return themeColor(.textSecondary)
+            case .status: return themeColor(.link)
+            }
+          }()
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, PopoverLayout.rowHorizontalPadding)
+        .padding(.bottom, 6)
     }
   }
 

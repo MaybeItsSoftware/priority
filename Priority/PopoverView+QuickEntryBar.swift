@@ -119,32 +119,6 @@ extension PopoverView {
     .padding(.leading, PopoverLayout.rowHorizontalPadding + leadingInset)
     .padding(.trailing, PopoverLayout.rowHorizontalPadding)
     .padding(.vertical, verticalPadding)
-
-    if let error = repository.errorMessage {
-      Text(error)
-        .font(.caption2)
-        .foregroundColor(themeColor(.danger))
-        .padding(.horizontal, 14)
-        .padding(.bottom, 6)
-      // A half-typed sequence outranks the status line, which used to win and
-      // so hid the hint entirely: the status message is sticky, and anything
-      // that had set one — a placement, an arrow key on the matrix — meant
-      // pressing `m` afterwards spelled out nothing at all. One is a live
-      // question about the key you are holding, the other a report about
-      // something already finished.
-    } else if let sequenceHint = sequenceInputHint {
-      Text(sequenceHint)
-        .font(.caption2)
-        .foregroundColor(themeColor(.textSecondary))
-        .padding(.horizontal, 14)
-        .padding(.bottom, 6)
-    } else if let status = manager.statusMessage {
-      Text(status)
-        .font(.caption2)
-        .foregroundColor(themeColor(.link))
-        .padding(.horizontal, 14)
-        .padding(.bottom, 6)
-    }
   }
 
   // MARK: - Helpers
@@ -196,38 +170,6 @@ extension PopoverView {
 
   var filteredCommandSuggestions: [CommandSuggestion] {
     manager.quickEntry.filteredCommandSuggestions(query: manager.quickEntry.quickEntryText)
-  }
-
-  var sequenceInputHint: String? {
-    let buffer = manager.quickEntry.keyBuffer.lowercased()
-    guard !buffer.isEmpty else { return nil }
-
-    let matrixStarters: Set<String> = Set(
-      manager.preferences.shortcutBinding(for: .sequenceMatrixCoord).split(separator: ",").compactMap {
-        let token = String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard token.count >= 2 else { return nil }
-        return String(token.prefix(1))
-      })
-    if let hint = ShortcutSequenceBuffer.matrixHint(
-      for: buffer, matrixStarters: matrixStarters)
-    {
-      return hint
-    }
-
-    // Every other starter spells its own vocabulary out too, from the bindings
-    // in force. `Tag sequence…` used to be the only non-matrix hint, and it
-    // named the starter rather than anything you could press next.
-    let sequences = ConfigurableShortcutAction.twoKeySequenceActions.flatMap { action -> [(keys: String, label: String)] in
-      guard let label = action.sequenceHintLabel else { return [] }
-      return manager.preferences.shortcutBinding(for: action)
-        .split(separator: ",")
-        .map { (keys: String($0).trimmingCharacters(in: .whitespacesAndNewlines), label: label) }
-    }
-    if let hint = ShortcutSequenceBuffer.hint(forBuffer: buffer, sequences: sequences) {
-      return hint
-    }
-
-    return "Sequence: \(buffer)…"
   }
 
   func submitAction() {

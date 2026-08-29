@@ -132,11 +132,59 @@ enum PopoverLayout {
         fixedHeight += compactOnboardingBarHeight
       }
     }
-    if manager.repository.errorMessage != nil || manager.statusMessage != nil {
-      fixedHeight += 20
-    }
+    fixedHeight += statusLineHeight(for: manager)
 
     return fixedHeight
+  }
+
+  /// The one-line report under the content, and which of the three things it
+  /// is — the colour differs, the room it needs does not.
+  ///
+  /// It used to live inside the quick-entry bar, which renders only while the
+  /// prompt is open. So in the ordinary case — a list, nothing typed — there
+  /// was nowhere for it to appear: every status message the app wrote went to
+  /// a view that was not on screen, and a half-typed sequence could not say
+  /// what it offered. It belongs to the panel, like the dock.
+  enum StatusLine {
+    case error(String)
+    case hint(String)
+    case status(String)
+
+    var text: String {
+      switch self {
+      case .error(let text), .hint(let text), .status(let text): return text
+      }
+    }
+  }
+
+  /// A pending sequence outranks a status message: one is a live question about
+  /// the key being held, the other a report about something already finished.
+  /// An error outranks both.
+  @MainActor
+  static func statusLine(for manager: AppCoordinator) -> StatusLine? {
+    if let error = manager.repository.errorMessage { return .error(error) }
+    if let hint = manager.sequenceInputHint { return .hint(hint) }
+    if let status = manager.statusMessage { return .status(status) }
+    return nil
+  }
+
+  /// Measured rather than assumed, and capped at two lines to match the view's
+  /// own limit. The matrix hint spells out five keys and a coordinate form; it
+  /// wraps at this width, and reserving one line for something that draws two
+  /// takes the difference out of the list underneath.
+  @MainActor
+  static func statusLineHeight(for manager: AppCoordinator) -> CGFloat {
+    guard let line = statusLine(for: manager) else { return 0 }
+    let lineHeight: CGFloat = 13
+    let bottomPadding: CGFloat = 6
+    let available = width - 2 * rowHorizontalPadding
+    let bounding = (line.text as NSString).boundingRect(
+      with: NSSize(width: available, height: .greatestFiniteMagnitude),
+      options: [.usesLineFragmentOrigin, .usesFontLeading],
+      attributes: [.font: NSFont.systemFont(ofSize: 10)]
+    )
+    let lines = min(2, max(1, Int(ceil(bounding.height / lineHeight))))
+    return CGFloat(lines) * lineHeight + bottomPadding
   }
 
   /// Everything in the Daily view except the checklist rows.
@@ -225,7 +273,10 @@ enum PopoverLayout {
       // the graph, the done-today list or the matrix's unplaced drawer on grows
       // the panel by exactly that block's height instead of taking the room out
       // of the content.
-      return override + toggleableBlockHeight(for: manager)
+      // The status line is added here as well, so a message appearing under a
+      // height you dragged lengthens the panel rather than eating a row of the
+      // list you sized by hand.
+      return override + toggleableBlockHeight(for: manager) + statusLineHeight(for: manager)
     }
 
     let fixedHeight = fixedChromeHeight(for: manager)
