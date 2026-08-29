@@ -99,42 +99,53 @@ enum PopoverLayout {
     if manager.taskListViewModel.hideFuture {
       fixedHeight += 24 + dividerHeight
     }
+    return fixedHeight
+  }
+
+  /// Everything that appears *over* the work rather than being part of it: the
+  /// prompts, the command palette, the onboarding bars, the delete
+  /// confirmation, the status line.
+  ///
+  /// Kept apart from `fixedChromeHeight` because it is added to the panel
+  /// *after* the height cap rather than counted inside it — the rule the matrix
+  /// drawer and the Daily chart already followed, now applied to everything
+  /// that pops out. A block that opens should lengthen the panel; taking the
+  /// room out of the list instead means asking for a command costs you the
+  /// sight of the thing you were going to run it on.
+  @MainActor
+  static func transientBlockHeight(for manager: AppCoordinator) -> CGFloat {
+    var height: CGFloat = statusLineHeight(for: manager)
+
     if manager.quickEntry.pendingDeleteConfirmation {
-      fixedHeight += 40
+      return height + 40
     }
+
     let showsSearchPrompt =
-      !manager.quickEntry.pendingDeleteConfirmation
-      && manager.quickEntry.quickEntryMode == .search
+      manager.quickEntry.quickEntryMode == .search
       && (manager.quickEntry.isQuickEntryFocused || !manager.quickEntry.searchText.isEmpty)
       && (!manager.taskListViewModel.visibleTasks.isEmpty || !manager.quickEntry.searchText.isEmpty)
     let showsQuickAddPrompt =
-      !manager.quickEntry.pendingDeleteConfirmation
-      && (manager.quickEntry.quickEntryMode == .quickAddDefault
+      (manager.quickEntry.quickEntryMode == .quickAddDefault
         || manager.quickEntry.quickEntryMode == .quickAddSpecific)
       && (manager.quickEntry.isQuickEntryFocused || !manager.quickEntry.quickEntryText.isEmpty)
     if showsSearchPrompt || showsQuickAddPrompt {
-      fixedHeight += 40
+      height += 40
     }
-    if !manager.quickEntry.pendingDeleteConfirmation
-      && (manager.quickEntry.quickEntryMode == .command
-        && (manager.quickEntry.isQuickEntryFocused || !manager.quickEntry.quickEntryText.isEmpty))
+    if manager.quickEntry.quickEntryMode == .command,
+      manager.quickEntry.isQuickEntryFocused || !manager.quickEntry.quickEntryText.isEmpty
     {
       // Input row + autocomplete list block.
-      fixedHeight += 220
+      height += 220
     }
-    if !manager.quickEntry.pendingDeleteConfirmation,
-      let activeOnboardingDialog = manager.onboardingService.activeOnboardingDialog
-    {
+    if let activeOnboardingDialog = manager.onboardingService.activeOnboardingDialog {
       switch activeOnboardingDialog {
       case .pluginSelection:
-        fixedHeight += pluginSelectionOnboardingBarHeight
+        height += pluginSelectionOnboardingBarHeight
       default:
-        fixedHeight += compactOnboardingBarHeight
+        height += compactOnboardingBarHeight
       }
     }
-    fixedHeight += statusLineHeight(for: manager)
-
-    return fixedHeight
+    return height
   }
 
   /// The one-line report under the content, and which of the three things it
@@ -252,10 +263,15 @@ enum PopoverLayout {
 
   /// Converts a height the user has just dragged the panel to into the value
   /// that gets stored. A view keeps its stored height free of the dock's
-  /// optional blocks, so toggling one moves the panel rather than the content.
+  /// optional blocks *and* of whatever is popped open over it, so toggling one
+  /// or dismissing the other moves the panel rather than the content.
+  ///
+  /// The transient term matters as much as the toggleable one: drag the panel
+  /// taller with the command palette open and, without it, the palette's 220
+  /// points would be stored as list height and stay there for good.
   @MainActor
   static func storedHeight(forDisplayed height: CGFloat, in manager: AppCoordinator) -> CGFloat {
-    height - toggleableBlockHeight(for: manager)
+    height - toggleableBlockHeight(for: manager) - transientBlockHeight(for: manager)
   }
 
   @MainActor
@@ -273,23 +289,22 @@ enum PopoverLayout {
       // the graph, the done-today list or the matrix's unplaced drawer on grows
       // the panel by exactly that block's height instead of taking the room out
       // of the content.
-      // The status line is added here as well, so a message appearing under a
-      // height you dragged lengthens the panel rather than eating a row of the
-      // list you sized by hand.
-      return override + toggleableBlockHeight(for: manager) + statusLineHeight(for: manager)
+      return capped(override + toggleableBlockHeight(for: manager), for: manager)
     }
 
     let fixedHeight = fixedChromeHeight(for: manager)
 
     if manager.taskListViewModel.rootTaskView == .kanban {
-      return maxHeight
+      return capped(maxHeight, for: manager)
     }
 
     if manager.taskListViewModel.rootTaskView == .eisenhower {
       // `+ width` is the plot asking to be square. The drawer is added after
       // the cap rather than inside it, so opening the list lengthens the panel
       // instead of flattening the grid.
-      return min(maxHeight, fixedHeight + width) + matrixToggleableBlockHeight(for: manager)
+      return capped(
+        min(maxHeight, fixedHeight + width) + matrixToggleableBlockHeight(for: manager),
+        for: manager)
     }
 
     // Sized to its own content rather than the task count: the dailies
@@ -306,7 +321,8 @@ enum PopoverLayout {
       // Its own ceiling: this view stacks four sections that are each worth
       // seeing at once, where the task views are one scrolling list that the
       // shared cap suits fine.
-      return min(dailyMaxHeight, max(minHeight, fixedHeight + dailyContentHeight))
+      return capped(
+        min(dailyMaxHeight, max(minHeight, fixedHeight + dailyContentHeight)), for: manager)
     }
 
     let taskAreaHeight: CGFloat
@@ -324,6 +340,20 @@ enum PopoverLayout {
       taskAreaHeight = max(110, visibleRows * 36)
     }
 
-    return min(maxHeight, max(minHeight, fixedHeight + taskAreaHeight))
+    return capped(min(maxHeight, max(minHeight, fixedHeight + taskAreaHeight)), for: manager)
+  }
+
+  /// The view's own height plus whatever is popped open over it.
+  ///
+  /// Added *after* each branch's cap, so opening the command palette lengthens
+  /// the panel rather than being squeezed into a height that was already full —
+  /// which is how asking for a command used to cost you most of the list. The
+  /// one absolute ceiling is the same one a dragged height is clamped to, so
+  /// the panel can never outgrow what the user is allowed to drag it to.
+  @MainActor
+  private static func capped(_ contentHeight: CGFloat, for manager: AppCoordinator) -> CGFloat {
+    min(
+      PopoverChromeManager.maxPanelHeight,
+      contentHeight + transientBlockHeight(for: manager))
   }
 }
