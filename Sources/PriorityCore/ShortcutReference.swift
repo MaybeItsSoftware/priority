@@ -274,5 +274,9 @@ public enum ShortcutReference {
     .setPriorityRank: "Within the parent, not the whole list",
     .setAbsolutePriorityRank: "Across the whole list",
     .showShortcutReference: "This screen",
+    // A modifier alone produces no key-down, so ⇧⇧ cannot be a binding — it is
+    // a gesture recognised alongside them. Named here so the one place that
+    // lists every key does not omit it.
+    .openCommandPalette: "Double-tap ⇧ as well, as in Checkvist",
   ]
 }

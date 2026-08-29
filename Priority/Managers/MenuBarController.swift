@@ -48,7 +48,11 @@ class MenuBarController: NSObject {
   deinit {
     if let monitor = keyMonitor { NSEvent.removeMonitor(monitor) }
     if let monitor = clickMonitor { NSEvent.removeMonitor(monitor) }
+    if let monitor = shiftMonitor { NSEvent.removeMonitor(monitor) }
   }
+
+  private var shiftMonitor: Any?
+  private var shiftTaps = DoubleTapModifier()
 
   private func setupStatusItem() {
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -62,8 +66,41 @@ class MenuBarController: NSObject {
     keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
       guard let self, let popoverWindow = self.window, popoverWindow.isVisible else { return event }
       guard event.window === popoverWindow else { return event }
+      self.shiftTaps.keyPressed()
       return self.handleSupplementalKey(event: event) ? nil : event
     }
+    installShiftMonitorIfNeeded()
+  }
+
+  /// ⇧⇧ opens the command palette, as it does in Checkvist.
+  ///
+  /// A modifier alone produces no key-down, so this cannot be a binding in
+  /// `ConfigurableShortcutAction` — it is a separate monitor over flag changes,
+  /// with the key-down monitor feeding it so that Shift held for a capital
+  /// letter is a chord rather than a tap. See `DoubleTapModifier`.
+  private func installShiftMonitorIfNeeded() {
+    guard shiftMonitor == nil else { return }
+    shiftMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+      guard let self, let window = self.window, window.isVisible else { return event }
+      guard event.window === window else { return event }
+      let flags = event.modifierFlags
+      let fired = self.shiftTaps.modifierChanged(
+        isDown: flags.contains(.shift),
+        otherModifiersHeld: !flags.isDisjoint(with: [.command, .option, .control]),
+        at: event.timestamp
+      )
+      if fired { self.openCommandPalette() }
+      // Never consumed: other views still need to know about Shift.
+      return event
+    }
+  }
+
+  private func openCommandPalette() {
+    manager.quickEntry.keyBuffer = ""
+    manager.quickEntry.quickEntryMode = .command
+    manager.quickEntry.quickEntryText = ""
+    manager.quickEntry.commandSuggestionIndex = 0
+    manager.quickEntry.isQuickEntryFocused = true
   }
 
   private var currentPopoverContentSize: NSSize {

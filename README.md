@@ -229,7 +229,10 @@ the scope the other views read, so it's always strictly parented.
 
 ## Command palette
 
-Open with `:`, `;` or `Cmd+K`. Most commands accept several spellings — `unrepeat`, `no repeat`, `remove repeat` and `clear repeat` all do the same thing.
+Open with `:`, `;`, `Cmd+K` — or a **double-tap of Shift**, as in Checkvist. A
+modifier on its own produces no key-down event, so `⇧⇧` is recognised as a
+gesture rather than bound as a shortcut; Shift held for a capital letter counts
+as a chord rather than a tap, so typing never trips it. Most commands accept several spellings — `unrepeat`, `no repeat`, `remove repeat` and `clear repeat` all do the same thing.
 
 | Family | Commands |
 | --- | --- |
