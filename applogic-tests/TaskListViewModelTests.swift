@@ -23,6 +23,7 @@ final class TaskListViewModelTests: XCTestCase {
     var timerElapsedByTaskId: [Int: TimeInterval] = [:]
     var showsTaskBreadcrumbContext = false
     var kanbanCurrentTask: CheckvistTask?
+    var matrixSelectedTaskId: Int?
   }
 
   private var defaults: UserDefaults!
@@ -176,6 +177,54 @@ final class TaskListViewModelTests: XCTestCase {
     host.kanbanCurrentTask = task(2, "b")
     viewModel.rootTaskView = .kanban
 
+    XCTAssertEqual(viewModel.currentTask?.id, 2)
+  }
+
+  /// The matrix is not the task list either — `visibleTasks` is empty there by
+  /// design — so it needs its own selection for the same reason the board does.
+  /// Without one the plot had none at all: no dot drew selected, `md` answered
+  /// "No task selected", and the arrow keys moved something nothing read.
+  func testTheMatrixOwnsTheSelectionInMatrixView() {
+    let (viewModel, host, _) = makeViewModel(tasks: [task(1, "a"), task(2, "b")])
+    host.matrixSelectedTaskId = 2
+    viewModel.rootTaskView = .eisenhower
+
+    XCTAssertEqual(viewModel.currentTask?.id, 2)
+  }
+
+  func testTheMatrixHasNoSelectionUntilOneIsMade() {
+    let (viewModel, _, _) = makeViewModel(tasks: [task(1, "a")])
+    viewModel.rootTaskView = .eisenhower
+
+    XCTAssertNil(viewModel.currentTask)
+  }
+
+  /// Completing a task takes it off the plot, so it has to take the selection
+  /// with it rather than leaving the keys pointed at a dot that is not drawn.
+  func testCompletingTheSelectedTaskClearsTheMatrixSelection() {
+    let (viewModel, host, repository) = makeViewModel(tasks: [task(1, "a")])
+    host.matrixSelectedTaskId = 1
+    viewModel.rootTaskView = .eisenhower
+    XCTAssertEqual(viewModel.currentTask?.id, 1)
+
+    repository.tasks = [
+      CheckvistTask(id: 1, content: "a", status: 1, due: nil, position: 1, parentId: nil)
+    ]
+    viewModel.invalidateCaches()
+
+    XCTAssertNil(viewModel.currentTask)
+  }
+
+  /// The board's selection and the plot's are separate stores, so one must not
+  /// answer for the other when the view flips.
+  func testTheBoardAndThePlotDoNotShareASelection() {
+    let (viewModel, host, _) = makeViewModel(tasks: [task(1, "a"), task(2, "b")])
+    host.kanbanCurrentTask = task(1, "a")
+    host.matrixSelectedTaskId = 2
+
+    viewModel.rootTaskView = .kanban
+    XCTAssertEqual(viewModel.currentTask?.id, 1)
+    viewModel.rootTaskView = .eisenhower
     XCTAssertEqual(viewModel.currentTask?.id, 2)
   }
 

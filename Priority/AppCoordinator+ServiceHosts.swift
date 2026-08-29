@@ -297,4 +297,5 @@ extension AppCoordinator: TaskListViewModelHost {
   var searchText: String { quickEntry.searchText }
   var showsTaskBreadcrumbContext: Bool { preferences.showTaskBreadcrumbContext }
   var kanbanCurrentTask: CheckvistTask? { kanban.currentKanbanTask }
+  var matrixSelectedTaskId: Int? { navigationState.matrixSelectedTaskId }
 }

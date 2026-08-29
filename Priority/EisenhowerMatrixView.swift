@@ -61,7 +61,7 @@ struct EisenhowerMatrixView: View {
   /// selected before you looked.
   private func openPile(_ cluster: MatrixCluster<CheckvistTask>) {
     manager.popoverChrome.openMatrixPile = cluster.key
-    manager.taskNavigationService.navigate(to: cluster.representative)
+    manager.taskNavigationService.selectOnMatrix(cluster.representative)
     manager.statusMessage =
       "\(cluster.count) at (\(formatCoordinate(cluster.urgency)), "
       + "\(formatCoordinate(cluster.importance))) — Esc closes"
@@ -147,7 +147,7 @@ struct EisenhowerMatrixView: View {
         MatrixDotLayer(
           points: plotPoints,
           selectedTaskId: currentSelectedId,
-          onTap: { manager.taskNavigationService.navigate(to: $0) },
+          onTap: { manager.taskNavigationService.selectOnMatrix($0) },
           onOpen: openPile
         )
         .equatable()
@@ -390,7 +390,7 @@ struct EisenhowerMatrixView: View {
       isSelected ? themeColor(.selectionBackground).opacity(0.18) : Color.clear
     )
     .contentShape(Rectangle())
-    .onTapGesture { manager.taskNavigationService.navigate(to: task) }
+    .onTapGesture { manager.taskNavigationService.selectOnMatrix(task) }
     .draggable(TaskDragPayload(taskId: task.id))
   }
 

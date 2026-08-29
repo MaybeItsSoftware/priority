@@ -163,6 +163,17 @@ final class TaskNavigationService {
     navigationState.currentSiblingIndex = selection.currentSiblingIndex
   }
 
+  /// Select a task on the matrix.
+  ///
+  /// Deliberately *not* `navigate(to:)`: that writes `currentParentId`, which
+  /// is the matrix's scope as well as the list's position, so selecting a dot
+  /// standing for a task two levels down would re-scope the plot underneath the
+  /// pointer that just picked it.
+  func selectOnMatrix(_ task: CheckvistTask) {
+    navigationState.rootScopeFocusLevel = 0
+    navigationState.matrixSelectedTaskId = task.id
+  }
+
   func clampSelectionToVisibleRange() {
     guard let coordinator else { return }
     coordinator.focusSessionManager.clampForTasks(repository.tasks)
@@ -204,6 +215,11 @@ final class TaskNavigationService {
     }
     if view != .tags {
       coordinator.taskListViewModel.selectedRootTag = ""
+    }
+    // Carry the selection onto the plot, so arriving with `y` lands on the dot
+    // holding the task you were just looking at rather than on nothing.
+    if view == .eisenhower {
+      navigationState.matrixSelectedTaskId = capturedTask?.id
     }
     if view != .kanban {
       coordinator.kanban.kanbanFilterSubtasks = false

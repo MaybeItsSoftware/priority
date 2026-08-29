@@ -1127,7 +1127,7 @@ extension KeyboardShortcutRouter {
         order: manager.repository.tasks.map(\.id)
       )
     else { return }
-    manager.taskNavigationService.navigate(to: next)
+    manager.taskNavigationService.selectOnMatrix(next)
   }
 
   /// Move the selection one dot across the matrix.
@@ -1184,7 +1184,7 @@ extension KeyboardShortcutRouter {
       // should stop, not silently move the plot behind it.
       return true
     }
-    manager.taskNavigationService.navigate(to: task)
+    manager.taskNavigationService.selectOnMatrix(task)
     return true
   }
 
@@ -1201,7 +1201,7 @@ extension KeyboardShortcutRouter {
         from: coordinate, direction: direction, in: cache.matrixClusters)
     else { return false }
 
-    manager.taskNavigationService.navigate(to: target.representative)
+    manager.taskNavigationService.selectOnMatrix(target.representative)
     let place =
       "(\(Int(target.urgency.rounded())), \(Int(target.importance.rounded())))"
     manager.statusMessage =

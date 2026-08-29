@@ -193,4 +193,7 @@ protocol TaskListViewModelHost: AnyObject {
   /// The kanban board's own selection, which replaces the list's when the
   /// board is the active view.
   var kanbanCurrentTask: CheckvistTask? { get }
+  /// The matrix's own selection, for the same reason — an id here rather than a
+  /// task, because the view model can resolve it from a cache it already keeps.
+  var matrixSelectedTaskId: Int? { get }
 }

@@ -536,6 +536,17 @@ import PriorityCore
     if rootTaskView == .kanban {
       return host?.kanbanCurrentTask
     }
+    // The matrix, likewise, is not the task list: `visibleTasks` is empty here
+    // by design, so the index below would have nothing to index into. A
+    // selected task that has since been completed or deleted leaves the plot,
+    // and leaves the selection with it.
+    if rootTaskView == .eisenhower {
+      ensureVisibleTasksCacheValid()
+      guard let id = host?.matrixSelectedTaskId, let task = cacheStorage.taskById[id],
+        task.status == 0
+      else { return nil }
+      return task
+    }
     let level = visibleTasks
     guard !level.isEmpty else { return nil }
     let clampedIndex = min(max(hostCurrentSiblingIndex, 0), level.count - 1)
