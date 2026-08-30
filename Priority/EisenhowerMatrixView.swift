@@ -513,8 +513,10 @@ private struct MatrixDotLayer: View, Equatable {
         .onTapGesture(count: 2) { onOpen(point.cluster) }
         .onTapGesture { onTap(point.task) }
         // A placed dot is draggable too, so refining a coordinate is the same
-        // gesture as setting one. Dragging a pile drags the task that put it
-        // there, so everything inheriting the coordinate follows.
+        // gesture as setting one. Dragging an inherited dot gives that task a
+        // coordinate of its own, which is how you overrule a position the plot
+        // derived; dragging a pile drags the task that put it there, and
+        // everything still inheriting from it follows.
         .draggable(TaskDragPayload(taskId: point.task.id))
       }
     }

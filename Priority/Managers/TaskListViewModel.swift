@@ -223,6 +223,29 @@ import PriorityCore
         return (urgency: level.urgency, importance: level.importance)
       }
     )
+    // An inherited coordinate is a starting point, not the answer: the task's
+    // own due date and priority rank move it inside its goal's point, so a pile
+    // of forty is forty dots rather than one. A task placed by hand keeps
+    // exactly where it was put — that is a decision, and nothing derived is
+    // allowed to nudge it.
+    let now = Date()
+    let ranks = cacheStorage.priorityRank
+    let spread = levels.reduce(into: [Int: EffectiveEisenhowerLevel]()) { result, entry in
+      let (taskId, level) = entry
+      guard level.isInherited, let task = cacheStorage.taskById[taskId] else {
+        result[taskId] = level
+        return
+      }
+      let point = MatrixSpread.spread(
+        base: (urgency: level.urgency, importance: level.importance),
+        drift: MatrixSpread.drift(
+          dueDate: task.dueDate, priorityRank: ranks[taskId], now: now)
+      )
+      result[taskId] = EffectiveEisenhowerLevel(
+        urgency: point.urgency, importance: point.importance,
+        isInherited: true, sourceTaskId: level.sourceTaskId)
+    }
+
     let open = tasks.filter { $0.status == 0 }
     let parentId = hostCurrentParentId
     let scoped = TaskScopeResolver.scoped(
@@ -234,9 +257,9 @@ import PriorityCore
         TaskFilterEngine.isDescendant(task, of: rootId, taskById: self.cacheStorage.taskById)
       }
     )
-    cacheStorage.effectiveEisenhowerLevels = levels
-    cacheStorage.matrixClusters = MatrixClustering.clusters(for: scoped, levels: levels)
-    cacheStorage.matrixUnplacedTasks = scoped.filter { levels[$0.id] == nil }
+    cacheStorage.effectiveEisenhowerLevels = spread
+    cacheStorage.matrixClusters = MatrixClustering.clusters(for: scoped, levels: spread)
+    cacheStorage.matrixUnplacedTasks = scoped.filter { spread[$0.id] == nil }
   }
 
   private func computeVisibility() -> TaskVisibilityEngine.Result<CheckvistTask> {
