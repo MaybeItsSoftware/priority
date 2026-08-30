@@ -98,14 +98,22 @@ struct EisenhowerMatrixView: View {
   // MARK: - The plot
 
   private func plot(_ cache: CacheState) -> some View {
-    let clusters = cache.matrixClusters
+    let focused = manager.popoverChrome.focusedMatrixQuadrant
+    let viewport = MatrixViewport.viewport(for: focused)
+    // Zoomed in, only the box's own dots are drawn. The others are not off the
+    // edge, they are outside the window entirely.
+    let clusters = cache.matrixClusters.filter { cluster in
+      guard let focused else { return true }
+      return MatrixGeometry.quadrant(urgency: cluster.urgency, importance: cluster.importance)
+        == focused
+    }
     let currentSelectedId = taskListViewModel.currentTask?.id
 
     return GeometryReader { proxy in
       let size = min(proxy.size.width, proxy.size.height) - 40
       let center = CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2)
       let plotPoints = clusters.map { cluster -> MatrixPlotPoint in
-        let offset = MatrixGeometry.offset(
+        let offset = viewport.offset(
           urgency: cluster.urgency, importance: cluster.importance, plotSize: size)
         return MatrixPlotPoint(
           cluster: cluster,
@@ -115,18 +123,36 @@ struct EisenhowerMatrixView: View {
 
       ZStack {
         Group {
-          quadrantLabel(MatrixQuadrant.doNow, alignment: .topTrailing)
-          quadrantLabel(MatrixQuadrant.schedule, alignment: .topLeading)
-          quadrantLabel(MatrixQuadrant.delegate, alignment: .bottomTrailing)
-          quadrantLabel(MatrixQuadrant.eliminate, alignment: .bottomLeading)
+          if let focused {
+            // One name, centred, and no crosshair: the axes of a zoomed box are
+            // its edges, so a cross through the middle would draw a division
+            // that is not there.
+            Text(focused.title.uppercased())
+              .font(.system(size: 24, weight: .black))
+              .foregroundColor(themeColor(.link).opacity(0.14))
+              .padding(.top, 24)
+              // The way back out for the pointer, since clicking the name is
+              // the way in. Esc and ← do the same from the keyboard.
+              .contentShape(Rectangle())
+              .onTapGesture {
+                manager.popoverChrome.focusedMatrixQuadrant = nil
+                manager.statusMessage = "Whole matrix."
+              }
+              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+          } else {
+            quadrantLabel(MatrixQuadrant.doNow, alignment: .topTrailing)
+            quadrantLabel(MatrixQuadrant.schedule, alignment: .topLeading)
+            quadrantLabel(MatrixQuadrant.delegate, alignment: .bottomTrailing)
+            quadrantLabel(MatrixQuadrant.eliminate, alignment: .bottomLeading)
 
-          Path { path in
-            path.move(to: CGPoint(x: 20, y: center.y))
-            path.addLine(to: CGPoint(x: proxy.size.width - 20, y: center.y))
-            path.move(to: CGPoint(x: center.x, y: 20))
-            path.addLine(to: CGPoint(x: center.x, y: proxy.size.height - 20))
+            Path { path in
+              path.move(to: CGPoint(x: 20, y: center.y))
+              path.addLine(to: CGPoint(x: proxy.size.width - 20, y: center.y))
+              path.move(to: CGPoint(x: center.x, y: 20))
+              path.addLine(to: CGPoint(x: center.x, y: proxy.size.height - 20))
+            }
+            .stroke(themeColor(.panelDivider), lineWidth: 1)
           }
-          .stroke(themeColor(.panelDivider), lineWidth: 1)
         }
 
         Group {
@@ -156,9 +182,11 @@ struct EisenhowerMatrixView: View {
         // empty grid, and "no dots" and "nothing placed yet" look identical.
         if plotPoints.isEmpty {
           Text(
-            cache.matrixUnplacedTasks.isEmpty
-              ? "Nothing here to place."
-              : "\(cache.matrixUnplacedTasks.count) unplaced — press m l to list them"
+            focused != nil
+              ? "Nothing in \(focused?.title ?? "") — Esc for the whole matrix"
+              : cache.matrixUnplacedTasks.isEmpty
+                ? "Nothing here to place."
+                : "\(cache.matrixUnplacedTasks.count) unplaced — press m l to list them"
           )
           .font(.system(size: 11))
           .foregroundColor(themeColor(.textSecondary))
@@ -210,15 +238,15 @@ struct EisenhowerMatrixView: View {
       // from the centre is what `MatrixGeometry` inverts.
       .dropDestination(for: TaskDragPayload.self) { payloads, location in
         guard let payload = payloads.first else { return false }
-        let coordinate = MatrixGeometry.snappedCoordinate(
+        // Snapping, the window's bounds and the "not the unplaced sentinel"
+        // rule all live in `MatrixViewport` — zooming gave the view a second
+        // mapping to get right, and one of the two would have drifted.
+        let coordinate = viewport.placement(
           offsetX: location.x - center.x,
           offsetY: location.y - center.y,
           plotSize: size
         )
-        // A drop landing exactly on the origin would read as "unplaced" and
-        // vanish, so it is nudged onto the nearest real slot instead.
-        let urgency = coordinate.urgency == 0 && coordinate.importance == 0 ? 1 : coordinate.urgency
-        place(taskId: payload.taskId, urgency: urgency, importance: coordinate.importance)
+        place(taskId: payload.taskId, urgency: coordinate.urgency, importance: coordinate.importance)
         return true
       } isTargeted: { isPlotTargeted = $0 }
       .overlay(
@@ -396,12 +424,23 @@ struct EisenhowerMatrixView: View {
 
   // MARK: - Chrome
 
+  /// The watermark, and the pointer's way into a zoom — clicking a box's name
+  /// is the obvious gesture for "show me that box", and `mz` is its keyboard
+  /// half.
   private func quadrantLabel(_ quadrant: MatrixQuadrant, alignment: Alignment) -> some View {
     Text(quadrant.title.uppercased())
       .font(.system(size: 24, weight: .black))
       .foregroundColor(themeColor(.textSecondary).opacity(0.12))
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
+      // Padded and given its hit area *before* the frame expands it. The other
+      // way round, each of the four labels claims the whole plot and the last
+      // one drawn answers for every click on the grid.
       .padding(30)
+      .contentShape(Rectangle())
+      .onTapGesture {
+        manager.popoverChrome.focusedMatrixQuadrant = quadrant
+        manager.statusMessage = "\(quadrant.title) — Esc leaves"
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
   }
 
   /// Names the pile, not just its representative — a dot standing for thirty

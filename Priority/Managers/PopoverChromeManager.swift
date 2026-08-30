@@ -71,6 +71,13 @@ import PriorityCore
   /// not remember by morning.
   var openMatrixPile: MatrixPileKey?
 
+  /// The quadrant filling the grid, if one is focused.
+  ///
+  /// Not persisted, like the open pile: it is somewhere you are looking, and a
+  /// popover that reopened showing a quarter of its own plot would be one you
+  /// had to zoom out of every morning.
+  var focusedMatrixQuadrant: MatrixQuadrant?
+
   /// Whether the Matrix view draws its drawer at all.
   ///
   /// An open pile shows the drawer without touching the toggle, so closing the

@@ -508,9 +508,16 @@ struct KeyboardShortcutRouter {
       if isFocused { return false }
       manager.navigationState.rootScopeFocusLevel = 0
       if manager.taskListViewModel.rootTaskView == .eisenhower {
-        // Out of the pile before out along the plot — the same ordering ← has
-        // everywhere else, where it shuts what is open before it moves.
-        if !closeOpenMatrixPile() { _ = moveMatrixSelection(.left) }
+        // Out of the pile, then out of the zoom, then along the plot — the same
+        // ordering ← has everywhere else, shutting what is open before it moves.
+        if !closeOpenMatrixPile() {
+          if manager.popoverChrome.focusedMatrixQuadrant != nil {
+            manager.popoverChrome.focusedMatrixQuadrant = nil
+            manager.statusMessage = "Whole matrix."
+          } else {
+            _ = moveMatrixSelection(.left)
+          }
+        }
         updateTitle()
         return true
       }
@@ -669,9 +676,14 @@ struct KeyboardShortcutRouter {
         manager.dailyLog.cancelDailyEdit()
         return true
       }
-      // An open matrix pile is the innermost thing on screen, so it unwinds
-      // before the scope focus and before the window.
+      // The matrix unwinds innermost-first: the pile sits inside the zoom,
+      // which sits inside the scope focus, which sits inside the window.
       if closeOpenMatrixPile() { return true }
+      if manager.popoverChrome.focusedMatrixQuadrant != nil {
+        manager.popoverChrome.focusedMatrixQuadrant = nil
+        manager.statusMessage = "Whole matrix."
+        return true
+      }
       if rootScopeFocused {
         manager.navigationState.rootScopeFocusLevel = 0
         return true
@@ -917,6 +929,13 @@ struct KeyboardShortcutRouter {
           chrome.showsMatrixUnplaced
           ? "Unplaced: \(manager.taskListViewModel.cache.matrixUnplacedTasks.count)"
           : "Unplaced list hidden."
+        return true
+      }
+      if manager.taskListViewModel.rootTaskView == .eisenhower,
+        manager.preferences.shortcutMatchesSequence(
+          action: .matrixFocusQuadrant, sequence: sequence)
+      {
+        focusMatrixQuadrantUnderSelection()
         return true
       }
       if manager.preferences.shortcutMatchesSequence(action: .sequenceMatrixCoord, sequence: sequence)
@@ -1188,6 +1207,29 @@ extension KeyboardShortcutRouter {
     return true
   }
 
+  /// Fill the grid with the box the selection is standing in.
+  ///
+  /// Toggles, so `mz` twice is there and back. With nothing selected there is
+  /// no box to mean, and saying so beats zooming somewhere arbitrary.
+  @MainActor private func focusMatrixQuadrantUnderSelection() {
+    let chrome = manager.popoverChrome
+    if chrome.focusedMatrixQuadrant != nil {
+      chrome.focusedMatrixQuadrant = nil
+      manager.statusMessage = "Whole matrix."
+      return
+    }
+    guard let taskId = manager.taskListViewModel.currentTask?.id,
+      let level = manager.taskListViewModel.cache.effectiveEisenhowerLevels[taskId]
+    else {
+      manager.statusMessage = "Pick a dot first — m z zooms into its quadrant."
+      return
+    }
+    let quadrant = MatrixGeometry.quadrant(
+      urgency: level.urgency, importance: level.importance)
+    chrome.focusedMatrixQuadrant = quadrant
+    manager.statusMessage = "\(quadrant.title) — Esc leaves"
+  }
+
   @MainActor private func moveMatrixSelection(_ direction: MatrixDirection) -> Bool {
     let cache = manager.taskListViewModel.cache
     // An inherited task navigates from its ancestor's coordinate, which is the
@@ -1196,9 +1238,16 @@ extension KeyboardShortcutRouter {
     let coordinate = manager.taskListViewModel.currentTask
       .flatMap { cache.effectiveEisenhowerLevels[$0.id] }
       .map { (urgency: $0.urgency, importance: $0.importance) }
+    // Zoomed in, the arrows stay in the box you are looking at — walking off
+    // the edge into a dot that is not drawn is motion with no picture.
+    let clusters = manager.popoverChrome.focusedMatrixQuadrant.map { quadrant in
+      cache.matrixClusters.filter {
+        MatrixGeometry.quadrant(urgency: $0.urgency, importance: $0.importance) == quadrant
+      }
+    } ?? cache.matrixClusters
     guard
       let target = MatrixNavigation.target(
-        from: coordinate, direction: direction, in: cache.matrixClusters)
+        from: coordinate, direction: direction, in: clusters)
     else { return false }
 
     manager.taskNavigationService.selectOnMatrix(target.representative)

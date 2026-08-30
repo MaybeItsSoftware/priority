@@ -125,6 +125,7 @@ still names its real key.
 | `me` | Eliminate — neither |
 | `m<u><i>` | An exact coordinate, each axis `-9` to `9`. `-` before a digit makes it negative: `m-3 5`, `m5-2`, `m-4-4` |
 | `m00` | Take the task off the matrix |
+| `mz` | Zoom into the selected dot's quadrant, so one box fills the grid. Again, `Esc` or `←` to zoom out. Clicking a quadrant's name does the same |
 | `ml` | Show or hide the unplaced list (also the dock's tray button) |
 | `↑` `↓` `←` `→` | Move the selection between dots — one coordinate at a time, nearest on the other axis breaking the tie. `j` `k` `h` `l` do the same. `↑` with nothing above it reaches the tab strip |
 | `⏎` | Open the dot the selection is on — lists everything standing on that point in the drawer. `↑` `↓` walk it, `←` or `Esc` closes it. Double-clicking a dot does the same |
@@ -168,6 +169,12 @@ siblings. The drift is capped at two units and can never cross an axis, so it
 orders tasks within a quadrant and never argues with which quadrant the goal
 was put in. Inherited dots are drawn hollow because the position is read off
 the task rather than chosen for it.
+
+`Do` fills up faster than the other three, and a quadrant is only a quarter of
+the glass. Zooming rescales the window rather than the data: the same
+coordinates through a smaller frame, with the other three boxes out of view, the
+arrow keys confined to the one you are in, and a drop landing on a coordinate
+that belongs to it.
 
 Placing a task by hand overrides all of that — a coordinate you set is exactly
 where the dot goes. Where several tasks still land on the same point, the plot

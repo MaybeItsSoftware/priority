@@ -156,6 +156,7 @@ public enum ShortcutReference {
           note: "Lists everything standing on that point — ← or Esc closes it"
         ),
         literal("m00", "Take off the matrix"),
+        entry(.matrixFocusQuadrant),
         entry(.matrixToggleUnplaced),
         entry(.sequenceMatrixCoord),
       ]
@@ -274,6 +275,7 @@ public enum ShortcutReference {
     .setPriorityRank: "Within the parent, not the whole list",
     .setAbsolutePriorityRank: "Across the whole list",
     .showShortcutReference: "This screen",
+    .matrixFocusQuadrant: "Fills the grid with the selected dot's box — Esc or ← leaves",
     // A modifier alone produces no key-down, so ⇧⇧ cannot be a binding — it is
     // a gesture recognised alongside them. Named here so the one place that
     // lists every key does not omit it.
