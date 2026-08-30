@@ -214,20 +214,35 @@ final class TaskRepositoryTests: XCTestCase {
     XCTAssertNotNil(repo.taskEisenhowerLevels[10])
   }
 
-  func testReconcilePriorityQueueDropsClosedTasksAndReScopesByParent() {
+  /// A closed task keeps its slot, in the scope it was ranked in — there is no
+  /// current parent to read for it, and re-scoping it to the root would move it
+  /// somewhere else the moment it was reopened. An open task is still re-scoped
+  /// under wherever it has actually been moved to.
+  func testReconcilePriorityQueueReScopesOpenTasksAndHoldsClosedOnes() {
     let repo = makeRepository(initialListId: "list-a")
     // Legacy: queue stored under parent 0 but task 11's actual parent is 5.
     repo.savePriorityQueue([0: [1, 11, 99]])
     repo.tasks = [
       makeTask(id: 1, parentId: 0),
       makeTask(id: 11, parentId: 5),
-      // 99 has been closed/deleted: not in the open list any more.
+      // 99 has been closed: not in the open list any more.
     ]
 
     repo.reconcilePriorityQueueWithOpenTasks()
 
-    XCTAssertEqual(repo.priorityTaskIdsByParentId[0], [1])
+    XCTAssertEqual(repo.priorityTaskIdsByParentId[0], [1, 99])
     XCTAssertEqual(repo.priorityTaskIdsByParentId[5], [11])
-    XCTAssertFalse(repo.priorityTaskIdsByParentId.values.flatMap { $0 }.contains(99))
+  }
+
+  /// An optimistic create's temp id is the one thing that really is gone once
+  /// it leaves the list — nothing will ever refer to it again.
+  func testReconcilePriorityQueueDropsOptimisticTempIds() {
+    let repo = makeRepository(initialListId: "list-a")
+    repo.savePriorityQueue([0: [1, -7]])
+    repo.tasks = [makeTask(id: 1, parentId: 0)]
+
+    repo.reconcilePriorityQueueWithOpenTasks()
+
+    XCTAssertEqual(repo.priorityTaskIdsByParentId[0], [1])
   }
 }

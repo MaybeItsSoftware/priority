@@ -794,7 +794,6 @@ extension TaskRepository {
     if filteredAbsolute != absolutePriorityTaskIds {
       saveAbsolutePriorityQueue(filteredAbsolute)
     }
-    reconcileEisenhowerLevels()
   }
 
   @MainActor func reconcilePriorityQueueWithOpenTasks() {
@@ -803,8 +802,16 @@ extension TaskRepository {
     var updated: [Int: [Int]] = [:]
     var changed = false
     for (parentId, ids) in priorityTaskIdsByParentId {
+      let retained = CompletionRetention.retained(storedIds: ids, openTaskIds: openTaskIds)
       for id in ids {
-        guard openTaskIds.contains(id) else { changed = true; continue }
+        guard retained.contains(id) else { changed = true; continue }
+        // A task that is retained but not open has been completed. It keeps the
+        // scope it was ranked in — there is no current parent to read, and
+        // re-scoping it to the root would move it on reopening.
+        guard openTaskIds.contains(id) else {
+          updated[parentId, default: []].append(id)
+          continue
+        }
         // Re-scope each task under its *actual* current parent. This keeps stored
         // queues coherent if a task was moved, and also normalizes legacy-migrated
         // queues that all landed under root scope.
@@ -817,7 +824,9 @@ extension TaskRepository {
       savePriorityQueue(updated)
     }
 
-    let filteredAbsolute = absolutePriorityTaskIds.filter { openTaskIds.contains($0) }
+    let retainedAbsolute = CompletionRetention.retained(
+      storedIds: absolutePriorityTaskIds, openTaskIds: openTaskIds)
+    let filteredAbsolute = absolutePriorityTaskIds.filter { retainedAbsolute.contains($0) }
     if filteredAbsolute != absolutePriorityTaskIds {
       saveAbsolutePriorityQueue(filteredAbsolute)
     }
@@ -864,7 +873,7 @@ extension TaskRepository {
   }
 
   @MainActor func reconcileEisenhowerLevels() {
-    let retained = MatrixLevelRetention.retained(
+    let retained = CompletionRetention.retained(
       storedIds: taskEisenhowerLevels.keys, openTaskIds: Set(tasks.map(\.id)))
     let filtered = taskEisenhowerLevels.filter { retained.contains($0.key) }
     if filtered.count != taskEisenhowerLevels.count {

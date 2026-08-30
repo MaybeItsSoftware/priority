@@ -155,14 +155,20 @@ import PriorityCore
     cacheStorage.taskById = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
     cacheStorage.tagsByTaskId = TaskFilterEngine.extractTagsByTaskId(tasks: tasks)
     cacheStorage.rootDueBucket = TaskFilterEngine.computeRootDueBuckets(tasks: tasks)
+    // Completed tasks keep their slot in the queue so that reopening one puts
+    // it back where it was, but they must not take a *number*: the ranks on
+    // screen are 1…n over the tasks actually open, with the held slots skipped.
+    let openIds = Set(tasks.map(\.id))
     var rankByTaskId: [Int: Int] = [:]
     for (_, ids) in repository.priorityTaskIdsByParentId {
-      for (idx, id) in ids.enumerated() {
+      for (idx, id) in ids.filter({ openIds.contains($0) }).enumerated() {
         rankByTaskId[id] = idx + 1
       }
     }
     var absoluteRankByTaskId: [Int: Int] = [:]
-    for (idx, id) in repository.absolutePriorityTaskIds.enumerated() {
+    for (idx, id) in repository.absolutePriorityTaskIds.filter({ openIds.contains($0) })
+      .enumerated()
+    {
       absoluteRankByTaskId[id] = idx + 1
     }
     cacheStorage.priorityRank = rankByTaskId
