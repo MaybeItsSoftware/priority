@@ -14,17 +14,20 @@ final class MatrixSpreadTests: XCTestCase {
     calendar.date(byAdding: .day, value: offset, to: now)!
   }
 
-  private func drift(due: Int?, rank: Int?) -> (urgency: Double, importance: Double) {
+  private func drift(due: Int?, rank: Int?, id: Int = 1) -> (urgency: Double, importance: Double) {
     MatrixSpread.drift(
-      dueDate: due.map(days), priorityRank: rank, now: now, calendar: calendar)
+      dueDate: due.map(days), priorityRank: rank, taskId: id, now: now, calendar: calendar)
   }
 
   // MARK: - Reading the task's own facts
 
+  /// Compared across buckets, not within them: "today" and "in two days" are
+  /// deliberately the same level, because a plot that distinguished them would
+  /// be claiming a precision the coordinate does not have.
   func testSoonerIsMoreUrgent() {
-    XCTAssertGreaterThan(drift(due: -1, rank: nil).urgency, drift(due: 0, rank: nil).urgency)
-    XCTAssertGreaterThan(drift(due: 0, rank: nil).urgency, drift(due: 2, rank: nil).urgency)
-    XCTAssertGreaterThan(drift(due: 2, rank: nil).urgency, drift(due: 30, rank: nil).urgency)
+    XCTAssertGreaterThan(drift(due: -1, rank: nil).urgency, drift(due: 1, rank: nil).urgency)
+    XCTAssertGreaterThan(drift(due: 1, rank: nil).urgency, drift(due: 7, rank: nil).urgency)
+    XCTAssertGreaterThan(drift(due: 7, rank: nil).urgency, drift(due: 40, rank: nil).urgency)
   }
 
   /// An unscheduled task under an urgent goal is the one worth seeing sit below
@@ -34,7 +37,8 @@ final class MatrixSpreadTests: XCTestCase {
   }
 
   func testAHigherRankIsMoreImportant() {
-    XCTAssertGreaterThan(drift(due: nil, rank: 1).importance, drift(due: nil, rank: 5).importance)
+    XCTAssertGreaterThan(drift(due: nil, rank: 1).importance, drift(due: nil, rank: 3).importance)
+    XCTAssertGreaterThan(drift(due: nil, rank: 3).importance, drift(due: nil, rank: 5).importance)
     XCTAssertGreaterThan(drift(due: nil, rank: 5).importance, drift(due: nil, rank: 9).importance)
   }
 
@@ -43,13 +47,65 @@ final class MatrixSpreadTests: XCTestCase {
   }
 
   func testTheDriftNeverExceedsItsReach() {
+    let limit = MatrixSpread.reach + MatrixSpread.scatter
     for due in [-5, 0, 1, 4, 40] {
       for rank in [1, 4, 9] {
-        let value = drift(due: due, rank: rank)
-        XCTAssertLessThanOrEqual(abs(value.urgency), MatrixSpread.reach)
-        XCTAssertLessThanOrEqual(abs(value.importance), MatrixSpread.reach)
+        for id in [1, 71981562, -3] {
+          let value = drift(due: due, rank: rank, id: id)
+          XCTAssertLessThanOrEqual(abs(value.urgency), limit)
+          XCTAssertLessThanOrEqual(abs(value.importance), limit)
+        }
       }
     }
+  }
+
+  // MARK: - Breaking ties without inventing an order
+
+  /// The bug this fixes: the fact levels were drawn from a fixed handful, so
+  /// every task landed on one of a few dozen points and the plot read as a
+  /// lattice. Two tasks tied on every fact must still be two dots.
+  func testTasksTiedOnEveryFactStillLandApart() {
+    let a = drift(due: nil, rank: nil, id: 72510514)
+    let b = drift(due: nil, rank: nil, id: 72510515)
+
+    XCTAssertNotEqual(a.urgency, b.urgency)
+    XCTAssertNotEqual(a.importance, b.importance)
+  }
+
+  /// Same id, same point — forever. `Hasher` is seeded per launch, so using it
+  /// would move every dot each time the app opened.
+  func testTheTieBreakIsStableForAnId() {
+    for id in [1, 999, 72510514, -12] {
+      XCTAssertEqual(drift(due: nil, rank: nil, id: id).urgency,
+                     drift(due: nil, rank: nil, id: id).urgency)
+    }
+  }
+
+  /// The constraint that keeps the scatter honest: it fills its own cell and
+  /// never reaches into the next, so a task can never be drawn as more urgent
+  /// than one genuinely due sooner.
+  func testTheTieBreakNeverReordersTasksTheFactsSeparate() {
+    var sooner = -Double.infinity
+    for id in 1...400 {
+      sooner = max(sooner, drift(due: 30, rank: nil, id: id).urgency)
+    }
+    var later = Double.infinity
+    for id in 1...400 {
+      later = min(later, drift(due: 0, rank: nil, id: id).urgency)
+    }
+    XCTAssertLessThanOrEqual(sooner, later)
+  }
+
+  /// Spread over a realistic pile, the dots should not pile back up.
+  func testAPileOfFortyTiedTasksProducesFortyPoints() {
+    let goal = (urgency: 6.0, importance: 6.0)
+    let points = Set(
+      (1...40).map { id -> String in
+        let point = MatrixSpread.spread(base: goal, drift: drift(due: nil, rank: nil, id: id))
+        return "\(point.urgency),\(point.importance)"
+      })
+
+    XCTAssertEqual(points.count, 40)
   }
 
   // MARK: - What the drift is not allowed to do

@@ -245,7 +245,7 @@ import PriorityCore
       let point = MatrixSpread.spread(
         base: (urgency: level.urgency, importance: level.importance),
         drift: MatrixSpread.drift(
-          dueDate: task.dueDate, priorityRank: ranks[taskId], now: now)
+          dueDate: task.dueDate, priorityRank: ranks[taskId], taskId: taskId, now: now)
       )
       result[taskId] = EffectiveEisenhowerLevel(
         urgency: point.urgency, importance: point.importance,

@@ -16,22 +16,41 @@ import Foundation
 /// coordinate.
 public enum MatrixSpread {
 
-  /// The furthest a derived offset moves a task from what it inherited.
+  /// The furthest the *facts* move a task from what it inherited.
   ///
   /// Two units on a scale of nine: enough to separate a pile visibly, small
-  /// enough that the goal's own position is still what you read first. The
-  /// coordinate stays an answer about the goal, refined — not replaced.
+  /// enough that the goal's own position is still what you read first.
   public static let reach: Double = 2
 
-  /// How far along each axis a task's own facts push it.
+  /// How far a task may be nudged off its fact-derived point to break a tie.
+  ///
+  /// Exactly half the spacing between fact levels, so scatter fills a cell and
+  /// never reaches into the next one — a task can never be drawn as more urgent
+  /// than one that is genuinely due sooner. Within a cell the arrangement means
+  /// nothing, and that is the point: those tasks are tied on every fact the app
+  /// has, and forty of them spread across a square you can click is a better
+  /// answer than forty stacked on a dot labelled `40`.
+  public static let scatter: Double = 0.5
+
+  /// How far along each axis a task's own facts push it, plus the tie-break.
+  ///
+  /// The fact terms are whole steps. That was not true at first, and the plot
+  /// showed it: the levels were half-steps drawn from a fixed handful, so every
+  /// task landed on one of a few dozen points and the result read as a lattice
+  /// — regular in a way nothing about the data is. Whole steps for the meaning,
+  /// a continuous nudge for the ties.
   public static func drift(
     dueDate: Date?,
     priorityRank: Int?,
+    taskId: Int,
     now: Date,
     calendar: Calendar = .current
   ) -> (urgency: Double, importance: Double) {
-    (urgency: urgencyDrift(dueDate: dueDate, now: now, calendar: calendar),
-     importance: importanceDrift(priorityRank: priorityRank))
+    let jitter = tieBreak(taskId: taskId)
+    return (
+      urgency: urgencyDrift(dueDate: dueDate, now: now, calendar: calendar) + jitter.urgency,
+      importance: importanceDrift(priorityRank: priorityRank) + jitter.importance
+    )
   }
 
   /// The inherited coordinate with the drift applied.
@@ -48,20 +67,19 @@ public enum MatrixSpread {
      importance: bounded(base: base.importance, drift: drift.importance))
   }
 
-  /// Sooner is more urgent, and no due date at all is less urgent than the goal
-  /// nominally is — an unscheduled task under an urgent goal is exactly the one
-  /// worth seeing sitting below its siblings.
+  /// Sooner is more urgent, and no due date at all is the least urgent of the
+  /// lot — an unscheduled task under an urgent goal is exactly the one worth
+  /// seeing sit below its siblings.
   private static func urgencyDrift(dueDate: Date?, now: Date, calendar: Calendar) -> Double {
-    guard let dueDate else { return -1 }
+    guard let dueDate else { return -reach }
     let today = calendar.startOfDay(for: now)
     let due = calendar.startOfDay(for: dueDate)
     guard let days = calendar.dateComponents([.day], from: today, to: due).day else { return 0 }
     switch days {
     case ..<0: return reach
-    case 0: return 1.5
-    case 1...2: return 1
-    case 3...7: return 0.5
-    default: return 0
+    case 0...2: return 1
+    case 3...14: return 0
+    default: return -1
     }
   }
 
@@ -69,9 +87,33 @@ public enum MatrixSpread {
   /// unranked task has not been argued about at all — so it sits below every
   /// task that has.
   private static func importanceDrift(priorityRank: Int?) -> Double {
-    guard let priorityRank else { return -1 }
-    let rank = Double(min(max(priorityRank, 1), 9))
-    return reach - (rank - 1) / 8 * (reach - 0.5)
+    guard let priorityRank else { return -reach }
+    switch min(max(priorityRank, 1), 9) {
+    case 1, 2: return reach
+    case 3, 4: return 1
+    case 5, 6: return 0
+    default: return -1
+    }
+  }
+
+  /// A stable pseudo-random offset in `-scatter ..< scatter` on each axis.
+  ///
+  /// Mixed by hand rather than through `Hasher`, whose seed changes every
+  /// launch — dots that jumped to new positions each time the app opened would
+  /// read as the data having changed. Same id, same point, forever.
+  private static func tieBreak(taskId: Int) -> (urgency: Double, importance: Double) {
+    var state = UInt64(bitPattern: Int64(taskId)) &+ 0x9E37_79B9_7F4A_7C15
+    func next() -> Double {
+      state &+= 0x9E37_79B9_7F4A_7C15
+      var z = state
+      z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+      z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+      z = z ^ (z >> 31)
+      // Top 53 bits into 0..<1, then onto -scatter ..< scatter.
+      let unit = Double(z >> 11) / Double(1 << 53)
+      return (unit * 2 - 1) * scatter
+    }
+    return (urgency: next(), importance: next())
   }
 
   /// Zero counts as the lower side of an axis, the way `MatrixGeometry.quadrant`

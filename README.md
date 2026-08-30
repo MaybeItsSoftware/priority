@@ -165,7 +165,11 @@ placing a handful of goals classifies everything beneath them. An inherited
 coordinate is a starting point rather than the answer: the task's **own due
 date and priority rank** move it inside its goal's point — sooner is further
 right, higher-ranked is further up, and a task with neither sits below its
-siblings. The drift is capped at two units and can never cross an axis, so it
+siblings. Those are whole steps, with a small stable nudge on top to separate
+tasks the facts leave tied: the nudge is exactly half a step, so it fills its
+own cell and can never draw a task as more urgent than one genuinely due
+sooner. Without it the plot read as a lattice, because most tasks share a due
+date of *none* and a rank of *none*. The drift can never cross an axis, so it
 orders tasks within a quadrant and never argues with which quadrant the goal
 was put in. Inherited dots are drawn hollow because the position is read off
 the task rather than chosen for it.
