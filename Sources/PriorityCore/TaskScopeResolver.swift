@@ -13,10 +13,14 @@ public enum TaskScopeMode: String, Codable, Sendable, CaseIterable {
   /// Every descendant of the scope, at any depth.
   case wholeSubtree
 
+  /// Named for what the view contains rather than for where you are standing.
+  /// "This level" and "Everything below" described the *scope*, which is the
+  /// one thing already visible — the breadcrumb beside the chip says where you
+  /// are. What was missing was which of the two sets you were being shown.
   public var title: String {
     switch self {
-    case .strictlyParented: return "This level"
-    case .wholeSubtree: return "Everything below"
+    case .strictlyParented: return "Direct children"
+    case .wholeSubtree: return "All descendants"
     }
   }
 }

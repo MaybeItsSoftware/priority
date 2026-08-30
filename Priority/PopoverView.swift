@@ -907,27 +907,32 @@ struct PopoverView: View {
       Button {
         taskListViewModel.showChildrenInMenus.toggle()
       } label: {
+        // The house micro-label: 10pt bold, uppercase, 0.15em of tracking. Only
+        // the *widened* scope is tinted — showing everything below is the
+        // unusual state and the one worth a colour. Strictly parented is the
+        // resting state, so it is a hairline and muted text and nothing else;
+        // it used to carry a filled capsule of its own, which put a second
+        // solid shape in a bar whose whole job is one line of breadcrumb.
         Text(mode.title.uppercased())
           .font(.system(size: 10, weight: .bold))
           .tracking(1.5)
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .background(
-            mode == .wholeSubtree
-              ? themeColor(.link).opacity(0.12) : themeColor(.panelSurface)
-          )
+          .padding(.horizontal, 8)
+          .padding(.vertical, 3)
           .foregroundColor(
             mode == .wholeSubtree ? themeColor(.link) : themeColor(.textSecondary)
+          )
+          .background(
+            Capsule().fill(
+              mode == .wholeSubtree ? themeColor(.link).opacity(0.12) : Color.clear)
           )
           .overlay(
             Capsule().stroke(
               mode == .wholeSubtree ? themeColor(.link).opacity(0.4) : themeColor(.panelDivider),
               lineWidth: 1)
           )
-          .clipShape(Capsule())
       }
       .buttonStyle(PlainButtonStyle())
-      .help("Whether this view shows only this level or everything below it")
+      .help("Whether this view shows only the scope's direct children or every descendant of it")
     }
   }
 
