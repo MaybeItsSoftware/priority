@@ -139,6 +139,27 @@ struct EisenhowerMatrixView: View {
                 manager.statusMessage = "Whole matrix."
               }
               .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            // A hairline per whole step. Coordinates are integers — a drop
+            // snaps to one — so zoomed in, the grid should show the slots you
+            // can actually land on rather than a blank field. Only when
+            // zoomed: nineteen of these across the whole board is noise.
+            Path { path in
+              for step in stride(from: -MatrixGeometry.extent, through: MatrixGeometry.extent, by: 1)
+              {
+                let offset = viewport.offset(
+                  urgency: step, importance: step, plotSize: size)
+                if abs(offset.x) <= size / 2 {
+                  path.move(to: CGPoint(x: center.x + offset.x, y: center.y - size / 2))
+                  path.addLine(to: CGPoint(x: center.x + offset.x, y: center.y + size / 2))
+                }
+                if abs(offset.y) <= size / 2 {
+                  path.move(to: CGPoint(x: center.x - size / 2, y: center.y + offset.y))
+                  path.addLine(to: CGPoint(x: center.x + size / 2, y: center.y + offset.y))
+                }
+              }
+            }
+            .stroke(themeColor(.panelDivider).opacity(0.45), lineWidth: 1)
           } else {
             quadrantLabel(MatrixQuadrant.doNow, alignment: .topTrailing)
             quadrantLabel(MatrixQuadrant.schedule, alignment: .topLeading)
@@ -155,19 +176,28 @@ struct EisenhowerMatrixView: View {
           }
         }
 
+        // The axis words sit *on* the axes, which is why they have to move when
+        // the window does. Zoomed into a box, neither axis runs through the
+        // middle any more — they are two of its edges — so leaving "URGENT"
+        // at mid-height would be naming a line that is not drawn and is not
+        // there. Zoomed, the words move to the edges and say which way the
+        // value climbs, which is true in every quadrant: right is always more
+        // urgent, up is always more important.
         Group {
-          Text("URGENT")
+          Text(focused == nil ? "URGENT" : "MORE URGENT →")
             .font(.system(size: 10, weight: .bold))
             .tracking(1.5)
             .foregroundColor(themeColor(.textSecondary))
-            .position(x: proxy.size.width - 40, y: center.y + 12)
+            .position(
+              x: proxy.size.width - 60,
+              y: focused == nil ? center.y + 12 : proxy.size.height - 16)
 
-          Text("IMPORTANT")
+          Text(focused == nil ? "IMPORTANT" : "MORE IMPORTANT ↑")
             .font(.system(size: 10, weight: .bold))
             .tracking(1.5)
             .foregroundColor(themeColor(.textSecondary))
             .rotationEffect(.degrees(-90))
-            .position(x: center.x - 12, y: 40)
+            .position(x: focused == nil ? center.x - 12 : 16, y: 60)
         }
 
         MatrixDotLayer(
@@ -220,6 +250,12 @@ struct EisenhowerMatrixView: View {
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
+      // Every dot's position is derived from the viewport, so animating on the
+      // focused quadrant makes the whole plot travel to the new scale rather
+      // than cutting to it.
+      .animation(
+        CelebrationMotion.viewport(reduceMotion: manager.celebration.prefersReducedMotion),
+        value: focused)
       .contentShape(Rectangle())
       .onContinuousHover { phase in
         switch phase {

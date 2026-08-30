@@ -42,6 +42,15 @@ enum CelebrationMotion {
     .spring(response: scaled(0.24, reduceMotion), dampingFraction: 0.72)
   }
 
+  /// Changing what the plot is a window onto — zooming into a quadrant and
+  /// back. Eased rather than sprung: the dots are moving because the *scale*
+  /// changed, not because anything happened to them, and a spring would give
+  /// that a bounce it has not earned. Lives here so it is scaled for reduced
+  /// motion like everything else rather than carrying its own raw number.
+  static func viewport(reduceMotion: Bool) -> Animation {
+    .easeInOut(duration: scaled(0.22, reduceMotion))
+  }
+
   /// The status glyph. Much looser — a small shape is where an overshoot reads
   /// as confidence rather than as slop, and this is the moment the completion
   /// is actually *felt*.
