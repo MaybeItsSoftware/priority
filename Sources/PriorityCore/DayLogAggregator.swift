@@ -149,31 +149,32 @@ public enum DayLogAggregator {
 
   // MARK: - Chart buckets
 
-  /// Completions per logical day, zero-filled across the whole window.
+  /// Daily ticks per logical day, zero-filled across the whole window.
   ///
-  /// The zero-fill is load-bearing: a day with nothing done has to occupy its
-  /// slot on the axis and render as an absent bar. Dropping empty days would
-  /// compress the gaps and quietly draw a busier history than the real one.
+  /// The zero-fill is load-bearing: a day with nothing ticked has to occupy its
+  /// slot on the axis and render as a marker on the baseline. Dropping empty
+  /// days would compress the gaps and quietly draw a busier history than the
+  /// real one.
   ///
-  /// Tasks and dailies are summed into one bar on purpose. The chart answers
-  /// "how much did I get done", and splitting it would invite reading the two
-  /// as competing rather than as one day's output.
+  /// Dailies only. Task completions used to be summed in alongside them, on the
+  /// reasoning that the chart answered "how much did I get done" — but a day's
+  /// task count is whatever happened to be on the list, so it swamped the
+  /// dailies and made the line say nothing about the habits it sits under. The
+  /// chart belongs to the checklist above it: same denominator every day, so
+  /// the shape of the line is the shape of the routine.
   public static func dailyBuckets(
     events: [DayLogEvent],
     boundary: DayBoundary,
     endingOn now: Date,
     days: Int
   ) -> [Bucket] {
-    var countsByDay = dailyTickCountsByDay(events, boundary: boundary)
-    for completion in netCompletions(events) {
-      countsByDay[boundary.logicalDay(for: completion.at), default: 0] += 1
-    }
+    let countsByDay = dailyTickCountsByDay(events, boundary: boundary)
     return boundary.days(endingOn: now, count: days).map { day in
       Bucket(day: day, key: boundary.dayKey(for: day), completed: countsByDay[day] ?? 0)
     }
   }
 
-  /// Completions per calendar week, zero-filled. Used for the year range, where
+  /// Daily ticks per calendar week, zero-filled. Used for the year range, where
   /// 365 daily bars would be a few pixels each and unreadable in a popover.
   public static func weeklyBuckets(
     events: [DayLogEvent],
@@ -182,11 +183,8 @@ public enum DayLogAggregator {
     weeks: Int
   ) -> [Bucket] {
     var countsByWeekStart: [Date: Int] = [:]
-    for completion in netCompletions(events) {
-      countsByWeekStart[boundary.weekStart(for: completion.at), default: 0] += 1
-    }
-    // Daily ticks are netted per day first, then rolled up — netting across a
-    // whole week would let Monday's un-tick cancel Tuesday's tick.
+    // Netted per day first, then rolled up — netting across a whole week would
+    // let Monday's un-tick cancel Tuesday's tick.
     for (day, count) in dailyTickCountsByDay(events, boundary: boundary) {
       countsByWeekStart[boundary.weekStart(for: day), default: 0] += count
     }

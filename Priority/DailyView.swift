@@ -395,7 +395,7 @@ struct DailyView: View {
   @ViewBuilder
   private var rangePicker: some View {
     HStack(spacing: 4) {
-      Text(hoverLabel ?? "Completed per \(dailyLog.chartRange.bucketNoun)")
+      Text(hoverLabel ?? "Dailies per \(dailyLog.chartRange.bucketNoun)")
         .font(.system(size: 12))
         .foregroundColor(themeColor(.textSecondary))
         .lineLimit(1)
@@ -510,7 +510,7 @@ struct DailyView: View {
                   inside ? index : (hoveredBucketIndex == index ? nil : hoveredBucketIndex)
               }
               .accessibilityLabel(
-                "\(bucketLabel(bucket)): \(DayLogFormatting.pluralised(bucket.completed, "task", "tasks"))"
+                "\(bucketLabel(bucket)): \(DayLogFormatting.pluralised(bucket.completed, "daily", "dailies"))"
               )
           }
         }
@@ -531,7 +531,7 @@ struct DailyView: View {
     let buckets = dailyLog.chartBuckets()
     guard buckets.indices.contains(index) else { return nil }
     let bucket = buckets[index]
-    return "\(bucketLabel(bucket)) — \(DayLogFormatting.pluralised(bucket.completed, "done", "done"))"
+    return "\(bucketLabel(bucket)) — \(DayLogFormatting.pluralised(bucket.completed, "ticked", "ticked"))"
   }
 
   // Built once rather than per call: `bucketLabel` runs inside every bar's

@@ -377,7 +377,9 @@ final class DailyTickAggregationTests: XCTestCase {
 
   // MARK: - Chart folding
 
-  func testChartCountsTasksAndDailiesTogether() {
+  /// The chart plots the checklist it sits under, so a busy task day must not
+  /// swamp it. Tasks used to be summed in alongside the ticks.
+  func testChartCountsOnlyDailies() {
     let events: [DayLogEvent] = [
       .completed(taskId: 1, title: "Task", at: date(2026, 8, 14, 10)),
       .dailyCompleted(dailyId: "a", title: "Read", at: date(2026, 8, 14, 11)),
@@ -385,7 +387,17 @@ final class DailyTickAggregationTests: XCTestCase {
     ]
     let buckets = DayLogAggregator.dailyBuckets(
       events: events, boundary: boundary, endingOn: date(2026, 8, 14, 20), days: 1)
-    XCTAssertEqual(buckets.map(\.completed), [3])
+    XCTAssertEqual(buckets.map(\.completed), [2])
+  }
+
+  func testWeeklyChartCountsOnlyDailies() {
+    let events: [DayLogEvent] = [
+      .completed(taskId: 1, title: "Task", at: date(2026, 8, 12, 10)),
+      .dailyCompleted(dailyId: "a", title: "Read", at: date(2026, 8, 12, 11)),
+    ]
+    let buckets = DayLogAggregator.weeklyBuckets(
+      events: events, boundary: boundary, endingOn: date(2026, 8, 14, 20), weeks: 1)
+    XCTAssertEqual(buckets.last?.completed, 1)
   }
 
   func testWeeklyBucketsRollUpDailyTicksWithoutNettingAcrossDays() {

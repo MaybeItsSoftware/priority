@@ -142,16 +142,19 @@ final class DayLogAggregatorTests: XCTestCase {
   }
 
   /// The point of netting across the whole log rather than per day: undoing
-  /// yesterday's tick has to remove it from *yesterday*, not subtract one from
+  /// yesterday's completion has to empty *yesterday*, not subtract one from
   /// today.
   func testReopenTheNextDayRemovesThePreviousDaysCompletion() {
     let events: [DayLogEvent] = [
       .completed(taskId: 1, title: "A", at: date(2026, 8, 13, 10)),
       .reopened(taskId: 1, title: "A", at: date(2026, 8, 14, 9)),
     ]
-    let buckets = DayLogAggregator.dailyBuckets(
-      events: events, boundary: boundary, endingOn: date(2026, 8, 14, 12), days: 3)
-    XCTAssertEqual(buckets.map(\.completed), [0, 0, 0])
+    let yesterday = DayLogAggregator.summary(
+      events: events, boundary: boundary, on: date(2026, 8, 13, 20))
+    let today = DayLogAggregator.summary(
+      events: events, boundary: boundary, on: date(2026, 8, 14, 12))
+    XCTAssertEqual(yesterday.completedCount, 0)
+    XCTAssertEqual(today.completedCount, 0)
   }
 
   func testReopenCancelsOnlyTheMostRecentCompletionOfARepeatingTask() {
@@ -176,9 +179,9 @@ final class DayLogAggregatorTests: XCTestCase {
 
   func testDailyBucketsZeroFillDaysWithNoActivity() {
     let events: [DayLogEvent] = [
-      .completed(taskId: 1, title: "A", at: date(2026, 8, 12, 10)),
-      .completed(taskId: 2, title: "B", at: date(2026, 8, 14, 10)),
-      .completed(taskId: 3, title: "C", at: date(2026, 8, 14, 15)),
+      .dailyCompleted(dailyId: "a", title: "A", at: date(2026, 8, 12, 10)),
+      .dailyCompleted(dailyId: "b", title: "B", at: date(2026, 8, 14, 10)),
+      .dailyCompleted(dailyId: "c", title: "C", at: date(2026, 8, 14, 15)),
     ]
     let buckets = DayLogAggregator.dailyBuckets(
       events: events, boundary: boundary, endingOn: date(2026, 8, 14, 20), days: 3)
@@ -195,9 +198,9 @@ final class DayLogAggregatorTests: XCTestCase {
 
   func testWeeklyBucketsAggregateAcrossTheWeek() {
     let events: [DayLogEvent] = [
-      .completed(taskId: 1, title: "A", at: date(2026, 8, 10, 10)),
-      .completed(taskId: 2, title: "B", at: date(2026, 8, 12, 10)),
-      .completed(taskId: 3, title: "C", at: date(2026, 8, 14, 10)),
+      .dailyCompleted(dailyId: "a", title: "A", at: date(2026, 8, 10, 10)),
+      .dailyCompleted(dailyId: "b", title: "B", at: date(2026, 8, 12, 10)),
+      .dailyCompleted(dailyId: "c", title: "C", at: date(2026, 8, 14, 10)),
     ]
     let buckets = DayLogAggregator.weeklyBuckets(
       events: events, boundary: boundary, endingOn: date(2026, 8, 14, 20), weeks: 2)
