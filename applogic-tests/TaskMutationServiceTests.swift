@@ -120,6 +120,44 @@ final class TaskMutationServiceTests: XCTestCase {
     XCTAssertEqual(repository.pendingTaskCreates.first?.tempId, optimistic.id)
   }
 
+  /// The list is an outline, so the selected row can be nested well inside the
+  /// scope while `currentParentId` still names the scope. Adding a sibling has
+  /// to follow the row, not the scope — taking the parent from the scope put
+  /// every add under a nested row back at the top level.
+  func testAddingASiblingOfANestedRowKeepsItUnderThatRowsParent() async {
+    repository.tasks = [
+      makeTask(id: 1, content: "parent", position: 1),
+      makeTask(id: 2, content: "child", parentId: 1, position: 1),
+    ]
+    host.currentParentId = 0
+    host.currentTask = repository.tasks[1]
+
+    await service.addTask(content: "new sibling")
+
+    XCTAssertEqual(plugin.createTaskCalls.first?.parentId, 1)
+    XCTAssertEqual(plugin.createTaskCalls.first?.position, 2)
+    XCTAssertEqual(
+      repository.tasks.first(where: { $0.content == "new sibling" })?.parentId, 1,
+      "the optimistic row has to agree with the create"
+    )
+  }
+
+  /// Add-to-top is the one add that really does mean the current level, so it
+  /// keeps reading the scope even when a nested row is selected.
+  func testAddingAtTheTopOfTheLevelStillUsesTheScopeRatherThanTheSelectedRow() async {
+    repository.tasks = [
+      makeTask(id: 1, content: "parent", position: 1),
+      makeTask(id: 2, content: "child", parentId: 1, position: 1),
+    ]
+    host.currentParentId = 0
+    host.currentTask = repository.tasks[1]
+
+    await service.addTask(content: "new top", insertAtTopOfCurrentLevel: true)
+
+    XCTAssertNil(plugin.createTaskCalls.first?.parentId)
+    XCTAssertEqual(plugin.createTaskCalls.first?.position, 1)
+  }
+
   func testAddWithoutAListPromptsSetupInsteadOfCallingTheServer() async {
     repository.listId = ""
 

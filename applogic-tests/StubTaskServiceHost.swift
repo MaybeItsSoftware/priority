@@ -6,7 +6,7 @@ import Foundation
 /// `SyncService`.
 ///
 /// The tree-shape helpers (`subtreeBlockRange`, `isDescendant`,
-/// `currentLevelTasks`) are real implementations over the repository's task
+/// `visibleTasks`) are real implementations over the repository's task
 /// array rather than canned answers, because the optimistic-completion and
 /// rollback paths under test are exactly the ones that depend on them being
 /// right. Everything else records calls.
@@ -78,10 +78,6 @@ final class StubTaskServiceHost: TaskMutationHost, SyncHost {
   var currentTask: CheckvistTask?
 
   var currentParentId: Int = 0
-
-  var currentLevelTasks: [CheckvistTask] {
-    tasks.filter { ($0.parentId ?? 0) == currentParentId }
-  }
 
   func isDescendant(_ task: CheckvistTask, of ancestorId: Int) -> Bool {
     isDescendant(task, of: ancestorId, in: tasks)

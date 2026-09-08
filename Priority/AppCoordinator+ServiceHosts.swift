@@ -37,7 +37,6 @@ extension AppCoordinator: TaskServiceHost {
 extension AppCoordinator: TaskMutationHost {
   var currentTask: CheckvistTask? { taskListViewModel.currentTask }
 
-  var currentLevelTasks: [CheckvistTask] { taskListViewModel.currentLevelTasks }
 
   func isDescendant(_ task: CheckvistTask, of ancestorId: Int) -> Bool {
     taskListViewModel.isDescendant(task, of: ancestorId)

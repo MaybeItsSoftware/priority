@@ -264,9 +264,26 @@ final class TaskMutationService {
       return
     }
 
+    let target = insertAfterTask ?? host.currentTask
+
+    // A sibling belongs beside the row you are on, which is not the same thing
+    // as the top of the scope. Since the list became an outline the selected
+    // row can sit several levels inside the scope while `currentParentId`
+    // still names the scope itself, so taking the parent from the scope sent
+    // every add under a nested row up to the root. Add-to-top is the one case
+    // that really does mean the current level, by name.
+    let parentIdForNewTask: Int
+    if insertAtTopOfCurrentLevel || target == nil {
+      parentIdForNewTask = host.currentParentId
+    } else {
+      parentIdForNewTask = target?.parentId ?? 0
+    }
+    let parentIdForCreate = parentIdForNewTask == 0 ? nil : parentIdForNewTask
+
     let optimisticTask = insertOptimisticSiblingTask(
       content: trimmedContent,
       afterTask: insertAfterTask,
+      parentId: parentIdForNewTask,
       insertAtTopOfCurrentLevel: insertAtTopOfCurrentLevel,
       insertsAbove: insertsAbove
     )
@@ -278,7 +295,6 @@ final class TaskMutationService {
 
     // Find current position to insert right below.
     var apiPosition = 0
-    let target = insertAfterTask ?? host.currentTask
     if insertAtTopOfCurrentLevel {
       apiPosition = 1
     } else if let current = target {
@@ -289,8 +305,10 @@ final class TaskMutationService {
       if let targetPos = current.position {
         apiPosition = targetPos + offset
       } else {
+        // Positions are per-parent, so the fallback has to count the target's
+        // own siblings rather than the scope's.
         let siblings =
-          repository.tasks.filter { ($0.parentId ?? 0) == host.currentParentId }
+          repository.tasks.filter { ($0.parentId ?? 0) == parentIdForNewTask }
         if let idx = siblings.firstIndex(where: { $0.id == current.id }) {
           apiPosition = idx + 1 + offset
         }
@@ -299,7 +317,6 @@ final class TaskMutationService {
       apiPosition = 1
     }
 
-    let parentIdForCreate = host.currentParentId == 0 ? nil : host.currentParentId
     let positionForCreate: Int? = apiPosition > 0 ? apiPosition : nil
 
     do {
@@ -627,16 +644,20 @@ final class TaskMutationService {
 
   // MARK: - Optimistic Updates
 
+  /// - Parameter parentId: the parent the new row is being added under, as
+  ///   resolved by the caller — the row's own parent for a sibling add, the
+  ///   scope for an add-to-top. 0 for the list root.
   private func insertOptimisticSiblingTask(
     content: String,
     afterTask: CheckvistTask?,
+    parentId: Int,
     insertAtTopOfCurrentLevel: Bool = false,
     insertsAbove: Bool = false
   ) -> CheckvistTask {
     guard let host else {
       return CheckvistTask(
         id: nextOptimisticTaskId(), content: content, status: 0, due: nil,
-        position: nil, parentId: nil, level: nil)
+        position: nil, parentId: parentId == 0 ? nil : parentId, level: nil)
     }
 
     let optimisticTask = CheckvistTask(
@@ -645,18 +666,18 @@ final class TaskMutationService {
       status: 0,
       due: nil,
       position: nil,
-      parentId: host.currentParentId == 0 ? nil : host.currentParentId,
+      parentId: parentId == 0 ? nil : parentId,
       level: nil
     )
 
     var insertIndex = repository.tasks.endIndex
     if insertAtTopOfCurrentLevel {
-      if host.currentParentId == 0 {
+      if parentId == 0 {
         insertIndex =
           repository.tasks.firstIndex(where: { ($0.parentId ?? 0) == 0 })
           ?? repository.tasks.endIndex
       } else if let parentRawIndex = repository.tasks.firstIndex(where: {
-        $0.id == host.currentParentId
+        $0.id == parentId
       }) {
         insertIndex = parentRawIndex + 1
       }
@@ -686,7 +707,11 @@ final class TaskMutationService {
       repository.tasks.append(optimisticTask)
     }
 
-    if let insertedIndex = host.currentLevelTasks.firstIndex(where: {
+    // The outline, not the level: the selection indexes into the rendered
+    // rows, and a row added beside a nested one is not in `currentLevelTasks`
+    // at all — so looking there left the cursor on whichever row happened to
+    // hold that index.
+    if let insertedIndex = host.visibleTasks.firstIndex(where: {
       $0.id == optimisticTask.id
     }) {
       host.currentSiblingIndex = insertedIndex

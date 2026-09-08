@@ -55,7 +55,6 @@ protocol TaskMutationHost: TaskServiceHost {
   // Selection and tree shape.
   var currentTask: CheckvistTask? { get }
   var currentParentId: Int { get }
-  var currentLevelTasks: [CheckvistTask] { get }
   func isDescendant(_ task: CheckvistTask, of ancestorId: Int) -> Bool
   func clampSelectionToVisibleRange()
 
