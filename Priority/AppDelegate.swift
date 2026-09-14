@@ -115,6 +115,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       try? await Task.sleep(nanoseconds: 500_000_000)
       guard let self else { return }
       await self.checkvistManager.syncService.fetchTopTask()
+      self.workspace.importLegacyCheckvistTasks(
+        self.checkvistManager.repository.tasks,
+        sourceListID: self.checkvistManager.repository.listId)
       self.menuBarController.updateTitle()
     }
   }
@@ -215,8 +218,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     else { return }
     lastAutoRefreshTime = now
     Task { [weak self] in
-      await self?.checkvistManager.syncService.fetchTopTask()
-      self?.menuBarController.updateTitle()
+      guard let self else { return }
+      await self.checkvistManager.syncService.fetchTopTask()
+      self.workspace.importLegacyCheckvistTasks(
+        self.checkvistManager.repository.tasks,
+        sourceListID: self.checkvistManager.repository.listId)
+      self.menuBarController.updateTitle()
     }
   }
 

@@ -7,6 +7,7 @@ import PriorityWorkspace
 @MainActor
 @Observable final class WorkspaceViewModel {
   private static let legacyMigrationKey = "localWorkspaceMigratedOfflineTasksV1"
+  private static let checkvistMigrationKeysKey = "localWorkspaceMigratedCheckvistListIDsV1"
 
   @ObservationIgnored private var store: WorkspaceStore?
   @ObservationIgnored private let legacyStore: LocalTaskStore
@@ -172,6 +173,48 @@ import PriorityWorkspace
       try store.finishFocusSession(id: session.id)
       reloadFocus()
       showsFocusPanel = false
+    }
+  }
+
+  /// Imports a loaded legacy Checkvist list once. This is deliberately a copy:
+  /// once migration completes, the workspace is fully local and never needs
+  /// Checkvist in order to open or edit these tasks.
+  func importLegacyCheckvistTasks(_ tasks: [CheckvistTask], sourceListID: String) {
+    guard let store, let workspace else { return }
+    let listID = sourceListID.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !listID.isEmpty, !tasks.isEmpty else { return }
+
+    let defaults = UserDefaults.standard
+    var migratedListIDs = Set(defaults.stringArray(forKey: Self.checkvistMigrationKeysKey) ?? [])
+    guard !migratedListIDs.contains(listID) else { return }
+
+    let uniqueTasks = Dictionary(tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let sourcePrefix = "checkvist:\(listID):"
+    let seeds = uniqueTasks.values.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map { task in
+      LegacyTaskSeed(
+        sourceId: "\(sourcePrefix)\(task.id)",
+        parentSourceId: task.parentId.map { "\(sourcePrefix)\($0)" },
+        title: task.content,
+        notes: task.notes?.map(\.content).joined(separator: "\n\n") ?? "",
+        status: task.status == 0 ? .open : (task.status == 1 ? .completed : .cancelled),
+        sortOrder: task.position ?? 0)
+    }
+
+    do {
+      let importedList = try store.importLegacyTasks(
+        workspaceId: workspace.id,
+        listName: "Imported from Checkvist — \(listID)",
+        seeds: seeds)
+      migratedListIDs.insert(listID)
+      defaults.set(Array(migratedListIDs).sorted(), forKey: Self.checkvistMigrationKeysKey)
+      try load()
+      if let importedList {
+        selectedListID = importedList.id
+        reloadOutline()
+      }
+      errorMessage = nil
+    } catch {
+      errorMessage = error.localizedDescription
     }
   }
 
