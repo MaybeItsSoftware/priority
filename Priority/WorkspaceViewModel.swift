@@ -1,6 +1,15 @@
+import AppKit
 import Foundation
 import Observation
 import PriorityWorkspace
+
+enum WorkspaceCreationKind: String, Identifiable {
+  case list
+  case folder
+
+  var id: String { rawValue }
+  var title: String { self == .list ? "New list" : "New folder" }
+}
 
 /// Presentation state for the desktop-only local workspace. The menu bar and
 /// its Checkvist compatibility panel deliberately do not read this state.
@@ -20,6 +29,9 @@ import PriorityWorkspace
   var scopeTaskID: String?
   var selectedTaskID: String?
   var showsFocusPanel = false
+  var showsKeyboardHelp = false
+  var creationRequest: WorkspaceCreationKind?
+  var taskComposerFocusRequest = 0
   private(set) var activeFocusSession: FocusSession?
   private(set) var focusQueue: [FocusQueueTask] = []
   var errorMessage: String?
@@ -91,7 +103,74 @@ import PriorityWorkspace
   func leaveTaskScope() {
     guard let task = scopeTask else { return }
     scopeTaskID = task.parentTaskId
+    selectedTaskID = task.id
     reloadOutline()
+  }
+
+  func requestTaskComposerFocus() {
+    taskComposerFocusRequest += 1
+  }
+
+  func requestCreation(_ kind: WorkspaceCreationKind) {
+    creationRequest = kind
+  }
+
+  /// Handles keys that belong to the desktop workspace only. Text editing is
+  /// filtered by `MainWindowController` before this method is reached.
+  @discardableResult
+  func handleDesktopKey(_ event: NSEvent) -> Bool {
+    let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+
+    if flags == [.command] {
+      if event.charactersIgnoringModifiers?.lowercased() == "n" {
+        requestTaskComposerFocus()
+        return true
+      }
+    }
+    if flags == [.command, .shift] {
+      if event.charactersIgnoringModifiers?.lowercased() == "n" {
+        requestCreation(.list)
+        return true
+      }
+    }
+    if flags == [.command, .option] {
+      if event.charactersIgnoringModifiers?.lowercased() == "n" {
+        requestCreation(.folder)
+        return true
+      }
+    }
+    guard flags.isEmpty else { return false }
+
+    switch event.keyCode {
+    case 125:  // ↓
+      moveTaskSelection(by: 1)
+    case 126:  // ↑
+      moveTaskSelection(by: -1)
+    case 124:  // →
+      enterSelectedTask()
+    case 123:  // ←
+      leaveSelectedTaskScope()
+    case 36, 76:  // Return / keypad Enter
+      enterSelectedTask()
+    case 49:  // Space
+      toggleSelectedTask()
+    case 53:  // Escape
+      dismissKeyboardContext()
+    default:
+      switch event.charactersIgnoringModifiers?.lowercased() {
+      case "j": moveTaskSelection(by: 1)
+      case "k": moveTaskSelection(by: -1)
+      case "l": enterSelectedTask()
+      case "h": leaveSelectedTaskScope()
+      case "x", " ": toggleSelectedTask()
+      case "f": focusSelectedTask()
+      case "[": moveListSelection(by: -1)
+      case "]": moveListSelection(by: 1)
+      case "?": showsKeyboardHelp = true
+      default: return false
+      }
+    }
+    return true
   }
 
   func createList(named name: String) {
@@ -120,6 +199,65 @@ import PriorityWorkspace
     perform {
       _ = try store.createTask(listId: selectedListID, title: title, parentTaskId: scopeTaskID)
       reloadOutline()
+    }
+  }
+
+  private func moveTaskSelection(by offset: Int) {
+    guard !outline.isEmpty else { return }
+    guard let currentTaskID = selectedTaskID,
+      let index = outline.firstIndex(where: { $0.task.id == currentTaskID })
+    else {
+      selectedTaskID = offset < 0 ? outline.last?.task.id : outline.first?.task.id
+      return
+    }
+    selectedTaskID = outline[min(max(0, index + offset), outline.count - 1)].task.id
+  }
+
+  private func moveListSelection(by offset: Int) {
+    guard !lists.isEmpty else { return }
+    guard let selectedListID, let index = lists.firstIndex(where: { $0.id == selectedListID }) else {
+      selectList(lists.first!.id)
+      return
+    }
+    selectList(lists[min(max(0, index + offset), lists.count - 1)].id)
+  }
+
+  private func enterSelectedTask() {
+    guard let task = selectedTask else { return }
+    enterTask(task)
+    selectedTaskID = nil
+  }
+
+  private func leaveSelectedTaskScope() {
+    if scopeTaskID != nil {
+      leaveTaskScope()
+    } else {
+      selectedTaskID = nil
+    }
+  }
+
+  private func toggleSelectedTask() {
+    guard let task = selectedTask else { return }
+    toggleTask(task)
+  }
+
+  private func focusSelectedTask() {
+    guard let task = selectedTask else { return }
+    if activeFocusSession == nil {
+      startFocus(on: task)
+    } else {
+      addToFocusQueue(task)
+      showsFocusPanel = true
+    }
+  }
+
+  private func dismissKeyboardContext() {
+    if showsKeyboardHelp {
+      showsKeyboardHelp = false
+    } else if scopeTaskID != nil {
+      leaveTaskScope()
+    } else {
+      selectedTaskID = nil
     }
   }
 

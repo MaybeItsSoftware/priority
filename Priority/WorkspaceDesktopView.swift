@@ -30,6 +30,17 @@ struct WorkspaceDesktopView: View {
       })
         .environment(model)
     }
+    .sheet(isPresented: Bindable(model).showsKeyboardHelp) {
+      WorkspaceKeyboardHelp()
+    }
+    .sheet(item: Bindable(model).creationRequest) { kind in
+      WorkspaceCreationSheet(kind: kind) { name in
+        switch kind {
+        case .list: model.createList(named: name)
+        case .folder: model.createFolder(named: name)
+        }
+      }
+    }
   }
 
   private var sidebar: some View {
@@ -122,7 +133,9 @@ struct WorkspaceDesktopView: View {
         }
         .listStyle(.inset)
 
-        TaskComposer { title in model.createTask(named: title) }
+        TaskComposer(focusRequest: model.taskComposerFocusRequest) { title in
+          model.createTask(named: title)
+        }
           .padding(14)
       }
     } else {
@@ -156,6 +169,12 @@ struct WorkspaceDesktopView: View {
       .help("Enter subtasks")
     }
     .padding(.leading, CGFloat(item.depth) * 22)
+    .contentShape(Rectangle())
+    .background(
+      item.task.id == model.selectedTaskID ? Color.accentColor.opacity(0.14) : .clear,
+      in: RoundedRectangle(cornerRadius: 6)
+    )
+    .onTapGesture { model.selectTask(item.task) }
   }
 
   private var inspector: some View {
@@ -291,6 +310,8 @@ private struct LocalFocusPanel: View {
 
 private struct TaskComposer: View {
   @State private var title = ""
+  @FocusState private var isFocused: Bool
+  let focusRequest: Int
   let onSubmit: (String) -> Void
 
   var body: some View {
@@ -299,16 +320,86 @@ private struct TaskComposer: View {
         .foregroundStyle(.secondary)
       TextField("Add a task", text: $title)
         .textFieldStyle(.plain)
+        .focused($isFocused)
         .onSubmit { submit() }
     }
     .padding(10)
     .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+    .onChange(of: focusRequest) { _, _ in isFocused = true }
   }
 
   private func submit() {
     guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
     onSubmit(title)
     title = ""
+  }
+}
+
+private struct WorkspaceCreationSheet: View {
+  let kind: WorkspaceCreationKind
+  let onSubmit: (String) -> Void
+  @Environment(\.dismiss) private var dismiss
+  @State private var name = ""
+  @FocusState private var isFocused: Bool
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Text(kind.title).font(.title3.weight(.semibold))
+      TextField("Name", text: $name)
+        .focused($isFocused)
+        .onSubmit { submit() }
+      HStack {
+        Spacer()
+        Button("Cancel") { dismiss() }
+        Button("Create") { submit() }
+          .buttonStyle(.borderedProminent)
+          .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      }
+    }
+    .padding(24)
+    .frame(width: 340)
+    .onAppear { isFocused = true }
+  }
+
+  private func submit() {
+    guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    onSubmit(name)
+    dismiss()
+  }
+}
+
+private struct WorkspaceKeyboardHelp: View {
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      HStack {
+        Text("Keyboard navigation").font(.title3.weight(.semibold))
+        Spacer()
+        Button("Done") { dismiss() }
+      }
+      Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 10) {
+        key("↑ ↓ / J K", "Select previous or next task")
+        key("← → / H L / Return", "Leave or enter a task’s subtasks")
+        key("Space / X", "Complete or reopen selected task")
+        key("F", "Start focus, or add to the active focus queue")
+        key("[  ]", "Previous or next list")
+        key("⌘ N", "Add a task")
+        key("⌘ ⇧ N", "Create a list")
+        key("⌘ ⌥ N", "Create a folder")
+        key("Esc", "Clear selection or leave the current task scope")
+      }
+    }
+    .padding(28)
+    .frame(width: 480)
+  }
+
+  @ViewBuilder
+  private func key(_ shortcut: String, _ description: String) -> some View {
+    GridRow {
+      Text(shortcut).font(.system(.body, design: .monospaced).weight(.semibold))
+      Text(description).foregroundStyle(.secondary)
+    }
   }
 }
 
