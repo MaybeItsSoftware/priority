@@ -44,7 +44,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // for any client that launched it before the app had ever been opened.
     LegacyNameMigration.runIfNeeded()
 
-    NSApp.setActivationPolicy(.accessory)
+    // Priority is a desktop app first. The status item remains available as a
+    // compact utility surface, but it no longer owns the initial experience.
+    NSApp.setActivationPolicy(.regular)
     applyAppTheme()
 
     menuBarController = MenuBarController(manager: checkvistManager)
@@ -60,7 +62,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     checkvistManager.focusSessionManager.onAlert = { [weak self] in
       guard let self else { return }
-      self.menuBarController.showPopoverWindow()
+      self.showMainWindow()
       if let sound = NSSound(named: NSSound.Name("Glass")) {
         sound.play()
       } else {
@@ -82,13 +84,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     shortcutManager = GlobalShortcutManager(manager: checkvistManager)
     shortcutManager.onTogglePopover = { [weak self] in
-      self?.menuBarController.togglePopover()
+      self?.mainWindowController.toggle()
     }
     shortcutManager.onQuickAdd = { [weak self] in
       self?.triggerQuickAddFromHotkey()
     }
 
     observeForAppThemeChanges()
+
+    // Constructing the workspace above also imports the old offline payload
+    // into its local SQLite database before this first presentation.
+    showMainWindow()
 
     NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)
       .receive(on: RunLoop.main)
@@ -107,11 +113,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     Task { [weak self] in
       try? await Task.sleep(nanoseconds: 500_000_000)
       guard let self else { return }
-      #if DEBUG
-        if self.isRunningFromXcode {
-          self.menuBarController.showPopoverWindow()
-        }
-      #endif
       await self.checkvistManager.syncService.fetchTopTask()
       self.menuBarController.updateTitle()
     }
@@ -250,8 +251,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   }
 
   private func triggerQuickAddFromHotkey() {
-    menuBarController.showPopoverWindow()
-    _ = checkvistManager.taskMutationService.beginQuickAddEntry()
+    showMainWindow()
   }
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

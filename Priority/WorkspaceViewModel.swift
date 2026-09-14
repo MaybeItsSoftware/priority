@@ -55,11 +55,17 @@ import PriorityWorkspace
     guard let store else { return }
     let workspace = try store.bootstrapIfNeeded()
     self.workspace = workspace
-    try migrateLegacyTasksIfNeeded(into: workspace, store: store)
+    let importedList = try migrateLegacyTasksIfNeeded(into: workspace, store: store)
     folders = try store.folders(in: workspace.id)
     lists = try store.lists(in: workspace.id)
     if selectedListID == nil || !lists.contains(where: { $0.id == selectedListID }) {
-      selectedListID = lists.first?.id
+      // On the first desktop launch, put a migrated user straight into their
+      // existing work rather than an empty Inbox. This also covers people who
+      // ran an earlier preview that completed the import before the desktop
+      // window became the default launch surface.
+      selectedListID = importedList?.id
+        ?? lists.first(where: { $0.name.hasPrefix("Imported from old Priority") })?.id
+        ?? lists.first?.id
     }
     reloadOutline()
     reloadFocus()
@@ -204,14 +210,15 @@ import PriorityWorkspace
     }
   }
 
-  private func migrateLegacyTasksIfNeeded(into workspace: Workspace, store: WorkspaceStore) throws {
+  @discardableResult
+  private func migrateLegacyTasksIfNeeded(into workspace: Workspace, store: WorkspaceStore) throws -> TaskList? {
     let defaults = UserDefaults.standard
-    guard !defaults.bool(forKey: Self.legacyMigrationKey) else { return }
+    guard !defaults.bool(forKey: Self.legacyMigrationKey) else { return nil }
     let payload = legacyStore.load()
     let legacyTasks = payload.openTasks + payload.archivedTasks
     guard !legacyTasks.isEmpty else {
       defaults.set(true, forKey: Self.legacyMigrationKey)
-      return
+      return nil
     }
 
     let uniqueTasks = Dictionary(legacyTasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -225,8 +232,9 @@ import PriorityWorkspace
         sortOrder: task.position ?? 0)
     }
     let date = ISO8601DateFormatter().string(from: .now).prefix(10)
-    _ = try store.importLegacyTasks(
+    let importedList = try store.importLegacyTasks(
       workspaceId: workspace.id, listName: "Imported from old Priority — \(date)", seeds: seeds)
     defaults.set(true, forKey: Self.legacyMigrationKey)
+    return importedList
   }
 }
