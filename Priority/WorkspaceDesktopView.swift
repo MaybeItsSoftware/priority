@@ -165,30 +165,8 @@ struct WorkspaceDesktopView: View {
         .foregroundStyle(.secondary)
       Divider()
       if let task = model.selectedTask {
-        Text(task.title).font(.headline)
-        if !task.notes.isEmpty {
-          Text(task.notes)
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .lineLimit(8)
-        }
-        if model.activeFocusSession != nil {
-          Button {
-            model.addToFocusQueue(task)
-          } label: {
-            Label("Add to focus queue", systemImage: "plus.circle")
-          }
-          .buttonStyle(.borderedProminent)
-          Button("Open focus panel") { model.showsFocusPanel = true }
-            .buttonStyle(.link)
-        } else {
-          Button {
-            model.startFocus(on: task)
-          } label: {
-            Label("Start focus", systemImage: "bolt.fill")
-          }
-          .buttonStyle(.borderedProminent)
-        }
+        LocalTaskInspector(task: task)
+          .environment(model)
       } else {
         Text("Select a task to see its notes, schedule, estimate, and focus controls here.")
           .font(.callout)
@@ -198,6 +176,53 @@ struct WorkspaceDesktopView: View {
     }
     .padding(18)
     .background(.background)
+  }
+}
+
+private struct LocalTaskInspector: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let task: WorkspaceTask
+  @State private var title: String
+  @State private var notes: String
+
+  init(task: WorkspaceTask) {
+    self.task = task
+    _title = State(initialValue: task.title)
+    _notes = State(initialValue: task.notes)
+  }
+
+  var body: some View {
+    TextField("Task title", text: $title)
+      .font(.headline)
+      .textFieldStyle(.plain)
+    Text("NOTES")
+      .font(.caption2.weight(.bold))
+      .foregroundStyle(.secondary)
+    TextEditor(text: $notes)
+      .font(.callout)
+      .frame(minHeight: 120)
+      .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
+    Button("Save") { model.updateTask(task, title: title, notes: notes) }
+      .buttonStyle(.bordered)
+      .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    Divider()
+    if model.activeFocusSession != nil {
+      Button {
+        model.addToFocusQueue(task)
+      } label: {
+        Label("Add to focus queue", systemImage: "plus.circle")
+      }
+      .buttonStyle(.borderedProminent)
+      Button("Open focus panel") { model.showsFocusPanel = true }
+        .buttonStyle(.link)
+    } else {
+      Button {
+        model.startFocus(on: task)
+      } label: {
+        Label("Start focus", systemImage: "bolt.fill")
+      }
+      .buttonStyle(.borderedProminent)
+    }
   }
 }
 

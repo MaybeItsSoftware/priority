@@ -124,6 +124,16 @@ import PriorityWorkspace
     }
   }
 
+  func updateTask(_ task: WorkspaceTask, title: String, notes: String) {
+    guard let store else { return }
+    perform {
+      try store.updateTask(
+        id: task.id, title: title, notes: notes, dueAt: task.dueAt,
+        estimateSeconds: task.estimateSeconds)
+      reloadOutline()
+    }
+  }
+
   func startFocus(on task: WorkspaceTask) {
     guard let store else { return }
     perform {
