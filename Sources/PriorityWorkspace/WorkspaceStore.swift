@@ -165,6 +165,129 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  public func updateTask(
+    id: String,
+    title: String,
+    notes: String,
+    dueAt: Date?,
+    estimateSeconds: Int?,
+    now: Date = .now
+  ) throws {
+    let trimmed = try Self.nonEmptyName(title)
+    try database.write { db in
+      guard var task = try WorkspaceTask.fetchOne(db, key: id) else { return }
+      task.title = trimmed
+      task.notes = notes
+      task.dueAt = dueAt
+      task.estimateSeconds = estimateSeconds
+      task.updatedAt = now
+      try task.update(db)
+    }
+  }
+
+  public func activeFocusSession() throws -> FocusSession? {
+    try database.read { db in
+      try FocusSession.filter(Column("phase") != FocusSessionPhase.finished.rawValue)
+        .order(Column("startedAt").desc).fetchOne(db)
+    }
+  }
+
+  public func focusQueue(for sessionId: String) throws -> [FocusQueueTask] {
+    try database.read { db in
+      let items = try FocusQueueItem.filter(Column("sessionId") == sessionId)
+        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
+      return try items.compactMap { item in
+        guard let task = try WorkspaceTask.fetchOne(db, key: item.taskId) else { return nil }
+        return FocusQueueTask(item: item, task: task)
+      }
+    }
+  }
+
+  public func startFocusSession(
+    taskId: String,
+    workDurationSeconds: Int = 25 * 60,
+    breakDurationSeconds: Int = 5 * 60,
+    now: Date = .now
+  ) throws -> FocusSession {
+    try database.write { db in
+      if let active = try FocusSession.filter(Column("phase") != FocusSessionPhase.finished.rawValue).fetchOne(db) {
+        return active
+      }
+      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
+        throw WorkspaceStoreError.missingTask
+      }
+      let session = FocusSession(
+        id: UUID().uuidString, startedAt: now, endedAt: nil, phase: .running, activeTaskId: taskId,
+        workDurationSeconds: max(60, workDurationSeconds), breakDurationSeconds: max(60, breakDurationSeconds),
+        breakEndsAt: nil)
+      let firstItem = FocusQueueItem(
+        id: UUID().uuidString, sessionId: session.id, taskId: taskId, sortOrder: 0, state: .queued,
+        completedAt: nil, skippedAt: nil, createdAt: now)
+      try session.insert(db)
+      try firstItem.insert(db)
+      return session
+    }
+  }
+
+  public func addToFocusQueue(sessionId: String, taskId: String, now: Date = .now) throws {
+    try database.write { db in
+      guard try FocusSession.fetchOne(db, key: sessionId) != nil,
+        try WorkspaceTask.fetchOne(db, key: taskId) != nil
+      else { throw WorkspaceStoreError.missingTask }
+      if try FocusQueueItem.filter(Column("sessionId") == sessionId && Column("taskId") == taskId)
+        .fetchOne(db) != nil
+      {
+        return
+      }
+      let count = try FocusQueueItem.filter(Column("sessionId") == sessionId)
+        .fetchCount(db)
+      let item = FocusQueueItem(
+        id: UUID().uuidString, sessionId: sessionId, taskId: taskId, sortOrder: count, state: .queued,
+        completedAt: nil, skippedAt: nil, createdAt: now)
+      try item.insert(db)
+    }
+  }
+
+  public func completeActiveFocusTask(sessionId: String, now: Date = .now) throws -> FocusSession {
+    try database.write { db in
+      guard var session = try FocusSession.fetchOne(db, key: sessionId), let activeID = session.activeTaskId else {
+        throw WorkspaceStoreError.noActiveFocusTask
+      }
+      if var task = try WorkspaceTask.fetchOne(db, key: activeID) {
+        task.status = .completed
+        task.updatedAt = now
+        try task.update(db)
+      }
+      if var item = try FocusQueueItem.filter(Column("sessionId") == sessionId && Column("taskId") == activeID)
+        .filter(Column("state") == FocusQueueState.queued.rawValue).fetchOne(db)
+      {
+        item.state = .completed
+        item.completedAt = now
+        try item.update(db)
+      }
+      let next = try FocusQueueItem.filter(Column("sessionId") == sessionId)
+        .filter(Column("state") == FocusQueueState.queued.rawValue)
+        .order(Column("sortOrder")).fetchOne(db)
+      session.activeTaskId = next?.taskId
+      if next == nil {
+        session.phase = .finished
+        session.endedAt = now
+      }
+      try session.update(db)
+      return session
+    }
+  }
+
+  public func finishFocusSession(id: String, now: Date = .now) throws {
+    try database.write { db in
+      guard var session = try FocusSession.fetchOne(db, key: id) else { return }
+      session.phase = .finished
+      session.endedAt = now
+      session.breakEndsAt = nil
+      try session.update(db)
+    }
+  }
+
   /// Imports the previous offline store once. Broken source parent links become
   /// roots instead of losing the task, and duplicate source IDs are rejected.
   @discardableResult
@@ -269,6 +392,40 @@ public final class WorkspaceStore: @unchecked Sendable {
         table.column("updatedAt", .datetime).notNull()
       }
     }
+    migrator.registerMigration("v2_metadata_and_focus") { db in
+      try db.create(table: "task_metadata") { table in
+        table.column("taskId", .text).primaryKey().references("tasks", onDelete: .cascade)
+        table.column("priority", .integer)
+        table.column("startAt", .datetime)
+        table.column("tagsJSON", .text).notNull().defaults(to: "[]")
+        table.column("recurrenceRule", .text)
+        table.column("matrixUrgency", .integer)
+        table.column("matrixImportance", .integer)
+        table.column("kanbanColumn", .text)
+        table.column("externalLinksJSON", .text).notNull().defaults(to: "[]")
+        table.column("updatedAt", .datetime).notNull()
+      }
+      try db.create(table: "focus_sessions") { table in
+        table.column("id", .text).primaryKey()
+        table.column("startedAt", .datetime).notNull().indexed()
+        table.column("endedAt", .datetime)
+        table.column("phase", .text).notNull()
+        table.column("activeTaskId", .text).references("tasks", onDelete: .setNull)
+        table.column("workDurationSeconds", .integer).notNull()
+        table.column("breakDurationSeconds", .integer).notNull()
+        table.column("breakEndsAt", .datetime)
+      }
+      try db.create(table: "focus_queue_items") { table in
+        table.column("id", .text).primaryKey()
+        table.column("sessionId", .text).notNull().indexed().references("focus_sessions", onDelete: .cascade)
+        table.column("taskId", .text).notNull().indexed().references("tasks", onDelete: .cascade)
+        table.column("sortOrder", .integer).notNull()
+        table.column("state", .text).notNull().defaults(to: FocusQueueState.queued.rawValue)
+        table.column("completedAt", .datetime)
+        table.column("skippedAt", .datetime)
+        table.column("createdAt", .datetime).notNull()
+      }
+    }
     return migrator
   }()
 }
@@ -276,11 +433,15 @@ public final class WorkspaceStore: @unchecked Sendable {
 public enum WorkspaceStoreError: LocalizedError, Equatable {
   case emptyName
   case duplicateLegacySourceID
+  case missingTask
+  case noActiveFocusTask
 
   public var errorDescription: String? {
     switch self {
     case .emptyName: return "A workspace item needs a name."
     case .duplicateLegacySourceID: return "The legacy task store contains duplicate task IDs."
+    case .missingTask: return "That task is no longer available."
+    case .noActiveFocusTask: return "This focus session has no active task."
     }
   }
 }

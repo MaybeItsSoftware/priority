@@ -17,6 +17,10 @@ import PriorityWorkspace
   private(set) var outline: [TaskOutlineItem] = []
   var selectedListID: String?
   var scopeTaskID: String?
+  var selectedTaskID: String?
+  var showsFocusPanel = false
+  private(set) var activeFocusSession: FocusSession?
+  private(set) var focusQueue: [FocusQueueTask] = []
   var errorMessage: String?
 
   init(legacyStore: LocalTaskStore) {
@@ -37,6 +41,16 @@ import PriorityWorkspace
     return try? store.task(id: scopeTaskID)
   }
 
+  var selectedTask: WorkspaceTask? {
+    guard let selectedTaskID, let store else { return nil }
+    return try? store.task(id: selectedTaskID)
+  }
+
+  var activeFocusTask: WorkspaceTask? {
+    guard let taskID = activeFocusSession?.activeTaskId, let store else { return nil }
+    return try? store.task(id: taskID)
+  }
+
   func load() throws {
     guard let store else { return }
     let workspace = try store.bootstrapIfNeeded()
@@ -48,17 +62,23 @@ import PriorityWorkspace
       selectedListID = lists.first?.id
     }
     reloadOutline()
+    reloadFocus()
   }
 
   func selectList(_ id: String) {
     selectedListID = id
     scopeTaskID = nil
+    selectedTaskID = nil
     reloadOutline()
   }
 
   func enterTask(_ task: WorkspaceTask) {
     scopeTaskID = task.id
     reloadOutline()
+  }
+
+  func selectTask(_ task: WorkspaceTask) {
+    selectedTaskID = task.id
   }
 
   func leaveTaskScope() {
@@ -104,6 +124,41 @@ import PriorityWorkspace
     }
   }
 
+  func startFocus(on task: WorkspaceTask) {
+    guard let store else { return }
+    perform {
+      activeFocusSession = try store.startFocusSession(taskId: task.id)
+      reloadFocus()
+      showsFocusPanel = true
+    }
+  }
+
+  func addToFocusQueue(_ task: WorkspaceTask) {
+    guard let store, let session = activeFocusSession else { return }
+    perform {
+      try store.addToFocusQueue(sessionId: session.id, taskId: task.id)
+      reloadFocus()
+    }
+  }
+
+  func completeFocusedTask() {
+    guard let store, let session = activeFocusSession else { return }
+    perform {
+      activeFocusSession = try store.completeActiveFocusTask(sessionId: session.id)
+      reloadFocus()
+      reloadOutline()
+    }
+  }
+
+  func finishFocus() {
+    guard let store, let session = activeFocusSession else { return }
+    perform {
+      try store.finishFocusSession(id: session.id)
+      reloadFocus()
+      showsFocusPanel = false
+    }
+  }
+
   private func reloadOutline() {
     guard let store, let selectedListID else {
       outline = []
@@ -111,6 +166,20 @@ import PriorityWorkspace
     }
     do {
       outline = try store.outline(in: selectedListID, parentTaskId: scopeTaskID)
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  private func reloadFocus() {
+    guard let store else { return }
+    do {
+      activeFocusSession = try store.activeFocusSession()
+      if let session = activeFocusSession {
+        focusQueue = try store.focusQueue(for: session.id)
+      } else {
+        focusQueue = []
+      }
     } catch {
       errorMessage = error.localizedDescription
     }

@@ -70,6 +70,66 @@ public struct TaskOutlineItem: Identifiable, Sendable, Equatable {
   }
 }
 
+public struct TaskMetadata: Codable, FetchableRecord, PersistableRecord, Sendable, Equatable {
+  public static let databaseTableName = "task_metadata"
+
+  public let taskId: String
+  public var priority: Int?
+  public var startAt: Date?
+  public var tagsJSON: String
+  public var recurrenceRule: String?
+  public var matrixUrgency: Int?
+  public var matrixImportance: Int?
+  public var kanbanColumn: String?
+  public var externalLinksJSON: String
+  public var updatedAt: Date
+}
+
+public enum FocusSessionPhase: String, Codable, Sendable, CaseIterable {
+  case running
+  case onBreak
+  case finished
+}
+
+public struct FocusSession: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable, Equatable {
+  public static let databaseTableName = "focus_sessions"
+
+  public let id: String
+  public let startedAt: Date
+  public var endedAt: Date?
+  public var phase: FocusSessionPhase
+  public var activeTaskId: String?
+  public let workDurationSeconds: Int
+  public let breakDurationSeconds: Int
+  public var breakEndsAt: Date?
+}
+
+public enum FocusQueueState: String, Codable, Sendable, CaseIterable {
+  case queued
+  case completed
+  case skipped
+}
+
+public struct FocusQueueItem: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable, Equatable {
+  public static let databaseTableName = "focus_queue_items"
+
+  public let id: String
+  public let sessionId: String
+  public let taskId: String
+  public var sortOrder: Int
+  public var state: FocusQueueState
+  public var completedAt: Date?
+  public var skippedAt: Date?
+  public let createdAt: Date
+}
+
+public struct FocusQueueTask: Identifiable, Sendable, Equatable {
+  public let item: FocusQueueItem
+  public let task: WorkspaceTask
+
+  public var id: String { item.id }
+}
+
 /// A source task copied into the first local workspace. Its source ID is used
 /// only to rebuild the hierarchy during this one transaction; local records
 /// receive new UUID identities.

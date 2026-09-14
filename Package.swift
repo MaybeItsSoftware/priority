@@ -25,6 +25,7 @@ let pluginTargetExcludes = [
   "Priority/Priority.entitlements",
   "Priority/Priority.release.entitlements",
   "Priority/FocusSessionView.swift",
+  "Priority/LocalFloatingFocusTimer.swift",
   "Priority/WorkspaceDesktopView.swift",
   "Priority/WorkspaceViewModel.swift",
 
@@ -152,6 +153,7 @@ let appLogicTargetExcludes = [
   "Priority/Priority.entitlements",
   "Priority/Priority.release.entitlements",
   "Priority/FocusSessionView.swift",
+  "Priority/LocalFloatingFocusTimer.swift",
   "Priority/WorkspaceDesktopView.swift",
   "Priority/WorkspaceViewModel.swift",
 

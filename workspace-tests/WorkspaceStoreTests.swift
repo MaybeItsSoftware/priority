@@ -53,4 +53,19 @@ final class WorkspaceStoreTests: XCTestCase {
     XCTAssertEqual(outline.map(\.depth), [0, 1])
     XCTAssertEqual(outline.last?.task.status, .completed)
   }
+
+  func testFocusSessionCompletesCurrentTaskAndAdvancesQueue() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let list = try XCTUnwrap(store.lists(in: workspace.id).first)
+    let first = try store.createTask(listId: list.id, title: "Write")
+    let second = try store.createTask(listId: list.id, title: "Review")
+    let session = try store.startFocusSession(taskId: first.id)
+    try store.addToFocusQueue(sessionId: session.id, taskId: second.id)
+
+    let advanced = try store.completeActiveFocusTask(sessionId: session.id)
+
+    XCTAssertEqual(try store.task(id: first.id)?.status, .completed)
+    XCTAssertEqual(advanced.activeTaskId, second.id)
+    XCTAssertEqual(try store.focusQueue(for: session.id).map(\.item.state), [.completed, .queued])
+  }
 }

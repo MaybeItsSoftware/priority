@@ -3,6 +3,7 @@ import SwiftUI
 
 struct WorkspaceDesktopView: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @State private var floatingTimer = LocalFloatingFocusTimer()
 
   var body: some View {
     HSplitView {
@@ -21,6 +22,13 @@ struct WorkspaceDesktopView: View {
       Button("OK", role: .cancel) {}
     } message: {
       Text(model.errorMessage ?? "")
+    }
+    .sheet(isPresented: Bindable(model).showsFocusPanel) {
+      LocalFocusPanel(onFloat: {
+        floatingTimer.show(model: model)
+        model.showsFocusPanel = false
+      })
+        .environment(model)
     }
   }
 
@@ -135,6 +143,8 @@ struct WorkspaceDesktopView: View {
       Text(item.task.title)
         .strikethrough(item.task.status != .open)
         .foregroundStyle(item.task.status == .open ? .primary : .secondary)
+        .contentShape(Rectangle())
+        .onTapGesture { model.selectTask(item.task) }
       Spacer(minLength: 8)
       Button {
         model.enterTask(item.task)
@@ -154,13 +164,103 @@ struct WorkspaceDesktopView: View {
         .font(.caption.weight(.bold))
         .foregroundStyle(.secondary)
       Divider()
-      Text("Select a task to see its notes, schedule, estimate, and focus controls here.")
-        .font(.callout)
-        .foregroundStyle(.secondary)
+      if let task = model.selectedTask {
+        Text(task.title).font(.headline)
+        if !task.notes.isEmpty {
+          Text(task.notes)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .lineLimit(8)
+        }
+        if model.activeFocusSession != nil {
+          Button {
+            model.addToFocusQueue(task)
+          } label: {
+            Label("Add to focus queue", systemImage: "plus.circle")
+          }
+          .buttonStyle(.borderedProminent)
+          Button("Open focus panel") { model.showsFocusPanel = true }
+            .buttonStyle(.link)
+        } else {
+          Button {
+            model.startFocus(on: task)
+          } label: {
+            Label("Start focus", systemImage: "bolt.fill")
+          }
+          .buttonStyle(.borderedProminent)
+        }
+      } else {
+        Text("Select a task to see its notes, schedule, estimate, and focus controls here.")
+          .font(.callout)
+          .foregroundStyle(.secondary)
+      }
       Spacer()
     }
     .padding(18)
     .background(.background)
+  }
+}
+
+private struct LocalFocusPanel: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.dismiss) private var dismiss
+  let onFloat: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 20) {
+      HStack {
+        Label("FOCUS", systemImage: "bolt.fill")
+          .font(.caption.weight(.bold))
+          .foregroundStyle(.secondary)
+        Spacer()
+        Button("Hide") { dismiss() }
+          .buttonStyle(.plain)
+      }
+
+      if let session = model.activeFocusSession, let task = model.activeFocusTask {
+        Text(task.title)
+          .font(.title2.weight(.semibold))
+          .lineLimit(3)
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+          Text(timeRemaining(session: session, now: context.date))
+            .font(.system(size: 42, weight: .bold, design: .monospaced))
+            .foregroundStyle(.tint)
+        }
+        Text("One task at a time. The queue stays editable while you work.")
+          .font(.callout)
+          .foregroundStyle(.secondary)
+
+        Divider()
+        Text("UP NEXT").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+        ForEach(model.focusQueue) { queued in
+          HStack {
+            Image(systemName: queued.item.state == .completed ? "checkmark.circle.fill" : "circle")
+              .foregroundStyle(queued.item.state == .completed ? Color.green : Color.secondary)
+            Text(queued.task.title)
+            Spacer()
+          }
+        }
+
+        HStack {
+          Button("Done") { model.completeFocusedTask() }
+            .buttonStyle(.borderedProminent)
+          Button("Float timer") { onFloat() }
+            .buttonStyle(.bordered)
+          Button("End session", role: .destructive) { model.finishFocus() }
+            .buttonStyle(.bordered)
+        }
+      } else {
+        ContentUnavailableView("Focus session complete", systemImage: "checkmark.circle")
+      }
+    }
+    .padding(28)
+    .frame(width: 440, height: 520, alignment: .topLeading)
+  }
+
+  private func timeRemaining(session: FocusSession, now: Date) -> String {
+    let elapsed = max(0, now.timeIntervalSince(session.startedAt))
+    let seconds = max(0, session.workDurationSeconds - Int(elapsed))
+    return String(format: "%02d:%02d", seconds / 60, seconds % 60)
   }
 }
 
