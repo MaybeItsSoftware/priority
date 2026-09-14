@@ -3,28 +3,22 @@ import OSLog
 import PriorityCore
 import SwiftUI
 
-/// The ordinary, resizable window onto the same task UI the menu bar panel shows.
+/// The ordinary, resizable window for Priority's local-first workspace.
 ///
-/// It hosts `PopoverView` unchanged — only `\.shellMode` differs — because every
-/// member of `PopoverView+Dock`, `+TaskRow` and `+QuickEntryBar` is an extension
-/// on that one type, so a separate window root would mean moving all of them.
-///
-/// State is shared with the panel rather than duplicated: `TaskListViewModel`'s
-/// cache is derived from the root view, the hide-future flag, the search text
-/// and the `NavigationState` cursor, so a second view model showing a different
-/// tab is not something one `AppCoordinator` can serve. The two surfaces are
-/// deliberately mirrors of each other.
+/// The menu bar deliberately keeps its compact compatibility surface while the
+/// desktop window owns independent local navigation and editing state. Shared
+/// services remain in `AppCoordinator`; a shared task cursor does not.
 @MainActor
 final class MainWindowController: NSObject, NSWindowDelegate {
 
   /// Matches the `.frame(minWidth:minHeight:)` on the hosted root below.
-  private static let minContentSize = NSSize(width: 560, height: 420)
+  private static let minContentSize = NSSize(width: 760, height: 520)
 
   private let manager: AppCoordinator
+  private let workspace: WorkspaceViewModel
   private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "main-window")
   private var window: NSWindow?
   private var keyMonitor: Any?
-  private var toolbarController: MainWindowToolbarController?
 
   /// Refreshes the menu bar title. Shared state means the window moving the
   /// cursor has to move the status item's label too, exactly as the panel does.
@@ -34,8 +28,9 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   /// process-wide setting, not a per-window one — is decided in one place.
   var onVisibilityChanged: ((Bool) -> Void)?
 
-  init(manager: AppCoordinator) {
+  init(manager: AppCoordinator, workspace: WorkspaceViewModel) {
     self.manager = manager
+    self.workspace = workspace
     super.init()
   }
 
@@ -67,18 +62,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   private func makeWindowIfNeeded() -> NSWindow {
     if let window { return window }
 
-    let rootView =
-      PopoverView()
+    let rootView = WorkspaceDesktopView()
       .font(Typography.interfaceFont)
-      .environment(manager)
-      .environment(manager.navigationState)
-      .environment(manager.taskListViewModel)
-      .environment(manager.repository)
-      .environment(\.shellMode, .window)
-      .frame(
-        minWidth: Self.minContentSize.width,
-        minHeight: Self.minContentSize.height
-      )
+      .environment(workspace)
+      .frame(minWidth: Self.minContentSize.width, minHeight: Self.minContentSize.height)
     let hostingController = NSHostingController(rootView: rootView)
 
     let window = NSWindow(
@@ -101,14 +88,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     window.delegate = self
     window.center()
 
-    let toolbarController = MainWindowToolbarController(manager: manager)
-    toolbarController.onRefresh = { [weak self] in self?.refresh() }
-    toolbarController.onShowSettings = { [weak self] in self?.onShowSettings?() }
-    toolbarController.onShowDiagnostics = { [weak self] in
-      self?.manager.popoverChrome.showsDiagnostics = true
-    }
-    window.toolbar = toolbarController.makeToolbar()
-    self.toolbarController = toolbarController
+    window.toolbarStyle = .unified
 
     window.setFrameAutosaveName("PriorityMainWindowV1")
     WindowContentSizing.enforce(
@@ -118,7 +98,6 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     )
 
     self.window = window
-    installKeyMonitorIfNeeded()
     return window
   }
 

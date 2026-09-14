@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		665C2D8C2F588A0A002ED852 /* PriorityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 665C2D8B2F588A0A002ED852 /* PriorityCore */; };
+		A11CE0012F588A0A002ED852 /* PriorityWorkspace in Frameworks */ = {isa = PBXBuildFile; productRef = A11CE0022F588A0A002ED852 /* PriorityWorkspace */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +47,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				665C2D8C2F588A0A002ED852 /* PriorityCore in Frameworks */,
+				A11CE0012F588A0A002ED852 /* PriorityWorkspace in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,6 +92,7 @@
 			name = "Priority";
 			packageProductDependencies = (
 				665C2D8B2F588A0A002ED852 /* PriorityCore */,
+				A11CE0022F588A0A002ED852 /* PriorityWorkspace */,
 			);
 			productName = "Priority";
 			productReference = 665C2D5D2F588A0A002ED852 /* Priority.app */;
@@ -397,6 +400,10 @@
 		665C2D8B2F588A0A002ED852 /* PriorityCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PriorityCore;
+		};
+		A11CE0022F588A0A002ED852 /* PriorityWorkspace */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PriorityWorkspace;
 		};
 /* End XCSwiftPackageProductDependency section */
 

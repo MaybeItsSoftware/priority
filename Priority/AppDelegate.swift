@@ -22,6 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private(set) var menuBarController: MenuBarController!
   private(set) var shortcutManager: GlobalShortcutManager!
   private(set) var mainWindowController: MainWindowController!
+  private(set) var workspace: WorkspaceViewModel!
 
   private var preferencesWindow: NSWindow?
   private var preferencesNavState: SettingsNavState?
@@ -67,7 +68,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       }
     }
 
-    mainWindowController = MainWindowController(manager: checkvistManager)
+    workspace = WorkspaceViewModel(legacyStore: checkvistManager.repository.localTaskStore)
+    mainWindowController = MainWindowController(manager: checkvistManager, workspace: workspace)
     mainWindowController.onUpdateMenuBarTitle = { [weak self] in
       self?.menuBarController.updateTitle()
     }

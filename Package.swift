@@ -16,6 +16,8 @@ let pluginTargetExcludes = [
   "corelogic-tests",
   "docs",
   "plugin-tests",
+  "workspace-tests",
+  "Sources/PriorityWorkspace",
   "scripts",
 
   // App resources and the core target's own source tree
@@ -23,6 +25,8 @@ let pluginTargetExcludes = [
   "Priority/Priority.entitlements",
   "Priority/Priority.release.entitlements",
   "Priority/FocusSessionView.swift",
+  "Priority/WorkspaceDesktopView.swift",
+  "Priority/WorkspaceViewModel.swift",
 
   // App-level source folders not needed by the plugins library
   "Priority/Managers",
@@ -139,6 +143,8 @@ let appLogicTargetExcludes = [
   "docs",
   "plugin-tests",
   "plugin-tests-support",
+  "workspace-tests",
+  "Sources/PriorityWorkspace",
   "scripts",
 
   // App resources and other targets' source trees.
@@ -146,6 +152,8 @@ let appLogicTargetExcludes = [
   "Priority/Priority.entitlements",
   "Priority/Priority.release.entitlements",
   "Priority/FocusSessionView.swift",
+  "Priority/WorkspaceDesktopView.swift",
+  "Priority/WorkspaceViewModel.swift",
 
   // Priority/Managers — AppLogic only wants TaskRepository.swift from here;
   // the rest of the directory pulls in AppKit/SwiftUI and is excluded file-by-file.
@@ -245,11 +253,23 @@ let package = Package(
     .library(name: "PriorityCore", targets: ["PriorityCore"]),
     .library(name: "PriorityPlugins", targets: ["PriorityPlugins"]),
     .library(name: "PriorityAppLogic", targets: ["PriorityAppLogic"]),
+    .library(name: "PriorityWorkspace", targets: ["PriorityWorkspace"]),
+  ],
+  dependencies: [
+    .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.8.0"),
   ],
   targets: [
     .target(
       name: "PriorityCore",
       path: "Sources/PriorityCore"
+    ),
+    .target(
+      name: "PriorityWorkspace",
+      dependencies: [
+        "PriorityCore",
+        .product(name: "GRDB", package: "GRDB.swift"),
+      ],
+      path: "Sources/PriorityWorkspace"
     ),
     .target(
       name: "PriorityPlugins",
@@ -345,6 +365,11 @@ let package = Package(
       name: "PriorityAppLogicTests",
       dependencies: ["PriorityAppLogic", "PriorityPlugins"],
       path: "applogic-tests"
+    ),
+    .testTarget(
+      name: "PriorityWorkspaceTests",
+      dependencies: ["PriorityWorkspace"],
+      path: "workspace-tests"
     ),
   ]
 )
