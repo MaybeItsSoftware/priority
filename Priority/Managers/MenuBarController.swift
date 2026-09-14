@@ -35,6 +35,11 @@ class MenuBarController: NSObject {
   var onShowSettings: (() -> Void)?
   var onShowMainWindow: (() -> Void)?
   var onQuit: (() -> Void)?
+  /// The local workspace owns task state. In this mode the status item is a
+  /// launcher, not a miniature task view.
+  var usesDesktopWorkspace = false {
+    didSet { updateTitle() }
+  }
 
   init(manager: AppCoordinator) {
     self.manager = manager
@@ -125,6 +130,13 @@ class MenuBarController: NSObject {
   }
 
   func updateTitle() {
+    guard !usesDesktopWorkspace else {
+      statusItem?.button?.attributedTitle = NSAttributedString(string: "Priority")
+      statusItem?.button?.toolTip = "Open Priority"
+      statusItem?.length = NSStatusItem.variableLength
+      statusItem?.button?.layer?.mask = nil
+      return
+    }
     let rawTaskText = menuBarSelectionText
     let baseTaskText = menuBarDisplayTaskText(rawTaskText)
     let taskText =
@@ -419,7 +431,9 @@ class MenuBarController: NSObject {
       showStatusItemContextMenu()
       return
     }
-    togglePopover()
+    // The status item is now a launcher for the desktop workspace. The old
+    // task panel is no longer presented from any user-facing path.
+    onShowMainWindow?()
   }
 
   private func showStatusItemContextMenu() {

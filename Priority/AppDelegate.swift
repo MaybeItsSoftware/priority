@@ -59,6 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     menuBarController.onQuit = { [weak self] in
       self?.menuQuit()
     }
+    menuBarController.usesDesktopWorkspace = true
 
     checkvistManager.focusSessionManager.onAlert = { [weak self] in
       guard let self else { return }
@@ -134,7 +135,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   }
 
   func menuSettings(pane: SettingsNavState.Pane?) {
-    menuBarController.closeWindow()
     let window = makePreferencesWindowIfNeeded()
     if let pane {
       preferencesNavState?.select(pane: pane)
@@ -221,7 +221,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   }
 
   func showMainWindow() {
-    menuBarController.closeWindow()
     mainWindowController.show()
   }
 
