@@ -590,6 +590,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The task committed to but not yet started — the step between "this one"
   /// and "go", where the estimate is decided.
   var stagedTaskID: String?
+  /// Bumped when something asks for the current rung to be ticked off. The
+  /// focus screen watches this and runs the celebration, because the mutation
+  /// has to wait on an animation the model cannot see.
+  var focusCompletionRequest = 0
 
   var visibleNavigationTasks: [WorkspaceTask] {
     switch viewMode {

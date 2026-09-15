@@ -54,7 +54,9 @@ extension WorkspaceViewModel {
     switch event.charactersIgnoringModifiers?.lowercased() {
     case "k": moveFocusLadder(by: 1); return true
     case "j": moveFocusLadder(by: -1); return true
-    case "x": completeFocusLadderSelection(); return true
+    // Not completed here: the celebration is allowed to cancel, and only the
+    // view can play it. Same path as the button, so both animate.
+    case "x": focusCompletionRequest += 1; return true
     case "l": deferFocusLadderSelection(); return true
     // Space stages rather than ticking off: on a screen whose whole purpose is
     // starting work, the big key should start work.

@@ -59,7 +59,7 @@ extension CompletionKind {
   fileprivate var sparkSeed: Int {
     switch self {
     case .task(let id): return id
-    case .daily(let id): return abs(id.hashValue % 9973)
+    case .daily(let id), .workspaceTask(let id): return abs(id.hashValue % 9973)
     }
   }
 }

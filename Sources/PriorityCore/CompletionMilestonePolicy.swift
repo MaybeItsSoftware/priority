@@ -9,10 +9,23 @@ import Foundation
 public enum CompletionKind: Equatable, Hashable, Sendable {
   case task(id: Int)
   case daily(id: String)
+  /// A task in the local desktop workspace, which keys by UUID rather than by
+  /// the `Int` Checkvist hands out. A separate case rather than a widened `id`
+  /// so the two can never be compared and found equal by accident.
+  case workspaceTask(id: String)
 
   public var isDaily: Bool {
     if case .daily = self { return true }
     return false
+  }
+
+  /// Whether this is a unit of work that can run out — as opposed to a daily,
+  /// which resets. What "the list is now clear" is a statement about.
+  public var isTask: Bool {
+    switch self {
+    case .task, .workspaceTask: return true
+    case .daily: return false
+    }
   }
 }
 
@@ -167,7 +180,7 @@ public enum CompletionMilestonePolicy {
     ordinal: Int,
     streakDays: Int = 0
   ) -> CompletionMilestone {
-    if case .task = kind, remainingVisibleTaskCount <= 1 {
+    if kind.isTask, remainingVisibleTaskCount <= 1 {
       return .listCleared
     }
     // Only on the day's opening completion: a streak is a property of the day,

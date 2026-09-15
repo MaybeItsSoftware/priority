@@ -192,4 +192,40 @@ final class WorkspaceDailyTests: XCTestCase {
     XCTAssertEqual(try store.allDailies().count, 3)
     XCTAssertEqual(try store.lists(in: workspace.id).filter { $0.name == "Habits" }.count, 1)
   }
+
+  // MARK: - Completion context
+
+  func testTheFirstCompletionOfTheDayIsOrdinalOne() throws {
+    _ = try store.createTask(listId: list.id, title: "Anything")
+
+    XCTAssertEqual(try store.completionContext().ordinalToday, 1)
+  }
+
+  func testOrdinalCountsBothFinishedTasksAndTickedDailies() throws {
+    let done = try store.createTask(listId: list.id, title: "Done")
+    try store.setStatus(.completed, for: done.id)
+    let habit = try store.createTask(listId: list.id, title: "Habit")
+    let daily = try store.makeDaily(taskId: habit.id)
+    try store.logContribution(dailyId: daily.id)
+
+    XCTAssertEqual(try store.completionContext().ordinalToday, 3, "two already done, so the next is the third")
+  }
+
+  func testAStreakCountsBackThroughConsecutiveDaysAndStopsAtAGap() throws {
+    let habit = try store.createTask(listId: list.id, title: "Habit")
+    let daily = try store.makeDaily(taskId: habit.id)
+    let today = calendar.startOfDay(for: Date())
+
+    for offset in [1, 2, 4] {
+      let day = try XCTUnwrap(calendar.date(byAdding: .day, value: -offset, to: today))
+      try store.logContribution(dailyId: daily.id, now: day, calendar: calendar)
+    }
+
+    // Today (about to be extended) plus the run at -1 and -2; the gap at -3 ends it.
+    XCTAssertEqual(try store.completionContext().streakDays, 3)
+  }
+
+  func testAnEmptyTodayStillCountsBecauseTheCompletionIsAboutToLandOnIt() throws {
+    XCTAssertEqual(try store.completionContext().streakDays, 1)
+  }
 }

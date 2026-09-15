@@ -174,6 +174,70 @@ extension WorkspaceStore {
     return contribution
   }
 
+  // MARK: - Completion context
+
+  /// What a celebration needs to know about today, in one read.
+  ///
+  /// Both numbers are questions about *today* rather than about the task being
+  /// completed, which is why they are fetched together: asking twice invites
+  /// the two halves to disagree about where the day boundary fell.
+  public struct CompletionContext: Sendable, Equatable {
+    /// How many things have already been finished today, this one included.
+    /// 1 means "the first thing today", which is what earns the streak note.
+    public let ordinalToday: Int
+    /// Consecutive days ending today on which something was finished.
+    public let streakDays: Int
+
+    public init(ordinalToday: Int, streakDays: Int) {
+      self.ordinalToday = ordinalToday
+      self.streakDays = streakDays
+    }
+  }
+
+  public func completionContext(now: Date = .now, calendar: Calendar = .current) throws -> CompletionContext {
+    try database.read { db in
+      let today = calendar.startOfDay(for: now)
+      let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? now
+      let tasksToday = try Int.fetchOne(
+        db,
+        sql: "SELECT COUNT(*) FROM tasks WHERE status = ? AND updatedAt >= ? AND updatedAt < ?",
+        arguments: [TaskStatus.completed.rawValue, today, tomorrow]) ?? 0
+      let contributionsToday = try Int.fetchOne(
+        db,
+        sql: "SELECT COUNT(*) FROM daily_contributions WHERE dayKey = ? AND completedAt IS NOT NULL",
+        arguments: [DailyContribution.dayKey(for: now, calendar: calendar)]) ?? 0
+      // Counting the completion about to happen, so the first of the day is 1.
+      let ordinal = tasksToday + contributionsToday + 1
+
+      // Walk back a day at a time until a day has nothing in it. Bounded at a
+      // year: past that the number stops meaning anything and the scan stops
+      // being free.
+      var streak = 0
+      for offset in 0..<366 {
+        guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { break }
+        let next = calendar.date(byAdding: .day, value: 1, to: day) ?? day
+        let finished = try Int.fetchOne(
+          db,
+          sql: "SELECT COUNT(*) FROM tasks WHERE status = ? AND updatedAt >= ? AND updatedAt < ?",
+          arguments: [TaskStatus.completed.rawValue, day, next]) ?? 0
+        let ticked = try Int.fetchOne(
+          db,
+          sql: "SELECT COUNT(*) FROM daily_contributions WHERE dayKey = ? AND completedAt IS NOT NULL",
+          arguments: [DailyContribution.dayKey(for: day, calendar: calendar)]) ?? 0
+        if finished + ticked > 0 {
+          streak += 1
+        } else if offset == 0 {
+          // Today being empty does not break a streak that is about to be
+          // extended by the completion we are describing.
+          streak += 1
+        } else {
+          break
+        }
+      }
+      return CompletionContext(ordinalToday: ordinal, streakDays: streak)
+    }
+  }
+
   // MARK: - Next up
 
   /// Every open task that could reasonably be done now, flattened into the

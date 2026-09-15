@@ -82,6 +82,7 @@ struct WorkspaceFocusLauncher: View {
 /// progress rather than as a list you are indexing into.
 struct WorkspaceFocusScreen: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(AppCoordinator.self) private var manager
 
   /// How much history stays on screen. Enough to feel the run you are on,
   /// few enough that it never becomes something to read.
@@ -106,6 +107,29 @@ struct WorkspaceFocusScreen: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(nsColor: .textBackgroundColor))
+    // Over the whole screen rather than the rung: the rung it belongs to is
+    // gone by the time this plays, and a cleared ladder is exactly when the
+    // flourish has the most to say.
+    .onChange(of: model.focusCompletionRequest) { _, _ in tickOff() }
+    .overlay {
+      if let flourish = manager.celebration.activeFlourish?.view {
+        flourish
+          .allowsHitTesting(false)
+          .transition(.opacity)
+      }
+    }
+  }
+
+  /// Plays the chosen preset, then mutates — in that order, because the preset
+  /// is allowed to cancel. Cancelling means the row stays, so the tick has to
+  /// wait on it rather than race it.
+  private func tickOff() {
+    guard let event = model.focusCompletionEvent() else { return }
+    Task {
+      guard await manager.celebration.runInline(event) else { return }
+      model.completeFocusLadderSelection()
+      manager.celebration.presentFlourish(for: event)
+    }
   }
 
   // MARK: - Chrome
@@ -210,8 +234,17 @@ struct WorkspaceFocusScreen: View {
   private func rung(_ scored: ScoredNextUp) -> some View {
     let distance = rungOffset(to: scored)
     let isCurrent = distance == 0
-    let scale = isCurrent ? 1 : Self.passedScale
     let task = isCurrent ? model.focusLadderTask : nil
+
+    // The active preset decides what completing looks like; this screen only
+    // says which rung it is happening to. Multiplying the treatment's scale
+    // into the ladder's own keeps the two independent — a rung being completed
+    // while you climb past it still shrinks.
+    let phase = celebrationPhase(for: scored)
+    let treatment = manager.celebration.rowTreatment
+    let scale = (isCurrent ? 1 : Self.passedScale) * treatment.rowScale(for: phase)
+    let tint = manager.preferences.themeColor(for: .success)
+    let celebrating = phase != .idle
 
     return VStack(spacing: 10) {
       // The reason line rises out of the title rather than appearing above it.
@@ -221,15 +254,18 @@ struct WorkspaceFocusScreen: View {
       }
 
       HStack(spacing: 10) {
-        Image(systemName: icon(for: scored.reason))
+        // The icon becomes the tick it is about to earn, and pops as it does.
+        Image(systemName: celebrating ? "checkmark.circle.fill" : icon(for: scored.reason))
           .font(.system(size: 20))
-          .foregroundStyle(isCurrent ? tint(for: scored.reason) : Color.secondary)
+          .foregroundStyle(celebrating ? tint : (isCurrent ? self.tint(for: scored.reason) : Color.secondary))
+          .scaleEffect(treatment.iconScale(for: phase))
         Text(scored.candidate.title)
           .font(.system(size: 28, weight: .semibold))
           .multilineTextAlignment(.center)
           .lineLimit(isCurrent ? 3 : 1)
           .truncationMode(.tail)
           .fixedSize(horizontal: false, vertical: isCurrent)
+          .strikethrough(treatment.drawsStrikethrough && phase == .celebrating, color: tint)
       }
       .scaleEffect(scale, anchor: .center)
       // Scaling alone leaves a full-height gap behind a shrunken row, so the
@@ -242,11 +278,42 @@ struct WorkspaceFocusScreen: View {
       }
     }
     .foregroundStyle(isCurrent ? .primary : .secondary)
-    .opacity(opacity(forDistance: distance))
+    .background {
+      if celebrating {
+        RoundedRectangle(cornerRadius: 12)
+          .fill(tint.opacity(treatment.tintOpacity))
+      }
+    }
+    .opacity(opacity(forDistance: distance) * (treatment.fades && phase == .celebrating ? 0 : 1))
+    // A preset that collapses takes the row's height with it, so the ladder
+    // closes over the gap instead of leaving one.
     .frame(maxWidth: 620)
+    .frame(height: treatment.collapses && phase == .celebrating ? 0 : nil)
     .padding(.vertical, isCurrent ? 20 : 3)
+    .overlay { rowAccent(for: scored) }
     .contentShape(Rectangle())
     .onTapGesture { model.moveFocusLadder(by: distance) }
+  }
+
+  /// `.idle` for every rung but the one actually being completed.
+  private func celebrationPhase(for scored: ScoredNextUp) -> CelebrationPhase {
+    guard let task = model.focusLadderTask, task.id == scored.candidate.id else { return .idle }
+    let kind: CompletionKind = model.dailyItem(for: task)
+      .map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id)
+    return manager.celebration.phase(for: kind)
+  }
+
+  @ViewBuilder
+  private func rowAccent(for scored: ScoredNextUp) -> some View {
+    if celebrationPhase(for: scored) != .idle,
+      let task = model.focusLadderTask,
+      task.id == scored.candidate.id
+    {
+      let kind: CompletionKind = model.dailyItem(for: task)
+        .map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id)
+      manager.celebration.rowAccent(for: kind)
+        .allowsHitTesting(false)
+    }
   }
 
   /// Legible rather than faint. These are the things you just dealt with, and a
@@ -318,7 +385,7 @@ struct WorkspaceFocusScreen: View {
         model.stageFocusLadderSelection()
       }
       actionButton("Tick off", systemImage: "checkmark", key: "X") {
-        model.completeFocusLadderSelection()
+        tickOff()
       }
       HStack(spacing: 0) {
         actionButton("Later", systemImage: "clock", key: "L") {

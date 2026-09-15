@@ -132,6 +132,27 @@ extension WorkspaceViewModel {
     startFocus(on: task, plannedSeconds: max(1, focusEstimateMinutes) * 60)
   }
 
+  /// Describes what ticking the current rung off would be an instance of, so
+  /// the celebration can be chosen before the row is gone.
+  ///
+  /// Built here rather than in the view because every input is a question about
+  /// stored state — which rung, whether it is a daily, how the day has gone —
+  /// and the view has none of that.
+  func focusCompletionEvent() -> CompletionEvent? {
+    guard let store, let task = focusLadderTask else { return nil }
+    let item = dailyItem(for: task)
+    let kind: CompletionKind = item.map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id)
+    let context = (try? store.completionContext()) ?? .init(ordinalToday: 1, streakDays: 0)
+    let milestone = CompletionMilestonePolicy.milestone(
+      for: kind,
+      // The rung being ticked is still in the ladder, so one left means this is
+      // the last of them.
+      remainingVisibleTaskCount: focusLadder.count,
+      ordinal: context.ordinalToday,
+      streakDays: context.streakDays)
+    return CompletionEvent(kind: kind, milestone: milestone, ordinal: context.ordinalToday)
+  }
+
   /// Ticks the rung under the cursor off without ever starting a session —
   /// the "actually, that's already done" path that stops the ladder being a
   /// list you can only work through one sitting at a time.
