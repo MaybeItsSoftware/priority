@@ -25,6 +25,15 @@ extension WorkspaceViewModel {
   /// Climbing the focus ladder. Up is *less* important — the direction matches
   /// the screen, where the most important thing sits at the foot.
   private func handleFocusLadderKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
+    // Option-arrow moves the task itself rather than the cursor, which is the
+    // same gesture that reorders a task everywhere else in the workspace.
+    if flags == [.option] {
+      switch event.keyCode {
+      case 126: reorderFocusLadder(by: -1); return true
+      case 125: reorderFocusLadder(by: 1); return true
+      default: return false
+      }
+    }
     guard flags.isEmpty || flags == [.shift] else { return false }
     switch event.keyCode {
     case 53:  // Escape
@@ -46,6 +55,7 @@ extension WorkspaceViewModel {
     case "k": moveFocusLadder(by: 1); return true
     case "j": moveFocusLadder(by: -1); return true
     case "x": completeFocusLadderSelection(); return true
+    case "l": deferFocusLadderSelection(); return true
     // Space stages rather than ticking off: on a screen whose whole purpose is
     // starting work, the big key should start work.
     case " ": if stagedTaskID == nil { stageFocusLadderSelection() } else { beginStagedFocus() }; return true

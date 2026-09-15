@@ -150,6 +150,46 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// Moves the task under the cursor through the ladder by hand, and follows it
+  /// with the cursor so the same task stays selected.
+  ///
+  /// Writing the whole visible order rather than one rank keeps the arrangement
+  /// stable: a single pinned task among floating ones drifts as soon as a due
+  /// date passes.
+  func reorderFocusLadder(by offset: Int) {
+    guard let store, !focusLadder.isEmpty else { return }
+    let target = focusLadderIndex + offset
+    guard focusLadder.indices.contains(target) else { return }
+    var order = focusLadder.map(\.candidate.id)
+    order.swapAt(focusLadderIndex, target)
+    perform {
+      try store.setFocusOrder(order)
+      focusLadderIndex = target
+      stagedTaskID = nil
+      reloadNextUp()
+    }
+  }
+
+  /// Gives the ladder back to the ranking.
+  func clearManualFocusOrder() {
+    guard let store else { return }
+    perform {
+      try store.clearFocusOrder()
+      reloadNextUp()
+    }
+  }
+
+  var hasManualFocusOrder: Bool {
+    (try? store?.hasManualFocusOrder()) == true
+  }
+
+  /// Defers the task under the cursor. The default is tomorrow morning, which
+  /// is what "not today" almost always means.
+  func deferFocusLadderSelection(_ deferral: WorkspaceDeferral = .tomorrow) {
+    guard let task = focusLadderTask else { return }
+    scheduleForLater(task, until: deferral.date(from: .now))
+  }
+
   /// Leaves focus mode, putting the ladder back at the top for next time.
   func dismissFocusScreen() {
     showsFocusScreen = false

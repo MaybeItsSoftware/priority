@@ -221,9 +221,50 @@ extension WorkspaceStore {
           priority: metadata?.priority,
           estimateSeconds: task.estimateSeconds,
           kanbanColumn: metadata?.kanbanColumn,
+          focusRank: metadata?.focusRank,
           sortOrder: task.sortOrder,
           createdAt: task.createdAt)
       }
+    }
+  }
+
+  /// Writes a hand-arranged focus order: every task in `orderedTaskIDs` takes
+  /// its position in that array as its rank.
+  ///
+  /// The whole visible order is written, not just the task that moved. Ranking
+  /// one task by hand while its neighbours keep floating on score produces an
+  /// order that rearranges itself the moment anything changes, which is the
+  /// opposite of what dragging something into place asks for.
+  public func setFocusOrder(_ orderedTaskIDs: [String], now: Date = .now) throws {
+    try database.write { db in
+      for (rank, taskId) in orderedTaskIDs.enumerated() {
+        if var metadata = try TaskMetadata.fetchOne(db, key: taskId) {
+          metadata.focusRank = rank
+          metadata.updatedAt = now
+          try metadata.update(db)
+        } else {
+          try TaskMetadata(
+            taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
+            matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]",
+            focusRank: rank, updatedAt: now
+          ).insert(db)
+        }
+      }
+    }
+  }
+
+  /// Hands the ladder back to the ranking.
+  public func clearFocusOrder(now: Date = .now) throws {
+    try database.write { db in
+      try db.execute(
+        sql: "UPDATE task_metadata SET focusRank = NULL, updatedAt = ? WHERE focusRank IS NOT NULL",
+        arguments: [now])
+    }
+  }
+
+  public func hasManualFocusOrder() throws -> Bool {
+    try database.read { db in
+      try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM task_metadata WHERE focusRank IS NOT NULL") ?? 0 > 0
     }
   }
 

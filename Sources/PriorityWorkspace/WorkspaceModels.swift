@@ -82,6 +82,8 @@ public struct TaskMetadata: Codable, FetchableRecord, PersistableRecord, Sendabl
   public var matrixImportance: Int?
   public var kanbanColumn: String?
   public var externalLinksJSON: String
+  /// Hand-placed position in the focus ladder; nil means ranked by score.
+  public var focusRank: Int?
   public var updatedAt: Date
 
   public init(
@@ -94,6 +96,7 @@ public struct TaskMetadata: Codable, FetchableRecord, PersistableRecord, Sendabl
     matrixImportance: Int?,
     kanbanColumn: String?,
     externalLinksJSON: String,
+    focusRank: Int? = nil,
     updatedAt: Date
   ) {
     self.taskId = taskId
@@ -105,6 +108,7 @@ public struct TaskMetadata: Codable, FetchableRecord, PersistableRecord, Sendabl
     self.matrixImportance = matrixImportance
     self.kanbanColumn = kanbanColumn
     self.externalLinksJSON = externalLinksJSON
+    self.focusRank = focusRank
     self.updatedAt = updatedAt
   }
 }

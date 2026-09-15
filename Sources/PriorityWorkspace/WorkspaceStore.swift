@@ -939,6 +939,13 @@ public final class WorkspaceStore: @unchecked Sendable {
         table.add(column: "plannedSeconds", .integer)
       }
     }
+    migrator.registerMigration("v4_manual_focus_order") { db in
+      // A hand-placed position in the focus ladder. Null means "not arranged by
+      // hand" — those tasks keep following the ranking underneath.
+      try db.alter(table: "task_metadata") { table in
+        table.add(column: "focusRank", .integer)
+      }
+    }
     return migrator
   }()
 }

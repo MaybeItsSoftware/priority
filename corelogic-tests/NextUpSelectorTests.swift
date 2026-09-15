@@ -16,14 +16,16 @@ final class NextUpSelectorTests: XCTestCase {
     priority: Int? = nil,
     estimate: Int? = nil,
     column: String? = nil,
-    order: Int = 0
+    order: Int = 0,
+    rank: Int? = nil
   ) -> NextUpCandidate {
     NextUpCandidate(
       id: id, title: id, isDailyDueToday: daily,
       dueAt: due.map { now.addingTimeInterval($0) },
       startAt: start.map { now.addingTimeInterval($0) },
       matrixUrgency: urgency, matrixImportance: importance, priority: priority,
-      estimateSeconds: estimate, kanbanColumn: column, sortOrder: order, createdAt: now)
+      estimateSeconds: estimate, kanbanColumn: column, focusRank: rank, sortOrder: order,
+      createdAt: now)
   }
 
   private func rank(_ candidates: [NextUpCandidate]) -> [String] {
@@ -139,5 +141,52 @@ final class NextUpSelectorTests: XCTestCase {
     for (higher, lower) in zip(ranked, ranked.dropFirst()) {
       XCTAssertGreaterThanOrEqual(higher.score, lower.score, "\(higher.candidate.id) should outrank \(lower.candidate.id)")
     }
+  }
+
+  // MARK: - Hand-placed order
+
+  func testAHandPlacedTaskSitsWhereItWasPutAboveEverythingScored() {
+    XCTAssertEqual(
+      rank([
+        candidate("daily", daily: true),
+        candidate("overdue", due: -10 * 86_400),
+        candidate("placed", rank: 0),
+      ]),
+      ["placed", "daily", "overdue"],
+      "arranging by hand says the ranking got it wrong, so it has to win outright")
+  }
+
+  func testHandPlacedTasksKeepTheirOwnOrderAmongThemselves() {
+    XCTAssertEqual(
+      rank([
+        candidate("third", daily: true, rank: 2),
+        candidate("first", rank: 0),
+        candidate("second", due: -40 * 86_400, rank: 1),
+        candidate("scored", daily: true),
+      ]),
+      ["first", "second", "third", "scored"])
+  }
+
+  func testClearingOneTasksRankLetsItFallBackToItsScore() {
+    XCTAssertEqual(
+      rank([candidate("unplaced", daily: true), candidate("placed", rank: 5)]),
+      ["placed", "unplaced"])
+    XCTAssertEqual(
+      rank([candidate("unplaced", daily: true), candidate("placed")]),
+      ["unplaced", "placed"])
+  }
+
+  func testRankingIsATotalOrderSoTheLadderNeverShuffles() {
+    let candidates = [
+      candidate("a", daily: true),
+      candidate("b", daily: true),
+      candidate("c", due: 0),
+      candidate("d"),
+    ]
+
+    let first = rank(candidates)
+
+    XCTAssertEqual(first, rank(candidates.reversed()), "order must not depend on input order")
+    XCTAssertEqual(Set(first).count, first.count)
   }
 }

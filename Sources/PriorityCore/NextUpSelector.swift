@@ -49,6 +49,9 @@ public struct NextUpCandidate: Sendable, Equatable, Identifiable {
   public let priority: Int?
   public let estimateSeconds: Int?
   public let kanbanColumn: String?
+  /// A position the user placed by hand. Present means the ranking has been
+  /// overruled for this task, and it sits where it was put.
+  public let focusRank: Int?
   public let sortOrder: Int
   public let createdAt: Date
 
@@ -63,6 +66,7 @@ public struct NextUpCandidate: Sendable, Equatable, Identifiable {
     priority: Int? = nil,
     estimateSeconds: Int? = nil,
     kanbanColumn: String? = nil,
+    focusRank: Int? = nil,
     sortOrder: Int = 0,
     createdAt: Date = .distantPast
   ) {
@@ -76,6 +80,7 @@ public struct NextUpCandidate: Sendable, Equatable, Identifiable {
     self.priority = priority
     self.estimateSeconds = estimateSeconds
     self.kanbanColumn = kanbanColumn
+    self.focusRank = focusRank
     self.sortOrder = sortOrder
     self.createdAt = createdAt
   }
@@ -129,6 +134,16 @@ public enum NextUpSelector {
       .filter { ($0.startAt ?? .distantPast) <= now }
       .map { score($0, now: now, calendar: calendar) }
       .sorted { lhs, rhs in
+        // A hand-placed task sits where it was put, above everything still
+        // being ordered by score. Arranging the ladder by hand is a statement
+        // that the ranking got it wrong, so it has to win outright — a manual
+        // order that score could still perturb would not be an order at all.
+        switch (lhs.candidate.focusRank, rhs.candidate.focusRank) {
+        case let (left?, right?): if left != right { return left < right }
+        case (.some, .none): return true
+        case (.none, .some): return false
+        case (.none, .none): break
+        }
         if lhs.score != rhs.score { return lhs.score > rhs.score }
         // A shorter job first, among equals: finishing something is worth more
         // than starting the same-sized something else.

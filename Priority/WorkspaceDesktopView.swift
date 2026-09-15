@@ -12,32 +12,34 @@ struct WorkspaceDesktopView: View {
   @FocusState private var focusedArea: WorkspaceFocusArea?
 
   var body: some View {
-    Group {
-      // Focus mode replaces the workspace rather than covering it. A sheet
-      // leaves the board visible round the edges, which is the one thing the
-      // screen exists to stop.
-      if model.showsFocusScreen {
-        WorkspaceFocusScreen()
-          .environment(model)
-          .transition(.opacity)
-      } else {
-        workspace
-      }
-    }
-    .animation(.easeInOut(duration: 0.12), value: model.showsFocusScreen)
+    workspace
   }
 
   private var workspace: some View {
     HSplitView {
+      // The sidebar stays through focus mode: setting up a session often means
+      // looking at which list something came from, and losing your place in the
+      // workspace to do that is its own distraction.
       sidebar
         .focusSection()
         .frame(minWidth: 155, idealWidth: 185, maxWidth: 230)
-      taskPane
-        .focusSection()
-        .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+      // Focus mode takes the main pane rather than floating over it. A sheet
+      // leaves the board visible round the edges, which is the one thing the
+      // screen exists to stop.
+      Group {
+        if model.showsFocusScreen {
+          WorkspaceFocusScreen()
+            .environment(model)
+        } else {
+          taskPane
+        }
+      }
+      .animation(.easeInOut(duration: 0.15), value: model.showsFocusScreen)
+      .focusSection()
+      .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
       // Selection remains light-weight; only I or an explicit inspector
       // command opens the editor and consumes the third pane.
-      if model.isInspectorVisible && model.selectedTask != nil {
+      if model.isInspectorVisible && model.selectedTask != nil && !model.showsFocusScreen {
         inspector
           .focusSection()
           .frame(minWidth: 210, idealWidth: 250, maxWidth: 320)
