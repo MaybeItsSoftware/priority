@@ -8,6 +8,7 @@ use crate::config::Config;
 use crate::error::{Result, ToolError};
 use serde_json::{Value, json};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::time::Duration;
 
 pub const USER_AGENT: &str = "PriorityMCP/0.3";
@@ -261,6 +262,7 @@ impl CheckvistClient {
         task_id: i64,
         content: Option<&str>,
         due: Option<&str>,
+        tags: Option<&str>,
     ) -> Result<Value> {
         let mut payload = serde_json::Map::new();
         if let Some(content) = content {
@@ -269,9 +271,12 @@ impl CheckvistClient {
         if let Some(due) = due {
             payload.insert("due".into(), json!(due));
         }
+        if let Some(tags) = tags {
+            payload.insert("tags".into(), json!(tags));
+        }
         if payload.is_empty() {
             return Err(ToolError::new(
-                "No updates provided. Pass content and/or due.",
+                "No updates provided. Pass content, due, and/or tags.",
             ));
         }
         self.put_task(list_id, task_id, Value::Object(payload))
@@ -294,6 +299,211 @@ impl CheckvistClient {
     ) -> Result<Value> {
         let parent = parent_id.map_or(Value::Null, Value::from);
         self.put_task(list_id, task_id, json!({ "parent_id": parent }))
+    }
+
+    /// Transfer a task and every descendant into another checklist.
+    ///
+    /// Checkvist's public REST API exposes hierarchy edits inside one checklist,
+    /// but not the web app's cross-checklist move action.  We therefore create
+    /// a verified equivalent tree in the destination before deleting the source
+    /// root.  A failed copy leaves the original untouched; a failed delete leaves
+    /// both trees intact rather than risking data loss.
+    pub fn move_project_to_list(
+        &self,
+        source_list_id: &str,
+        target_list_id: &str,
+        root_task_id: i64,
+    ) -> Result<Value> {
+        if source_list_id == target_list_id {
+            return Err(ToolError::new(
+                "source_list_id and target_list_id must be different.",
+            ));
+        }
+
+        let source_tasks = self.fetch_tasks(source_list_id, true, true)?;
+        let project = project_tasks(&source_tasks, root_task_id)?;
+        let mut id_map: HashMap<i64, i64> = HashMap::new();
+        let mut copied: Vec<Value> = Vec::with_capacity(project.len());
+
+        // Create every item open first. Applying closed/invalidated statuses
+        // afterwards avoids a closed parent changing the state of descendants
+        // as they are added.
+        for task in &project {
+            let source_id = task_id(task)?;
+            let source_parent = parent_id_of(task);
+            let target_parent = id_map.get(&source_parent).copied();
+            let created = self.copy_task(target_list_id, task, target_parent)?;
+            let target_id = task_id(&created)?;
+            id_map.insert(source_id, target_id);
+            copied.push(created);
+        }
+
+        // Comments are a separate Checkvist resource, so add them only after
+        // the complete task tree itself has been created.
+        for task in &project {
+            let source_id = task_id(task)?;
+            let target_id = *id_map
+                .get(&source_id)
+                .ok_or_else(|| ToolError::new("Internal error mapping copied task."))?;
+            for note in notes_of(task) {
+                self.add_note(target_list_id, target_id, &note)?;
+            }
+        }
+
+        // Children first: Checkvist derives a non-leaf task's status from its
+        // children, and applying parent status first could overwrite them.
+        for task in project.iter().rev() {
+            let status = status_of(task);
+            if status == 0 {
+                continue;
+            }
+            let source_id = task_id(task)?;
+            let target_id = *id_map
+                .get(&source_id)
+                .ok_or_else(|| ToolError::new("Internal error mapping copied task."))?;
+            let action = match status {
+                1 => "close",
+                2 => "invalidate",
+                _ => return Err(ToolError::new("Source task has an unsupported status.")),
+            };
+            self.task_action(target_list_id, target_id, action)?;
+        }
+
+        let target_root_id = *id_map
+            .get(&root_task_id)
+            .ok_or_else(|| ToolError::new("Internal error mapping copied project root."))?;
+        self.verify_copied_project(target_list_id, target_root_id, &project, &id_map)?;
+
+        // This is intentionally last. The source hierarchy remains recoverable
+        // until destination structure and task count have been checked.
+        self.delete_task(source_list_id, root_task_id)?;
+
+        let id_map: Vec<Value> = project
+            .iter()
+            .map(|task| {
+                let source_id = task_id(task)?;
+                let target_id = id_map
+                    .get(&source_id)
+                    .copied()
+                    .ok_or_else(|| ToolError::new("Internal error mapping copied task."))?;
+                Ok(json!({ "source_task_id": source_id, "target_task_id": target_id }))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(json!({
+            "source_list_id": source_list_id,
+            "target_list_id": target_list_id,
+            "source_root_task_id": root_task_id,
+            "target_root_task_id": target_root_id,
+            "moved_task_count": project.len(),
+            "task_id_map": id_map,
+        }))
+    }
+
+    fn copy_task(
+        &self,
+        target_list_id: &str,
+        source: &Value,
+        target_parent_id: Option<i64>,
+    ) -> Result<Value> {
+        let content = source
+            .get("content")
+            .and_then(Value::as_str)
+            .filter(|text| !text.trim().is_empty())
+            .ok_or_else(|| ToolError::new("Source task is missing content."))?;
+        let mut task = serde_json::Map::new();
+        task.insert("content".into(), json!(content));
+        if let Some(parent_id) = target_parent_id {
+            task.insert("parent_id".into(), json!(parent_id));
+        }
+        if let Some(position) = source.get("position").and_then(Value::as_i64) {
+            task.insert("position".into(), json!(position));
+        }
+        if let Some(due) = source
+            .get("due")
+            .and_then(Value::as_str)
+            .filter(|due| !due.is_empty())
+        {
+            task.insert("due".into(), json!(due));
+        }
+        if let Some(tags) = source
+            .get("tags_as_text")
+            .and_then(Value::as_str)
+            .filter(|tags| !tags.is_empty())
+        {
+            task.insert("tags".into(), json!(tags));
+        }
+        if let Some(priority) = source.get("priority").and_then(Value::as_i64) {
+            task.insert("priority".into(), json!(priority));
+        }
+
+        let response = self.request(
+            "POST",
+            &format!("/checklists/{target_list_id}/tasks.json"),
+            // Checkvist treats the presence of `parse` as enabled, including
+            // the string value `false`. Omit it entirely to retain literal
+            // text such as "#test" while transferring an existing project.
+            &[],
+            Some(json!({ "task": task })),
+            true,
+        )?;
+        if !response.is_object() {
+            return Err(ToolError::http(
+                "Unexpected response while copying task.",
+                None,
+                Some(response),
+            ));
+        }
+        Ok(response)
+    }
+
+    fn verify_copied_project(
+        &self,
+        target_list_id: &str,
+        target_root_id: i64,
+        source_project: &[Value],
+        id_map: &HashMap<i64, i64>,
+    ) -> Result<()> {
+        let target_tasks = self.fetch_tasks(target_list_id, true, false)?;
+        let target_project = project_tasks(&target_tasks, target_root_id)?;
+        if target_project.len() != source_project.len() {
+            return Err(ToolError::new(format!(
+                "Copied project verification failed: expected {} tasks, found {}. Source was not deleted.",
+                source_project.len(),
+                target_project.len()
+            )));
+        }
+        for source in source_project {
+            let source_id = task_id(source)?;
+            let target_id = *id_map
+                .get(&source_id)
+                .ok_or_else(|| ToolError::new("Internal error mapping copied task."))?;
+            let Some(target) = target_project
+                .iter()
+                .find(|candidate| candidate.get("id").and_then(Value::as_i64) == Some(target_id))
+            else {
+                return Err(ToolError::new(
+                    "Copied project verification failed: a copied task is missing. Source was not deleted.",
+                ));
+            };
+            if target.get("content") != source.get("content") {
+                return Err(ToolError::new(
+                    "Copied project verification failed: task content changed. Source was not deleted.",
+                ));
+            }
+            let expected_parent = parent_id_of(source);
+            let actual_parent = parent_id_of(target);
+            match id_map.get(&expected_parent) {
+                Some(expected_target_parent) if *expected_target_parent == actual_parent => {}
+                None if expected_parent == 0 && actual_parent == 0 => {}
+                _ => {
+                    return Err(ToolError::new(
+                        "Copied project verification failed: hierarchy changed. Source was not deleted.",
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 
     fn put_task(&self, list_id: &str, task_id: i64, task: Value) -> Result<Value> {
@@ -388,6 +598,65 @@ pub fn parent_id_of(task: &Value) -> i64 {
         Some(Value::String(text)) => text.parse().unwrap_or(0),
         _ => 0,
     }
+}
+
+fn task_id(task: &Value) -> Result<i64> {
+    task.get("id")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| ToolError::new("Task response is missing an ID."))
+}
+
+fn notes_of(task: &Value) -> Vec<String> {
+    task.get("notes")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|note| note.get("comment").and_then(Value::as_str))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Return the root and its descendants, depth-first. `tasks` is already
+/// ordered by [`depth_first_tasks`], but filtering by ancestry rather than by
+/// a contiguous range also handles a malformed ordering defensively.
+fn project_tasks(tasks: &[Value], root_id: i64) -> Result<Vec<Value>> {
+    if !tasks
+        .iter()
+        .any(|task| task.get("id").and_then(Value::as_i64) == Some(root_id))
+    {
+        return Err(ToolError::new(format!(
+            "Task {root_id} was not found in the source list."
+        )));
+    }
+
+    let mut result = Vec::new();
+    let mut included = vec![root_id];
+    // The API can return rows out of hierarchy order when a list has been
+    // edited concurrently. Repeat until no further descendant is found.
+    while result.len() < tasks.len() {
+        let before = result.len();
+        for task in tasks {
+            let id = task_id(task)?;
+            if included.contains(&id) || !included.contains(&parent_id_of(task)) {
+                continue;
+            }
+            included.push(id);
+            result.push(task.clone());
+        }
+        if result.len() == before {
+            break;
+        }
+    }
+
+    // The loop above intentionally skips the root (its parent is external),
+    // so prepend it after confirming the traversal found no impossible cycle.
+    let root = tasks
+        .iter()
+        .find(|task| task.get("id").and_then(Value::as_i64) == Some(root_id))
+        .expect("root presence checked above")
+        .clone();
+    result.insert(0, root);
+    Ok(result)
 }
 
 /// Parents before children, siblings in `position` order — the order the app

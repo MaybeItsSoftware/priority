@@ -12,7 +12,7 @@ Priority ships an MCP stdio server so an AI assistant can work directly with you
 
 ## What It Can Do
 
-The server exposes 20 MCP tools, in two groups.
+The server exposes 21 MCP tools, in two groups.
 
 **Checkvist tools** — these reach the Checkvist API directly, so they work
 whether or not the app is running:
@@ -28,6 +28,7 @@ whether or not the app is running:
 | `task_note_add` | Append a note (a Checkvist comment) |
 | `task_move` | Reorder among siblings (1-based position) |
 | `task_reparent` | Move under a different parent, or to the root |
+| `project_move` | Move a root task and its full subtree to another list, with an old-to-new ID map |
 | `task_complete` | Close a task |
 | `task_reopen` | Reopen a task |
 | `task_invalidate` | Mark "won't do" |

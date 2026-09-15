@@ -727,7 +727,7 @@ fn every_advertised_tool_is_actually_implemented() {
 }
 
 #[test]
-fn the_tool_surface_is_twenty_uniquely_named_tools() {
+fn the_tool_surface_is_twenty_one_uniquely_named_tools() {
     let definitions = tool_definitions();
     let mut names: Vec<&str> = definitions
         .iter()
@@ -737,7 +737,7 @@ fn the_tool_surface_is_twenty_uniquely_named_tools() {
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), total, "duplicate tool name");
-    assert_eq!(total, 20);
+    assert_eq!(total, 21);
 
     for definition in &definitions {
         assert!(

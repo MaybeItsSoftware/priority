@@ -1,4 +1,4 @@
-//! The nineteen Priority tools, implemented once.
+//! The Priority tools, implemented once.
 //!
 //! Both front ends — the CLI subcommands in `cli.rs` and the MCP server in
 //! `mcp.rs` — dispatch through [`Tools::call`], so the two cannot drift from
@@ -79,11 +79,13 @@ impl Tools {
                 let task_id = required_int(arguments, "task_id")?;
                 let content = as_string(arguments.get("content"));
                 let due = as_string(arguments.get("due"));
+                let tags = as_string(arguments.get("tags"));
                 let payload = self.client.update_task(
                     &list_id,
                     task_id,
                     content.as_deref(),
                     due.as_deref(),
+                    tags.as_deref(),
                 )?;
                 Ok(outcome("Task updated", payload))
             }
@@ -139,6 +141,17 @@ impl Tools {
                 Ok(outcome(
                     "Task reparented",
                     self.client.reparent_task(&list_id, task_id, parent_id)?,
+                ))
+            }
+
+            "project_move" => {
+                let source_list_id = required_string(arguments, "source_list_id")?;
+                let target_list_id = required_string(arguments, "target_list_id")?;
+                let task_id = required_int(arguments, "task_id")?;
+                Ok(outcome(
+                    "Project moved",
+                    self.client
+                        .move_project_to_list(&source_list_id, &target_list_id, task_id)?,
                 ))
             }
 

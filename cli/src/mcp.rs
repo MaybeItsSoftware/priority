@@ -351,7 +351,7 @@ pub fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "task_update",
-            "description": "Update task content and/or due field.",
+            "description": "Update task content, due field, and/or tags. An empty tags string removes every tag.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -359,6 +359,7 @@ pub fn tool_definitions() -> Vec<Value> {
                     "task_id": { "type": "integer" },
                     "content": { "type": "string" },
                     "due": { "type": "string" },
+                    "tags": { "type": "string" },
                 },
                 "required": ["task_id"],
                 "additionalProperties": false,
@@ -409,6 +410,20 @@ pub fn tool_definitions() -> Vec<Value> {
                     "parent_task_id": { "type": "integer" },
                 },
                 "required": ["task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "project_move",
+            "description": "Move a root task and its complete subtree to another list. The destination copy is verified before the source project is deleted; the result includes an old-to-new task ID map.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "source_list_id": { "type": "string", "minLength": 1 },
+                    "target_list_id": { "type": "string", "minLength": 1 },
+                    "task_id": { "type": "integer" },
+                },
+                "required": ["source_list_id", "target_list_id", "task_id"],
                 "additionalProperties": false,
             },
         }),
