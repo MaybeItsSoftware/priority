@@ -230,7 +230,7 @@ private struct ListSettingsEditor: View {
       model.moveList(list, toFolderId: folderID)
     }
     if isArchived != list.isArchived {
-      isArchived ? model.archiveList(list) : model.restoreList(list)
+      if isArchived { model.archiveList(list) } else { model.restoreList(list) }
     }
     dismiss()
   }

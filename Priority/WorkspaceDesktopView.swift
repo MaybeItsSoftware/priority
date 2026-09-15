@@ -124,8 +124,7 @@ struct WorkspaceDesktopView: View {
       List(selection: Binding(
         get: { model.isEverythingSelected ? everythingSidebarID : model.selectedListID },
         set: { id in
-          if id == everythingSidebarID { model.selectEverything() }
-          else if let id { model.selectList(id) }
+          if id == everythingSidebarID { model.selectEverything() } else if let id { model.selectList(id) }
         }
       )) {
         Label("Everything", systemImage: "square.stack.3d.up")
@@ -496,7 +495,6 @@ private struct WorkspaceKanbanColumnView: View {
         )
       }
 
-
       TaskComposer(focusRequest: 0) { title in
         model.createBoardTask(named: title, in: column)
       }
@@ -615,17 +613,23 @@ private struct WorkspaceKanbanCard: View {
   private func handleCardKey(_ press: KeyPress) -> KeyPress.Result {
     guard isCardFocused else { return .ignored }
     if press.modifiers.contains(.option) {
-      if press.key == .leftArrow { model.moveTaskToAdjacentColumn(task, by: -1) }
-      else if press.key == .rightArrow { model.moveTaskToAdjacentColumn(task, by: 1) }
-      else { return .ignored }
-    } else if press.key == .space { model.toggleTask(task) }
-    else if press.key == .return { model.enterTask(task) }
-    else if press.key == .upArrow { model.selectAdjacentTask(by: -1) }
-    else if press.key == .downArrow { model.selectAdjacentTask(by: 1) }
-    else if press.key == .leftArrow { model.selectTaskInAdjacentColumn(from: task, by: -1) }
-    else if press.key == .rightArrow { model.selectTaskInAdjacentColumn(from: task, by: 1) }
-    else if press.key == "i" { model.toggleInspector() }
-    else { return .ignored }
+      if press.key == .leftArrow { model.moveTaskToAdjacentColumn(task, by: -1) } else if press.key == .rightArrow { model.moveTaskToAdjacentColumn(task, by: 1) } else { return .ignored }
+
+    } else if press.key == .space {
+      model.toggleTask(task)
+    } else if press.key == .return {
+      model.enterTask(task)
+    } else if press.key == .upArrow {
+      model.selectAdjacentTask(by: -1)
+    } else if press.key == .downArrow {
+      model.selectAdjacentTask(by: 1)
+    } else if press.key == .leftArrow {
+      model.selectTaskInAdjacentColumn(from: task, by: -1)
+    } else if press.key == .rightArrow {
+      model.selectTaskInAdjacentColumn(from: task, by: 1)
+    } else if press.key == "i" {
+      model.toggleInspector()
+    } else { return .ignored }
     return .handled
   }
 
@@ -935,12 +939,19 @@ private struct WorkspaceMatrixTaskRow: View {
         case "4": place(urgency: 0, importance: 0)
         default: return .ignored
         }
-      } else if press.key == .upArrow { model.selectAdjacentTask(by: -1) }
-      else if press.key == .downArrow { model.selectAdjacentTask(by: 1) }
-      else if press.key == .space { model.toggleTask(task) }
-      else if press.key == .return { model.enterTask(task) }
-      else if press.key == "i" { model.toggleInspector() }
-      else { return .ignored }
+      } else if press.key == .upArrow {
+        model.selectAdjacentTask(by: -1)
+      } else if press.key == .downArrow {
+        model.selectAdjacentTask(by: 1)
+      } else if press.key == .space {
+        model.toggleTask(task)
+      } else if press.key == .return {
+        model.enterTask(task)
+      } else if press.key == "i" {
+        model.toggleInspector()
+      } else {
+        return .ignored
+      }
       return .handled
     }
   }
@@ -1280,8 +1291,7 @@ private struct WorkspaceScopedTaskComposer: View {
         .help("Choose the sub-list for new tasks")
       }
       TaskComposer(focusRequest: model.taskComposerFocusRequest) { title in
-        if board { model.createBoardTask(named: title) }
-        else { model.createTask(named: title) }
+        if board { model.createBoardTask(named: title) } else { model.createTask(named: title) }
       }
       .frame(maxWidth: .infinity)
     }

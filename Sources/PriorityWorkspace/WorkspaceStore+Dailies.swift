@@ -248,7 +248,6 @@ extension WorkspaceStore {
     }
   }
 
-
   /// Brings the plugin-era dailies across: each becomes a task in a "Habits"
   /// list with a daily attached to it, on the same schedule.
   ///

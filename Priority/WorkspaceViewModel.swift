@@ -401,7 +401,6 @@ enum WorkspaceSidebarItem: Identifiable {
     requestCreation(.folder, in: selectedFolderID)
   }
 
-
   func createList(named name: String, in folderId: String? = nil) {
     guard let store, let workspace else { return }
     do {
@@ -597,8 +596,7 @@ enum WorkspaceSidebarItem: Identifiable {
     case .dailies: dailyProgressTasks
     case .matrix: boardTasks
     case .focus:
-      if let activeFocusTask { [activeFocusTask] + focusQueue.map(\.task) }
-      else { selectedTask.map { [$0] } ?? [] }
+      if let activeFocusTask { [activeFocusTask] + focusQueue.map(\.task) } else { selectedTask.map { [$0] } ?? [] }
     }
   }
 
@@ -883,7 +881,6 @@ enum WorkspaceSidebarItem: Identifiable {
       reloadFocus()
     }
   }
-
 
   /// Imports a loaded legacy Checkvist list once. This is deliberately a copy:
   /// once migration completes, the workspace is fully local and never needs

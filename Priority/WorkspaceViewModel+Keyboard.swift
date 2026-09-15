@@ -47,7 +47,7 @@ extension WorkspaceViewModel {
 
   /// Focus cycling and the creation chords: new task, list, folder.
   private func handleModifiedKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
-    if (flags == [.control] || flags == [.control, .shift]), event.keyCode == 48 {
+    if flags == [.control] || flags == [.control, .shift], event.keyCode == 48 {
       cycleKeyboardFocus(by: flags == [.control, .shift] ? -1 : 1)
       return true
     }
@@ -89,6 +89,11 @@ extension WorkspaceViewModel {
         }
       }
     }
+    return handleListChordKey(event, flags: flags)
+  }
+
+  /// Chords that act on the selected list, the board, or the window itself.
+  private func handleListChordKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     if flags == [.command] {
       switch event.charactersIgnoringModifiers?.lowercased() {
       case "i":
@@ -174,6 +179,12 @@ extension WorkspaceViewModel {
       default: break
       }
     }
+    return handlePlacementKey(event, flags: flags)
+  }
+
+  /// Where a task sits: which board column, which matrix quadrant — and the two
+  /// unmodified keys that open the inspector and the move sheet.
+  private func handlePlacementKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     if flags == [.option], keyboardFocusArea == .tasks {
       if viewMode == .board, keyboardNavigationSurfaceActive {
         switch event.keyCode {
@@ -201,8 +212,6 @@ extension WorkspaceViewModel {
       requestMoveSelectedTask()
       return true
     }
-    guard keyboardNavigationSurfaceActive else { return false }
-    return false
     return false
   }
 

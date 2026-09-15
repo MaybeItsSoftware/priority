@@ -81,9 +81,7 @@ private struct WorkspaceDailyProgressRow: View {
       Spacer()
       Button("Focus") {
         model.selectTask(task)
-        if model.activeFocusSession == nil { model.startFocus(on: task) }
-        else if model.activeFocusTask?.id == task.id { model.showsFocusPanel = true }
-        else { model.addToFocusQueue(task) }
+        if model.activeFocusSession == nil { model.startFocus(on: task) } else if model.activeFocusTask?.id == task.id { model.showsFocusPanel = true } else { model.addToFocusQueue(task) }
       }
       .buttonStyle(.bordered)
       .focusable()
@@ -104,10 +102,15 @@ private struct WorkspaceDailyProgressRow: View {
     }
     .onKeyPress(keys: [.space, .return, .upArrow, .downArrow, "i"]) { press in
       guard isRowFocused else { return .ignored }
-      if press.key == .upArrow { model.selectAdjacentTask(by: -1) }
-      else if press.key == .downArrow { model.selectAdjacentTask(by: 1) }
-      else if press.key == "i" { model.toggleInspector() }
-      else { model.toggleDailyProgress(task) }
+      if press.key == .upArrow {
+        model.selectAdjacentTask(by: -1)
+      } else if press.key == .downArrow {
+        model.selectAdjacentTask(by: 1)
+      } else if press.key == "i" {
+        model.toggleInspector()
+      } else {
+        model.toggleDailyProgress(task)
+      }
       return .handled
     }
   }

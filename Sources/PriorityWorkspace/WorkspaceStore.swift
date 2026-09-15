@@ -828,7 +828,6 @@ public final class WorkspaceStore: @unchecked Sendable {
     return descendants
   }
 
-
   private static let migrator: DatabaseMigrator = {
     var migrator = DatabaseMigrator()
     migrator.registerMigration("v1_local_workspace") { db in
