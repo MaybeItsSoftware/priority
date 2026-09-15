@@ -1372,6 +1372,8 @@ private struct WorkspaceKeyboardHelp: View {
         key("Focus: ↑ ↓ / J K", "Climb to less important work, or back down towards the most important")
         key("Focus: ↵ / Space", "Stage the task, then begin it with the estimate shown")
         key("Focus: X", "Tick the task off without starting a session")
+        key("Focus: ⌥ ↑ / ↓", "Move the task itself up or down the ladder, fixing your own order")
+        key("Focus: L", "Schedule it for later so it stops being offered")
         key("⌃ Tab / ⌃ ⇧ Tab", "Move focus forward or backward between those regions")
         key("Tab / ⇧ Tab", "Move between buttons, menus, and fields")
         key("Sidebar: ↑ ↓ / J K", "Select Everything, then its visible lists and folders")

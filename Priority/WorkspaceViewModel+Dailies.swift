@@ -211,7 +211,11 @@ extension WorkspaceViewModel {
     scheduleForLater(task, until: deferral.date(from: .now))
   }
 
-  /// Leaves focus mode, putting the ladder back at the top for next time.
+  /// Leaves the focus screen, putting the ladder back at the top for next time.
+  ///
+  /// Called by every sidebar selection as well as by Escape: focus is a screen
+  /// you are looking at, not a mode you are trapped in, so asking to see a list
+  /// is a complete answer to "what now" and should simply show you the list.
   func dismissFocusScreen() {
     showsFocusScreen = false
     stagedTaskID = nil

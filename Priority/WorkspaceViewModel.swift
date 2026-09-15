@@ -280,6 +280,7 @@ enum WorkspaceSidebarItem: Identifiable {
 
   func selectList(_ id: String) {
     guard lists.contains(where: { $0.id == id }) else { return }
+    dismissFocusScreen()
     isEverythingSelected = false
     UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
     selectedListID = id
@@ -294,6 +295,7 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   func selectEverything() {
+    dismissFocusScreen()
     if let selectedListID { newTaskListID = selectedListID }
     isEverythingSelected = true
     UserDefaults.standard.set(true, forKey: Self.everythingScopeKey)
@@ -307,6 +309,7 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   func selectFolder(_ folder: ListFolder) {
+    dismissFocusScreen()
     selectedFolderID = folder.id
     selectedTaskID = nil
     isInspectorVisible = false

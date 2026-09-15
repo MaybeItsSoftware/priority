@@ -27,10 +27,12 @@ extension WorkspaceViewModel {
   private func handleFocusLadderKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     // Option-arrow moves the task itself rather than the cursor, which is the
     // same gesture that reorders a task everywhere else in the workspace.
+    // Same sign as the cursor keys below, so the task travels the way the arrow
+    // points: up the screen is up the ladder, which is *less* important.
     if flags == [.option] {
       switch event.keyCode {
-      case 126: reorderFocusLadder(by: -1); return true
-      case 125: reorderFocusLadder(by: 1); return true
+      case 126: reorderFocusLadder(by: 1); return true
+      case 125: reorderFocusLadder(by: -1); return true
       default: return false
       }
     }
