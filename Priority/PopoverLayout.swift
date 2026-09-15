@@ -17,6 +17,10 @@ enum PopoverLayout {
   /// height tracked its contents would resize the plot above it every time you
   /// placed something — the grid moving under the pointer mid-sort.
   static let matrixUnplacedDrawerHeight: CGFloat = 170
+  /// Header, graphical month, action row and keyboard hint for the `dd` picker.
+  /// Like the command palette, this is transient chrome and grows the panel
+  /// instead of stealing the task list's normal allocation.
+  static let dueDatePickerBlockHeight: CGFloat = 360
 
   @MainActor
   static func preferredWidth(for manager: AppCoordinator) -> CGFloat {
@@ -131,7 +135,9 @@ enum PopoverLayout {
     if showsSearchPrompt || showsQuickAddPrompt {
       height += 40
     }
-    if manager.quickEntry.quickEntryMode == .command,
+    if manager.quickEntry.quickEntryMode == .dueDatePicker {
+      height += dueDatePickerBlockHeight
+    } else if manager.quickEntry.quickEntryMode == .command,
       manager.quickEntry.isQuickEntryFocused || !manager.quickEntry.quickEntryText.isEmpty
     {
       // Input row + autocomplete list block.

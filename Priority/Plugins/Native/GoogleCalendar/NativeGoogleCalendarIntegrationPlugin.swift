@@ -59,6 +59,7 @@ import Security
   private let defaults: UserDefaults
   private let tokenStore: GoogleCalendarOAuthTokenStore
   private var tokenPayload: GoogleCalendarOAuthTokenPayload?
+  private var hasLoadedStoredToken = false
   private var normalizedOAuthClientID: String {
     oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines)
   }
@@ -86,7 +87,7 @@ import Security
     self.targetCalendarID = storedCalendarID.isEmpty ? "primary" : storedCalendarID
     self.openCreatedEventInBrowser =
       defaults.object(forKey: Self.openCreatedEventInBrowserDefaultsKey) as? Bool ?? true
-    self.tokenPayload = tokenStore.load()
+    self.tokenPayload = nil
     self.isAuthenticated = Self.canUseTokenPayload(
       tokenPayload, forClientID: normalizedOAuthClientID)
     self.updateAuthenticationStatusDescription()
@@ -236,6 +237,7 @@ import Security
     guard !normalizedOAuthClientID.isEmpty else {
       throw GoogleCalendarPluginError.missingOAuthClientID
     }
+    loadStoredTokenIfNeeded()
     guard var payload = tokenPayload else {
       isAuthenticated = false
       updateAuthenticationStatusDescription()
@@ -264,6 +266,17 @@ import Security
     isAuthenticated = true
     updateAuthenticationStatusDescription()
     return payload.accessToken
+  }
+
+  /// Reads the keychain only after the user explicitly asks Priority to create
+  /// a Calendar event. This keeps a stale or differently-signed token from
+  /// prompting for a macOS password simply because the app launched.
+  private func loadStoredTokenIfNeeded() {
+    guard !hasLoadedStoredToken else { return }
+    hasLoadedStoredToken = true
+    tokenPayload = tokenStore.load()
+    isAuthenticated = Self.canUseTokenPayload(tokenPayload, forClientID: normalizedOAuthClientID)
+    updateAuthenticationStatusDescription()
   }
 
   private func createEventWithGoogleAPI(

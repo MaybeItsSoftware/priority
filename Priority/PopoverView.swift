@@ -580,6 +580,7 @@ struct PopoverView: View {
       && manager.onboardingService.activeOnboardingDialog == nil
       && !taskListViewModel.isSearchFilterActive
       && manager.quickEntry.quickEntryMode != .command
+      && manager.quickEntry.quickEntryMode != .dueDatePicker
       && manager.quickEntry.quickEntryMode != .quickAddDefault
       && manager.quickEntry.quickEntryMode != .quickAddSpecific
 
@@ -601,13 +602,15 @@ struct PopoverView: View {
       manager.quickEntry.quickEntryMode == .command
       && (manager.quickEntry.isQuickEntryFocused || !manager.quickEntry.quickEntryText.isEmpty)
     return showsSearchPrompt || showsQuickAddPrompt || showsCommandPrompt
+      || manager.quickEntry.quickEntryMode == .dueDatePicker
   }
 
   var activePromptTextBinding: Binding<String> {
     switch manager.quickEntry.quickEntryMode {
     case .search:
       return Bindable(manager).quickEntry.searchText
-    case .addSibling, .addSiblingAbove, .addChild, .editTask, .command, .quickAddDefault,
+    case .addSibling, .addSiblingAbove, .addChild, .editTask, .command, .dueDatePicker,
+      .quickAddDefault,
       .quickAddSpecific:
       return Bindable(manager).quickEntry.quickEntryText
     }
@@ -617,7 +620,8 @@ struct PopoverView: View {
     switch manager.quickEntry.quickEntryMode {
     case .search:
       return manager.quickEntry.searchText
-    case .addSibling, .addSiblingAbove, .addChild, .editTask, .command, .quickAddDefault,
+    case .addSibling, .addSiblingAbove, .addChild, .editTask, .command, .dueDatePicker,
+      .quickAddDefault,
       .quickAddSpecific:
       return manager.quickEntry.quickEntryText
     }
@@ -628,7 +632,8 @@ struct PopoverView: View {
     switch manager.quickEntry.quickEntryMode {
     case .search:
       manager.quickEntry.searchText = ""
-    case .addSibling, .addSiblingAbove, .addChild, .editTask, .command, .quickAddDefault,
+    case .addSibling, .addSiblingAbove, .addChild, .editTask, .command, .dueDatePicker,
+      .quickAddDefault,
       .quickAddSpecific:
       manager.quickEntry.quickEntryText = ""
       manager.quickEntry.quickEntryMode = .search

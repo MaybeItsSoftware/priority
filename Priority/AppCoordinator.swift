@@ -136,6 +136,10 @@ import SwiftUI
   var onboardingService: OnboardingService!
 
   @ObservationIgnored var isApplyingLaunchAtLoginChange = false
+  /// Loading a saved key must not be treated as a user edit: otherwise the
+  /// repository callback immediately writes it back to Keychain after reading
+  /// it, defeating the single explicit-access guarantee.
+  @ObservationIgnored var isLoadingStoredRemoteKey = false
   @ObservationIgnored let preferencesStore = PreferencesStore()
   let userPluginManager: UserPluginManager
   @ObservationIgnored lazy var commandExecutor = CommandExecutor(manager: self)
@@ -216,8 +220,9 @@ import SwiftUI
     #else
       let useKeychainStorageAtInit = true
     #endif
-    // Returns "" in keychain mode: the actual read is deferred out of the
-    // launch path to `LifecycleController.start()`.
+    // Returns "" in keychain mode. Reading (or migrating) a keychain item is
+    // deliberately deferred until the user explicitly requests saved
+    // credentials, so a stale code-signature ACL cannot prompt at launch.
     let initialRemoteKey = resolvedCheckvistSyncPlugin.startupRemoteKey(
       useKeychainStorageAtInit: useKeychainStorageAtInit)
 
@@ -529,7 +534,9 @@ extension AppCoordinator {
       usesKeychainStorage: usesKeychainStorage,
       loadFromKeychain: { repository.checkvistSyncPlugin.loadRemoteKeyFromKeychain() }
     )
+    isLoadingStoredRemoteKey = true
     repository.remoteKey = nextState.remoteKey
+    isLoadingStoredRemoteKey = false
     repository.hasAttemptedRemoteKeyBootstrap = nextState.hasAttemptedBootstrap
   }
 
@@ -585,6 +592,33 @@ extension AppCoordinator {
     if case .unknown(let raw) = parsed {
       logger.error("Unknown command: \(raw, privacy: .public)")
     }
+  }
+
+  /// Opens the calendar used by Checkvist's `dd`-style due-date interaction.
+  /// An existing due date is highlighted, so changing one starts from the date
+  /// the task already has instead of jumping back to today.
+  func openDueDatePicker() {
+    guard let task = taskListViewModel.currentTask else {
+      repository.errorMessage = "No task selected."
+      return
+    }
+    repository.errorMessage = nil
+    quickEntry.beginDueDatePicker(forTaskId: task.id, initialDate: task.dueDate)
+  }
+
+  /// Applies (or clears) the calendar's choice to the task that opened it, then
+  /// closes the picker immediately while sync runs.
+  func submitDueDatePicker(clearDueDate: Bool = false) {
+    guard let taskId = quickEntry.dueDatePickerTaskId,
+      let task = repository.tasks.first(where: { $0.id == taskId })
+    else {
+      quickEntry.dismissDueDatePicker()
+      repository.errorMessage = "No task selected."
+      return
+    }
+    let due = clearDueDate ? "" : quickEntry.dueDatePickerDueString()
+    quickEntry.dismissDueDatePicker()
+    Task { await taskMutationService.updateTask(task: task, due: due) }
   }
 
   // Setup is non-blocking: the app can always run in offline-first mode.

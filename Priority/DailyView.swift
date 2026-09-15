@@ -231,13 +231,27 @@ struct DailyView: View {
     // Not while renaming, though: a click into the field would tick the thing
     // you are in the middle of naming.
     .onTapGesture {
-      guard !isEditing else { return }
-      dailyLog.selectDaily(daily)
-      dailyLog.toggleDaily(daily)
+      activateDaily(daily, isEditing: isEditing)
+    }
+    // The workspace embeds this checklist without the menu-bar key router.
+    // A focusable row keeps its toggle reachable even when macOS Keyboard
+    // Navigation is disabled and native buttons are skipped by Tab.
+    .focusable(!isEditing)
+    .onKeyPress(keys: [.space, .return]) { _ in
+      guard !isEditing else { return .ignored }
+      activateDaily(daily, isEditing: isEditing)
+      return .handled
     }
     .accessibilityElement(children: .combine)
     .accessibilityLabel("\(daily.title), \(isDone ? "done" : "not done")")
     .accessibilityAddTraits(.isButton)
+    .accessibilityAction(.default) { activateDaily(daily, isEditing: isEditing) }
+  }
+
+  private func activateDaily(_ daily: Daily, isEditing: Bool) {
+    guard !isEditing else { return }
+    dailyLog.selectDaily(daily)
+    dailyLog.toggleDaily(daily)
   }
 
   /// Renaming a daily in place.
@@ -277,6 +291,11 @@ struct DailyView: View {
       .fixedSize(horizontal: false, vertical: true)
       .padding(.horizontal, PopoverLayout.rowHorizontalPadding)
       .padding(.vertical, PopoverLayout.rowVerticalPadding)
+      .focusable()
+      .onKeyPress(keys: [.return, .space]) { _ in
+        dailyLog.isAddingDaily = true
+        return .handled
+      }
   }
 
   @ViewBuilder
@@ -313,6 +332,7 @@ struct DailyView: View {
             .foregroundColor(themeColor(.textSecondary))
         }
         .buttonStyle(.plain)
+        .focusable()
         .help("Cancel (Esc)")
         .accessibilityLabel("Cancel adding a daily")
       }
@@ -363,6 +383,7 @@ struct DailyView: View {
     }
     .menuStyle(.borderlessButton)
     .menuIndicator(.hidden)
+    .focusable()
     .fixedSize()
     .help("How often the new daily repeats")
   }

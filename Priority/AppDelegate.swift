@@ -117,10 +117,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     Task { [weak self] in
       try? await Task.sleep(nanoseconds: 500_000_000)
       guard let self else { return }
+      let listsLoaded = await self.checkvistManager.syncService.loadCheckvistLists()
       await self.checkvistManager.syncService.fetchTopTask()
       self.workspace.importLegacyCheckvistTasks(
         self.checkvistManager.repository.tasks,
         sourceListID: self.checkvistManager.repository.listId)
+      if listsLoaded {
+        let snapshots = await self.checkvistWorkspaceSnapshots()
+        self.workspace.importCheckvistLists(snapshots)
+      }
       self.menuBarController.updateTitle()
     }
   }
@@ -222,12 +227,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     lastAutoRefreshTime = now
     Task { [weak self] in
       guard let self else { return }
+      let listsLoaded = await self.checkvistManager.syncService.loadCheckvistLists()
       await self.checkvistManager.syncService.fetchTopTask()
       self.workspace.importLegacyCheckvistTasks(
         self.checkvistManager.repository.tasks,
         sourceListID: self.checkvistManager.repository.listId)
+      if listsLoaded {
+        let snapshots = await self.checkvistWorkspaceSnapshots()
+        self.workspace.importCheckvistLists(snapshots)
+      }
       self.menuBarController.updateTitle()
     }
+  }
+
+  /// Fetch every discovered list without changing the user's active legacy
+  /// Checkvist selection. The workspace receives a local snapshot only; its
+  /// regular task editing remains independent from the remote service.
+  private func checkvistWorkspaceSnapshots() async -> [(list: CheckvistList, tasks: [CheckvistTask])] {
+    let repository = checkvistManager.repository
+    var snapshots: [(list: CheckvistList, tasks: [CheckvistTask])] = []
+    for list in repository.availableLists {
+      let tasks = (try? await repository.fetchCheckvistOpenTasks(listId: String(list.id))) ?? []
+      snapshots.append((list: list, tasks: tasks))
+    }
+    return snapshots
   }
 
   func showMainWindow() {

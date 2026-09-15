@@ -935,6 +935,14 @@ extension TaskRepository {
     return true
   }
 
+  /// Fetch a remote Checkvist list without changing the user's active list.
+  /// The desktop workspace uses this to take a local snapshot of every list
+  /// visible in its sidebar; its existence must not depend on which sync route
+  /// happens to be active for the legacy menu-bar surface.
+  @MainActor func fetchCheckvistOpenTasks(listId: String) async throws -> [CheckvistTask] {
+    try await checkvistSyncPlugin.fetchOpenTasks(listId: listId, credentials: activeCredentials)
+  }
+
   @MainActor func selectList(_ list: CheckvistList) {
     listId = String(list.id)
   }

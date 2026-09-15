@@ -145,12 +145,24 @@ class MenuBarController: NSObject {
     guard !usesDesktopWorkspace else {
       if showFocusSessionTitle() { return }
       stopFocusTicker()
-      statusItem?.button?.attributedTitle = NSAttributedString(string: "Priority")
+      // The desktop workspace still needs a menu-bar launcher, but spelling
+      // out "Priority" turns it into a conspicuously wide status item. Keep
+      // it at the standard menu-bar icon footprint instead.
+      statusItem?.button?.title = ""
+      statusItem?.button?.attributedTitle = NSAttributedString(string: "")
+      let image = NSImage(
+        systemSymbolName: "checkmark.circle",
+        accessibilityDescription: "Open Priority")
+      image?.isTemplate = true
+      statusItem?.button?.image = image
+      statusItem?.button?.imagePosition = .imageOnly
       statusItem?.button?.toolTip = "Open Priority"
-      statusItem?.length = NSStatusItem.variableLength
+      statusItem?.length = NSStatusItem.squareLength
       statusItem?.button?.layer?.mask = nil
       return
     }
+    statusItem?.button?.image = nil
+    statusItem?.button?.imagePosition = .noImage
     let rawTaskText = menuBarSelectionText
     let baseTaskText = menuBarDisplayTaskText(rawTaskText)
     let taskText =
@@ -430,7 +442,9 @@ class MenuBarController: NSObject {
   func closeWindow() {
     window?.orderOut(nil)
     pinnedTopRight = nil
-    if [.addSibling, .addChild, .quickAddDefault, .quickAddSpecific].contains(
+    if manager.quickEntry.quickEntryMode == .dueDatePicker {
+      manager.quickEntry.dismissDueDatePicker()
+    } else if [.addSibling, .addChild, .quickAddDefault, .quickAddSpecific].contains(
       manager.quickEntry.quickEntryMode)
     {
       manager.quickEntry.quickEntryText = ""
@@ -560,6 +574,11 @@ class MenuBarController: NSObject {
       _ = self.manager.popoverChrome.showsDailyChart
       _ = self.manager.popoverChrome.showsDailyCompletions
       _ = self.manager.popoverChrome.showsMatrixUnplaced
+      // Prompt modes contribute transient height. In particular, the `dd`
+      // calendar is taller than the list panel it opens from; observing the
+      // mode lets the AppKit window grow with the SwiftUI content and shrink
+      // again when the picker is dismissed.
+      _ = self.manager.quickEntry.quickEntryMode
     } onChange: {
       Task { @MainActor [weak self] in
         self?.reanchorPopoverToStatusItem()
@@ -631,7 +650,6 @@ class MenuBarController: NSObject {
     focusTicker?.invalidate()
     focusTicker = nil
   }
-
 
   private func observeForTitleUpdates() {
     withObservationTracking {

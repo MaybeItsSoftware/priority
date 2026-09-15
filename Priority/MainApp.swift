@@ -66,6 +66,51 @@ struct MainApp: App {
           AppDelegate.shared.checkvistManager.popoverChrome.showsDiagnostics = true
         }
       }
+      CommandMenu("Workspace") {
+        Button("Focus Sidebar") {
+          AppDelegate.shared.workspace.requestKeyboardFocus(.sidebar)
+        }
+        .keyboardShortcut("1", modifiers: .command)
+        Button("Focus Task Outline") {
+          AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
+        }
+        .keyboardShortcut("2", modifiers: .command)
+        Button("Focus Inspector") {
+          AppDelegate.shared.workspace.requestKeyboardFocus(.inspector)
+        }
+        .keyboardShortcut("3", modifiers: .command)
+        Divider()
+        Button("New Task") {
+          AppDelegate.shared.workspace.requestTaskComposerFocus()
+        }
+        .keyboardShortcut("n", modifiers: .command)
+        Button("New List") {
+          AppDelegate.shared.workspace.requestListCreationForSelection()
+        }
+        .keyboardShortcut("n", modifiers: [.command, .shift])
+        Button("New Folder") {
+          AppDelegate.shared.workspace.requestFolderCreationForSelection()
+        }
+        .keyboardShortcut("n", modifiers: [.command, .option])
+        Divider()
+        Button("List Settings…") {
+          AppDelegate.shared.workspace.showSelectedListSettings()
+        }
+        .keyboardShortcut("i", modifiers: .command)
+        Button("Archive Current List") {
+          AppDelegate.shared.workspace.archiveSelectedList()
+        }
+        .keyboardShortcut("a", modifiers: [.command, .shift])
+        Button("Restore Most Recently Archived List") {
+          AppDelegate.shared.workspace.restoreMostRecentlyArchivedList()
+        }
+        .keyboardShortcut("r", modifiers: [.command, .shift])
+        Divider()
+        Button("Keyboard Help") {
+          AppDelegate.shared.workspace.showsKeyboardHelp = true
+        }
+        .keyboardShortcut("/", modifiers: .command)
+      }
     }
   }
 }

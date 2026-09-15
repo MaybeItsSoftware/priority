@@ -64,6 +64,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     let rootView = WorkspaceDesktopView()
       .font(Typography.interfaceFont)
       .environment(workspace)
+      .environment(manager)
+      .environment(manager.navigationState)
+      .environment(manager.taskListViewModel)
+      .environment(manager.repository)
       .frame(minWidth: Self.minContentSize.width, minHeight: Self.minContentSize.height)
     let hostingController = NSHostingController(rootView: rootView)
 
@@ -120,7 +124,19 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       guard let self, let window = self.window, window.isVisible, event.window === window else {
         return event
       }
-      guard !self.isEditingText(in: window) else { return event }
+      if self.isEditingText(in: window) {
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        let character = event.charactersIgnoringModifiers?.lowercased() ?? ""
+        let regionOrView = flags == [.command] && character.count == 1
+          && "012345678".contains(character)
+        let cycleRegion = (flags == [.control] || flags == [.control, .shift]) && event.keyCode == 48
+        let createItem = (flags == [.command] || flags == [.command, .shift]
+          || flags == [.command, .option]) && character == "n"
+        let chooseDestination = flags == [.command, .option]
+          && (character == "[" || character == "]")
+        let help = flags == [.command] && character == "/"
+        guard regionOrView || cycleRegion || createItem || chooseDestination || help else { return event }
+      }
       return self.workspace.handleDesktopKey(event) ? nil : event
     }
   }

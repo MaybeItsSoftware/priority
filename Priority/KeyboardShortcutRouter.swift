@@ -122,6 +122,41 @@ struct KeyboardShortcutRouter {
       return true
     }
 
+    // The `dd` calendar is modal: arrows move its highlighted day rather than
+    // the list selection, Return applies it, and Escape gets back to the list.
+    // Shift+left/right crosses months while preserving the day where possible.
+    if manager.quickEntry.quickEntryMode == .dueDatePicker {
+      switch event.keyCode {
+      case 53:  // Escape
+        manager.quickEntry.dismissDueDatePicker()
+      case 36, 76:  // Return / keypad Enter
+        manager.submitDueDatePicker()
+      case 123:  // Left
+        if shift {
+          manager.quickEntry.moveDueDatePickerSelection(byMonths: -1)
+        } else {
+          manager.quickEntry.moveDueDatePickerSelection(byDays: -1)
+        }
+      case 124:  // Right
+        if shift {
+          manager.quickEntry.moveDueDatePickerSelection(byMonths: 1)
+        } else {
+          manager.quickEntry.moveDueDatePickerSelection(byDays: 1)
+        }
+      case 125:  // Down
+        manager.quickEntry.moveDueDatePickerSelection(byDays: 7)
+      case 126:  // Up
+        manager.quickEntry.moveDueDatePickerSelection(byDays: -7)
+      case 51, 117:  // Delete / forward delete
+        manager.submitDueDatePicker(clearDueDate: true)
+      default:
+        if chars.lowercased() == "t" {
+          manager.quickEntry.dueDatePickerSelection = Date()
+        }
+      }
+      return true
+    }
+
     if manager.quickEntry.quickEntryMode == .command && isFocused {
       if event.keyCode == 125 {
         manager.quickEntry.selectNextCommandSuggestion(for: manager.quickEntry.quickEntryText)
@@ -862,10 +897,7 @@ struct KeyboardShortcutRouter {
       return false
     case .attempt(let sequence):
       if manager.preferences.shortcutMatchesSequence(action: .sequenceDue, sequence: sequence) {
-        manager.quickEntry.quickEntryMode = .command
-        manager.quickEntry.commandSuggestionIndex = 0
-        manager.quickEntry.quickEntryText = "due "
-        manager.quickEntry.isQuickEntryFocused = true
+        manager.openDueDatePicker()
         return true
       }
       if manager.preferences.shortcutMatchesSequence(action: .sequenceDueToday, sequence: sequence)

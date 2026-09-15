@@ -264,6 +264,8 @@ public enum ShortcutReference {
     .indentTask: "Tab, matching Shift+Tab for unindent",
     .addSiblingAbove: "Checkvist's Alt+Enter",
     .duplicateTask: "Content only — no due date, tags or subtasks",
+    .sequenceDue: "Opens the calendar; arrows move, Return applies",
+    .sequenceDueToday: "Type a time after the prefilled date",
     .deleteTask: "In the Daily view, deletes the daily — restorable in Preferences",
     .editTaskAtEnd: "Renames a daily in the Daily view",
     .editTaskAtStart: "Renames a daily in the Daily view",

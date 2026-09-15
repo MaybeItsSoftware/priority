@@ -99,6 +99,13 @@ private struct CheckvistSyncPluginSettingsView: View {
               .labelsHidden()
           }
 
+          if manager.repository.remoteKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Button("Use saved Keychain key") {
+              manager.loadCredentialsFromKeychain()
+            }
+            .help("Reads the saved Checkvist key only after you explicitly request it.")
+          }
+
           stepHeader(number: 2, title: "Connect")
           HStack(spacing: 8) {
             Button(connectButtonLabel) {

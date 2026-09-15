@@ -27,8 +27,10 @@ final class CheckvistCredentialStore {
 
   func startupRemoteKey(useKeychainStorageAtInit: Bool) -> String {
     if useKeychainStorageAtInit {
-      migrateLegacyRemoteKeyIntoKeychainIfNeeded()
-      // Never read keychain during app bootstrap; defer until explicit login/action.
+      // Keychain reads (and migrations that write to the keychain) may surface
+      // a macOS password prompt for an item created by an older signature.
+      // Keep app launch entirely credential-free; an intentional Connect or
+      // "Use saved key" action performs this work instead.
       return ""
     }
     let stored = defaults.string(forKey: Self.remoteKeyDefaultsKey)?
@@ -79,7 +81,8 @@ final class CheckvistCredentialStore {
   }
 
   func loadRemoteKeyFromKeychain() -> String? {
-    keychainValue(forKey: Self.remoteKeyDefaultsKey)
+    migrateLegacyRemoteKeyIntoKeychainIfNeeded()
+    return keychainValue(forKey: Self.remoteKeyDefaultsKey)
   }
 
   private func migrateLegacyRemoteKeyIntoKeychainIfNeeded() {

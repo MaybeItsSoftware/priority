@@ -42,6 +42,7 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 
 ### Lists and folders
 
+- Treat active lists as sub-lists of a virtual Everything scope. Its views should aggregate tasks while preserving each task's list, project hierarchy, and an explicit destination for new work.
 - Rename, archive, restore, delete, and reorder lists/folders.
 - Support nested folders in both persistence and sidebar presentation.
 - Add move-list-to-folder, move-folder, and keyboard commands.

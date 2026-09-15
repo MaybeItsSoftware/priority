@@ -90,6 +90,8 @@ Onboarding boxes guide the Checkvist, Obsidian and Google Calendar setup. Each o
 | `Tab` / `Shift+Tab` | Indent / unindent |
 | `Cmd+D` | Duplicate — content only, no due date, tags or subtasks |
 | `Shift+A` | Quick-add at the configured location |
+| `dd` | Open the due-date calendar; arrows move the date, `Return` applies, `Esc` cancels |
+| `dt` | Type a due date and time (for example `today 14:30`) |
 | `Cmd+↑` / `Cmd+↓` | Move task |
 | `1`–`9` | Scoped priority rank, within the parent |
 | `Hyper+1`–`Hyper+9` | Absolute priority rank (`Ctrl+Cmd+Option+Shift`) |
@@ -492,7 +494,7 @@ Every command is one of the MCP tools under a friendlier name, and the same bina
 
 ## MCP server
 
-Priority exposes **20 MCP tools** so an AI assistant can work with your lists directly — thirteen that reach the Checkvist API, and seven for the local state Checkvist has no representation for (day log, dailies, priority ranks, recurrence, and the matrix).
+Priority exposes **21 MCP tools** so an AI assistant can work with your lists directly — fourteen that reach the Checkvist API, and seven for the local state Checkvist has no representation for (day log, dailies, priority ranks, recurrence, and the matrix).
 
 All but one are reads or Checkvist writes. `task_matrix_set` places tasks on the Eisenhower matrix in bulk (`priority matrix <id>:<urgency>:<importance> …` from a terminal), and refuses while Priority is running — the app holds those coordinates in memory and would overwrite them. Quit Priority, let the assistant do a first pass over the whole list, then reopen and correct it by dragging.
 
