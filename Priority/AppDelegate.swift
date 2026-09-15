@@ -73,6 +73,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     workspace = WorkspaceViewModel(legacyStore: checkvistManager.repository.localTaskStore)
     mainWindowController = MainWindowController(manager: checkvistManager, workspace: workspace)
+    // The status item reports the focus session, which is the one thing worth
+    // showing there while you are working in another app.
+    menuBarController.workspace = workspace
     mainWindowController.onUpdateMenuBarTitle = { [weak self] in
       self?.menuBarController.updateTitle()
     }

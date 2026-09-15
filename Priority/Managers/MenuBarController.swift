@@ -3,6 +3,7 @@ import Combine
 import OSLog
 import Observation
 import PriorityCore
+import PriorityWorkspace
 import SwiftUI
 
 @MainActor
@@ -40,6 +41,16 @@ class MenuBarController: NSObject {
   var usesDesktopWorkspace = false {
     didSet { updateTitle() }
   }
+  /// The local workspace, read only for the focus session the status item
+  /// reports. Weak because the workspace outlives nothing here.
+  weak var workspace: WorkspaceViewModel? {
+    didSet {
+      observeForTitleUpdates()
+      updateTitle()
+    }
+  }
+  /// Drives the once-a-second redraw, and exists only while a session runs.
+  private var focusTicker: Timer?
 
   init(manager: AppCoordinator) {
     self.manager = manager
@@ -54,6 +65,7 @@ class MenuBarController: NSObject {
     if let monitor = keyMonitor { NSEvent.removeMonitor(monitor) }
     if let monitor = clickMonitor { NSEvent.removeMonitor(monitor) }
     if let monitor = shiftMonitor { NSEvent.removeMonitor(monitor) }
+    focusTicker?.invalidate()
   }
 
   private var shiftMonitor: Any?
@@ -131,6 +143,8 @@ class MenuBarController: NSObject {
 
   func updateTitle() {
     guard !usesDesktopWorkspace else {
+      if showFocusSessionTitle() { return }
+      stopFocusTicker()
       statusItem?.button?.attributedTitle = NSAttributedString(string: "Priority")
       statusItem?.button?.toolTip = "Open Priority"
       statusItem?.length = NSStatusItem.variableLength
@@ -554,6 +568,71 @@ class MenuBarController: NSObject {
     }
   }
 
+  // MARK: - Focus session in the menu bar
+
+  /// Replaces the launcher icon with the task being focused and its clock.
+  /// Returns false when no session is running, leaving the icon to the caller.
+  ///
+  /// The point of putting it here is that the menu bar is the one surface
+  /// visible while you are working in another app — a focus timer you have to
+  /// switch away to read is a timer you stop consulting.
+  private func showFocusSessionTitle() -> Bool {
+    guard let workspace,
+      let session = workspace.activeFocusSession,
+      session.phase != .finished,
+      let task = workspace.activeFocusTask
+    else { return false }
+
+    startFocusTickerIfNeeded()
+    let reading = FocusTimerDisplay.reading(
+      since: session.startedAt, planned: TimeInterval(session.workDurationSeconds))
+    let title = "\(Self.truncatedFocusTitle(task.title))  \(reading.text)"
+
+    let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.menuBarFont(ofSize: 0).pointSize, weight: .regular)
+    var attributes: [NSAttributedString.Key: Any] = [.font: font, .paragraphStyle: Self.clippingParagraphStyle]
+    // Overrun is coloured rather than re-worded: the clock already says `+`,
+    // and a second signal in the same place would just be noise.
+    if reading.isOverrun { attributes[.foregroundColor] = NSColor.systemOrange }
+
+    statusItem?.button?.image = nil
+    statusItem?.button?.imagePosition = .noImage
+    statusItem?.button?.attributedTitle = NSAttributedString(string: title, attributes: attributes)
+    statusItem?.button?.toolTip = "Focusing: \(task.title)"
+    statusItem?.length = NSStatusItem.variableLength
+    statusItem?.button?.layer?.mask = nil
+    return true
+  }
+
+  /// Long titles are clipped here rather than by the status item, so the clock
+  /// keeps its place instead of being the part that falls off the end.
+  private static func truncatedFocusTitle(_ title: String, limit: Int = 28) -> String {
+    guard title.count > limit else { return title }
+    return title.prefix(limit - 1).trimmingCharacters(in: .whitespaces) + "…"
+  }
+
+  private static let clippingParagraphStyle: NSParagraphStyle = {
+    let style = NSMutableParagraphStyle()
+    style.lineBreakMode = .byClipping
+    return style
+  }()
+
+  private func startFocusTickerIfNeeded() {
+    guard focusTicker == nil else { return }
+    let ticker = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+      Task { @MainActor [weak self] in self?.updateTitle() }
+    }
+    // Common mode, or the clock freezes while a menu is open or a window is
+    // being dragged — exactly when a glance at it is most likely.
+    RunLoop.main.add(ticker, forMode: .common)
+    focusTicker = ticker
+  }
+
+  private func stopFocusTicker() {
+    focusTicker?.invalidate()
+    focusTicker = nil
+  }
+
+
   private func observeForTitleUpdates() {
     withObservationTracking {
       _ = self.menuBarSelectionText
@@ -576,6 +655,9 @@ class MenuBarController: NSObject {
       _ = self.manager.navigationState.currentSiblingIndex
       _ = self.manager.repository.isLoading
       _ = self.manager.repository.errorMessage
+      // Starting or ending a session swaps the status item between launcher
+      // and clock; the per-second redraw is the ticker's job, not this one's.
+      _ = self.workspace?.activeFocusSession
     } onChange: {
       Task { @MainActor [weak self] in
         self?.updateTitle()

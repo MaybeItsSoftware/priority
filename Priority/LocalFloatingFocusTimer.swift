@@ -1,4 +1,5 @@
 import AppKit
+import PriorityCore
 import PriorityWorkspace
 import SwiftUI
 
@@ -8,10 +9,14 @@ import SwiftUI
 final class LocalFloatingFocusTimer: NSObject, NSWindowDelegate {
   private var panel: NSPanel?
 
-  func show(model: WorkspaceViewModel) {
+  func show(model: WorkspaceViewModel, activate: Bool = false) {
     let panel = makePanel(model: model)
-    panel.makeKeyAndOrderFront(nil)
-    NSApp.activate(ignoringOtherApps: true)
+    if activate {
+      panel.makeKeyAndOrderFront(nil)
+    } else {
+      // Starting from a card should not steal keyboard focus from the board.
+      panel.orderFrontRegardless()
+    }
   }
 
   func close() {
@@ -52,6 +57,8 @@ private struct LocalFloatingFocusTimerView: View {
         Text(task.title)
           .font(.headline)
           .lineLimit(2)
+          .truncationMode(.tail)
+          .help(task.title)
         TimelineView(.periodic(from: .now, by: 1)) { context in
           Text(remainingTime(session: session, now: context.date))
             .font(.system(size: 28, weight: .bold, design: .monospaced))
@@ -59,22 +66,26 @@ private struct LocalFloatingFocusTimerView: View {
         HStack {
           Button("Done") { model.completeFocusedTask() }
             .buttonStyle(.borderedProminent)
+            .focusable()
           Button("Open panel") {
             model.showsFocusPanel = true
             onClose()
           }
           .buttonStyle(.bordered)
+          .focusable()
           Spacer()
           Button("End") {
             model.finishFocus()
             onClose()
           }
           .buttonStyle(.plain)
+          .focusable()
           .foregroundStyle(.red)
         }
       } else {
         Text("No active focus session").foregroundStyle(.secondary)
         Button("Close") { onClose() }
+          .focusable()
       }
     }
     .padding(16)
@@ -82,8 +93,8 @@ private struct LocalFloatingFocusTimerView: View {
   }
 
   private func remainingTime(session: FocusSession, now: Date) -> String {
-    let elapsed = max(0, now.timeIntervalSince(session.startedAt))
-    let seconds = max(0, session.workDurationSeconds - Int(elapsed))
-    return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    FocusTimerDisplay.reading(
+      since: session.startedAt, planned: TimeInterval(session.workDurationSeconds), now: now
+    ).text
   }
 }
