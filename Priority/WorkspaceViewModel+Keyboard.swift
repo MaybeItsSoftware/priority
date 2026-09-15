@@ -12,10 +12,45 @@ extension WorkspaceViewModel {
   @discardableResult
   func handleDesktopKey(_ event: NSEvent) -> Bool {
     let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+    // Focus mode owns the keyboard outright while it is up. It replaced the
+    // workspace on screen, so leaving the workspace's own keys live would mean
+    // ⌘4 quietly switching a board nobody can see.
+    if showsFocusScreen, handleFocusLadderKey(event, flags: flags) { return true }
     if handleViewSwitchKey(event, flags: flags) { return true }
     if handleModifiedKey(event, flags: flags) { return true }
     if keyboardFocusArea == .sidebar { return handleSidebarKey(event) }
     return handleTaskSurfaceKey(event)
+  }
+
+  /// Climbing the focus ladder. Up is *less* important — the direction matches
+  /// the screen, where the most important thing sits at the foot.
+  private func handleFocusLadderKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
+    guard flags.isEmpty || flags == [.shift] else { return false }
+    switch event.keyCode {
+    case 53:  // Escape
+      if stagedTaskID != nil { unstageFocusTask() } else { dismissFocusScreen() }
+      return true
+    case 126:  // Up
+      moveFocusLadder(by: 1)
+      return true
+    case 125:  // Down
+      moveFocusLadder(by: -1)
+      return true
+    case 36, 76:  // Return, Enter
+      if stagedTaskID == nil { stageFocusLadderSelection() } else { beginStagedFocus() }
+      return true
+    default:
+      break
+    }
+    switch event.charactersIgnoringModifiers?.lowercased() {
+    case "k": moveFocusLadder(by: 1); return true
+    case "j": moveFocusLadder(by: -1); return true
+    case "x": completeFocusLadderSelection(); return true
+    // Space stages rather than ticking off: on a screen whose whole purpose is
+    // starting work, the big key should start work.
+    case " ": if stagedTaskID == nil { stageFocusLadderSelection() } else { beginStagedFocus() }; return true
+    default: return false
+    }
   }
 
   /// Command-digit: the regions and view modes, plus the focus screen on ⌘8.

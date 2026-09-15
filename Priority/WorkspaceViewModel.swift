@@ -582,12 +582,14 @@ enum WorkspaceSidebarItem: Identifiable {
   /// What the focus screen offers, and why. Nil when there is nothing to do —
   /// which is a real state worth rendering, not an error.
   var nextUp: ScoredNextUp?
-  /// The runners-up, so "not that one" can be answered without leaving the
-  /// screen. Deliberately short: a focus screen showing a backlog is a backlog.
-  var nextUpAlternatives: [ScoredNextUp] = []
-  /// Tasks passed over this sitting. Held in memory rather than persisted —
-  /// skipping is a statement about right now, and should not survive a relaunch.
-  @ObservationIgnored var skippedTaskIDs: Set<String> = []
+  /// Everything worth doing, most important first. Focus mode presents this as
+  /// a ladder: rung 0 at the foot, less important work above it.
+  var focusLadder: [ScoredNextUp] = []
+  /// Which rung the cursor is on. Climbing means accepting less priority.
+  var focusLadderIndex = 0
+  /// The task committed to but not yet started — the step between "this one"
+  /// and "go", where the estimate is decided.
+  var stagedTaskID: String?
 
   var visibleNavigationTasks: [WorkspaceTask] {
     switch viewMode {

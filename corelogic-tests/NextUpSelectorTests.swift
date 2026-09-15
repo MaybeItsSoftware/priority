@@ -107,4 +107,37 @@ final class NextUpSelectorTests: XCTestCase {
   func testEmptyInputHasNoPick() {
     XCTAssertNil(NextUpSelector.next(from: [], now: now, calendar: calendar))
   }
+
+  // MARK: - The ladder
+
+  func testRankOrdersTheWholeLadderNotJustTheWinner() {
+    let ranked = NextUpSelector.rank(
+      [
+        candidate("order-only", order: 9),
+        candidate("daily", daily: true),
+        candidate("overdue", due: -2 * 86_400),
+        candidate("important", urgency: 1, importance: 1),
+      ], now: now, calendar: calendar)
+
+    XCTAssertEqual(ranked.map(\.candidate.id), ["daily", "overdue", "important", "order-only"])
+    // Every rung carries its own reason, so climbing can explain each one.
+    XCTAssertEqual(ranked.map(\.reason), [.daily, .overdue, .importance, .order])
+  }
+
+  func testScoresDecreaseMonotonicallyUpTheLadder() {
+    let ranked = NextUpSelector.rank(
+      [
+        candidate("a", daily: true),
+        candidate("b", due: -1 * 86_400),
+        candidate("c", due: 0),
+        candidate("d", column: "today"),
+        candidate("e", priority: 1),
+        candidate("f"),
+      ], now: now, calendar: calendar)
+
+    XCTAssertEqual(ranked.count, 6)
+    for (higher, lower) in zip(ranked, ranked.dropFirst()) {
+      XCTAssertGreaterThanOrEqual(higher.score, lower.score, "\(higher.candidate.id) should outrank \(lower.candidate.id)")
+    }
+  }
 }

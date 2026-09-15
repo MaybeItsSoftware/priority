@@ -12,6 +12,22 @@ struct WorkspaceDesktopView: View {
   @FocusState private var focusedArea: WorkspaceFocusArea?
 
   var body: some View {
+    Group {
+      // Focus mode replaces the workspace rather than covering it. A sheet
+      // leaves the board visible round the edges, which is the one thing the
+      // screen exists to stop.
+      if model.showsFocusScreen {
+        WorkspaceFocusScreen()
+          .environment(model)
+          .transition(.opacity)
+      } else {
+        workspace
+      }
+    }
+    .animation(.easeInOut(duration: 0.12), value: model.showsFocusScreen)
+  }
+
+  private var workspace: some View {
     HSplitView {
       sidebar
         .focusSection()
@@ -57,10 +73,6 @@ struct WorkspaceDesktopView: View {
         floatingTimer.show(model: model, activate: true)
         model.showsFocusPanel = false
       })
-        .environment(model)
-    }
-    .sheet(isPresented: Bindable(model).showsFocusScreen) {
-      WorkspaceFocusScreen()
         .environment(model)
     }
     .sheet(isPresented: Bindable(model).showsKeyboardHelp) {
@@ -1354,7 +1366,10 @@ private struct WorkspaceKeyboardHelp: View {
         key("⌘ 1 / ⌘ 2 / ⌘ 3", "Focus the sidebar or task surface; ⌘ 3 opens the inspector")
         key("I", "Open or close the selected task’s inspector")
         key("⌘ 4–7", "View this list as Board, Outline, Dailies, or Matrix")
-        key("⌘ 8", "Open the focus screen, or return to the running session")
+        key("⌘ 8", "Enter focus mode, or return to the running session")
+        key("Focus: ↑ ↓ / J K", "Climb to less important work, or back down towards the most important")
+        key("Focus: ↵ / Space", "Stage the task, then begin it with the estimate shown")
+        key("Focus: X", "Tick the task off without starting a session")
         key("⌃ Tab / ⌃ ⇧ Tab", "Move focus forward or backward between those regions")
         key("Tab / ⇧ Tab", "Move between buttons, menus, and fields")
         key("Sidebar: ↑ ↓ / J K", "Select Everything, then its visible lists and folders")

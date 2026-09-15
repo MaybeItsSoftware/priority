@@ -68,29 +68,93 @@ extension WorkspaceViewModel {
     guard let store else { return }
     perform {
       let ranked = NextUpSelector.rank(try store.nextUpCandidates())
-        .filter { !skippedTaskIDs.contains($0.candidate.id) }
+      focusLadder = ranked
+      // Keep the cursor pointing at the same task across a reload where we can;
+      // ticking one off should not throw away where you had climbed to.
+      if let id = focusLadderTaskID, let index = ranked.firstIndex(where: { $0.candidate.id == id }) {
+        focusLadderIndex = index
+      } else {
+        focusLadderIndex = min(focusLadderIndex, max(0, ranked.count - 1))
+      }
       nextUp = ranked.first
-      nextUpAlternatives = Array(ranked.dropFirst().prefix(3))
     }
   }
 
-  func nextUpTask() -> WorkspaceTask? {
-    guard let id = nextUp?.candidate.id, let store else { return nil }
+  // MARK: - The focus ladder
+
+  /// The rung currently under the cursor. Rung 0 is the most important thing;
+  /// climbing raises the index and lowers the priority.
+  var focusLadderSelection: ScoredNextUp? {
+    guard focusLadder.indices.contains(focusLadderIndex) else { return nil }
+    return focusLadder[focusLadderIndex]
+  }
+
+  var focusLadderTask: WorkspaceTask? {
+    guard let id = focusLadderSelection?.candidate.id, let store else { return nil }
     return try? store.task(id: id)
   }
 
-  /// Passes over the current suggestion without rescheduling it. It comes back
-  /// next time the app launches, which is the point — a skip is not a decision.
-  func skipNextUp() {
-    guard let id = nextUp?.candidate.id else { return }
-    skippedTaskIDs.insert(id)
-    reloadNextUp()
+  private var focusLadderTaskID: String? { focusLadderSelection?.candidate.id }
+
+  /// `offset` of +1 climbs to the next less important task, -1 descends back
+  /// towards the most important one. Deliberately clamped rather than wrapped:
+  /// the ladder has a top and a bottom, and wrapping would hide which you are at.
+  func moveFocusLadder(by offset: Int) {
+    guard !focusLadder.isEmpty else { return }
+    let target = focusLadderIndex + offset
+    guard focusLadder.indices.contains(target) else { return }
+    focusLadderIndex = target
+    stagedTaskID = nil
   }
 
-  func clearSkippedTasks() {
-    guard !skippedTaskIDs.isEmpty else { return }
-    skippedTaskIDs.removeAll()
-    reloadNextUp()
+  /// Commits to the rung under the cursor: it becomes the thing you are about
+  /// to do, and the estimate is seeded from whatever it already knows.
+  func stageFocusLadderSelection() {
+    guard let task = focusLadderTask else { return }
+    stagedTaskID = task.id
+    let seconds = dailyItem(for: task)?.daily.targetSeconds ?? task.estimateSeconds
+    focusEstimateMinutes = seconds.map { max(1, $0 / 60) } ?? 25
+  }
+
+  func unstageFocusTask() {
+    stagedTaskID = nil
+  }
+
+  var stagedTask: WorkspaceTask? {
+    guard let id = stagedTaskID, let store else { return nil }
+    return try? store.task(id: id)
+  }
+
+  /// Begins work on the staged task with the committed estimate.
+  func beginStagedFocus() {
+    guard let task = stagedTask else { return }
+    stagedTaskID = nil
+    startFocus(on: task, plannedSeconds: max(1, focusEstimateMinutes) * 60)
+  }
+
+  /// Ticks the rung under the cursor off without ever starting a session —
+  /// the "actually, that's already done" path that stops the ladder being a
+  /// list you can only work through one sitting at a time.
+  func completeFocusLadderSelection() {
+    guard let store, let task = focusLadderTask else { return }
+    perform {
+      if let item = dailyItem(for: task), !item.isDoneToday {
+        try store.logContribution(dailyId: item.daily.id)
+      } else {
+        try store.setStatus(.completed, for: task.id)
+      }
+      stagedTaskID = nil
+      reloadDailies()
+      reloadOutline()
+      reloadNextUp()
+    }
+  }
+
+  /// Leaves focus mode, putting the ladder back at the top for next time.
+  func dismissFocusScreen() {
+    showsFocusScreen = false
+    stagedTaskID = nil
+    focusLadderIndex = 0
   }
 
   /// Pushes the suggestion out to `date`, so it stops being offered until then.

@@ -20,21 +20,14 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// Starts on whatever the ranker currently suggests, with the estimate shown
-  /// on the focus screen.
-  func startFocusOnNextUp() {
-    guard let task = nextUpTask() else { return }
-    startFocus(on: task, plannedSeconds: max(1, focusEstimateMinutes) * 60)
-  }
-
   /// Opens the focus screen, seeding the estimate from whatever the suggested
   /// task already knows about itself — its daily target, then its estimate.
   func presentFocusScreen() {
+    // Always open at the foot of the ladder. Where you climbed to last time was
+    // a judgement about that moment, not a preference to restore.
+    focusLadderIndex = 0
+    stagedTaskID = nil
     reloadNextUp()
-    if let task = nextUpTask() {
-      let seconds = dailyItem(for: task)?.daily.targetSeconds ?? task.estimateSeconds
-      focusEstimateMinutes = seconds.map { max(1, $0 / 60) } ?? 25
-    }
     showsFocusScreen = true
   }
 

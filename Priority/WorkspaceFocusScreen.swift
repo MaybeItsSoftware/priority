@@ -74,243 +74,333 @@ struct WorkspaceFocusLauncher: View {
     return reason.explanation.localizedCapitalized
   }
 }
-
-/// One task, an estimate, and a way out.
+/// Focus mode: the workspace gets out of the way and one task is put in front
+/// of you.
 ///
-/// Deliberately shows nothing else. The screen exists to end the deciding, so
-/// putting the rest of the queue on it would reopen exactly the question it is
-/// meant to close; the alternatives sit behind a disclosure for the case where
-/// the suggestion is genuinely wrong.
+/// The work is presented as a **ladder**. The foot of it is the most important
+/// thing you could be doing; climbing moves up through work of decreasing
+/// priority. That direction is the whole interaction — deciding what to do is
+/// rarely "show me everything", it is "not that, what's next", and a ladder
+/// answers that one rung at a time without ever showing you the backlog.
+///
+/// From any rung you can stage the task (commit to it, set an estimate, start)
+/// or simply tick it off, because a fair number of things on any list are
+/// already done or were never really work.
 struct WorkspaceFocusScreen: View {
   @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.dismiss) private var dismiss
-  @State private var showsAlternatives = false
 
-  private let estimateChoices = [5, 10, 15, 25, 45, 60, 90]
+  /// How many rungs either side of the cursor are drawn. A window rather than
+  /// the whole list: a focus screen you can scroll through is a task list.
+  private static let visibleAbove = 3
+  private static let visibleBelow = 2
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
+    VStack(spacing: 0) {
       header
       Divider()
-      if let next = model.nextUp {
-        content(for: next)
+      if model.focusLadder.isEmpty {
+        emptyState
       } else {
-        ContentUnavailableView(
-          "Nothing waiting",
-          systemImage: "checkmark.circle",
-          description: Text("Every daily is done and no task is due. Add something, or take the time back."))
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ladder
       }
+      Divider()
+      footer
     }
-    .frame(width: 520, height: 560)
-    .onAppear { model.reloadNextUp() }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color(nsColor: .textBackgroundColor))
   }
 
+  // MARK: - Chrome
+
   private var header: some View {
-    HStack {
-      Text("NEXT UP")
-        .font(.caption2.weight(.bold))
-        .tracking(1.2)
+    HStack(alignment: .firstTextBaseline) {
+      Text("FOCUS")
+        .font(.caption.weight(.bold))
+        .tracking(1.5)
         .foregroundStyle(.secondary)
+      if !model.focusLadder.isEmpty {
+        Text("rung \(model.focusLadderIndex + 1) of \(model.focusLadder.count)")
+          .font(.caption.monospacedDigit())
+          .foregroundStyle(.tertiary)
+      }
       Spacer()
-      Button("Close") { dismiss() }
+      Button("Leave") { model.dismissFocusScreen() }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
         .focusable()
-        .keyboardShortcut(.cancelAction)
+      Text("Esc")
+        .font(.caption2.monospaced())
+        .foregroundStyle(.tertiary)
     }
-    .padding(.horizontal, 22)
-    .padding(.vertical, 16)
+    .padding(.horizontal, 24)
+    .padding(.vertical, 14)
   }
 
-  @ViewBuilder
-  private func content(for next: ScoredNextUp) -> some View {
-    let task = model.nextUpTask()
+  private var footer: some View {
+    HStack(spacing: 18) {
+      hint("↑", "Less important")
+      hint("↓", "More important")
+      hint("↵", model.stagedTask == nil ? "Stage" : "Begin")
+      hint("X", "Tick off")
+      Spacer()
+      if model.stagedTask != nil {
+        Text("Staged — set the estimate and begin")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .padding(.horizontal, 24)
+    .padding(.vertical, 12)
+  }
 
-    ScrollView {
-      VStack(alignment: .leading, spacing: 26) {
-        VStack(alignment: .leading, spacing: 10) {
-          Text(next.candidate.title)
-            .font(.title.weight(.semibold))
-            .fixedSize(horizontal: false, vertical: true)
+  private func hint(_ key: String, _ label: String) -> some View {
+    HStack(spacing: 5) {
+      Text(key)
+        .font(.caption2.monospaced())
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+      Text(label)
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+    }
+  }
 
-          Label("Suggested because \(next.reason.explanation).", systemImage: "sparkles")
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
+  private var emptyState: some View {
+    ContentUnavailableView(
+      "Nothing waiting",
+      systemImage: "checkmark.circle",
+      description: Text("Every daily is done and no task is due. Add something, or enjoy it."))
+      .frame(maxHeight: .infinity)
+  }
 
-          if let task, let list = model.list(for: task) {
-            Text(list.name)
-              .font(.caption)
-              .foregroundStyle(.tertiary)
-          }
-        }
+  // MARK: - The ladder
 
-        VStack(alignment: .leading, spacing: 10) {
-          Text("HOW LONG WILL YOU GIVE IT?")
-            .font(.caption2.weight(.bold))
-            .tracking(1.2)
-            .foregroundStyle(.secondary)
+  /// Drawn top-down as least-important → most-important, so that climbing is
+  /// literally upward movement on screen.
+  private var ladder: some View {
+    let index = model.focusLadderIndex
+    let upper = min(model.focusLadder.count - 1, index + Self.visibleAbove)
+    let lower = max(0, index - Self.visibleBelow)
 
-          estimatePicker
-
-          if let task, model.isDailyProgressTask(task) {
-            Label(
-              "This is a daily. Finishing logs today's contribution — the task itself stays open.",
-              systemImage: "arrow.triangle.2.circlepath")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-              .fixedSize(horizontal: false, vertical: true)
-          }
-        }
-
-        actions(for: task)
-
-        if !model.nextUpAlternatives.isEmpty {
-          alternatives
+    return VStack(spacing: 0) {
+      if upper < model.focusLadder.count - 1 {
+        moreMarker("\(model.focusLadder.count - 1 - upper) less important above")
+      }
+      Spacer(minLength: 0)
+      ForEach(Array(stride(from: upper, through: lower, by: -1)), id: \.self) { rung in
+        if rung == index {
+          selectedRung(model.focusLadder[rung])
+        } else {
+          neighbourRung(model.focusLadder[rung], distance: abs(rung - index))
         }
       }
-      .padding(.horizontal, 22)
-      .padding(.vertical, 20)
+      Spacer(minLength: 0)
+      if lower > 0 {
+        moreMarker("\(lower) more important below")
+      }
+    }
+    .padding(.horizontal, 28)
+    .frame(maxHeight: .infinity)
+  }
+
+  private func moreMarker(_ text: String) -> some View {
+    Text(text)
+      .font(.caption2)
+      .foregroundStyle(.quaternary)
+      .padding(.vertical, 8)
+  }
+
+  /// A rung you are not on: enough to recognise, not enough to weigh up.
+  private func neighbourRung(_ scored: ScoredNextUp, distance: Int) -> some View {
+    HStack(spacing: 8) {
+      Image(systemName: icon(for: scored.reason))
+        .font(.caption)
+      Text(scored.candidate.title)
+        .lineLimit(1)
+        .truncationMode(.tail)
+      Spacer(minLength: 0)
+    }
+    .font(.callout)
+    // Fading with distance makes the ordering legible without a single number
+    // on screen: the further from your cursor, the less it is asking of you.
+    .foregroundStyle(.secondary.opacity(max(0.25, 1 - Double(distance) * 0.28)))
+    .padding(.horizontal, 14)
+    .padding(.vertical, 9)
+    .contentShape(Rectangle())
+    .onTapGesture { model.moveFocusLadder(by: rungOffset(to: scored)) }
+  }
+
+  private func rungOffset(to scored: ScoredNextUp) -> Int {
+    guard let target = model.focusLadder.firstIndex(where: { $0.candidate.id == scored.candidate.id })
+    else { return 0 }
+    return target - model.focusLadderIndex
+  }
+
+  /// The rung under the cursor, and the only one that argues its case.
+  private func selectedRung(_ scored: ScoredNextUp) -> some View {
+    let task = model.focusLadderTask
+    let isStaged = model.stagedTask?.id == scored.candidate.id
+
+    return VStack(alignment: .leading, spacing: 14) {
+      HStack(spacing: 8) {
+        Image(systemName: icon(for: scored.reason))
+          .foregroundStyle(tint(for: scored.reason))
+        Text(scored.reason.explanation.localizedCapitalized)
+          .font(.caption.weight(.medium))
+          .foregroundStyle(tint(for: scored.reason))
+        Spacer(minLength: 0)
+        if let task, let list = model.list(for: task) {
+          Text(list.name)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+      }
+
+      Text(scored.candidate.title)
+        .font(.system(size: 26, weight: .semibold))
+        .lineLimit(3)
+        .fixedSize(horizontal: false, vertical: true)
+
+      if let meta = metaLine(for: scored, task: task) {
+        Text(meta)
+          .font(.callout)
+          .foregroundStyle(.secondary)
+      }
+
+      if isStaged {
+        estimatePicker
+        stagedActions
+      } else {
+        unstagedActions
+      }
+    }
+    .padding(20)
+    .frame(maxWidth: 560, alignment: .leading)
+    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+    .overlay(
+      RoundedRectangle(cornerRadius: 10)
+        .strokeBorder(isStaged ? Color.accentColor : Color.primary.opacity(0.15), lineWidth: isStaged ? 2 : 1))
+  }
+
+  private func metaLine(for scored: ScoredNextUp, task: WorkspaceTask?) -> String? {
+    var parts: [String] = []
+    if let due = scored.candidate.dueAt {
+      parts.append("Due \(due.formatted(.relative(presentation: .named)))")
+    }
+    if let estimate = scored.candidate.estimateSeconds {
+      parts.append("~\(max(1, estimate / 60))m")
+    }
+    if let task, let item = model.dailyItem(for: task), item.secondsLoggedToday > 0 {
+      parts.append("\(item.secondsLoggedToday / 60)m done today")
+    }
+    return parts.isEmpty ? nil : parts.joined(separator: " · ")
+  }
+
+  // MARK: - Actions
+
+  private var unstagedActions: some View {
+    HStack(spacing: 10) {
+      Button {
+        model.stageFocusLadderSelection()
+      } label: {
+        Label("Stage this", systemImage: "target")
+      }
+      .buttonStyle(.borderedProminent)
+      .focusable()
+      .keyboardShortcut(.defaultAction)
+
+      Button {
+        model.completeFocusLadderSelection()
+      } label: {
+        Label("Tick off", systemImage: "checkmark")
+      }
+      .buttonStyle(.bordered)
+      .focusable()
+
+      Menu {
+        ForEach(WorkspaceDeferral.allCases) { option in
+          Button(option.title) {
+            guard let task = model.focusLadderTask else { return }
+            model.scheduleForLater(task, until: option.date(from: .now))
+          }
+        }
+      } label: {
+        Label("Later", systemImage: "clock")
+      }
+      .menuStyle(.borderlessButton)
+      .fixedSize()
+
+      Spacer(minLength: 0)
+    }
+  }
+
+  private var stagedActions: some View {
+    HStack(spacing: 10) {
+      Button {
+        model.beginStagedFocus()
+      } label: {
+        Label("Begin \(max(1, model.focusEstimateMinutes))m", systemImage: "play.fill")
+      }
+      .buttonStyle(.borderedProminent)
+      .focusable()
+      .keyboardShortcut(.defaultAction)
+
+      Button("Not yet") { model.unstageFocusTask() }
+        .buttonStyle(.bordered)
+        .focusable()
+
+      Spacer(minLength: 0)
     }
   }
 
   private var estimatePicker: some View {
-    @Bindable var model = model
-    return VStack(alignment: .leading, spacing: 10) {
-      HStack(spacing: 6) {
-        ForEach(estimateChoices, id: \.self) { minutes in
-          Button {
-            model.focusEstimateMinutes = minutes
-          } label: {
-            Text("\(minutes)m")
-              .font(.callout.monospacedDigit())
-              .frame(minWidth: 42)
-              .padding(.vertical, 7)
-              .background(
-                model.focusEstimateMinutes == minutes ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.05),
-                in: RoundedRectangle(cornerRadius: 6))
-              .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                  .strokeBorder(
-                    model.focusEstimateMinutes == minutes ? Color.accentColor : Color.primary.opacity(0.12),
-                    lineWidth: 1))
-          }
-          .buttonStyle(.plain)
-          .focusable()
-          .accessibilityLabel("\(minutes) minutes")
-        }
-      }
-
-      Stepper(value: $model.focusEstimateMinutes, in: 1...480, step: 5) {
-        Text("\(model.focusEstimateMinutes) minutes")
-          .font(.callout.monospacedDigit())
-          .foregroundStyle(.secondary)
-      }
-      .focusable()
-    }
-  }
-
-  @ViewBuilder
-  private func actions(for task: WorkspaceTask?) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Button {
-        model.startFocusOnNextUp()
-        dismiss()
-      } label: {
-        Label("Start \(model.focusEstimateMinutes) minutes", systemImage: "play.fill")
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 5)
-      }
-      .buttonStyle(.borderedProminent)
-      .controlSize(.large)
-      .focusable()
-      .keyboardShortcut(.defaultAction)
-      .disabled(task == nil)
-
-      HStack(spacing: 10) {
-        if let task {
-          Menu {
-            ForEach(WorkspaceDeferral.allCases) { deferral in
-              Button(deferral.title) {
-                model.scheduleForLater(task, until: deferral.date(from: .now))
-                dismiss()
-              }
-            }
-          } label: {
-            Label("Schedule for later", systemImage: "clock")
-          }
-          .menuStyle(.borderlessButton)
-          .fixedSize()
-          .focusable()
-          .help("Stop offering this until the time you choose")
-        }
-
-        Button("Not this one") {
-          model.skipNextUp()
-        }
-        .buttonStyle(.bordered)
-        .focusable()
-        .help("Pass over it for now; it comes back next launch")
-
-        Spacer()
-      }
-
-      // The other way to start: everything you already put in Today, queued in
-      // board order. Kept here rather than on its own shortcut, so there is one
-      // place that starts a session.
-      if model.todayTasks.count > 1 {
-        Button {
-          model.startFocusFromToday(plannedSeconds: max(1, model.focusEstimateMinutes) * 60)
-          dismiss()
-        } label: {
-          Label("Run all \(model.todayTasks.count) Today tasks as a queue", systemImage: "list.number")
-            .font(.callout)
-        }
-        .buttonStyle(.link)
-        .focusable()
-      }
-    }
-  }
-
-  private var alternatives: some View {
-    DisclosureGroup(isExpanded: $showsAlternatives) {
-      VStack(alignment: .leading, spacing: 8) {
-        ForEach(model.nextUpAlternatives) { alternative in
-          HStack(alignment: .firstTextBaseline, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-              Text(alternative.candidate.title)
-                .lineLimit(1)
-              Text(alternative.reason.explanation.localizedCapitalized)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button("Start") {
-              guard let task = model.task(withID: alternative.candidate.id) else { return }
-              model.startFocus(on: task, plannedSeconds: max(1, model.focusEstimateMinutes) * 60)
-              dismiss()
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .focusable()
-          }
-          .padding(.vertical, 2)
-        }
-      }
-      .padding(.top, 8)
-    } label: {
-      Text("Something else")
-        .font(.caption.weight(.medium))
+    @Bindable var bindable = model
+    return VStack(alignment: .leading, spacing: 8) {
+      Text("HOW LONG WILL YOU GIVE IT?")
+        .font(.caption2.weight(.bold))
+        .tracking(1.2)
         .foregroundStyle(.secondary)
+      HStack(spacing: 6) {
+        ForEach([5, 10, 15, 25, 45, 60, 90], id: \.self) { minutes in
+          Button("\(minutes)m") { model.focusEstimateMinutes = minutes }
+            .buttonStyle(.bordered)
+            .tint(model.focusEstimateMinutes == minutes ? Color.accentColor : nil)
+            .focusable()
+        }
+        Stepper("", value: $bindable.focusEstimateMinutes, in: 1...480, step: 5)
+          .labelsHidden()
+      }
     }
-    .focusable()
+  }
+
+  // MARK: - Reason styling
+
+  private func icon(for reason: NextUpReason) -> String {
+    switch reason {
+    case .daily: return "arrow.triangle.2.circlepath"
+    case .overdue: return "exclamationmark.triangle.fill"
+    case .dueToday: return "calendar.badge.exclamationmark"
+    case .dueSoon: return "calendar"
+    case .today: return "tray.full"
+    case .importance: return "star.fill"
+    case .priority: return "flag.fill"
+    case .order: return "list.bullet"
+    }
+  }
+
+  private func tint(for reason: NextUpReason) -> Color {
+    switch reason {
+    case .daily: return .green
+    case .overdue: return .red
+    case .dueToday, .dueSoon: return .orange
+    case .today: return .accentColor
+    case .importance, .priority: return .purple
+    case .order: return .secondary
+    }
   }
 }
 
-/// The deferrals the focus screen offers. Fixed rather than a date picker,
-/// because "later" is a mood and picking a timestamp for it is a second
-/// decision at the exact moment you were trying to avoid making one.
 enum WorkspaceDeferral: String, CaseIterable, Identifiable {
   case anHour
   case thisAfternoon
