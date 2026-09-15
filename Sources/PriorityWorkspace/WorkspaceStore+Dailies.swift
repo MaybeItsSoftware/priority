@@ -299,21 +299,39 @@ extension WorkspaceStore {
   /// one task by hand while its neighbours keep floating on score produces an
   /// order that rearranges itself the moment anything changes, which is the
   /// opposite of what dragging something into place asks for.
-  public func setFocusOrder(_ orderedTaskIDs: [String], now: Date = .now) throws {
+  /// Pins one task to `index` in the ladder, leaving every other task to be
+  /// ordered by score around it.
+  ///
+  /// Deliberately one task rather than the whole visible order. Writing the
+  /// entire ladder is what froze it: every task acquired a rank from a single
+  /// nudge, after which nothing could ever be re-ranked again.
+  public func pinTask(id taskId: String, atIndex index: Int, now: Date = .now) throws {
     try database.write { db in
-      for (rank, taskId) in orderedTaskIDs.enumerated() {
-        if var metadata = try TaskMetadata.fetchOne(db, key: taskId) {
-          metadata.focusRank = rank
-          metadata.updatedAt = now
-          try metadata.update(db)
-        } else {
-          try TaskMetadata(
-            taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-            matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]",
-            focusRank: rank, updatedAt: now
-          ).insert(db)
-        }
+      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
+        throw WorkspaceStoreError.missingTask
       }
+      let rank = max(0, index)
+      if var metadata = try TaskMetadata.fetchOne(db, key: taskId) {
+        metadata.focusRank = rank
+        metadata.updatedAt = now
+        try metadata.update(db)
+      } else {
+        try TaskMetadata(
+          taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
+          matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]",
+          focusRank: rank, updatedAt: now
+        ).insert(db)
+      }
+    }
+  }
+
+  /// Releases one task back to the ranking.
+  public func unpinTask(id taskId: String, now: Date = .now) throws {
+    try database.write { db in
+      guard var metadata = try TaskMetadata.fetchOne(db, key: taskId) else { return }
+      metadata.focusRank = nil
+      metadata.updatedAt = now
+      try metadata.update(db)
     }
   }
 

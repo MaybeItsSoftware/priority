@@ -130,34 +130,62 @@ public enum NextUpSelector {
     now: Date = .now,
     calendar: Calendar = .current
   ) -> [ScoredNextUp] {
-    candidates
+    let scored = candidates
       .filter { ($0.startAt ?? .distantPast) <= now }
       .map { score($0, now: now, calendar: calendar) }
-      .sorted { lhs, rhs in
-        // A hand-placed task sits where it was put, above everything still
-        // being ordered by score. Arranging the ladder by hand is a statement
-        // that the ranking got it wrong, so it has to win outright — a manual
-        // order that score could still perturb would not be an order at all.
-        switch (lhs.candidate.focusRank, rhs.candidate.focusRank) {
-        case let (left?, right?): if left != right { return left < right }
-        case (.some, .none): return true
-        case (.none, .some): return false
-        case (.none, .none): break
-        }
-        if lhs.score != rhs.score { return lhs.score > rhs.score }
-        // A shorter job first, among equals: finishing something is worth more
-        // than starting the same-sized something else.
-        let lhsEstimate = lhs.candidate.estimateSeconds ?? Int.max
-        let rhsEstimate = rhs.candidate.estimateSeconds ?? Int.max
-        if lhsEstimate != rhsEstimate { return lhsEstimate < rhsEstimate }
-        if lhs.candidate.sortOrder != rhs.candidate.sortOrder {
-          return lhs.candidate.sortOrder < rhs.candidate.sortOrder
-        }
-        if lhs.candidate.createdAt != rhs.candidate.createdAt {
-          return lhs.candidate.createdAt < rhs.candidate.createdAt
-        }
-        return lhs.candidate.id < rhs.candidate.id
+    return place(pinned: scored.filter { $0.candidate.focusRank != nil },
+                 among: scored.filter { $0.candidate.focusRank == nil }.sorted(by: byScore))
+  }
+
+  /// Slots hand-placed tasks into the scored order at the positions they were
+  /// put, leaving everything else ranked normally around them.
+  ///
+  /// A pin is a *position*, not a promotion. The alternative — letting any
+  /// pinned task outrank every unpinned one — means the first time you nudge
+  /// something the whole ladder freezes, because from then on the pinned set
+  /// only ever grows and the ranking has nothing left to order.
+  ///
+  /// A pin whose index has been passed takes the next free slot rather than
+  /// being dropped, so two tasks pinned to the same place still both appear.
+  private static func place(pinned: [ScoredNextUp], among free: [ScoredNextUp]) -> [ScoredNextUp] {
+    guard !pinned.isEmpty else { return free }
+    let queue = pinned.sorted {
+      let left = $0.candidate.focusRank ?? 0
+      let right = $1.candidate.focusRank ?? 0
+      return left == right ? $0.candidate.id < $1.candidate.id : left < right
+    }
+    var result: [ScoredNextUp] = []
+    result.reserveCapacity(queue.count + free.count)
+    var nextPinned = 0
+    var nextFree = 0
+    while result.count < queue.count + free.count {
+      let claimsThisSlot = nextPinned < queue.count
+        && (queue[nextPinned].candidate.focusRank ?? 0) <= result.count
+      if claimsThisSlot || nextFree == free.count {
+        result.append(queue[nextPinned])
+        nextPinned += 1
+      } else {
+        result.append(free[nextFree])
+        nextFree += 1
       }
+    }
+    return result
+  }
+
+  private static func byScore(_ lhs: ScoredNextUp, _ rhs: ScoredNextUp) -> Bool {
+    if lhs.score != rhs.score { return lhs.score > rhs.score }
+    // A shorter job first, among equals: finishing something is worth more
+    // than starting the same-sized something else.
+    let lhsEstimate = lhs.candidate.estimateSeconds ?? Int.max
+    let rhsEstimate = rhs.candidate.estimateSeconds ?? Int.max
+    if lhsEstimate != rhsEstimate { return lhsEstimate < rhsEstimate }
+    if lhs.candidate.sortOrder != rhs.candidate.sortOrder {
+      return lhs.candidate.sortOrder < rhs.candidate.sortOrder
+    }
+    if lhs.candidate.createdAt != rhs.candidate.createdAt {
+      return lhs.candidate.createdAt < rhs.candidate.createdAt
+    }
+    return lhs.candidate.id < rhs.candidate.id
   }
 
   public static func score(

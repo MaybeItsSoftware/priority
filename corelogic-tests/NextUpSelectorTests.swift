@@ -169,8 +169,9 @@ final class NextUpSelectorTests: XCTestCase {
 
   func testClearingOneTasksRankLetsItFallBackToItsScore() {
     XCTAssertEqual(
-      rank([candidate("unplaced", daily: true), candidate("placed", rank: 5)]),
-      ["placed", "unplaced"])
+      rank([candidate("unplaced", daily: true), candidate("placed", rank: 0)]),
+      ["placed", "unplaced"],
+      "a task pinned to the top sits above even an outstanding daily")
     XCTAssertEqual(
       rank([candidate("unplaced", daily: true), candidate("placed")]),
       ["unplaced", "placed"])
@@ -188,5 +189,66 @@ final class NextUpSelectorTests: XCTestCase {
 
     XCTAssertEqual(first, rank(candidates.reversed()), "order must not depend on input order")
     XCTAssertEqual(Set(first).count, first.count)
+  }
+
+  // MARK: - Hand placement
+
+  func testAPinIsAPositionNotAPromotion() {
+    // "loose" outscores everything; pinning "pinned" to slot 1 must not
+    // displace it, only sit behind it.
+    let ranked = rank([
+      candidate("loose", daily: true),
+      candidate("pinned", order: 9, rank: 1),
+      candidate("a", order: 0),
+      candidate("b", order: 1),
+    ])
+
+    XCTAssertEqual(ranked, ["loose", "pinned", "a", "b"])
+  }
+
+  func testPinningOneTaskLeavesEveryOtherTaskRankedByScore() {
+    let ranked = rank([
+      candidate("nudged", order: 5, rank: 0),
+      candidate("daily", daily: true),
+      candidate("overdue", due: -86_400),
+      candidate("idle", order: 3),
+    ])
+
+    XCTAssertEqual(ranked.first, "nudged")
+    XCTAssertEqual(
+      Array(ranked.dropFirst()), ["daily", "overdue", "idle"],
+      "the unpinned tail keeps its scored order")
+  }
+
+  func testTwoTasksPinnedToTheSameSlotBothSurvive() {
+    let ranked = rank([
+      candidate("first", rank: 0),
+      candidate("second", rank: 0),
+      candidate("free", order: 0),
+    ])
+
+    XCTAssertEqual(ranked.count, 3)
+    XCTAssertEqual(Set(ranked), ["first", "second", "free"])
+    XCTAssertEqual(Array(ranked.prefix(2)), ["first", "second"])
+  }
+
+  func testAPinPastTheEndOfTheLadderTakesTheLastSlotRatherThanVanishing() {
+    let ranked = rank([
+      candidate("far", rank: 99),
+      candidate("a", order: 0),
+      candidate("b", order: 1),
+    ])
+
+    XCTAssertEqual(ranked, ["a", "b", "far"])
+  }
+
+  func testEveryTaskPinnedReproducesTheRecordedOrderExactly() {
+    let ranked = rank([
+      candidate("third", daily: true, rank: 2),
+      candidate("first", rank: 0),
+      candidate("second", rank: 1),
+    ])
+
+    XCTAssertEqual(ranked, ["first", "second", "third"], "a fully pinned ladder ignores score")
   }
 }

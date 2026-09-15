@@ -181,10 +181,11 @@ extension WorkspaceViewModel {
     guard let store, !focusLadder.isEmpty else { return }
     let target = focusLadderIndex + offset
     guard focusLadder.indices.contains(target) else { return }
-    var order = focusLadder.map(\.candidate.id)
-    order.swapAt(focusLadderIndex, target)
+    let moved = focusLadder[focusLadderIndex].candidate.id
     perform {
-      try store.setFocusOrder(order)
+      // Only the task that moved is pinned. Its neighbour is left to the
+      // ranking, so a nudge stays a nudge instead of freezing the ladder.
+      try store.pinTask(id: moved, atIndex: target)
       focusLadderIndex = target
       stagedTaskID = nil
       reloadNextUp()
