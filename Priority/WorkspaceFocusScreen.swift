@@ -88,6 +88,11 @@ struct WorkspaceFocusScreen: View {
   private static let historyDepth = 4
   /// How many still to come are hinted at below.
   private static let previewDepth = 2
+  /// What a rung shrinks to once you are not on it. Big enough that history
+  /// stays readable, small enough that the current rung is unmistakable.
+  private static let passedScale = 0.62
+  /// The height a shrunken rung occupies, so the scale does not leave a hole.
+  private static let passedRowHeight: CGFloat = 26
 
   var body: some View {
     VStack(spacing: 0) {
@@ -172,92 +177,107 @@ struct WorkspaceFocusScreen: View {
     let index = model.focusLadderIndex
     let historyTop = min(model.focusLadder.count - 1, index + Self.historyDepth)
     let previewEnd = max(0, index - Self.previewDepth)
+    let visible = stride(from: historyTop, through: previewEnd, by: -1)
+      .compactMap { model.focusLadder[safe: $0] }
 
     return VStack(spacing: 0) {
       Spacer(minLength: 12)
-
-      // Above the cursor: where you have been, receding.
-      ForEach(Array(stride(from: historyTop, to: index, by: -1)), id: \.self) { rung in
-        passedRung(model.focusLadder[rung], distance: rung - index)
+      // One view type for every rung, keyed by the task rather than by its
+      // position. That is what lets a rung you climb past *travel* to where it
+      // ends up: keyed by position, each row keeps its identity and swaps its
+      // contents instead, which is the teleporting.
+      ForEach(visible, id: \.candidate.id) { scored in
+        rung(scored)
+          .transition(.opacity)
       }
-
-      if let current = model.focusLadder[safe: index] {
-        currentRung(current)
-          .id(current.candidate.id)
-          .transition(.asymmetric(
-            insertion: .move(edge: .bottom).combined(with: .opacity),
-            removal: .move(edge: .top).combined(with: .opacity)))
-      }
-
-      // Below: just enough of what follows to know the column continues.
-      ForEach(Array(stride(from: index - 1, through: previewEnd, by: -1)), id: \.self) { rung in
-        passedRung(model.focusLadder[rung], distance: index - rung)
-      }
-
       Spacer(minLength: 12)
     }
     .frame(maxWidth: .infinity)
     // One spring for the whole column, so history slides up as a body rather
     // than each row animating on its own account.
-    .animation(.spring(response: 0.34, dampingFraction: 0.86), value: model.focusLadderIndex)
-    .animation(.spring(response: 0.34, dampingFraction: 0.86), value: model.focusLadder.count)
+    .animation(.spring(response: 0.42, dampingFraction: 0.82), value: model.focusLadderIndex)
+    .animation(.spring(response: 0.42, dampingFraction: 0.82), value: model.stagedTaskID)
+    .animation(.spring(response: 0.42, dampingFraction: 0.82), value: model.focusLadder.count)
   }
 
-  /// A rung you are not on. Legible rather than faint: these are the things you
-  /// just dealt with, and a history you cannot read is only decoration.
-  private func passedRung(_ scored: ScoredNextUp, distance: Int) -> some View {
-    HStack(spacing: 8) {
-      Image(systemName: icon(for: scored.reason))
-        .font(.caption)
-      Text(scored.candidate.title)
-        .lineLimit(1)
-        .truncationMode(.tail)
-    }
-    .font(.callout)
-    .foregroundStyle(.secondary)
-    .opacity(max(0.45, 1 - Double(abs(distance)) * 0.13))
-    .padding(.vertical, 7)
-    .frame(maxWidth: .infinity)
-    .contentShape(Rectangle())
-    .onTapGesture { model.moveFocusLadder(by: rungOffset(to: scored)) }
-  }
+  /// Every rung is the same view; how far it sits from the cursor decides how
+  /// big it is and how much of itself it shows.
+  ///
+  /// The title is always set at one size and *scaled*, rather than given a
+  /// smaller font when it is not current. Fonts do not interpolate — swapping
+  /// `.callout` for `.title` is a jump cut however long the animation is — but
+  /// a scale factor and a row height are both numbers, so both can be sprung.
+  private func rung(_ scored: ScoredNextUp) -> some View {
+    let distance = rungOffset(to: scored)
+    let isCurrent = distance == 0
+    let scale = isCurrent ? 1 : Self.passedScale
+    let task = isCurrent ? model.focusLadderTask : nil
 
-  private func rungOffset(to scored: ScoredNextUp) -> Int {
-    guard let target = model.focusLadder.firstIndex(where: { $0.candidate.id == scored.candidate.id })
-    else { return 0 }
-    return target - model.focusLadderIndex
-  }
-
-  /// The task in hand. No border and no card: it is the only thing arguing its
-  /// case, so it does not need an outline to say where it begins.
-  private func currentRung(_ scored: ScoredNextUp) -> some View {
-    let task = model.focusLadderTask
-    let isStaged = model.stagedTask?.id == scored.candidate.id
-
-    return VStack(spacing: 12) {
-      HStack(spacing: 7) {
-        Image(systemName: icon(for: scored.reason))
-        Text(scored.reason.explanation.localizedCapitalized)
-          .font(.caption.weight(.medium))
-        if let task, let list = model.list(for: task) {
-          Text("·").foregroundStyle(.tertiary)
-          Text(list.name).font(.caption).foregroundStyle(.secondary)
-        }
+    return VStack(spacing: 10) {
+      // The reason line rises out of the title rather than appearing above it.
+      if isCurrent {
+        reasonLine(scored, task: task)
+          .transition(.opacity.combined(with: .offset(y: 8)))
       }
-      .foregroundStyle(tint(for: scored.reason))
 
-      Text(scored.candidate.title)
-        .font(.system(size: 28, weight: .semibold))
-        .multilineTextAlignment(.center)
-        .lineLimit(3)
-        .fixedSize(horizontal: false, vertical: true)
+      HStack(spacing: 10) {
+        Image(systemName: icon(for: scored.reason))
+          .font(.system(size: 20))
+          .foregroundStyle(isCurrent ? tint(for: scored.reason) : Color.secondary)
+        Text(scored.candidate.title)
+          .font(.system(size: 28, weight: .semibold))
+          .multilineTextAlignment(.center)
+          .lineLimit(isCurrent ? 3 : 1)
+          .truncationMode(.tail)
+          .fixedSize(horizontal: false, vertical: isCurrent)
+      }
+      .scaleEffect(scale, anchor: .center)
+      // Scaling alone leaves a full-height gap behind a shrunken row, so the
+      // row's own height comes down with it. Both are numbers; both spring.
+      .frame(height: isCurrent ? nil : Self.passedRowHeight)
 
+      if isCurrent {
+        details(scored, task: task)
+          .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+      }
+    }
+    .foregroundStyle(isCurrent ? .primary : .secondary)
+    .opacity(opacity(forDistance: distance))
+    .frame(maxWidth: 620)
+    .padding(.vertical, isCurrent ? 20 : 3)
+    .contentShape(Rectangle())
+    .onTapGesture { model.moveFocusLadder(by: distance) }
+  }
+
+  /// Legible rather than faint. These are the things you just dealt with, and a
+  /// history you cannot read is only decoration — so the ramp is shallow and
+  /// does not start until a few rungs out.
+  private func opacity(forDistance distance: Int) -> Double {
+    let steps = max(0, abs(distance) - 1)
+    return max(0.5, 1 - Double(steps) * 0.11)
+  }
+
+  private func reasonLine(_ scored: ScoredNextUp, task: WorkspaceTask?) -> some View {
+    HStack(spacing: 7) {
+      Text(scored.reason.explanation.localizedCapitalized)
+        .font(.caption.weight(.medium))
+      if let task, let list = model.list(for: task) {
+        Text("·").foregroundStyle(.tertiary)
+        Text(list.name).font(.caption).foregroundStyle(.secondary)
+      }
+    }
+    .foregroundStyle(tint(for: scored.reason))
+  }
+
+  @ViewBuilder
+  private func details(_ scored: ScoredNextUp, task: WorkspaceTask?) -> some View {
+    let isStaged = model.stagedTask?.id == scored.candidate.id
+    VStack(spacing: 12) {
       if let meta = metaLine(for: scored, task: task) {
         Text(meta)
           .font(.callout)
           .foregroundStyle(.secondary)
       }
-
       if isStaged {
         estimatePicker
         stagedActions
@@ -265,8 +285,12 @@ struct WorkspaceFocusScreen: View {
         unstagedActions
       }
     }
-    .frame(maxWidth: 620)
-    .padding(.vertical, 22)
+  }
+
+  private func rungOffset(to scored: ScoredNextUp) -> Int {
+    guard let target = model.focusLadder.firstIndex(where: { $0.candidate.id == scored.candidate.id })
+    else { return 0 }
+    return target - model.focusLadderIndex
   }
 
   private func metaLine(for scored: ScoredNextUp, task: WorkspaceTask?) -> String? {
