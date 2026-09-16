@@ -282,8 +282,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     NSApp.terminate(nil)
   }
 
+  /// The global hotkey is capture, not navigation: wherever the user was, and
+  /// whatever they were looking at, what they type next has to land somewhere
+  /// they will find it again.
   private func triggerQuickAddFromHotkey() {
     showMainWindow()
+    workspace.beginQuickCapture()
   }
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

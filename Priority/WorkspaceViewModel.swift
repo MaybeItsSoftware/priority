@@ -354,6 +354,22 @@ enum WorkspaceSidebarItem: Identifiable {
     reloadOutline()
   }
 
+  /// Captures into the inbox from anywhere: the global hotkey, with no
+  /// assumption about what was on screen when it was pressed.
+  ///
+  /// Selecting the inbox rather than typing into whatever list happened to be
+  /// open is the point — a thought caught mid-task belongs in the inbox, not
+  /// filed into the project the user was looking at by accident.
+  func beginQuickCapture() {
+    // Explicitly, rather than relying on `selectList` to do it: the focus
+    // screen can be up while the inbox is already the selected list.
+    dismissFocusScreen()
+    if let inbox = inboxList, selectedListID != inbox.id || isEverythingSelected {
+      selectList(inbox.id)
+    }
+    requestTaskComposerFocus()
+  }
+
   func requestTaskComposerFocus() {
     requestKeyboardFocus(.tasks)
     taskComposerFocusRequest += 1
