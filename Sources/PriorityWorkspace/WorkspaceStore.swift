@@ -112,7 +112,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     now: Date = .now
   ) throws -> ListFolder {
     let trimmed = try Self.nonEmptyName(name)
-    return try database.write { db in
+    return try journalledWrite("New Folder") { db in
       if let parentFolderId {
         guard let folder = try ListFolder.fetchOne(db, key: parentFolderId), folder.workspaceId == workspaceId else {
           throw WorkspaceStoreError.missingFolder
@@ -136,7 +136,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     now: Date = .now
   ) throws -> TaskList {
     let trimmed = try Self.nonEmptyName(name)
-    return try database.write { db in
+    return try journalledWrite("New List") { db in
       if let folderId {
         guard let folder = try ListFolder.fetchOne(db, key: folderId), folder.workspaceId == workspaceId else {
           throw WorkspaceStoreError.missingFolder
@@ -159,7 +159,7 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   public func updateFolder(id: String, name: String, now: Date = .now) throws {
     let trimmed = try Self.nonEmptyName(name)
-    try database.write { db in
+    try journalledWrite("Rename Folder") { db in
       guard var folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
       folder.name = trimmed
       folder.updatedAt = now
@@ -168,7 +168,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func moveFolder(id: String, toParentFolderId parentFolderId: String?, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Move Folder") { db in
       guard var folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
       guard parentFolderId != id else { throw WorkspaceStoreError.invalidFolderMove }
       if let parentFolderId {
@@ -189,7 +189,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func deleteFolder(id: String) throws {
-    try database.write { db in
+    try journalledWrite("Delete Folder") { db in
       guard try ListFolder.fetchOne(db, key: id) != nil else { throw WorkspaceStoreError.missingFolder }
       // Lists are intentionally retained: the schema's SET NULL relation moves
       // them to the sidebar root. Child folders cascade with their parent.
@@ -199,7 +199,7 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   public func updateList(id: String, name: String, colorHex: String?, now: Date = .now) throws {
     let trimmed = try Self.nonEmptyName(name)
-    try database.write { db in
+    try journalledWrite("Edit List") { db in
       guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
       list.name = trimmed
       list.colorHex = colorHex?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
@@ -209,7 +209,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func moveList(id: String, toFolderId folderId: String?, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Move List") { db in
       guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
       if let folderId {
         guard let folder = try ListFolder.fetchOne(db, key: folderId), folder.workspaceId == list.workspaceId else {
@@ -226,7 +226,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func moveListWithinFolder(id: String, by offset: Int, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Reorder List") { db in
       guard let list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
       var siblings = try TaskList
         .filter(Column("workspaceId") == list.workspaceId && Column("folderId") == list.folderId)
@@ -241,7 +241,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func moveFolderWithinSiblings(id: String, by offset: Int, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Reorder Folder") { db in
       guard let folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
       var siblings = try ListFolder
         .filter(Column("workspaceId") == folder.workspaceId && Column("parentFolderId") == folder.parentFolderId)
@@ -255,7 +255,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func setListArchived(_ archived: Bool, id: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Archive List") { db in
       guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
       // A system list is somewhere the app puts things by itself, so it has to
       // be somewhere the user can still see.
@@ -267,7 +267,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func deleteList(id: String) throws {
-    try database.write { db in
+    try journalledWrite("Delete List") { db in
       guard let list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
       guard !list.isSystemList else { throw WorkspaceStoreError.systemListIsPermanent }
       try TaskList.deleteOne(db, key: id)
@@ -338,7 +338,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     now: Date = .now
   ) throws -> WorkspaceTask {
     let trimmed = try Self.nonEmptyName(title)
-    return try database.write { db in
+    return try journalledWrite("New Task") { db in
       guard try TaskList.fetchOne(db, key: listId) != nil else { throw WorkspaceStoreError.missingList }
       if let parentTaskId {
         guard let parent = try WorkspaceTask.fetchOne(db, key: parentTaskId), parent.listId == listId else {
@@ -358,7 +358,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func setStatus(_ status: TaskStatus, for taskId: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Change Status") { db in
       guard var task = try WorkspaceTask.fetchOne(db, key: taskId) else { return }
       task.status = status
       task.updatedAt = now
@@ -375,7 +375,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     now: Date = .now
   ) throws {
     let trimmed = try Self.nonEmptyName(title)
-    try database.write { db in
+    try journalledWrite("Edit Task") { db in
       guard var task = try WorkspaceTask.fetchOne(db, key: id) else { return }
       task.title = trimmed
       task.notes = notes
@@ -406,7 +406,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     let links = Self.normalizedStrings(metadata.externalLinks)
     let recurrence = metadata.recurrenceRule?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     let priority = metadata.priority.flatMap { (1...4).contains($0) ? $0 : nil }
-    try database.write { db in
+    try journalledWrite("Edit Task Details") { db in
       guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
       let tagsJSON = String(data: try JSONEncoder().encode(tags), encoding: .utf8) ?? "[]"
       let linksJSON = String(data: try JSONEncoder().encode(links), encoding: .utf8) ?? "[]"
@@ -431,7 +431,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func setKanbanColumn(_ column: String?, for taskId: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Move Task") { db in
       guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
       var record = try TaskMetadata.fetchOne(db, key: taskId) ?? TaskMetadata(
         taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
@@ -458,7 +458,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     for taskId: String,
     now: Date = .now
   ) throws {
-    try database.write { db in
+    try journalledWrite("Move Task") { db in
       guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
       var record = try TaskMetadata.fetchOne(db, key: taskId) ?? TaskMetadata(
         taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
@@ -477,7 +477,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Moves a task and its complete subtree. A destination parent must belong to
   /// the destination list and may not be the task itself or one of its descendants.
   public func moveTask(id: String, toListId listId: String, parentTaskId: String? = nil, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Move Task") { db in
       guard var task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
       guard try TaskList.fetchOne(db, key: listId) != nil else { throw WorkspaceStoreError.missingList }
       let descendants = try Self.taskDescendantIDs(db, of: id)
@@ -508,7 +508,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func moveTaskWithinSiblings(id: String, by offset: Int, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Reorder Task") { db in
       guard let task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
       var siblings = try WorkspaceTask.filter(Column("listId") == task.listId && Column("parentTaskId") == task.parentTaskId)
         .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
@@ -524,7 +524,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Places a newly captured task at the top of its project/list. The Today
   /// queue uses this same persistent order, so the first card is first live.
   public func moveTaskToStart(id: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Reorder Task") { db in
       guard let task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
       var siblings = try WorkspaceTask.filter(Column("listId") == task.listId && Column("parentTaskId") == task.parentTaskId)
         .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
@@ -537,7 +537,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Reorders a card before another card without changing either task's real
   /// list or project parent. Cross-project drops remain a list-move operation.
   public func moveTaskBefore(id: String, targetId: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Reorder Task") { db in
       guard let task = try WorkspaceTask.fetchOne(db, key: id),
         let target = try WorkspaceTask.fetchOne(db, key: targetId)
       else { throw WorkspaceStoreError.missingTask }
@@ -557,7 +557,7 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   /// Makes the selected task a child of its immediately preceding sibling.
   public func indentTask(id: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Indent Task") { db in
       guard var task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
       let siblings = try WorkspaceTask.filter(Column("listId") == task.listId && Column("parentTaskId") == task.parentTaskId)
         .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
@@ -575,7 +575,7 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   /// Promotes a task one level, immediately after its former parent.
   public func outdentTask(id: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Outdent Task") { db in
       guard var task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
       guard let parentID = task.parentTaskId, let parent = try WorkspaceTask.fetchOne(db, key: parentID) else { return }
       let newParentID = parent.parentTaskId
@@ -590,7 +590,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func deleteTask(id: String) throws {
-    try database.write { db in
+    try journalledWrite("Delete Task") { db in
       guard try WorkspaceTask.fetchOne(db, key: id) != nil else { throw WorkspaceStoreError.missingTask }
       try WorkspaceTask.deleteOne(db, key: id)
     }
@@ -981,6 +981,30 @@ public final class WorkspaceStore: @unchecked Sendable {
         // for "cafe" finds "café".
         table.tokenizer = .porter(wrapping: .unicode61())
       }
+    }
+    migrator.registerMigration("v8_undo_journal") { db in
+      try db.create(table: "undo_control") { table in
+        table.column("id", .integer).primaryKey()
+        // The step any recorded change belongs to, set by `journalledWrite`.
+        table.column("groupId", .text)
+        table.column("label", .text)
+        // Recording is off unless a journalled write turns it on, so imports
+        // and migrations do not arrive as thousands of undo steps.
+        table.column("suppressed", .integer).notNull().defaults(to: 1)
+      }
+      try db.execute(sql: "INSERT INTO undo_control (id, suppressed) VALUES (0, 1)")
+      try db.create(table: "change_log") { table in
+        table.autoIncrementedPrimaryKey("id")
+        table.column("groupId", .text).indexed()
+        table.column("label", .text)
+        table.column("tableName", .text).notNull()
+        table.column("rowId", .text).notNull()
+        table.column("operation", .text).notNull()
+        table.column("beforeJSON", .text)
+        table.column("afterJSON", .text)
+        table.column("undone", .boolean).notNull().defaults(to: false)
+      }
+      try WorkspaceStore.installChangeLogTriggers(db)
     }
     return migrator
   }()

@@ -135,7 +135,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         let chooseDestination = flags == [.command, .option]
           && (character == "[" || character == "]")
         let help = flags == [.command] && character == "/"
-        guard regionOrView || cycleRegion || createItem || chooseDestination || help else { return event }
+        // Search, but deliberately not undo: inside a text field ⌘Z belongs to
+        // the text being typed, not to the workspace behind it.
+        let search = flags == [.command] && character == "f"
+        guard regionOrView || cycleRegion || createItem || chooseDestination || help || search else {
+          return event
+        }
       }
       return self.workspace.handleDesktopKey(event) ? nil : event
     }

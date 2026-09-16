@@ -50,7 +50,7 @@ extension WorkspaceStore {
     targetSeconds: Int? = nil,
     now: Date = .now
   ) throws -> WorkspaceDaily {
-    try database.write { db in
+    try journalledWrite("Make Daily") { db in
       guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
         throw WorkspaceStoreError.missingTask
       }
@@ -74,7 +74,7 @@ extension WorkspaceStore {
 
   /// Archives rather than deletes, so logged contributions keep a parent.
   public func archiveDaily(taskId: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Archive Daily") { db in
       guard var daily = try WorkspaceDaily.filter(Column("taskId") == taskId && Column("archivedAt") == nil)
         .fetchOne(db)
       else { return }
@@ -87,7 +87,7 @@ extension WorkspaceStore {
   public func updateDaily(
     id: String, weekdays: Set<Int>? = nil, intervalDays: Int?? = nil, targetSeconds: Int?? = nil, now: Date = .now
   ) throws {
-    try database.write { db in
+    try journalledWrite("Edit Daily") { db in
       guard var daily = try WorkspaceDaily.fetchOne(db, key: id) else { return }
       if let weekdays, !weekdays.isEmpty { daily.activeWeekdaysMask = WorkspaceDaily.mask(forWeekdays: weekdays) }
       if let intervalDays {
@@ -109,7 +109,7 @@ extension WorkspaceStore {
   public func logContribution(
     dailyId: String, seconds: Int = 0, complete: Bool = true, now: Date = .now, calendar: Calendar = .current
   ) throws -> DailyContribution {
-    try database.write { db in
+    try journalledWrite("Log Daily") { db in
       guard let daily = try WorkspaceDaily.fetchOne(db, key: dailyId) else {
         throw WorkspaceStoreError.missingDaily
       }
@@ -121,7 +121,7 @@ extension WorkspaceStore {
   /// Un-ticks a day without discarding the time already logged against it.
   public func clearContribution(dailyId: String, on day: Date = .now, calendar: Calendar = .current) throws {
     let key = DailyContribution.dayKey(for: day, calendar: calendar)
-    try database.write { db in
+    try journalledWrite("Clear Daily") { db in
       guard var contribution = try DailyContribution
         .filter(Column("dailyId") == dailyId && Column("dayKey") == key).fetchOne(db)
       else { return }
@@ -306,7 +306,7 @@ extension WorkspaceStore {
   /// entire ladder is what froze it: every task acquired a rank from a single
   /// nudge, after which nothing could ever be re-ranked again.
   public func pinTask(id taskId: String, atIndex index: Int, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Pin Task") { db in
       guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
         throw WorkspaceStoreError.missingTask
       }
@@ -327,7 +327,7 @@ extension WorkspaceStore {
 
   /// Releases one task back to the ranking.
   public func unpinTask(id taskId: String, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Unpin Task") { db in
       guard var metadata = try TaskMetadata.fetchOne(db, key: taskId) else { return }
       metadata.focusRank = nil
       metadata.updatedAt = now
@@ -337,7 +337,7 @@ extension WorkspaceStore {
 
   /// Hands the ladder back to the ranking.
   public func clearFocusOrder(now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Clear Focus Order") { db in
       try db.execute(
         sql: "UPDATE task_metadata SET focusRank = NULL, updatedAt = ? WHERE focusRank IS NOT NULL",
         arguments: [now])
@@ -353,7 +353,7 @@ extension WorkspaceStore {
   /// Pushes a task out of consideration until `date` by setting its start time.
   /// This is what "schedule it for later" on the focus screen writes.
   public func scheduleTask(id: String, startAt: Date?, now: Date = .now) throws {
-    try database.write { db in
+    try journalledWrite("Schedule Task") { db in
       guard try WorkspaceTask.fetchOne(db, key: id) != nil else {
         throw WorkspaceStoreError.missingTask
       }

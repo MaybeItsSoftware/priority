@@ -91,6 +91,17 @@ final class WorkspaceInboxTests: XCTestCase {
     let workspaceID = try WorkspaceStore(databaseURL: url).bootstrapIfNeeded().id
     let queue = try DatabaseQueue(path: url.path)
     try queue.write { db in
+      // The undo journal's triggers name every column of the tables they
+      // watch, so they have to come off before a column can be taken away —
+      // and all of them, because SQLite reparses the whole schema during an
+      // ALTER and a trigger left pointing at a dropped table fails that.
+      // Removing their migration too means reopening puts them back.
+      let triggers = try String.fetchAll(
+        db, sql: "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'change\\_log%' ESCAPE '\\'")
+      for trigger in triggers { try db.execute(sql: "DROP TRIGGER \(trigger)") }
+      try db.execute(sql: "DELETE FROM grdb_migrations WHERE identifier = 'v8_undo_journal'")
+      try db.execute(sql: "DROP TABLE change_log")
+      try db.execute(sql: "DROP TABLE undo_control")
       try db.execute(sql: "DROP INDEX task_lists_on_system_role")
       try db.execute(sql: "ALTER TABLE task_lists DROP COLUMN systemRole")
       try db.execute(sql: "DELETE FROM task_lists")

@@ -1409,6 +1409,7 @@ private struct WorkspaceKeyboardHelp: View {
         key("⌘ ⌥ N", "Create a folder; when a folder is selected, create it there")
         key("⌘ I", "Open settings for the selected list or folder")
         key("⌘ F", "Search every task’s title and notes")
+        key("⌘ Z / ⌘ ⇧ Z", "Undo or redo the last change to the workspace")
         key("⌘ ⇧ A / ⌘ ⇧ R", "Archive the current list / restore the most recently archived list")
         key("⌃ ⌥ ↑ / ↓", "Select the previous or next folder")
         key("⌘ ⌥ ↑ / ↓", "Reorder the selected folder among its siblings")

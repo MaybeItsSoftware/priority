@@ -154,6 +154,9 @@ extension WorkspaceViewModel {
       case "f":
         presentSearch()
         return true
+      case "z":
+        undoLastChange()
+        return true
       default:
         break
       }
@@ -171,6 +174,9 @@ extension WorkspaceViewModel {
         return false
       case "r":
         restoreMostRecentlyArchivedList()
+        return true
+      case "z":
+        redoLastUndoneChange()
         return true
       default:
         break
