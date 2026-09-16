@@ -43,7 +43,7 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 ### Lists and folders
 
 - Treat active lists as sub-lists of a virtual Everything scope. Its views should aggregate tasks while preserving each task's list, project hierarchy, and an explicit destination for new work.
-- Rename, archive, restore, delete, and reorder lists/folders.
+- Rename, archive, restore, delete, and reorder lists/folders. *Renaming is done in place — double-click, context menu, or ⌘R — rather than through the settings sheet.*
 - Support nested folders in both persistence and sidebar presentation.
 - Add move-list-to-folder, move-folder, and keyboard commands.
 - Add a list settings inspector: color, archive state, task count.
@@ -130,10 +130,17 @@ Goal: match the low-friction focus flow of Blitzit and add Super Productivity-st
 - Add pause/resume, work/break phase transitions, skip, configurable durations, and session completion behavior.
 - Support reordering/removing queue items while focused.
 - Restore an active session correctly after relaunch, including timer elapsed time.
+  *Each block is now timed from its own start rather than the session's, so a queued
+  task is no longer credited the previous task's sitting.*
 - Add local notifications and optional sound; notifications must degrade safely when permission is denied.
 
 ### Time tracking and review
 
+- ~~Score a finished focus block by how well the work went.~~ Done: a block is worth
+  the minutes it took, to one decimal place, multiplied by a quality multiplier the
+  user gives when they press Done. Five presets from Scattered (×0.5) to Flow (×2.0),
+  or any multiplier up to ×5. Scores are kept in `focus_awards` with the task's title
+  copied in, so renaming or deleting the task later cannot rewrite what was earned.
 - Add manual start/stop tracking per task and project.
 - Persist work logs independently from task completion.
 - Add daily/weekly reports: focused time, estimates versus actuals, completed work, and project distribution.
