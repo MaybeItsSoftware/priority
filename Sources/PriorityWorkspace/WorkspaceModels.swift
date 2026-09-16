@@ -191,6 +191,10 @@ public struct FocusSession: Codable, FetchableRecord, PersistableRecord, Identif
   public var endedAt: Date?
   public var phase: FocusSessionPhase
   public var activeTaskId: String?
+  /// When the *current* task's block began, as distinct from the session's own
+  /// start. The queue moves on without ending the session, so timing a second
+  /// task from `startedAt` would credit it with the first one's sitting too.
+  public var activeTaskStartedAt: Date
   public let workDurationSeconds: Int
   public let breakDurationSeconds: Int
   public var breakEndsAt: Date?

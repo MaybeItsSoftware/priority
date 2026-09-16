@@ -94,7 +94,7 @@ private struct LocalFloatingFocusTimerView: View {
 
   private func remainingTime(session: FocusSession, now: Date) -> String {
     FocusTimerDisplay.reading(
-      since: session.startedAt, planned: TimeInterval(session.workDurationSeconds), now: now
+      since: session.activeTaskStartedAt, planned: TimeInterval(session.workDurationSeconds), now: now
     ).text
   }
 }

@@ -68,7 +68,7 @@ extension WorkspaceViewModel {
   /// contribution reflects the sitting rather than the estimate.
   func completeFocusedTask(now: Date = .now) {
     guard let store, let session = activeFocusSession else { return }
-    let elapsed = Int(max(0, now.timeIntervalSince(session.startedAt)))
+    let elapsed = Int(max(0, now.timeIntervalSince(session.activeTaskStartedAt)))
     perform {
       let completion = try store.completeActiveFocusTask(
         sessionId: session.id, elapsedSeconds: elapsed, now: now)

@@ -18,6 +18,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v6_inbox_as_a_system_list",
     "v7_task_full_text_search",
     "v8_undo_journal",
+    "v9_focus_block_start",
   ]
 
   private var directoryURL: URL!
@@ -69,6 +70,8 @@ final class WorkspaceMigrationTests: XCTestCase {
     let parent = try store.createTask(listId: list.id, title: "Parent task")
     let child = try store.createTask(listId: list.id, title: "Child task", parentTaskId: parent.id)
     try store.setKanbanColumn("today", for: child.id)
+    let sessionStart = Date(timeIntervalSince1970: 1_700_000_000)
+    let session = try store.startFocusSession(taskId: parent.id, now: sessionStart)
 
     // Rewind the additive migrations: drop what they created, forget that they
     // ran, and reopen. What v1–v4 built, and the data in it, stays put.
@@ -85,13 +88,14 @@ final class WorkspaceMigrationTests: XCTestCase {
       }
       try db.execute(sql: "DROP INDEX task_lists_on_system_role")
       try db.execute(sql: "ALTER TABLE task_lists DROP COLUMN systemRole")
+      try db.execute(sql: "ALTER TABLE focus_sessions DROP COLUMN activeTaskStartedAt")
       try db.execute(sql: "DROP INDEX tasks_on_source")
       try db.execute(sql: "ALTER TABLE tasks DROP COLUMN sourceSystem")
       try db.execute(sql: "ALTER TABLE tasks DROP COLUMN sourceId")
       try db.execute(
-        sql: "DELETE FROM grdb_migrations WHERE identifier IN (?, ?, ?, ?)",
+        sql: "DELETE FROM grdb_migrations WHERE identifier IN (?, ?, ?, ?, ?)",
         arguments: ["v5_task_source_identity", "v6_inbox_as_a_system_list",
-                    "v7_task_full_text_search", "v8_undo_journal"])
+                    "v7_task_full_text_search", "v8_undo_journal", "v9_focus_block_start"])
     }
 
     let migrated = try WorkspaceStore(databaseURL: url)
@@ -101,6 +105,9 @@ final class WorkspaceMigrationTests: XCTestCase {
     XCTAssertEqual(try migrated.kanbanColumn(for: child.id), "today")
     // And everything the later migrations add works on that existing data.
     XCTAssertEqual(try migrated.inbox(in: workspace.id)?.id, list.id)
+    // A session that predates the per-task clock keeps the only start it had.
+    XCTAssertEqual(try migrated.activeFocusSession()?.id, session.id)
+    XCTAssertEqual(try migrated.activeFocusSession()?.activeTaskStartedAt, sessionStart)
     XCTAssertEqual(try migrated.searchTasks(in: workspace.id, matching: "child").map(\.task.id), [child.id])
     try migrated.updateTask(id: parent.id, title: "Renamed", notes: "", dueAt: nil, estimateSeconds: nil)
     XCTAssertEqual(try migrated.undo(), "Edit Task")

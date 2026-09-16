@@ -1266,7 +1266,7 @@ private struct LocalFocusPanel: View {
 
   private func reading(session: FocusSession, now: Date) -> FocusTimerDisplay.Reading {
     FocusTimerDisplay.reading(
-      since: session.startedAt, planned: TimeInterval(session.workDurationSeconds), now: now)
+      since: session.activeTaskStartedAt, planned: TimeInterval(session.workDurationSeconds), now: now)
   }
 }
 

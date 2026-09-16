@@ -633,6 +633,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       }
       let session = FocusSession(
         id: UUID().uuidString, startedAt: now, endedAt: nil, phase: .running, activeTaskId: taskId,
+        activeTaskStartedAt: now,
         workDurationSeconds: max(60, plannedSeconds ?? workDurationSeconds),
         breakDurationSeconds: max(60, breakDurationSeconds),
         breakEndsAt: nil)
@@ -716,6 +717,8 @@ public final class WorkspaceStore: @unchecked Sendable {
         .filter(Column("state") == FocusQueueState.queued.rawValue)
         .order(Column("sortOrder")).fetchOne(db)
       session.activeTaskId = next?.taskId
+      // The next task's block starts now, not when the session did.
+      session.activeTaskStartedAt = now
       if next == nil {
         session.phase = .finished
         session.endedAt = now
@@ -1005,6 +1008,18 @@ public final class WorkspaceStore: @unchecked Sendable {
         table.column("undone", .boolean).notNull().defaults(to: false)
       }
       try WorkspaceStore.installChangeLogTriggers(db)
+    }
+    migrator.registerMigration("v9_focus_block_start") { db in
+      try db.alter(table: "focus_sessions") { table in
+        // The default exists only because SQLite needs one to add a NOT NULL
+        // column to a table with rows in it; every existing row is overwritten
+        // on the next line, and every new row carries its own value.
+        table.add(column: "activeTaskStartedAt", .datetime)
+          .notNull().defaults(to: Date(timeIntervalSince1970: 0))
+      }
+      // Existing sessions only ever had one clock, so the session's start is
+      // the truest answer available for the block that was running.
+      try db.execute(sql: "UPDATE focus_sessions SET activeTaskStartedAt = startedAt")
     }
     return migrator
   }()

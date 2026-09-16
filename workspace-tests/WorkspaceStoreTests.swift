@@ -180,6 +180,25 @@ final class WorkspaceStoreTests: XCTestCase {
     XCTAssertEqual(try store.focusQueue(for: session.id).map(\.item.state), [.completed, .queued])
   }
 
+  func testAdvancingTheQueueRestartsTheBlockClockSoTheNextTaskIsNotCreditedTheFirstsSitting() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let list = try XCTUnwrap(store.lists(in: workspace.id).first)
+    let first = try store.createTask(listId: list.id, title: "Write")
+    let second = try store.createTask(listId: list.id, title: "Review")
+    let start = Date(timeIntervalSince1970: 1_700_000_000)
+    let session = try store.startFocusSession(taskId: first.id, now: start)
+    try store.addToFocusQueue(sessionId: session.id, taskId: second.id, now: start)
+
+    XCTAssertEqual(session.activeTaskStartedAt, start)
+
+    let handover = start.addingTimeInterval(30 * 60)
+    let advanced = try store.completeActiveFocusTask(sessionId: session.id, now: handover)
+
+    // The session still began half an hour ago; the second task's block did not.
+    XCTAssertEqual(advanced.session.startedAt, start)
+    XCTAssertEqual(advanced.session.activeTaskStartedAt, handover)
+  }
+
   func testMoveTaskMovesEntireSubtreeAndRejectsCircularParent() throws {
     let workspace = try store.bootstrapIfNeeded()
     let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)
