@@ -679,6 +679,9 @@ public final class WorkspaceStore: @unchecked Sendable {
   public struct FocusCompletion: Sendable, Equatable {
     public let session: FocusSession
     public let outcome: FocusCompletionOutcome
+    /// The points the block earned, or nil when it was finished without a
+    /// quality judgement — or took no measurable time.
+    public let award: FocusAward?
   }
 
   /// Finishes the current focus block, crediting `elapsedSeconds` of work.
@@ -686,25 +689,42 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// When the active task has a daily expected today the task stays open and
   /// the time lands on today's contribution instead. Otherwise the task is
   /// completed, which is what the queue's original behaviour was.
+  ///
+  /// `qualityMultiplier` is how well the user says the block went. Supplying
+  /// one scores the block; leaving it nil finishes the block without a score,
+  /// which is what every caller that is not the user pressing Done does.
   @discardableResult
   public func completeActiveFocusTask(
-    sessionId: String, elapsedSeconds: Int = 0, now: Date = .now, calendar: Calendar = .current
+    sessionId: String,
+    elapsedSeconds: Int = 0,
+    qualityMultiplier: Double? = nil,
+    now: Date = .now,
+    calendar: Calendar = .current
   ) throws -> FocusCompletion {
     try database.write { db in
       guard var session = try FocusSession.fetchOne(db, key: sessionId), let activeID = session.activeTaskId else {
         throw WorkspaceStoreError.noActiveFocusTask
       }
       var outcome = FocusCompletionOutcome.taskCompleted
+      let activeTask = try WorkspaceTask.fetchOne(db, key: activeID)
       let daily = try Self.dueDaily(db, taskId: activeID, on: now, calendar: calendar)
       if let daily {
         let credited = max(0, elapsedSeconds)
         try Self.recordContribution(
           db, daily: daily, seconds: credited, complete: true, now: now, calendar: calendar)
         outcome = .contributionLogged(seconds: credited)
-      } else if var task = try WorkspaceTask.fetchOne(db, key: activeID) {
+      } else if var task = activeTask {
         task.status = .completed
         task.updatedAt = now
         try task.update(db)
+      }
+      var award: FocusAward?
+      if let qualityMultiplier, elapsedSeconds > 0 {
+        let earned = FocusAward(
+          sessionId: sessionId, taskId: activeTask?.id, taskTitle: activeTask?.title ?? "Untitled task",
+          seconds: elapsedSeconds, multiplier: qualityMultiplier, awardedAt: now)
+        try earned.insert(db)
+        award = earned
       }
       if var item = try FocusQueueItem.filter(Column("sessionId") == sessionId && Column("taskId") == activeID)
         .filter(Column("state") == FocusQueueState.queued.rawValue).fetchOne(db)
@@ -724,7 +744,7 @@ public final class WorkspaceStore: @unchecked Sendable {
         session.endedAt = now
       }
       try session.update(db)
-      return FocusCompletion(session: session, outcome: outcome)
+      return FocusCompletion(session: session, outcome: outcome, award: award)
     }
   }
 
@@ -1020,6 +1040,21 @@ public final class WorkspaceStore: @unchecked Sendable {
       // Existing sessions only ever had one clock, so the session's start is
       // the truest answer available for the block that was running.
       try db.execute(sql: "UPDATE focus_sessions SET activeTaskStartedAt = startedAt")
+    }
+    migrator.registerMigration("v10_focus_points") { db in
+      try db.create(table: "focus_awards") { table in
+        table.column("id", .text).primaryKey()
+        // Both references let go rather than cascade: deleting a task or
+        // clearing out old sessions must not take the score with it.
+        table.column("sessionId", .text).references("focus_sessions", onDelete: .setNull)
+        table.column("taskId", .text).references("tasks", onDelete: .setNull)
+        table.column("taskTitle", .text).notNull()
+        table.column("seconds", .integer).notNull()
+        table.column("minutes", .double).notNull()
+        table.column("multiplier", .double).notNull()
+        table.column("points", .double).notNull()
+        table.column("awardedAt", .datetime).notNull().indexed()
+      }
     }
     return migrator
   }()

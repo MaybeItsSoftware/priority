@@ -19,6 +19,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v7_task_full_text_search",
     "v8_undo_journal",
     "v9_focus_block_start",
+    "v10_focus_points",
   ]
 
   private var directoryURL: URL!
@@ -79,7 +80,7 @@ final class WorkspaceMigrationTests: XCTestCase {
       let triggers = try String.fetchAll(
         db, sql: "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'change\\_log%' ESCAPE '\\'")
       for trigger in triggers { try db.execute(sql: "DROP TRIGGER \(trigger)") }
-      for table in ["change_log", "undo_control", "tasks_fts"] {
+      for table in ["focus_awards", "change_log", "undo_control", "tasks_fts"] {
         try db.execute(sql: "DROP TABLE \(table)")
       }
       for trigger in try String.fetchAll(
@@ -93,9 +94,10 @@ final class WorkspaceMigrationTests: XCTestCase {
       try db.execute(sql: "ALTER TABLE tasks DROP COLUMN sourceSystem")
       try db.execute(sql: "ALTER TABLE tasks DROP COLUMN sourceId")
       try db.execute(
-        sql: "DELETE FROM grdb_migrations WHERE identifier IN (?, ?, ?, ?, ?)",
+        sql: "DELETE FROM grdb_migrations WHERE identifier IN (?, ?, ?, ?, ?, ?)",
         arguments: ["v5_task_source_identity", "v6_inbox_as_a_system_list",
-                    "v7_task_full_text_search", "v8_undo_journal", "v9_focus_block_start"])
+                    "v7_task_full_text_search", "v8_undo_journal", "v9_focus_block_start",
+                    "v10_focus_points"])
     }
 
     let migrated = try WorkspaceStore(databaseURL: url)
