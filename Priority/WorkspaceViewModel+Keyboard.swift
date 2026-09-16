@@ -151,6 +151,9 @@ extension WorkspaceViewModel {
       case "/":
         showsKeyboardHelp = true
         return true
+      case "f":
+        presentSearch()
+        return true
       default:
         break
       }

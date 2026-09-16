@@ -151,6 +151,13 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Requests the always-on-top companion without coupling focus to a sheet.
   var focusFloatRequest = 0
   var showsKeyboardHelp = false
+  var showsSearch = false
+  var searchQuery = "" { didSet { refreshSearchResults() } }
+  var searchIncludesCompleted = false { didSet { refreshSearchResults() } }
+  /// Written only by `refreshSearchResults()`; internal rather than
+  /// `private(set)` so that method can live in `WorkspaceViewModel+Search.swift`.
+  var searchResults: [TaskSearchResult] = []
+  var selectedSearchResultID: String?
   var creationRequest: WorkspaceCreationKind?
   var creationParentFolderID: String?
   var sidebarEditor: WorkspaceSidebarEditor?

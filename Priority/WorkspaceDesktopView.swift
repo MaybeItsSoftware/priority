@@ -92,6 +92,10 @@ struct WorkspaceDesktopView: View {
         }
       }
     }
+    .sheet(isPresented: Bindable(model).showsSearch) {
+      WorkspaceSearchSheet()
+        .environment(model)
+    }
     .sheet(isPresented: Bindable(model).newKanbanColumnRequest) {
       NewKanbanColumnSheet { model.addKanbanColumn(named: $0) }
     }
@@ -1404,6 +1408,7 @@ private struct WorkspaceKeyboardHelp: View {
         key("⌘ ⇧ N", "Create a list; when a folder is selected, create it there")
         key("⌘ ⌥ N", "Create a folder; when a folder is selected, create it there")
         key("⌘ I", "Open settings for the selected list or folder")
+        key("⌘ F", "Search every task’s title and notes")
         key("⌘ ⇧ A / ⌘ ⇧ R", "Archive the current list / restore the most recently archived list")
         key("⌃ ⌥ ↑ / ↓", "Select the previous or next folder")
         key("⌘ ⌥ ↑ / ↓", "Reorder the selected folder among its siblings")

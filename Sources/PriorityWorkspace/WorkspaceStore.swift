@@ -969,6 +969,19 @@ public final class WorkspaceStore: @unchecked Sendable {
         ON task_lists(workspaceId, systemRole) WHERE systemRole IS NOT NULL
         """)
     }
+    migrator.registerMigration("v7_task_full_text_search") { db in
+      // External-content FTS5: the index stores no task text of its own, and
+      // `synchronize` writes the triggers that keep it level with the tasks
+      // table, so no mutation path has to remember to update the index.
+      try db.create(virtualTable: "tasks_fts", using: FTS5()) { table in
+        table.synchronize(withTable: "tasks")
+        table.column("title")
+        table.column("notes")
+        // Porter over unicode61, so "meeting" finds "meetings" and a search
+        // for "cafe" finds "café".
+        table.tokenizer = .porter(wrapping: .unicode61())
+      }
+    }
     return migrator
   }()
 }
