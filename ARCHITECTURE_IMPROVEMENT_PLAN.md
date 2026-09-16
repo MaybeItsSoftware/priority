@@ -442,6 +442,22 @@ Closing the audit's open list. In order:
 
 Tests 455 → **570**. SwiftLint warnings 13 → **9**, none suppressed.
 
+### Since then, 2026-09-16
+
+The desktop workspace grew past those numbers and this document did not
+follow. Recorded here rather than silently left stale:
+
+- Tests 570 → **983**. The new ones are `workspace-tests/`: the store, the
+  Inbox's system role, FTS search, the undo journal, and the migration ladder.
+- SwiftLint warnings 9 → **19**, none suppressed and none of them new kinds.
+  All ten are `file_length` / `type_body_length` on the workspace files, which
+  arrived with it: `WorkspaceDesktopView.swift` (1,396 counted lines),
+  `WorkspaceViewModel.swift` (1,011), `WorkspaceStore.swift`, and one
+  `redundant_discardable_let` in `WorkspaceDailiesView.swift`. The split-by-
+  extension pattern the rest of the app uses (`+Sidebar`, `+Focus`, `+Search`,
+  `+History`) is the obvious remedy and has not been applied to the two views.
+- `WorkspaceStore` is now split as `+Dailies`, `+Import`, `+Search`, `+Undo`.
+
 ## Out of Scope
 
 - Replacing `@Observable` / SwiftUI patterns. The concurrency model (`@MainActor` everywhere, async/await for I/O) is sound; don't churn it.

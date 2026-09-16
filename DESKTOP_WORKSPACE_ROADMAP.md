@@ -55,12 +55,12 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 - Support moving tasks between lists while preserving subtrees.
 - Implement multi-selection and bulk complete/move/tag/delete.
 - Add drag-and-drop, but keep an equivalent keyboard operation for every drag action.
-- Add undo/redo for all local mutations.
+- ~~Add undo/redo for all local mutations.~~ Done: every mutating store write runs through `journalledWrite`, which records row-level before/after images under one step per operation. ⌘Z / ⌘⇧Z.
 
 ### Fast capture and discovery
 
-- Make the global quick-add hotkey create a local Inbox task and focus the desktop composer.
-- Add local full-text search across task title and notes (SQLite FTS is preferred).
+- ~~Make the global quick-add hotkey create a local Inbox task and focus the desktop composer.~~ Done: the hotkey selects the Inbox, leaves the focus screen, and puts the caret in the composer.
+- ~~Add local full-text search across task title and notes (SQLite FTS is preferred).~~ Done: external-content FTS5 over title and notes, kept level by triggers. ⌘F.
 - Add filters for open/completed, due, tags, priority, and estimate.
 - Add a command palette for navigation and creation; do not route it through legacy Checkvist state.
 
@@ -69,7 +69,7 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 - A user can create a project outline, reorganize it, complete work, and find a task entirely offline.
 - No common operation requires the legacy popover or a Checkvist credential.
 - Keyboard reference documents every new action.
-- Store tests cover tree moves, ordering, deletion/archival, undo boundaries, and FTS/filter behavior.
+- Store tests cover tree moves, ordering, deletion/archival, undo boundaries, and FTS/filter behavior. *Filters are the part still missing; the rest is covered.*
 
 ## Phase 2 — Data safety and complete migration
 
@@ -87,8 +87,8 @@ Goal: make local data trustworthy before adding more views.
 - Build an import assistant with source selection and a task/list count preview.
 - Import all configured Checkvist lists, not only the currently loaded list.
 - Preserve source-list names, hierarchy, notes, ordering, due dates, and completed/invalidated status where supplied by the source.
-- Track an immutable external source ID in local metadata so re-running import merges safely instead of duplicating tasks.
-- Provide an import result report: created, updated, skipped, orphaned-parent repairs, and errors.
+- ~~Track an immutable external source ID in local metadata so re-running import merges safely instead of duplicating tasks.~~ Done: `tasks.sourceSystem` + `tasks.sourceId` behind a partial unique index. A re-import updates content in place and leaves local placement alone.
+- Provide an import result report: created, updated, skipped, orphaned-parent repairs, and errors. *`TaskImportOutcome` now carries created/updated; the rest is unreported.*
 - Treat Checkvist sync as optional and explicitly separate “one-time import” from future two-way sync.
 
 ### Acceptance criteria
@@ -104,7 +104,7 @@ Goal: give the local workspace the planning loop users expect from a desktop tas
 
 ### Inbox, Today, Upcoming
 
-- Make Inbox a first-class system list.
+- ~~Make Inbox a first-class system list.~~ Done: `task_lists.systemRole`. Found by role rather than by name, so renaming it is safe; archiving and deleting it are refused.
 - Implement Today as a local planning view: manually include tasks, schedule tasks, reorder the day, and show overdue/upcoming work.
 - Add Upcoming grouped by day/week and a clean unscheduled view.
 - Ensure changing Today does not change a source list unless the user explicitly moves/schedules a task.
