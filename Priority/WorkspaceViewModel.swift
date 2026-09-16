@@ -105,6 +105,10 @@ enum WorkspaceSidebarItem: Identifiable {
   private static let dailyProgressTaskIDsKey = "localWorkspaceDailyProgressTaskIDsV1"
   private static let dailyMigrationKey = "localWorkspaceMigratedDailiesV1"
   private static let everythingScopeKey = "localWorkspaceEverythingScopeV1"
+  /// Names the service a task was imported from, and so which identifiers its
+  /// `sourceId` values belong to. Stored on the task, hence not free to change.
+  static let checkvistSourceSystem = "checkvist"
+  static let legacyOfflineSourceSystem = "priority-offline"
 
   /// Internal rather than private so `WorkspaceViewModel+Dailies.swift` —
   /// the same type, split only for size — can reach it.
@@ -906,7 +910,7 @@ enum WorkspaceSidebarItem: Identifiable {
     let uniqueTasks = Dictionary(tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     let sourcePrefix = "checkvist:\(listID):"
     let seeds = uniqueTasks.values.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map { task in
-      LegacyTaskSeed(
+      ImportedTaskSeed(
         sourceId: "\(sourcePrefix)\(task.id)",
         parentSourceId: task.parentId.map { "\(sourcePrefix)\($0)" },
         title: task.content,
@@ -916,15 +920,16 @@ enum WorkspaceSidebarItem: Identifiable {
     }
 
     do {
-      let importedList = try store.importLegacyTasks(
+      let outcome = try store.importTasks(
         workspaceId: workspace.id,
         listName: "Imported from Checkvist — \(listID)",
+        sourceSystem: Self.checkvistSourceSystem,
         seeds: seeds)
       migratedListIDs.insert(listID)
       defaults.set(Array(migratedListIDs).sorted(), forKey: Self.checkvistMigrationKeysKey)
       try load()
-      if let importedList {
-        selectList(importedList.id)
+      if let outcome {
+        selectList(outcome.list.id)
       }
       errorMessage = nil
     } catch {
@@ -962,7 +967,7 @@ enum WorkspaceSidebarItem: Identifiable {
           if lhsParent != rhsParent { return lhsParent < rhsParent }
           return (lhs.position ?? 0) < (rhs.position ?? 0)
         }.map { task in
-          LegacyTaskSeed(
+          ImportedTaskSeed(
             sourceId: "\(sourcePrefix)\(task.id)",
             parentSourceId: task.parentId.map { "\(sourcePrefix)\($0)" },
             title: task.content,
@@ -974,10 +979,11 @@ enum WorkspaceSidebarItem: Identifiable {
         let localList: TaskList
         if seeds.isEmpty {
           localList = try store.createList(workspaceId: workspace.id, name: snapshot.list.name)
-        } else if let imported = try store.importLegacyTasks(
-          workspaceId: workspace.id, listName: snapshot.list.name, seeds: seeds)
+        } else if let outcome = try store.importTasks(
+          workspaceId: workspace.id, listName: snapshot.list.name,
+          sourceSystem: Self.checkvistSourceSystem, seeds: seeds)
         {
-          localList = imported
+          localList = outcome.list
         } else {
           continue
         }
@@ -1176,7 +1182,7 @@ enum WorkspaceSidebarItem: Identifiable {
 
     let uniqueTasks = Dictionary(legacyTasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     let seeds = uniqueTasks.values.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map { task in
-      LegacyTaskSeed(
+      ImportedTaskSeed(
         sourceId: String(task.id),
         parentSourceId: task.parentId.map(String.init),
         title: task.content,
@@ -1185,9 +1191,10 @@ enum WorkspaceSidebarItem: Identifiable {
         sortOrder: task.position ?? 0)
     }
     let date = ISO8601DateFormatter().string(from: .now).prefix(10)
-    let importedList = try store.importLegacyTasks(
-      workspaceId: workspace.id, listName: "Imported from old Priority — \(date)", seeds: seeds)
+    let outcome = try store.importTasks(
+      workspaceId: workspace.id, listName: "Imported from old Priority — \(date)",
+      sourceSystem: Self.legacyOfflineSourceSystem, seeds: seeds)
     defaults.set(true, forKey: Self.legacyMigrationKey)
-    return importedList
+    return outcome?.list
   }
 }

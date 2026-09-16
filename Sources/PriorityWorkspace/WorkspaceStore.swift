@@ -319,7 +319,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       let task = WorkspaceTask(
         id: UUID().uuidString, listId: listId, parentTaskId: parentTaskId, title: trimmed,
         notes: "", status: .open, sortOrder: nextOrder, dueAt: nil, estimateSeconds: nil,
-        createdAt: now, updatedAt: now)
+        sourceSystem: nil, sourceId: nil, createdAt: now, updatedAt: now)
       try task.insert(db)
       return task
     }
@@ -703,54 +703,6 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
-  /// Imports the previous offline store once. Broken source parent links become
-  /// roots instead of losing the task, and duplicate source IDs are rejected.
-  @discardableResult
-  public func importLegacyTasks(
-    workspaceId: String,
-    listName: String,
-    seeds: [LegacyTaskSeed],
-    now: Date = .now
-  ) throws -> TaskList? {
-    guard !seeds.isEmpty else { return nil }
-    guard Set(seeds.map(\.sourceId)).count == seeds.count else {
-      throw WorkspaceStoreError.duplicateLegacySourceID
-    }
-    return try database.write { db in
-      let listOrder = try Self.nextOrder(
-        db, table: TaskList.databaseTableName, whereSQL: "workspaceId = ? AND folderId IS ?",
-        arguments: [workspaceId, nil])
-      let list = TaskList(
-        id: UUID().uuidString, workspaceId: workspaceId, folderId: nil, name: listName,
-        colorHex: nil, sortOrder: listOrder, isArchived: false, createdAt: now, updatedAt: now)
-      try list.insert(db)
-
-      let localIDBySourceID = Dictionary(uniqueKeysWithValues: seeds.map { ($0.sourceId, UUID().uuidString) })
-      let sourceIDs = Set(seeds.map(\.sourceId))
-      var insertedSourceIDs = Set<String>()
-      var remaining = seeds
-      while !remaining.isEmpty {
-        let nextIndex = remaining.firstIndex { seed in
-          guard let parent = seed.parentSourceId else { return true }
-          return !sourceIDs.contains(parent) || insertedSourceIDs.contains(parent)
-        }
-        // A cyclic legacy hierarchy cannot be represented with foreign keys.
-        // Keep every task by promoting one cycle member to a local root.
-        let seed = remaining.remove(at: nextIndex ?? 0)
-        let parent = nextIndex == nil
-          ? nil
-          : seed.parentSourceId.flatMap { localIDBySourceID[$0] }
-        let task = WorkspaceTask(
-          id: localIDBySourceID[seed.sourceId]!, listId: list.id, parentTaskId: parent,
-          title: seed.title, notes: seed.notes, status: seed.status, sortOrder: seed.sortOrder,
-          dueAt: nil, estimateSeconds: nil, createdAt: now, updatedAt: now)
-        try task.insert(db)
-        insertedSourceIDs.insert(seed.sourceId)
-      }
-      return list
-    }
-  }
-
   private static func nonEmptyName(_ raw: String) throws -> String {
     let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !value.isEmpty else { throw WorkspaceStoreError.emptyName }
@@ -773,7 +725,9 @@ public final class WorkspaceStore: @unchecked Sendable {
     return normalizedStrings(values)
   }
 
-  private static func nextOrder(
+  /// Internal rather than private so `WorkspaceStore+Import.swift` — the same
+  /// type, split only for size — can reach it.
+  static func nextOrder(
     _ db: Database, table: String, whereSQL: String, arguments: StatementArguments
   ) throws -> Int {
     let sql = "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM \(table) WHERE \(whereSQL)"
@@ -945,6 +899,20 @@ public final class WorkspaceStore: @unchecked Sendable {
       try db.alter(table: "task_metadata") { table in
         table.add(column: "focusRank", .integer)
       }
+    }
+    migrator.registerMigration("v5_task_source_identity") { db in
+      // Immutable once written: what an outside service calls this task. The
+      // pair is what makes a second import run a merge rather than a copy.
+      try db.alter(table: "tasks") { table in
+        table.add(column: "sourceSystem", .text)
+        table.add(column: "sourceId", .text)
+      }
+      // Partial, so the many locally created tasks — all of which have a null
+      // sourceId — do not collide with each other in the index.
+      try db.execute(sql: """
+        CREATE UNIQUE INDEX tasks_on_source
+        ON tasks(sourceSystem, sourceId) WHERE sourceId IS NOT NULL
+        """)
     }
     return migrator
   }()

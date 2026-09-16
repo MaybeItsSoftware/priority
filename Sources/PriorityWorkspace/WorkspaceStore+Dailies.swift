@@ -412,7 +412,7 @@ extension WorkspaceStore {
         let task = WorkspaceTask(
           id: UUID().uuidString, listId: habits.id, parentTaskId: nil, title: seed.title, notes: "",
           status: .open, sortOrder: taskOrder, dueAt: nil, estimateSeconds: seed.targetSeconds,
-          createdAt: seed.createdAt, updatedAt: now)
+          sourceSystem: nil, sourceId: nil, createdAt: seed.createdAt, updatedAt: now)
         try task.insert(db)
         var daily = WorkspaceDaily(
           id: UUID().uuidString, taskId: task.id,

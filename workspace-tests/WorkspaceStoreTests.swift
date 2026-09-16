@@ -83,18 +83,85 @@ final class WorkspaceStoreTests: XCTestCase {
 
   func testLegacyImportCreatesSeparateListAndRebuildsParents() throws {
     let workspace = try store.bootstrapIfNeeded()
-    let imported = try XCTUnwrap(store.importLegacyTasks(
+    let imported = try XCTUnwrap(store.importTasks(
       workspaceId: workspace.id,
       listName: "Imported from old Priority",
+      sourceSystem: "priority-offline",
       seeds: [
         .init(sourceId: "2", parentSourceId: "1", title: "Child", status: .completed, sortOrder: 0),
         .init(sourceId: "1", parentSourceId: nil, title: "Parent", status: .open, sortOrder: 0),
       ]))
 
-    let outline = try store.outline(in: imported.id)
+    let outline = try store.outline(in: imported.list.id)
     XCTAssertEqual(outline.map { $0.task.title }, ["Parent", "Child"])
     XCTAssertEqual(outline.map(\.depth), [0, 1])
     XCTAssertEqual(outline.last?.task.status, .completed)
+    XCTAssertTrue(imported.createdList)
+    XCTAssertEqual(imported.insertedCount, 2)
+  }
+
+  func testRepeatedImportUpdatesTheSameTasksInsteadOfCopyingThem() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let first = try XCTUnwrap(store.importTasks(
+      workspaceId: workspace.id, listName: "Imported", sourceSystem: "checkvist",
+      seeds: [
+        .init(sourceId: "1", parentSourceId: nil, title: "Parent", status: .open, sortOrder: 0),
+        .init(sourceId: "2", parentSourceId: "1", title: "Child", status: .open, sortOrder: 0),
+      ]))
+
+    let second = try XCTUnwrap(store.importTasks(
+      workspaceId: workspace.id, listName: "Imported", sourceSystem: "checkvist",
+      seeds: [
+        .init(sourceId: "1", parentSourceId: nil, title: "Parent renamed", status: .open, sortOrder: 0),
+        .init(sourceId: "2", parentSourceId: "1", title: "Child", status: .completed, sortOrder: 0),
+        .init(sourceId: "3", parentSourceId: "1", title: "Added later", status: .open, sortOrder: 1),
+      ]))
+
+    XCTAssertFalse(second.createdList)
+    XCTAssertEqual(second.list.id, first.list.id)
+    XCTAssertEqual(second.insertedCount, 1)
+    XCTAssertEqual(second.updatedCount, 2)
+    XCTAssertEqual(try store.lists(in: workspace.id).count, 2)  // Inbox plus the one imported list
+    let outline = try store.outline(in: first.list.id)
+    XCTAssertEqual(outline.map { $0.task.title }, ["Parent renamed", "Child", "Added later"])
+    XCTAssertEqual(outline.map(\.depth), [0, 1, 1])
+    XCTAssertEqual(outline[1].task.status, .completed)
+  }
+
+  /// The same source in two systems is two different tasks, so the unique
+  /// index has to be on the pair rather than on the id alone.
+  func testSameSourceIDInADifferentSystemImportsSeparately() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let seeds: [ImportedTaskSeed] = [.init(sourceId: "1", parentSourceId: nil, title: "One", status: .open, sortOrder: 0)]
+
+    let checkvist = try XCTUnwrap(store.importTasks(
+      workspaceId: workspace.id, listName: "From Checkvist", sourceSystem: "checkvist", seeds: seeds))
+    let offline = try XCTUnwrap(store.importTasks(
+      workspaceId: workspace.id, listName: "From old Priority", sourceSystem: "priority-offline", seeds: seeds))
+
+    XCTAssertNotEqual(checkvist.list.id, offline.list.id)
+    XCTAssertEqual(checkvist.insertedCount, 1)
+    XCTAssertEqual(offline.insertedCount, 1)
+  }
+
+  /// A re-import must not undo the user's own filing. Content is the source's
+  /// to update; placement is not.
+  func testRepeatedImportLeavesLocalPlacementAlone() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let seeds: [ImportedTaskSeed] = [
+      .init(sourceId: "1", parentSourceId: nil, title: "Parent", status: .open, sortOrder: 0),
+      .init(sourceId: "2", parentSourceId: "1", title: "Child", status: .open, sortOrder: 0),
+    ]
+    let imported = try XCTUnwrap(store.importTasks(
+      workspaceId: workspace.id, listName: "Imported", sourceSystem: "checkvist", seeds: seeds))
+    let child = try XCTUnwrap(try store.outline(in: imported.list.id).last?.task)
+    try store.outdentTask(id: child.id)
+
+    _ = try store.importTasks(
+      workspaceId: workspace.id, listName: "Imported", sourceSystem: "checkvist", seeds: seeds)
+
+    XCTAssertNil(try store.task(id: child.id)?.parentTaskId)
+    XCTAssertEqual(try store.outline(in: imported.list.id).map(\.depth), [0, 0])
   }
 
   func testFocusSessionCompletesCurrentTaskAndAdvancesQueue() throws {

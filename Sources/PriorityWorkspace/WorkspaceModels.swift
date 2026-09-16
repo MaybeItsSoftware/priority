@@ -54,6 +54,13 @@ public struct WorkspaceTask: Codable, FetchableRecord, PersistableRecord, Identi
   public var sortOrder: Int
   public var dueAt: Date?
   public var estimateSeconds: Int?
+  /// Where an imported task came from, and what that service calls it.
+  ///
+  /// Both are nil for a task typed into Priority, and immutable once set: they
+  /// are what lets a second import run recognise a task it has already brought
+  /// across instead of making another copy of it.
+  public var sourceSystem: String?
+  public var sourceId: String?
   public let createdAt: Date
   public var updatedAt: Date
 }
@@ -206,10 +213,13 @@ public struct FocusQueueTask: Identifiable, Sendable, Equatable {
   public var id: String { item.id }
 }
 
-/// A source task copied into the first local workspace. Its source ID is used
-/// only to rebuild the hierarchy during this one transaction; local records
-/// receive new UUID identities.
-public struct LegacyTaskSeed: Sendable, Equatable {
+/// A task offered to the local workspace by an outside service.
+///
+/// The source ID rebuilds the hierarchy within one import run, and is then
+/// kept on the local task, so running the same import again recognises what it
+/// already brought across. Local records still carry their own UUID identity —
+/// the source ID names the task abroad, never here.
+public struct ImportedTaskSeed: Sendable, Equatable {
   public let sourceId: String
   public let parentSourceId: String?
   public let title: String
@@ -231,6 +241,27 @@ public struct LegacyTaskSeed: Sendable, Equatable {
     self.notes = notes
     self.status = status
     self.sortOrder = sortOrder
+  }
+}
+
+/// What one import run actually did, so a caller can say so rather than
+/// reporting that something unspecified happened.
+public struct TaskImportOutcome: Sendable, Equatable {
+  public let list: TaskList
+  public let insertedTaskIDs: [String]
+  public let updatedTaskIDs: [String]
+  /// True when the run created the destination list rather than merging into
+  /// a list a previous run had already made.
+  public let createdList: Bool
+
+  public var insertedCount: Int { insertedTaskIDs.count }
+  public var updatedCount: Int { updatedTaskIDs.count }
+
+  public init(list: TaskList, insertedTaskIDs: [String], updatedTaskIDs: [String], createdList: Bool) {
+    self.list = list
+    self.insertedTaskIDs = insertedTaskIDs
+    self.updatedTaskIDs = updatedTaskIDs
+    self.createdList = createdList
   }
 }
 
