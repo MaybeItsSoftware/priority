@@ -64,7 +64,13 @@ private struct LocalFloatingFocusTimerView: View {
             .font(.system(size: 28, weight: .bold, design: .monospaced))
         }
         HStack {
-          Button("Done") { model.completeFocusedTask() }
+          Button("Done") {
+            // The prompt lives in the window, so that there is one of it. A
+            // block worth scoring is worth looking up from the corner for.
+            model.requestFocusCompletion()
+            onClose()
+            AppDelegate.shared.showMainWindow()
+          }
             .buttonStyle(.borderedProminent)
             .focusable()
           Button("Open panel") {

@@ -77,6 +77,10 @@ struct WorkspaceDesktopView: View {
       })
         .environment(model)
     }
+    .sheet(item: Bindable(model).pendingFocusCompletion) { pending in
+      WorkspaceFocusQualityPrompt(pending: pending)
+        .environment(model)
+    }
     .sheet(isPresented: Bindable(model).showsKeyboardHelp) {
       WorkspaceKeyboardHelp()
     }
@@ -998,8 +1002,11 @@ private struct WorkspaceFocusDashboard: View {
           .truncationMode(.tail)
         Text("Focus mode is active. Complete the current task to advance the queue.")
           .foregroundStyle(.secondary)
+        Text("\(FocusPoints.formatted(model.focusPoints.today)) points today over \(model.focusPoints.blocksToday) blocks")
+          .font(.callout.monospacedDigit())
+          .foregroundStyle(.secondary)
         HStack {
-          Button("Complete current") { model.completeFocusedTask() }
+          Button("Complete current") { model.requestFocusCompletion() }
             .buttonStyle(.borderedProminent)
             .focusable()
           Button("End session", role: .destructive) { model.finishFocus() }
@@ -1205,6 +1212,10 @@ private struct LocalFocusPanel: View {
           .font(.caption.weight(.bold))
           .foregroundStyle(.secondary)
         Spacer()
+        Text("\(FocusPoints.formatted(model.focusPoints.today)) pts today")
+          .font(.caption.monospacedDigit())
+          .foregroundStyle(.secondary)
+          .help("Minutes focused, multiplied by how well each block went")
         Button("Hide") { dismiss() }
           .buttonStyle(.plain)
           .focusable()
@@ -1245,7 +1256,7 @@ private struct LocalFocusPanel: View {
         .frame(maxHeight: 110)
 
         HStack {
-          Button("Done") { model.completeFocusedTask() }
+          Button("Done") { model.requestFocusCompletion() }
             .buttonStyle(.borderedProminent)
             .focusable()
             .keyboardShortcut(.defaultAction)

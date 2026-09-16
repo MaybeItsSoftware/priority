@@ -180,6 +180,17 @@ enum WorkspaceSidebarItem: Identifiable {
   /// What finishing the current block did — a task closed, or a day's
   /// contribution logged. Held so the UI can say which, then cleared.
   var lastFocusOutcome: WorkspaceStore.FocusCompletionOutcome?
+  /// A finished block waiting to be told how it went. Set the instant Done is
+  /// pressed — the clock stops when the work stops, not when the judgement
+  /// arrives — and cleared when the block is scored or the prompt is dropped.
+  var pendingFocusCompletion: PendingFocusCompletion?
+  /// What the last scored block earned, so the UI can show it and move on.
+  var lastFocusAward: FocusAward?
+  /// Written only by `reloadFocus()`; read by the panel and the prompt.
+  var focusPoints: FocusPointsSummary = .zero
+  /// Whether the focus panel was the surface that asked, so it can be put back
+  /// once the prompt is answered. Owned by `WorkspaceViewModel+Focus.swift`.
+  var resumesFocusPanel = false
 
   var showsFocusScreen = false
   /// Minutes offered on the focus screen, seeded from the task's estimate.
@@ -1181,6 +1192,7 @@ enum WorkspaceSidebarItem: Identifiable {
       } else {
         focusQueue = []
       }
+      focusPoints = try store.focusPointsSummary()
     } catch {
       errorMessage = error.localizedDescription
     }

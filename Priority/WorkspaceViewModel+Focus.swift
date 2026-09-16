@@ -64,21 +64,64 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// Credits the time actually spent since the block started, so a daily's
-  /// contribution reflects the sitting rather than the estimate.
-  func completeFocusedTask(now: Date = .now) {
-    guard let store, let session = activeFocusSession else { return }
-    let elapsed = Int(max(0, now.timeIntervalSince(session.activeTaskStartedAt)))
+  /// A finished block, held between pressing Done and saying how it went.
+  ///
+  /// The elapsed time is captured here rather than read again on confirmation:
+  /// the seconds that count are the ones spent working, not the ones spent
+  /// deciding what the work was worth.
+  struct PendingFocusCompletion: Identifiable, Equatable {
+    let sessionID: String
+    let taskID: String
+    let title: String
+    let seconds: Int
+
+    var id: String { "\(sessionID)/\(taskID)" }
+    var minutes: Double { FocusPoints.minutes(seconds: seconds) }
+  }
+
+  /// Stops the clock and asks how the block went. Nothing is written yet — the
+  /// task stays open and the queue stays put until the prompt is answered.
+  func requestFocusCompletion(now: Date = .now) {
+    guard let session = activeFocusSession, let task = activeFocusTask else { return }
+    pendingFocusCompletion = PendingFocusCompletion(
+      sessionID: session.id, taskID: task.id, title: task.title,
+      seconds: Int(max(0, now.timeIntervalSince(session.activeTaskStartedAt))))
+    // The prompt is a sheet, and so is the panel; only one of them can be on
+    // screen. Remembering which surface asked lets the panel come back.
+    resumesFocusPanel = showsFocusPanel
+    showsFocusPanel = false
+  }
+
+  /// Drops the prompt and leaves the block running. The time carries on from
+  /// where it was, because the block never actually ended.
+  func cancelFocusCompletion() {
+    pendingFocusCompletion = nil
+    restoreFocusPanelIfItWasOpen()
+  }
+
+  /// Credits the time actually spent, so a daily's contribution reflects the
+  /// sitting rather than the estimate, and scores it by the multiplier given.
+  func confirmFocusCompletion(multiplier: Double) {
+    guard let store, let pending = pendingFocusCompletion else { return }
+    pendingFocusCompletion = nil
     perform {
       let completion = try store.completeActiveFocusTask(
-        sessionId: session.id, elapsedSeconds: elapsed, now: now)
+        sessionId: pending.sessionID, elapsedSeconds: pending.seconds, qualityMultiplier: multiplier)
       activeFocusSession = completion.session
       lastFocusOutcome = completion.outcome
+      lastFocusAward = completion.award
       reloadFocus()
       reloadOutline()
       reloadDailies()
       reloadNextUp()
+      restoreFocusPanelIfItWasOpen()
     }
+  }
+
+  private func restoreFocusPanelIfItWasOpen() {
+    defer { resumesFocusPanel = false }
+    guard resumesFocusPanel, activeFocusSession?.activeTaskId != nil else { return }
+    showsFocusPanel = true
   }
 
   func finishFocus() {
