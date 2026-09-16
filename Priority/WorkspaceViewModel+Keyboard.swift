@@ -154,6 +154,9 @@ extension WorkspaceViewModel {
       case "f":
         presentSearch()
         return true
+      case "r":
+        beginRenamingSelection()
+        return true
       case "z":
         undoLastChange()
         return true

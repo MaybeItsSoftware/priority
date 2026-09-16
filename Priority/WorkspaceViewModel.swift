@@ -161,6 +161,9 @@ enum WorkspaceSidebarItem: Identifiable {
   var creationRequest: WorkspaceCreationKind?
   var creationParentFolderID: String?
   var sidebarEditor: WorkspaceSidebarEditor?
+  /// The list or folder currently showing a rename field, by its own id.
+  /// Lists and folders both carry UUIDs, so one field serves both.
+  var renamingSidebarItemID: String?
   var pendingSidebarDeletion: WorkspaceSidebarItem?
   var taskComposerFocusRequest = 0
   private(set) var keyboardFocusArea: WorkspaceFocusArea = .tasks

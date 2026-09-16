@@ -199,6 +199,35 @@ final class WorkspaceStoreTests: XCTestCase {
     XCTAssertEqual(advanced.session.activeTaskStartedAt, handover)
   }
 
+  func testRenamingAListKeepsItsColourAndIsUndoableOnItsOwn() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let list = try store.createList(workspaceId: workspace.id, name: "Wrk")
+    try store.updateList(id: list.id, name: "Wrk", colorHex: "#7a4de8")
+
+    try store.renameList(id: list.id, name: "  Work  ")
+
+    let renamed = try XCTUnwrap(store.lists(in: workspace.id).first { $0.id == list.id })
+    XCTAssertEqual(renamed.name, "Work")
+    XCTAssertEqual(renamed.colorHex, "#7a4de8")
+    XCTAssertEqual(try store.undoableLabel(), "Rename List")
+
+    XCTAssertEqual(try store.undo(), "Rename List")
+    XCTAssertEqual(try store.lists(in: workspace.id).first { $0.id == list.id }?.name, "Wrk")
+  }
+
+  func testRenamingRefusesAnEmptyNameAndRenamingTheInboxIsAllowed() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let inbox = try XCTUnwrap(store.inbox(in: workspace.id))
+
+    XCTAssertThrowsError(try store.renameList(id: inbox.id, name: "   ")) {
+      XCTAssertEqual($0 as? WorkspaceStoreError, .emptyName)
+    }
+    // Renaming the Inbox is fine; it is found by its role, not its name.
+    try store.renameList(id: inbox.id, name: "Capture")
+
+    XCTAssertEqual(try store.inbox(in: workspace.id)?.name, "Capture")
+  }
+
   func testMoveTaskMovesEntireSubtreeAndRejectsCircularParent() throws {
     let workspace = try store.bootstrapIfNeeded()
     let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)

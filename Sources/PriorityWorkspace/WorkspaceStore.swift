@@ -208,6 +208,21 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  /// Renames a list and touches nothing else.
+  ///
+  /// Separate from `updateList` so that renaming from the sidebar cannot carry
+  /// a stale colour along with it, and so undo offers "Rename List" rather
+  /// than the settings sheet's broader "Edit List".
+  public func renameList(id: String, name: String, now: Date = .now) throws {
+    let trimmed = try Self.nonEmptyName(name)
+    try journalledWrite("Rename List") { db in
+      guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
+      list.name = trimmed
+      list.updatedAt = now
+      try list.update(db)
+    }
+  }
+
   public func moveList(id: String, toFolderId folderId: String?, now: Date = .now) throws {
     try journalledWrite("Move List") { db in
       guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }

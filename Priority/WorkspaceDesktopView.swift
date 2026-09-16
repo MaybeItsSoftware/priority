@@ -195,15 +195,7 @@ struct WorkspaceDesktopView: View {
   }
 
   private func sidebarListRow(_ list: TaskList) -> some View {
-    HStack(spacing: 7) {
-      Circle()
-        .fill(Color(priorityHex: list.colorHex))
-        .frame(width: 8, height: 8)
-      Text(list.name)
-        .lineLimit(1)
-        .truncationMode(.middle)
-        .help(list.name)
-    }
+    WorkspaceListRowLabel(list: list)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.vertical, 5)
       .contentShape(Rectangle())
@@ -222,6 +214,7 @@ struct WorkspaceDesktopView: View {
         in: RoundedRectangle(cornerRadius: 6)
       )
       .contextMenu {
+        Button("Rename") { model.beginRenaming(.list(list)) }
         Button("List settings…") { model.showSettings(for: list) }
         // The Inbox can be renamed and refiled, but not taken away: quick
         // capture has to have somewhere to land.
@@ -1131,15 +1124,7 @@ private struct WorkspaceFolderTree: View {
       set: { model.setFolderExpanded(folder, expanded: $0) }
     )) {
       ForEach(model.lists.filter { $0.folderId == folder.id }) { list in
-        HStack(spacing: 7) {
-          Circle()
-            .fill(Color(priorityHex: list.colorHex))
-            .frame(width: 8, height: 8)
-          Text(list.name)
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .help(list.name)
-        }
+        WorkspaceListRowLabel(list: list)
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.vertical, 5)
           .contentShape(Rectangle())
@@ -1158,6 +1143,7 @@ private struct WorkspaceFolderTree: View {
             in: RoundedRectangle(cornerRadius: 6)
           )
           .contextMenu {
+            Button("Rename") { model.beginRenaming(.list(list)) }
             Button("List settings…") { model.showSettings(for: list) }
             if !list.isSystemList {
               Divider()
@@ -1174,12 +1160,22 @@ private struct WorkspaceFolderTree: View {
       Button {
         model.selectFolder(folder)
       } label: {
-        Label(folder.name, systemImage: "folder")
-          .lineLimit(1)
-          .truncationMode(.middle)
-          .help(folder.name)
+        if model.isRenaming(.folder(folder)) {
+          WorkspaceRenameField(
+            initialName: folder.name,
+            onCommit: { model.renameFolder(folder, to: $0) },
+            onCancel: { model.cancelRenaming() })
+        } else {
+          Label(folder.name, systemImage: "folder")
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .help(folder.name)
+        }
       }
         .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture(count: 2).onEnded {
+          model.beginRenaming(.folder(folder))
+        })
         .focusable()
         .foregroundStyle(.secondary)
         .padding(.vertical, 2)
@@ -1190,6 +1186,7 @@ private struct WorkspaceFolderTree: View {
         )
         .contentShape(Rectangle())
         .contextMenu {
+          Button("Rename") { model.beginRenaming(.folder(folder)) }
           Button("Folder settings…") { model.showSettings(for: folder) }
           Button("New list in folder") { model.requestCreation(.list, in: folder.id) }
           Button("New subfolder") { model.requestCreation(.folder, in: folder.id) }
@@ -1418,6 +1415,7 @@ private struct WorkspaceKeyboardHelp: View {
         key("⌘ S", "Save edits in the task inspector")
         key("⌘ ⇧ N", "Create a list; when a folder is selected, create it there")
         key("⌘ ⌥ N", "Create a folder; when a folder is selected, create it there")
+        key("⌘ R", "Rename the selected list or folder in place")
         key("⌘ I", "Open settings for the selected list or folder")
         key("⌘ F", "Search every task’s title and notes")
         key("⌘ Z / ⌘ ⇧ Z", "Undo or redo the last change to the workspace")
@@ -1491,7 +1489,9 @@ private struct AddWorkspaceItemButton: View {
   }
 }
 
-private extension Color {
+/// A list's colour, or the accent colour when it has none. Internal rather
+/// than file-private because sidebar rows moved out into their own file.
+extension Color {
   init(priorityHex rawValue: String?) {
     let value = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines)
       .trimmingCharacters(in: CharacterSet(charactersIn: "#")) ?? ""
