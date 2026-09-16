@@ -2,14 +2,14 @@
 
 # Priority
 
-**A keyboard-first macOS menu bar app for working Checkvist lists fast.**
+**A keyboard-first macOS desktop app for working your task lists fast.**
 Quick navigation, priority and due workflows, focus timers, a kanban board, an honest daily log, and a command line that reaches the same data.
 
 <br clear="left" />
 
 ---
 
-Priority lives in the menu bar and is built to be driven without the mouse. Checkvist owns your tasks; Priority adds the things Checkvist has no representation for — priority ranking, start dates, recurrence, focus sessions, daily habits, and a record of what actually happened each day.
+Priority opens as a desktop window, keeps a menu bar surface for quick capture, and is built to be driven without the mouse. Its own local workspace owns your tasks; Checkvist is an optional import. Priority adds the things a plain list has no representation for — priority ranking, start dates, recurrence, focus sessions, daily habits, and a record of what actually happened each day.
 
 It works offline. It works from the terminal. And it exposes the whole surface to an AI assistant over MCP.
 
