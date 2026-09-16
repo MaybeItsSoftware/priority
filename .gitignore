@@ -102,3 +102,6 @@ __pycache__/
 
 .env.local
 cli/target/
+
+# Scratch worktrees from `git worktree add`, used to check a commit builds alone.
+.worktrees/
