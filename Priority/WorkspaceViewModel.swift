@@ -191,6 +191,8 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   var selectedList: TaskList? { lists.first { $0.id == selectedListID } }
+  /// Where quick capture lands. Found by role, so renaming it does not move it.
+  var inboxList: TaskList? { lists.first { $0.systemRole == .inbox } }
   var selectedFolder: ListFolder? { folders.first { $0.id == selectedFolderID } }
   func list(for task: WorkspaceTask) -> TaskList? { lists.first { $0.id == task.listId } }
 
@@ -236,7 +238,7 @@ enum WorkspaceSidebarItem: Identifiable {
       selectedListID = importedList?.id
         ?? lists.first(where: { $0.name.hasPrefix("Imported from old Priority") })?.id
         ?? lists.first?.id
-      if selectedList?.name.caseInsensitiveCompare("Inbox") == .orderedSame {
+      if selectedList?.systemRole == .inbox {
         viewMode = .outline
       }
     }
@@ -293,8 +295,9 @@ enum WorkspaceSidebarItem: Identifiable {
     scopeTaskID = nil
     selectedTaskID = nil
     isInspectorVisible = false
-    viewMode = lists.first(where: { $0.id == id })?.name.caseInsensitiveCompare("Inbox") == .orderedSame
-      ? .outline : .board
+    // The inbox is a queue to empty, not a board to plan, so it opens as a
+    // flat outline whatever the last list was shown as.
+    viewMode = lists.first(where: { $0.id == id })?.systemRole == .inbox ? .outline : .board
     reloadOutline()
   }
 

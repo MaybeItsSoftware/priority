@@ -35,25 +35,53 @@ public final class WorkspaceStore: @unchecked Sendable {
   @discardableResult
   public func bootstrapIfNeeded(now: Date = .now) throws -> Workspace {
     if let workspace = try database.read({ db in try Workspace.fetchOne(db) }) {
+      // A workspace whose inbox was deleted before the role existed would
+      // otherwise have nowhere for quick capture to land.
+      try database.write { db in try Self.ensureInbox(db, workspaceId: workspace.id, now: now) }
       return workspace
     }
 
     let workspace = Workspace(id: UUID().uuidString, name: "My Workspace", createdAt: now, updatedAt: now)
-    let inbox = TaskList(
-      id: UUID().uuidString,
-      workspaceId: workspace.id,
-      folderId: nil,
-      name: "Inbox",
-      colorHex: nil,
-      sortOrder: 0,
-      isArchived: false,
-      createdAt: now,
-      updatedAt: now)
     try database.write { db in
       try workspace.insert(db)
-      try inbox.insert(db)
+      try Self.ensureInbox(db, workspaceId: workspace.id, now: now)
     }
     return workspace
+  }
+
+  /// The list quick capture lands in. Never archived, never deleted, and found
+  /// by its role rather than by its name.
+  public func inbox(in workspaceId: String) throws -> TaskList? {
+    try database.read { db in try Self.inbox(db, workspaceId: workspaceId) }
+  }
+
+  private static func inbox(_ db: Database, workspaceId: String) throws -> TaskList? {
+    try TaskList
+      .filter(Column("workspaceId") == workspaceId && Column("systemRole") == TaskListRole.inbox.rawValue)
+      .fetchOne(db)
+  }
+
+  @discardableResult
+  private static func ensureInbox(_ db: Database, workspaceId: String, now: Date) throws -> TaskList {
+    if var existing = try inbox(db, workspaceId: workspaceId) {
+      // Archiving is blocked, but a database from before the role existed can
+      // still arrive with the inbox out of sight.
+      if existing.isArchived {
+        existing.isArchived = false
+        existing.updatedAt = now
+        try existing.update(db)
+      }
+      return existing
+    }
+    let order = try nextOrder(
+      db, table: TaskList.databaseTableName, whereSQL: "workspaceId = ? AND folderId IS ?",
+      arguments: [workspaceId, nil])
+    let inbox = TaskList(
+      id: UUID().uuidString, workspaceId: workspaceId, folderId: nil, name: "Inbox",
+      colorHex: nil, sortOrder: order, isArchived: false, systemRole: .inbox,
+      createdAt: now, updatedAt: now)
+    try inbox.insert(db)
+    return inbox
   }
 
   public func workspaces() throws -> [Workspace] {
@@ -229,6 +257,9 @@ public final class WorkspaceStore: @unchecked Sendable {
   public func setListArchived(_ archived: Bool, id: String, now: Date = .now) throws {
     try database.write { db in
       guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
+      // A system list is somewhere the app puts things by itself, so it has to
+      // be somewhere the user can still see.
+      if archived, list.isSystemList { throw WorkspaceStoreError.systemListIsPermanent }
       list.isArchived = archived
       list.updatedAt = now
       try list.update(db)
@@ -237,7 +268,8 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   public func deleteList(id: String) throws {
     try database.write { db in
-      guard try TaskList.fetchOne(db, key: id) != nil else { throw WorkspaceStoreError.missingList }
+      guard let list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
+      guard !list.isSystemList else { throw WorkspaceStoreError.systemListIsPermanent }
       try TaskList.deleteOne(db, key: id)
     }
   }
@@ -319,7 +351,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       let task = WorkspaceTask(
         id: UUID().uuidString, listId: listId, parentTaskId: parentTaskId, title: trimmed,
         notes: "", status: .open, sortOrder: nextOrder, dueAt: nil, estimateSeconds: nil,
-        sourceSystem: nil, sourceId: nil, createdAt: now, updatedAt: now)
+        createdAt: now, updatedAt: now)
       try task.insert(db)
       return task
     }
@@ -914,6 +946,29 @@ public final class WorkspaceStore: @unchecked Sendable {
         ON tasks(sourceSystem, sourceId) WHERE sourceId IS NOT NULL
         """)
     }
+    migrator.registerMigration("v6_inbox_as_a_system_list") { db in
+      try db.alter(table: "task_lists") { table in
+        table.add(column: "systemRole", .text)
+      }
+      // Claim the list that has been acting as the inbox rather than adding a
+      // second one beside it. Oldest wins, so a user who made their own list
+      // called Inbox later keeps it as an ordinary list.
+      try db.execute(sql: """
+        UPDATE task_lists SET systemRole = 'inbox' WHERE id IN (
+          SELECT id FROM task_lists AS candidate
+          WHERE lower(candidate.name) = 'inbox'
+            AND candidate.createdAt = (
+              SELECT MIN(earliest.createdAt) FROM task_lists AS earliest
+              WHERE lower(earliest.name) = 'inbox' AND earliest.workspaceId = candidate.workspaceId
+            )
+          GROUP BY candidate.workspaceId
+        )
+        """)
+      try db.execute(sql: """
+        CREATE UNIQUE INDEX task_lists_on_system_role
+        ON task_lists(workspaceId, systemRole) WHERE systemRole IS NOT NULL
+        """)
+    }
     return migrator
   }()
 }
@@ -928,6 +983,7 @@ public enum WorkspaceStoreError: LocalizedError, Equatable {
   case missingFolder
   case invalidTaskMove
   case invalidFolderMove
+  case systemListIsPermanent
 
   public var errorDescription: String? {
     switch self {
@@ -940,6 +996,7 @@ public enum WorkspaceStoreError: LocalizedError, Equatable {
     case .missingFolder: return "That folder is no longer available."
     case .invalidTaskMove: return "A task cannot be moved into itself or one of its subtasks."
     case .invalidFolderMove: return "A folder cannot be moved into itself or one of its subfolders."
+    case .systemListIsPermanent: return "The Inbox cannot be archived or deleted. You can rename it instead."
     }
   }
 }

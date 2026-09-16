@@ -215,10 +215,14 @@ struct WorkspaceDesktopView: View {
       )
       .contextMenu {
         Button("List settings…") { model.showSettings(for: list) }
-        Divider()
-        Button("Archive") { model.archiveList(list) }
-        Divider()
-        Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
+        // The Inbox can be renamed and refiled, but not taken away: quick
+        // capture has to have somewhere to land.
+        if !list.isSystemList {
+          Divider()
+          Button("Archive") { model.archiveList(list) }
+          Divider()
+          Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
+        }
       }
   }
 
@@ -1144,10 +1148,12 @@ private struct WorkspaceFolderTree: View {
           )
           .contextMenu {
             Button("List settings…") { model.showSettings(for: list) }
-            Divider()
-            Button("Archive") { model.archiveList(list) }
-            Divider()
-            Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
+            if !list.isSystemList {
+              Divider()
+              Button("Archive") { model.archiveList(list) }
+              Divider()
+              Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
+            }
           }
       }
       ForEach(model.folders.filter { $0.parentFolderId == folder.id }) { child in

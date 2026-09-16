@@ -39,7 +39,7 @@ extension WorkspaceViewModel {
   func requestDeletionOfSelectedSidebarItem() {
     if let folder = selectedFolder {
       requestDeletion(of: .folder(folder))
-    } else if let list = selectedList {
+    } else if let list = selectedList, !list.isSystemList {
       requestDeletion(of: .list(list))
     }
   }
@@ -62,7 +62,7 @@ extension WorkspaceViewModel {
   }
 
   func archiveSelectedList() {
-    guard let list = selectedList else { return }
+    guard let list = selectedList, !list.isSystemList else { return }
     archiveList(list)
   }
 

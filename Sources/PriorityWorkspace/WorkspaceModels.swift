@@ -22,6 +22,15 @@ public struct ListFolder: Codable, FetchableRecord, PersistableRecord, Identifia
   public var updatedAt: Date
 }
 
+/// A job the workspace itself relies on a list to do, as opposed to a list the
+/// user made for their own reasons.
+///
+/// The role is what the app navigates by, so renaming Inbox to "Capture" keeps
+/// it the inbox — the name is the user's, the role is the workspace's.
+public enum TaskListRole: String, Codable, Sendable, CaseIterable {
+  case inbox
+}
+
 public struct TaskList: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable, Equatable {
   public static let databaseTableName = "task_lists"
 
@@ -32,8 +41,11 @@ public struct TaskList: Codable, FetchableRecord, PersistableRecord, Identifiabl
   public var colorHex: String?
   public var sortOrder: Int
   public var isArchived: Bool
+  public var systemRole: TaskListRole?
   public let createdAt: Date
   public var updatedAt: Date
+
+  public var isSystemList: Bool { systemRole != nil }
 }
 
 public enum TaskStatus: String, Codable, Sendable, CaseIterable {

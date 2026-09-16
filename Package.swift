@@ -370,7 +370,9 @@ let package = Package(
     ),
     .testTarget(
       name: "PriorityWorkspaceTests",
-      dependencies: ["PriorityWorkspace"],
+      // GRDB directly, so a migration test can write a fixture database in the
+      // shape an older version of the app left behind.
+      dependencies: ["PriorityWorkspace", .product(name: "GRDB", package: "GRDB.swift")],
       path: "workspace-tests"
     ),
   ]
