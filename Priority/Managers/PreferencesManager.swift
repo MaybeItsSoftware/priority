@@ -69,11 +69,11 @@ import SwiftUI
   var quickAddHotkeyEnabled: Bool {
     didSet { preferencesStore.set(quickAddHotkeyEnabled, for: .quickAddHotkeyEnabled) }
   }
-  /// Carbon keyCode for the quick add hotkey (default 11 = B)
+  /// Carbon keyCode for the quick add hotkey (default 45 = N)
   var quickAddHotkeyKeyCode: Int {
     didSet { preferencesStore.set(quickAddHotkeyKeyCode, for: .quickAddHotkeyKeyCode) }
   }
-  /// Carbon modifier mask (default 0x0A00 = shift+option)
+  /// Carbon modifier mask (default 0x1B00 = command+shift+option+control / Hyper)
   var quickAddHotkeyModifiers: Int {
     didSet { preferencesStore.set(quickAddHotkeyModifiers, for: .quickAddHotkeyModifiers) }
   }
@@ -141,14 +141,14 @@ import SwiftUI
       .globalHotkeyModifiers,
       default: AppCoordinator.CarbonModifier.option
     )
-    self.quickAddHotkeyEnabled = preferencesStore.bool(.quickAddHotkeyEnabled, default: false)
+    self.quickAddHotkeyEnabled = preferencesStore.bool(.quickAddHotkeyEnabled, default: true)
     self.quickAddHotkeyKeyCode = preferencesStore.int(
       .quickAddHotkeyKeyCode,
-      default: AppCoordinator.CarbonKey.b
+      default: AppCoordinator.CarbonKey.n
     )
     self.quickAddHotkeyModifiers = preferencesStore.int(
       .quickAddHotkeyModifiers,
-      default: AppCoordinator.CarbonModifier.shiftOption
+      default: AppCoordinator.CarbonModifier.hyper
     )
     self.quickAddLocationMode =
       QuickAddLocationMode(
@@ -163,6 +163,19 @@ import SwiftUI
     self.namedTimeEveningHour = preferencesStore.int(.namedTimeEveningHour, default: 18)
     self.namedTimeEodHour = preferencesStore.int(.namedTimeEodHour, default: 17)
     self.appFontName = preferencesStore.string(.appFontName, default: "System Font")
+
+    // Move untouched installs from the old, opt-in Shift-Option-B capture to
+    // the product default. A customised binding is never rewritten.
+    if !preferencesStore.bool(.quickAddHyperNMigrationCompleted, default: false) {
+      if quickAddHotkeyKeyCode == AppCoordinator.CarbonKey.b,
+        quickAddHotkeyModifiers == AppCoordinator.CarbonModifier.shiftOption
+      {
+        quickAddHotkeyEnabled = true
+        quickAddHotkeyKeyCode = AppCoordinator.CarbonKey.n
+        quickAddHotkeyModifiers = AppCoordinator.CarbonModifier.hyper
+      }
+      preferencesStore.set(true, for: .quickAddHyperNMigrationCompleted)
+    }
   }
 
   var quickAddSpecificParentTaskIdValue: Int? {

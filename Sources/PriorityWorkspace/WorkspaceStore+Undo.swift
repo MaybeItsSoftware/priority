@@ -22,8 +22,10 @@ extension WorkspaceStore {
     "list_folders": "id",
     "tasks": "id",
     "task_metadata": "taskId",
+    "task_conditions": "id",
     "dailies": "id",
     "daily_contributions": "id",
+    "kanban_boards": "id",
   ]
 
   /// What undo would take back, phrased for a menu item. Nil when there is
@@ -39,6 +41,26 @@ extension WorkspaceStore {
     try database.read { db in
       try String.fetchOne(
         db, sql: "SELECT label FROM change_log WHERE undone = 1 ORDER BY id ASC LIMIT 1")
+    }
+  }
+
+  /// The affected task/list lets the desktop reveal restored work after undo.
+  public func historyTarget(forUndo: Bool) throws -> (taskId: String?, listId: String?) {
+    try database.read { db in
+      let groupID = try String.fetchOne(db, sql: forUndo
+        ? "SELECT groupId FROM change_log WHERE undone = 0 ORDER BY id DESC LIMIT 1"
+        : "SELECT groupId FROM change_log WHERE undone = 1 ORDER BY id ASC LIMIT 1")
+      guard let groupID else { return (nil, nil) }
+      let operation = forUndo ? "delete" : "insert"
+      let taskID = try String.fetchOne(db, sql: """
+        SELECT rowId FROM change_log WHERE groupId = ? AND tableName = 'tasks'
+        ORDER BY CASE WHEN operation = ? THEN 0 ELSE 1 END, id DESC LIMIT 1
+        """, arguments: [groupID, operation])
+      let listID = try String.fetchOne(db, sql: """
+        SELECT rowId FROM change_log WHERE groupId = ? AND tableName = 'task_lists' AND operation = ?
+        ORDER BY id DESC LIMIT 1
+        """, arguments: [groupID, operation])
+      return (taskID, listID)
     }
   }
 
@@ -82,18 +104,21 @@ extension WorkspaceStore {
   /// step ran before it, and undoing that step would take back both.
   func journalledWrite<T>(_ label: String, _ block: (Database) throws -> T) throws -> T {
     try database.write { db in
-      // A fresh edit is a new branch of history: what was undone can no longer
-      // be redone, exactly as in a text editor.
-      try db.execute(sql: "DELETE FROM change_log WHERE undone = 1")
+      let groupID = UUID().uuidString
       // Recording is off by default, so a write that has not opted in — a
       // migration, an import, the focus tables — is not an undo step. It is
       // switched on here and off again below, inside the one transaction.
       try db.execute(
         sql: "UPDATE undo_control SET groupId = ?, label = ?, suppressed = 0 WHERE id = 0",
-        arguments: [UUID().uuidString, label])
+        arguments: [groupID, label])
       defer { try? db.execute(sql: "UPDATE undo_control SET suppressed = 1 WHERE id = 0") }
       let result = try block(db)
       try db.execute(sql: "UPDATE undo_control SET suppressed = 1 WHERE id = 0")
+      // A key pressed at the end of a list can be a no-op. Only an actual
+      // change creates a new history branch and invalidates redo.
+      let changed = try Bool.fetchOne(
+        db, sql: "SELECT EXISTS(SELECT 1 FROM change_log WHERE groupId = ?)", arguments: [groupID]) ?? false
+      if changed { try db.execute(sql: "DELETE FROM change_log WHERE undone = 1") }
       try Self.trimJournal(db)
       return result
     }
@@ -179,6 +204,7 @@ extension WorkspaceStore {
   /// leaves it recording the old shape.
   static func installChangeLogTriggers(_ db: Database) throws {
     for (table, keyColumn) in journalledTables {
+      guard try db.tableExists(table) else { continue }
       let columns = try db.columns(in: table).map(\.name)
       func json(_ prefix: String) -> String {
         "json_object(" + columns.map { "'\($0)', \(prefix).\"\($0)\"" }.joined(separator: ", ") + ")"

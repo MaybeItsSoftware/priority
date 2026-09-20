@@ -3,45 +3,58 @@ import SwiftUI
 
 struct WorkspaceDailiesDashboard: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @State private var visibleTaskIDs: Set<String> = []
 
   var body: some View {
     let _ = model.dailyProgressRevision
     let items = model.dailyItems
     let done = items.filter(\.isDoneToday).count
-    ScrollView {
-      VStack(alignment: .leading, spacing: 20) {
-        VStack(alignment: .leading, spacing: 5) {
-          HStack(alignment: .firstTextBaseline) {
-            Text("DAILIES")
-              .font(.caption.weight(.bold))
-              .tracking(1.2)
+    ScrollViewReader { scrollProxy in
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 20) {
+          VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline) {
+              Text("DAILIES")
+                .font(.caption.weight(.bold))
+                .tracking(1.2)
+                .foregroundStyle(.secondary)
+              Spacer()
+              if !items.isEmpty {
+                Text("\(done) of \(items.count) done")
+                  .font(.caption.monospacedDigit())
+                  .foregroundStyle(done == items.count ? Color.green : .secondary)
+              }
+            }
+            Text("Every daily moves one task forward. Ticking one records today’s contribution — the task itself stays open until it is genuinely finished.")
+              .font(.callout)
               .foregroundStyle(.secondary)
-            Spacer()
-            if !items.isEmpty {
-              Text("\(done) of \(items.count) done")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(done == items.count ? Color.green : .secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+
+          if items.isEmpty {
+            ContentUnavailableView(
+              "No dailies due today",
+              systemImage: "arrow.triangle.2.circlepath",
+              description: Text("Select a task and enable Make daily progress in the inspector to commit to it daily."))
+          } else {
+            ForEach(items) { item in
+              WorkspaceDailyProgressRow(item: item)
+                .environment(model)
+                .id(item.task.id)
             }
           }
-          Text("Every daily moves one task forward. Ticking one records today’s contribution — the task itself stays open until it is genuinely finished.")
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
         }
-
-        if items.isEmpty {
-          ContentUnavailableView(
-            "No dailies due today",
-            systemImage: "arrow.triangle.2.circlepath",
-            description: Text("Select a task and enable Make daily progress in the inspector to commit to it daily."))
-        } else {
-          ForEach(items) { item in
-            WorkspaceDailyProgressRow(item: item)
-              .environment(model)
-          }
-        }
+        .scrollTargetLayout()
+        .padding(20)
       }
-      .padding(20)
+      .onScrollTargetVisibilityChange(idType: String.self) { ids in
+        visibleTaskIDs = Set(ids)
+      }
+      .onChange(of: model.selectedTaskID) { _, id in
+        guard let id, !visibleTaskIDs.contains(id),
+          items.contains(where: { $0.task.id == id }) else { return }
+        scrollProxy.scrollTo(id, anchor: .center)
+      }
     }
   }
 }
@@ -94,6 +107,7 @@ private struct WorkspaceDailyProgressRow: View {
       in: RoundedRectangle(cornerRadius: 8))
     .focusable()
     .focused($isRowFocused)
+    .focusEffectDisabled()
     .onChange(of: isRowFocused) { _, focused in
       if focused { model.selectTask(task) }
     }

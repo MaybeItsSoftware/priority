@@ -9,6 +9,7 @@ final class NativeGoogleCalendarIntegrationPluginTests: XCTestCase {
     let defaults = makeIsolatedDefaults()
     let calendar = makeUTCCalendar()
     let plugin = NativeGoogleCalendarIntegrationPlugin(
+      account: makeAccount(defaults: defaults),
       defaultEventDurationMinutes: 30,
       calendar: calendar,
       defaults: defaults
@@ -33,6 +34,7 @@ final class NativeGoogleCalendarIntegrationPluginTests: XCTestCase {
     let defaults = makeIsolatedDefaults()
     let calendar = makeUTCCalendar()
     let plugin = NativeGoogleCalendarIntegrationPlugin(
+      account: makeAccount(defaults: defaults),
       defaultEventDurationMinutes: 30,
       calendar: calendar,
       defaults: defaults
@@ -52,7 +54,8 @@ final class NativeGoogleCalendarIntegrationPluginTests: XCTestCase {
 
   func testCreateEventRequiresOAuthWhenOAuthNotConfigured() async {
     let defaults = makeIsolatedDefaults()
-    let plugin = NativeGoogleCalendarIntegrationPlugin(defaults: defaults)
+    let plugin = NativeGoogleCalendarIntegrationPlugin(
+      account: makeAccount(defaults: defaults), defaults: defaults)
     let now = makeDate(2026, 4, 3, 10, 0)
     let task = CheckvistTask(id: 303, content: "Review notes", status: 0, due: nil)
 
@@ -65,6 +68,12 @@ final class NativeGoogleCalendarIntegrationPluginTests: XCTestCase {
         "Set a Google OAuth client ID first."
       )
     }
+  }
+
+  /// An account with nowhere to read a token from, so these tests never touch
+  /// the login keychain: every one of them is about an unconfigured client.
+  private func makeAccount(defaults: UserDefaults) -> GoogleAccount {
+    GoogleAccount(defaults: defaults, legacyTokenStore: nil)
   }
 
   private func makeIsolatedDefaults() -> UserDefaults {

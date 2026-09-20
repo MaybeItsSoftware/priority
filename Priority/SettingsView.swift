@@ -61,6 +61,7 @@ struct HotkeyRecorderField: NSViewRepresentable {
 
   func makeNSView(context: Context) -> HotkeyNSTextField {
     let tf = HotkeyNSTextField()
+    tf.focusRingType = .none
     tf.isEditable = false
     tf.isSelectable = false
     tf.alignment = .center
@@ -394,6 +395,7 @@ struct SettingsView: View {
             set: { manager.setPluginEnabled($0, pluginIdentifier: plugin.manifest.id) }
           )
         )
+          .toggleStyle(.switch)
       }
       Section {
         Button("Reveal in Finder") {

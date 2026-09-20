@@ -17,6 +17,8 @@ let pluginTargetExcludes = [
   "docs",
   "plugin-tests",
   "workspace-tests",
+  "workspace-editing-tests",
+  "Priority/Editing",
   "Sources/PriorityWorkspace",
   "scripts",
 
@@ -100,8 +102,15 @@ let pluginTargetExcludes = [
   "Priority/Plugins/Native/Checkvist/CheckvistSession.swift",
   "Priority/Plugins/Native/Checkvist/CheckvistTaskRepository.swift",
   "Priority/Plugins/Native/Checkvist/NativeCheckvistSyncPlugin+Settings.swift",
-  "Priority/Plugins/Native/GoogleCalendar/GoogleOAuthLoopbackReceiver.swift",
+  "Priority/Plugins/Native/Google/GoogleOAuthLoopbackReceiver.swift",
+  "Priority/Plugins/Native/Google/GoogleAccountSettingsSection.swift",
   "Priority/Plugins/Native/GoogleCalendar/NativeGoogleCalendarIntegrationPlugin+Settings.swift",
+  "Priority/Plugins/Native/GoogleCalendar/GoogleCalendarCompletionWatcher.swift",
+  "Priority/Plugins/Native/GoogleTasks/NativeGoogleTasksIntegrationPlugin+Settings.swift",
+  // App-only: the mirror drives the workspace store, which lives in a module
+  // `PriorityPlugins` does not depend on.
+  "Priority/Plugins/Native/GoogleTasks/GoogleTasksMirrorService.swift",
+  "Priority/Plugins/Native/GoogleTasks/GoogleTasksMirrorStores.swift",
   // App-only: drives NSOpenPanel and depends on `PriorityCore`'s catalog,
   // which `PriorityPlugins` can't import (one file, one target).
   "Priority/Plugins/Native/MCP/MCPClientInstaller.swift",
@@ -129,6 +138,8 @@ let pluginTargetExcludes = [
 // keeps `Priority/Managers/TaskRepository.swift`, the priority/queue stores,
 // `OfflineTaskSyncPlugin.swift`, etc. unblocked so SPM can pick them up.
 let appLogicTargetExcludes = [
+  "workspace-editing-tests",
+  "Priority/Editing",
   // Top-level non-source artefacts (same set as pluginTargetExcludes; this
   // isn't shared because exclude entries are path-based and we'd risk drift).
   "ARCHITECTURE_IMPROVEMENT_PLAN.md",
@@ -242,7 +253,9 @@ let appLogicTargetExcludes = [
   "Priority/Plugins/Native/Celebration",
   "Priority/Plugins/Native/Checkvist",
   "Priority/Plugins/Native/DailyLog",
+  "Priority/Plugins/Native/Google",
   "Priority/Plugins/Native/GoogleCalendar",
+  "Priority/Plugins/Native/GoogleTasks",
   "Priority/Plugins/Native/MCP",
   "Priority/Plugins/Native/Obsidian",
   "Priority/Plugins/User",
@@ -294,13 +307,20 @@ let package = Package(
         "Priority/Plugins/Native/AFFiNE/NativeAFFiNEIntegrationPlugin.swift",
         "Priority/Plugins/Native/Obsidian/ObsidianOpenMode.swift",
         "Priority/Plugins/Native/Obsidian/NativeObsidianIntegrationPlugin.swift",
+        "Priority/Plugins/Native/Google/GoogleAccount.swift",
+        "Priority/Plugins/Native/Google/GoogleOAuthTokenStore.swift",
         "Priority/Plugins/Native/GoogleCalendar/NativeGoogleCalendarIntegrationPlugin.swift",
-        "Priority/Plugins/Native/GoogleCalendar/GoogleCalendarOAuthTokenStore.swift",
+        "Priority/Plugins/Native/GoogleTasks/NativeGoogleTasksIntegrationPlugin.swift",
         "Priority/Plugins/Native/MCP/NativeMCPIntegrationPlugin.swift",
         "Priority/Plugins/User/UserPluginManager.swift",
         "Priority/Plugins/User/UserPluginManifest.swift",
         "plugin-tests-support/PluginModelStubs.swift",
       ]
+    ),
+    .target(
+      name: "PriorityWorkspaceEditing",
+      dependencies: ["PriorityWorkspace"],
+      path: "Priority/Editing"
     ),
     // AppLogic hosts the headless-but-app-bound state machines (TaskRepository,
     // OfflineTaskSyncPlugin, the priority/queue/eisenhower stores, etc.) so they
@@ -374,6 +394,11 @@ let package = Package(
       // shape an older version of the app left behind.
       dependencies: ["PriorityWorkspace", .product(name: "GRDB", package: "GRDB.swift")],
       path: "workspace-tests"
+    ),
+    .testTarget(
+      name: "PriorityWorkspaceEditingTests",
+      dependencies: ["PriorityWorkspaceEditing", "PriorityWorkspace"],
+      path: "workspace-editing-tests"
     ),
   ]
 )

@@ -20,6 +20,11 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v8_undo_journal",
     "v9_focus_block_start",
     "v10_focus_points",
+    "v11_stable_visible_roots",
+    "v12_task_conditions_and_work",
+    "v13_legacy_visible_roots",
+    "v14_nested_lists",
+    "v15_kanban_board_history",
   ]
 
   private var directoryURL: URL!
@@ -46,6 +51,23 @@ final class WorkspaceMigrationTests: XCTestCase {
     XCTAssertEqual(try appliedMigrations(at: url), Self.expectedLadder)
   }
 
+  func testLegacyBulkImportedWrapperIsRecognisedOnUpgrade() throws {
+    let url = directoryURL.appendingPathComponent("legacy-wrapper.sqlite")
+    let store = try WorkspaceStore(databaseURL: url)
+    let workspace = try store.bootstrapIfNeeded()
+    let batchDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let list = try store.createList(workspaceId: workspace.id, name: "Work", now: batchDate)
+    let root = try store.createTask(listId: list.id, title: "Work", now: batchDate)
+    let child = try store.createTask(listId: list.id, title: "Proposal", parentTaskId: root.id, now: batchDate)
+    try DatabaseQueue(path: url.path).write { db in
+      try db.execute(sql: "DELETE FROM grdb_migrations WHERE identifier = 'v13_legacy_visible_roots'")
+    }
+    let reopened = try WorkspaceStore(databaseURL: url)
+    XCTAssertEqual(try reopened.visibleRootParentTaskID(for: list), root.id)
+    XCTAssertEqual(try reopened.visibleRootTasks(in: workspace.id).map(\.id), [child.id])
+    XCTAssertEqual(try reopened.task(id: child.id)?.parentTaskId, root.id)
+  }
+
   func testReopeningAppliesNothingFurther() throws {
     let url = directoryURL.appendingPathComponent("reopen.sqlite")
     let store = try WorkspaceStore(databaseURL: url)
@@ -58,6 +80,43 @@ final class WorkspaceMigrationTests: XCTestCase {
     XCTAssertEqual(try appliedMigrations(at: url), Self.expectedLadder)
     XCTAssertEqual(try reopened.task(id: task.id)?.title, "Survives a reopen")
     XCTAssertEqual(try reopened.workspaces().map(\.id), [workspace.id])
+  }
+
+  func testUpgradingAnImportedWrapperPreservesItsIdentityInOlderUndoSnapshots() throws {
+    let url = directoryURL.appendingPathComponent("wrapper-upgrade.sqlite")
+    let store = try WorkspaceStore(databaseURL: url)
+    let workspace = try store.bootstrapIfNeeded()
+    let list = try XCTUnwrap(store.importTasks(
+      workspaceId: workspace.id, listName: "Work", sourceSystem: "checkvist",
+      seeds: [
+        .init(sourceId: "root", parentSourceId: nil, title: "Work", status: .open, sortOrder: 0),
+        .init(sourceId: "child", parentSourceId: "root", title: "Proposal", status: .open, sortOrder: 0),
+      ])).list
+    let rootID = try XCTUnwrap(list.visibleRootTaskId)
+    try store.updateList(id: list.id, name: "Work", colorHex: "#abcdef")
+
+    // Recreate the previous schema and its snapshots without the new field.
+    try DatabaseQueue(path: url.path).write { db in
+      for suffix in ["insert", "update", "delete"] {
+        try db.execute(sql: "DROP TRIGGER change_log_task_lists_\(suffix)")
+      }
+      try db.execute(sql: "ALTER TABLE task_lists DROP COLUMN visibleRootTaskId")
+      try db.execute(sql: """
+        UPDATE change_log SET
+          beforeJSON = json_remove(beforeJSON, '$.visibleRootTaskId'),
+          afterJSON = json_remove(afterJSON, '$.visibleRootTaskId')
+        WHERE tableName = 'task_lists'
+        """)
+      try db.execute(sql: "DELETE FROM grdb_migrations WHERE identifier = 'v11_stable_visible_roots'")
+    }
+
+    let migrated = try WorkspaceStore(databaseURL: url)
+    XCTAssertEqual(try migrated.visibleRootParentTaskID(for: list), rootID)
+    XCTAssertEqual(try migrated.undo(), "Edit List")
+    XCTAssertEqual(try migrated.visibleRootParentTaskID(for: list), rootID)
+    XCTAssertNil(try migrated.lists(in: workspace.id).first { $0.id == list.id }?.colorHex)
+    try migrated.redo()
+    XCTAssertEqual(try migrated.visibleRootParentTaskID(for: list), rootID)
   }
 
   /// Each migration has to be able to run against a database that already has
@@ -80,7 +139,7 @@ final class WorkspaceMigrationTests: XCTestCase {
       let triggers = try String.fetchAll(
         db, sql: "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'change\\_log%' ESCAPE '\\'")
       for trigger in triggers { try db.execute(sql: "DROP TRIGGER \(trigger)") }
-      for table in ["focus_awards", "change_log", "undo_control", "tasks_fts"] {
+      for table in ["kanban_boards", "focus_work_blocks", "task_conditions", "focus_awards", "change_log", "undo_control", "tasks_fts"] {
         try db.execute(sql: "DROP TABLE \(table)")
       }
       for trigger in try String.fetchAll(
@@ -88,16 +147,26 @@ final class WorkspaceMigrationTests: XCTestCase {
         try db.execute(sql: "DROP TRIGGER \(trigger)")
       }
       try db.execute(sql: "DROP INDEX task_lists_on_system_role")
+      try db.execute(sql: "ALTER TABLE task_lists DROP COLUMN visibleRootTaskId")
       try db.execute(sql: "ALTER TABLE task_lists DROP COLUMN systemRole")
       try db.execute(sql: "ALTER TABLE focus_sessions DROP COLUMN activeTaskStartedAt")
+      for column in ["activeBlockId", "accumulatedSeconds", "pausedAt", "checkpointAt"] {
+        try db.execute(sql: "ALTER TABLE focus_sessions DROP COLUMN \(column)")
+      }
+      try db.execute(sql: "ALTER TABLE task_metadata DROP COLUMN planningJSON")
+      try db.execute(sql: "ALTER TABLE task_lists DROP COLUMN completedAt")
+      for column in ["itemKind", "isPromoted", "archivedAt"] {
+        try db.execute(sql: "ALTER TABLE tasks DROP COLUMN \(column)")
+      }
       try db.execute(sql: "DROP INDEX tasks_on_source")
       try db.execute(sql: "ALTER TABLE tasks DROP COLUMN sourceSystem")
       try db.execute(sql: "ALTER TABLE tasks DROP COLUMN sourceId")
       try db.execute(
-        sql: "DELETE FROM grdb_migrations WHERE identifier IN (?, ?, ?, ?, ?, ?)",
+        sql: "DELETE FROM grdb_migrations WHERE identifier IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         arguments: ["v5_task_source_identity", "v6_inbox_as_a_system_list",
                     "v7_task_full_text_search", "v8_undo_journal", "v9_focus_block_start",
-                    "v10_focus_points"])
+                    "v10_focus_points", "v11_stable_visible_roots", "v12_task_conditions_and_work",
+                    "v13_legacy_visible_roots", "v14_nested_lists", "v15_kanban_board_history"])
     }
 
     let migrated = try WorkspaceStore(databaseURL: url)

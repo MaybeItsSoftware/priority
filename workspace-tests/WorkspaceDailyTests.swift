@@ -127,15 +127,16 @@ final class WorkspaceDailyTests: XCTestCase {
 
   // MARK: - Next up
 
-  func testNextUpPrefersAnOutstandingDailyAndDropsItOnceContributed() throws {
+  func testNextUpKeepsDeadlinePrecedenceAndDropsContributedDailies() throws {
     let daily = try store.createTask(listId: list.id, title: "Write 500 words")
     let due = try store.createTask(listId: list.id, title: "File return")
     try store.updateTask(id: due.id, title: due.title, notes: "", dueAt: Date(), estimateSeconds: nil)
     let record = try store.makeDaily(taskId: daily.id)
 
-    XCTAssertEqual(NextUpSelector.next(from: try store.nextUpCandidates())?.candidate.id, daily.id)
+    XCTAssertEqual(NextUpSelector.next(from: try store.nextUpCandidates())?.candidate.id, due.id)
 
     try store.logContribution(dailyId: record.id)
+    XCTAssertFalse(try store.nextUpCandidates().contains { $0.id == daily.id })
 
     XCTAssertEqual(NextUpSelector.next(from: try store.nextUpCandidates())?.candidate.id, due.id)
   }

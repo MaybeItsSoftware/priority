@@ -18,6 +18,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   private let workspace: WorkspaceViewModel
   private var window: NSWindow?
   private var workspaceKeyMonitor: Any?
+  private var shortcutShiftTap = DoubleTapModifier()
 
   /// Refreshes the menu bar title. Shared state means the window moving the
   /// cursor has to move the status item's label too, exactly as the panel does.
@@ -62,6 +63,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     if let window { return window }
 
     let rootView = WorkspaceDesktopView()
+      .focusEffectDisabled()
       .font(Typography.interfaceFont)
       .environment(workspace)
       .environment(manager)
@@ -120,15 +122,29 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   /// menu-bar/Checkvist command router.
   private func installWorkspaceKeyMonitorIfNeeded() {
     guard workspaceKeyMonitor == nil else { return }
-    workspaceKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-      guard let self, let window = self.window, window.isVisible, event.window === window else {
+    workspaceKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
+      guard let self, let window = self.window, window.isVisible,
+        window.attachedSheet == nil, event.window === window else {
         return event
       }
+      if event.type == .flagsChanged {
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        if self.shortcutShiftTap.modifierChanged(isDown: flags.contains(.shift),
+          otherModifiersHeld: !flags.subtracting(.shift).isEmpty, at: event.timestamp),
+          !self.isEditingText(in: window) {
+          self.workspace.desktopShortcutSequence.reset()
+          self.workspace.showsKeyboardHelp = true
+          return nil
+        }
+        return event
+      }
+      self.shortcutShiftTap.keyPressed()
       if self.isEditingText(in: window) {
+        self.workspace.desktopShortcutSequence.reset()
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
         let character = event.charactersIgnoringModifiers?.lowercased() ?? ""
         let regionOrView = flags == [.command] && character.count == 1
-          && "012345678".contains(character)
+          && "0123456789".contains(character)
         let cycleRegion = (flags == [.control] || flags == [.control, .shift]) && event.keyCode == 48
         let createItem = (flags == [.command] || flags == [.command, .shift]
           || flags == [.command, .option]) && character == "n"

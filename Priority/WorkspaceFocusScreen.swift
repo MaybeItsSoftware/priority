@@ -12,55 +12,76 @@ struct WorkspaceFocusLauncher: View {
   @State private var isHovering = false
 
   var body: some View {
-    Button {
-      if model.activeFocusSession != nil {
-        model.showsFocusPanel = true
-      } else {
-        model.presentFocusScreen()
+    VStack(alignment: .leading, spacing: 8) {
+      Button {
+        if model.activeFocusSession != nil {
+          model.showsFocusPanel = true
+        } else {
+          model.presentFocusScreen()
+        }
+      } label: {
+        VStack(alignment: .leading, spacing: 4) {
+          HStack(spacing: 6) {
+            Image(systemName: model.activeFocusSession == nil ? "target" : "timer")
+            Text(model.activeFocusSession == nil ? "FOCUS" : "IN SESSION")
+              .font(.caption2.weight(.bold))
+              .tracking(1.2)
+            Spacer(minLength: 0)
+            Text("⌘8")
+              .font(.caption2.monospaced())
+              .foregroundStyle(.tertiary)
+          }
+          .foregroundStyle(model.activeFocusSession == nil ? .secondary : Color.accentColor)
+
+          Text(headline)
+            .font(.callout.weight(.medium))
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .foregroundStyle(.primary)
+
+          if let detail {
+            Text(detail)
+              .font(.caption2)
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+          isHovering ? Color.primary.opacity(0.07) : Color.primary.opacity(0.03),
+          in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+          RoundedRectangle(cornerRadius: 8)
+            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+        .contentShape(RoundedRectangle(cornerRadius: 8))
       }
-    } label: {
-      VStack(alignment: .leading, spacing: 4) {
+      .buttonStyle(.plain)
+      .focusable()
+      .onHover { isHovering = $0 }
+      .help(model.activeFocusSession == nil ? "Start a focus session on your next task" : "Return to the running session")
+      .accessibilityLabel(model.activeFocusSession == nil ? "Start focus. Next up: \(headline)" : "Return to focus session")
+      Button { model.presentTimelineScreen() } label: {
         HStack(spacing: 6) {
-          Image(systemName: model.activeFocusSession == nil ? "target" : "timer")
-          Text(model.activeFocusSession == nil ? "FOCUS" : "IN SESSION")
+          Image(systemName: "chart.bar.doc.horizontal")
+          Text("TIMELINE")
             .font(.caption2.weight(.bold))
             .tracking(1.2)
           Spacer(minLength: 0)
-          Text("⌘8")
+          Text("⌘9")
             .font(.caption2.monospaced())
             .foregroundStyle(.tertiary)
         }
-        .foregroundStyle(model.activeFocusSession == nil ? .secondary : Color.accentColor)
-
-        Text(headline)
-          .font(.callout.weight(.medium))
-          .lineLimit(2)
-          .multilineTextAlignment(.leading)
-          .fixedSize(horizontal: false, vertical: true)
-          .foregroundStyle(.primary)
-
-        if let detail {
-          Text(detail)
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-        }
+        .foregroundStyle(model.showsTimelineScreen ? Color.accentColor : .secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(10)
-      .background(
-        isHovering ? Color.primary.opacity(0.07) : Color.primary.opacity(0.03),
-        in: RoundedRectangle(cornerRadius: 8))
-      .overlay(
-        RoundedRectangle(cornerRadius: 8)
-          .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
-      .contentShape(RoundedRectangle(cornerRadius: 8))
+      .buttonStyle(.plain)
+      .focusable()
+      .help("See where the day's focused time went")
     }
-    .buttonStyle(.plain)
-    .focusable()
-    .onHover { isHovering = $0 }
-    .help(model.activeFocusSession == nil ? "Start a focus session on your next task" : "Return to the running session")
-    .accessibilityLabel(model.activeFocusSession == nil ? "Start focus. Next up: \(headline)" : "Return to focus session")
   }
 
   private var headline: String {
@@ -70,8 +91,8 @@ struct WorkspaceFocusLauncher: View {
 
   private var detail: String? {
     if model.activeFocusSession != nil { return "Session running" }
-    guard let reason = model.nextUp?.reason else { return "Add a task or a daily to get started" }
-    return reason.explanation.localizedCapitalized
+    guard let scored = model.nextUp else { return "Add a task or a daily to get started" }
+    return model.focusExplanation(scored).localizedCapitalized
   }
 }/// Focus mode: one task, centred, with everything you have already been
 /// through drifting up and away above it.
@@ -98,10 +119,32 @@ struct WorkspaceFocusScreen: View {
   var body: some View {
     VStack(spacing: 0) {
       header
+      WorkspaceFocusContextControls().padding(.horizontal, 20)
       if model.focusLadder.isEmpty {
         emptyState
       } else {
         column
+      }
+      if !model.blockedFocusTasks.isEmpty {
+        DisclosureGroup("\(model.blockedFocusTasks.count) tasks unavailable") {
+          ScrollView {
+            VStack(alignment: .leading, spacing: 6) {
+              ForEach(model.blockedFocusTasks) { blocked in
+                Button { if let task = model.task(withID: blocked.id) { model.selectTask(task); model.showsFocusScreen = false; model.isInspectorVisible = true } } label: {
+                  VStack(alignment: .leading) {
+                    Text(blocked.candidate.title).font(.caption.weight(.medium))
+                    let urgency = NextUpSelector.score(blocked.candidate)
+                    if [.overdue, .dueToday, .deadlineRisk].contains(urgency.reason) {
+                      Text(urgency.explanation).font(.caption2).foregroundStyle(.orange)
+                    }
+                    Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
+                      .font(.caption2).foregroundStyle(.secondary)
+                  }
+                }.buttonStyle(.plain)
+              }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+          }.frame(maxHeight: 100)
+        }.padding(.horizontal, 20).padding(.top, 8)
       }
       footer
     }
@@ -155,7 +198,7 @@ struct WorkspaceFocusScreen: View {
     HStack(spacing: 14) {
       Spacer()
       hint("↑ ↓", "Move through")
-      hint("⌥ ↑ ↓", "Reorder")
+      hint("⌥ ↑ ↓", "Reorder within urgency")
       if model.hasManualFocusOrder {
         Button("Reset order") { model.clearManualFocusOrder() }
           .buttonStyle(.plain)
@@ -191,7 +234,7 @@ struct WorkspaceFocusScreen: View {
     ContentUnavailableView(
       "Nothing waiting",
       systemImage: "checkmark.circle",
-      description: Text("Every daily is done and no task is due. Add something, or enjoy it."))
+      description: Text("No task matches the current conditions, start times and available time."))
       .frame(maxHeight: .infinity)
   }
 
@@ -326,7 +369,7 @@ struct WorkspaceFocusScreen: View {
 
   private func reasonLine(_ scored: ScoredNextUp, task: WorkspaceTask?) -> some View {
     HStack(spacing: 7) {
-      Text(scored.reason.explanation.localizedCapitalized)
+      Text(model.focusExplanation(scored).localizedCapitalized)
         .font(.caption.weight(.medium))
       if let task, let list = model.list(for: task) {
         Text("·").foregroundStyle(.tertiary)
@@ -362,11 +405,12 @@ struct WorkspaceFocusScreen: View {
 
   private func metaLine(for scored: ScoredNextUp, task: WorkspaceTask?) -> String? {
     var parts: [String] = []
+    if let day = scored.candidate.dueDate { parts.append("Due \(day)") }
     if let due = scored.candidate.dueAt {
       parts.append("Due \(due.formatted(.relative(presentation: .named)))")
     }
-    if let estimate = scored.candidate.estimateSeconds {
-      parts.append("~\(max(1, estimate / 60))m")
+    if let estimate = scored.candidate.remainingSeconds {
+      parts.append(estimate > 0 ? "~\(FocusPoints.formatted(Double(estimate) / 60))m remaining" : "Estimate exhausted")
     }
     if let task, let item = model.dailyItem(for: task), item.secondsLoggedToday > 0 {
       parts.append("\(item.secondsLoggedToday / 60)m done today")
@@ -448,16 +492,15 @@ struct WorkspaceFocusScreen: View {
         .foregroundStyle(.secondary)
       HStack(spacing: 6) {
         ForEach([5, 10, 15, 25, 45, 60, 90], id: \.self) { minutes in
-          Button("\(minutes)m") { model.focusEstimateMinutes = minutes }
+          Button("\(minutes)m") { model.focusEstimateMinutes = Double(minutes) }
             .buttonStyle(.bordered)
-            .tint(model.focusEstimateMinutes == minutes ? Color.accentColor : Color.secondary)
+            .tint(model.focusEstimateMinutes == Double(minutes) ? Color.accentColor : Color.secondary)
             .focusable()
         }
       }
       Stepper(
-        "\(model.focusEstimateMinutes) minutes",
+        "\(FocusPoints.formatted(model.focusEstimateMinutes)) minutes",
         value: Bindable(model).focusEstimateMinutes, in: 1...480, step: 5)
-        .labelsHidden()
         .fixedSize()
     }
   }
@@ -474,6 +517,9 @@ struct WorkspaceFocusScreen: View {
     case .importance: return "star.fill"
     case .priority: return "flag.fill"
     case .order: return "list.bullet"
+    case .condition: return "location.fill"
+    case .started: return "clock.badge.checkmark"
+    case .deadlineRisk: return "hourglass"
     }
   }
 
@@ -481,7 +527,8 @@ struct WorkspaceFocusScreen: View {
     switch reason {
     case .daily: return .green
     case .overdue: return .red
-    case .dueToday, .dueSoon: return .orange
+    case .dueToday, .dueSoon, .deadlineRisk: return .orange
+    case .condition, .started: return .accentColor
     case .today: return .accentColor
     case .importance, .priority: return .purple
     case .order: return .secondary

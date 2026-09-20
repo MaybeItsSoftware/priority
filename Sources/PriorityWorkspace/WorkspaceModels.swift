@@ -42,6 +42,10 @@ public struct TaskList: Codable, FetchableRecord, PersistableRecord, Identifiabl
   public var sortOrder: Int
   public var isArchived: Bool
   public var systemRole: TaskListRole?
+  /// An imported wrapper whose children form the list's visible root.
+  /// Stored by identity so renaming either record cannot change placement.
+  public var visibleRootTaskId: String?
+  public var completedAt: Date?
   public let createdAt: Date
   public var updatedAt: Date
 
@@ -52,6 +56,11 @@ public enum TaskStatus: String, Codable, Sendable, CaseIterable {
   case open
   case completed
   case cancelled
+}
+
+public enum WorkspaceItemKind: String, Codable, Sendable, CaseIterable {
+  case task
+  case list
 }
 
 public struct WorkspaceTask: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable, Equatable {
@@ -73,8 +82,15 @@ public struct WorkspaceTask: Codable, FetchableRecord, PersistableRecord, Identi
   /// across instead of making another copy of it.
   public var sourceSystem: String?
   public var sourceId: String?
+  /// Lists share the task tree so conversion preserves identity and descendants.
+  /// Nil is a pre-existing ordinary task, not an inferred container.
+  public var itemKind: WorkspaceItemKind?
+  public var isPromoted: Bool?
+  public var archivedAt: Date?
   public let createdAt: Date
   public var updatedAt: Date
+
+  public var isList: Bool { itemKind == .list }
 }
 
 public struct TaskOutlineItem: Identifiable, Sendable, Equatable {
@@ -104,6 +120,7 @@ public struct TaskMetadata: Codable, FetchableRecord, PersistableRecord, Sendabl
   /// Hand-placed position in the focus ladder; nil means ranked by score.
   public var focusRank: Int?
   public var updatedAt: Date
+  public var planningJSON: String?
 
   public init(
     taskId: String,
@@ -132,7 +149,7 @@ public struct TaskMetadata: Codable, FetchableRecord, PersistableRecord, Sendabl
   }
 }
 
-public struct TaskEditorMetadata: Sendable, Equatable {
+public struct TaskEditorMetadata: Codable, Sendable, Equatable {
   public var priority: Int?
   public var tags: [String]
   public var recurrenceRule: String?
@@ -195,9 +212,17 @@ public struct FocusSession: Codable, FetchableRecord, PersistableRecord, Identif
   /// start. The queue moves on without ending the session, so timing a second
   /// task from `startedAt` would credit it with the first one's sitting too.
   public var activeTaskStartedAt: Date
-  public let workDurationSeconds: Int
+  public var workDurationSeconds: Int
   public let breakDurationSeconds: Int
   public var breakEndsAt: Date?
+  public var activeBlockId: String?
+  public var accumulatedSeconds: Int?
+  public var pausedAt: Date?
+  public var checkpointAt: Date?
+
+  public func elapsedSeconds(now: Date) -> Int {
+    max(0, accumulatedSeconds ?? 0) + (pausedAt == nil ? Int(max(0, now.timeIntervalSince(activeTaskStartedAt))) : 0)
+  }
 }
 
 public enum FocusQueueState: String, Codable, Sendable, CaseIterable {

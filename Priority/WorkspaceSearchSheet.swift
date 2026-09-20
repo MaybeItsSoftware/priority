@@ -40,7 +40,7 @@ struct WorkspaceSearchSheet: View {
       Divider()
       HStack(spacing: 16) {
         Toggle("Include completed", isOn: $model.searchIncludesCompleted)
-          .toggleStyle(.checkbox)
+          .toggleStyle(.switch)
         Spacer()
         Text("↑↓ choose · ↩ open · esc close")
           .font(.caption)

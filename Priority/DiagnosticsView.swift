@@ -37,6 +37,13 @@ struct DiagnosticsView: View {
       footer
     }
     .frame(minWidth: 560, idealWidth: 680, minHeight: 420, idealHeight: 620)
+    // The Google rows report a sign-in that is read from the keychain on
+    // first use. Asking for it here means the health pane shows the real
+    // state rather than "sign in required" until something else looks.
+    .task {
+      manager.integrations.googleCalendarPlugin.prepareAuthentication()
+      manager.integrations.googleTasksPlugin.prepareAuthentication()
+    }
   }
 
   // MARK: - Header / footer
@@ -271,6 +278,15 @@ struct DiagnosticsView: View {
       items.append(
         .init(
           title: "Google Calendar",
+          isHealthy: !plugin.requiresAuthentication || plugin.isAuthenticated,
+          detail: plugin.authenticationStatusDescription))
+    }
+
+    if integrations.googleTasksIntegrationEnabled {
+      let plugin = integrations.googleTasksPlugin
+      items.append(
+        .init(
+          title: "Google Tasks",
           isHealthy: !plugin.requiresAuthentication || plugin.isAuthenticated,
           detail: plugin.authenticationStatusDescription))
     }

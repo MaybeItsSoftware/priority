@@ -33,13 +33,14 @@ struct WorkspaceFocusQualityPrompt: View {
       actions
     }
     .padding(26)
-    .frame(width: 440)
+    .frame(width: 500)
+    .interactiveDismissDisabled()
     .onExitCommand { model.cancelFocusCompletion() }
   }
 
   private var header: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("HOW DID THAT GO?")
+      Text(pending.completeTask ? "COMPLETE TASK · HOW DID THAT GO?" : "LOG PROGRESS · HOW DID THAT GO?")
         .font(.caption.weight(.bold))
         .foregroundStyle(.secondary)
       Text(pending.title)
@@ -93,7 +94,7 @@ struct WorkspaceFocusQualityPrompt: View {
   private var customRow: some View {
     HStack(spacing: 10) {
       Toggle("Something else", isOn: $isCustom)
-        .toggleStyle(.checkbox)
+        .toggleStyle(.switch)
         .focusable()
       Stepper(
         value: $customMultiplier,

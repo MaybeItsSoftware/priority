@@ -141,6 +141,12 @@ Goal: match the low-friction focus flow of Blitzit and add Super Productivity-st
   user gives when they press Done. Five presets from Scattered (×0.5) to Flow (×2.0),
   or any multiplier up to ×5. Scores are kept in `focus_awards` with the task's title
   copied in, so renaming or deleting the task later cannot rewrite what was earned.
+- ~~Show the day's focused work back as a timeline.~~ Done: ⌘9 gives the timeline the
+  main pane the way ⌘8 gives it to focus. Blocks are drawn against an hour ruler from
+  when each one ran — a stored block is active seconds ending at the moment it was
+  logged — with the running block growing live, a per-task breakdown beside it, and a
+  day picker. It replaces the panel-sized history, which was too small to compare the
+  shape of a day against the shape you meant it to have.
 - Add manual start/stop tracking per task and project.
 - Persist work logs independently from task completion.
 - Add daily/weekly reports: focused time, estimates versus actuals, completed work, and project distribution.

@@ -112,7 +112,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
     let item = NSToolbarItem(itemIdentifier: identifier)
     item.label = label
     item.paletteLabel = label
-    let hostingView = NSHostingView(rootView: content())
+    let hostingView = NSHostingView(rootView: content().focusEffectDisabled())
     hostingView.sizingOptions = [.intrinsicContentSize]
     item.view = hostingView
     item.minSize = NSSize(width: minWidth, height: 24)

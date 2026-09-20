@@ -17,7 +17,7 @@ extension WorkspaceStore {
         .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
       return try dailies.compactMap { daily -> DailyItem? in
         guard daily.isDue(on: day, calendar: calendar),
-          let task = try WorkspaceTask.fetchOne(db, key: daily.taskId)
+          let task = try WorkspaceTask.fetchOne(db, key: daily.taskId), !task.isList
         else { return nil }
         let contribution = try DailyContribution
           .filter(Column("dailyId") == daily.id && Column("dayKey") == key).fetchOne(db)
@@ -51,37 +51,49 @@ extension WorkspaceStore {
     now: Date = .now
   ) throws -> WorkspaceDaily {
     try journalledWrite("Make Daily") { db in
-      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
-        throw WorkspaceStoreError.missingTask
-      }
-      if var existing = try WorkspaceDaily.filter(Column("taskId") == taskId).fetchOne(db) {
+      try Self.makeDailyRecord(db, taskId: taskId, weekdays: weekdays, intervalDays: intervalDays,
+                               targetSeconds: targetSeconds, now: now)
+    }
+  }
+
+  static func makeDailyRecord(
+    _ db: Database, taskId: String, weekdays: Set<Int> = Set(1...7), intervalDays: Int? = nil,
+    targetSeconds: Int?, now: Date
+  ) throws -> WorkspaceDaily {
+    guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
+    if var existing = try WorkspaceDaily.filter(Column("taskId") == taskId).fetchOne(db) {
+      let target = targetSeconds ?? existing.targetSeconds
+      if existing.archivedAt != nil || existing.targetSeconds != target {
         existing.archivedAt = nil
-        existing.targetSeconds = targetSeconds ?? existing.targetSeconds
+        existing.targetSeconds = target
         existing.updatedAt = now
         try existing.update(db)
-        return existing
       }
-      let order = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM dailies") ?? 0
-      let daily = WorkspaceDaily(
-        id: UUID().uuidString, taskId: taskId,
-        activeWeekdaysMask: WorkspaceDaily.mask(forWeekdays: weekdays),
-        intervalDays: intervalDays, intervalAnchor: intervalDays == nil ? nil : now,
-        targetSeconds: targetSeconds, sortOrder: order, archivedAt: nil, createdAt: now, updatedAt: now)
-      try daily.insert(db)
-      return daily
+      return existing
     }
+    let order = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM dailies") ?? 0
+    let daily = WorkspaceDaily(
+      id: UUID().uuidString, taskId: taskId,
+      activeWeekdaysMask: WorkspaceDaily.mask(forWeekdays: weekdays),
+      intervalDays: intervalDays, intervalAnchor: intervalDays == nil ? nil : now,
+      targetSeconds: targetSeconds, sortOrder: order, archivedAt: nil, createdAt: now, updatedAt: now)
+    try daily.insert(db)
+    return daily
   }
 
   /// Archives rather than deletes, so logged contributions keep a parent.
   public func archiveDaily(taskId: String, now: Date = .now) throws {
     try journalledWrite("Archive Daily") { db in
-      guard var daily = try WorkspaceDaily.filter(Column("taskId") == taskId && Column("archivedAt") == nil)
-        .fetchOne(db)
-      else { return }
-      daily.archivedAt = now
-      daily.updatedAt = now
-      try daily.update(db)
+      try Self.archiveDailyRecord(db, taskId: taskId, now: now)
     }
+  }
+
+  static func archiveDailyRecord(_ db: Database, taskId: String, now: Date) throws {
+    guard var daily = try WorkspaceDaily.filter(Column("taskId") == taskId && Column("archivedAt") == nil)
+      .fetchOne(db) else { return }
+    daily.archivedAt = now
+    daily.updatedAt = now
+    try daily.update(db)
   }
 
   public func updateDaily(
@@ -249,46 +261,56 @@ extension WorkspaceStore {
   /// contributed to today are excluded rather than scored down, so ticking one
   /// visibly removes it from consideration.
   public func nextUpCandidates(now: Date = .now, calendar: Calendar = .current) throws -> [NextUpCandidate] {
+    try database.read { try Self.focusCandidates($0, now: now, calendar: calendar) }
+  }
+
+  static func focusCandidates(_ db: Database, now: Date, calendar: Calendar) throws -> [NextUpCandidate] {
     let dayKey = DailyContribution.dayKey(for: now, calendar: calendar)
-    return try database.read { db in
-      let archivedListIDs = try String.fetchSet(
-        db, sql: "SELECT id FROM task_lists WHERE isArchived")
-      let parentIDs = try String.fetchSet(
-        db,
-        sql: """
-          SELECT DISTINCT parentTaskId FROM tasks
-          WHERE parentTaskId IS NOT NULL AND status = ?
-          """,
-        arguments: [TaskStatus.open.rawValue])
-
-      let dailies = try WorkspaceDaily.filter(Column("archivedAt") == nil).fetchAll(db)
-      let doneToday = try String.fetchSet(
-        db, sql: "SELECT dailyId FROM daily_contributions WHERE dayKey = ? AND completedAt IS NOT NULL",
-        arguments: [dayKey])
-      let outstandingDailyTaskIDs = Set(
-        dailies
-          .filter { $0.isDue(on: now, calendar: calendar) && !doneToday.contains($0.id) }
-          .map(\.taskId))
-
-      let tasks = try WorkspaceTask.filter(Column("status") == TaskStatus.open.rawValue).fetchAll(db)
-      return try tasks.compactMap { task -> NextUpCandidate? in
-        guard !archivedListIDs.contains(task.listId), !parentIDs.contains(task.id) else { return nil }
-        let metadata = try TaskMetadata.fetchOne(db, key: task.id)
-        return NextUpCandidate(
-          id: task.id,
-          title: task.title,
-          isDailyDueToday: outstandingDailyTaskIDs.contains(task.id),
-          dueAt: task.dueAt,
-          startAt: metadata?.startAt,
-          matrixUrgency: metadata?.matrixUrgency,
-          matrixImportance: metadata?.matrixImportance,
-          priority: metadata?.priority,
-          estimateSeconds: task.estimateSeconds,
-          kanbanColumn: metadata?.kanbanColumn,
-          focusRank: metadata?.focusRank,
-          sortOrder: task.sortOrder,
-          createdAt: task.createdAt)
+    let archived = try String.fetchSet(db, sql: "SELECT id FROM task_lists WHERE isArchived OR completedAt IS NOT NULL")
+    let allTasks = try WorkspaceTask.fetchAll(db)
+    let inactive = Self.inactiveContainerItems(allTasks)
+    let wrappers = try String.fetchSet(db, sql: "SELECT visibleRootTaskId FROM task_lists WHERE visibleRootTaskId IS NOT NULL")
+    let parents = try String.fetchSet(db, sql: "SELECT DISTINCT parentTaskId FROM tasks WHERE parentTaskId IS NOT NULL AND status = 'open'")
+    let metadata = Dictionary(uniqueKeysWithValues: try TaskMetadata.fetchAll(db).map { ($0.taskId, $0) })
+    let dailies = Dictionary(try WorkspaceDaily.filter(Column("archivedAt") == nil).fetchAll(db)
+      .map { ($0.taskId, $0) }, uniquingKeysWith: { first, _ in first })
+    let contributions = Dictionary(uniqueKeysWithValues: try DailyContribution.filter(Column("dayKey") == dayKey)
+      .fetchAll(db).map { ($0.dailyId, $0) })
+    let work = Dictionary(uniqueKeysWithValues: try Row.fetchAll(db,
+      sql: """
+        SELECT COALESCE(taskId, originalTaskId) AS taskId, SUM(seconds) AS seconds
+        FROM focus_work_blocks WHERE COALESCE(taskId, originalTaskId) IS NOT NULL
+        GROUP BY COALESCE(taskId, originalTaskId)
+        """)
+      .map { row -> (String, Int) in (row["taskId"], row["seconds"]) })
+    return try allTasks.filter { $0.status == .open }.compactMap { task in
+      guard !task.isList, !inactive.contains(task.id), !wrappers.contains(task.id),
+        !archived.contains(task.listId), !parents.contains(task.id) else { return nil }
+      let record = metadata[task.id]
+      let plan = try planning(record)
+      let daily = dailies[task.id]
+      let contribution = daily.flatMap { contributions[$0.id] }
+      var dailyUnavailable: TaskUnavailableReason?
+      if let daily {
+        if !daily.isDue(on: now, calendar: calendar) {
+          dailyUnavailable = .dailyNotScheduled
+        } else if contribution?.completedAt != nil ||
+          (daily.targetSeconds.map { $0 > 0 && (contribution?.secondsLogged ?? 0) >= $0 } ?? false) {
+          dailyUnavailable = .dailyAlreadyMet
+        }
+        // A completed habit can disappear; a task with a deadline must remain
+        // visible among blocked urgent work even when its daily is unavailable.
+        if dailyUnavailable != nil && task.dueAt == nil && plan?.dueDate == nil { return nil }
       }
+      return NextUpCandidate(id: task.id, title: task.title, isDailyDueToday: daily != nil && dailyUnavailable == nil,
+        dueAt: task.dueAt, startAt: record?.startAt, matrixUrgency: record?.matrixUrgency,
+        matrixImportance: record?.matrixImportance, priority: record?.priority,
+        estimateSeconds: task.estimateSeconds, kanbanColumn: record?.kanbanColumn,
+        focusRank: record?.focusRank, sortOrder: task.sortOrder, createdAt: task.createdAt,
+        dueDate: plan?.dueDate, requirementGroups: plan?.requirementGroups ?? [], loggedSeconds: work[task.id] ?? 0,
+        minimumBlockSeconds: plan?.minimumBlockSeconds, requiresSingleSitting: plan?.requiresSingleSitting == true,
+        dailyRemainingSeconds: daily?.targetSeconds.map { max(0, $0 - (contribution?.secondsLogged ?? 0)) },
+        dailyUnavailable: dailyUnavailable)
     }
   }
 
@@ -354,20 +376,12 @@ extension WorkspaceStore {
   /// This is what "schedule it for later" on the focus screen writes.
   public func scheduleTask(id: String, startAt: Date?, now: Date = .now) throws {
     try journalledWrite("Schedule Task") { db in
-      guard try WorkspaceTask.fetchOne(db, key: id) != nil else {
-        throw WorkspaceStoreError.missingTask
-      }
-      if var metadata = try TaskMetadata.fetchOne(db, key: id) {
-        metadata.startAt = startAt
-        metadata.updatedAt = now
-        try metadata.update(db)
-      } else {
-        try TaskMetadata(
-          taskId: id, priority: nil, startAt: startAt, tagsJSON: "[]", recurrenceRule: nil,
-          matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]",
-          updatedAt: now
-        ).insert(db)
-      }
+      let previous = try Self.taskEditorSnapshot(db, taskId: id)
+      var edit = previous
+      var plan = edit.planning ?? TaskPlanning()
+      plan.startAt = startAt
+      edit.planning = plan.normalized
+      try Self.updatePlanning(db, edit: edit, previous: previous.planning, previousDueAt: previous.dueAt, now: now)
     }
   }
 

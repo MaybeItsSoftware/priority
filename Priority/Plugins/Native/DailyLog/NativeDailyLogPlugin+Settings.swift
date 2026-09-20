@@ -106,6 +106,7 @@ private struct DailyLogPluginSettingsView: View {
       .padding(.top, 4)
 
       Toggle("Create missing notes", isOn: createsMissingNotesBinding)
+        .toggleStyle(.switch)
       Text(
         createsMissingNotesBinding.wrappedValue
           ? "Priority will create the note if it doesn't exist yet. Turn this off if a "
@@ -119,6 +120,7 @@ private struct DailyLogPluginSettingsView: View {
       // The master switch, last: it acts on everything above it. Unreachable
       // until a folder exists, so it can never be on with nowhere to write.
       Toggle("Write days into Obsidian daily notes", isOn: dailyLogEnabledBinding)
+        .toggleStyle(.switch)
         .disabled(dailyLog.dailiesFolderPath.isEmpty)
 
       if dailyLog.dailiesFolderPath.isEmpty {
@@ -133,6 +135,7 @@ private struct DailyLogPluginSettingsView: View {
 
       if dailyLog.dailyLogEnabled {
         Toggle("Write automatically at day rollover", isOn: writesAutomaticallyBinding)
+          .toggleStyle(.switch)
 
         HStack {
           Button("Write Yesterday's Note Now") {

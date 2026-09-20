@@ -101,8 +101,10 @@ extension SettingsView {
 
       Section(header: Text("Preferences")) {
         Toggle("Confirm before deleting tasks", isOn: preferenceBinding(\.confirmBeforeDelete))
+          .toggleStyle(.switch)
         if #available(macOS 13.0, *) {
           Toggle("Launch at login", isOn: preferenceBinding(\.launchAtLogin))
+            .toggleStyle(.switch)
         }
 
         VStack(alignment: .leading) {

@@ -40,6 +40,95 @@ final class WorkspaceUndoTests: XCTestCase {
     XCTAssertEqual(try store.task(id: task.id)?.title, "Write the report")
   }
 
+  func testBoardCreationAtTopIsOneCompleteUndoStep() throws {
+    let existing = try store.createTask(listId: listID, title: "Existing")
+    let added = try store.createTask(listId: listID, title: "New card", kanbanColumn: "today", atTop: true)
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [added.id, existing.id])
+    XCTAssertEqual(try store.undo(), "New Task")
+    XCTAssertNil(try store.task(id: added.id))
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [existing.id])
+    try store.redo()
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [added.id, existing.id])
+    XCTAssertEqual(try store.kanbanColumn(for: added.id), "today")
+  }
+
+  func testColumnPlacementAndReorderingUndoTogether() throws {
+    let first = try store.createTask(listId: listID, title: "First", kanbanColumn: "backlog")
+    let second = try store.createTask(listId: listID, title: "Second", kanbanColumn: "today")
+    try store.moveTaskBefore(id: second.id, targetId: first.id, kanbanColumn: "backlog")
+    XCTAssertEqual(try store.undo(), "Reorder Task")
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [first.id, second.id])
+    XCTAssertEqual(try store.kanbanColumn(for: second.id), "today")
+    try store.redo()
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [second.id, first.id])
+    XCTAssertEqual(try store.kanbanColumn(for: second.id), "backlog")
+  }
+
+  func testBoardHistoryPersistsAndLegacyPreferencesDoNotOverwriteIt() throws {
+    let key = "\(listID!)/root"
+    let baseline = WorkspaceKanbanColumn.blitzitDefaults
+    let legacy = [key: try JSONEncoder().encode(baseline)]
+    _ = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: key)
+    let custom = baseline + [WorkspaceKanbanColumn(id: "custom", title: "Custom")]
+    try store.setKanbanBoardColumns(custom, for: key, label: "Add Board Column")
+    let reopened = try WorkspaceStore(databaseURL: directoryURL.appendingPathComponent("priority.sqlite"))
+    XCTAssertEqual(try reopened.undo(), "Add Board Column")
+    let undone = try XCTUnwrap(reopened.kanbanBoardConfigurations(legacy: legacy, currentKey: key)[key])
+    XCTAssertEqual(try JSONDecoder().decode([WorkspaceKanbanColumn].self, from: undone), baseline)
+    XCTAssertEqual(try reopened.redo(), "Add Board Column")
+    let redone = try XCTUnwrap(reopened.kanbanBoardConfigurations(legacy: legacy, currentKey: key)[key])
+    XCTAssertEqual(try JSONDecoder().decode([WorkspaceKanbanColumn].self, from: redone), custom)
+  }
+
+  func testColumnRemovalAndItsCardsUndoTogether() throws {
+    let key = "\(listID!)/root"
+    let defaults = WorkspaceKanbanColumn.blitzitDefaults
+    _ = try store.kanbanBoardConfigurations(legacy: [:], currentKey: key)
+    let card = try store.createTask(listId: listID, title: "Today", kanbanColumn: "today")
+    let remaining = defaults.filter { $0.id != "today" }
+    try store.setKanbanBoardColumns(remaining, for: key, movingTaskIDs: [card.id], toColumn: "backlog", label: "Remove Board Column")
+    XCTAssertEqual(try store.undo(), "Remove Board Column")
+    let restored = try XCTUnwrap(store.kanbanBoardConfigurations(legacy: [:], currentKey: key)[key])
+    XCTAssertEqual(try JSONDecoder().decode([WorkspaceKanbanColumn].self, from: restored), defaults)
+    XCTAssertEqual(try store.kanbanColumn(for: card.id), "today")
+    try store.redo()
+    let redone = try XCTUnwrap(store.kanbanBoardConfigurations(legacy: [:], currentKey: key)[key])
+    XCTAssertEqual(try JSONDecoder().decode([WorkspaceKanbanColumn].self, from: redone), remaining)
+    XCTAssertEqual(try store.kanbanColumn(for: card.id), "backlog")
+  }
+
+  func testRelativeCreationPreservesSiblingOrderAndUndoesInOneStep() throws {
+    let first = try store.createTask(listId: listID, title: "First")
+    let last = try store.createTask(listId: listID, title: "Last")
+    let middle = try store.createTask(listId: listID, title: "Middle", adjacentTaskId: last.id, above: true)
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [first.id, middle.id, last.id])
+    try store.undo()
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [first.id, last.id])
+    try store.redo()
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [first.id, middle.id, last.id])
+  }
+
+  func testFailedCreationDoesNotLeaveAPartialTaskOrDestroyRedo() throws {
+    let first = try store.createTask(listId: listID, title: "First")
+    try store.updateTask(id: first.id, title: "Changed", notes: "", dueAt: nil, estimateSeconds: nil)
+    try store.undo()
+    XCTAssertThrowsError(try store.createTask(listId: listID, title: "Bad", kanbanColumn: "today", adjacentTaskId: "missing"))
+    XCTAssertEqual(try store.tasks(in: listID).map(\.id), [first.id])
+    XCTAssertEqual(try store.redoableLabel(), "Edit Task")
+  }
+
+  func testUndoFocusCompletionReopensWorkWithoutErasingElapsedTime() throws {
+    let task = try store.createTask(listId: listID, title: "Focus task")
+    let session = try store.startFocusSession(taskId: task.id)
+    _ = try store.completeActiveFocusTask(sessionId: session.id, elapsedSeconds: 600)
+    XCTAssertEqual(try store.undo(), "Complete Task")
+    XCTAssertEqual(try store.task(id: task.id)?.status, .open)
+    XCTAssertEqual(try store.workBlocks(for: task.id).map(\.seconds), [600])
+    try store.redo()
+    XCTAssertEqual(try store.task(id: task.id)?.status, .completed)
+    XCTAssertEqual(try store.workBlocks(for: task.id).map(\.seconds), [600])
+  }
+
   func testUndoRestoresAnEditedTitleWithoutTouchingItsSubtree() throws {
     let parent = try store.createTask(listId: listID, title: "Original")
     let child = try store.createTask(listId: listID, title: "Child", parentTaskId: parent.id)

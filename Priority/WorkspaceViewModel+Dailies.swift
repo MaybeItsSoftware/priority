@@ -67,16 +67,27 @@ extension WorkspaceViewModel {
   func reloadNextUp() {
     guard let store else { return }
     perform {
-      let ranked = NextUpSelector.rank(try store.nextUpCandidates())
+      taskLoggedSeconds = try store.loggedWorkTotals()
+      taskPlanningByID = try store.taskPlanningValues()
+      let selectedID = focusLadderTaskID
+      if let workspace { focusConditions = try store.conditions(in: workspace.id) }
+      let now = Date.now
+      let ranking = NextUpSelector.evaluate(try store.nextUpCandidates(now: now), now: now, context: effectiveFocusContext)
+      let ranked = ranking.ranked
       focusLadder = ranked
-      // Keep the cursor pointing at the same task across a reload where we can;
-      // ticking one off should not throw away where you had climbed to.
-      if let id = focusLadderTaskID, let index = ranked.firstIndex(where: { $0.candidate.id == id }) {
+      blockedFocusTasks = ranking.blocked
+      nextFocusEvaluationAt = ranking.nextEvaluationAt
+      if let id = selectedID, let index = ranked.firstIndex(where: { $0.candidate.id == id }) {
         focusLadderIndex = index
       } else {
         focusLadderIndex = min(focusLadderIndex, max(0, ranked.count - 1))
       }
+      if let stagedTaskID, !ranked.contains(where: { $0.id == stagedTaskID }) { self.stagedTaskID = nil }
       nextUp = ranked.first
+      if allowsQueueResume && activeFocusSession != nil && activeFocusSession?.activeTaskId == nil {
+        try store.resumeEligibleFocusQueue(context: effectiveFocusContext, now: now)
+        reloadFocus()
+      }
     }
   }
 
@@ -90,8 +101,8 @@ extension WorkspaceViewModel {
   }
 
   var focusLadderTask: WorkspaceTask? {
-    guard let id = focusLadderSelection?.candidate.id, let store else { return nil }
-    return try? store.task(id: id)
+    guard let id = focusLadderSelection?.candidate.id else { return nil }
+    return task(withID: id)
   }
 
   private var focusLadderTaskID: String? { focusLadderSelection?.candidate.id }
@@ -112,8 +123,9 @@ extension WorkspaceViewModel {
   func stageFocusLadderSelection() {
     guard let task = focusLadderTask else { return }
     stagedTaskID = task.id
-    let seconds = dailyItem(for: task)?.daily.targetSeconds ?? task.estimateSeconds
-    focusEstimateMinutes = seconds.map { max(1, $0 / 60) } ?? 25
+    let candidate = focusLadderSelection?.candidate
+    let seconds = candidate.map { TaskAvailabilityPolicy.suggestedSeconds(for: $0, context: effectiveFocusContext, now: .now) } ?? 1500
+    focusEstimateMinutes = max(1, Double(seconds) / 60)
   }
 
   func unstageFocusTask() {
@@ -121,15 +133,16 @@ extension WorkspaceViewModel {
   }
 
   var stagedTask: WorkspaceTask? {
-    guard let id = stagedTaskID, let store else { return nil }
-    return try? store.task(id: id)
+    guard let id = stagedTaskID else { return nil }
+    return task(withID: id)
   }
 
   /// Begins work on the staged task with the committed estimate.
   func beginStagedFocus() {
     guard let task = stagedTask else { return }
-    stagedTaskID = nil
-    startFocus(on: task, plannedSeconds: max(1, focusEstimateMinutes) * 60)
+    let seconds = (max(1, focusEstimateMinutes) * 60).rounded()
+    guard seconds.isFinite, seconds < Double(Int.max) else { errorMessage = "Choose a supported session duration."; return }
+    startFocus(on: task, plannedSeconds: Int(seconds), automatic: true)
   }
 
   /// Describes what ticking the current rung off would be an instance of, so

@@ -417,6 +417,7 @@ class MenuBarController: NSObject {
 
     let hostingController = NSHostingController(
       rootView: PopoverView()
+        .focusEffectDisabled()
         .font(Typography.interfaceFont)
         .environment(manager)
         .environment(manager.navigationState)

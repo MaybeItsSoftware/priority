@@ -1,8 +1,6 @@
 import AppKit
-import CryptoKit
 import Foundation
 import Observation
-import Security
 
 @MainActor
 @Observable final class NativeGoogleCalendarIntegrationPlugin: GoogleCalendarIntegrationPlugin
@@ -11,14 +9,10 @@ import Security
   let displayName = "Native Google Calendar Integration"
   let pluginDescription = "Create Google Calendar events from tasks using your Google account."
 
-  var oauthClientID: String {
-    didSet {
-      let normalized = oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines)
-      defaults.set(normalized, forKey: Self.oauthClientIDDefaultsKey)
-      isAuthenticated = Self.canUseTokenPayload(tokenPayload, forClientID: normalized)
-      updateAuthenticationStatusDescription()
-    }
-  }
+  /// Sign-in belongs to the Google account, not to this integration: Tasks
+  /// signs in through the same one, and two integrations should not mean two
+  /// trips through consent for the same Google user.
+  let account: GoogleAccount
 
   var targetCalendarID: String {
     didSet {
@@ -35,51 +29,50 @@ import Security
     }
   }
 
-  private(set) var isAuthenticating = false
-  private(set) var isAuthenticated = false
-  private(set) var authenticationStatusDescription =
-    "Set a Google OAuth client ID to enable Calendar event creation."
+  var oauthClientID: String {
+    get { account.clientID }
+    set { account.clientID = newValue }
+  }
 
-  var requiresAuthentication: Bool { !normalizedOAuthClientID.isEmpty }
-  var hasOAuthClientConfiguration: Bool { !normalizedOAuthClientID.isEmpty }
+  var isAuthenticating: Bool { account.isAuthenticating }
+  var isAuthenticated: Bool { account.hasGrantedScopes(GoogleAPIScope.calendar) }
+  var authenticationStatusDescription: String {
+    guard account.hasClientConfiguration else {
+      return "OAuth not configured. Calendar event creation is unavailable."
+    }
+    if account.isAuthenticating { return "Signing in with Google…" }
+    if isAuthenticated { return "Connected to the Google Calendar API." }
+    if account.isAuthenticated {
+      return "Signed in, but this grant predates Calendar. Sign in again."
+    }
+    return "OAuth configured. Sign in required."
+  }
 
-  private static let oauthClientIDDefaultsKey = "googleCalendarOAuthClientID"
+  var requiresAuthentication: Bool { account.hasClientConfiguration }
+  var hasOAuthClientConfiguration: Bool { account.hasClientConfiguration }
+
   private static let targetCalendarIDDefaultsKey = "googleCalendarTargetCalendarID"
   private static let openCreatedEventInBrowserDefaultsKey =
     "googleCalendarOpenCreatedEventInBrowser"
-  private static let authorizationURL = URL(string: "https://accounts.google.com/o/oauth2/v2/auth")!
-  private static let tokenURL = URL(string: "https://oauth2.googleapis.com/token")!
   private static let eventDescriptionSourceName = "Priority"
-  private static let oauthScope =
-    "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly"
 
   private let defaultEventDurationMinutes: Int
   private let calendar: Calendar
   private let session: URLSession
   private let defaults: UserDefaults
-  private let tokenStore: GoogleCalendarOAuthTokenStore
-  private var tokenPayload: GoogleCalendarOAuthTokenPayload?
-  private var hasLoadedStoredToken = false
-  private var normalizedOAuthClientID: String {
-    oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines)
-  }
 
   init(
+    account: GoogleAccount,
     defaultEventDurationMinutes: Int = 30,
     calendar: Calendar = .current,
     session: URLSession = .shared,
-    defaults: UserDefaults = .standard,
-    tokenStore: GoogleCalendarOAuthTokenStore = GoogleCalendarOAuthTokenStore()
+    defaults: UserDefaults = .standard
   ) {
+    self.account = account
     self.defaultEventDurationMinutes = max(defaultEventDurationMinutes, 1)
     self.calendar = calendar
     self.session = session
     self.defaults = defaults
-    self.tokenStore = tokenStore
-    self.oauthClientID =
-      defaults.string(forKey: Self.oauthClientIDDefaultsKey)?
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-      ?? ""
     let storedCalendarID =
       defaults.string(forKey: Self.targetCalendarIDDefaultsKey)?
       .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -87,10 +80,7 @@ import Security
     self.targetCalendarID = storedCalendarID.isEmpty ? "primary" : storedCalendarID
     self.openCreatedEventInBrowser =
       defaults.object(forKey: Self.openCreatedEventInBrowserDefaultsKey) as? Bool ?? true
-    self.tokenPayload = nil
-    self.isAuthenticated = Self.canUseTokenPayload(
-      tokenPayload, forClientID: normalizedOAuthClientID)
-    self.updateAuthenticationStatusDescription()
+    account.requireScopes(GoogleAPIScope.calendar)
   }
 
   func makeCreateEventURL(task: CheckvistTask, listId: String, now: Date) -> URL? {
@@ -124,63 +114,42 @@ import Security
   func createEvent(task: CheckvistTask, listId: String, now: Date) async throws
     -> GoogleCalendarEventCreationOutcome
   {
-    if normalizedOAuthClientID.isEmpty {
-      throw GoogleCalendarPluginError.missingOAuthClientID
-    }
+    let rawTitle = task.content.trimmingCharacters(in: .whitespacesAndNewlines)
+    let title = rawTitle.isEmpty ? "Checkvist Task #\(task.id)" : rawTitle
+    let details = """
+      Created from \(Self.eventDescriptionSourceName)
+      List ID: \(listId)
+      Task ID: \(task.id)
+      """
+    return try await createEvent(
+      title: title, details: details, date: task.dueDate,
+      isAllDay: task.dueDate != nil && !hasExplicitDueTime(rawDue: task.due), now: now)
+  }
 
-    let validAccessToken = try await ensureValidAccessToken()
+  func createEvent(
+    title: String, details: String, date: Date?, isAllDay: Bool, now: Date
+  ) async throws -> GoogleCalendarEventCreationOutcome {
+    let validAccessToken = try await account.accessToken(
+      requiring: GoogleAPIScope.calendar, service: "Google Calendar")
     let createdEventURL = try await createEventWithGoogleAPI(
-      accessToken: validAccessToken,
-      task: task,
-      listId: listId,
-      now: now
+      accessToken: validAccessToken, title: title, details: details,
+      date: date, isAllDay: isAllDay, now: now
     )
-    let urlToOpen = openCreatedEventInBrowser ? createdEventURL : nil
-    return GoogleCalendarEventCreationOutcome(urlToOpen: urlToOpen, usedGoogleCalendarAPI: true)
+    let urlToOpen = openCreatedEventInBrowser ? createdEventURL.url : nil
+    return GoogleCalendarEventCreationOutcome(
+      urlToOpen: urlToOpen, usedGoogleCalendarAPI: true, eventID: createdEventURL.id)
+  }
+
+  func prepareAuthentication() {
+    account.prepare()
   }
 
   func beginAuthentication() async throws {
-    guard !normalizedOAuthClientID.isEmpty else {
-      throw GoogleCalendarPluginError.missingOAuthClientID
-    }
-    guard !isAuthenticating else { return }
-    isAuthenticating = true
-    updateAuthenticationStatusDescription()
-    defer {
-      isAuthenticating = false
-      updateAuthenticationStatusDescription()
-    }
-
-    let state = try Self.makeOAuthState()
-    let verifier = try Self.makePKCECodeVerifier()
-    let challenge = Self.makePKCECodeChallenge(from: verifier)
-    let callbackReceiver = GoogleOAuthLoopbackReceiver()
-
-    let redirectURI = try await callbackReceiver.start()
-    defer { callbackReceiver.stop() }
-
-    let authorizationURL = try makeAuthorizationURL(
-      redirectURI: redirectURI,
-      state: state,
-      codeChallenge: challenge
-    )
-
-    NSWorkspace.shared.open(authorizationURL)
-    let callbackURL = try await callbackReceiver.waitForCallback(timeout: 180)
-    let code = try extractAuthorizationCode(from: callbackURL, expectedState: state)
-    let tokenResponse = try await exchangeAuthorizationCode(
-      authorizationCode: code,
-      redirectURI: redirectURI,
-      codeVerifier: verifier
-    )
-    storeTokenResponse(tokenResponse)
+    try await account.beginAuthentication()
   }
 
   func disconnectAuthentication() {
-    tokenPayload = nil
-    tokenStore.clear()
-    isAuthenticated = false
-    updateAuthenticationStatusDescription()
+    account.disconnect()
   }
 
   private func eventDatesValue(task: CheckvistTask, now: Date) -> String? {
@@ -233,63 +202,56 @@ import Security
     return formatter.string(from: date)
   }
 
-  private func ensureValidAccessToken() async throws -> String {
-    guard !normalizedOAuthClientID.isEmpty else {
-      throw GoogleCalendarPluginError.missingOAuthClientID
-    }
-    loadStoredTokenIfNeeded()
-    guard var payload = tokenPayload else {
-      isAuthenticated = false
-      updateAuthenticationStatusDescription()
-      throw GoogleCalendarPluginError.authenticationRequired
-    }
-    guard payload.clientID == normalizedOAuthClientID else {
-      disconnectAuthentication()
-      throw GoogleCalendarPluginError.authenticationRequired
-    }
+  /// Whether an event Priority created is still on the calendar.
+  ///
+  /// Google keeps a deleted event as `cancelled` for a while and then stops
+  /// returning it at all, so both answers mean the same thing here: somebody
+  /// cleared it, and the task it stood for is done.
+  func eventState(id: String) async throws -> GoogleCalendarEventState {
+    guard let url = makeEventURL(id: id) else { throw GoogleCalendarPluginError.invalidCalendarID }
+    let token = try await account.accessToken(
+      requiring: GoogleAPIScope.calendar, service: "Google Calendar")
+    var request = URLRequest(url: url)
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-    let refreshThreshold = Date().addingTimeInterval(60)
-    if payload.expiryDate > refreshThreshold {
-      return payload.accessToken
+    let (data, response) = try await session.data(for: request)
+    guard let http = response as? HTTPURLResponse else {
+      throw GoogleCalendarPluginError.invalidResponse
     }
-
-    let refreshResponse = try await refreshAccessToken(refreshToken: payload.refreshToken)
-    payload = GoogleCalendarOAuthTokenPayload(
-      accessToken: refreshResponse.accessToken,
-      refreshToken: payload.refreshToken,
-      expiryDate: Date().addingTimeInterval(TimeInterval(refreshResponse.expiresIn)),
-      grantedScopes: refreshResponse.scope ?? payload.grantedScopes,
-      clientID: normalizedOAuthClientID
-    )
-    tokenPayload = payload
-    tokenStore.save(payload)
-    isAuthenticated = true
-    updateAuthenticationStatusDescription()
-    return payload.accessToken
+    if http.statusCode == 404 || http.statusCode == 410 { return .gone }
+    if http.statusCode == 401 {
+      account.invalidateAfterUnauthorized()
+      throw GoogleAccountError.authenticationRequired
+    }
+    guard (200...299).contains(http.statusCode) else {
+      throw GoogleCalendarPluginError.apiError(
+        String(data: data, encoding: .utf8) ?? "Unknown Google Calendar API error.")
+    }
+    let decoded = try JSONDecoder().decode(GoogleCalendarEventResponse.self, from: data)
+    return decoded.status == "cancelled" ? .gone : .active
   }
 
-  /// Reads the keychain only after the user explicitly asks Priority to create
-  /// a Calendar event. This keeps a stale or differently-signed token from
-  /// prompting for a macOS password simply because the app launched.
-  private func loadStoredTokenIfNeeded() {
-    guard !hasLoadedStoredToken else { return }
-    hasLoadedStoredToken = true
-    tokenPayload = tokenStore.load()
-    isAuthenticated = Self.canUseTokenPayload(tokenPayload, forClientID: normalizedOAuthClientID)
-    updateAuthenticationStatusDescription()
+  private func makeEventURL(id: String) -> URL? {
+    guard let base = makeEventsAPIURL(),
+      let encoded = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+    else { return nil }
+    return URL(string: "\(base.absoluteString)/\(encoded)")
   }
 
   private func createEventWithGoogleAPI(
     accessToken: String,
-    task: CheckvistTask,
-    listId: String,
+    title: String,
+    details: String,
+    date: Date?,
+    isAllDay: Bool,
     now: Date
-  ) async throws -> URL? {
+  ) async throws -> (url: URL?, id: String?) {
     guard let eventURL = makeEventsAPIURL() else {
       throw GoogleCalendarPluginError.invalidCalendarID
     }
 
-    let payload = makeGoogleCalendarEventPayload(task: task, listId: listId, now: now)
+    let payload = makeGoogleCalendarEventPayload(
+      title: title, details: details, date: date, isAllDay: isAllDay, now: now)
     var request = URLRequest(url: eventURL)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -302,9 +264,10 @@ import Security
     }
 
     if httpResponse.statusCode == 401 {
-      // Token likely expired/revoked unexpectedly: clear local state and ask for re-auth.
-      disconnectAuthentication()
-      throw GoogleCalendarPluginError.authenticationRequired
+      // Accepted at refresh, rejected at use: the grant was revoked at
+      // Google's end, so the local sign-in is worthless and goes too.
+      account.invalidateAfterUnauthorized()
+      throw GoogleAccountError.authenticationRequired
     }
 
     guard (200...299).contains(httpResponse.statusCode) else {
@@ -313,10 +276,7 @@ import Security
     }
 
     let decoded = try JSONDecoder().decode(GoogleCalendarCreateEventResponse.self, from: data)
-    if let htmlLink = decoded.htmlLink {
-      return URL(string: htmlLink)
-    }
-    return nil
+    return (decoded.htmlLink.flatMap { URL(string: $0) }, decoded.id)
   }
 
   private func makeEventsAPIURL() -> URL? {
@@ -328,19 +288,13 @@ import Security
       string: "https://www.googleapis.com/calendar/v3/calendars/\(encodedCalendarID)/events")
   }
 
-  private func makeGoogleCalendarEventPayload(task: CheckvistTask, listId: String, now: Date)
+  private func makeGoogleCalendarEventPayload(
+    title: String, details: String, date: Date?, isAllDay: Bool, now: Date
+  )
     -> GoogleCalendarCreateEventPayload
   {
-    let rawTitle = task.content.trimmingCharacters(in: .whitespacesAndNewlines)
-    let title = rawTitle.isEmpty ? "Checkvist Task #\(task.id)" : rawTitle
-    let details = """
-      Created from \(Self.eventDescriptionSourceName)
-      List ID: \(listId)
-      Task ID: \(task.id)
-      """
-
-    if let dueDate = task.dueDate {
-      if hasExplicitDueTime(rawDue: task.due) {
+    if let dueDate = date {
+      if !isAllDay {
         let end = dueDate.addingTimeInterval(Double(defaultEventDurationMinutes * 60))
         return GoogleCalendarCreateEventPayload(
           summary: title,
@@ -388,209 +342,6 @@ import Security
     formatter.timeZone = calendar.timeZone
     return formatter.string(from: date)
   }
-
-  private func updateAuthenticationStatusDescription() {
-    if normalizedOAuthClientID.isEmpty {
-      authenticationStatusDescription =
-        "OAuth not configured. Calendar event creation is unavailable."
-      isAuthenticated = false
-      return
-    }
-
-    if isAuthenticating {
-      authenticationStatusDescription = "Signing in with Google…"
-      return
-    }
-
-    if isAuthenticated {
-      authenticationStatusDescription = "Connected to Google Calendar API."
-    } else {
-      authenticationStatusDescription = "OAuth configured. Sign in required."
-    }
-  }
-
-  private func makeAuthorizationURL(
-    redirectURI: URL,
-    state: String,
-    codeChallenge: String
-  ) throws -> URL {
-    var components = URLComponents(url: Self.authorizationURL, resolvingAgainstBaseURL: false)
-    components?.queryItems = [
-      .init(name: "client_id", value: normalizedOAuthClientID),
-      .init(name: "redirect_uri", value: redirectURI.absoluteString),
-      .init(name: "response_type", value: "code"),
-      .init(name: "scope", value: Self.oauthScope),
-      .init(name: "access_type", value: "offline"),
-      .init(name: "prompt", value: "consent"),
-      .init(name: "include_granted_scopes", value: "true"),
-      .init(name: "code_challenge", value: codeChallenge),
-      .init(name: "code_challenge_method", value: "S256"),
-      .init(name: "state", value: state),
-    ]
-    guard let url = components?.url else {
-      throw GoogleCalendarPluginError.invalidAuthorizationURL
-    }
-    return url
-  }
-
-  private func extractAuthorizationCode(from callbackURL: URL, expectedState: String) throws
-    -> String
-  {
-    guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false) else {
-      throw GoogleCalendarPluginError.invalidOAuthCallback
-    }
-    // Keep the first occurrence of each parameter rather than using
-    // `Dictionary(uniqueKeysWithValues:)`, which traps on a duplicate key. The
-    // callback is attacker-reachable (anything that can reach the loopback
-    // port), so a repeated `code`/`state` must not be able to crash sign-in.
-    let items = (components.queryItems ?? []).reduce(into: [String: String]()) { result, item in
-      if result[item.name] == nil {
-        result[item.name] = item.value ?? ""
-      }
-    }
-    if let error = items["error"], !error.isEmpty {
-      throw GoogleCalendarPluginError.authorizationDenied(error)
-    }
-    guard items["state"] == expectedState else {
-      throw GoogleCalendarPluginError.invalidOAuthState
-    }
-    guard let code = items["code"], !code.isEmpty else {
-      throw GoogleCalendarPluginError.invalidOAuthCallback
-    }
-    return code
-  }
-
-  private func exchangeAuthorizationCode(
-    authorizationCode: String,
-    redirectURI: URL,
-    codeVerifier: String
-  ) async throws -> GoogleCalendarOAuthTokenResponse {
-    var request = URLRequest(url: Self.tokenURL)
-    request.httpMethod = "POST"
-    request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-    request.httpBody = Self.formEncodedData(
-      [
-        ("code", authorizationCode),
-        ("client_id", normalizedOAuthClientID),
-        ("code_verifier", codeVerifier),
-        ("redirect_uri", redirectURI.absoluteString),
-        ("grant_type", "authorization_code"),
-      ]
-    )
-
-    let (data, response) = try await session.data(for: request)
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw GoogleCalendarPluginError.invalidResponse
-    }
-
-    guard (200...299).contains(httpResponse.statusCode) else {
-      let message = String(data: data, encoding: .utf8) ?? "Unknown OAuth token exchange error."
-      throw GoogleCalendarPluginError.apiError(message)
-    }
-
-    return try JSONDecoder().decode(GoogleCalendarOAuthTokenResponse.self, from: data)
-  }
-
-  private func refreshAccessToken(refreshToken: String) async throws
-    -> GoogleCalendarRefreshResponse
-  {
-    var request = URLRequest(url: Self.tokenURL)
-    request.httpMethod = "POST"
-    request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-    request.httpBody = Self.formEncodedData(
-      [
-        ("client_id", normalizedOAuthClientID),
-        ("refresh_token", refreshToken),
-        ("grant_type", "refresh_token"),
-      ]
-    )
-
-    let (data, response) = try await session.data(for: request)
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw GoogleCalendarPluginError.invalidResponse
-    }
-
-    guard (200...299).contains(httpResponse.statusCode) else {
-      let message = String(data: data, encoding: .utf8) ?? "Unknown OAuth refresh error."
-      throw GoogleCalendarPluginError.apiError(message)
-    }
-
-    return try JSONDecoder().decode(GoogleCalendarRefreshResponse.self, from: data)
-  }
-
-  private func storeTokenResponse(_ response: GoogleCalendarOAuthTokenResponse) {
-    let existingRefreshToken = tokenPayload?.refreshToken
-    let resolvedRefreshToken = response.refreshToken ?? existingRefreshToken
-
-    guard let resolvedRefreshToken, !resolvedRefreshToken.isEmpty else {
-      isAuthenticated = false
-      updateAuthenticationStatusDescription()
-      return
-    }
-
-    let payload = GoogleCalendarOAuthTokenPayload(
-      accessToken: response.accessToken,
-      refreshToken: resolvedRefreshToken,
-      expiryDate: Date().addingTimeInterval(TimeInterval(response.expiresIn)),
-      grantedScopes: response.scope ?? Self.oauthScope,
-      clientID: normalizedOAuthClientID
-    )
-    tokenPayload = payload
-    tokenStore.save(payload)
-    isAuthenticated = true
-    updateAuthenticationStatusDescription()
-  }
-
-  private static func makeOAuthState() throws -> String {
-    try makeRandomBase64URLString(byteCount: 32)
-  }
-
-  private static func makePKCECodeVerifier() throws -> String {
-    try makeRandomBase64URLString(byteCount: 64)
-  }
-
-  private static func makePKCECodeChallenge(from verifier: String) -> String {
-    let digest = SHA256.hash(data: Data(verifier.utf8))
-    return base64URLEncode(Data(digest))
-  }
-
-  private static func makeRandomBase64URLString(byteCount: Int) throws -> String {
-    var bytes = [UInt8](repeating: 0, count: max(byteCount, 1))
-    let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-    guard status == errSecSuccess else {
-      throw GoogleCalendarPluginError.randomGenerationFailed
-    }
-    return base64URLEncode(Data(bytes))
-  }
-
-  private static func base64URLEncode(_ data: Data) -> String {
-    data.base64EncodedString()
-      .replacingOccurrences(of: "+", with: "-")
-      .replacingOccurrences(of: "/", with: "_")
-      .replacingOccurrences(of: "=", with: "")
-  }
-
-  private static func formEncodedData(_ pairs: [(String, String)]) -> Data? {
-    let query = pairs.map { key, value in
-      "\(percentEncode(key))=\(percentEncode(value))"
-    }.joined(separator: "&")
-    return query.data(using: .utf8)
-  }
-
-  private static func percentEncode(_ value: String) -> String {
-    let allowed = CharacterSet(
-      charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
-    return value.addingPercentEncoding(withAllowedCharacters: allowed)!
-  }
-
-  private static func canUseTokenPayload(
-    _ payload: GoogleCalendarOAuthTokenPayload?,
-    forClientID clientID: String
-  ) -> Bool {
-    guard let payload else { return false }
-    guard !clientID.isEmpty else { return false }
-    return payload.clientID == clientID && !payload.refreshToken.isEmpty
-  }
 }
 
 private struct GoogleCalendarCreateEventPayload: Encodable {
@@ -608,68 +359,28 @@ private struct GoogleCalendarCreateEventPayload: Encodable {
 
 private struct GoogleCalendarCreateEventResponse: Decodable {
   let htmlLink: String?
+  let id: String?
 }
 
-private struct GoogleCalendarOAuthTokenResponse: Decodable {
-  let accessToken: String
-  let expiresIn: Int
-  let refreshToken: String?
-  let scope: String?
-
-  enum CodingKeys: String, CodingKey {
-    case accessToken = "access_token"
-    case expiresIn = "expires_in"
-    case refreshToken = "refresh_token"
-    case scope
-  }
+private struct GoogleCalendarEventResponse: Decodable {
+  let status: String?
 }
 
-private struct GoogleCalendarRefreshResponse: Decodable {
-  let accessToken: String
-  let expiresIn: Int
-  let scope: String?
-
-  enum CodingKeys: String, CodingKey {
-    case accessToken = "access_token"
-    case expiresIn = "expires_in"
-    case scope
-  }
-}
-
+/// What is left once sign-in moved to `GoogleAccount`: the errors that are
+/// about calendars rather than about OAuth.
 private enum GoogleCalendarPluginError: LocalizedError {
-  case missingOAuthClientID
-  case invalidAuthorizationURL
-  case invalidOAuthCallback
-  case invalidOAuthState
-  case authorizationDenied(String)
-  case authenticationRequired
   case invalidResponse
   case invalidCalendarID
   case apiError(String)
-  case randomGenerationFailed
 
   var errorDescription: String? {
     switch self {
-    case .missingOAuthClientID:
-      return "Set a Google OAuth client ID first."
-    case .invalidAuthorizationURL:
-      return "Could not build Google authorization URL."
-    case .invalidOAuthCallback:
-      return "Google sign-in callback was invalid."
-    case .invalidOAuthState:
-      return "Google sign-in state mismatch. Try again."
-    case .authorizationDenied(let reason):
-      return "Google authorization failed: \(reason)"
-    case .authenticationRequired:
-      return "Sign in to Google Calendar in Preferences."
     case .invalidResponse:
       return "Received an invalid response from Google."
     case .invalidCalendarID:
       return "Google Calendar ID is invalid."
     case .apiError(let message):
       return "Google Calendar API error: \(message)"
-    case .randomGenerationFailed:
-      return "Could not generate secure OAuth parameters."
     }
   }
 }

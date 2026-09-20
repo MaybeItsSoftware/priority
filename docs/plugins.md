@@ -72,6 +72,42 @@ handles an AFFiNE credential. See `docs/affine.md`.
 - Event URL composition for selected tasks.
 - Due-date mapping decisions for event timing.
 
+### Google Tasks (`GoogleTasksIntegrationPlugin`)
+
+Transport for the Google Tasks mirror: lists, tasks, create, patch, delete and
+paging. It decides nothing — what the mirror *should* do is `GoogleTasksMirror`
+in `PriorityCore`, and when it should happen is `GoogleTasksMirrorService`.
+
+One Google Tasks list per Priority list, with Priority as the source of
+authority: local edits win and are logged when they overwrite something, while
+completions, added notes and tasks created on the Google side are kept. See
+`docs/google-tasks.md` for the full table and the reasoning.
+
+### The shared Google account (`GoogleAccount`)
+
+Calendar and Tasks are two APIs on one Google user, so the OAuth dance —
+client ID, PKCE, the loopback receiver, the keychain item and refresh — lives
+in `Priority/Plugins/Native/Google/` and both plugins are handed the same
+`GoogleAccount`. Each declares the scopes it needs with `requireScopes` at
+construction; signing in asks for the union of them.
+
+Two consequences worth knowing:
+
+- Scopes accumulate, and an existing sign-in does not grow on its own.
+  Switching on an integration that was added later leaves a token whose grant
+  predates it, so `hasGrantedScopes` is false and the settings page says to
+  sign in again. That is a real state, not an error to swallow.
+- A 401 invalidates the shared sign-in, because the token Google rejected is
+  the one every Google integration is using.
+
+The first token was stored under a Calendar-specific keychain account, and the
+client ID under a Calendar-specific defaults key. Both are adopted on first
+read rather than abandoned, so an existing Calendar sign-in survives the move.
+
+Google Tasks needs the Tasks API switched on in the same Google Cloud project
+as the OAuth client. Sign-in succeeds without it and every call then fails with
+a 403, which is worth knowing before debugging the mirror.
+
 ### MCP (`MCPIntegrationPlugin`)
 
 - Resolve server command and optional guide path.

@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import PriorityWorkspace
+import PriorityCore
 
 /// The desktop window's key handling. Split from `WorkspaceViewModel.swift`
 /// both for size and because one 270-line method was impossible to read: the
@@ -16,10 +17,118 @@ extension WorkspaceViewModel {
     // workspace on screen, so leaving the workspace's own keys live would mean
     // ⌘4 quietly switching a board nobody can see.
     if showsFocusScreen, handleFocusLadderKey(event, flags: flags) { return true }
+    if showsTimelineScreen, handleTimelineKey(event, flags: flags) { return true }
     if handleViewSwitchKey(event, flags: flags) { return true }
-    if handleModifiedKey(event, flags: flags) { return true }
+    if handleModifiedKey(event, flags: flags) { desktopShortcutSequence.reset(); return true }
+    guard flags.isEmpty || flags == [.shift] else { desktopShortcutSequence.reset(); return false }
+    if flags.isEmpty && keyboardFocusArea != .inspector && !showsFocusScreen {
+      switch desktopShortcutSequence.advance(event.charactersIgnoringModifiers ?? "", at: event.timestamp) {
+      case .pending: return true
+      case .command(let command): return handleCheckvistCommand(command)
+      case .pass: break
+      }
+    } else { desktopShortcutSequence.reset() }
     if keyboardFocusArea == .sidebar { return handleSidebarKey(event) }
     return handleTaskSurfaceKey(event)
+  }
+
+  private func handleCheckvistCommand(_ command: String) -> Bool {
+    switch command {
+    case "uu": undoLastChange()
+    case "ll": showsListNavigator = true
+    case "gh": selectEverything(); requestKeyboardFocus(.sidebar)
+    case "mm": requestMoveSelectedTask()
+    case "ee": editSelectedTaskTitle()
+    case "dd": quickEdit(.due)
+    case "nn": quickEdit(.notes)
+    case "tt": quickEdit(.tags)
+    case "dr": quickEdit(.recurrence)
+    case "td": editTaskValues { $0.dueAt = Calendar.current.startOfDay(for: .now); $0.dueDate = nil }
+    case "tm": editTaskValues { $0.dueAt = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now)); $0.dueDate = nil }
+    case "cd": editTaskValues { $0.dueAt = nil; $0.dueDate = nil }
+    case "cn": editTaskValues { $0.notes = "" }
+    case "ct": editTaskValues { $0.tags = "" }
+    case "hc":
+      hidesCompletedTasks.toggle()
+      reloadOutline()
+      if let selectedTaskID, !visibleNavigationTasks.contains(where: { $0.id == selectedTaskID }) {
+        self.selectedTaskID = nil
+      }
+    case "sd": toggleInspector()
+    case "oo": showSelectedListSettings()
+    case "pc":
+      if selectedTask != nil { requestKeyboardFocus(.inspector) }
+    case "xx":
+      if let task = selectedTask { moveDroppedItem(task.id, toFolderID: nil) }
+    case "gg":
+      if let task = selectedTask, let store,
+        let snapshot = try? store.taskEditorSnapshot(for: task.id),
+        let link = snapshot.metadata.externalLinks.first, let url = URL(string: link),
+        ["https", "http", "obsidian"].contains(url.scheme?.lowercased() ?? "") {
+        NSWorkspace.shared.open(url)
+      }
+    default: return false
+    }
+    return true
+  }
+
+  private func quickEdit(_ kind: WorkspaceTaskQuickEditKind) {
+    guard let task = selectedTask else { return }
+    taskQuickEditRequest = WorkspaceTaskQuickEditRequest(task: task, kind: kind)
+  }
+
+  private func editSelectedTaskTitle() {
+    if keyboardFocusArea == .sidebar { beginRenamingSelection() }
+    else { quickEdit(.title) }
+  }
+
+  private func editTaskValues(_ change: (inout TaskEditorValues) -> Void) {
+    guard let task = selectedTask, let store else { return }
+    perform {
+      var draft = TaskEditorDraft(snapshot: try store.taskEditorSnapshot(for: task.id))
+      change(&draft.values)
+      _ = try store.saveTaskEditor(draft)
+      reloadOutline()
+      reloadDailies()
+      reloadNextUp()
+    }
+  }
+
+  private func invalidateTask(_ task: WorkspaceTask) {
+    guard let store else { return }
+    perform {
+      try store.setStatus(task.status == .cancelled ? .open : .cancelled, for: task.id)
+      reloadOutline()
+      reloadNextUp()
+    }
+  }
+
+  private func selectTaskAtEnd(first: Bool) {
+    let candidates = viewMode == .board
+      ? boardColumns.first(where: { $0.id == activeBoardColumnID }).map { tasks(in: $0) } ?? []
+      : visibleNavigationTasks
+    selectedTaskID = first ? candidates.first?.id : candidates.last?.id
+  }
+
+  /// The timeline's own keys. Like focus mode it owns the keyboard while it is
+  /// up, so the workspace's single-letter shortcuts cannot edit a board that is
+  /// no longer on screen.
+  private func handleTimelineKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
+    guard flags.isEmpty else { return false }
+    switch event.keyCode {
+    case 53: dismissTimelineScreen(); return true
+    // Left goes back in time, which is also up the list: earlier is further
+    // from now, and the arrow points the way the day moves.
+    case 123: moveTimelineDay(by: -1); return true
+    case 124: moveTimelineDay(by: 1); return true
+    default: break
+    }
+    switch event.charactersIgnoringModifiers?.lowercased() {
+    case "h": moveTimelineDay(by: -1); return true
+    case "l": moveTimelineDay(by: 1); return true
+    case "t": showTimelineToday(); return true
+    default: return true
+    }
   }
 
   /// Climbing the focus ladder. Up is *less* important — the direction matches
@@ -67,7 +176,8 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// Command-digit: the regions and view modes, plus the focus screen on ⌘8.
+  /// Command-digit: the regions and view modes, plus the focus screen on ⌘8
+  /// and the timeline on ⌘9.
   private func handleViewSwitchKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
 
     if flags == [.command] {
@@ -88,6 +198,12 @@ extension WorkspaceViewModel {
         // focus screen decides what to start on, which is its whole job.
         if activeFocusSession != nil { showsFocusPanel = true } else { presentFocusScreen() }
         return true
+      case "9":
+        // A toggle rather than a second way in: the timeline answers a question
+        // in a glance, and pressing the same key to put it away again is what
+        // makes it cheap enough to glance at.
+        if showsTimelineScreen { dismissTimelineScreen() } else { presentTimelineScreen() }
+        return true
       default: break
       }
     }
@@ -101,6 +217,32 @@ extension WorkspaceViewModel {
       return true
     }
 
+    if (flags == [.control] || flags == [.control, .shift]), event.charactersIgnoringModifiers?.lowercased() == "z" {
+      if flags.contains(.shift) { redoLastUndoneChange() } else { undoLastChange() }
+      return true
+    }
+    if keyboardFocusArea == .tasks {
+      if event.keyCode == 48 && (flags.isEmpty || flags == [.shift]) {
+        if let task = selectedTask {
+          if flags.contains(.shift) { outdentTask(task) } else { indentTask(task) }
+        }
+        return true
+      }
+      if (event.keyCode == 36 || event.keyCode == 76) && (flags == [.option] || flags == [.shift]) {
+        requestRelativeTaskComposerFocus(above: flags == [.option], child: flags == [.shift])
+        return true
+      }
+      if flags == [.shift] {
+        switch event.keyCode {
+        case 124: enterSelectedTask(); return true
+        case 123: leaveSelectedTaskScope(); return true
+        case 49:
+          if let task = selectedTask { invalidateTask(task) }
+          return true
+        default: break
+        }
+      }
+    }
     if flags == [.command] {
       if event.charactersIgnoringModifiers?.lowercased() == "n" {
         requestTaskComposerFocus()
@@ -166,6 +308,16 @@ extension WorkspaceViewModel {
     }
     if flags == [.command, .shift] {
       switch event.charactersIgnoringModifiers?.lowercased() {
+      case "l":
+        if let task = keyboardFocusArea == .sidebar ? scopeTask : selectedTask ?? scopeTask { convertItem(task) }
+        else if let list = selectedList, !list.isSystemList { convertListToTask(list) }
+        return true
+      case "p":
+        if let task = keyboardFocusArea == .sidebar ? scopeTask : selectedTask ?? scopeTask { toggleListPromotion(task) }
+        return true
+      case "x":
+        toggleCurrentListCompletion()
+        return true
       case "a":
         archiveSelectedList()
         return true
@@ -210,20 +362,24 @@ extension WorkspaceViewModel {
       showsKeyboardHelp = true
       return true
     }
-    if flags == [.command] {
+    if flags == [.command] || flags == [.control] {
       switch event.keyCode {
       case 125:  // Cmd+Down
-        if let task = selectedTask {
-          moveTaskWithinSiblings(task, by: 1)
-        } else if let list = selectedList {
+        if keyboardFocusArea == .sidebar, let folder = selectedFolder {
+          moveFolderWithinSiblings(folder, by: 1)
+        } else if keyboardFocusArea == .sidebar, let list = selectedList {
           moveListWithinFolder(list, by: 1)
+        } else if let task = selectedTask {
+          moveTaskWithinSiblings(task, by: 1)
         }
         return true
       case 126:  // Cmd+Up
-        if let task = selectedTask {
-          moveTaskWithinSiblings(task, by: -1)
-        } else if let list = selectedList {
+        if keyboardFocusArea == .sidebar, let folder = selectedFolder {
+          moveFolderWithinSiblings(folder, by: -1)
+        } else if keyboardFocusArea == .sidebar, let list = selectedList {
           moveListWithinFolder(list, by: -1)
+        } else if let task = selectedTask {
+          moveTaskWithinSiblings(task, by: -1)
         }
         return true
       default: break
@@ -247,6 +403,8 @@ extension WorkspaceViewModel {
   /// unmodified keys that open the inspector and the move sheet.
   private func handlePlacementKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     if flags == [.option], keyboardFocusArea == .tasks {
+      if event.charactersIgnoringModifiers?.lowercased() == "t" { quickEdit(.estimate); return true }
+      if event.charactersIgnoringModifiers?.lowercased() == "s" { quickEdit(.start); return true }
       if viewMode == .board, keyboardNavigationSurfaceActive {
         switch event.keyCode {
         case 123: moveSelectedTaskToAdjacentColumn(by: -1); return true
@@ -265,12 +423,12 @@ extension WorkspaceViewModel {
       }
     }
     guard flags.isEmpty else { return false }
-    if event.charactersIgnoringModifiers?.lowercased() == "i" {
-      toggleInspector()
+    if keyboardFocusArea == .tasks, let digit = Int(event.charactersIgnoringModifiers ?? ""), (0...9).contains(digit) {
+      editTaskValues { $0.priority = digit }
       return true
     }
-    if event.charactersIgnoringModifiers?.lowercased() == "m" {
-      requestMoveSelectedTask()
+    if event.charactersIgnoringModifiers?.lowercased() == "i" {
+      toggleInspector()
       return true
     }
     return false
@@ -287,17 +445,19 @@ extension WorkspaceViewModel {
         if let folder = selectedFolder {
           toggleFolderExpansion(folder)
         } else {
-          requestKeyboardFocus(.tasks)
+          enterTaskSurfaceFromSidebar()
         }
       case 124:  // Right
         if let folder = selectedFolder {
           setFolderExpanded(folder, expanded: true)
         } else {
-          requestKeyboardFocus(.tasks)
+          enterTaskSurfaceFromSidebar()
         }
       case 123:  // Left
         if let folder = selectedFolder, expandedFolderIDs.contains(folder.id) {
           setFolderExpanded(folder, expanded: false)
+        } else if let scope = scopeTask, scope.isList {
+          leaveTaskScope()
         } else if let parentID = selectedFolder?.parentFolderId,
           let parent = folders.first(where: { $0.id == parentID }) {
           selectFolder(parent)
@@ -307,12 +467,18 @@ extension WorkspaceViewModel {
         } else if !isEverythingSelected {
           selectEverything()
         }
+      case 120: beginRenamingSelection()
+      case 115: selectEverything()
+      case 119: moveSidebarSelection(by: 10000)
+      case 116: moveSidebarSelection(by: -8)
+      case 121: moveSidebarSelection(by: 8)
       case 53:  // Escape
         selectedFolderID = nil
       default:
         switch event.charactersIgnoringModifiers?.lowercased() {
         case "j": moveSidebarSelection(by: 1)
         case "k": moveSidebarSelection(by: -1)
+        case "/": presentSearch()
         case "?": showsKeyboardHelp = true
         default: return false
         }
@@ -342,19 +508,27 @@ extension WorkspaceViewModel {
     case 126:  // ↑
       moveTaskSelection(by: -1)
     case 124:  // →
-      if viewMode == .board, let task = selectedTask {
-        selectTaskInAdjacentColumn(from: task, by: 1)
+      if viewMode == .board {
+        focusAdjacentBoardColumn(by: 1)
       } else {
         enterSelectedTask()
       }
     case 123:  // ←
-      if viewMode == .board, let task = selectedTask {
-        selectTaskInAdjacentColumn(from: task, by: -1)
+      if viewMode == .board {
+        focusAdjacentBoardColumn(by: -1)
       } else {
         leaveSelectedTaskScope()
       }
+    case 120:  // F2
+      editSelectedTaskTitle()
+    case 115: selectTaskAtEnd(first: true)
+    case 119: selectTaskAtEnd(first: false)
+    case 116: moveTaskSelection(by: -8)
+    case 121: moveTaskSelection(by: 8)
     case 36, 76:  // Return / keypad Enter
-      enterSelectedTask()
+      if viewMode == .board && selectedTask == nil { requestTaskComposerFocus() }
+      else if viewMode == .board { enterSelectedTask() }
+      else { requestRelativeTaskComposerFocus() }
     case 49:  // Space
       toggleSelectedTask()
     case 51, 117:  // Delete / forward delete
@@ -369,8 +543,13 @@ extension WorkspaceViewModel {
       case "h": leaveSelectedTaskScope()
       case "x", " ": toggleSelectedTask()
       case "f": focusSelectedTask()
-      case "[": moveListSelection(by: -1)
-      case "]": moveListSelection(by: 1)
+      case "[":
+        if scopeTaskID != nil { leaveSelectedTaskScope() }
+        requestKeyboardFocus(.tasks)
+      case "]":
+        enterSelectedTask()
+        requestKeyboardFocus(.tasks)
+      case "/": presentSearch()
       case "?": showsKeyboardHelp = true
       default: return false
       }

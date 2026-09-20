@@ -23,6 +23,7 @@ class GlobalShortcutManager {
   init(manager: AppCoordinator) {
     self.manager = manager
     setupEventHandler()
+    registerGlobalHotkeys()
     observeForHotkeyChanges()
   }
 

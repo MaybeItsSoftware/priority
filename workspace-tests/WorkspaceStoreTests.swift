@@ -1,5 +1,6 @@
 import Foundation
-import PriorityWorkspace
+@testable import PriorityWorkspace
+import GRDB
 import XCTest
 
 final class WorkspaceStoreTests: XCTestCase {
@@ -28,9 +29,15 @@ final class WorkspaceStoreTests: XCTestCase {
     let workspace = try store.bootstrapIfNeeded()
     let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)
     let inboxTask = try store.createTask(listId: inbox.id, title: "Inbox task")
-    let work = try store.createList(workspaceId: workspace.id, name: "Work")
-    let transportRoot = try store.createTask(listId: work.id, title: "Wörk!!!")
-    let workTask = try store.createTask(listId: work.id, title: "Prepare proposal", parentTaskId: transportRoot.id)
+    let imported = try XCTUnwrap(store.importTasks(
+      workspaceId: workspace.id, listName: "Work", sourceSystem: "checkvist",
+      seeds: [
+        .init(sourceId: "root", parentSourceId: nil, title: "Wörk!!!", status: .open, sortOrder: 0),
+        .init(sourceId: "child", parentSourceId: "root", title: "Prepare proposal", status: .open, sortOrder: 0),
+      ]))
+    let work = imported.list
+    let transportRoot = try XCTUnwrap(store.tasks(in: work.id).first)
+    let workTask = try XCTUnwrap(store.tasks(in: work.id, parentTaskId: transportRoot.id).first)
     let archived = try store.createList(workspaceId: workspace.id, name: "Archived")
     _ = try store.createTask(listId: archived.id, title: "Old task")
     try store.setListArchived(true, id: archived.id)
@@ -335,5 +342,77 @@ final class WorkspaceStoreTests: XCTestCase {
         tags: ["Work", "Launch"],
         recurrenceRule: "every Monday",
         externalLinks: ["https://example.com/spec"]))
+  }
+}
+
+
+extension WorkspaceStoreTests {
+  func testBatchedBoardMetadataMatchesIndividualReadsAcrossBatchBoundaries() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let outcome = try XCTUnwrap(store.importTasks(
+      workspaceId: workspace.id, listName: "Large board", sourceSystem: "performance-test",
+      seeds: (0..<1200).map {
+        ImportedTaskSeed(sourceId: "task-\($0)", parentSourceId: nil,
+                         title: "Task \($0)", status: .open, sortOrder: $0)
+      }))
+    let ids = outcome.insertedTaskIDs
+    try store.database.write { db in
+      for (index, id) in ids.enumerated() where index % 3 != 0 {
+        try db.execute(sql: """
+          INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON,
+            matrixUrgency, matrixImportance, kanbanColumn, updatedAt)
+          VALUES (?, '[]', '[]', ?, ?, ?, ?)
+          """, arguments: [id, index % 100, (index * 7) % 100,
+                             index.isMultiple(of: 2) ? "today" : nil, Date.now])
+      }
+    }
+    let clock = ContinuousClock()
+    let individualStart = clock.now
+    var expectedColumns: [String: String] = [:]
+    var expectedPositions: [String: TaskMatrixPosition] = [:]
+    for id in ids {
+      expectedColumns[id] = try store.kanbanColumn(for: id)
+      expectedPositions[id] = try store.matrixPosition(for: id)
+    }
+    let individualTime = individualStart.duration(to: clock.now)
+    let batchStart = clock.now
+    let metadata = try store.boardMetadata(for: ids + [ids[0]])
+    let batchTime = batchStart.duration(to: clock.now)
+    XCTAssertEqual(metadata.columns, expectedColumns)
+    XCTAssertEqual(metadata.positions, expectedPositions)
+    print("Board metadata, 1200 tasks: individual=\(individualTime), batched=\(batchTime)")
+
+    let empty = try store.boardMetadata(for: [])
+    XCTAssertTrue(empty.columns.isEmpty)
+    XCTAssertTrue(empty.positions.isEmpty)
+    try store.setKanbanColumn("later", for: ids[0])
+    XCTAssertEqual(try store.boardMetadata(for: [ids[0]]).columns[ids[0]], "later")
+    _ = try store.undo()
+    XCTAssertNil(try store.boardMetadata(for: [ids[0]]).columns[ids[0]])
+  }
+}
+
+
+extension WorkspaceStoreTests {
+  func testBulkColumnMovePreservesMetadataAndIsOneAtomicUndoStep() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let list = try XCTUnwrap(store.inbox(in: workspace.id))
+    let first = try store.createTask(listId: list.id, title: "First")
+    let second = try store.createTask(listId: list.id, title: "Second")
+    let position = TaskMatrixPosition(urgency: 25, importance: 80)
+    try store.setMatrixPosition(position, for: first.id)
+    try store.setKanbanColumn("today", for: first.id)
+    try store.setKanbanColumn("later", for: [first.id, second.id, first.id])
+    XCTAssertEqual(try store.kanbanColumn(for: first.id), "later")
+    XCTAssertEqual(try store.kanbanColumn(for: second.id), "later")
+    XCTAssertEqual(try store.matrixPosition(for: first.id), position)
+    _ = try store.undo()
+    XCTAssertEqual(try store.kanbanColumn(for: first.id), "today")
+    XCTAssertNil(try store.kanbanColumn(for: second.id))
+    _ = try store.redo()
+    XCTAssertEqual(try store.kanbanColumn(for: second.id), "later")
+    XCTAssertThrowsError(try store.setKanbanColumn("done", for: [first.id, "missing"]))
+    XCTAssertEqual(try store.kanbanColumn(for: first.id), "later")
+    XCTAssertEqual(try store.matrixPosition(for: first.id), position)
   }
 }

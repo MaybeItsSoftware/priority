@@ -50,6 +50,7 @@ private struct CheckvistSyncPluginSettingsView: View {
             set: { manager.repository.checkvistIntegrationEnabled = $0 }
           )
         )
+          .toggleStyle(.switch)
         Text(
           "When disabled, Priority runs offline and your Checkvist credentials and list selection are preserved for when you re-enable it."
         )

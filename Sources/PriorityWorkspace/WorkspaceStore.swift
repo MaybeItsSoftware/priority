@@ -45,6 +45,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     try database.write { db in
       try workspace.insert(db)
       try Self.ensureInbox(db, workspaceId: workspace.id, now: now)
+      try Self.seedConditions(db, workspaceId: workspace.id, now: now)
     }
     return workspace
   }
@@ -93,7 +94,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   public func folders(in workspaceId: String) throws -> [ListFolder] {
     try database.read { db in
       try ListFolder.filter(Column("workspaceId") == workspaceId)
-        .order(Column("sortOrder"), Column("name")).fetchAll(db)
+        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
     }
   }
 
@@ -101,7 +102,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     try database.read { db in
       var request = TaskList.filter(Column("workspaceId") == workspaceId)
       if !includingArchived { request = request.filter(Column("isArchived") == false) }
-      return try request.order(Column("sortOrder"), Column("name")).fetchAll(db)
+      return try request.order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
     }
   }
 
@@ -161,6 +162,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     let trimmed = try Self.nonEmptyName(name)
     try journalledWrite("Rename Folder") { db in
       guard var folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
+      guard folder.name != trimmed else { return }
       folder.name = trimmed
       folder.updatedAt = now
       try folder.update(db)
@@ -170,15 +172,8 @@ public final class WorkspaceStore: @unchecked Sendable {
   public func moveFolder(id: String, toParentFolderId parentFolderId: String?, now: Date = .now) throws {
     try journalledWrite("Move Folder") { db in
       guard var folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
-      guard parentFolderId != id else { throw WorkspaceStoreError.invalidFolderMove }
-      if let parentFolderId {
-        guard let parent = try ListFolder.fetchOne(db, key: parentFolderId), parent.workspaceId == folder.workspaceId else {
-          throw WorkspaceStoreError.missingFolder
-        }
-        if try Self.folderDescendantIDs(db, of: id).contains(parentFolderId) {
-          throw WorkspaceStoreError.invalidFolderMove
-        }
-      }
+      try Self.validateFolderParent(db, folder: folder, parentFolderId: parentFolderId)
+      guard folder.parentFolderId != parentFolderId else { return }
       folder.parentFolderId = parentFolderId
       folder.sortOrder = try Self.nextOrder(
         db, table: ListFolder.databaseTableName, whereSQL: "workspaceId = ? AND parentFolderId IS ?",
@@ -199,10 +194,12 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   public func updateList(id: String, name: String, colorHex: String?, now: Date = .now) throws {
     let trimmed = try Self.nonEmptyName(name)
+    let color = colorHex?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     try journalledWrite("Edit List") { db in
       guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
+      guard list.name != trimmed || list.colorHex != color else { return }
       list.name = trimmed
-      list.colorHex = colorHex?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+      list.colorHex = color
       list.updatedAt = now
       try list.update(db)
     }
@@ -217,6 +214,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     let trimmed = try Self.nonEmptyName(name)
     try journalledWrite("Rename List") { db in
       guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
+      guard list.name != trimmed else { return }
       list.name = trimmed
       list.updatedAt = now
       try list.update(db)
@@ -231,6 +229,7 @@ public final class WorkspaceStore: @unchecked Sendable {
           throw WorkspaceStoreError.missingFolder
         }
       }
+      guard list.folderId != folderId else { return }
       list.folderId = folderId
       list.sortOrder = try Self.nextOrder(
         db, table: TaskList.databaseTableName, whereSQL: "workspaceId = ? AND folderId IS ?",
@@ -246,7 +245,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       var siblings = try TaskList
         .filter(Column("workspaceId") == list.workspaceId && Column("folderId") == list.folderId)
         .filter(Column("isArchived") == list.isArchived)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
+        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
       guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
       let target = min(max(0, index + offset), siblings.count - 1)
       guard target != index else { return }
@@ -260,7 +259,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       guard let folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
       var siblings = try ListFolder
         .filter(Column("workspaceId") == folder.workspaceId && Column("parentFolderId") == folder.parentFolderId)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
+        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
       guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
       let target = min(max(0, index + offset), siblings.count - 1)
       guard target != index else { return }
@@ -321,14 +320,34 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
-  /// Returns a transport root only when it is the sole top-level task and
-  /// repeats the list name. Its children are the visible list-level work.
+  /// Returns the imported wrapper by its persisted identity. If it has been
+  /// moved or promoted alongside other roots, show the actual hierarchy.
   public func visibleRootParentTaskID(for list: TaskList) throws -> String? {
-    let roots = try tasks(in: list.id)
-    guard roots.count == 1, let root = roots.first,
-      Self.normalizedVisibleRootName(root.title) == Self.normalizedVisibleRootName(list.name)
-    else { return nil }
-    return root.id
+    try database.read { db in
+      try Self.visibleRootParentTaskID(db, listId: list.id)
+    }
+  }
+
+  private static func visibleRootParentTaskID(_ db: Database, listId: String) throws -> String? {
+    guard let list = try TaskList.fetchOne(db, key: listId), let rootID = list.visibleRootTaskId else { return nil }
+    let roots = try WorkspaceTask
+      .filter(Column("listId") == listId && Column("parentTaskId") == nil).fetchAll(db)
+    guard roots.count == 1, roots.first?.id == rootID else { return nil }
+    return rootID
+  }
+
+  /// Recognise wrappers once, at import or migration, rather than during edits.
+  static func registerVisibleRoot(_ db: Database, for list: TaskList) throws {
+    let roots = try WorkspaceTask
+      .filter(Column("listId") == list.id && Column("parentTaskId") == nil).fetchAll(db)
+    let listName = normalizedVisibleRootName(list.name)
+    guard roots.count == 1, let root = roots.first, root.sourceSystem != nil,
+      !listName.isEmpty, normalizedVisibleRootName(root.title) == listName,
+      try WorkspaceTask.filter(Column("parentTaskId") == root.id).fetchCount(db) > 0
+    else { return }
+    var updated = list
+    updated.visibleRootTaskId = root.id
+    try updated.update(db)
   }
 
   /// The virtual Everything scope aggregates active lists without changing
@@ -343,13 +362,19 @@ public final class WorkspaceStore: @unchecked Sendable {
   private static func normalizedVisibleRootName(_ name: String) -> String {
     name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
       .trimmingCharacters(in: .whitespacesAndNewlines)
-      .replacingOccurrences(of: "[^a-z0-9]+", with: "", options: .regularExpression)
+      .replacingOccurrences(of: "[^\\p{L}\\p{N}]+", with: "", options: .regularExpression)
   }
 
   public func createTask(
     listId: String,
     title: String,
     parentTaskId: String? = nil,
+    kind: WorkspaceItemKind = .task,
+    kanbanColumn: String? = nil,
+    startAt: Date? = nil,
+    atTop: Bool = false,
+    adjacentTaskId: String? = nil,
+    above: Bool = false,
     now: Date = .now
   ) throws -> WorkspaceTask {
     let trimmed = try Self.nonEmptyName(title)
@@ -366,9 +391,30 @@ public final class WorkspaceStore: @unchecked Sendable {
       let task = WorkspaceTask(
         id: UUID().uuidString, listId: listId, parentTaskId: parentTaskId, title: trimmed,
         notes: "", status: .open, sortOrder: nextOrder, dueAt: nil, estimateSeconds: nil,
-        createdAt: now, updatedAt: now)
+        itemKind: kind, createdAt: now, updatedAt: now)
       try task.insert(db)
-      return task
+      if kanbanColumn != nil || startAt != nil {
+        try db.execute(sql: """
+          INSERT INTO task_metadata(taskId, startAt, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
+          VALUES (?, ?, '[]', '[]', ?, ?)
+          """, arguments: [task.id, startAt, kanbanColumn, now])
+      }
+      if atTop || adjacentTaskId != nil {
+        var siblings = try WorkspaceTask
+          .filter(Column("listId") == listId && Column("parentTaskId") == parentTaskId)
+          .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
+        siblings.removeAll { $0.id == task.id }
+        let insertion: Int
+        if let adjacentTaskId {
+          guard let index = siblings.firstIndex(where: { $0.id == adjacentTaskId }) else {
+            throw WorkspaceStoreError.invalidTaskMove
+          }
+          insertion = index + (above ? 0 : 1)
+        } else { insertion = 0 }
+        siblings.insert(task, at: insertion)
+        try Self.persistTaskOrder(siblings, db: db, now: now)
+      }
+      return try WorkspaceTask.fetchOne(db, key: task.id) ?? task
     }
   }
 
@@ -391,53 +437,27 @@ public final class WorkspaceStore: @unchecked Sendable {
   ) throws {
     let trimmed = try Self.nonEmptyName(title)
     try journalledWrite("Edit Task") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: id) else { return }
-      task.title = trimmed
-      task.notes = notes
-      task.dueAt = dueAt
-      task.estimateSeconds = estimateSeconds
-      task.updatedAt = now
-      try task.update(db)
+      var edit = try Self.taskEditorSnapshot(db, taskId: id)
+      let previous = edit
+      edit.title = trimmed
+      edit.notes = notes
+      edit.dueAt = dueAt
+      edit.estimateSeconds = estimateSeconds
+      if dueAt != nil { edit.planning?.dueDate = nil; edit.planning = edit.planning?.normalized }
+      try Self.updatePlanning(db, edit: edit, previous: previous.planning, previousDueAt: previous.dueAt, now: now)
+      try Self.updateTaskRecord(db, edit: edit, now: now)
     }
   }
 
   public func taskEditorMetadata(for taskId: String) throws -> TaskEditorMetadata {
-    try database.read { db in
-      guard let metadata = try TaskMetadata.fetchOne(db, key: taskId) else { return TaskEditorMetadata() }
-      return TaskEditorMetadata(
-        priority: metadata.priority,
-        tags: Self.decodeStringArray(metadata.tagsJSON),
-        recurrenceRule: metadata.recurrenceRule,
-        externalLinks: Self.decodeStringArray(metadata.externalLinksJSON))
-    }
+    try database.read { db in try Self.taskEditorSnapshot(db, taskId: taskId).metadata }
   }
 
   public func updateTaskEditorMetadata(
-    taskId: String,
-    metadata: TaskEditorMetadata,
-    now: Date = .now
+    taskId: String, metadata: TaskEditorMetadata, now: Date = .now
   ) throws {
-    let tags = Self.normalizedStrings(metadata.tags)
-    let links = Self.normalizedStrings(metadata.externalLinks)
-    let recurrence = metadata.recurrenceRule?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-    let priority = metadata.priority.flatMap { (1...4).contains($0) ? $0 : nil }
     try journalledWrite("Edit Task Details") { db in
-      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
-      let tagsJSON = String(data: try JSONEncoder().encode(tags), encoding: .utf8) ?? "[]"
-      let linksJSON = String(data: try JSONEncoder().encode(links), encoding: .utf8) ?? "[]"
-      var record = try TaskMetadata.fetchOne(db, key: taskId) ?? TaskMetadata(
-        taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-        matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]", updatedAt: now)
-      record.priority = priority
-      record.tagsJSON = tagsJSON
-      record.recurrenceRule = recurrence
-      record.externalLinksJSON = linksJSON
-      record.updatedAt = now
-      if try TaskMetadata.fetchOne(db, key: taskId) == nil {
-        try record.insert(db)
-      } else {
-        try record.update(db)
-      }
+      try Self.updateEditorMetadata(db, taskId: taskId, metadata: metadata, now: now)
     }
   }
 
@@ -445,18 +465,52 @@ public final class WorkspaceStore: @unchecked Sendable {
     try database.read { db in try TaskMetadata.fetchOne(db, key: taskId)?.kanbanColumn }
   }
 
+  /// Loads board placement in batches rather than opening a read per card.
+  /// Missing metadata retains the same unplaced/default-column behaviour.
+  public func boardMetadata(for taskIDs: [String]) throws -> (
+    columns: [String: String], positions: [String: TaskMatrixPosition]
+  ) {
+    guard !taskIDs.isEmpty else { return ([:], [:]) }
+    return try database.read { db in
+      var columns: [String: String] = [:]
+      var positions = Dictionary(uniqueKeysWithValues: Set(taskIDs).map {
+        ($0, TaskMatrixPosition(urgency: nil, importance: nil))
+      })
+      // Stay below SQLite's parameter limit even for large imported trees.
+      for start in stride(from: 0, to: taskIDs.count, by: 500) {
+        let ids = Array(taskIDs[start..<min(start + 500, taskIDs.count)])
+        for record in try TaskMetadata.filter(ids.contains(Column("taskId"))).fetchAll(db) {
+          columns[record.taskId] = record.kanbanColumn
+          positions[record.taskId] = TaskMatrixPosition(
+            urgency: record.matrixUrgency, importance: record.matrixImportance)
+        }
+      }
+      return (columns, positions)
+    }
+  }
+
   public func setKanbanColumn(_ column: String?, for taskId: String, now: Date = .now) throws {
+    try setKanbanColumn(column, for: [taskId], now: now)
+  }
+
+  /// Moving a whole column is one transaction and one undo step.
+  public func setKanbanColumn(_ column: String?, for taskIDs: [String], now: Date = .now) throws {
+    let ids = Array(Set(taskIDs))
+    guard !ids.isEmpty else { return }
+    let value = column?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     try journalledWrite("Move Task") { db in
-      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
-      var record = try TaskMetadata.fetchOne(db, key: taskId) ?? TaskMetadata(
-        taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-        matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]", updatedAt: now)
-      record.kanbanColumn = column?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-      record.updatedAt = now
-      if try TaskMetadata.fetchOne(db, key: taskId) == nil {
-        try record.insert(db)
-      } else {
-        try record.update(db)
+      for start in stride(from: 0, to: ids.count, by: 500) {
+        let batch = Array(ids[start..<min(start + 500, ids.count)])
+        let count = try WorkspaceTask.filter(batch.contains(Column("id"))).fetchCount(db)
+        guard count == batch.count else { throw WorkspaceStoreError.missingTask }
+      }
+      for id in ids {
+        try db.execute(sql: """
+          INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
+          VALUES (?, '[]', '[]', ?, ?)
+          ON CONFLICT(taskId) DO UPDATE SET
+            kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt
+          """, arguments: [id, value, now])
       }
     }
   }
@@ -491,10 +545,14 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   /// Moves a task and its complete subtree. A destination parent must belong to
   /// the destination list and may not be the task itself or one of its descendants.
-  public func moveTask(id: String, toListId listId: String, parentTaskId: String? = nil, now: Date = .now) throws {
+  public func moveTask(
+    id: String, toListId listId: String, parentTaskId: String? = nil,
+    toVisibleRoot: Bool = false, now: Date = .now
+  ) throws {
     try journalledWrite("Move Task") { db in
       guard var task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
       guard try TaskList.fetchOne(db, key: listId) != nil else { throw WorkspaceStoreError.missingList }
+      let parentTaskId = toVisibleRoot ? try Self.visibleRootParentTaskID(db, listId: listId) : parentTaskId
       let descendants = try Self.taskDescendantIDs(db, of: id)
       guard parentTaskId != id, parentTaskId.map({ !descendants.contains($0) }) ?? true else {
         throw WorkspaceStoreError.invalidTaskMove
@@ -504,6 +562,7 @@ public final class WorkspaceStore: @unchecked Sendable {
           throw WorkspaceStoreError.invalidTaskMove
         }
       }
+      guard task.listId != listId || task.parentTaskId != parentTaskId else { return }
       if task.listId != listId {
         let ids = descendants.union([id])
         let values: [Any] = [listId, now] + ids.sorted()
@@ -551,7 +610,7 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   /// Reorders a card before another card without changing either task's real
   /// list or project parent. Cross-project drops remain a list-move operation.
-  public func moveTaskBefore(id: String, targetId: String, now: Date = .now) throws {
+  public func moveTaskBefore(id: String, targetId: String, kanbanColumn: String? = nil, now: Date = .now) throws {
     try journalledWrite("Reorder Task") { db in
       guard let task = try WorkspaceTask.fetchOne(db, key: id),
         let target = try WorkspaceTask.fetchOne(db, key: targetId)
@@ -567,6 +626,13 @@ public final class WorkspaceStore: @unchecked Sendable {
       guard let targetIndex = siblings.firstIndex(where: { $0.id == targetId }) else { return }
       siblings.insert(moved, at: targetIndex)
       try Self.persistTaskOrder(siblings, db: db, now: now)
+      if let kanbanColumn {
+        try db.execute(sql: """
+          INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
+          VALUES (?, '[]', '[]', ?, ?)
+          ON CONFLICT(taskId) DO UPDATE SET kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt
+          """, arguments: [id, kanbanColumn, now])
+      }
     }
   }
 
@@ -611,192 +677,6 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
-  public func activeFocusSession() throws -> FocusSession? {
-    try database.read { db in
-      try FocusSession.filter(Column("phase") != FocusSessionPhase.finished.rawValue)
-        .order(Column("startedAt").desc).fetchOne(db)
-    }
-  }
-
-  public func focusQueue(for sessionId: String) throws -> [FocusQueueTask] {
-    try database.read { db in
-      let items = try FocusQueueItem.filter(Column("sessionId") == sessionId)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-      return try items.compactMap { item in
-        guard let task = try WorkspaceTask.fetchOne(db, key: item.taskId) else { return nil }
-        return FocusQueueTask(item: item, task: task)
-      }
-    }
-  }
-
-  /// `plannedSeconds` is the estimate given on the focus screen. It becomes the
-  /// session's work block, so the timer counts towards the number the user
-  /// actually committed to rather than a fixed pomodoro they never chose.
-  public func startFocusSession(
-    taskId: String,
-    plannedSeconds: Int? = nil,
-    workDurationSeconds: Int = 25 * 60,
-    breakDurationSeconds: Int = 5 * 60,
-    now: Date = .now
-  ) throws -> FocusSession {
-    try database.write { db in
-      if let active = try FocusSession.filter(Column("phase") != FocusSessionPhase.finished.rawValue).fetchOne(db) {
-        return active
-      }
-      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
-        throw WorkspaceStoreError.missingTask
-      }
-      let session = FocusSession(
-        id: UUID().uuidString, startedAt: now, endedAt: nil, phase: .running, activeTaskId: taskId,
-        activeTaskStartedAt: now,
-        workDurationSeconds: max(60, plannedSeconds ?? workDurationSeconds),
-        breakDurationSeconds: max(60, breakDurationSeconds),
-        breakEndsAt: nil)
-      let firstItem = FocusQueueItem(
-        id: UUID().uuidString, sessionId: session.id, taskId: taskId, sortOrder: 0, state: .queued,
-        plannedSeconds: plannedSeconds, completedAt: nil, skippedAt: nil, createdAt: now)
-      try session.insert(db)
-      try firstItem.insert(db)
-      return session
-    }
-  }
-
-  public func addToFocusQueue(
-    sessionId: String, taskId: String, plannedSeconds: Int? = nil, now: Date = .now
-  ) throws {
-    try database.write { db in
-      guard try FocusSession.fetchOne(db, key: sessionId) != nil,
-        try WorkspaceTask.fetchOne(db, key: taskId) != nil
-      else { throw WorkspaceStoreError.missingTask }
-      if try FocusQueueItem.filter(Column("sessionId") == sessionId && Column("taskId") == taskId)
-        .fetchOne(db) != nil
-      {
-        return
-      }
-      let count = try FocusQueueItem.filter(Column("sessionId") == sessionId)
-        .fetchCount(db)
-      let item = FocusQueueItem(
-        id: UUID().uuidString, sessionId: sessionId, taskId: taskId, sortOrder: count, state: .queued,
-        plannedSeconds: plannedSeconds, completedAt: nil, skippedAt: nil, createdAt: now)
-      try item.insert(db)
-    }
-  }
-
-  /// What finishing a focus block did to the underlying task. A daily's task
-  /// survives the sitting — that is the whole point of modelling a daily as a
-  /// contribution — so the caller needs to know which happened before it
-  /// reports anything to the user.
-  public enum FocusCompletionOutcome: Sendable, Equatable {
-    case taskCompleted
-    case contributionLogged(seconds: Int)
-  }
-
-  public struct FocusCompletion: Sendable, Equatable {
-    public let session: FocusSession
-    public let outcome: FocusCompletionOutcome
-    /// The points the block earned, or nil when it was finished without a
-    /// quality judgement — or took no measurable time.
-    public let award: FocusAward?
-  }
-
-  /// Finishes the current focus block, crediting `elapsedSeconds` of work.
-  ///
-  /// When the active task has a daily expected today the task stays open and
-  /// the time lands on today's contribution instead. Otherwise the task is
-  /// completed, which is what the queue's original behaviour was.
-  ///
-  /// `qualityMultiplier` is how well the user says the block went. Supplying
-  /// one scores the block; leaving it nil finishes the block without a score,
-  /// which is what every caller that is not the user pressing Done does.
-  @discardableResult
-  public func completeActiveFocusTask(
-    sessionId: String,
-    elapsedSeconds: Int = 0,
-    qualityMultiplier: Double? = nil,
-    now: Date = .now,
-    calendar: Calendar = .current
-  ) throws -> FocusCompletion {
-    try database.write { db in
-      guard var session = try FocusSession.fetchOne(db, key: sessionId), let activeID = session.activeTaskId else {
-        throw WorkspaceStoreError.noActiveFocusTask
-      }
-      var outcome = FocusCompletionOutcome.taskCompleted
-      let activeTask = try WorkspaceTask.fetchOne(db, key: activeID)
-      let daily = try Self.dueDaily(db, taskId: activeID, on: now, calendar: calendar)
-      if let daily {
-        let credited = max(0, elapsedSeconds)
-        try Self.recordContribution(
-          db, daily: daily, seconds: credited, complete: true, now: now, calendar: calendar)
-        outcome = .contributionLogged(seconds: credited)
-      } else if var task = activeTask {
-        task.status = .completed
-        task.updatedAt = now
-        try task.update(db)
-      }
-      var award: FocusAward?
-      if let qualityMultiplier, elapsedSeconds > 0 {
-        let earned = FocusAward(
-          sessionId: sessionId, taskId: activeTask?.id, taskTitle: activeTask?.title ?? "Untitled task",
-          seconds: elapsedSeconds, multiplier: qualityMultiplier, awardedAt: now)
-        try earned.insert(db)
-        award = earned
-      }
-      if var item = try FocusQueueItem.filter(Column("sessionId") == sessionId && Column("taskId") == activeID)
-        .filter(Column("state") == FocusQueueState.queued.rawValue).fetchOne(db)
-      {
-        item.state = .completed
-        item.completedAt = now
-        try item.update(db)
-      }
-      let next = try FocusQueueItem.filter(Column("sessionId") == sessionId)
-        .filter(Column("state") == FocusQueueState.queued.rawValue)
-        .order(Column("sortOrder")).fetchOne(db)
-      session.activeTaskId = next?.taskId
-      // The next task's block starts now, not when the session did.
-      session.activeTaskStartedAt = now
-      if next == nil {
-        session.phase = .finished
-        session.endedAt = now
-      }
-      try session.update(db)
-      return FocusCompletion(session: session, outcome: outcome, award: award)
-    }
-  }
-
-  public func finishFocusSession(id: String, now: Date = .now) throws {
-    try database.write { db in
-      guard var session = try FocusSession.fetchOne(db, key: id) else { return }
-      session.phase = .finished
-      session.endedAt = now
-      session.breakEndsAt = nil
-      try session.update(db)
-    }
-  }
-
-  private static func nonEmptyName(_ raw: String) throws -> String {
-    let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !value.isEmpty else { throw WorkspaceStoreError.emptyName }
-    return value
-  }
-
-  private static func normalizedStrings(_ values: [String]) -> [String] {
-    var seen = Set<String>()
-    return values.compactMap { value in
-      let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !trimmed.isEmpty, seen.insert(trimmed.localizedLowercase).inserted else { return nil }
-      return trimmed
-    }
-  }
-
-  private static func decodeStringArray(_ json: String) -> [String] {
-    guard let data = json.data(using: .utf8), let values = try? JSONDecoder().decode([String].self, from: data) else {
-      return []
-    }
-    return normalizedStrings(values)
-  }
-
-  /// Internal rather than private so `WorkspaceStore+Import.swift` — the same
-  /// type, split only for size — can reach it.
   static func nextOrder(
     _ db: Database, table: String, whereSQL: String, arguments: StatementArguments
   ) throws -> Int {
@@ -828,7 +708,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
-  private static func taskDescendantIDs(_ db: Database, of taskID: String) throws -> Set<String> {
+  static func taskDescendantIDs(_ db: Database, of taskID: String) throws -> Set<String> {
     var descendants = Set<String>()
     var frontier = [taskID]
     while !frontier.isEmpty {
@@ -840,7 +720,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     return descendants
   }
 
-  private static func folderDescendantIDs(_ db: Database, of folderID: String) throws -> Set<String> {
+  static func folderDescendantIDs(_ db: Database, of folderID: String) throws -> Set<String> {
     var descendants = Set<String>()
     var frontier = [folderID]
     while !frontier.isEmpty {
@@ -1071,6 +951,100 @@ public final class WorkspaceStore: @unchecked Sendable {
         table.column("awardedAt", .datetime).notNull().indexed()
       }
     }
+    migrator.registerMigration("v11_stable_visible_roots") { db in
+      // Nullable for older undo snapshots, which predate this column.
+      try db.alter(table: "task_lists") { table in
+        table.add(column: "visibleRootTaskId", .text).references("tasks", onDelete: .setNull)
+      }
+      for list in try TaskList.fetchAll(db) {
+        try WorkspaceStore.registerVisibleRoot(db, for: list)
+      }
+      // Carry the inferred identity into pre-upgrade list snapshots as well,
+      // so undoing an old colour/name edit does not unhide its wrapper.
+      try db.execute(sql: """
+        UPDATE change_log SET
+          beforeJSON = CASE WHEN beforeJSON IS NULL THEN NULL ELSE
+            json_set(beforeJSON, '$.visibleRootTaskId',
+              (SELECT visibleRootTaskId FROM task_lists WHERE id = change_log.rowId)) END,
+          afterJSON = CASE WHEN afterJSON IS NULL THEN NULL ELSE
+            json_set(afterJSON, '$.visibleRootTaskId',
+              (SELECT visibleRootTaskId FROM task_lists WHERE id = change_log.rowId)) END
+        WHERE tableName = 'task_lists'
+        """)
+      try WorkspaceStore.installChangeLogTriggers(db)
+    }
+    migrator.registerMigration("v12_task_conditions_and_work") { db in
+      try db.create(table: "task_conditions") { table in
+        table.column("id", .text).primaryKey()
+        table.column("workspaceId", .text).notNull().references("workspaces", onDelete: .cascade)
+        table.column("name", .text).notNull()
+        table.column("isLocation", .boolean).notNull().defaults(to: false)
+        table.column("isArchived", .boolean).notNull().defaults(to: false)
+        table.column("createdAt", .datetime).notNull()
+        table.column("updatedAt", .datetime).notNull()
+      }
+      for workspace in try Workspace.fetchAll(db) {
+        try WorkspaceStore.seedConditions(db, workspaceId: workspace.id, now: .now)
+      }
+      try db.alter(table: "task_metadata") { table in table.add(column: "planningJSON", .text) }
+      try db.alter(table: "focus_sessions") { table in
+        table.add(column: "activeBlockId", .text)
+        table.add(column: "accumulatedSeconds", .integer)
+        table.add(column: "pausedAt", .datetime)
+        table.add(column: "checkpointAt", .datetime)
+      }
+      try db.create(table: "focus_work_blocks") { table in
+        table.column("id", .text).primaryKey()
+        table.column("sessionId", .text).references("focus_sessions", onDelete: .setNull)
+        table.column("taskId", .text).indexed().references("tasks", onDelete: .setNull)
+        table.column("taskTitle", .text).notNull()
+        table.column("seconds", .integer).notNull()
+        table.column("recordedAt", .datetime).notNull()
+        table.column("originalTaskId", .text).indexed()
+      }
+      try db.execute(sql: """
+        INSERT INTO focus_work_blocks(id, sessionId, taskId, taskTitle, seconds, recordedAt, originalTaskId)
+        SELECT 'legacy-' || id, sessionId, taskId, taskTitle, seconds, awardedAt, taskId FROM focus_awards
+        """)
+      try WorkspaceStore.installChangeLogTriggers(db)
+    }
+    migrator.registerMigration("v13_legacy_visible_roots") { db in
+      // Early bulk imports predate source identity. Recognise only matching
+      // wrappers created in the same batch as their list and children.
+      for var list in try TaskList.fetchAll(db) where list.visibleRootTaskId == nil {
+        let roots = try WorkspaceTask
+          .filter(Column("listId") == list.id && Column("parentTaskId") == nil).fetchAll(db)
+        guard roots.count == 1, let root = roots.first,
+          root.sourceSystem == nil, root.createdAt == list.createdAt,
+          !normalizedVisibleRootName(list.name).isEmpty,
+          normalizedVisibleRootName(root.title) == normalizedVisibleRootName(list.name),
+          try WorkspaceTask.filter(Column("parentTaskId") == root.id
+            && Column("createdAt") == list.createdAt).fetchCount(db) > 0
+        else { continue }
+        list.visibleRootTaskId = root.id
+        try list.update(db)
+      }
+    }
+    migrator.registerMigration("v14_nested_lists") { db in
+      try db.alter(table: "tasks") { table in
+        table.add(column: "itemKind", .text)
+        table.add(column: "isPromoted", .boolean)
+        table.add(column: "archivedAt", .datetime)
+      }
+      try db.alter(table: "task_lists") { table in
+        table.add(column: "completedAt", .datetime)
+      }
+      // Nullable additions also keep pre-migration undo snapshots valid.
+      try installChangeLogTriggers(db)
+    }
+    migrator.registerMigration("v15_kanban_board_history") { db in
+      try db.create(table: "kanban_boards") { table in
+        table.column("id", .text).primaryKey()
+        table.column("columnsJSON", .text).notNull()
+      }
+      try WorkspaceStore.installChangeLogTriggers(db)
+    }
+
     return migrator
   }()
 }

@@ -5,6 +5,201 @@ import PriorityWorkspace
 /// deletion. Split from `WorkspaceViewModel.swift` only for size.
 @MainActor
 extension WorkspaceViewModel {
+  func itemSymbol(for task: WorkspaceTask) -> String {
+    task.isList ? (listIcons[task.id] ?? "list.bullet") : (task.status == .open ? "circle" : "checkmark.circle.fill")
+  }
+
+  func setNestedListIcon(_ symbol: String, for task: WorkspaceTask) {
+    listIcons[task.id] = symbol
+    UserDefaults.standard.set(listIcons, forKey: "workspaceListIconsV1")
+  }
+
+  func openItemList(_ task: WorkspaceTask) {
+    taskEditor.flush()
+    enterTask(task)
+    selectedTaskID = nil
+    requestKeyboardFocus(.tasks)
+  }
+
+  func moveIntoNestedList(_ task: WorkspaceTask, parent: WorkspaceTask) {
+    guard let store else { return }
+    taskEditor.flush()
+    perform {
+      try store.moveTask(id: task.id, toListId: parent.listId, parentTaskId: parent.id)
+      try load()
+    }
+  }
+
+  func moveDroppedItem(_ payload: String, toListID listID: String, parentTaskID: String? = nil) {
+    guard let store else { return }
+    taskEditor.flush()
+    perform {
+      if payload.hasPrefix(WorkspaceTaskDrag.listPrefix) {
+        let sourceID = String(payload.dropFirst(WorkspaceTaskDrag.listPrefix.count))
+        guard sourceID != listID else { return }
+        let oldIcon = listIcons[sourceID]
+        let nested = try store.nestList(id: sourceID, inListId: listID, parentTaskId: parentTaskID)
+        if let oldIcon { setNestedListIcon(oldIcon, for: nested) }
+        if selectedListID == sourceID {
+          selectedListID = listID
+          if scopeTaskID == nil { scopeTaskID = nested.id }
+        }
+      } else {
+        guard let task = try store.task(id: payload), task.id != parentTaskID else { return }
+        try store.moveTask(id: task.id, toListId: listID, parentTaskId: parentTaskID, toVisibleRoot: parentTaskID == nil)
+        if let scopeID = scopeTaskID, let scope = try store.task(id: scopeID), scope.listId != selectedListID {
+          scopeTaskID = nil
+        }
+        if !isEverythingSelected && listID != selectedListID && selectedTaskID == task.id {
+          selectedTaskID = nil
+          isInspectorVisible = false
+        }
+      }
+      try load()
+      if let selectedID = selectedTaskID, !visibleNavigationTasks.contains(where: { $0.id == selectedID }) {
+        selectedTaskID = visibleNavigationTasks.first?.id
+      }
+    }
+  }
+
+  func moveDroppedItem(_ payload: String, toFolderID folderID: String?) {
+    guard let store else { return }
+    taskEditor.flush()
+    perform {
+      if payload.hasPrefix(WorkspaceTaskDrag.listPrefix) {
+        let listID = String(payload.dropFirst(WorkspaceTaskDrag.listPrefix.count))
+        try store.moveList(id: listID, toFolderId: folderID)
+      } else {
+        let oldTask = try store.task(id: payload)
+        let list = try store.moveTaskToFolder(id: payload, folderId: folderID)
+        if let oldTask, oldTask.isList, let symbol = listIcons[oldTask.id] { setIcon(symbol, for: list) }
+        if scopeTaskID == payload || selectedTaskID == payload {
+          selectedListID = list.id
+          scopeTaskID = nil
+        } else if let scopeID = scopeTaskID, let scope = try store.task(id: scopeID), scope.listId != selectedListID {
+          scopeTaskID = nil
+        }
+      }
+      var ancestorID: String? = folderID
+      var visited = Set<String>()
+      while let id = ancestorID, visited.insert(id).inserted, let folder = folders.first(where: { $0.id == id }) {
+        setFolderExpanded(folder, expanded: true)
+        ancestorID = folder.parentFolderId
+      }
+      try load()
+      if let selectedID = selectedTaskID, !visibleNavigationTasks.contains(where: { $0.id == selectedID }) {
+        selectedTaskID = visibleNavigationTasks.first?.id
+      }
+    }
+  }
+  var promotedLists: [WorkspaceTask] {
+    nestedLists.map(\.task).filter { $0.isPromoted == true && $0.status == .open }
+  }
+
+  var currentSidebarID: String? {
+    if isEverythingSelected { return "priority:everything" }
+    if let scope = scopeTask, scope.isList { return scope.id }
+    return selectedListID
+  }
+
+  func reloadNestedLists() throws {
+    guard let store else { return }
+    nestedLists = []
+    archivedNestedLists = []
+    var counts: [String: Int] = [:]
+    for list in lists {
+      var ancestors: [TaskOutlineItem] = []
+      let items = try store.outline(in: list.id)
+      counts[list.id] = items.count
+      for item in items {
+        while let last = ancestors.last, last.depth >= item.depth { ancestors.removeLast() }
+        if item.task.isList && item.id != list.visibleRootTaskId {
+          if item.task.archivedAt != nil { archivedNestedLists.append(item.task) }
+          if item.task.archivedAt == nil && !ancestors.contains(where: { $0.task.isList && $0.task.archivedAt != nil }) {
+            nestedLists.append(TaskOutlineItem(task: item.task, depth: ancestors.filter { $0.task.isList && $0.id != list.visibleRootTaskId }.count))
+          }
+        }
+        ancestors.append(item)
+      }
+    }
+    if listTaskCounts != counts { listTaskCounts = counts }
+  }
+
+  func selectNestedList(_ task: WorkspaceTask) {
+    taskEditor.flush()
+    dismissFocusScreen()
+    selectedFolderID = nil
+    enterTask(task)
+    selectedListID = task.listId
+    selectedTaskID = nil
+    reportKeyboardFocus(.sidebar)
+  }
+
+  func convertItem(_ task: WorkspaceTask) {
+    guard let store else { return }
+    taskEditor.flush()
+    perform {
+      try store.setItemKind(task.isList ? .task : .list, for: task.id)
+      try load()
+    }
+  }
+
+  func convertListToTask(_ list: TaskList) {
+    guard let store else { return }
+    taskEditor.flush()
+    perform {
+      let task = try store.convertListToTask(id: list.id)
+      selectedListID = task.listId
+      scopeTaskID = nil
+      viewMode = .outline
+      try load()
+      selectTask(task)
+      requestKeyboardFocus(.tasks)
+    }
+  }
+
+  func toggleCurrentListCompletion() {
+    if let scope = scopeTask, scope.isList { toggleTask(scope) }
+    else if let list = selectedList, !list.isSystemList { toggleListCompletion(list) }
+  }
+
+  func toggleListPromotion(_ task: WorkspaceTask) {
+    guard let store, task.isList else { return }
+    perform { try store.setNestedListPromoted(task.isPromoted != true, id: task.id); try load() }
+  }
+
+  func archiveNestedList(_ task: WorkspaceTask, archived: Bool = true) {
+    guard let store else { return }
+    taskEditor.flush()
+    perform {
+      try store.setNestedListArchived(archived, id: task.id)
+      if archived, scopeTaskID == task.id { scopeTaskID = task.parentTaskId }
+      try load()
+    }
+  }
+
+  func toggleListCompletion(_ list: TaskList) {
+    guard let store else { return }
+    perform { try store.setListCompleted(list.completedAt == nil, id: list.id); try load() }
+  }
+
+  func requestNestedListCreation(under parent: WorkspaceTask? = nil) {
+    guard let listID = parent?.listId ?? selectedListID, let store else { return }
+    creationTaskListID = listID
+    creationTaskParentID = parent?.id ?? (try? selectedList.flatMap { try store.visibleRootParentTaskID(for: $0) })
+    creationIsNested = true
+    creationRequest = .list
+  }
+
+  func createNestedList(named name: String) {
+    guard let store, let listID = creationTaskListID else { return }
+    perform {
+      let task = try store.createTask(listId: listID, title: name, parentTaskId: creationTaskParentID, kind: .list)
+      try load()
+      selectNestedList(task)
+      requestKeyboardFocus(.tasks)
+    }
+  }
   func archiveList(_ list: TaskList) {
     guard let store else { return }
     perform {
@@ -54,18 +249,21 @@ extension WorkspaceViewModel {
   func beginRenamingSelection() {
     if let folder = selectedFolder {
       beginRenaming(.folder(folder))
+    } else if let scope = scopeTask, scope.isList {
+      taskQuickEditRequest = WorkspaceTaskQuickEditRequest(task: scope, kind: .title)
     } else if let list = selectedList {
       beginRenaming(.list(list))
     }
   }
 
-  func cancelRenaming() {
+  func cancelRenaming(itemID: String? = nil) {
+    if let itemID, renamingSidebarItemID != itemID { return }
     renamingSidebarItemID = nil
   }
 
   func renameList(_ list: TaskList, to name: String) {
     guard let store else { return }
-    renamingSidebarItemID = nil
+    cancelRenaming(itemID: list.id)
     perform {
       try store.renameList(id: list.id, name: name)
       try load()
@@ -73,7 +271,7 @@ extension WorkspaceViewModel {
   }
 
   func renameFolder(_ folder: ListFolder, to name: String) {
-    renamingSidebarItemID = nil
+    cancelRenaming(itemID: folder.id)
     updateFolder(folder, name: name)
   }
 
@@ -110,12 +308,16 @@ extension WorkspaceViewModel {
   func showSelectedListSettings() {
     if let folder = selectedFolder {
       showSettings(for: folder)
+    } else if let scope = scopeTask, scope.isList {
+      selectTask(scope)
+      requestKeyboardFocus(.inspector)
     } else if let list = selectedList {
       showSettings(for: list)
     }
   }
 
   func archiveSelectedList() {
+    if let scope = scopeTask, scope.isList { archiveNestedList(scope); return }
     guard let list = selectedList, !list.isSystemList else { return }
     archiveList(list)
   }
@@ -190,7 +392,6 @@ extension WorkspaceViewModel {
   }
 
   func taskCount(for list: TaskList) -> Int {
-    guard let store else { return 0 }
-    return (try? store.outline(in: list.id).count) ?? 0
+    listTaskCounts[list.id, default: 0]
   }
 }

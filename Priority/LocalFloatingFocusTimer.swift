@@ -41,6 +41,7 @@ final class LocalFloatingFocusTimer: NSObject, NSWindowDelegate {
     panel.center()
     panel.contentViewController = NSHostingController(
       rootView: LocalFloatingFocusTimerView(onClose: { [weak self] in self?.close() })
+        .focusEffectDisabled()
         .environment(model))
     self.panel = panel
     return panel
@@ -64,15 +65,16 @@ private struct LocalFloatingFocusTimerView: View {
             .font(.system(size: 28, weight: .bold, design: .monospaced))
         }
         HStack {
-          Button("Done") {
+          Button("Progress") {
             // The prompt lives in the window, so that there is one of it. A
             // block worth scoring is worth looking up from the corner for.
-            model.requestFocusCompletion()
+            model.requestFocusCompletion(completeTask: false)
             onClose()
             AppDelegate.shared.showMainWindow()
           }
             .buttonStyle(.borderedProminent)
             .focusable()
+          Button(session.pausedAt == nil ? "Pause" : "Resume") { model.toggleFocusPause() }
           Button("Open panel") {
             model.showsFocusPanel = true
             onClose()
@@ -100,7 +102,7 @@ private struct LocalFloatingFocusTimerView: View {
 
   private func remainingTime(session: FocusSession, now: Date) -> String {
     FocusTimerDisplay.reading(
-      since: session.activeTaskStartedAt, planned: TimeInterval(session.workDurationSeconds), now: now
+      elapsed: TimeInterval(session.elapsedSeconds(now: now)), planned: TimeInterval(session.workDurationSeconds)
     ).text
   }
 }

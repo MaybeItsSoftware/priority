@@ -32,7 +32,7 @@ final class NextUpSelectorTests: XCTestCase {
     NextUpSelector.rank(candidates, now: now, calendar: calendar).map(\.candidate.id)
   }
 
-  func testAnOutstandingDailyOutranksEverythingElse() throws {
+  func testOverdueTasksOutrankOutstandingDailies() throws {
     let ranked = NextUpSelector.rank(
       [
         candidate("overdue", due: -20 * 86_400),
@@ -40,8 +40,8 @@ final class NextUpSelectorTests: XCTestCase {
         candidate("important", urgency: 1, importance: 1, priority: 4),
       ], now: now, calendar: calendar)
 
-    XCTAssertEqual(ranked.map(\.candidate.id), ["daily", "overdue", "important"])
-    XCTAssertEqual(ranked.first?.reason, .daily)
+    XCTAssertEqual(ranked.map(\.candidate.id), ["overdue", "daily", "important"])
+    XCTAssertEqual(ranked.first?.reason, .overdue)
   }
 
   func testOverdueBeatsDueTodayAndDeeperOverdueBeatsShallower() {
@@ -50,12 +50,10 @@ final class NextUpSelectorTests: XCTestCase {
       ["later", "late", "today"])
   }
 
-  func testOverdueContributionIsCappedSoOneForgottenTaskCannotBuryTheQueue() {
-    let ancient = NextUpSelector.score(candidate("ancient", due: -400 * 86_400), now: now, calendar: calendar)
-    let month = NextUpSelector.score(candidate("month", due: -30 * 86_400), now: now, calendar: calendar)
-
-    XCTAssertEqual(ancient.score, month.score)
-    XCTAssertLessThan(ancient.score, NextUpSelector.score(candidate("daily", daily: true), now: now, calendar: calendar).score)
+  func testOverdueAgeIsNotCappedAndOlderDeadlinesWin() {
+    XCTAssertEqual(rank([candidate("month", due: -30 * 86_400),
+                         candidate("ancient", due: -400 * 86_400), candidate("daily", daily: true)]),
+                   ["ancient", "month", "daily"])
   }
 
   func testDueDatesBeyondTheHorizonStopContributing() {
@@ -121,9 +119,9 @@ final class NextUpSelectorTests: XCTestCase {
         candidate("important", urgency: 1, importance: 1),
       ], now: now, calendar: calendar)
 
-    XCTAssertEqual(ranked.map(\.candidate.id), ["daily", "overdue", "important", "order-only"])
+    XCTAssertEqual(ranked.map(\.candidate.id), ["overdue", "daily", "important", "order-only"])
     // Every rung carries its own reason, so climbing can explain each one.
-    XCTAssertEqual(ranked.map(\.reason), [.daily, .overdue, .importance, .order])
+    XCTAssertEqual(ranked.map(\.reason), [.overdue, .daily, .importance, .order])
   }
 
   func testScoresDecreaseMonotonicallyUpTheLadder() {
@@ -145,15 +143,15 @@ final class NextUpSelectorTests: XCTestCase {
 
   // MARK: - Hand-placed order
 
-  func testAHandPlacedTaskSitsWhereItWasPutAboveEverythingScored() {
+  func testHandPlacementCannotDisplaceDeadlines() {
     XCTAssertEqual(
       rank([
         candidate("daily", daily: true),
         candidate("overdue", due: -10 * 86_400),
         candidate("placed", rank: 0),
       ]),
-      ["placed", "daily", "overdue"],
-      "arranging by hand says the ranking got it wrong, so it has to win outright")
+      ["overdue", "placed", "daily"],
+      "deadline precedence survives manual placement")
   }
 
   func testHandPlacedTasksKeepTheirOwnOrderAmongThemselves() {
@@ -164,7 +162,7 @@ final class NextUpSelectorTests: XCTestCase {
         candidate("second", due: -40 * 86_400, rank: 1),
         candidate("scored", daily: true),
       ]),
-      ["first", "second", "third", "scored"])
+      ["second", "first", "scored", "third"])
   }
 
   func testClearingOneTasksRankLetsItFallBackToItsScore() {
@@ -214,9 +212,9 @@ final class NextUpSelectorTests: XCTestCase {
       candidate("idle", order: 3),
     ])
 
-    XCTAssertEqual(ranked.first, "nudged")
+    XCTAssertEqual(ranked.first, "overdue")
     XCTAssertEqual(
-      Array(ranked.dropFirst()), ["daily", "overdue", "idle"],
+      Array(ranked.dropFirst()), ["nudged", "daily", "idle"],
       "the unpinned tail keeps its scored order")
   }
 

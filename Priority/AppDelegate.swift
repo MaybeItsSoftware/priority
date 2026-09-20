@@ -72,6 +72,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     workspace = WorkspaceViewModel(legacyStore: checkvistManager.repository.localTaskStore)
+    workspace.googleCalendarEventCreator = { [weak checkvistManager] title, taskID, listTitle, date, isAllDay in
+      guard let integrations = checkvistManager?.integrations else { return nil }
+      return try await integrations.createGoogleCalendarEvent(
+        title: title, taskID: taskID, listTitle: listTitle, date: date, isAllDay: isAllDay)
+    }
+    // The mirror needs the workspace, and the workspace has only just been
+    // built — the coordinator is constructed before it.
+    checkvistManager.workspaceStoreProvider = { [weak workspace] in workspace?.store }
+    workspace.onLocalWrite = { [weak checkvistManager] in
+      checkvistManager?.googleTasksMirror.scheduleSync()
+    }
+    workspace.onGoogleCalendarEventCreated = { [weak checkvistManager] taskID, eventID in
+      checkvistManager?.googleCalendarCompletions.watch(eventID: eventID, forTask: taskID)
+    }
+    checkvistManager.googleTasksMirror.startPolling()
+    checkvistManager.googleCalendarCompletions.startPolling()
+    // One pass at launch, so anything ticked off on a phone while the app was
+    // closed lands before the first thing you look at.
+    checkvistManager.integrations.googleTasksPlugin.prepareAuthentication()
+    Task { [weak checkvistManager] in await checkvistManager?.googleTasksMirror.sync() }
     mainWindowController = MainWindowController(manager: checkvistManager, workspace: workspace)
     // The status item reports the focus session, which is the one thing worth
     // showing there while you are working in another app.
@@ -163,6 +183,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     preferencesNavState = navState
 
     let rootView = SettingsView()
+      .focusEffectDisabled()
       .font(Typography.interfaceFont)
       .environment(checkvistManager)
       .environment(navState)
@@ -306,6 +327,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   }
 
   func applicationWillTerminate(_ notification: Notification) {
+    workspace?.taskEditor.flush()
+    workspace?.pauseFocus()
     // Optional because termination can arrive before the manager is built —
     // reaching through an implicitly-unwrapped optional here used to crash the
     // MCP server on shutdown, back when `--mcp-server` ran inside this app.

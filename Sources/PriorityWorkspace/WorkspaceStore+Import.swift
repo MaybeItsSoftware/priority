@@ -89,8 +89,10 @@ extension WorkspaceStore {
         }
         settledSourceIDs.insert(seed.sourceId)
       }
+      if createdList { try Self.registerVisibleRoot(db, for: list) }
       return TaskImportOutcome(
-        list: list, insertedTaskIDs: inserted, updatedTaskIDs: updated, createdList: createdList)
+        list: try TaskList.fetchOne(db, key: list.id)!,
+        insertedTaskIDs: inserted, updatedTaskIDs: updated, createdList: createdList)
     }
   }
 

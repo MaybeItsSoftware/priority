@@ -29,6 +29,7 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
     @Bindable var manager = manager
     Section(header: Text("AFFiNE Plugin")) {
       Toggle("Enable AFFiNE integration", isOn: $manager.integrations.affineIntegrationEnabled)
+        .toggleStyle(.switch)
 
       if manager.integrations.affineIntegrationEnabled {
         VStack(alignment: .leading, spacing: 12) {

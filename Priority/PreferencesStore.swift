@@ -26,10 +26,12 @@ final class PreferencesStore {
     case affineIntegrationEnabled
     case googleCalendarIntegrationEnabled
     case googleCalendarEventLinksByTaskKey
+    case googleTasksIntegrationEnabled
     case mcpIntegrationEnabled
     case quickAddHotkeyEnabled
     case quickAddHotkeyKeyCode
     case quickAddHotkeyModifiers
+    case quickAddHyperNMigrationCompleted
     case quickAddLocationModeRawValue
     case quickAddSpecificParentTaskId
     case appThemeRawValue

@@ -25,6 +25,12 @@ struct MainApp: App {
       EmptyView()
     }
     .commands {
+      CommandGroup(replacing: .undoRedo) {
+        Button("Undo") { AppDelegate.shared.workspace.applyHistoryFromMenu(redo: false) }
+          .keyboardShortcut("z", modifiers: .command)
+        Button("Redo") { AppDelegate.shared.workspace.applyHistoryFromMenu(redo: true) }
+          .keyboardShortcut("z", modifiers: [.command, .shift])
+      }
       CommandGroup(replacing: .appSettings) {
         Button("Preferences...") {
           AppDelegate.shared.menuSettings()

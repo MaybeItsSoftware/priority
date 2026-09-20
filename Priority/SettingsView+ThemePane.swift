@@ -247,6 +247,7 @@ extension SettingsView {
           set: { celebration.soundEnabled = $0 }
         )
       )
+        .toggleStyle(.switch)
       .padding(.top, 2)
 
       // Worth saying plainly, because the obvious assumption — that the haptic

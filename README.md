@@ -201,6 +201,14 @@ count beside it, and `⏎` opens it.
 
 ### Coming from Checkvist
 
+The desktop workspace supports Checkvist-style two-letter commands, including
+`uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll`, and `hc`, plus native undo/redo in the
+Edit menu. See the [desktop keyboard reference](docs/keyboard-shortcuts.md) or
+press `?` / double-tap Shift. Board arrows navigate every column, including
+empty ones; the sidebar outlines the list you are navigating.
+
+The mappings below describe the menu bar surface.
+
 Priority is a Checkvist client, so the gestures worth keeping are Checkvist's.
 `j` `k` and the arrows, `Space` and `Shift+Space`, `Enter` and `Shift+Enter`,
 `Tab` and `Shift+Tab`, `Shift+←` / `Shift+→` for hoisting, `⌘↑` / `⌘↓` to move,
@@ -343,7 +351,7 @@ carried into the one you arrived at.
 **View → Diagnostics**. It answers "why does this look wrong?":
 
 - **Status** — connection, current list, network, sync age, open task count, and whether anything is queued offline.
-- **Health** — a green tick or an orange triangle per integration, with the detail underneath. The AFFiNE row lists every path it searched for the helper; the MCP row shows the resolved command; the Google Calendar row shows its auth state.
+- **Health** — a green tick or an orange triangle per integration, with the detail underneath. The AFFiNE row lists every path it searched for the helper; the MCP row shows the resolved command; the Google Calendar and Google Tasks rows show whether the shared Google sign-in covers them.
 - **Recent problems** — every failure this session, timestamped. Worth having because nothing else keeps one: the error line is overwritten by the next thing that fails, the status message erases itself after three seconds, and integration errors were not retained at all. Not written to disk — it covers this run of the app, not last fortnight's.
 - **Data** — where everything lives, with a Reveal button each, including `~/.config/priority/config.json`, which belongs to the CLI rather than the app and is a recurring source of confusion.
 
@@ -563,7 +571,9 @@ The same source tree is compiled by two build systems: the Xcode project builds 
 | Login keychain, service `uk.co.maybeitsadam.priority` | The app's Checkvist remote key |
 | `~/.config/priority/config.json` | The CLI's own credentials, mode 0600 |
 
-Nothing is sent anywhere except Checkvist, and Google Calendar or Obsidian if you enable them.
+Nothing is sent anywhere except Checkvist, and Google Calendar, Google Tasks or Obsidian if you enable them.
+
+Google Tasks, when enabled, is a **mirror**: each list becomes a Google Tasks list of the same name, and Priority is the source of authority. Ticking a task off on your phone completes it here, notes you add there are kept, and a task you type there is adopted — but an edit that overwrites what Priority holds is replaced and written to a conflict log. `docs/google-tasks.md` has the full table.
 
 > Upgrading from **Bar Tasker**? Everything is carried across automatically on first launch — preferences, dailies, the day log and your keychain item. The old locations are copied rather than moved, so they stay on disk until you delete them.
 

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import PriorityCore
@@ -8,14 +9,17 @@ import UniformTypeIdentifiers
 struct WorkspaceDesktopView: View {
   @Environment(WorkspaceViewModel.self) private var model
   private let everythingSidebarID = "priority:everything"
+  @State private var isTopLevelDropTargeted = false
   @State private var floatingTimer = LocalFloatingFocusTimer()
   @FocusState private var focusedArea: WorkspaceFocusArea?
 
   var body: some View {
-    workspace
+    workspace.task { await model.monitorFocus() }
+      .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in model.reloadNextUp() }
+      .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.willSleepNotification)) { _ in model.pauseFocus() }
   }
 
-  private var workspace: some View {
+  private var workspaceLayout: some View {
     HSplitView {
       // The sidebar stays through focus mode: setting up a session often means
       // looking at which list something came from, and losing your place in the
@@ -25,21 +29,26 @@ struct WorkspaceDesktopView: View {
         .frame(minWidth: 155, idealWidth: 185, maxWidth: 230)
       // Focus mode takes the main pane rather than floating over it. A sheet
       // leaves the board visible round the edges, which is the one thing the
-      // screen exists to stop.
+      // screen exists to stop. The timeline is the same kind of surface and
+      // takes the pane the same way — it is read at the scale of a day.
       Group {
         if model.showsFocusScreen {
           WorkspaceFocusScreen()
+            .environment(model)
+        } else if model.showsTimelineScreen {
+          WorkspaceTimelineScreen()
             .environment(model)
         } else {
           taskPane
         }
       }
       .animation(.easeInOut(duration: 0.15), value: model.showsFocusScreen)
+      .animation(.easeInOut(duration: 0.15), value: model.showsTimelineScreen)
       .focusSection()
       .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
       // Selection remains light-weight; only I or an explicit inspector
       // command opens the editor and consumes the third pane.
-      if model.isInspectorVisible && model.selectedTask != nil && !model.showsFocusScreen {
+      if model.isInspectorVisible && model.selectedTask != nil && !model.showsFocusScreen && !model.showsTimelineScreen {
         inspector
           .focusSection()
           .frame(minWidth: 210, idealWidth: 250, maxWidth: 320)
@@ -47,11 +56,15 @@ struct WorkspaceDesktopView: View {
     }
     .frame(minWidth: 760, minHeight: 520)
     .onAppear {
-      focusedArea = model.requestedFocusArea
+      if model.requestedFocusArea != .tasks || (model.viewMode != .board && model.viewMode != .outline) {
+        focusedArea = model.requestedFocusArea
+      }
       if model.activeFocusSession != nil { floatingTimer.show(model: model) }
     }
     .onChange(of: model.focusRequest) { _, _ in
-      focusedArea = model.requestedFocusArea
+      if model.requestedFocusArea != .tasks || (model.viewMode != .board && model.viewMode != .outline) {
+        focusedArea = model.requestedFocusArea
+      }
     }
     .onChange(of: focusedArea) { _, area in
       model.reportKeyboardFocus(area)
@@ -62,6 +75,16 @@ struct WorkspaceDesktopView: View {
     .onChange(of: model.activeFocusSession?.id) { _, sessionID in
       if sessionID == nil { floatingTimer.close() }
     }
+  }
+
+  private var workspaceAlerts: some View {
+    workspaceLayout
+    .alert("Start this task anyway?", isPresented: Binding(
+      get: { model.focusStartOverride != nil }, set: { if !$0 { model.focusStartOverride = nil } }
+    ), presenting: model.focusStartOverride) { request in
+      Button("Start anyway") { model.startFocus(on: request.task, plannedSeconds: request.plannedSeconds, override: true); model.focusStartOverride = nil }
+      Button("Cancel", role: .cancel) { model.focusStartOverride = nil }
+    } message: { request in Text(request.explanation) }
     .alert("Priority needs attention", isPresented: Binding(
       get: { model.errorMessage != nil },
       set: { if !$0 { model.errorMessage = nil } }
@@ -81,17 +104,30 @@ struct WorkspaceDesktopView: View {
       WorkspaceFocusQualityPrompt(pending: pending)
         .environment(model)
     }
+  }
+
+  private var workspace: some View {
+    workspaceAlerts
+    .sheet(isPresented: Bindable(model).showsListNavigator) {
+      WorkspaceListNavigator().environment(model)
+    }
     .sheet(isPresented: Bindable(model).showsKeyboardHelp) {
       WorkspaceKeyboardHelp()
     }
-    .sheet(item: Bindable(model).taskMoveRequest) { task in
-      WorkspaceTaskMoveSheet(task: task)
+    .sheet(item: Bindable(model).taskMoveRequest) { request in
+      WorkspaceTaskMoveSheet(request: request)
+        .environment(model)
+    }
+    .sheet(item: Bindable(model).taskQuickEditRequest, onDismiss: { model.requestKeyboardFocus(.tasks) }) { request in
+      WorkspaceTaskQuickEditSheet(request: request)
         .environment(model)
     }
     .sheet(item: Bindable(model).creationRequest) { kind in
       WorkspaceCreationSheet(kind: kind) { name in
         switch kind {
-        case .list: model.createList(named: name, in: model.creationParentFolderID)
+        case .list:
+          if model.creationIsNested { model.createNestedList(named: name) }
+          else { model.createList(named: name, in: model.creationParentFolderID) }
         case .folder: model.createFolder(named: name, in: model.creationParentFolderID)
         }
       }
@@ -124,50 +160,99 @@ struct WorkspaceDesktopView: View {
 
   private var sidebar: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text("PRIORITY")
-        .font(.caption.weight(.bold))
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 16)
-        .padding(.top, 18)
-        .padding(.bottom, 12)
+      HStack {
+        Text("PRIORITY")
+          .font(.caption.weight(.bold))
+          .foregroundStyle(.secondary)
+        Spacer()
+        Menu {
+          Button(model.undoLabel.map { "Undo \($0)" } ?? "Undo") { model.undoLastChange() }
+            .disabled(model.undoLabel == nil)
+          Button(model.redoLabel.map { "Redo \($0)" } ?? "Redo") { model.redoLastUndoneChange() }
+            .disabled(model.redoLabel == nil)
+        } label: {
+          Image(systemName: "arrow.uturn.backward")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Undo or redo workspace changes")
+        .accessibilityLabel("Workspace history")
+      }
+      .padding(.horizontal, 16)
+      .padding(.top, 18)
+      .padding(.bottom, 12)
 
       WorkspaceFocusLauncher()
         .environment(model)
         .padding(.horizontal, 12)
         .padding(.bottom, 14)
 
-      Text("LISTS")
-        .font(.caption2.weight(.bold))
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 16)
-        .padding(.top, 4)
-        .padding(.bottom, 6)
-
-      List(selection: Binding(
-        get: { model.isEverythingSelected ? everythingSidebarID : model.selectedListID },
-        set: { id in
-          if id == everythingSidebarID { model.selectEverything() } else if let id { model.selectList(id) }
+      ScrollViewReader { sidebarProxy in
+      List {
+        Button {
+          model.selectEverything()
+          model.reportKeyboardFocus(.sidebar)
+        } label: {
+          Label("Everything", systemImage: "square.stack.3d.up")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
         }
-      )) {
-        Label("Everything", systemImage: "square.stack.3d.up")
-          .tag(Optional(everythingSidebarID))
-          .accessibilityLabel("Everything, all lists")
-        let rootLists = model.lists.filter { $0.folderId == nil }
-        Section("Sub-lists") {
+        .buttonStyle(.plain)
+        .id(everythingSidebarID)
+        .listRowBackground(
+          WorkspaceSidebarSelectionBackground(
+            isSelected: model.isEverythingSelected && model.selectedFolderID == nil))
+        .tag(Optional(everythingSidebarID))
+        .accessibilityLabel("Everything, all lists")
+        if let inbox = model.inboxList {
+          sidebarListRow(inbox)
+          WorkspaceNestedListRows(list: inbox)
+        }
+        Section {
+          ForEach(model.promotedLists) { task in
+            WorkspaceNestedListRow(task: task, promotedShortcut: true)
+          }
           ForEach(model.folders.filter { $0.parentFolderId == nil }) { folder in
             WorkspaceFolderTree(folder: folder)
-              .padding(.leading, 10)
           }
-          ForEach(rootLists) { list in
+          ForEach(model.lists.filter { $0.folderId == nil && $0.systemRole != .inbox }) { list in
             sidebarListRow(list)
-              .padding(.leading, 10)
+            WorkspaceNestedListRows(list: list)
+          }
+        } header: {
+          HStack {
+            Text("Lists")
+            Spacer()
+            Image(systemName: "arrow.up.left")
+          }
+          .padding(.vertical, 6)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .contentShape(Rectangle())
+          .background(isTopLevelDropTargeted ? Color.accentColor.opacity(0.16) : .clear,
+            in: RoundedRectangle(cornerRadius: 6))
+          .help("Drop a list here to make it a top level list")
+          .accessibilityLabel("Lists, drop here to move to top level")
+          .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isTopLevelDropTargeted) { providers in
+            WorkspaceTaskDrag.readItemID(from: providers) { payload in
+              model.moveDroppedItem(payload, toFolderID: nil)
+            }
           }
         }
       }
       .listStyle(.sidebar)
+      .animation(.easeInOut(duration: 0.22), value: model.lists.map { "\($0.id)/\($0.folderId ?? "root")" })
+      .animation(.easeInOut(duration: 0.22), value: model.folders.map { "\($0.id)/\($0.parentFolderId ?? "root")" })
+      .animation(.easeInOut(duration: 0.22), value: model.nestedLists.map { "\($0.id)/\($0.task.parentTaskId ?? "root")/\($0.task.isPromoted == true)" })
       .focusable()
       .focused($focusedArea, equals: .sidebar)
-      .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.sidebar) })
+      .focusEffectDisabled()
+      .onChange(of: model.focusRequest) { _, _ in
+        if model.requestedFocusArea == .sidebar {
+          sidebarProxy.scrollTo(model.currentSidebarID)
+        }
+      }
+      }
 
       Divider()
       HStack(spacing: 8) {
@@ -177,10 +262,13 @@ struct WorkspaceDesktopView: View {
         AddWorkspaceItemButton(title: "New folder", systemImage: "folder.badge.plus") { name in
           model.createFolder(named: name)
         }
-        if !model.archivedLists.isEmpty {
+        if !model.archivedLists.isEmpty || !model.archivedNestedLists.isEmpty {
           Menu {
             ForEach(model.archivedLists) { list in
               Button("Restore \(list.name)") { model.restoreList(list) }
+            }
+            ForEach(model.archivedNestedLists) { task in
+              Button("Restore \(task.title)") { model.archiveNestedList(task, archived: false) }
             }
           } label: {
             Image(systemName: "archivebox")
@@ -195,18 +283,19 @@ struct WorkspaceDesktopView: View {
   }
 
   private func sidebarListRow(_ list: TaskList) -> some View {
-    WorkspaceListRowLabel(list: list)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.vertical, 5)
-      .contentShape(Rectangle())
+    WorkspaceSelectableListRow(list: list)
       .tag(Optional(list.id))
+      .id(list.id)
+      .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
+      .listRowBackground(
+        WorkspaceSidebarSelectionBackground(
+          isSelected: model.selectedFolderID == nil && model.currentSidebarID == list.id))
       .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: Binding(
         get: { model.dragDestinationListID == list.id },
         set: { model.dragDestinationListID = $0 ? list.id : nil }
       )) { providers in
-        WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
-          guard let task = model.task(withID: taskID), task.listId != list.id else { return }
-          model.moveTask(task, toListId: list.id)
+        WorkspaceTaskDrag.readItemID(from: providers) { payload in
+          model.moveDroppedItem(payload, toListID: list.id)
         }
       }
       .background(
@@ -214,12 +303,25 @@ struct WorkspaceDesktopView: View {
         in: RoundedRectangle(cornerRadius: 6)
       )
       .contextMenu {
+        Menu("Choose icon") {
+          ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
+            Button { model.setIcon(icon.symbol, for: list) } label: {
+              Label(icon.label, systemImage: icon.symbol)
+            }
+          }
+        }
         Button("Rename") { model.beginRenaming(.list(list)) }
         Button("List settings…") { model.showSettings(for: list) }
+        Button("New nested list…") {
+          model.selectList(list.id)
+          model.requestNestedListCreation()
+        }
         // The Inbox can be renamed and refiled, but not taken away: quick
         // capture has to have somewhere to land.
         if !list.isSystemList {
           Divider()
+          Button("Convert to task in Inbox") { model.convertListToTask(list) }
+          Button(list.completedAt == nil ? "Complete list" : "Reopen list") { model.toggleListCompletion(list) }
           Button("Archive") { model.archiveList(list) }
           Divider()
           Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
@@ -233,8 +335,6 @@ struct WorkspaceDesktopView: View {
     case .board:
       WorkspaceKanbanBoard()
         .environment(model)
-        .focusable()
-        .focused($focusedArea, equals: .tasks)
     case .outline:
       outlineTaskPane
     case .dailies:
@@ -242,16 +342,19 @@ struct WorkspaceDesktopView: View {
         .environment(model)
         .focusable()
         .focused($focusedArea, equals: .tasks)
+        .focusEffectDisabled()
     case .matrix:
       WorkspaceMatrixDashboard()
         .environment(model)
         .focusable()
         .focused($focusedArea, equals: .tasks)
+        .focusEffectDisabled()
     case .focus:
       WorkspaceFocusDashboard()
         .environment(model)
         .focusable()
         .focused($focusedArea, equals: .tasks)
+        .focusEffectDisabled()
     }
   }
 
@@ -310,8 +413,6 @@ struct WorkspaceDesktopView: View {
           }
         }
         .listStyle(.inset)
-        .focusable()
-        .focused($focusedArea, equals: .tasks)
         .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.tasks) })
 
         WorkspaceScopedTaskComposer(board: false)
@@ -326,9 +427,9 @@ struct WorkspaceDesktopView: View {
   private func taskRow(_ item: TaskOutlineItem) -> some View {
     HStack(spacing: 8) {
       Button {
-        model.toggleTask(item.task)
+        if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
-        Image(systemName: item.task.status == .open ? "circle" : "checkmark.circle.fill")
+        Image(systemName: model.itemSymbol(for: item.task))
           .foregroundStyle(item.task.status == .open ? Color.secondary : Color.green)
       }
       .buttonStyle(.plain)
@@ -346,6 +447,7 @@ struct WorkspaceDesktopView: View {
         .help(item.task.title)
         .strikethrough(item.task.status != .open)
         .foregroundStyle(item.task.status == .open ? .primary : .secondary)
+      WorkspaceTaskPlanningBadges(task: item.task).frame(maxWidth: 170, alignment: .leading)
     }
     .padding(.leading, CGFloat(item.depth) * 22)
     .contentShape(Rectangle())
@@ -355,6 +457,18 @@ struct WorkspaceDesktopView: View {
       in: RoundedRectangle(cornerRadius: 6)
     )
     .onTapGesture { model.selectTask(item.task) }
+    .contextMenu { WorkspaceItemActions(task: item.task) }
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: Binding(
+      get: { model.dragDestinationListID == item.task.id },
+      set: { model.dragDestinationListID = $0 ? item.task.id : nil }
+    )) { providers in
+      guard item.task.isList else { return false }
+      return WorkspaceTaskDrag.readItemID(from: providers) { payload in
+        model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)
+      }
+    }
+    .overlay(RoundedRectangle(cornerRadius: 6)
+      .stroke(model.dragDestinationListID == item.task.id && item.task.isList ? Color.accentColor : .clear, lineWidth: 2))
   }
 
   private var inspector: some View {
@@ -380,12 +494,14 @@ struct WorkspaceDesktopView: View {
     .background(.background)
     .focusable()
     .focused($focusedArea, equals: .inspector)
+    .focusEffectDisabled()
     .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.inspector) })
   }
 }
 
 private struct WorkspaceKanbanBoard: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @State private var visibleColumnIDs: Set<String> = []
 
   var body: some View {
     if model.selectedList == nil && !model.isEverythingSelected {
@@ -400,24 +516,29 @@ private struct WorkspaceKanbanBoard: View {
         let columnWidth = max(172, min(340, available / columnCount))
         VStack(spacing: 0) {
           ScrollViewReader { scrollProxy in
-            ScrollView(.horizontal) {
-              LazyHStack(alignment: .top, spacing: 14) {
-                ForEach(model.boardColumns) { column in
-                  WorkspaceKanbanColumnView(
-                    column: column,
-                    width: columnWidth)
-                    .environment(model)
+            GeometryReader { viewport in
+              ScrollView(.horizontal) {
+                LazyHStack(alignment: .top, spacing: 14) {
+                  ForEach(model.boardColumns) { column in
+                    WorkspaceKanbanColumnView(
+                      column: column,
+                      width: columnWidth,
+                      height: max(100, viewport.size.height - 36))
+                      .environment(model)
+                      .id(column.id)
+                  }
                 }
+                .scrollTargetLayout()
+                .padding(18)
+                .background(WorkspaceHorizontalOverscrollDisabler())
               }
-              .padding(18)
+              .onScrollTargetVisibilityChange(idType: String.self, threshold: 0.9) { ids in
+                visibleColumnIDs = Set(ids)
+              }
             }
-            .onChange(of: model.selectedTaskID) { _, id in
-              guard let id, let task = model.task(withID: id),
-                model.isTaskVisibleOnBoard(task)
-              else { return }
-              withAnimation(.easeInOut(duration: 0.15)) {
-                scrollProxy.scrollTo(id, anchor: .center)
-              }
+            .onChange(of: model.activeBoardColumnID) { _, columnID in
+              guard let columnID, !visibleColumnIDs.contains(columnID) else { return }
+              scrollProxy.scrollTo(columnID, anchor: .center)
             }
           }
           WorkspaceScopedTaskComposer(board: true)
@@ -434,12 +555,15 @@ private struct WorkspaceKanbanColumnView: View {
   @Environment(WorkspaceViewModel.self) private var model
   let column: WorkspaceKanbanColumn
   let width: CGFloat
+  let height: CGFloat
   @State private var isDropTargeted = false
   @State private var isAddingAtTop = false
   @State private var topTaskTitle = ""
+  @State private var visibleCardIDs: Set<String> = []
   @FocusState private var topComposerFocused: Bool
 
   var body: some View {
+    let tasks = model.tasks(in: column)
     VStack(alignment: .leading, spacing: 10) {
       HStack(spacing: 8) {
         Text(column.title.uppercased())
@@ -448,7 +572,7 @@ private struct WorkspaceKanbanColumnView: View {
           .lineLimit(1)
           .truncationMode(.tail)
           .help(column.title)
-        Text("\(model.tasks(in: column).count)")
+        Text("\(tasks.count)")
           .font(.caption.monospacedDigit())
           .foregroundStyle(.tertiary)
         Spacer()
@@ -492,45 +616,72 @@ private struct WorkspaceKanbanColumnView: View {
           .accessibilityLabel("New task at top of \(column.title)")
       }
 
-      ForEach(model.tasks(in: column)) { task in
-        WorkspaceKanbanCard(task: task, column: column)
-          .environment(model)
-          .id(task.id)
-      }
+      ScrollViewReader { cardProxy in
+        ScrollView(.vertical) {
+          LazyVStack(alignment: .leading, spacing: 10) {
+            ForEach(tasks) { task in
+              WorkspaceKanbanCard(task: task, column: column)
+                .environment(model)
+                .id(task.id)
+            }
 
-      if model.tasks(in: column).isEmpty {
-        VStack(spacing: 6) {
-          Image(systemName: "arrow.down.doc")
-            .font(.title3)
-          Text(isDropTargeted ? "Drop card here" : "Drop cards here")
-            .font(.caption.weight(.medium))
+            if tasks.isEmpty {
+              VStack(spacing: 6) {
+                Image(systemName: "arrow.down.doc")
+                  .font(.title3)
+                Text(isDropTargeted ? "Drop card here" : "Drop cards here")
+                  .font(.caption.weight(.medium))
+              }
+              .foregroundStyle(isDropTargeted ? Color.accentColor : Color.secondary)
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 20)
+              .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                  .stroke(isDropTargeted ? Color.accentColor : Color.secondary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5]))
+              )
+            }
+
+            TaskComposer(focusRequest: 0) { title in
+              model.createBoardTask(named: title, in: column)
+            }
+            .accessibilityLabel("Add task to \(column.title)")
+          }
+          .scrollTargetLayout()
+          .padding(.bottom, 2)
+          .background(WorkspaceHorizontalOverscrollDisabler())
         }
-        .foregroundStyle(isDropTargeted ? Color.accentColor : Color.secondary)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .overlay(
-          RoundedRectangle(cornerRadius: 8)
-            .stroke(isDropTargeted ? Color.accentColor : Color.secondary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5]))
-        )
+        .onScrollTargetVisibilityChange(idType: String.self) { ids in
+          visibleCardIDs = Set(ids)
+        }
+        .onChange(of: model.selectedTaskID) { _, id in
+          guard let id, !visibleCardIDs.contains(id),
+            tasks.contains(where: { $0.id == id }) else { return }
+          cardProxy.scrollTo(id, anchor: .center)
+        }
+        .onAppear {
+          if let id = model.selectedTaskID, tasks.contains(where: { $0.id == id }) {
+            cardProxy.scrollTo(id, anchor: .center)
+          }
+        }
       }
-
-      TaskComposer(focusRequest: 0) { title in
-        model.createBoardTask(named: title, in: column)
-      }
-      .accessibilityLabel("Add task to \(column.title)")
-
-      Spacer(minLength: 0)
     }
     .padding(12)
     .frame(width: width, alignment: .topLeading)
-    .frame(minHeight: 360, alignment: .topLeading)
+    .frame(height: height, alignment: .topLeading)
     .background(
       isDropTargeted ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.05),
       in: RoundedRectangle(cornerRadius: 12))
     .overlay(
       RoundedRectangle(cornerRadius: 12)
-        .stroke(isDropTargeted ? Color.accentColor : .clear, lineWidth: 2)
+        .stroke(isDropTargeted || (model.keyboardFocusArea == .tasks && model.activeBoardColumnID == column.id) ? Color.accentColor : .clear, lineWidth: 2)
     )
+    .simultaneousGesture(TapGesture().onEnded {
+      if tasks.isEmpty {
+        model.focusedBoardColumnID = column.id
+        model.selectedTaskID = nil
+        model.reportKeyboardFocus(.tasks)
+      }
+    })
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
       WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
         guard let task = model.task(withID: taskID), model.isTaskVisibleOnBoard(task) else { return }
@@ -557,6 +708,17 @@ private struct WorkspaceKanbanCard: View {
       .help("Drag to move. Enter opens its Kanban board; Option Left/Right moves columns.")
       .focusable()
       .focused($isCardFocused)
+      .focusEffectDisabled()
+      .onAppear {
+        if model.keyboardFocusArea == .tasks && model.selectedTaskID == task.id {
+          isCardFocused = true
+        }
+      }
+      .onChange(of: model.focusRequest) { _, _ in
+        if model.requestedFocusArea == .tasks && model.selectedTaskID == task.id {
+          isCardFocused = true
+        }
+      }
       .onChange(of: isCardFocused) { _, focused in
         if focused {
           model.selectTask(task)
@@ -570,43 +732,23 @@ private struct WorkspaceKanbanCard: View {
         handleCardKey(press)
       }
       .accessibilityElement(children: .contain)
+      .contextMenu { WorkspaceItemActions(task: task) }
   }
 
   private var cardSurface: some View {
     VStack(alignment: .leading, spacing: 8) {
       cardHeading
-      if let parent = model.boardParent(of: task) {
-        Button("↳ \(parent.title)") {
-          model.selectTask(parent)
-          model.reportKeyboardFocus(.tasks)
-        }
-        .buttonStyle(.plain)
-        .focusable()
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .lineLimit(1)
-        .truncationMode(.middle)
-        .help("Subtask of \(parent.title)")
-      }
-      if model.isEverythingSelected, let list = model.list(for: task) {
-        Button {
-          model.selectList(list.id)
-        } label: {
-          Label(list.name, systemImage: "list.bullet")
-            .font(.caption)
-        }
-        .buttonStyle(.plain)
-        .focusable()
-        .foregroundStyle(.secondary)
-        .lineLimit(1)
-        .truncationMode(.middle)
-        .help("Open sub-list \(list.name)")
-      }
-      if let dueAt = task.dueAt {
+      if !task.isList, let dueAt = task.dueAt {
         HStack(spacing: 4) {
           Image(systemName: "calendar")
           Text(dueAt, format: .dateTime.month().day())
         }.font(.caption).foregroundStyle(.secondary)
+      }
+      if task.isList {
+        Text("List · \(model.descendants(of: task).filter { !$0.task.isList }.count) tasks")
+          .font(.caption).foregroundStyle(.secondary)
+      } else {
+        WorkspaceTaskPlanningBadges(task: task)
       }
       if isExpanded { inlineSubtasks }
     }
@@ -622,7 +764,12 @@ private struct WorkspaceKanbanCard: View {
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
-      WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
+      if task.isList {
+        return WorkspaceTaskDrag.readItemID(from: providers) { payload in
+          model.moveDroppedItem(payload, toListID: task.listId, parentTaskID: task.id)
+        }
+      }
+      return WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
         guard let dragged = model.task(withID: taskID), dragged.id != task.id else { return }
         model.placeTask(dragged, before: task)
       }
@@ -663,9 +810,9 @@ private struct WorkspaceKanbanCard: View {
         .accessibilityLabel("Drag \(task.title)")
         .help("Drag this card to reorder it or move it to another column")
       Button {
-        model.toggleTask(task)
+        if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
       } label: {
-        Image(systemName: task.status == .open ? "circle" : "checkmark.circle.fill")
+        Image(systemName: model.itemSymbol(for: task))
           .foregroundStyle(task.status == .open ? Color.secondary : Color.green)
       }
       .buttonStyle(.plain)
@@ -682,6 +829,7 @@ private struct WorkspaceKanbanCard: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       .help(task.title)
       .strikethrough(task.status != .open)
+      if !task.isList {
       Button {
         if model.activeFocusSession == nil {
           model.startFocus(on: task)
@@ -699,6 +847,7 @@ private struct WorkspaceKanbanCard: View {
       .focusable()
       .accessibilityLabel(model.activeFocusSession == nil ? "Focus on \(task.title)" : "Add \(task.title) to focus")
       .help(model.activeFocusSession == nil ? "Start focus" : "Add to focus queue")
+      }
       Button {
         isExpanded.toggle()
       } label: {
@@ -746,9 +895,9 @@ private struct WorkspaceKanbanCard: View {
   private func inlineSubtaskRow(_ item: TaskOutlineItem) -> some View {
     HStack(spacing: 5) {
       Button {
-        model.toggleTask(item.task)
+        if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
-        Image(systemName: item.task.status == .open ? "circle" : "checkmark.circle.fill")
+        Image(systemName: model.itemSymbol(for: item.task))
           .font(.caption)
       }
       .buttonStyle(.plain)
@@ -780,6 +929,13 @@ private struct WorkspaceKanbanCard: View {
     .font(.caption)
     .padding(.leading, CGFloat(item.depth) * 10)
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
+    .contextMenu { WorkspaceItemActions(task: item.task) }
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: nil) { providers in
+      guard item.task.isList else { return false }
+      return WorkspaceTaskDrag.readItemID(from: providers) { payload in
+        model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)
+      }
+    }
   }
 
   private func submitSubtask() {
@@ -794,12 +950,24 @@ private struct WorkspaceKanbanCard: View {
 /// still resolves the ID through the local store before changing any task.
 enum WorkspaceTaskDrag {
   static var typeIdentifier: String { UTType.utf8PlainText.identifier }
+  static let listPrefix = "priority-list:"
+
+  static func provider(forList listID: String) -> NSItemProvider {
+    provider(for: listPrefix + listID)
+  }
 
   static func provider(for taskID: String) -> NSItemProvider {
     NSItemProvider(object: taskID as NSString)
   }
 
   static func readTaskID(from providers: [NSItemProvider], apply: @escaping @MainActor (String) -> Void) -> Bool {
+    readItemID(from: providers) { payload in
+      guard !payload.hasPrefix(listPrefix) else { return }
+      apply(payload)
+    }
+  }
+
+  static func readItemID(from providers: [NSItemProvider], apply: @escaping @MainActor (String) -> Void) -> Bool {
     guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
       return false
     }
@@ -942,8 +1110,22 @@ private struct WorkspaceMatrixTaskRow: View {
       in: RoundedRectangle(cornerRadius: 6))
     .focusable()
     .focused($isRowFocused)
+    .focusEffectDisabled()
+    .onAppear {
+      if model.keyboardFocusArea == .tasks && model.selectedTaskID == task.id {
+        isRowFocused = true
+      }
+    }
+    .onChange(of: model.focusRequest) { _, _ in
+      if model.requestedFocusArea == .tasks && model.selectedTaskID == task.id {
+        isRowFocused = true
+      }
+    }
     .onChange(of: isRowFocused) { _, focused in
-      if focused { model.selectTask(task) }
+      if focused {
+        model.selectTask(task)
+        model.reportKeyboardFocus(.tasks)
+      }
     }
     .onChange(of: model.selectedTaskID) { _, id in
       if id == task.id && !isRowFocused { isRowFocused = true }
@@ -985,79 +1167,112 @@ private struct WorkspaceFocusDashboard: View {
   @Environment(WorkspaceViewModel.self) private var model
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 18) {
-      Text("FOCUS")
-        .font(.title2.weight(.semibold))
-      if let task = model.activeFocusTask {
-        Text(task.title)
-          .font(.title3.weight(.medium))
-          .lineLimit(2)
-          .truncationMode(.tail)
-        Text("Focus mode is active. Complete the current task to advance the queue.")
-          .foregroundStyle(.secondary)
-        Text("\(FocusPoints.formatted(model.focusPoints.today)) points today over \(model.focusPoints.blocksToday) blocks")
-          .font(.callout.monospacedDigit())
-          .foregroundStyle(.secondary)
-        HStack {
-          Button("Complete current") { model.requestFocusCompletion() }
+    ScrollView {
+      VStack(alignment: .leading, spacing: 18) {
+        Text("FOCUS")
+          .font(.title2.weight(.semibold))
+        WorkspaceFocusContextControls()
+        if let task = model.activeFocusTask {
+          Text(task.title)
+            .font(.title3.weight(.medium))
+            .lineLimit(2)
+            .truncationMode(.tail)
+          Text("Focus mode is active. Complete the current task to advance the queue.")
+            .foregroundStyle(.secondary)
+          Text("\(FocusPoints.formatted(model.focusPoints.today)) points today over \(model.focusPoints.blocksToday) blocks")
+            .font(.callout.monospacedDigit())
+            .foregroundStyle(.secondary)
+          HStack {
+            Button("Complete current") { model.requestFocusCompletion() }
+              .buttonStyle(.borderedProminent)
+              .focusable()
+            Button("End session", role: .destructive) { model.finishFocus() }
+              .buttonStyle(.bordered)
+              .focusable()
+          }
+          if !model.focusQueue.isEmpty {
+            Divider()
+            Text("UP NEXT").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+            ForEach(model.focusQueue) { item in
+              Text(item.task.title)
+                .lineLimit(1)
+                .help(item.task.title)
+            }
+          }
+        } else if let task = model.selectedTask {
+          Text("Ready to focus on \(task.title).")
+            .foregroundStyle(.secondary)
+            .lineLimit(2)
+          Button("Start focus") { model.startFocus(on: task) }
             .buttonStyle(.borderedProminent)
             .focusable()
-          Button("End session", role: .destructive) { model.finishFocus() }
-            .buttonStyle(.bordered)
-            .focusable()
+        } else {
+          ContentUnavailableView(
+            "Choose a task to focus on",
+            systemImage: "bolt.fill",
+            description: Text("Select a card or task, then open Focus."))
         }
-        if !model.focusQueue.isEmpty {
-          Divider()
-          Text("UP NEXT").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-          ForEach(model.focusQueue) { item in
-            Text(item.task.title)
-              .lineLimit(1)
-              .help(item.task.title)
-          }
+        Divider()
+        Button { model.presentTimelineScreen() } label: {
+          Label("See the day's timeline", systemImage: "chart.bar.doc.horizontal")
+            .font(.callout)
         }
-      } else if let task = model.selectedTask {
-        Text("Ready to focus on \(task.title).")
-          .foregroundStyle(.secondary)
-          .lineLimit(2)
-        Button("Start focus") { model.startFocus(on: task) }
-          .buttonStyle(.borderedProminent)
-          .focusable()
-      } else {
-        ContentUnavailableView(
-          "Choose a task to focus on",
-          systemImage: "bolt.fill",
-          description: Text("Select a card or task, then open Focus."))
+        .buttonStyle(.plain)
+        .focusable()
       }
-      Spacer()
+      .padding(24)
     }
-    .padding(24)
   }
 }
 
 private struct WorkspaceTaskMoveSheet: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.dismiss) private var dismiss
-  let task: WorkspaceTask
+  let request: WorkspaceItemMoveRequest
   @State private var destinationID: String?
+  @FocusState private var destinationIsFocused: Bool
 
-  private var destinations: [TaskList] {
-    model.lists.filter { $0.id != task.listId }
+  private struct Destination: Identifiable {
+    let id: String
+    let name: String
+    let listID: String
+    let parentTaskID: String?
+    var folderID: String? = nil
+  }
+
+  private var destinations: [Destination] {
+    var blocked = Set<String>()
+    if let taskID = request.taskID {
+      blocked.insert(taskID)
+      for item in (try? model.store?.outline(in: request.sourceListID, parentTaskId: taskID)) ?? [] { blocked.insert(item.id) }
+    }
+    let roots = model.lists.filter { request.taskID != nil || $0.id != request.sourceListID }
+    let listDestinations = roots.flatMap { list in
+      [Destination(id: "root:\(list.id)", name: list.name, listID: list.id, parentTaskID: nil)]
+        + model.nestedLists.filter { $0.task.listId == list.id && !blocked.contains($0.id) }.map { item in
+          Destination(id: item.id, name: "\(list.name) › \(item.task.title)", listID: list.id, parentTaskID: item.id)
+        }
+    }
+    return listDestinations + model.folders.map { folder in
+      Destination(id: "folder:\(folder.id)", name: "Folder: \(folder.name)", listID: "", parentTaskID: nil, folderID: folder.id)
+    }
   }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Move task to list")
+      Text("Move to list or folder")
         .font(.title3.weight(.semibold))
-      Text(task.title)
+      Text(request.title)
         .lineLimit(2)
         .truncationMode(.tail)
-        .help(task.title)
+        .help(request.title)
       Picker("Destination", selection: $destinationID) {
         ForEach(destinations) { list in
           Text(list.name).tag(Optional(list.id))
         }
       }
       .focusable()
+      .focused($destinationIsFocused)
       HStack {
         Spacer()
         Button("Cancel") { dismiss() }
@@ -1065,7 +1280,9 @@ private struct WorkspaceTaskMoveSheet: View {
           .keyboardShortcut(.cancelAction)
         Button("Move") {
           guard let destinationID else { return }
-          model.moveTask(task, toListId: destinationID)
+          guard let destination = destinations.first(where: { $0.id == destinationID }) else { return }
+          if let folderID = destination.folderID { model.moveDroppedItem(request.payload, toFolderID: folderID) }
+          else { model.moveDroppedItem(request.payload, toListID: destination.listID, parentTaskID: destination.parentTaskID) }
           dismiss()
         }
         .buttonStyle(.borderedProminent)
@@ -1076,7 +1293,10 @@ private struct WorkspaceTaskMoveSheet: View {
     }
     .padding(24)
     .frame(width: 380)
-    .onAppear { destinationID = destinations.first?.id }
+    .onAppear {
+      destinationID = destinations.first?.id
+      destinationIsFocused = true
+    }
   }
 }
 
@@ -1114,28 +1334,116 @@ private struct NewKanbanColumnSheet: View {
   }
 }
 
+private struct WorkspaceItemActions: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let task: WorkspaceTask
+
+  var body: some View {
+    Button(task.isList ? "Open list" : "Open subtasks") { model.openItemList(task) }
+    Button("Rename…") { model.taskQuickEditRequest = WorkspaceTaskQuickEditRequest(task: task, kind: .title) }
+    Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
+    Button("Move to list or folder…") { model.requestMove(task) }
+    Button("New nested list…") { model.requestNestedListCreation(under: task) }
+    if task.isList {
+      Button("Move to top level") { model.moveDroppedItem(task.id, toFolderID: nil) }
+      Button(task.isPromoted == true ? "Unpin from sidebar" : "Promote to sidebar") { model.toggleListPromotion(task) }
+      Menu("Choose icon") {
+        ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
+          Button { model.setNestedListIcon(icon.symbol, for: task) } label: { Label(icon.label, systemImage: icon.symbol) }
+        }
+      }
+      Divider()
+      Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
+      Button("Archive list") { model.archiveNestedList(task) }
+    }
+  }
+}
+
+private struct WorkspaceSidebarSelectionBackground: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let isSelected: Bool
+
+  var body: some View {
+    RoundedRectangle(cornerRadius: 6)
+      .fill(isSelected ? Color.accentColor.opacity(0.17) : .clear)
+      .overlay(
+        RoundedRectangle(cornerRadius: 6)
+          .strokeBorder(
+            isSelected && model.keyboardFocusArea == .sidebar ? Color.accentColor : .clear,
+            lineWidth: 2)
+      )
+  }
+}
+
+private struct WorkspaceNestedListRows: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let list: TaskList
+
+  var body: some View {
+    ForEach(model.nestedLists.filter { $0.task.listId == list.id }) { item in
+      WorkspaceNestedListRow(task: item.task)
+        .padding(.leading, CGFloat(item.depth + 1) * 12)
+    }
+  }
+}
+
+private struct WorkspaceNestedListRow: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let task: WorkspaceTask
+  var promotedShortcut = false
+  @State private var isDropTargeted = false
+
+  var body: some View {
+    Button { model.selectNestedList(task) } label: {
+      HStack(spacing: 7) {
+        Image(systemName: model.itemSymbol(for: task)).frame(width: 18)
+        Text(task.title).lineLimit(1).truncationMode(.middle).strikethrough(task.status != .open)
+        Spacer(minLength: 0)
+        if promotedShortcut { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary) }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.vertical, 5)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .focusable().focusEffectDisabled()
+    .id(promotedShortcut ? "promoted:\(task.id)" : task.id)
+    .listRowBackground(WorkspaceSidebarSelectionBackground(
+      isSelected: model.selectedFolderID == nil && model.currentSidebarID == task.id))
+    .contextMenu { WorkspaceItemActions(task: task) }
+    .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
+    .background(isDropTargeted ? Color.accentColor.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 6))
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
+      WorkspaceTaskDrag.readItemID(from: providers) { payload in
+        model.moveDroppedItem(payload, toListID: task.listId, parentTaskID: task.id)
+      }
+    }
+  }
+}
+
 private struct WorkspaceFolderTree: View {
   @Environment(WorkspaceViewModel.self) private var model
   let folder: ListFolder
+  @State private var isDropTargeted = false
 
   var body: some View {
-    DisclosureGroup(isExpanded: Binding(
-      get: { model.isFolderExpanded(folder) },
-      set: { model.setFolderExpanded(folder, expanded: $0) }
-    )) {
-      ForEach(model.lists.filter { $0.folderId == folder.id }) { list in
-        WorkspaceListRowLabel(list: list)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.vertical, 5)
-          .contentShape(Rectangle())
+    Group {
+      folderHeader
+      if model.isFolderExpanded(folder) {
+      ForEach(model.lists.filter { $0.folderId == folder.id && $0.systemRole != .inbox }) { list in
+        WorkspaceSelectableListRow(list: list)
           .tag(Optional(list.id))
+          .id(list.id)
+          .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
+          .listRowBackground(
+            WorkspaceSidebarSelectionBackground(
+              isSelected: model.selectedFolderID == nil && model.currentSidebarID == list.id))
           .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: Binding(
             get: { model.dragDestinationListID == list.id },
             set: { model.dragDestinationListID = $0 ? list.id : nil }
           )) { providers in
-            WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
-              guard let task = model.task(withID: taskID), task.listId != list.id else { return }
-              model.moveTask(task, toListId: list.id)
+            WorkspaceTaskDrag.readItemID(from: providers) { payload in
+              model.moveDroppedItem(payload, toListID: list.id)
             }
           }
           .background(
@@ -1145,46 +1453,80 @@ private struct WorkspaceFolderTree: View {
           .contextMenu {
             Button("Rename") { model.beginRenaming(.list(list)) }
             Button("List settings…") { model.showSettings(for: list) }
+            Button("New nested list…") {
+              model.selectList(list.id)
+              model.requestNestedListCreation()
+            }
             if !list.isSystemList {
               Divider()
+              Button("Convert to task in Inbox") { model.convertListToTask(list) }
+              Button(list.completedAt == nil ? "Complete list" : "Reopen list") { model.toggleListCompletion(list) }
               Button("Archive") { model.archiveList(list) }
               Divider()
               Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
             }
           }
+        WorkspaceNestedListRows(list: list)
       }
+      .padding(.leading, 14)
       ForEach(model.folders.filter { $0.parentFolderId == folder.id }) { child in
         WorkspaceFolderTree(folder: child)
       }
-    } label: {
-      Button {
-        model.selectFolder(folder)
-      } label: {
+      .padding(.leading, 14)
+      }
+    }
+  }
+
+  private var folderHeader: some View {
+      HStack(spacing: 6) {
+        Button {
+          withAnimation(.easeInOut(duration: 0.18)) {
+            model.setFolderExpanded(folder, expanded: !model.isFolderExpanded(folder))
+          }
+        } label: {
+          Image(systemName: model.isFolderExpanded(folder) ? "chevron.down" : "chevron.right")
+            .font(.caption)
+            .frame(width: 14, height: 20)
+        }
+        .accessibilityLabel(model.isFolderExpanded(folder) ? "Collapse folder" : "Expand folder")
         if model.isRenaming(.folder(folder)) {
           WorkspaceRenameField(
             initialName: folder.name,
             onCommit: { model.renameFolder(folder, to: $0) },
-            onCancel: { model.cancelRenaming() })
+            onCancel: { model.cancelRenaming(itemID: folder.id) })
         } else {
-          Label(folder.name, systemImage: "folder")
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .help(folder.name)
+          Button { model.selectFolder(folder) } label: {
+            Label(folder.name, systemImage: "folder")
+              .lineLimit(1)
+              .truncationMode(.middle)
+              .help(folder.name)
+          }
         }
       }
         .buttonStyle(.plain)
-        .simultaneousGesture(TapGesture(count: 2).onEnded {
-          model.beginRenaming(.folder(folder))
-        })
         .focusable()
+        .focusEffectDisabled()
         .foregroundStyle(.secondary)
         .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 4)
         .background(
-          folder.id == model.selectedFolderID ? Color.accentColor.opacity(0.14) : .clear,
+          isDropTargeted || folder.id == model.selectedFolderID ? Color.accentColor.opacity(0.14) : .clear,
           in: RoundedRectangle(cornerRadius: 5)
         )
+        .overlay(
+          RoundedRectangle(cornerRadius: 5)
+            .strokeBorder(
+              model.keyboardFocusArea == .sidebar && model.selectedFolderID == folder.id
+                ? Color.accentColor : .clear,
+              lineWidth: 2)
+        )
         .contentShape(Rectangle())
+        .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
+          WorkspaceTaskDrag.readItemID(from: providers) { payload in
+            model.moveDroppedItem(payload, toFolderID: folder.id)
+          }
+        }
         .contextMenu {
           Button("Rename") { model.beginRenaming(.folder(folder)) }
           Button("Folder settings…") { model.showSettings(for: folder) }
@@ -1193,88 +1535,6 @@ private struct WorkspaceFolderTree: View {
           Divider()
           Button("Delete folder", role: .destructive) { model.requestDeletion(of: .folder(folder)) }
         }
-    }
-  }
-}
-
-private struct LocalFocusPanel: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.dismiss) private var dismiss
-  let onFloat: () -> Void
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 20) {
-      HStack {
-        Label("FOCUS", systemImage: "bolt.fill")
-          .font(.caption.weight(.bold))
-          .foregroundStyle(.secondary)
-        Spacer()
-        Text("\(FocusPoints.formatted(model.focusPoints.today)) pts today")
-          .font(.caption.monospacedDigit())
-          .foregroundStyle(.secondary)
-          .help("Minutes focused, multiplied by how well each block went")
-        Button("Hide") { dismiss() }
-          .buttonStyle(.plain)
-          .focusable()
-          .keyboardShortcut(.cancelAction)
-      }
-
-      if let session = model.activeFocusSession, let task = model.activeFocusTask {
-        Text(task.title)
-          .font(.title2.weight(.semibold))
-          .lineLimit(3)
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-          let clock = reading(session: session, now: context.date)
-          Text(clock.text)
-            .font(.system(size: 42, weight: .bold, design: .monospaced))
-            .foregroundStyle(clock.isOverrun ? Color.orange : Color.accentColor)
-        }
-        Text("One task at a time. The queue stays editable while you work.")
-          .font(.callout)
-          .foregroundStyle(.secondary)
-
-        Divider()
-        Text("UP NEXT").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-        ScrollView(.vertical) {
-          VStack(alignment: .leading, spacing: 6) {
-            ForEach(model.focusQueue) { queued in
-              HStack {
-                Image(systemName: queued.item.state == .completed ? "checkmark.circle.fill" : "circle")
-                  .foregroundStyle(queued.item.state == .completed ? Color.green : Color.secondary)
-                Text(queued.task.title)
-                  .lineLimit(1)
-                  .truncationMode(.tail)
-                  .help(queued.task.title)
-                Spacer()
-              }
-            }
-          }
-        }
-        .frame(maxHeight: 110)
-
-        HStack {
-          Button("Done") { model.requestFocusCompletion() }
-            .buttonStyle(.borderedProminent)
-            .focusable()
-            .keyboardShortcut(.defaultAction)
-          Button("Float timer") { onFloat() }
-            .buttonStyle(.bordered)
-            .focusable()
-          Button("End session", role: .destructive) { model.finishFocus() }
-            .buttonStyle(.bordered)
-            .focusable()
-        }
-      } else {
-        ContentUnavailableView("Focus session complete", systemImage: "checkmark.circle")
-      }
-    }
-    .padding(28)
-    .frame(width: 440, height: 520, alignment: .topLeading)
-  }
-
-  private func reading(session: FocusSession, now: Date) -> FocusTimerDisplay.Reading {
-    FocusTimerDisplay.reading(
-      since: session.activeTaskStartedAt, planned: TimeInterval(session.workDurationSeconds), now: now)
   }
 }
 
@@ -1282,7 +1542,14 @@ private struct TaskComposer: View {
   @State private var title = ""
   @FocusState private var isFocused: Bool
   let focusRequest: Int
+  let onCancel: () -> Void
   let onSubmit: (String) -> Void
+
+  init(focusRequest: Int, onCancel: @escaping () -> Void = {}, onSubmit: @escaping (String) -> Void) {
+    self.focusRequest = focusRequest
+    self.onCancel = onCancel
+    self.onSubmit = onSubmit
+  }
 
   var body: some View {
     HStack {
@@ -1292,6 +1559,7 @@ private struct TaskComposer: View {
         .textFieldStyle(.plain)
         .focused($isFocused)
         .onSubmit { submit() }
+        .onExitCommand { title = ""; isFocused = false; onCancel() }
     }
     .padding(10)
     .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
@@ -1305,27 +1573,171 @@ private struct TaskComposer: View {
   }
 }
 
+/// A focused capture field owns the arrows while it is active: vertical
+/// arrows file the thought, horizontal arrows defer it. A native text field
+/// is used because SwiftUI's TextField consumes those commands for cursor
+/// movement before a view-level key handler can see them.
+private final class QuickCaptureNSTextField: NSTextField {
+  var onSubmit: (() -> Void)?
+  var onCancel: (() -> Void)?
+  var onMoveDestination: ((Int) -> Void)?
+  var onMoveStartDay: ((Int) -> Void)?
+
+  override func keyDown(with event: NSEvent) {
+    switch event.keyCode {
+    case 36, 76: onSubmit?()
+    case 53: onCancel?()
+    case 126: onMoveDestination?(-1)
+    case 125: onMoveDestination?(1)
+    case 123: onMoveStartDay?(-1)
+    case 124: onMoveStartDay?(1)
+    default: super.keyDown(with: event)
+    }
+  }
+}
+
+private struct QuickCaptureTextField: NSViewRepresentable {
+  @Binding var text: String
+  let focusRequest: Int
+  let onSubmit: () -> Void
+  let onCancel: () -> Void
+  let onMoveDestination: (Int) -> Void
+  let onMoveStartDay: (Int) -> Void
+
+  func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+  func makeNSView(context: Context) -> QuickCaptureNSTextField {
+    let field = QuickCaptureNSTextField()
+    field.delegate = context.coordinator
+    field.isBordered = false
+    field.drawsBackground = false
+    field.focusRingType = .none
+    field.font = .systemFont(ofSize: 14, weight: .medium)
+    field.placeholderString = "What needs doing?"
+    return field
+  }
+
+  func updateNSView(_ field: QuickCaptureNSTextField, context: Context) {
+    context.coordinator.parent = self
+    if field.stringValue != text { field.stringValue = text }
+    field.onSubmit = onSubmit
+    field.onCancel = onCancel
+    field.onMoveDestination = onMoveDestination
+    field.onMoveStartDay = onMoveStartDay
+    if context.coordinator.lastFocusRequest != focusRequest {
+      context.coordinator.lastFocusRequest = focusRequest
+      DispatchQueue.main.async { field.window?.makeFirstResponder(field) }
+    }
+  }
+
+  final class Coordinator: NSObject, NSTextFieldDelegate {
+    var parent: QuickCaptureTextField
+    var lastFocusRequest = -1
+    init(_ parent: QuickCaptureTextField) { self.parent = parent }
+    func controlTextDidChange(_ notification: Notification) {
+      guard let field = notification.object as? NSTextField else { return }
+      parent.text = field.stringValue
+    }
+  }
+}
+
+private struct GlobalQuickCaptureComposer: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @State private var title = ""
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 9) {
+      HStack(spacing: 9) {
+        Image(systemName: "tray.and.arrow.down.fill")
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundStyle(.tint)
+        QuickCaptureTextField(
+          text: $title,
+          focusRequest: model.taskComposerFocusRequest,
+          onSubmit: submit,
+          onCancel: cancel,
+          onMoveDestination: model.moveQuickCaptureDestination,
+          onMoveStartDay: model.moveQuickCaptureStartDay)
+          .frame(height: 22)
+      }
+
+      HStack(spacing: 8) {
+        capturePill(
+          icon: "arrow.up.arrow.down",
+          text: model.quickCaptureDestination?.path ?? "Inbox",
+          accessibility: "Destination list")
+        capturePill(
+          icon: "arrow.left.arrow.right",
+          text: model.quickCaptureStartLabel,
+          accessibility: "Start day")
+        Spacer(minLength: 6)
+        Text("↩ Add  ·  Esc Cancel")
+          .font(.caption2)
+          .foregroundStyle(.tertiary)
+      }
+    }
+    .padding(12)
+    .background(
+      LinearGradient(
+        colors: [Color.accentColor.opacity(0.13), Color.accentColor.opacity(0.035)],
+        startPoint: .topLeading, endPoint: .bottomTrailing),
+      in: RoundedRectangle(cornerRadius: 10))
+    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor.opacity(0.3)))
+  }
+
+  private func capturePill(icon: String, text: String, accessibility: String) -> some View {
+    Label(text, systemImage: icon)
+      .font(.caption.weight(.medium))
+      .lineLimit(1)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(.background.opacity(0.65), in: Capsule())
+      .accessibilityLabel("\(accessibility): \(text)")
+  }
+
+  private func submit() {
+    guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    model.submitQuickCapture(named: title)
+    title = ""
+  }
+
+  private func cancel() {
+    title = ""
+    model.cancelQuickCapture()
+    model.requestKeyboardFocus(.tasks)
+  }
+}
+
 private struct WorkspaceScopedTaskComposer: View {
   @Environment(WorkspaceViewModel.self) private var model
   let board: Bool
 
   var body: some View {
-    HStack(spacing: 10) {
-      if model.isEverythingSelected {
-        Picker("In list", selection: Bindable(model).newTaskListID) {
-          ForEach(model.lists) { list in
-            Text(list.name).tag(Optional(list.id))
+    Group {
+      if model.isQuickCaptureActive {
+        GlobalQuickCaptureComposer()
+      } else {
+        HStack(spacing: 10) {
+          if model.isEverythingSelected {
+            Picker("In list", selection: Bindable(model).newTaskListID) {
+              ForEach(model.lists) { list in
+                Text(list.name).tag(Optional(list.id))
+              }
+            }
+            .pickerStyle(.menu)
+            .focusable()
+            .frame(width: 170)
+            .help("Choose the sub-list for new tasks")
           }
+          TaskComposer(focusRequest: model.taskComposerFocusRequest, onCancel: {
+            model.taskInsertionReference = nil
+            model.requestKeyboardFocus(.tasks)
+          }) { title in
+            if board { model.createBoardTask(named: title) } else { model.createTask(named: title) }
+          }
+          .frame(maxWidth: .infinity)
         }
-        .pickerStyle(.menu)
-        .focusable()
-        .frame(width: 170)
-        .help("Choose the sub-list for new tasks")
       }
-      TaskComposer(focusRequest: model.taskComposerFocusRequest) { title in
-        if board { model.createBoardTask(named: title) } else { model.createTask(named: title) }
-      }
-      .frame(maxWidth: .infinity)
     }
   }
 }
@@ -1367,6 +1779,78 @@ private struct WorkspaceCreationSheet: View {
   }
 }
 
+private struct WorkspaceListNavigator: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.dismiss) private var dismiss
+  @State private var query = ""
+  @State private var selection = 0
+  @FocusState private var isFocused: Bool
+
+  private struct Destination: Identifiable {
+    let id: String
+    let title: String
+    let task: WorkspaceTask?
+  }
+
+  private var destinations: [Destination] {
+    let lists = model.lists.map { Destination(id: $0.id, title: $0.name, task: nil) }
+    let nested = model.nestedLists.map { Destination(id: $0.task.id, title: $0.task.title, task: $0.task) }
+    return (lists + nested).filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) }
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Lists and locations").font(.title3.bold())
+      TextField("Find a list", text: $query)
+        .textFieldStyle(.roundedBorder)
+        .focused($isFocused)
+        .onSubmit { openSelection() }
+        .onKeyPress(.upArrow) { selection = max(0, selection - 1); return .handled }
+        .onKeyPress(.downArrow) { selection = min(max(0, destinations.count - 1), selection + 1); return .handled }
+        .onChange(of: query) { _, _ in selection = 0 }
+      ScrollViewReader { proxy in
+        ScrollView {
+          LazyVStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(destinations.enumerated()), id: \.element.id) { index, destination in
+              Button { open(destination) } label: {
+                Label(destination.title, systemImage: destination.task == nil ? "list.bullet" : "list.bullet.indent")
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .padding(8)
+                  .background(index == selection ? Color.accentColor.opacity(0.17) : .clear,
+                    in: RoundedRectangle(cornerRadius: 6))
+              }
+              .buttonStyle(.plain)
+              .id(index)
+            }
+          }
+        }
+        .onChange(of: selection) { _, index in proxy.scrollTo(index) }
+      }
+      HStack {
+        Button("New list…") { dismiss(); model.requestListCreationForSelection() }
+        Spacer()
+        Text("↑↓ choose · Return open · Esc close").font(.caption).foregroundStyle(.secondary)
+      }
+    }
+    .padding(20)
+    .frame(width: 460, height: 380)
+    .onAppear { isFocused = true }
+    .onExitCommand { dismiss() }
+  }
+
+  private func openSelection() {
+    guard destinations.indices.contains(selection) else { return }
+    open(destinations[selection])
+  }
+
+  private func open(_ destination: Destination) {
+    if let task = destination.task { model.selectNestedList(task) }
+    else { model.selectList(destination.id) }
+    dismiss()
+    model.requestKeyboardFocus(.tasks)
+  }
+}
+
 private struct WorkspaceKeyboardHelp: View {
   @Environment(\.dismiss) private var dismiss
 
@@ -1385,6 +1869,20 @@ private struct WorkspaceKeyboardHelp: View {
         key("⌘ 0", "Open Everything across all active lists")
         key("⌘ 1 / ⌘ 2 / ⌘ 3", "Focus the sidebar or task surface; ⌘ 3 opens the inspector")
         key("I", "Open or close the selected task’s inspector")
+        key("EE / F2", "Edit the task title; F2 also renames a sidebar list or folder")
+        key("DD / NN / TT / DR", "Edit due date, notes, tags, or repeating due settings")
+        key("TD / TM / CD", "Due today / tomorrow / clear due date")
+        key("CN / CT", "Clear notes / tags")
+        key("⌥ S / ⌥ T", "Edit start date / time estimate")
+        key("0–9", "Set task priority; 0 clears it")
+        key("HC", "Hide or show completed tasks")
+        key("LL / GH", "Find or create a list / open Everything")
+        key("SD / OO / PC", "Toggle inspector / list settings / show task progress")
+        key("XX / GG", "Extract a branch as a list / open its first linked URL")
+        key("Home / End / PgUp / PgDown", "Navigate to either end, or eight tasks at a time")
+        key("Date picker: ← → / ↑ ↓", "Select a day / week immediately; Shift ← → changes month")
+        key("Date picker: Tab", "Switch between calendar, hour, minute, and buttons")
+        key("Picker: ↵ / Esc", "Save / cancel; Delete clears the selected planning value")
         key("⌘ 4–7", "View this list as Board, Outline, Dailies, or Matrix")
         key("⌘ 8", "Enter focus mode, or return to the running session")
         key("Focus: ↑ ↓ / J K", "Climb to less important work, or back down towards the most important")
@@ -1392,13 +1890,18 @@ private struct WorkspaceKeyboardHelp: View {
         key("Focus: X", "Tick the task off without starting a session")
         key("Focus: ⌥ ↑ / ↓", "Move the task itself up or down the ladder, fixing your own order")
         key("Focus: L", "Schedule it for later so it stops being offered")
+        key("⌘ 9", "Open the timeline of the day's focused work, or close it")
+        key("Timeline: ← → / H L", "Step back or forward a day; T returns to today")
         key("⌃ Tab / ⌃ ⇧ Tab", "Move focus forward or backward between those regions")
-        key("Tab / ⇧ Tab", "Move between buttons, menus, and fields")
+        key("Task surface: Tab / ⇧ Tab", "Indent / outdent; controls and text fields retain normal Tab navigation")
         key("Sidebar: ↑ ↓ / J K", "Select Everything, then its visible lists and folders")
         key("Sidebar: ← → / Return", "Collapse, expand, or toggle the selected folder")
-        key("Board: ← →", "Move selection between columns; Enter opens a task’s nested board")
-        key("Outline: ← → / H L", "Leave or enter a task’s subtasks")
-        key("Space / X", "Complete or reopen selected task")
+        key("Board: ← → / Return", "Focus any column; Return opens a task or adds to an empty column")
+        key("Outline: ← →", "Leave or enter a task’s subtasks")
+        key("Outline: Return / ⌥ Return / ⇧ Return", "Add below / above / as a child")
+        key("⇧ → / ⇧ ←", "Open the selected branch / return to its parent")
+        key("Space", "Complete or reopen selected task")
+        key("⇧ Space", "Invalidate or reopen selected task")
         key("⌘ ⌥ → / ←", "Indent or outdent the selected task")
         key("⌥ → / ←", "Move the selected board card to the next or previous column")
         key("⌥ 1–4", "Place the selected matrix task in a quadrant")
@@ -1408,22 +1911,25 @@ private struct WorkspaceKeyboardHelp: View {
         key("Board card drop", "Drop on a sibling card to place it before that card")
         key("Delete", "Delete the selected task and its subtasks")
         key("F", "Start focus, or add to the active focus queue")
-        key("M", "Move the selected task and its subtasks to another list")
-        key("[  ]", "Previous or next list, including Everything")
+        key("MM", "Move the selected task or list, including its contents, to a list or folder")
+        key("[ / ]", "Return to the parent list / open the selected task as a list")
+        key("⌘ ⇧ L", "Convert selected task to a list, or list back to a task")
+        key("⌘ ⇧ P", "Promote / unpin a nested list in the sidebar")
+        key("⌘ ⇧ X", "Complete / reopen the current list")
         key("⌘ N", "Add a task")
         key("⌘ ⌥ [ / ]", "Choose the destination sub-list when adding in Everything")
         key("⌘ S", "Save edits in the task inspector")
-        key("⌘ ⇧ N", "Create a list; when a folder is selected, create it there")
+        key("⌘ ⇧ N", "Create a nested list in the task pane; otherwise create a sidebar list")
         key("⌘ ⌥ N", "Create a folder; when a folder is selected, create it there")
         key("⌘ R", "Rename the selected list or folder in place")
         key("⌘ I", "Open settings for the selected list or folder")
         key("⌘ F", "Search every task’s title and notes")
-        key("⌘ Z / ⌘ ⇧ Z", "Undo or redo the last change to the workspace")
+        key("UU / ⌘ Z / ⌘ ⇧ Z", "Undo / undo / redo the last complete workspace action")
         key("⌘ ⇧ A / ⌘ ⇧ R", "Archive the current list / restore the most recently archived list")
         key("⌃ ⌥ ↑ / ↓", "Select the previous or next folder")
         key("⌘ ⌥ ↑ / ↓", "Reorder the selected folder among its siblings")
         key("⌘ ⇧ Delete", "Delete the selected folder or current list")
-        key("? / ⌘ /", "Show this keyboard reference")
+        key("? / ⌘ / / ⇧ ⇧", "Show this keyboard reference")
         key("Esc", "Clear selection or leave the current task scope")
         }
       }
@@ -1505,5 +2011,26 @@ extension Color {
       green: Double((hex >> 8) & 0xFF) / 255,
       blue: Double(hex & 0xFF) / 255,
       opacity: 1)
+  }
+}
+
+/// SwiftUI has no API for disabling macOS scroll elasticity entirely.
+private struct WorkspaceHorizontalOverscrollDisabler: NSViewRepresentable {
+  func makeNSView(context: Context) -> Probe { Probe() }
+  func updateNSView(_ nsView: Probe, context: Context) {
+    nsView.disableOverscroll()
+  }
+
+  final class Probe: NSView {
+    override func viewDidMoveToWindow() {
+      super.viewDidMoveToWindow()
+      disableOverscroll()
+    }
+
+    func disableOverscroll() {
+      DispatchQueue.main.async { [weak self] in
+        self?.enclosingScrollView?.horizontalScrollElasticity = .none
+      }
+    }
   }
 }

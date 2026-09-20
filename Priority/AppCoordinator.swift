@@ -3,6 +3,7 @@ import Foundation
 import OSLog
 import Observation
 import PriorityCore
+import PriorityWorkspace
 import ServiceManagement
 import SwiftUI
 
@@ -10,6 +11,26 @@ import SwiftUI
 @Observable class AppCoordinator {
   @ObservationIgnored let logger = Logger(
     subsystem: "uk.co.maybeitsadam.priority", category: "manager")
+
+  /// How the Google Tasks mirror reaches the workspace. Set by `AppDelegate`
+  /// once the workspace exists — the coordinator is built first, and the
+  /// mirror is only ever used after both of them are up.
+  @ObservationIgnored var workspaceStoreProvider: (() -> WorkspaceStore?)?
+
+  /// The Google Tasks mirror. Lazy because it closes over `self`, and because
+  /// an installation that never switches it on should never build it.
+  /// Watches the events the Calendar integration created, so clearing one off
+  /// the calendar completes the task it stood for.
+  @ObservationIgnored private(set) lazy var googleCalendarCompletions =
+    GoogleCalendarCompletionWatcher(
+      plugin: integrations.googleCalendarPlugin,
+      storeProvider: { [weak self] in self?.workspaceStoreProvider?() },
+      isEnabled: { [weak self] in self?.integrations.googleCalendarIntegrationEnabled ?? false })
+
+  @ObservationIgnored private(set) lazy var googleTasksMirror = GoogleTasksMirrorService(
+    plugin: integrations.googleTasksPlugin,
+    storeProvider: { [weak self] in self?.workspaceStoreProvider?() },
+    isEnabled: { [weak self] in self?.integrations.googleTasksIntegrationEnabled ?? false })
 
   let repository: TaskRepository
   @ObservationIgnored let cacheInvalidationBus: CacheInvalidationBus
@@ -101,10 +122,13 @@ import SwiftUI
   enum CarbonKey {
     static let space = 49
     static let b = 11
+    static let n = 45
   }
   enum CarbonModifier {
     static let option = 0x0800
     static let shiftOption = 0x0A00
+    /// Command + Shift + Option + Control (the conventional macOS Hyper key).
+    static let hyper = 0x1B00
   }
 
   let startDates: StartDateManager
@@ -191,9 +215,15 @@ import SwiftUI
     let resolvedAFFiNEPlugin =
       pluginRegistry.activeAFFiNEPlugin
       ?? NativeAFFiNEIntegrationPlugin()
+    // The fallbacks share one account for the same reason the registry's
+    // plugins do: two Google integrations, one Google user.
+    let fallbackGoogleAccount = GoogleAccount()
     let resolvedGoogleCalendarPlugin =
       pluginRegistry.activeGoogleCalendarPlugin
-      ?? NativeGoogleCalendarIntegrationPlugin()
+      ?? NativeGoogleCalendarIntegrationPlugin(account: fallbackGoogleAccount)
+    let resolvedGoogleTasksPlugin =
+      pluginRegistry.activeGoogleTasksPlugin
+      ?? NativeGoogleTasksIntegrationPlugin(account: fallbackGoogleAccount)
     let resolvedMCPIntegrationPlugin =
       pluginRegistry.activeMCPIntegrationPlugin
       ?? NativeMCPIntegrationPlugin()
@@ -207,6 +237,7 @@ import SwiftUI
         resolvedObsidianPlugin.pluginIdentifier,
         resolvedAFFiNEPlugin.pluginIdentifier,
         resolvedGoogleCalendarPlugin.pluginIdentifier,
+        resolvedGoogleTasksPlugin.pluginIdentifier,
         resolvedMCPIntegrationPlugin.pluginIdentifier,
         resolvedDailyLogPlugin.pluginIdentifier,
       ]
@@ -312,6 +343,7 @@ import SwiftUI
       obsidianPlugin: resolvedObsidianPlugin,
       affinePlugin: resolvedAFFiNEPlugin,
       googleCalendarPlugin: resolvedGoogleCalendarPlugin,
+      googleTasksPlugin: resolvedGoogleTasksPlugin,
       mcpIntegrationPlugin: resolvedMCPIntegrationPlugin,
       initialListId: storedListId
     )
@@ -630,6 +662,7 @@ extension AppCoordinator {
       integrations.obsidianPlugin as any Plugin,
       integrations.affinePlugin as any Plugin,
       integrations.googleCalendarPlugin as any Plugin,
+      integrations.googleTasksPlugin as any Plugin,
       integrations.mcpIntegrationPlugin as any Plugin,
       dailyLog.plugin as any Plugin,
     ].compactMap { $0 as? any PluginSettingsPageProviding }

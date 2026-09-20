@@ -29,8 +29,8 @@ extension SettingsView {
         )
         hotkeyCard(
           title: "Quick Add hotkey",
-          description: "Opens Quick Add at your configured target.",
-          defaultDisplay: HotkeyRecorderField.displayString(keyCode: 11, modifiers: 0x0A00),
+          description: "Captures to Inbox. Use ↑/↓ for lists and ←/→ for the start day.",
+          defaultDisplay: HotkeyRecorderField.displayString(keyCode: 45, modifiers: 0x1B00),
           enabled: preferenceBinding(\.quickAddHotkeyEnabled),
           keyCode: preferenceBinding(\.quickAddHotkeyKeyCode),
           modifiers: preferenceBinding(\.quickAddHotkeyModifiers)
@@ -61,8 +61,8 @@ extension SettingsView {
           Button("Reset hotkeys to defaults") {
             preferences.globalHotkeyKeyCode = 49  // Space
             preferences.globalHotkeyModifiers = 0x0800  // Option
-            preferences.quickAddHotkeyKeyCode = 11  // B
-            preferences.quickAddHotkeyModifiers = 0x0A00  // Shift + Option
+            preferences.quickAddHotkeyKeyCode = 45  // N
+            preferences.quickAddHotkeyModifiers = 0x1B00  // Hyper
           }
         }
       }
@@ -260,6 +260,7 @@ extension SettingsView {
           Text(title)
             .font(.system(size: 13, weight: .semibold))
         }
+          .toggleStyle(.switch)
         Text(description)
           .font(.caption)
           .foregroundColor(themeColor(.textSecondary))

@@ -8,6 +8,7 @@ final class PluginRegistry {
   private(set) var googleCalendarPluginsByIdentifier:
     [String: any GoogleCalendarIntegrationPlugin] =
       [:]
+  private(set) var googleTasksPluginsByIdentifier: [String: any GoogleTasksIntegrationPlugin] = [:]
   private(set) var mcpIntegrationPluginsByIdentifier: [String: any MCPIntegrationPlugin] = [:]
   private(set) var dailyLogPluginsByIdentifier: [String: any DailyLogPlugin] = [:]
   private(set) var celebrationPluginsByIdentifier: [String: any CompletionCelebrationPlugin] = [:]
@@ -19,6 +20,7 @@ final class PluginRegistry {
   private(set) var activeObsidianPluginIdentifier: String?
   private(set) var activeAFFiNEPluginIdentifier: String?
   private(set) var activeGoogleCalendarPluginIdentifier: String?
+  private(set) var activeGoogleTasksPluginIdentifier: String?
   private(set) var activeMCPIntegrationPluginIdentifier: String?
   private(set) var activeDailyLogPluginIdentifier: String?
   private(set) var activeCelebrationPluginIdentifier: String?
@@ -41,6 +43,11 @@ final class PluginRegistry {
   var activeGoogleCalendarPlugin: (any GoogleCalendarIntegrationPlugin)? {
     guard let activeGoogleCalendarPluginIdentifier else { return nil }
     return googleCalendarPluginsByIdentifier[activeGoogleCalendarPluginIdentifier]
+  }
+
+  var activeGoogleTasksPlugin: (any GoogleTasksIntegrationPlugin)? {
+    guard let activeGoogleTasksPluginIdentifier else { return nil }
+    return googleTasksPluginsByIdentifier[activeGoogleTasksPluginIdentifier]
   }
 
   var activeMCPIntegrationPlugin: (any MCPIntegrationPlugin)? {
@@ -92,6 +99,13 @@ final class PluginRegistry {
     googleCalendarPluginsByIdentifier[plugin.pluginIdentifier] = plugin
     if activate || activeGoogleCalendarPluginIdentifier == nil {
       activeGoogleCalendarPluginIdentifier = plugin.pluginIdentifier
+    }
+  }
+
+  func register(_ plugin: any GoogleTasksIntegrationPlugin, activate: Bool = false) {
+    googleTasksPluginsByIdentifier[plugin.pluginIdentifier] = plugin
+    if activate || activeGoogleTasksPluginIdentifier == nil {
+      activeGoogleTasksPluginIdentifier = plugin.pluginIdentifier
     }
   }
 
@@ -148,6 +162,13 @@ final class PluginRegistry {
   }
 
   @discardableResult
+  func activateGoogleTasksPlugin(identifier: String) -> Bool {
+    guard googleTasksPluginsByIdentifier[identifier] != nil else { return false }
+    activeGoogleTasksPluginIdentifier = identifier
+    return true
+  }
+
+  @discardableResult
   func activateMCPIntegrationPlugin(identifier: String) -> Bool {
     guard mcpIntegrationPluginsByIdentifier[identifier] != nil else { return false }
     activeMCPIntegrationPluginIdentifier = identifier
@@ -173,7 +194,12 @@ final class PluginRegistry {
     registry.register(NativeCheckvistSyncPlugin(), activate: true)
     registry.register(NativeObsidianIntegrationPlugin(), activate: true)
     registry.register(NativeAFFiNEIntegrationPlugin(), activate: true)
-    registry.register(NativeGoogleCalendarIntegrationPlugin(), activate: true)
+    // One Google sign-in, shared: Calendar and Tasks are two APIs on the same
+    // account, and asking the user to authorise twice would be an accident of
+    // how the plugins are split rather than anything they care about.
+    let googleAccount = GoogleAccount()
+    registry.register(NativeGoogleCalendarIntegrationPlugin(account: googleAccount), activate: true)
+    registry.register(NativeGoogleTasksIntegrationPlugin(account: googleAccount), activate: true)
     registry.register(NativeMCPIntegrationPlugin(), activate: true)
     registry.register(NativeDailyLogPlugin(), activate: true)
     // Celebrations are a menu, not a single integration: all presets register,

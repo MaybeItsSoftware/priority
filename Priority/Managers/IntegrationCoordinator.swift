@@ -57,6 +57,12 @@ protocol IntegrationDataSource: AnyObject {
       onIntegrationStateChanged?()
     }
   }
+  var googleTasksIntegrationEnabled: Bool {
+    didSet {
+      preferencesStore.set(googleTasksIntegrationEnabled, for: .googleTasksIntegrationEnabled)
+      onIntegrationStateChanged?()
+    }
+  }
   var mcpIntegrationEnabled: Bool {
     didSet {
       preferencesStore.set(mcpIntegrationEnabled, for: .mcpIntegrationEnabled)
@@ -84,6 +90,7 @@ protocol IntegrationDataSource: AnyObject {
   let obsidianPlugin: any ObsidianIntegrationPlugin
   let affinePlugin: any AFFiNEIntegrationPlugin
   let googleCalendarPlugin: any GoogleCalendarIntegrationPlugin
+  let googleTasksPlugin: any GoogleTasksIntegrationPlugin
   let mcpIntegrationPlugin: any MCPIntegrationPlugin
 
   // MARK: - Internal state
@@ -114,6 +121,7 @@ protocol IntegrationDataSource: AnyObject {
     obsidianPlugin: any ObsidianIntegrationPlugin,
     affinePlugin: any AFFiNEIntegrationPlugin,
     googleCalendarPlugin: any GoogleCalendarIntegrationPlugin,
+    googleTasksPlugin: any GoogleTasksIntegrationPlugin,
     mcpIntegrationPlugin: any MCPIntegrationPlugin,
     initialListId: String
   ) {
@@ -121,11 +129,13 @@ protocol IntegrationDataSource: AnyObject {
     self.obsidianPlugin = obsidianPlugin
     self.affinePlugin = affinePlugin
     self.googleCalendarPlugin = googleCalendarPlugin
+    self.googleTasksPlugin = googleTasksPlugin
     self.mcpIntegrationPlugin = mcpIntegrationPlugin
 
     let storedObsidianEnabled = preferencesStore.optionalBool(.obsidianIntegrationEnabled)
     let storedAFFiNEEnabled = preferencesStore.optionalBool(.affineIntegrationEnabled)
     let storedGoogleEnabled = preferencesStore.optionalBool(.googleCalendarIntegrationEnabled)
+    let storedGoogleTasksEnabled = preferencesStore.optionalBool(.googleTasksIntegrationEnabled)
     let storedMCPEnabled = preferencesStore.optionalBool(.mcpIntegrationEnabled)
 
     self.obsidianIntegrationEnabled =
@@ -137,6 +147,9 @@ protocol IntegrationDataSource: AnyObject {
     self.googleCalendarIntegrationEnabled =
       storedGoogleEnabled
       ?? preferencesStore.bool(.googleCalendarIntegrationEnabled, default: false)
+    self.googleTasksIntegrationEnabled =
+      storedGoogleTasksEnabled
+      ?? preferencesStore.bool(.googleTasksIntegrationEnabled, default: false)
     self.mcpIntegrationEnabled =
       storedMCPEnabled
       ?? preferencesStore.bool(.mcpIntegrationEnabled, default: false)
@@ -224,6 +237,29 @@ protocol IntegrationDataSource: AnyObject {
   }
 
   // MARK: - Google Calendar
+
+  /// Creates an event for a task owned by the local workspace. The legacy
+  /// coordinator used to accept only Checkvist integer IDs, which made the
+  /// Calendar integration disappear as soon as the desktop workspace became
+  /// the primary UI.
+  func createGoogleCalendarEvent(
+    title: String, taskID: String, listTitle: String, date: Date?, isAllDay: Bool
+  ) async throws -> String? {
+    guard googleCalendarIntegrationEnabled else {
+      throw WorkspaceGoogleCalendarError.integrationDisabled
+    }
+    let details = """
+      Created from Priority
+      List: \(listTitle)
+      Task ID: \(taskID)
+      """
+    let outcome = try await googleCalendarPlugin.createEvent(
+      title: title, details: details, date: date, isAllDay: isAllDay, now: .now)
+    if let url = outcome.urlToOpen, url.scheme?.lowercased() == "https" {
+      NSWorkspace.shared.open(url)
+    }
+    return outcome.eventID
+  }
 
   func openTaskInGoogleCalendar(taskId explicitTaskId: Int? = nil) {
     guard googleCalendarIntegrationEnabled else {
@@ -750,5 +786,13 @@ protocol IntegrationDataSource: AnyObject {
         // Keep queued; we'll retry on the next connectivity transition.
       }
     }
+  }
+}
+
+private enum WorkspaceGoogleCalendarError: LocalizedError {
+  case integrationDisabled
+
+  var errorDescription: String? {
+    "Enable Google Calendar in Preferences → Integrations first."
   }
 }
