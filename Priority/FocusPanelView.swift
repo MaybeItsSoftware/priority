@@ -10,7 +10,7 @@ import SwiftUI
 /// summoned it to check the clock or to go and find something.
 struct FocusPanelView: View {
   @Environment(WorkspaceViewModel.self) private var model
-  let onDismiss: () -> Void
+  let onClose: (FocusPanelDismissal) -> Void
 
   @State private var query = ""
   @State private var results: [TaskSearchResult] = []
@@ -275,7 +275,7 @@ struct FocusPanelView: View {
   // MARK: - Acting
 
   private func dismissOrClear() {
-    if query.isEmpty { onDismiss() } else { query = "" }
+    if query.isEmpty { onClose(.back) } else { query = "" }
   }
 
   /// Return. What it does depends on what the panel is showing, which is the
@@ -294,18 +294,19 @@ struct FocusPanelView: View {
     // the conditions would not have offered it — the alert that would ask
     // about that lives in the main window, which is not on screen here.
     model.startFocus(on: task, override: true)
-    onDismiss()
+    onClose(.back)
   }
 
   /// Done. The quality prompt is a sheet in the main window, so the window has
   /// to come with it — there is one prompt, and it lives there.
   private func finish() {
     model.requestFocusCompletion()
-    onDismiss()
+    onClose(.toWindow)
     AppDelegate.shared.showMainWindow()
   }
 
   private func revealSelection() {
+    onClose(.toWindow)
     AppDelegate.shared.showMainWindow()
     if isRunning, query.isEmpty {
       model.presentFocusScreen()
@@ -315,7 +316,6 @@ struct FocusPanelView: View {
       model.selectTask(task)
       model.dismissFocusScreen()
     }
-    onDismiss()
   }
 
   // MARK: - Reason vocabulary

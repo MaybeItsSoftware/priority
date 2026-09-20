@@ -29,7 +29,7 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
   var isVisible: Bool { panel?.isVisible ?? false }
 
   func toggle(model: WorkspaceViewModel) {
-    if isVisible { dismiss() } else { show(model: model) }
+    if isVisible { dismiss(.back) } else { show(model: model) }
   }
 
   func show(model: WorkspaceViewModel) {
@@ -44,11 +44,14 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
     model.reloadNextUp()
   }
 
-  /// Dismissal the user asked for: Escape, the hotkey again, or finishing
-  /// something. Hands the keyboard back to whatever was interrupted.
-  func dismiss() {
+  /// Closes the panel. `.back` hands the keyboard to whatever the hotkey
+  /// interrupted, which is what Escape and the hotkey itself mean. `.toWindow`
+  /// does not, because the caller is about to bring Priority's own window up —
+  /// restoring the other app first would only put it straight back behind.
+  func dismiss(_ destination: FocusPanelDismissal) {
     panel?.orderOut(nil)
-    if let interruptedApp, interruptedApp.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+    if destination == .back, let interruptedApp,
+      interruptedApp.processIdentifier != ProcessInfo.processInfo.processIdentifier {
       interruptedApp.activate()
     }
     interruptedApp = nil
@@ -76,7 +79,7 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
     panel.delegate = self
     panel.contentViewController = NSHostingController(
-      rootView: FocusPanelView(onDismiss: { [weak self] in self?.dismiss() })
+      rootView: FocusPanelView(onClose: { [weak self] in self?.dismiss($0) })
         .focusEffectDisabled()
         .font(Typography.interfaceFont)
         .environment(model))
@@ -104,6 +107,14 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
     panel?.orderOut(nil)
     interruptedApp = nil
   }
+}
+
+/// Where the keyboard goes when the panel closes.
+enum FocusPanelDismissal {
+  /// Back to whatever the hotkey interrupted.
+  case back
+  /// On to Priority's own window, which the caller is about to show.
+  case toWindow
 }
 
 /// A borderless panel does not become key on its own account, and a panel that
