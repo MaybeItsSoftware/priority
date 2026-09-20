@@ -28,6 +28,14 @@ extension SettingsView {
           modifiers: preferenceBinding(\.globalHotkeyModifiers)
         )
         hotkeyCard(
+          title: "Focus panel hotkey",
+          description: "Summons the focus panel over any app. Type to search, ↵ to start.",
+          defaultDisplay: HotkeyRecorderField.displayString(keyCode: 3, modifiers: 0x1B00),
+          enabled: preferenceBinding(\.focusPanelHotkeyEnabled),
+          keyCode: preferenceBinding(\.focusPanelHotkeyKeyCode),
+          modifiers: preferenceBinding(\.focusPanelHotkeyModifiers)
+        )
+        hotkeyCard(
           title: "Quick Add hotkey",
           description: "Captures to Inbox. Use ↑/↓ for lists and ←/→ for the start day.",
           defaultDisplay: HotkeyRecorderField.displayString(keyCode: 45, modifiers: 0x1B00),
@@ -36,11 +44,8 @@ extension SettingsView {
           modifiers: preferenceBinding(\.quickAddHotkeyModifiers)
         )
 
-        if hotkeyConflictDetected {
-          Label(
-            "Global hotkey and Quick Add hotkey currently conflict.",
-            systemImage: "exclamationmark.triangle.fill"
-          )
+        if let conflict = hotkeyConflict {
+          Label(conflict, systemImage: "exclamationmark.triangle.fill")
           .font(.caption)
           .foregroundColor(themeColor(.danger))
           .padding(10)
@@ -63,6 +68,8 @@ extension SettingsView {
             preferences.globalHotkeyModifiers = 0x0800  // Option
             preferences.quickAddHotkeyKeyCode = 45  // N
             preferences.quickAddHotkeyModifiers = 0x1B00  // Hyper
+            preferences.focusPanelHotkeyKeyCode = 3  // F
+            preferences.focusPanelHotkeyModifiers = 0x1B00  // Hyper
           }
         }
       }
@@ -183,13 +190,24 @@ extension SettingsView {
 
   // MARK: - Pane-local helpers
 
-  fileprivate var hotkeyConflictDetected: Bool {
-    guard preferences.globalHotkeyEnabled, preferences.quickAddHotkeyEnabled else {
-      return false
+  /// Names the pair that clash rather than reporting a bare "conflict": with
+  /// three global hotkeys, which two is the thing you need to know.
+  fileprivate var hotkeyConflict: String? {
+    let bindings: [(String, Bool, Int, Int)] = [
+      ("Global hotkey", preferences.globalHotkeyEnabled,
+        preferences.globalHotkeyKeyCode, preferences.globalHotkeyModifiers),
+      ("Focus panel hotkey", preferences.focusPanelHotkeyEnabled,
+        preferences.focusPanelHotkeyKeyCode, preferences.focusPanelHotkeyModifiers),
+      ("Quick Add hotkey", preferences.quickAddHotkeyEnabled,
+        preferences.quickAddHotkeyKeyCode, preferences.quickAddHotkeyModifiers)
+    ].filter(\.1)
+    for (index, binding) in bindings.enumerated() {
+      for other in bindings.dropFirst(index + 1)
+      where binding.2 == other.2 && binding.3 == other.3 {
+        return "\(binding.0) and \(other.0) currently conflict."
+      }
     }
-    return
-      preferences.globalHotkeyKeyCode == preferences.quickAddHotkeyKeyCode
-      && preferences.globalHotkeyModifiers == preferences.quickAddHotkeyModifiers
+    return nil
   }
 
   fileprivate var configurableShortcutCategories: [ShortcutCategoryDescriptor] {

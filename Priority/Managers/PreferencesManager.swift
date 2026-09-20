@@ -66,6 +66,19 @@ import SwiftUI
   var globalHotkeyModifiers: Int {
     didSet { preferencesStore.set(globalHotkeyModifiers, for: .globalHotkeyModifiers) }
   }
+  /// The summoned focus panel — the one hotkey that works from inside
+  /// whatever you are actually doing.
+  var focusPanelHotkeyEnabled: Bool {
+    didSet { preferencesStore.set(focusPanelHotkeyEnabled, for: .focusPanelHotkeyEnabled) }
+  }
+  /// Carbon keyCode for the focus panel hotkey (default 3 = F)
+  var focusPanelHotkeyKeyCode: Int {
+    didSet { preferencesStore.set(focusPanelHotkeyKeyCode, for: .focusPanelHotkeyKeyCode) }
+  }
+  /// Carbon modifier mask (default 0x1B00 = Hyper, matching Quick Add)
+  var focusPanelHotkeyModifiers: Int {
+    didSet { preferencesStore.set(focusPanelHotkeyModifiers, for: .focusPanelHotkeyModifiers) }
+  }
   var quickAddHotkeyEnabled: Bool {
     didSet { preferencesStore.set(quickAddHotkeyEnabled, for: .quickAddHotkeyEnabled) }
   }
@@ -146,6 +159,15 @@ import SwiftUI
     self.globalHotkeyModifiers = preferencesStore.int(
       .globalHotkeyModifiers,
       default: AppCoordinator.CarbonModifier.option
+    )
+    self.focusPanelHotkeyEnabled = preferencesStore.bool(.focusPanelHotkeyEnabled, default: true)
+    self.focusPanelHotkeyKeyCode = preferencesStore.int(
+      .focusPanelHotkeyKeyCode,
+      default: AppCoordinator.CarbonKey.f
+    )
+    self.focusPanelHotkeyModifiers = preferencesStore.int(
+      .focusPanelHotkeyModifiers,
+      default: AppCoordinator.CarbonModifier.hyper
     )
     self.quickAddHotkeyEnabled = preferencesStore.bool(.quickAddHotkeyEnabled, default: true)
     self.quickAddHotkeyKeyCode = preferencesStore.int(

@@ -19,7 +19,7 @@ It works offline. It works from the terminal. And it exposes the whole surface t
 ## Contents
 
 - [Install](#install) · [First run](#first-run)
-- [Keyboard flow](#keyboard-flow) · [Command palette](#command-palette)
+- [Keyboard flow](#keyboard-flow) · [Focus](#focus) · [Command palette](#command-palette)
 - [Views](#views) · [The window](#the-window) · [Diagnostics](#diagnostics) · [The dock row](#the-dock-row)
 - [Daily log](#daily-log) · [Obsidian daily notes](#obsidian-daily-notes) · [AFFiNE](#affine)
 - [Command line](#command-line) · [MCP server](#mcp-server) · [Plugins](#plugins)
@@ -48,11 +48,12 @@ Open Preferences with `Cmd+,`:
 | 1 | Checkvist username and remote API key (from [checkvist.com/auth/profile](https://checkvist.com/auth/profile)) |
 | 2 | The checklist/list ID to work in |
 | 3 | Global hotkey to toggle the popover |
-| 4 | Quick-add hotkey, and whether it targets the list root or a specific parent |
-| 5 | Day rollover hour — when your day starts, default 04:00 |
-| 6 | Obsidian inbox folder *(optional)* |
-| 7 | MCP integration *(optional)* |
-| 8 | Launch at login |
+| 4 | Focus panel hotkey — `⌃⌥⇧⌘F` by default |
+| 5 | Quick-add hotkey, and whether it targets the list root or a specific parent |
+| 6 | Day rollover hour — when your day starts, default 04:00 |
+| 7 | Obsidian inbox folder *(optional)* |
+| 8 | MCP integration *(optional)* |
+| 9 | Launch at login |
 
 Onboarding boxes guide the Checkvist, Obsidian and Google Calendar setup. Each one is dismissable, and the app stays usable offline-first without any of them.
 
@@ -254,6 +255,66 @@ or the chip in the breadcrumb bar, which also says which answer is in force.
 
 All is the exception on purpose. It's the navigator you drill through to *set*
 the scope the other views read, so it's always strictly parented.
+
+## Focus
+
+Focus is where the app opens, because the first question it exists to answer is
+what to do next rather than what there is. `Cmd+8` from anywhere in the window
+takes the main pane; `Esc` gives it back. The preference **Open on the focus
+screen** turns the launch behaviour off without hiding the screen.
+
+The pane has two states and no third surface. With nothing running it is the
+**ladder**: one task at a time at full size, the ones you have climbed past
+stacked and shrunken above it, with the reason each was offered written under
+its title. Once a block starts, the same pane *is* the block — the task, a
+clock, and the four things you can do to it.
+
+| Key | Action |
+| --- | --- |
+| `↑` / `↓` | Climb the ladder. `k` / `j` do the same |
+| `⌥↑` / `⌥↓` | Reorder within the same urgency, rather than moving the cursor |
+| `Return` | Stage the task, then start it. `Space` does the same |
+| `X` | Tick it off without starting a block |
+| `L` | Put it off — the menu beside it chooses when |
+| `Esc` | Unstage, then leave |
+
+While a block is running:
+
+| Key | Action |
+| --- | --- |
+| `Return` | Done — stops the clock and asks how it went |
+| `P` | Pause / resume. Only active time is recorded |
+| `L` | Log progress and keep the task open |
+| `F` | Float it — a small always-on-top clock for working in another app |
+| `Esc` | Leave the pane. The block keeps running |
+
+`Cmd+9` gives the same pane to the day's **timeline**: every block drawn against
+an hour ruler, with the running one growing live.
+
+### The focus panel
+
+`⌃⌥⇧⌘F` summons the focus panel over whatever app you are in — the one surface
+you can reach without going to the app. It comes up with the caret already in
+its field, so there is nothing to click:
+
+| | |
+| --- | --- |
+| **Empty field, nothing running** | The shortlist of what to start, in the order the ladder offers it |
+| **Empty field, block running** | That block: task, clock, pause and done |
+| **Anything typed** | Every task whose title or notes match, wherever it lives |
+
+| Key | Action |
+| --- | --- |
+| `↑` / `↓` | Choose |
+| `Return` | Start focus on it — or, with a block already running, queue it. On the running block, Done |
+| `Cmd+Return` | Open it in the main window instead |
+| `Esc` | Clear the field, then close |
+
+Closing it hands the keyboard back to the app it interrupted, so summoning it
+mid-sentence and pressing `Esc` puts the caret back where it was. The status
+item's context menu has **Focus Panel** too, so the hotkey is a shortcut for
+something visible rather than the only way in. Rebind or disable it in
+Preferences → Keybindings.
 
 ## Command palette
 

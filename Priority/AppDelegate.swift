@@ -22,6 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private(set) var menuBarController: MenuBarController!
   private(set) var shortcutManager: GlobalShortcutManager!
   private(set) var mainWindowController: MainWindowController!
+  private(set) var focusPanelController = FocusPanelController()
   private(set) var workspace: WorkspaceViewModel!
 
   private var preferencesWindow: NSWindow?
@@ -55,6 +56,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     menuBarController.onShowMainWindow = { [weak self] in
       self?.showMainWindow()
+    }
+    menuBarController.onShowFocusPanel = { [weak self] in
+      self?.showFocusPanel()
     }
     menuBarController.onQuit = { [weak self] in
       self?.menuQuit()
@@ -112,6 +116,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     shortcutManager.onQuickAdd = { [weak self] in
       self?.triggerQuickAddFromHotkey()
+    }
+    shortcutManager.onToggleFocusPanel = { [weak self] in
+      guard let self else { return }
+      self.focusPanelController.toggle(model: self.workspace)
     }
 
     observeForAppThemeChanges()
@@ -331,6 +339,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       break
     }
     return .terminateCancel
+  }
+
+  /// Shows the summoned focus panel, whatever else is on screen. The menu
+  /// bar uses this too, so the hotkey is a shortcut for something visible
+  /// rather than the only way to reach it.
+  func showFocusPanel() {
+    focusPanelController.show(model: workspace)
   }
 
   func applicationWillTerminate(_ notification: Notification) {

@@ -122,6 +122,7 @@ import SwiftUI
   enum CarbonKey {
     static let space = 49
     static let b = 11
+    static let f = 3
     static let n = 45
   }
   enum CarbonModifier {

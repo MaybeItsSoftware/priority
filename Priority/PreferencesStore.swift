@@ -28,6 +28,9 @@ final class PreferencesStore {
     case googleCalendarEventLinksByTaskKey
     case googleTasksIntegrationEnabled
     case mcpIntegrationEnabled
+    case focusPanelHotkeyEnabled
+    case focusPanelHotkeyKeyCode
+    case focusPanelHotkeyModifiers
     case quickAddHotkeyEnabled
     case quickAddHotkeyKeyCode
     case quickAddHotkeyModifiers

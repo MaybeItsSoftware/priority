@@ -35,6 +35,17 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// A query answered without touching the sheet's own state.
+  ///
+  /// The summoned focus panel is a second window, and it can be up while the
+  /// search sheet is open behind it. Sharing `searchQuery` between them would
+  /// mean one wipes the other's results as you type.
+  func searchResults(matching query: String, includingCompleted: Bool = false) -> [TaskSearchResult] {
+    guard let store, let workspace else { return [] }
+    return (try? store.searchTasks(
+      in: workspace.id, matching: query, includingCompleted: includingCompleted)) ?? []
+  }
+
   func moveSearchSelection(by offset: Int) {
     guard !searchResults.isEmpty else { return }
     let current = searchResults.firstIndex { $0.id == selectedSearchResultID } ?? 0

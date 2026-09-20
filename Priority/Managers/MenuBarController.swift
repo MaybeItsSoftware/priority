@@ -35,6 +35,7 @@ class MenuBarController: NSObject {
 
   var onShowSettings: (() -> Void)?
   var onShowMainWindow: (() -> Void)?
+  var onShowFocusPanel: (() -> Void)?
   var onQuit: (() -> Void)?
   /// The local workspace owns task state. In this mode the status item is a
   /// launcher, not a miniature task view.
@@ -469,6 +470,8 @@ class MenuBarController: NSObject {
     let menu = NSMenu()
     menu.addItem(withTitle: "Open Main Window", action: #selector(menuMainWindow), keyEquivalent: "")
       .target = self
+    menu.addItem(withTitle: "Focus Panel", action: #selector(menuFocusPanel), keyEquivalent: "")
+      .target = self
     menu.addItem(.separator())
     menu.addItem(withTitle: "Preferences…", action: #selector(menuSettings), keyEquivalent: "")
       .target = self
@@ -492,6 +495,10 @@ class MenuBarController: NSObject {
 
   @objc private func menuMainWindow() {
     onShowMainWindow?()
+  }
+
+  @objc private func menuFocusPanel() {
+    onShowFocusPanel?()
   }
 
   @objc private func menuQuit() {

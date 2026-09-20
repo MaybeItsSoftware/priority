@@ -61,6 +61,11 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 
 - ~~Make the global quick-add hotkey create a local Inbox task and focus the desktop composer.~~ Done: the hotkey selects the Inbox, leaves the focus screen, and puts the caret in the composer.
 - ~~Add local full-text search across task title and notes (SQLite FTS is preferred).~~ Done: external-content FTS5 over title and notes, kept level by triggers. ⌘F.
+- ~~Reach focus without going to the app.~~ Done: a global hotkey (`⌃⌥⇧⌘F`) summons a
+  floating focus panel over whatever you are in, with the caret already in its
+  field. Empty it offers the ladder, or the running block; typed it searches
+  every task's title and notes. Return starts or queues, ⌘Return opens the task
+  in the window, Escape hands the keyboard back to the app it interrupted.
 - Add filters for open/completed, due, tags, priority, and estimate.
 - Add a command palette for navigation and creation; do not route it through legacy Checkvist state.
 
@@ -127,6 +132,12 @@ Goal: match the low-friction focus flow of Blitzit and add Super Productivity-st
 
 ### Focus sessions
 
+- ~~Give a running session a surface the size of the work.~~ Done: the focus pane
+  has two states rather than two surfaces — the ladder that picks a task, and
+  then the block itself. It was a dialog-sized sheet over the board, which left
+  the workspace visible round the edges and made returning to a session a
+  different gesture from starting one. The window also opens on it, behind the
+  `opensOnFocusScreen` preference.
 - Add pause/resume, work/break phase transitions, skip, configurable durations, and session completion behavior.
 - Support reordering/removing queue items while focused.
 - Restore an active session correctly after relaunch, including timer elapsed time.
