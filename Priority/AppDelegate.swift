@@ -116,6 +116,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     observeForAppThemeChanges()
 
+    // What to do next is the question the app exists to answer, so it is the
+    // one the first screen asks. Decided before the window is built rather
+    // than after, so the lists never flash up behind it.
+    if checkvistManager.preferences.opensOnFocusScreen {
+      workspace.presentFocusScreen()
+    }
+
     // Constructing the workspace above also imports the old offline payload
     // into its local SQLite database before this first presentation.
     showMainWindow()

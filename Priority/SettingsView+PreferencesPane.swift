@@ -102,6 +102,13 @@ extension SettingsView {
       Section(header: Text("Preferences")) {
         Toggle("Confirm before deleting tasks", isOn: preferenceBinding(\.confirmBeforeDelete))
           .toggleStyle(.switch)
+        VStack(alignment: .leading, spacing: 2) {
+          Toggle("Open on the focus screen", isOn: preferenceBinding(\.opensOnFocusScreen))
+            .toggleStyle(.switch)
+          Text("The window comes up asking what to do next. Turn this off to land on your lists instead.")
+            .font(.caption)
+            .foregroundColor(themeColor(.textSecondary))
+        }
         if #available(macOS 13.0, *) {
           Toggle("Launch at login", isOn: preferenceBinding(\.launchAtLogin))
             .toggleStyle(.switch)

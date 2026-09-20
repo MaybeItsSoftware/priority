@@ -48,6 +48,8 @@ final class PreferencesStore {
     case namedTimeEodHour
     case recurrenceRulesByTaskId
     case rootTaskViewOrder
+    /// Whether the window comes up on the focus screen rather than the lists.
+    case opensOnFocusScreen
     case focusDurationMinutes
     case focusBreakDurationMinutes
     case kanbanManualOrderByColumnId

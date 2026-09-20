@@ -77,6 +77,12 @@ import SwiftUI
   var quickAddHotkeyModifiers: Int {
     didSet { preferencesStore.set(quickAddHotkeyModifiers, for: .quickAddHotkeyModifiers) }
   }
+  /// Whether opening the window lands on the focus screen instead of the
+  /// lists. On by default: the first question the app is there to answer is
+  /// what to do next, and a board of everything is not that answer.
+  var opensOnFocusScreen: Bool {
+    didSet { preferencesStore.set(opensOnFocusScreen, for: .opensOnFocusScreen) }
+  }
   var quickAddLocationMode: QuickAddLocationMode {
     didSet { preferencesStore.set(quickAddLocationMode.rawValue, for: .quickAddLocationModeRawValue) }
   }
@@ -150,6 +156,7 @@ import SwiftUI
       .quickAddHotkeyModifiers,
       default: AppCoordinator.CarbonModifier.hyper
     )
+    self.opensOnFocusScreen = preferencesStore.bool(.opensOnFocusScreen, default: true)
     self.quickAddLocationMode =
       QuickAddLocationMode(
         rawValue: preferencesStore.int(.quickAddLocationModeRawValue, default: 0)
