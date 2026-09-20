@@ -153,7 +153,7 @@ enum WorkspaceSidebarItem: Identifiable {
   private(set) var taskContentRevision = 0
   @ObservationIgnored private var taskCache: [String: WorkspaceTask] = [:]
   @ObservationIgnored private var missingTaskIDs: Set<String> = []
-  @ObservationIgnored private var descendantCache: [String: [TaskOutlineItem]] = [:]
+  @ObservationIgnored var descendantCache: [String: [TaskOutlineItem]] = [:]
   var listTaskCounts: [String: Int] = [:]
   private(set) var boardCrossColumnTasks: [WorkspaceTask] = []
   private(set) var boardDescendants: [String: [TaskOutlineItem]] = [:]
@@ -165,9 +165,9 @@ enum WorkspaceSidebarItem: Identifiable {
   private(set) var boardParentTaskID: String?
   private(set) var boardColumns: [WorkspaceKanbanColumn] = WorkspaceKanbanColumn.blitzitDefaults
   private(set) var boardTaskColumns: [String: String] = [:]
-  private var boardTasksByColumn: [String: [WorkspaceTask]] = [:]
-  private var boardColumnsByID: [String: WorkspaceKanbanColumn] = [:]
-  private var boardVisibleTaskIDs: Set<String> = []
+  var boardTasksByColumn: [String: [WorkspaceTask]] = [:]
+  var boardColumnsByID: [String: WorkspaceKanbanColumn] = [:]
+  var boardVisibleTaskIDs: Set<String> = []
   private(set) var matrixPositions: [String: TaskMatrixPosition] = [:]
   var viewMode: WorkspaceViewMode = .board
   /// Virtual parent of every active list. The tasks remain stored in their
@@ -491,112 +491,6 @@ enum WorkspaceSidebarItem: Identifiable {
     reloadOutline(refreshSidebar: false)
   }
 
-  /// Captures into the inbox from anywhere: the global hotkey, with no
-  /// assumption about what was on screen when it was pressed.
-  ///
-  /// Selecting the inbox rather than typing into whatever list happened to be
-  /// open is the point — a thought caught mid-task belongs in the inbox, not
-  /// filed into the project the user was looking at by accident.
-  func beginQuickCapture() {
-    // Explicitly, rather than relying on `selectList` to do it: the focus
-    // screen can be up while the inbox is already the selected list.
-    dismissFocusScreen()
-    if let inbox = inboxList, selectedListID != inbox.id || isEverythingSelected {
-      selectList(inbox.id)
-    }
-    isQuickCaptureActive = true
-    quickCaptureDestinationID = inboxList?.id ?? lists.first?.id
-    quickCaptureStartDayOffset = nil
-    requestTaskComposerFocus()
-  }
-
-  var quickCaptureDestinations: [QuickCaptureDestination] {
-    lists.flatMap { list -> [QuickCaptureDestination] in
-      var result = [QuickCaptureDestination(
-        id: list.id, listID: list.id, parentTaskID: nil, title: list.name,
-        path: list.name, depth: 0)]
-      result += nestedLists.filter { $0.task.listId == list.id }.map { item in
-        var components = [item.task.title]
-        var parentID = item.task.parentTaskId
-        var visited = Set<String>()
-        while let id = parentID, visited.insert(id).inserted, let parent = task(withID: id) {
-          if parent.isList && parent.id != list.visibleRootTaskId { components.append(parent.title) }
-          parentID = parent.parentTaskId
-        }
-        let path = ([list.name] + components.reversed()).joined(separator: " › ")
-        return QuickCaptureDestination(
-          id: item.task.id, listID: list.id, parentTaskID: item.task.id,
-          title: item.task.title, path: path, depth: item.depth + 1)
-      }
-      return result
-    }
-  }
-
-  var quickCaptureDestination: QuickCaptureDestination? {
-    let destinations = quickCaptureDestinations
-    return destinations.first { $0.id == quickCaptureDestinationID }
-      ?? destinations.first { destination in
-        lists.first(where: { $0.id == destination.listID })?.systemRole == .inbox
-      }
-      ?? destinations.first
-  }
-
-  var quickCaptureStartDate: Date? {
-    guard let offset = quickCaptureStartDayOffset else { return nil }
-    let start = Calendar.current.startOfDay(for: .now)
-    return Calendar.current.date(byAdding: .day, value: offset, to: start)
-  }
-
-  var quickCaptureStartLabel: String {
-    guard let offset = quickCaptureStartDayOffset, let date = quickCaptureStartDate else {
-      return "Any day"
-    }
-    if offset == 1 { return "Tomorrow" }
-    if offset == 2 { return "In 2 days" }
-    return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
-  }
-
-  func moveQuickCaptureDestination(by offset: Int) {
-    let destinations = quickCaptureDestinations
-    guard !destinations.isEmpty else { return }
-    let current = destinations.firstIndex { $0.id == quickCaptureDestination?.id } ?? 0
-    let next = (current + offset + destinations.count) % destinations.count
-    quickCaptureDestinationID = destinations[next].id
-  }
-
-  func moveQuickCaptureStartDay(by offset: Int) {
-    let current = quickCaptureStartDayOffset ?? 0
-    let next = max(0, current + offset)
-    quickCaptureStartDayOffset = next == 0 ? nil : next
-  }
-
-  func cancelQuickCapture() {
-    isQuickCaptureActive = false
-    quickCaptureDestinationID = nil
-    quickCaptureStartDayOffset = nil
-  }
-
-  func submitQuickCapture(named title: String) {
-    let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalized.isEmpty, let store, let destination = quickCaptureDestination else { return }
-    perform {
-      let parentID: String?
-      if let nestedParent = destination.parentTaskID {
-        parentID = nestedParent
-      } else if let list = lists.first(where: { $0.id == destination.listID }) {
-        parentID = try visibleRootParentTaskID(for: list, store: store)
-      } else {
-        parentID = nil
-      }
-      let task = try store.createTask(
-        listId: destination.listID, title: normalized, parentTaskId: parentID,
-        startAt: quickCaptureStartDate)
-      selectedTaskID = destination.listID == selectedListID ? task.id : nil
-      cancelQuickCapture()
-      reloadOutline()
-    }
-  }
-
   func requestTaskComposerFocus() {
     if !isQuickCaptureActive {
       quickCaptureDestinationID = nil
@@ -724,175 +618,6 @@ enum WorkspaceSidebarItem: Identifiable {
 
   func toggleFolderExpansion(_ folder: ListFolder) {
     setFolderExpanded(folder, expanded: !isFolderExpanded(folder))
-  }
-
-  func createTask(named title: String) {
-    if taskInsertionReference != nil { createRelativeTask(named: title); return }
-    guard let store,
-      let destinationID = isEverythingSelected ? newTaskListID : selectedListID,
-      let destinationList = lists.first(where: { $0.id == destinationID })
-    else { return }
-    perform {
-      let parentID = isEverythingSelected
-        ? try visibleRootParentTaskID(for: destinationList, store: store) : scopeTaskID
-      let task = try store.createTask(listId: destinationID, title: title, parentTaskId: parentID)
-      selectedTaskID = task.id
-      reloadOutline()
-    }
-  }
-
-  private func createRelativeTask(named title: String) {
-    guard let store, let reference = taskInsertionReference else { return }
-    perform {
-      let task = try store.createTask(listId: reference.listId, title: title,
-        parentTaskId: taskInsertionIsChild ? reference.id : reference.parentTaskId,
-        kanbanColumn: viewMode == .board ? column(for: reference)?.id : nil,
-        adjacentTaskId: taskInsertionIsChild ? nil : reference.id, above: taskInsertionAbove)
-      if taskInsertionIsChild { scopeTaskID = reference.id }
-      selectedTaskID = task.id
-      taskInsertionReference = task
-      taskInsertionAbove = false
-      taskInsertionIsChild = false
-      reloadOutline()
-    }
-  }
-
-  /// Creates work in the currently visible board scope. This differs from the
-  /// outline only for a transparent imported root project (see
-  /// `boardParentTaskID`), where a new card belongs alongside the visible
-  /// children rather than appearing above them as a second wrapper.
-  func createBoardTask(named title: String, in column: WorkspaceKanbanColumn? = nil, atTop: Bool = false) {
-    if column == nil && taskInsertionReference != nil { createRelativeTask(named: title); return }
-    guard let store,
-      let destinationID = isEverythingSelected ? newTaskListID : selectedListID,
-      let destinationList = lists.first(where: { $0.id == destinationID })
-    else { return }
-    let column = column ?? boardColumns.first { $0.id == activeBoardColumnID }
-    perform {
-      let parentID = isEverythingSelected
-        ? try visibleRootParentTaskID(for: destinationList, store: store) : boardParentTaskID
-      let task = try store.createTask(listId: destinationID, title: title, parentTaskId: parentID,
-        kanbanColumn: column?.id, atTop: atTop)
-      selectedTaskID = task.id
-      reloadOutline()
-    }
-  }
-
-  func createSubtask(named title: String, under parent: WorkspaceTask) {
-    guard let store else { return }
-    let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return }
-    perform {
-      _ = try store.createTask(listId: parent.listId, title: trimmed, parentTaskId: parent.id)
-      reloadOutline()
-    }
-  }
-
-  func descendants(of task: WorkspaceTask) -> [TaskOutlineItem] {
-    _ = taskContentRevision
-    if let cached = boardDescendants[task.id] { return cached }
-    if let cached = descendantCache[task.id] { return cached }
-    guard let store else { return [] }
-    let items = (try? store.outline(in: task.listId, parentTaskId: task.id)) ?? []
-    descendantCache[task.id] = items
-    return items
-  }
-
-  func boardParent(of task: WorkspaceTask) -> WorkspaceTask? {
-    boardTaskParents[task.id]
-  }
-
-  var currentBoardScopeTitle: String {
-    if isEverythingSelected { return "Everything" }
-    return scopeTask?.title ?? selectedList?.name ?? "Board"
-  }
-
-  func tasks(in column: WorkspaceKanbanColumn) -> [WorkspaceTask] {
-    boardTasksByColumn[column.id, default: []]
-  }
-
-  var todayTasks: [WorkspaceTask] {
-    guard let today = boardColumns.first(where: { $0.id == "today" }) else { return [] }
-    return tasks(in: today).filter { $0.status == .open }
-  }
-
-  func isTaskVisibleOnBoard(_ task: WorkspaceTask) -> Bool {
-    boardVisibleTaskIDs.contains(task.id)
-  }
-
-  func column(for task: WorkspaceTask) -> WorkspaceKanbanColumn? {
-    let id = boardTaskColumns[task.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-    return boardColumnsByID[id] ?? boardColumns.first
-  }
-
-  private func rebuildBoardIndex() {
-    boardColumnsByID = Dictionary(boardColumns.map { ($0.id, $0) },
-                                  uniquingKeysWith: { first, _ in first })
-    let tasks = boardTasks + boardCrossColumnTasks
-    boardVisibleTaskIDs = Set(tasks.map(\.id))
-    boardTasksByColumn = Dictionary(grouping: tasks) { task in
-      column(for: task)?.id ?? ""
-    }
-  }
-
-  func moveTask(_ task: WorkspaceTask, toKanbanColumn column: WorkspaceKanbanColumn) {
-    guard let store else { return }
-    perform {
-      try store.setKanbanColumn(column.id, for: task.id)
-      reloadBoard()
-    }
-  }
-
-  func placeTask(_ task: WorkspaceTask, before target: WorkspaceTask) {
-    guard let store, task.id != target.id else { return }
-    guard task.listId == target.listId, task.parentTaskId == target.parentTaskId else {
-      errorMessage = "To reorder these cards, they must be siblings in the same project. Drag to a column or list to move them."
-      return
-    }
-    perform {
-      try store.moveTaskBefore(id: task.id, targetId: target.id, kanbanColumn: column(for: target)?.id)
-      reloadBoard()
-    }
-  }
-
-  func addKanbanColumn(named name: String) {
-    let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !title.isEmpty else { return }
-    guard let store else { return }
-    var columns = boardColumns
-    let baseID = title.lowercased()
-      .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
-      .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-    let id = uniqueColumnID(base: baseID.isEmpty ? "column" : baseID, in: columns)
-    columns.append(WorkspaceKanbanColumn(id: id, title: title))
-    perform {
-      try store.setKanbanBoardColumns(columns, for: boardConfigurationKey, label: "Add Board Column")
-      reloadOutline()
-    }
-  }
-
-  func removeKanbanColumn(_ column: WorkspaceKanbanColumn) {
-    guard boardColumns.count > 1 else { return }
-    let fallback = boardColumns.first { $0.id != column.id } ?? WorkspaceKanbanColumn.blitzitDefaults[0]
-    guard let store else { return }
-    let remaining = boardColumns.filter { $0.id != column.id }
-    perform {
-      try store.setKanbanBoardColumns(remaining, for: boardConfigurationKey,
-        movingTaskIDs: tasks(in: column).map(\.id), toColumn: fallback.id, label: "Remove Board Column")
-      reloadOutline()
-    }
-  }
-
-  func matrixPosition(for task: WorkspaceTask) -> TaskMatrixPosition {
-    matrixPositions[task.id] ?? TaskMatrixPosition(urgency: nil, importance: nil)
-  }
-
-  func setMatrixPosition(_ position: TaskMatrixPosition, for task: WorkspaceTask) {
-    guard let store else { return }
-    perform {
-      try store.setMatrixPosition(position, for: task.id)
-      reloadBoard()
-    }
   }
 
   /// Today's dailies, joined to their tasks and contributions. Reloaded rather
@@ -1363,12 +1088,12 @@ enum WorkspaceSidebarItem: Identifiable {
     }
   }
 
-  private var boardConfigurationKey: String {
+  var boardConfigurationKey: String {
     if isEverythingSelected { return "everything/root" }
     return "\(selectedListID ?? "none")/\(scopeTaskID ?? "root")"
   }
 
-  private func reloadBoard() {
+  func reloadBoard() {
     defer { rebuildBoardIndex() }
     taskCache.removeAll(keepingCapacity: true)
     missingTaskIDs.removeAll(keepingCapacity: true)
@@ -1477,11 +1202,11 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Some Checkvist imports have a single transport root repeating the list
   /// name. Its children are the visible list roots in both single-list and
   /// Everything scopes, while their actual parent IDs remain unchanged.
-  private func visibleRootParentTaskID(for list: TaskList, store: WorkspaceStore) throws -> String? {
+  func visibleRootParentTaskID(for list: TaskList, store: WorkspaceStore) throws -> String? {
     try store.visibleRootParentTaskID(for: list)
   }
 
-  private func uniqueColumnID(base: String, in columns: [WorkspaceKanbanColumn]) -> String {
+  func uniqueColumnID(base: String, in columns: [WorkspaceKanbanColumn]) -> String {
     guard columns.contains(where: { $0.id == base }) else { return base }
     var counter = 2
     while columns.contains(where: { $0.id == "\(base)-\(counter)" }) { counter += 1 }

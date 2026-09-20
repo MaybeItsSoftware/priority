@@ -1,0 +1,494 @@
+import AppKit
+import PriorityCore
+import PriorityWorkspace
+import SwiftUI
+import UniformTypeIdentifiers
+
+/// The workspace board: columns of cards, the cards themselves, and the drag
+/// payload they travel as.
+///
+/// Split out of `WorkspaceDesktopView.swift`, which had grown past the point
+/// where the shell it is named after was findable in it. These types are
+/// internal rather than file-private now only because they are read from the
+/// shell's file; nothing outside the app should reach for them.
+
+struct WorkspaceKanbanBoard: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @State private var visibleColumnIDs: Set<String> = []
+
+  var body: some View {
+    if model.selectedList == nil && !model.isEverythingSelected {
+      ContentUnavailableView("No list selected", systemImage: "rectangle.split.3x1")
+    } else {
+      GeometryReader { geometry in
+        let columnCount = CGFloat(max(model.boardColumns.count, 1))
+        // Five default columns should be visible together at useful desktop
+        // widths. Fewer/custom columns expand naturally instead of leaving an
+        // oversized empty canvas; very narrow windows still scroll.
+        let available = geometry.size.width - 36 - 14 * (columnCount - 1)
+        let columnWidth = max(172, min(340, available / columnCount))
+        VStack(spacing: 0) {
+          ScrollViewReader { scrollProxy in
+            GeometryReader { viewport in
+              ScrollView(.horizontal) {
+                LazyHStack(alignment: .top, spacing: 14) {
+                  ForEach(model.boardColumns) { column in
+                    WorkspaceKanbanColumnView(
+                      column: column,
+                      width: columnWidth,
+                      height: max(100, viewport.size.height - 36))
+                      .environment(model)
+                      .id(column.id)
+                  }
+                }
+                .scrollTargetLayout()
+                .padding(18)
+                .background(WorkspaceHorizontalOverscrollDisabler())
+              }
+              .onScrollTargetVisibilityChange(idType: String.self, threshold: 0.9) { ids in
+                visibleColumnIDs = Set(ids)
+              }
+            }
+            .onChange(of: model.activeBoardColumnID) { _, columnID in
+              guard let columnID, !visibleColumnIDs.contains(columnID) else { return }
+              scrollProxy.scrollTo(columnID, anchor: .center)
+            }
+          }
+          WorkspaceScopedTaskComposer(board: true)
+            .environment(model)
+          .padding(14)
+        }
+      }
+      .background(.background)
+    }
+  }
+}
+
+struct WorkspaceKanbanColumnView: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let column: WorkspaceKanbanColumn
+  let width: CGFloat
+  let height: CGFloat
+  @State private var isDropTargeted = false
+  @State private var isAddingAtTop = false
+  @State private var topTaskTitle = ""
+  @State private var visibleCardIDs: Set<String> = []
+  @FocusState private var topComposerFocused: Bool
+
+  var body: some View {
+    let tasks = model.tasks(in: column)
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(spacing: 8) {
+        Text(column.title.uppercased())
+          .font(.caption.weight(.bold))
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .help(column.title)
+        Text("\(tasks.count)")
+          .font(.caption.monospacedDigit())
+          .foregroundStyle(.tertiary)
+        Spacer()
+        Button {
+          isAddingAtTop = true
+          topComposerFocused = true
+        } label: {
+          Image(systemName: "plus")
+        }
+        .buttonStyle(.plain)
+        .focusable()
+        .accessibilityLabel("Add task at top of \(column.title)")
+        .help("Add highest-priority task in \(column.title)")
+        if model.boardColumns.count > 1 {
+          Button(role: .destructive) {
+            model.removeKanbanColumn(column)
+          } label: {
+            Image(systemName: "minus.circle")
+          }
+          .buttonStyle(.plain)
+          .focusable()
+          .help("Remove \(column.title)")
+        }
+      }
+
+      if isAddingAtTop {
+        TextField("Add at top", text: $topTaskTitle)
+          .textFieldStyle(.roundedBorder)
+          .focused($topComposerFocused)
+          .onSubmit {
+            let title = topTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { return }
+            model.createBoardTask(named: title, in: column, atTop: true)
+            topTaskTitle = ""
+            isAddingAtTop = false
+          }
+          .onExitCommand {
+            topTaskTitle = ""
+            isAddingAtTop = false
+          }
+          .accessibilityLabel("New task at top of \(column.title)")
+      }
+
+      ScrollViewReader { cardProxy in
+        ScrollView(.vertical) {
+          LazyVStack(alignment: .leading, spacing: 10) {
+            ForEach(tasks) { task in
+              WorkspaceKanbanCard(task: task, column: column)
+                .environment(model)
+                .id(task.id)
+            }
+
+            if tasks.isEmpty {
+              VStack(spacing: 6) {
+                Image(systemName: "arrow.down.doc")
+                  .font(.title3)
+                Text(isDropTargeted ? "Drop card here" : "Drop cards here")
+                  .font(.caption.weight(.medium))
+              }
+              .foregroundStyle(isDropTargeted ? Color.accentColor : Color.secondary)
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 20)
+              .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                  .stroke(isDropTargeted ? Color.accentColor : Color.secondary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5]))
+              )
+            }
+
+            TaskComposer(focusRequest: 0) { title in
+              model.createBoardTask(named: title, in: column)
+            }
+            .accessibilityLabel("Add task to \(column.title)")
+          }
+          .scrollTargetLayout()
+          .padding(.bottom, 2)
+          .background(WorkspaceHorizontalOverscrollDisabler())
+        }
+        .onScrollTargetVisibilityChange(idType: String.self) { ids in
+          visibleCardIDs = Set(ids)
+        }
+        .onChange(of: model.selectedTaskID) { _, id in
+          guard let id, !visibleCardIDs.contains(id),
+            tasks.contains(where: { $0.id == id }) else { return }
+          cardProxy.scrollTo(id, anchor: .center)
+        }
+        .onAppear {
+          if let id = model.selectedTaskID, tasks.contains(where: { $0.id == id }) {
+            cardProxy.scrollTo(id, anchor: .center)
+          }
+        }
+      }
+    }
+    .padding(12)
+    .frame(width: width, alignment: .topLeading)
+    .frame(height: height, alignment: .topLeading)
+    .background(
+      isDropTargeted ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.05),
+      in: RoundedRectangle(cornerRadius: 12))
+    .overlay(
+      RoundedRectangle(cornerRadius: 12)
+        .stroke(isDropTargeted || (model.keyboardFocusArea == .tasks && model.activeBoardColumnID == column.id) ? Color.accentColor : .clear, lineWidth: 2)
+    )
+    .simultaneousGesture(TapGesture().onEnded {
+      if tasks.isEmpty {
+        model.focusedBoardColumnID = column.id
+        model.selectedTaskID = nil
+        model.reportKeyboardFocus(.tasks)
+      }
+    })
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
+      WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
+        guard let task = model.task(withID: taskID), model.isTaskVisibleOnBoard(task) else { return }
+        model.moveTask(task, toKanbanColumn: column)
+      }
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel("\(column.title) column")
+    .accessibilityHint("Drop a task here to move it to \(column.title)")
+  }
+}
+
+struct WorkspaceKanbanCard: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @FocusState private var isCardFocused: Bool
+  @State private var isExpanded = false
+  @State private var isDropTargeted = false
+  @State private var newSubtaskTitle = ""
+  let task: WorkspaceTask
+  let column: WorkspaceKanbanColumn
+
+  var body: some View {
+    cardSurface
+      .help("Drag to move. Enter opens its Kanban board; Option Left/Right moves columns.")
+      .focusable()
+      .focused($isCardFocused)
+      .focusEffectDisabled()
+      .onAppear {
+        if model.keyboardFocusArea == .tasks && model.selectedTaskID == task.id {
+          isCardFocused = true
+        }
+      }
+      .onChange(of: model.focusRequest) { _, _ in
+        if model.requestedFocusArea == .tasks && model.selectedTaskID == task.id {
+          isCardFocused = true
+        }
+      }
+      .onChange(of: isCardFocused) { _, focused in
+        if focused {
+          model.selectTask(task)
+          model.reportKeyboardFocus(.tasks)
+        }
+      }
+      .onChange(of: model.selectedTaskID) { _, id in
+        if id == task.id && !isCardFocused { isCardFocused = true }
+      }
+      .onKeyPress(keys: [.space, .return, .upArrow, .downArrow, .leftArrow, .rightArrow, "i"]) { press in
+        handleCardKey(press)
+      }
+      .accessibilityElement(children: .contain)
+      .contextMenu { WorkspaceItemActions(task: task) }
+  }
+
+  private var cardSurface: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      cardHeading
+      if !task.isList, let dueAt = task.dueAt {
+        HStack(spacing: 4) {
+          Image(systemName: "calendar")
+          Text(dueAt, format: .dateTime.month().day())
+        }.font(.caption).foregroundStyle(.secondary)
+      }
+      if task.isList {
+        Text("List · \(model.descendants(of: task).filter { !$0.task.isList }.count) tasks")
+          .font(.caption).foregroundStyle(.secondary)
+      } else {
+        WorkspaceTaskPlanningBadges(task: task)
+      }
+      if isExpanded { inlineSubtasks }
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      task.id == model.selectedTaskID ? Color.accentColor.opacity(0.17) : Color.clear,
+      in: RoundedRectangle(cornerRadius: 9)
+    )
+    .overlay(RoundedRectangle(cornerRadius: 9).stroke(
+      isDropTargeted ? Color.accentColor : Color.primary.opacity(0.15),
+      lineWidth: isDropTargeted ? 2 : 1))
+    .contentShape(Rectangle())
+    .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
+      if task.isList {
+        return WorkspaceTaskDrag.readItemID(from: providers) { payload in
+          model.moveDroppedItem(payload, toListID: task.listId, parentTaskID: task.id)
+        }
+      }
+      return WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
+        guard let dragged = model.task(withID: taskID), dragged.id != task.id else { return }
+        model.placeTask(dragged, before: task)
+      }
+    }
+  }
+
+  private func handleCardKey(_ press: KeyPress) -> KeyPress.Result {
+    guard isCardFocused else { return .ignored }
+    if press.modifiers.contains(.option) {
+      if press.key == .leftArrow { model.moveTaskToAdjacentColumn(task, by: -1) } else if press.key == .rightArrow { model.moveTaskToAdjacentColumn(task, by: 1) } else { return .ignored }
+
+    } else if press.key == .space {
+      model.toggleTask(task)
+    } else if press.key == .return {
+      model.enterTask(task)
+    } else if press.key == .upArrow {
+      model.selectAdjacentTask(by: -1)
+    } else if press.key == .downArrow {
+      model.selectAdjacentTask(by: 1)
+    } else if press.key == .leftArrow {
+      model.selectTaskInAdjacentColumn(from: task, by: -1)
+    } else if press.key == .rightArrow {
+      model.selectTaskInAdjacentColumn(from: task, by: 1)
+    } else if press.key == "i" {
+      model.toggleInspector()
+    } else { return .ignored }
+    return .handled
+  }
+
+  private var cardHeading: some View {
+    HStack(spacing: 7) {
+      Image(systemName: "line.3.horizontal")
+        .font(.caption2)
+        .foregroundStyle(.tertiary)
+        .frame(width: 13, height: 24)
+        .contentShape(Rectangle())
+        .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
+        .accessibilityLabel("Drag \(task.title)")
+        .help("Drag this card to reorder it or move it to another column")
+      Button {
+        if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
+      } label: {
+        Image(systemName: model.itemSymbol(for: task))
+          .foregroundStyle(task.status == .open ? Color.secondary : Color.green)
+      }
+      .buttonStyle(.plain)
+      .focusable()
+      Button(task.title) {
+        model.selectTask(task)
+        model.reportKeyboardFocus(.tasks)
+      }
+      .buttonStyle(.plain)
+      .focusable()
+      .multilineTextAlignment(.leading)
+      .lineLimit(2)
+      .truncationMode(.tail)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .help(task.title)
+      .strikethrough(task.status != .open)
+      if !task.isList {
+      Button {
+        if model.activeFocusSession == nil {
+          model.startFocus(on: task)
+        } else if model.activeFocusTask?.id == task.id {
+          model.presentFocusScreen()
+        } else {
+          model.addToFocusQueue(task)
+        }
+      } label: {
+        Image(systemName: model.activeFocusTask?.id == task.id ? "bolt.fill" :
+          model.activeFocusSession == nil ? "bolt" : "plus")
+          .font(.caption)
+      }
+      .buttonStyle(.plain)
+      .focusable()
+      .accessibilityLabel(model.activeFocusSession == nil ? "Focus on \(task.title)" : "Add \(task.title) to focus")
+      .help(model.activeFocusSession == nil ? "Start focus" : "Add to focus queue")
+      }
+      Button {
+        isExpanded.toggle()
+      } label: {
+        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+          .font(.caption.weight(.semibold))
+      }
+      .buttonStyle(.plain)
+      .focusable()
+      .accessibilityLabel(isExpanded ? "Collapse subtasks" : "Expand subtasks")
+      .help(isExpanded ? "Collapse subtasks" : "Show subtasks and add a subtask")
+    }
+  }
+
+  private var inlineSubtasks: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Divider()
+      let items = model.descendants(of: task)
+      if items.isEmpty {
+        Text("No subtasks yet")
+          .font(.caption)
+          .foregroundStyle(.tertiary)
+      } else {
+        ScrollView(.vertical) {
+          LazyVStack(alignment: .leading, spacing: 5) {
+            ForEach(items) { item in
+              inlineSubtaskRow(item)
+            }
+          }
+        }
+        .frame(height: min(CGFloat(items.count) * 30, 180))
+      }
+      HStack(spacing: 5) {
+        Image(systemName: "plus")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        TextField("Add subtask", text: $newSubtaskTitle)
+          .textFieldStyle(.plain)
+          .onSubmit { submitSubtask() }
+          .accessibilityLabel("Add subtask under \(task.title)")
+      }
+      .font(.caption)
+    }
+  }
+
+  private func inlineSubtaskRow(_ item: TaskOutlineItem) -> some View {
+    HStack(spacing: 5) {
+      Button {
+        if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
+      } label: {
+        Image(systemName: model.itemSymbol(for: item.task))
+          .font(.caption)
+      }
+      .buttonStyle(.plain)
+      .focusable()
+      Button(item.task.title) {
+        model.selectTask(item.task)
+        model.reportKeyboardFocus(.tasks)
+      }
+      .buttonStyle(.plain)
+      .focusable()
+      .lineLimit(1)
+      .truncationMode(.tail)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .help(item.task.title)
+      Menu {
+        ForEach(model.boardColumns) { destination in
+          Button(destination.title) { model.moveTask(item.task, toKanbanColumn: destination) }
+        }
+      } label: {
+        Text(model.column(for: item.task)?.title ?? "Backlog")
+          .lineLimit(1)
+          .font(.caption2)
+          .frame(maxWidth: 50)
+      }
+      .menuStyle(.borderlessButton)
+      .focusable()
+      .help("Move \(item.task.title) to a column")
+    }
+    .font(.caption)
+    .padding(.leading, CGFloat(item.depth) * 10)
+    .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
+    .contextMenu { WorkspaceItemActions(task: item.task) }
+    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: nil) { providers in
+      guard item.task.isList else { return false }
+      return WorkspaceTaskDrag.readItemID(from: providers) { payload in
+        model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)
+      }
+    }
+  }
+
+  private func submitSubtask() {
+    let title = newSubtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !title.isEmpty else { return }
+    model.createSubtask(named: title, under: task)
+    newSubtaskTitle = ""
+  }
+}
+
+/// String objects advertise macOS's standard text pasteboard type. Each drop
+/// still resolves the ID through the local store before changing any task.
+enum WorkspaceTaskDrag {
+  static var typeIdentifier: String { UTType.utf8PlainText.identifier }
+  static let listPrefix = "priority-list:"
+
+  static func provider(forList listID: String) -> NSItemProvider {
+    provider(for: listPrefix + listID)
+  }
+
+  static func provider(for taskID: String) -> NSItemProvider {
+    NSItemProvider(object: taskID as NSString)
+  }
+
+  static func readTaskID(from providers: [NSItemProvider], apply: @escaping @MainActor (String) -> Void) -> Bool {
+    readItemID(from: providers) { payload in
+      guard !payload.hasPrefix(listPrefix) else { return }
+      apply(payload)
+    }
+  }
+
+  static func readItemID(from providers: [NSItemProvider], apply: @escaping @MainActor (String) -> Void) -> Bool {
+    guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
+      return false
+    }
+    provider.loadObject(ofClass: NSString.self) { value, _ in
+      guard let taskID = value as? String, !taskID.isEmpty else { return }
+      DispatchQueue.main.async { apply(taskID) }
+    }
+    return true
+  }
+}
+
