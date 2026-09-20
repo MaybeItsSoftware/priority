@@ -89,15 +89,24 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
     // whole job is to stay visible over other work.
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     panel.delegate = self
-    panel.contentViewController = NSHostingController(
+    let hosting = NSHostingController(
       rootView: FocusPanelView(summons: summons, onClose: { [weak self] in self?.dismiss($0) })
         .focusEffectDisabled()
         .font(Typography.interfaceFont)
         .environment(model))
+    // Without this the hosting controller sizes the *window* from the view's
+    // ideal size, and this view has none — it is all `maxWidth: .infinity` —
+    // so the panel collapsed to its minimum on every launch. The window owns
+    // its frame here; the view fills whatever it is given.
+    hosting.sizingOptions = []
+    panel.contentViewController = hosting
     self.panel = panel
-    // Restoring returns false the first time, which is the only time the
-    // anchor below should get a say.
-    if !panel.setFrameUsingName(Self.frameAutosaveName) { position(panel) }
+    // Restoring returns false the first time, which is the only time the size
+    // and anchor below should get a say.
+    if !panel.setFrameUsingName(Self.frameAutosaveName) {
+      panel.setContentSize(Self.defaultSize)
+      position(panel)
+    }
     panel.setFrameAutosaveName(Self.frameAutosaveName)
     return panel
   }
