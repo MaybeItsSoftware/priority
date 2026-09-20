@@ -92,7 +92,10 @@ struct WorkspaceDesktopView: View {
     } message: {
       Text(model.errorMessage ?? "")
     }
-    .sheet(item: Bindable(model).pendingFocusCompletion) { pending in
+    .sheet(item: Binding(
+      get: { model.windowFocusCompletion },
+      set: { if $0 == nil { model.cancelFocusCompletion() } }
+    )) { pending in
       WorkspaceFocusQualityPrompt(pending: pending)
         .environment(model)
     }

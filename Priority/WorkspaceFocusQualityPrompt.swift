@@ -10,6 +10,9 @@ import SwiftUI
 struct WorkspaceFocusQualityPrompt: View {
   @Environment(WorkspaceViewModel.self) private var model
   let pending: WorkspaceViewModel.PendingFocusCompletion
+  /// Nil when the prompt is filling a surface that already has a width — the
+  /// summoned panel, where it is the whole of what is on screen.
+  var fixedWidth: CGFloat? = 500
 
   @State private var quality: FocusQuality = .solid
   @State private var customMultiplier: Double = FocusQuality.solid.multiplier
@@ -33,7 +36,7 @@ struct WorkspaceFocusQualityPrompt: View {
       actions
     }
     .padding(26)
-    .frame(width: 500)
+    .frame(width: fixedWidth)
     .interactiveDismissDisabled()
     .onExitCommand { model.cancelFocusCompletion() }
   }

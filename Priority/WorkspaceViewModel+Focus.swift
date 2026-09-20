@@ -2,6 +2,12 @@ import Foundation
 import PriorityWorkspace
 import PriorityCore
 
+/// Where the "how did that go?" question is asked.
+enum FocusCompletionSurface {
+  case window
+  case panel
+}
+
 /// Starting, advancing and ending a focus session. Split from
 /// `WorkspaceViewModel.swift` only for size.
 @MainActor
@@ -157,9 +163,12 @@ extension WorkspaceViewModel {
 
   /// Pauses the clock and asks how the block went. Crediting and queue
   /// advancement wait until the prompt is answered.
-  func requestFocusCompletion(now: Date = .now, completeTask: Bool = true) {
+  func requestFocusCompletion(
+    now: Date = .now, completeTask: Bool = true, from surface: FocusCompletionSurface = .window
+  ) {
     synchroniseFocusClock(now: now)
     guard pendingFocusCompletion == nil, let session = activeFocusSession, let task = activeFocusTask else { return }
+    focusCompletionSurface = surface
     pendingFocusCompletion = PendingFocusCompletion(
       sessionID: session.id, taskID: task.id, title: task.title,
       seconds: session.elapsedSeconds(now: now), completeTask: completeTask,

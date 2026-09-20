@@ -268,6 +268,18 @@ enum WorkspaceSidebarItem: Identifiable {
   /// pressed — the clock stops when the work stops, not when the judgement
   /// arrives — and cleared when the block is scored or the prompt is dropped.
   var pendingFocusCompletion: PendingFocusCompletion?
+  /// Which surface asked the question, so the answer is offered where the
+  /// block was finished. The summoned panel has to be able to close a block
+  /// on its own — needing the window for it is exactly what stops the panel
+  /// being usable as the only surface.
+  var focusCompletionSurface: FocusCompletionSurface = .window
+  /// The pending block, but only for the surface that asked.
+  var windowFocusCompletion: PendingFocusCompletion? {
+    focusCompletionSurface == .window ? pendingFocusCompletion : nil
+  }
+  var panelFocusCompletion: PendingFocusCompletion? {
+    focusCompletionSurface == .panel ? pendingFocusCompletion : nil
+  }
   /// What the last scored block earned, so the UI can show it and move on.
   var lastFocusAward: FocusAward?
   /// Written only by `reloadFocus()`; read by the panel and the prompt.

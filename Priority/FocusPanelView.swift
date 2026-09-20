@@ -10,6 +10,7 @@ import SwiftUI
 /// summoned it to check the clock or to go and find something.
 struct FocusPanelView: View {
   @Environment(WorkspaceViewModel.self) private var model
+  let summons: FocusPanelSummons
   let onClose: (FocusPanelDismissal) -> Void
 
   @State private var query = ""
@@ -19,21 +20,28 @@ struct FocusPanelView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      field
-      FocusRule()
-      content
-      FocusRule()
-      hints
+      if let pending = model.panelFocusCompletion {
+        // Scoring a block is one question with one answer, so it gets the
+        // panel to itself rather than sitting under a search field that has
+        // nothing to offer while it is up.
+        ScrollView { WorkspaceFocusQualityPrompt(pending: pending, fixedWidth: nil) }
+      } else {
+        field
+        FocusRule()
+        content
+        FocusRule()
+        hints
+      }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
     .overlay(
       RoundedRectangle(cornerRadius: 18)
         .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
-    .onAppear {
-      isFieldFocused = true
-      selectDefault()
-    }
+    .onAppear { reset() }
+    // The panel is not rebuilt between summons, so this is what makes each one
+    // open ready to type rather than holding the last thing that was searched.
+    .onChange(of: summons.count) { _, _ in reset() }
     .onChange(of: query) { _, new in
       let trimmed = new.trimmingCharacters(in: .whitespaces)
       results = trimmed.isEmpty ? [] : model.searchResults(matching: trimmed)
@@ -64,6 +72,14 @@ struct FocusPanelView: View {
         .font(.system(size: 11, design: .monospaced))
         .foregroundStyle(.tertiary)
         .help("Minutes focused today, multiplied by how well each block went")
+      Button { onClose(.back) } label: {
+        Image(systemName: "xmark")
+          .font(.system(size: 11, weight: .semibold))
+      }
+      .buttonStyle(.plain)
+      .foregroundStyle(.tertiary)
+      .help("Hide the panel (esc)")
+      .accessibilityLabel("Hide the focus panel")
     }
     .padding(.horizontal, 20)
     .padding(.vertical, 16)
@@ -194,6 +210,14 @@ struct FocusPanelView: View {
         .buttonStyle(.bordered)
         .focusable(false)
         Button {
+          logProgress()
+        } label: {
+          Label("Log", systemImage: "clock.arrow.circlepath")
+        }
+        .buttonStyle(.bordered)
+        .focusable(false)
+        .help("Record the time so far and leave the task open")
+        Button {
           finish()
         } label: {
           Label("Done", systemImage: "checkmark")
@@ -224,7 +248,7 @@ struct FocusPanelView: View {
         KeyHint("⌘↵", "Open in window")
       }
       Spacer(minLength: 0)
-      KeyHint("esc", query.isEmpty ? "Close" : "Clear")
+      KeyHint("esc", query.isEmpty ? "Hide" : "Clear")
     }
     .padding(.horizontal, 20)
     .padding(.vertical, 10)
@@ -257,6 +281,14 @@ struct FocusPanelView: View {
         icon: result.task.status == .completed ? "checkmark.circle" : "circle",
         tint: .secondary)
     }
+  }
+
+  /// What a fresh summon looks like: an empty field with the caret in it.
+  private func reset() {
+    query = ""
+    results = []
+    isFieldFocused = true
+    selectDefault()
   }
 
   private func selectDefault() {
@@ -297,12 +329,17 @@ struct FocusPanelView: View {
     onClose(.back)
   }
 
-  /// Done. The quality prompt is a sheet in the main window, so the window has
-  /// to come with it — there is one prompt, and it lives there.
+  /// Done. The question that follows is asked here rather than in the window:
+  /// a panel you can run a whole block from but not close one in would send
+  /// you to the app at the only moment that matters.
   private func finish() {
-    model.requestFocusCompletion()
-    onClose(.toWindow)
-    AppDelegate.shared.showMainWindow()
+    model.requestFocusCompletion(from: .panel)
+  }
+
+  /// The same stop, without closing the task. Scored here too — the minutes
+  /// were still spent, and the panel is where they were spent from.
+  private func logProgress() {
+    model.requestFocusCompletion(completeTask: false, from: .panel)
   }
 
   private func revealSelection() {

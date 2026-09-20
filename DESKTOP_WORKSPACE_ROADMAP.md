@@ -66,6 +66,13 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
   field. Empty it offers the ladder, or the running block; typed it searches
   every task's title and notes. Return starts or queues, ⌘Return opens the task
   in the window, Escape hands the keyboard back to the app it interrupted.
+  It is a window you leave up rather than an overlay that vanishes on the next
+  click — movable, resizable, and remembered — because the thing most worth
+  seeing while you work elsewhere is the clock that is running. It is also
+  self-sufficient: starting, pausing, logging and *scoring* a block all happen
+  in the panel, so none of it needs the main window and the app can stay out of
+  the Dock for a whole session. Standard editing shortcuts are routed to its
+  field by hand, since an accessory app has no Edit menu to carry them.
 - Add filters for open/completed, due, tags, priority, and estimate.
 - Add a command palette for navigation and creation; do not route it through legacy Checkvist state.
 

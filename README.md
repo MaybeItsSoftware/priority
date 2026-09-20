@@ -295,12 +295,24 @@ an hour ruler, with the running one growing live.
 
 `⌃⌥⇧⌘F` summons the focus panel over whatever app you are in — the one surface
 you can reach without going to the app. It comes up with the caret already in
-its field, so there is nothing to click:
+its field, so there is nothing to click.
+
+It **stays where you put it**. Clicking back into your editor does not dismiss
+it: it floats above the other window, at the size and position you gave it,
+until you press `Esc` or the hotkey again. Drag it anywhere, drag its edges to
+resize, and it comes back the same next time. It is a panel you leave up while
+you work, not an overlay you summon and lose.
+
+Everything a block needs it can do on its own — pick the task, run the clock,
+pause it, log progress, and score the block when it ends. Nothing in it reaches
+for the main window, so **Priority needs no Dock icon** for any of it: close
+the main window and the app drops to the menu bar, and the panel keeps working
+exactly as before.
 
 | | |
 | --- | --- |
 | **Empty field, nothing running** | The shortlist of what to start, in the order the ladder offers it |
-| **Empty field, block running** | That block: task, clock, pause and done |
+| **Empty field, block running** | That block: task, clock, pause, log and done |
 | **Anything typed** | Every task whose title or notes match, wherever it lives |
 
 | Key | Action |
@@ -308,10 +320,12 @@ its field, so there is nothing to click:
 | `↑` / `↓` | Choose |
 | `Return` | Start focus on it — or, with a block already running, queue it. On the running block, Done |
 | `Cmd+Return` | Open it in the main window instead |
-| `Esc` | Clear the field, then close |
+| `Esc` | Clear the field, then hide the panel |
+| `Cmd+C` / `Cmd+V` | Copy and paste, sent straight to the field — an app with no Dock icon has no Edit menu to route them |
 
-Closing it hands the keyboard back to the app it interrupted, so summoning it
-mid-sentence and pressing `Esc` puts the caret back where it was. The status
+Hiding it hands the keyboard back to the app it interrupted, so summoning it
+mid-sentence and pressing `Esc` puts the caret back where it was. Clicking away
+instead leaves the panel up and makes no such promise. The status
 item's context menu has **Focus Panel** too, so the hotkey is a shortcut for
 something visible rather than the only way in. Rebind or disable it in
 Preferences → Keybindings.
