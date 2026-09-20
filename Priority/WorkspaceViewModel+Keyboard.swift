@@ -16,6 +16,7 @@ extension WorkspaceViewModel {
     // Focus mode owns the keyboard outright while it is up. It replaced the
     // workspace on screen, so leaving the workspace's own keys live would mean
     // ⌘4 quietly switching a board nobody can see.
+    if showsFocusScreen, handleRunningFocusKey(event, flags: flags) { return true }
     if showsFocusScreen, handleFocusLadderKey(event, flags: flags) { return true }
     if showsTimelineScreen, handleTimelineKey(event, flags: flags) { return true }
     if handleViewSwitchKey(event, flags: flags) { return true }
@@ -133,6 +134,30 @@ extension WorkspaceViewModel {
 
   /// Climbing the focus ladder. Up is *less* important — the direction matches
   /// the screen, where the most important thing sits at the foot.
+  /// The running session's own keys. Checked before the ladder's, because
+  /// while a block is running the pane is showing the block — the ladder is
+  /// not on screen to be driven.
+  private func handleRunningFocusKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
+    guard activeFocusSession != nil, activeFocusTask != nil, pendingFocusCompletion == nil else { return false }
+    guard flags.isEmpty else { return false }
+    switch event.keyCode {
+    case 36, 76:  // Return, Enter — finish the block, which is what Done does.
+      requestFocusCompletion()
+      return true
+    case 53:  // Escape leaves the pane; the block keeps running behind it.
+      dismissFocusScreen()
+      return true
+    default:
+      break
+    }
+    switch event.charactersIgnoringModifiers?.lowercased() {
+    case "p": toggleFocusPause(); return true
+    case "l": requestFocusCompletion(completeTask: false); return true
+    case "f": requestFocusFloat(); return true
+    default: return false
+    }
+  }
+
   private func handleFocusLadderKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     // Option-arrow moves the task itself rather than the cursor, which is the
     // same gesture that reorders a task everywhere else in the workspace.
@@ -194,9 +219,9 @@ extension WorkspaceViewModel {
       case "6": selectViewMode(.dailies); requestKeyboardFocus(.tasks); return true
       case "7": selectViewMode(.matrix); requestKeyboardFocus(.tasks); return true
       case "8":
-        // A running session is returned to rather than restarted; otherwise the
-        // focus screen decides what to start on, which is its whole job.
-        if activeFocusSession != nil { showsFocusPanel = true } else { presentFocusScreen() }
+        // One key for the one surface. What it shows — a running session or
+        // the ladder that picks one — is the screen's business, not the key's.
+        presentFocusScreen()
         return true
       case "9":
         // A toggle rather than a second way in: the timeline answers a question

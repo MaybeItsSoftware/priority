@@ -94,7 +94,7 @@ private struct WorkspaceDailyProgressRow: View {
       Spacer()
       Button("Focus") {
         model.selectTask(task)
-        if model.activeFocusSession == nil { model.startFocus(on: task) } else if model.activeFocusTask?.id == task.id { model.showsFocusPanel = true } else { model.addToFocusQueue(task) }
+        if model.activeFocusSession == nil { model.startFocus(on: task) } else if model.activeFocusTask?.id == task.id { model.presentFocusScreen() } else { model.addToFocusQueue(task) }
       }
       .buttonStyle(.bordered)
       .focusable()

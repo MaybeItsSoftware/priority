@@ -59,7 +59,6 @@ struct WorkspaceDesktopView: View {
       if model.requestedFocusArea != .tasks || (model.viewMode != .board && model.viewMode != .outline) {
         focusedArea = model.requestedFocusArea
       }
-      if model.activeFocusSession != nil { floatingTimer.show(model: model) }
     }
     .onChange(of: model.focusRequest) { _, _ in
       if model.requestedFocusArea != .tasks || (model.viewMode != .board && model.viewMode != .outline) {
@@ -70,7 +69,7 @@ struct WorkspaceDesktopView: View {
       model.reportKeyboardFocus(area)
     }
     .onChange(of: model.focusFloatRequest) { _, _ in
-      floatingTimer.show(model: model)
+      floatingTimer.show(model: model, activate: true)
     }
     .onChange(of: model.activeFocusSession?.id) { _, sessionID in
       if sessionID == nil { floatingTimer.close() }
@@ -92,13 +91,6 @@ struct WorkspaceDesktopView: View {
       Button("OK", role: .cancel) {}
     } message: {
       Text(model.errorMessage ?? "")
-    }
-    .sheet(isPresented: Bindable(model).showsFocusPanel) {
-      LocalFocusPanel(onFloat: {
-        floatingTimer.show(model: model, activate: true)
-        model.showsFocusPanel = false
-      })
-        .environment(model)
     }
     .sheet(item: Bindable(model).pendingFocusCompletion) { pending in
       WorkspaceFocusQualityPrompt(pending: pending)
@@ -834,7 +826,7 @@ private struct WorkspaceKanbanCard: View {
         if model.activeFocusSession == nil {
           model.startFocus(on: task)
         } else if model.activeFocusTask?.id == task.id {
-          model.showsFocusPanel = true
+          model.presentFocusScreen()
         } else {
           model.addToFocusQueue(task)
         }

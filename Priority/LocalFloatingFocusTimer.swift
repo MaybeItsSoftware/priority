@@ -75,9 +75,10 @@ private struct LocalFloatingFocusTimerView: View {
             .buttonStyle(.borderedProminent)
             .focusable()
           Button(session.pausedAt == nil ? "Pause" : "Resume") { model.toggleFocusPause() }
-          Button("Open panel") {
-            model.showsFocusPanel = true
+          Button("Open") {
             onClose()
+            AppDelegate.shared.showMainWindow()
+            model.presentFocusScreen()
           }
           .buttonStyle(.bordered)
           .focusable()

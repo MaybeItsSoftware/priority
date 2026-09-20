@@ -163,7 +163,7 @@ struct LocalTaskInspector: View {
       Button { model.addToFocusQueue(task) } label: {
         Label("Add to focus queue", systemImage: "plus.circle")
       }.buttonStyle(.borderedProminent).focusable()
-      Button("Open focus panel") { model.showsFocusPanel = true }.buttonStyle(.link).focusable()
+      Button("Open focus") { model.presentFocusScreen() }.buttonStyle(.link).focusable()
     } else if !task.isList {
       Button { model.startFocus(on: task) } label: {
         Label("Start focus", systemImage: "bolt.fill")

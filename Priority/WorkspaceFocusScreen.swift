@@ -14,22 +14,17 @@ struct WorkspaceFocusLauncher: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Button {
-        if model.activeFocusSession != nil {
-          model.showsFocusPanel = true
-        } else {
-          model.presentFocusScreen()
-        }
+        model.presentFocusScreen()
       } label: {
         VStack(alignment: .leading, spacing: 4) {
           HStack(spacing: 6) {
             Image(systemName: model.activeFocusSession == nil ? "target" : "timer")
-            Text(model.activeFocusSession == nil ? "FOCUS" : "IN SESSION")
-              .font(.caption2.weight(.bold))
-              .tracking(1.2)
+              .font(.system(size: 11, weight: .semibold))
+            MicroLabel(
+              model.activeFocusSession == nil ? "Focus" : "In session",
+              tint: model.activeFocusSession == nil ? .secondary : Color.accentColor)
             Spacer(minLength: 0)
-            Text("⌘8")
-              .font(.caption2.monospaced())
-              .foregroundStyle(.tertiary)
+            KeyCap("⌘8")
           }
           .foregroundStyle(model.activeFocusSession == nil ? .secondary : Color.accentColor)
 
@@ -65,13 +60,10 @@ struct WorkspaceFocusLauncher: View {
       Button { model.presentTimelineScreen() } label: {
         HStack(spacing: 6) {
           Image(systemName: "chart.bar.doc.horizontal")
-          Text("TIMELINE")
-            .font(.caption2.weight(.bold))
-            .tracking(1.2)
+            .font(.system(size: 11, weight: .semibold))
+          MicroLabel("Timeline", tint: model.showsTimelineScreen ? Color.accentColor : .secondary)
           Spacer(minLength: 0)
-          Text("⌘9")
-            .font(.caption2.monospaced())
-            .foregroundStyle(.tertiary)
+          KeyCap("⌘9")
         }
         .foregroundStyle(model.showsTimelineScreen ? Color.accentColor : .secondary)
         .padding(.horizontal, 10)
@@ -94,7 +86,9 @@ struct WorkspaceFocusLauncher: View {
     guard let scored = model.nextUp else { return "Add a task or a daily to get started" }
     return model.focusExplanation(scored).localizedCapitalized
   }
-}/// Focus mode: one task, centred, with everything you have already been
+}
+
+/// Focus mode: one task, centred, with everything you have already been
 /// through drifting up and away above it.
 ///
 /// The column is a single file of work. The task you are on sits in the middle
@@ -119,34 +113,15 @@ struct WorkspaceFocusScreen: View {
   var body: some View {
     VStack(spacing: 0) {
       header
-      WorkspaceFocusContextControls().padding(.horizontal, 20)
-      if model.focusLadder.isEmpty {
-        emptyState
+      FocusRule()
+      // One screen, two states: choosing what to do, and then doing it. They
+      // were a pane and a sheet before, which made returning to a running
+      // session a different gesture from starting one.
+      if let session = model.activeFocusSession, let task = model.activeFocusTask {
+        WorkspaceFocusRunning(session: session, task: task)
       } else {
-        column
+        chooser
       }
-      if !model.blockedFocusTasks.isEmpty {
-        DisclosureGroup("\(model.blockedFocusTasks.count) tasks unavailable") {
-          ScrollView {
-            VStack(alignment: .leading, spacing: 6) {
-              ForEach(model.blockedFocusTasks) { blocked in
-                Button { if let task = model.task(withID: blocked.id) { model.selectTask(task); model.showsFocusScreen = false; model.isInspectorVisible = true } } label: {
-                  VStack(alignment: .leading) {
-                    Text(blocked.candidate.title).font(.caption.weight(.medium))
-                    let urgency = NextUpSelector.score(blocked.candidate)
-                    if [.overdue, .dueToday, .deadlineRisk].contains(urgency.reason) {
-                      Text(urgency.explanation).font(.caption2).foregroundStyle(.orange)
-                    }
-                    Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-                      .font(.caption2).foregroundStyle(.secondary)
-                  }
-                }.buttonStyle(.plain)
-              }
-            }.frame(maxWidth: .infinity, alignment: .leading)
-          }.frame(maxHeight: 100)
-        }.padding(.horizontal, 20).padding(.top, 8)
-      }
-      footer
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(nsColor: .textBackgroundColor))
@@ -177,28 +152,95 @@ struct WorkspaceFocusScreen: View {
 
   // MARK: - Chrome
 
+  private var isRunning: Bool { model.activeFocusSession != nil && model.activeFocusTask != nil }
+
+  /// The same bar in both states, so leaving is always in the same place and
+  /// the day's total never moves out from under you.
   private var header: some View {
-    HStack {
-      Text("FOCUS")
-        .font(.caption.weight(.bold))
-        .tracking(1.5)
+    HStack(spacing: 12) {
+      MicroLabel(isRunning ? "In session" : "Focus", tint: isRunning ? Color.accentColor : nil)
+      Spacer(minLength: 0)
+      Text("\(FocusPoints.formatted(model.focusPoints.today)) pts today")
+        .font(.system(size: 11, design: .monospaced))
         .foregroundStyle(.secondary)
-      Spacer()
+        .help("Minutes focused, multiplied by how well each block went")
+      Button { model.presentTimelineScreen() } label: {
+        Image(systemName: "chart.bar.doc.horizontal")
+      }
+      .buttonStyle(.plain)
+      .foregroundStyle(.secondary)
+      .focusable()
+      .help("See where the day's focused time went (⌘9)")
       Button("Leave") { model.dismissFocusScreen() }
         .buttonStyle(.plain)
+        .font(.caption)
         .foregroundStyle(.secondary)
         .focusable()
-      keyCap("esc")
+      KeyCap("esc")
     }
-    .padding(.horizontal, 20)
+    .padding(.horizontal, 24)
     .padding(.vertical, 12)
+  }
+
+  /// Picking the next thing: the conditions it has to satisfy, the ladder of
+  /// what qualifies, and what is currently ruled out.
+  private var chooser: some View {
+    VStack(spacing: 0) {
+      WorkspaceFocusContextControls()
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
+      if model.focusLadder.isEmpty {
+        emptyState
+      } else {
+        column
+      }
+      if !model.blockedFocusTasks.isEmpty {
+        blocked
+      }
+      FocusRule()
+      footer
+    }
+  }
+
+  private var blocked: some View {
+    DisclosureGroup("\(model.blockedFocusTasks.count) tasks unavailable") {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 6) {
+          ForEach(model.blockedFocusTasks) { blocked in
+            Button {
+              if let task = model.task(withID: blocked.id) {
+                model.selectTask(task)
+                model.showsFocusScreen = false
+                model.isInspectorVisible = true
+              }
+            } label: {
+              VStack(alignment: .leading, spacing: 2) {
+                Text(blocked.candidate.title).font(.caption.weight(.medium))
+                let urgency = NextUpSelector.score(blocked.candidate)
+                if [.overdue, .dueToday, .deadlineRisk].contains(urgency.reason) {
+                  Text(urgency.explanation).font(.caption2).foregroundStyle(.orange)
+                }
+                Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
+                  .font(.caption2).foregroundStyle(.secondary)
+              }
+            }
+            .buttonStyle(.plain)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .frame(maxHeight: 100)
+    }
+    .font(.caption)
+    .padding(.horizontal, 24)
+    .padding(.bottom, 8)
   }
 
   private var footer: some View {
     HStack(spacing: 14) {
       Spacer()
-      hint("↑ ↓", "Move through")
-      hint("⌥ ↑ ↓", "Reorder within urgency")
+      KeyHint("↑ ↓", "Move through")
+      KeyHint("⌥ ↑ ↓", "Reorder within urgency")
       if model.hasManualFocusOrder {
         Button("Reset order") { model.clearManualFocusOrder() }
           .buttonStyle(.plain)
@@ -208,26 +250,8 @@ struct WorkspaceFocusScreen: View {
       }
       Spacer()
     }
-    .padding(.horizontal, 20)
+    .padding(.horizontal, 24)
     .padding(.vertical, 12)
-  }
-
-  private func hint(_ key: String, _ label: String) -> some View {
-    HStack(spacing: 5) {
-      keyCap(key)
-      Text(label)
-        .font(.caption2)
-        .foregroundStyle(.tertiary)
-    }
-  }
-
-  private func keyCap(_ key: String) -> some View {
-    Text(key)
-      .font(.caption2.monospaced())
-      .foregroundStyle(.secondary)
-      .padding(.horizontal, 5)
-      .padding(.vertical, 2)
-      .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
   }
 
   private var emptyState: some View {
@@ -468,7 +492,7 @@ struct WorkspaceFocusScreen: View {
       Image(systemName: systemImage)
       Text(title)
       Text(key)
-        .font(.caption2.monospaced())
+        .font(.system(size: 10, design: .monospaced))
         .opacity(0.65)
     }
     if prominent {
@@ -486,10 +510,7 @@ struct WorkspaceFocusScreen: View {
 
   private var estimatePicker: some View {
     VStack(spacing: 8) {
-      Text("HOW LONG?")
-        .font(.caption2.weight(.bold))
-        .tracking(1.2)
-        .foregroundStyle(.secondary)
+      MicroLabel("How long?")
       HStack(spacing: 6) {
         ForEach([5, 10, 15, 25, 45, 60, 90], id: \.self) { minutes in
           Button("\(minutes)m") { model.focusEstimateMinutes = Double(minutes) }

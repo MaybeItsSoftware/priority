@@ -41,9 +41,9 @@ extension WorkspaceViewModel {
       stagedTaskID = nil
       reloadFocus()
       reloadNextUp()
-      showsFocusPanel = false
-      showsFocusScreen = false
-      focusFloatRequest += 1
+      // Wherever the start came from — the board, a daily, the ladder — the
+      // pane it lands on is the session. There is nowhere else for it to be.
+      showsFocusScreen = true
     }
   }
 
@@ -66,11 +66,18 @@ extension WorkspaceViewModel {
   /// actually did, and a panel floating over the board gives you a slot the
   /// size of a dialog to do that in.
   func presentTimelineScreen() {
-    showsFocusPanel = false
     showsFocusScreen = false
     focusHistoryDate = min(focusHistoryDate, .now)
     reloadFocus()
     showsTimelineScreen = true
+  }
+
+  /// Puts the running session in the corner. The pane stays where it is —
+  /// floating is for working in another app, and coming back to a workspace
+  /// that had moved on without you would be a surprise.
+  func requestFocusFloat() {
+    guard activeFocusSession != nil else { return }
+    focusFloatRequest += 1
   }
 
   func dismissTimelineScreen() {
@@ -99,15 +106,11 @@ extension WorkspaceViewModel {
   /// in Everything, while tasks retain their original lists and parents.
   func startFocusFromToday(plannedSeconds: Int? = nil) {
     guard let store else { return }
-    if activeFocusSession != nil { showsFocusPanel = true; return }
+    if activeFocusSession != nil { showsFocusScreen = true; return }
     reloadNextUp()
     let available = Set(focusLadder.map(\.id))
     let planned = todayTasks.filter { available.contains($0.id) }
     guard let first = planned.first else { errorMessage = "No Today task is available in this context and time window."; return }
-    if activeFocusSession != nil {
-      showsFocusPanel = true
-      return
-    }
     perform {
       let session = try store.startFocusSession(
         taskId: first.id, plannedSeconds: plannedSeconds ?? suggestedFocusSeconds(for: first.id), context: effectiveFocusContext)
@@ -119,8 +122,7 @@ extension WorkspaceViewModel {
       activeFocusSession = session
       reloadFocus()
       reloadNextUp()
-      showsFocusScreen = false
-      showsFocusPanel = true
+      showsFocusScreen = true
     }
   }
 
@@ -163,10 +165,6 @@ extension WorkspaceViewModel {
       seconds: session.elapsedSeconds(now: now), completeTask: completeTask,
       blockID: session.activeBlockId, wasPaused: session.pausedAt != nil)
     perform { try store?.pauseFocusSession(id: session.id, now: now); reloadFocus() }
-    // The prompt is a sheet, and so is the panel; only one of them can be on
-    // screen. Remembering which surface asked lets the panel come back.
-    resumesFocusPanel = showsFocusPanel
-    showsFocusPanel = false
   }
 
   /// Drops the prompt and resumes a previously running block, excluding the
@@ -176,7 +174,6 @@ extension WorkspaceViewModel {
       perform { try store?.resumeFocusSession(id: pending.sessionID); reloadFocus() }
     }
     pendingFocusCompletion = nil
-    restoreFocusPanelIfItWasOpen()
   }
 
   /// Credits the time actually spent, so a daily's contribution reflects the
@@ -195,14 +192,7 @@ extension WorkspaceViewModel {
       reloadOutline()
       reloadDailies()
       reloadNextUp()
-      restoreFocusPanelIfItWasOpen()
     }
-  }
-
-  private func restoreFocusPanelIfItWasOpen() {
-    defer { resumesFocusPanel = false }
-    guard resumesFocusPanel, activeFocusSession?.activeTaskId != nil else { return }
-    showsFocusPanel = true
   }
 
   func finishFocus() {
@@ -216,7 +206,6 @@ extension WorkspaceViewModel {
       try store.finishFocusSession(id: session.id)
       reloadFocus()
       reloadNextUp()
-      showsFocusPanel = false
     }
   }
 }

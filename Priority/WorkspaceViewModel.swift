@@ -216,8 +216,8 @@ enum WorkspaceSidebarItem: Identifiable {
   var taskMoveRequest: WorkspaceItemMoveRequest?
   var taskQuickEditRequest: WorkspaceTaskQuickEditRequest?
   var dragDestinationListID: String?
-  var showsFocusPanel = false
-  /// Requests the always-on-top companion without coupling focus to a sheet.
+  /// Asks the view for the always-on-top companion. A counter rather than a
+  /// flag: the button and the F key both just want it shown, again.
   var focusFloatRequest = 0
   var showsKeyboardHelp = false
   var showsListNavigator = false
@@ -278,10 +278,6 @@ enum WorkspaceSidebarItem: Identifiable {
   /// award carries the block's own id. Blocks finished without a judgement
   /// have no entry, which is the difference the timeline draws.
   private(set) var focusHistoryAwards: [String: FocusAward] = [:]
-  /// Whether the focus panel was the surface that asked, so it can be put back
-  /// once the prompt is answered. Owned by `WorkspaceViewModel+Focus.swift`.
-  var resumesFocusPanel = false
-
   var showsFocusScreen = false
   /// Whether the timeline has the main pane. Held beside `showsFocusScreen`
   /// and mutually exclusive with it: both are takeovers of the same pane.
