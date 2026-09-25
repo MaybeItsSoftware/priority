@@ -249,6 +249,10 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var onFocusFloatRequested: (() -> Void)?
   /// Called when a running block stops being one, however it stopped.
   @ObservationIgnored var onFocusSessionEnded: (() -> Void)?
+  /// Whether finishing a block should stop and ask how it went. Read at the
+  /// moment of asking rather than stored, so changing the preference takes
+  /// effect on the next block rather than the next launch.
+  @ObservationIgnored var asksHowEachBlockWent: () -> Bool = { true }
   /// Called when something is finished, wherever it was finished from. The
   /// celebration lives in the app shell, so the model reports the occasion
   /// rather than staging it.

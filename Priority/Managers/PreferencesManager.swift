@@ -99,6 +99,13 @@ import SwiftUI
   var opensOnFocusScreen: Bool {
     didSet { preferencesStore.set(opensOnFocusScreen, for: .opensOnFocusScreen) }
   }
+  /// Whether finishing a block stops to ask how it went. On by default,
+  /// because the score is the thing that makes a logged hour mean something —
+  /// but a day of eight blocks is eight interruptions, and someone who only
+  /// wants the minutes should be able to say so once.
+  var scoresEachFocusBlock: Bool {
+    didSet { preferencesStore.set(scoresEachFocusBlock, for: .scoresEachFocusBlock) }
+  }
   var quickAddLocationMode: QuickAddLocationMode {
     didSet { preferencesStore.set(quickAddLocationMode.rawValue, for: .quickAddLocationModeRawValue) }
   }
@@ -182,6 +189,7 @@ import SwiftUI
       default: AppCoordinator.CarbonModifier.hyper
     )
     self.opensOnFocusScreen = preferencesStore.bool(.opensOnFocusScreen, default: false)
+    self.scoresEachFocusBlock = preferencesStore.bool(.scoresEachFocusBlock, default: true)
     self.quickAddLocationMode =
       QuickAddLocationMode(
         rawValue: preferencesStore.int(.quickAddLocationModeRawValue, default: 0)

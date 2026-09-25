@@ -92,6 +92,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // The mirror needs the workspace, and the workspace has only just been
     // built — the coordinator is constructed before it.
     checkvistManager.workspaceStoreProvider = { [weak workspace] in workspace?.store }
+    workspace.asksHowEachBlockWent = { [weak checkvistManager] in
+      checkvistManager?.preferences.scoresEachFocusBlock ?? true
+    }
     workspace.onFocusFloatRequested = { [weak self] in
       guard let self, let workspace = self.workspace else { return }
       self.floatingTimer.show(model: workspace, activate: true)

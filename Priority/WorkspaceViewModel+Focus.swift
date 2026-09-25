@@ -174,6 +174,10 @@ extension WorkspaceViewModel {
       seconds: session.elapsedSeconds(now: now), completeTask: completeTask,
       blockID: session.activeBlockId, wasPaused: session.pausedAt != nil)
     perform { try store?.pauseFocusSession(id: session.id, now: now); reloadFocus() }
+    // Someone who has said they only want the minutes gets them: the block
+    // closes at the neutral multiplier and nothing is put in the way of the
+    // next one.
+    if !asksHowEachBlockWent() { confirmFocusCompletion(multiplier: 1) }
   }
 
   /// Drops the prompt and resumes a previously running block, excluding the

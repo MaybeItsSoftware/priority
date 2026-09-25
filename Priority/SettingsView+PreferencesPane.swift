@@ -109,6 +109,13 @@ extension SettingsView {
             .font(.caption)
             .foregroundColor(themeColor(.textSecondary))
         }
+        VStack(alignment: .leading, spacing: 2) {
+          Toggle("Ask how each focus block went", isOn: preferenceBinding(\.scoresEachFocusBlock))
+            .toggleStyle(.switch)
+          Text("Finishing a block asks for a quality multiplier, which is what turns minutes into points. Turn this off to log every block at ×1 and keep moving.")
+            .font(.caption)
+            .foregroundColor(themeColor(.textSecondary))
+        }
         if #available(macOS 13.0, *) {
           Toggle("Launch at login", isOn: preferenceBinding(\.launchAtLogin))
             .toggleStyle(.switch)

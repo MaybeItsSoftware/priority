@@ -53,6 +53,8 @@ final class PreferencesStore {
     case rootTaskViewOrder
     /// Whether the window comes up on the focus screen rather than the lists.
     case opensOnFocusScreen
+    /// Whether finishing a block stops to ask how it went.
+    case scoresEachFocusBlock
     case focusDurationMinutes
     case focusBreakDurationMinutes
     case kanbanManualOrderByColumnId
