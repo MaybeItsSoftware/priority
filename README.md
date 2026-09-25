@@ -295,7 +295,9 @@ an hour ruler, with the running one growing live.
 
 `⌃⌥⇧⌘F` summons the focus panel over whatever app you are in — the one surface
 you can reach without going to the app. It comes up with the caret already in
-its field, so there is nothing to click.
+its field, so there is nothing to click, and it comes up **alone**: the main
+window stays wherever you left it, open or closed, rather than being dragged
+forward along with it.
 
 It **stays where you put it**. Clicking back into your editor does not dismiss
 it: it floats above the other window, at the size and position you gave it,
@@ -303,9 +305,18 @@ until you press `Esc` or the hotkey again. Drag it anywhere, drag its edges to
 resize, and it comes back the same next time. It is a panel you leave up while
 you work, not an overlay you summon and lose.
 
-What it shows is **the day as a list of cards** — whatever is in the Today
-column, numbered, each with its estimate and the time already on it, under a bar
-showing what the day is meant to cost against what it has cost so far. Press a
+What it shows is **the day as a list of cards**, numbered, each with its
+estimate and the time already on it, under a bar showing what the day is meant
+to cost against what it has cost so far.
+
+The day is not only what you dragged into the Today column. It is, in order:
+the block you are running, then whatever you put on Today by hand, then
+anything overdue, then anything **due today**, then anything **starting
+today**. Each task appears once, under the strongest reason that claims it, and
+the card says which — so work with a date on it turns up in the panel without
+you having to go and find it first. A task you placed on Today by hand still
+outranks every automatic reason, because a plan you made is a decision and a
+due date is only a fact. Press a
 card and it starts; the card you are on grows a live clock and its own strip of
 controls — pause, skip, log, done — while the rest of the list stays visible
 underneath. Finished work collects at the bottom, one line per task rather than
@@ -324,7 +335,7 @@ exactly as before.
 
 | | |
 | --- | --- |
-| **Empty field** | Today's cards, running task first. A workspace with no Today column falls back to the ranked shortlist |
+| **Empty field** | The day's cards, running task first. A day that claims nothing falls back to the ranked shortlist |
 | **Anything typed** | Every task whose title or notes match, wherever it lives, with *Add “…” to today* at the foot |
 
 | Key | Action |

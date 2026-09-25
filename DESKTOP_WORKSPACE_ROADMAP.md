@@ -43,7 +43,11 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 ### Lists and folders
 
 - Treat active lists as sub-lists of a virtual Everything scope. Its views should aggregate tasks while preserving each task's list, project hierarchy, and an explicit destination for new work.
-- Rename, archive, restore, delete, and reorder lists/folders. *Renaming is done in place — double-click, context menu, or ⌘R — rather than through the settings sheet.*
+- Rename, archive, restore, delete, and reorder lists/folders. *Renaming is done
+  in place — double-click, context menu, or ⌘R — rather than through the settings
+  sheet. Reordering is a drag onto the gap between two rows, which is a separate
+  target from the row itself so that dropping **on** a list can go on meaning
+  "nest inside it". Folders drag too, and refuse their own descendants.*
 - Support nested folders in both persistence and sidebar presentation.
 - Add move-list-to-folder, move-folder, and keyboard commands.
 - Add a list settings inspector: color, archive state, task count.
@@ -124,6 +128,10 @@ Goal: give the local workspace the planning loop users expect from a desktop tas
 
 - ~~Make Inbox a first-class system list.~~ Done: `task_lists.systemRole`. Found by role rather than by name, so renaming it is safe; archiving and deleting it are refused.
 - Implement Today as a local planning view: manually include tasks, schedule tasks, reorder the day, and show overdue/upcoming work.
+  *Partly done: `DayPlanSelector` derives the day from the running block, the
+  hand-placed Today column, then overdue, due-today and starts-today work, each
+  task claimed once by its strongest reason. The focus panel reads it. Manual
+  reordering of the derived part, and the Upcoming view, are still missing.*
 - Add Upcoming grouped by day/week and a clean unscheduled view.
 - Ensure changing Today does not change a source list unless the user explicitly moves/schedules a task.
 
