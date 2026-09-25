@@ -421,10 +421,10 @@ protocol DailyLogDataSource: AnyObject {
 
   // MARK: - Projections
   //
-  // Memoised because these are called from view bodies *and* from
-  // `PopoverView.panelHeight`, which re-runs on every layout pass. Each
-  // projection nets completions across the entire log, so recomputing them per
-  // pass would put the whole history on the layout path. The cache key folds in
+  // Memoised because these are called from view bodies, and were called from
+  // the legacy panel's height calculation on every layout pass. Each projection
+  // nets completions across the entire log, so recomputing them per pass would
+  // have put the whole history on the layout path. The cache key folds in
   // `revision` and the logical day, so a new event or a rollover invalidates it
   // without anything having to remember to.
 

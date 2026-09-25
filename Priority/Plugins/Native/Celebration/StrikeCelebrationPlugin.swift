@@ -107,11 +107,16 @@ private struct StrikeFlourish: View {
         Spacer(minLength: 0)
       }
     }
-    .padding(.horizontal, PopoverLayout.rowHorizontalPadding)
+    .padding(.horizontal, Self.rowHorizontalPadding)
     .onAppear {
       withAnimation(CelebrationMotion.flourish(reduceMotion: manager.celebration.prefersReducedMotion)) {
         progress = 1
       }
     }
   }
+
+  /// The strike is drawn over a task row, so it has to start and end where the
+  /// row's text does. Held here as its own number now that `PopoverLayout` is
+  /// gone; it was never the popover's measurement so much as a row's.
+  private static let rowHorizontalPadding: CGFloat = 14
 }

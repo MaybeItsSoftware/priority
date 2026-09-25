@@ -61,10 +61,11 @@ import SwiftUI
 
   /// What a half-typed key sequence should say, or nil when none is pending.
   ///
-  /// On the coordinator rather than in the view because the panel has to
-  /// *reserve* room for the line before it draws it — `PopoverLayout` and
-  /// `PopoverView` need the same answer, and a second reading of the key
-  /// buffer would drift from the first.
+  /// On the coordinator rather than in a view because the legacy panel had to
+  /// *reserve* room for the line before drawing it, so its layout and its
+  /// content needed the same answer and a second reading of the key buffer
+  /// would have drifted from the first. That panel is gone; the sequence hint
+  /// stays here because the buffer it reads still does.
   var sequenceInputHint: String? {
     let buffer = quickEntry.keyBuffer.lowercased()
     guard !buffer.isEmpty else { return nil }

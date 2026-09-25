@@ -83,7 +83,7 @@ import PriorityCore
   /// Up-to-date view of the derived caches.
   ///
   /// Reading this rebuilds lazily if anything has invalidated since the last
-  /// read, so external callers (`PopoverView`, `KanbanManager`,
+  /// read, so external callers (`KanbanManager`,
   /// `KanbanTaskDataSourceAdapter`) can't observe a stale snapshot. Previously
   /// `invalidateCaches()` rebuilt eagerly, which kept those readers correct
   /// only by accident and made every single mutation of `tasks` — plus each
