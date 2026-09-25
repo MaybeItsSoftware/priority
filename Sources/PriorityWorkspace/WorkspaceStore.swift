@@ -497,9 +497,14 @@ public final class WorkspaceStore: @unchecked Sendable {
       // Only stamp a task that is newly closed. Re-closing an already closed
       // task — which a sync or a repeated command can do — would otherwise
       // move it into today and inflate the count.
+      let wasOpen = task.completedAt == nil
       task.completedAt = status == .open ? nil : (task.completedAt ?? now)
       task.updatedAt = now
       try task.update(db)
+      // Closing one occurrence of a repeating task writes the next one.
+      if status != .open, wasOpen {
+        try Self.scheduleNextOccurrence(db, after: task, now: now)
+      }
     }
   }
 
@@ -760,7 +765,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     return try Int.fetchOne(db, sql: sql, arguments: arguments) ?? 0
   }
 
-  private static func persistTaskOrder(_ tasks: [WorkspaceTask], db: Database, now: Date) throws {
+  static func persistTaskOrder(_ tasks: [WorkspaceTask], db: Database, now: Date) throws {
     for (index, var task) in tasks.enumerated() {
       task.sortOrder = index
       task.updatedAt = now

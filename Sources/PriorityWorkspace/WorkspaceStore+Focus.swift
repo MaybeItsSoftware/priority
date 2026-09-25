@@ -151,10 +151,12 @@ extension WorkspaceStore {
           } ?? false), now: now, calendar: calendar)
         outcome = .contributionLogged(seconds: credited)
       } else if completeTask, var task = activeTask {
+        let wasOpen = task.completedAt == nil
         task.status = .completed
         task.completedAt = task.completedAt ?? now
         task.updatedAt = now
         try task.update(db)
+        if wasOpen { try Self.scheduleNextOccurrence(db, after: task, now: now, calendar: calendar) }
       }
       var block = FocusWorkBlock(id: blockId, sessionId: session.id, taskId: activeTask?.id,
         taskTitle: activeTask?.title ?? "Deleted task", seconds: max(0, elapsedSeconds), recordedAt: now)

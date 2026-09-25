@@ -67,6 +67,43 @@ final class WorkspaceStoreTests: XCTestCase {
     XCTAssertEqual(progress.elapsedDays, 3)
   }
 
+  func testCompletingAPeriodicTaskSchedulesTheNextOccurrence() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)
+    // Wednesday 2025-09-24, 09:00 UTC.
+    let wednesday = Date(timeIntervalSince1970: 1_758_704_400)
+    let task = try store.createTask(
+      listId: inbox.id, title: "Water the plants", kanbanColumn: "today", startAt: wednesday)
+    try store.updateTaskEditorMetadata(
+      taskId: task.id, metadata: TaskEditorMetadata(recurrenceRule: "every 3 days"))
+
+    try store.setStatus(.completed, for: task.id, now: wednesday)
+
+    // The occurrence you did stays done, so it counts towards the day.
+    let finished = try XCTUnwrap(store.task(id: task.id))
+    XCTAssertEqual(finished.status, .completed)
+    XCTAssertEqual(finished.completedAt, wednesday)
+
+    let repeated = try XCTUnwrap(
+      store.tasks(in: inbox.id).first { $0.id != task.id && $0.title == "Water the plants" })
+    XCTAssertEqual(repeated.status, .open)
+    XCTAssertNil(repeated.completedAt)
+    XCTAssertEqual(try store.startAt(for: repeated.id), wednesday.addingTimeInterval(3 * 86_400))
+    XCTAssertEqual(try store.periodicSchedule(for: repeated.id)?.cadence, .days(3))
+    // It arrives without a claim on a day nobody has planned yet.
+    XCTAssertNil(try store.kanbanColumn(for: repeated.id))
+  }
+
+  func testATaskWithoutARuleIsSimplyCompleted() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)
+    let task = try store.createTask(listId: inbox.id, title: "One-off")
+
+    try store.setStatus(.completed, for: task.id)
+
+    XCTAssertEqual(try store.tasks(in: inbox.id).map(\.id), [task.id])
+  }
+
   func testEverythingShowsVisibleRootsAcrossActiveListsWithoutChangingHierarchy() throws {
     let workspace = try store.bootstrapIfNeeded()
     let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)
