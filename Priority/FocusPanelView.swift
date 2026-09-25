@@ -450,21 +450,9 @@ struct FocusPanelView: View {
 
   /// The day, in the order it is read: the running block, the Today column as
   /// it was arranged by hand, then everything the dates put there — overdue,
-  /// due today, starting today.
-  ///
-  /// Falling back to the ranked candidates when all of that is empty keeps the
-  /// panel useful for a workspace that never adopted the column and dates
-  /// nothing — but they are listed as plain tasks, not as a ladder to climb.
-  private var day: [(task: WorkspaceTask, reason: DayPlanReason?)] {
-    let planned = model.todayPlan.compactMap { entry -> (WorkspaceTask, DayPlanReason)? in
-      guard let task = model.task(withID: entry.id) else { return nil }
-      return (task, entry.reason)
-    }
-    if !planned.isEmpty { return planned.map { (task: $0.0, reason: $0.1) } }
-    return model.focusLadder.prefix(8)
-      .compactMap { model.task(withID: $0.candidate.id) }
-      .map { (task: $0, reason: nil) }
-  }
+  /// due today, starting today. Shared with the menu bar so the two cannot
+  /// disagree about what is on today.
+  private var day: [DayItem] { model.dayItems }
 
   private var dayTasks: [WorkspaceTask] { day.map(\.task) }
 

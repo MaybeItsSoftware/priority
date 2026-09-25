@@ -2,6 +2,15 @@ import Foundation
 import PriorityCore
 import PriorityWorkspace
 
+/// One task in today, and why it is there. `reason` is nil only for the
+/// fallback ranking, where nothing chose the task at all.
+struct DayItem: Identifiable {
+  let task: WorkspaceTask
+  let reason: DayPlanReason?
+
+  var id: String { task.id }
+}
+
 /// Dailies and the next-up ranking. Split from `WorkspaceViewModel.swift` only
 /// for size; the state these read lives on the class itself, because stored
 /// properties cannot be declared in an extension.
@@ -96,6 +105,26 @@ extension WorkspaceViewModel {
         reloadFocus()
       }
     }
+  }
+
+  /// Today, resolved to tasks, with whatever put each one there.
+  ///
+  /// Every surface that shows the day reads this rather than deriving its own:
+  /// the panel, the focus screen and the menu bar have to agree about what
+  /// today is, and three copies of the same fallback is how they stop agreeing.
+  ///
+  /// Falling back to the ranked candidates keeps it useful for a workspace that
+  /// never adopted the Today column and dates nothing — but those are listed as
+  /// plain tasks, with no reason, because none of them were chosen.
+  var dayItems: [DayItem] {
+    let planned = todayPlan.compactMap { entry -> DayItem? in
+      guard let task = task(withID: entry.id) else { return nil }
+      return DayItem(task: task, reason: entry.reason)
+    }
+    if !planned.isEmpty { return planned }
+    return focusLadder.prefix(8)
+      .compactMap { task(withID: $0.candidate.id) }
+      .map { DayItem(task: $0, reason: nil) }
   }
 
   // MARK: - The focus ladder
