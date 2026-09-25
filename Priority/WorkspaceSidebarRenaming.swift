@@ -117,3 +117,38 @@ struct WorkspaceRenameField: View {
     onCancel()
   }
 }
+
+/// The gap between two sidebar rows, as a drop target.
+///
+/// Dropping a list *on* another list nests it, which is a different and
+/// useful thing — so reordering needed somewhere else to land. This is that
+/// somewhere: a hairline that only shows itself while a drag is over it, so
+/// the sidebar does not grow a row of empty strips at rest.
+struct WorkspaceSidebarDropSeparator: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  /// The row this gap sits above, or nil for the gap after the last row.
+  let beforeID: String?
+  /// The folder this group belongs to; nil at the top level.
+  let folderID: String?
+
+  @State private var isTargeted = false
+
+  var body: some View {
+    Rectangle()
+      .fill(isTargeted ? Color.accentColor : .clear)
+      .frame(height: isTargeted ? 2 : 1)
+      .frame(maxWidth: .infinity)
+      // Bigger than it looks, because a 2pt target is one nobody can hit.
+      .padding(.vertical, 3)
+      .contentShape(Rectangle())
+      .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
+      .listRowSeparator(.hidden)
+      .listRowBackground(Color.clear)
+      .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isTargeted) { providers in
+        WorkspaceTaskDrag.readItemID(from: providers) { payload in
+          model.placeDroppedItem(payload, before: beforeID, inFolderID: folderID)
+        }
+      }
+      .accessibilityHidden(true)
+  }
+}

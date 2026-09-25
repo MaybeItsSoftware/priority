@@ -209,12 +209,15 @@ struct WorkspaceDesktopView: View {
             WorkspaceNestedListRow(task: task, promotedShortcut: true)
           }
           ForEach(model.folders.filter { $0.parentFolderId == nil }) { folder in
+            WorkspaceSidebarDropSeparator(beforeID: folder.id, folderID: nil)
             WorkspaceFolderTree(folder: folder)
           }
           ForEach(model.lists.filter { $0.folderId == nil && $0.systemRole != .inbox }) { list in
+            WorkspaceSidebarDropSeparator(beforeID: list.id, folderID: nil)
             sidebarListRow(list)
             WorkspaceNestedListRows(list: list)
           }
+          WorkspaceSidebarDropSeparator(beforeID: nil, folderID: nil)
         } header: {
           HStack {
             Text("Lists")
@@ -946,6 +949,7 @@ private struct WorkspaceFolderTree: View {
       folderHeader
       if model.isFolderExpanded(folder) {
       ForEach(model.lists.filter { $0.folderId == folder.id && $0.systemRole != .inbox }) { list in
+        WorkspaceSidebarDropSeparator(beforeID: list.id, folderID: folder.id)
         WorkspaceSelectableListRow(list: list)
           .tag(Optional(list.id))
           .id(list.id)
@@ -984,7 +988,10 @@ private struct WorkspaceFolderTree: View {
         WorkspaceNestedListRows(list: list)
       }
       .padding(.leading, 14)
+      WorkspaceSidebarDropSeparator(beforeID: nil, folderID: folder.id)
+        .padding(.leading, 14)
       ForEach(model.folders.filter { $0.parentFolderId == folder.id }) { child in
+        WorkspaceSidebarDropSeparator(beforeID: child.id, folderID: folder.id)
         WorkspaceFolderTree(folder: child)
       }
       .padding(.leading, 14)
@@ -1037,6 +1044,7 @@ private struct WorkspaceFolderTree: View {
               lineWidth: 2)
         )
         .contentShape(Rectangle())
+        .onDrag { WorkspaceTaskDrag.provider(forFolder: folder.id) }
         .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
           WorkspaceTaskDrag.readItemID(from: providers) { payload in
             model.moveDroppedItem(payload, toFolderID: folder.id)

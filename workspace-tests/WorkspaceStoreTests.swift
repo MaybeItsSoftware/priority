@@ -322,6 +322,50 @@ final class WorkspaceStoreTests: XCTestCase {
     XCTAssertEqual(try store.lists(in: workspace.id).first(where: { $0.id == project.id })?.folderId, firstFolder.id)
   }
 
+  func testDroppingAListPlacesItWhereItLandedAcrossFolders() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let folder = try store.createFolder(workspaceId: workspace.id, name: "Work")
+    let project = try store.createList(workspaceId: workspace.id, name: "Project")
+    let someday = try store.createList(workspaceId: workspace.id, name: "Someday")
+
+    // Dropped above the Inbox at the top level.
+    let inbox = try XCTUnwrap(store.lists(in: workspace.id).first { $0.systemRole == .inbox })
+    try store.placeList(id: someday.id, before: inbox.id, inFolderId: nil)
+    XCTAssertEqual(
+      try store.lists(in: workspace.id).filter { $0.folderId == nil }.map(\.name),
+      ["Someday", "Inbox", "Project"])
+
+    // A drop with no row below it means the end of the group.
+    try store.placeList(id: someday.id, before: nil, inFolderId: nil)
+    XCTAssertEqual(
+      try store.lists(in: workspace.id).filter { $0.folderId == nil }.map(\.name),
+      ["Inbox", "Project", "Someday"])
+
+    // Crossing into a folder moves and places in one step.
+    try store.placeList(id: project.id, before: nil, inFolderId: folder.id)
+    XCTAssertEqual(try store.lists(in: workspace.id).first { $0.id == project.id }?.folderId, folder.id)
+    XCTAssertEqual(
+      try store.lists(in: workspace.id).filter { $0.folderId == nil }.map(\.name),
+      ["Inbox", "Someday"])
+  }
+
+  func testDroppingAFolderPlacesItAndRefusesItsOwnDescendant() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let first = try store.createFolder(workspaceId: workspace.id, name: "First")
+    let second = try store.createFolder(workspaceId: workspace.id, name: "Second")
+    let child = try store.createFolder(workspaceId: workspace.id, name: "Child", parentFolderId: first.id)
+
+    try store.placeFolder(id: second.id, before: first.id, inParentFolderId: nil)
+    XCTAssertEqual(
+      try store.folders(in: workspace.id).filter { $0.parentFolderId == nil }.map(\.name),
+      ["Second", "First"])
+
+    XCTAssertThrowsError(try store.placeFolder(id: first.id, before: nil, inParentFolderId: child.id)) {
+      XCTAssertEqual($0 as? WorkspaceStoreError, .invalidFolderMove)
+    }
+    XCTAssertEqual(try store.folders(in: workspace.id).first { $0.id == first.id }?.parentFolderId, nil)
+  }
+
   func testTaskEditorMetadataNormalizesAndPersistsInspectorFields() throws {
     let workspace = try store.bootstrapIfNeeded()
     let list = try XCTUnwrap(store.lists(in: workspace.id).first)

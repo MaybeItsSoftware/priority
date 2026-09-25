@@ -464,9 +464,27 @@ struct WorkspaceKanbanCard: View {
 enum WorkspaceTaskDrag {
   static var typeIdentifier: String { UTType.utf8PlainText.identifier }
   static let listPrefix = "priority-list:"
+  static let folderPrefix = "priority-folder:"
 
   static func provider(forList listID: String) -> NSItemProvider {
     provider(for: listPrefix + listID)
+  }
+
+  static func provider(forFolder folderID: String) -> NSItemProvider {
+    provider(for: folderPrefix + folderID)
+  }
+
+  /// The id inside a sidebar payload, whichever kind it is. `nil` for a task
+  /// drag, which sidebar *placement* has no meaning for — a task is moved into
+  /// a list, not between them.
+  static func sidebarItemID(from payload: String) -> (id: String, isFolder: Bool)? {
+    if payload.hasPrefix(folderPrefix) {
+      return (String(payload.dropFirst(folderPrefix.count)), true)
+    }
+    if payload.hasPrefix(listPrefix) {
+      return (String(payload.dropFirst(listPrefix.count)), false)
+    }
+    return nil
   }
 
   static func provider(for taskID: String) -> NSItemProvider {

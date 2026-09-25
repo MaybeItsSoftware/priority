@@ -62,6 +62,27 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// A sidebar item dropped between two rows: put it there.
+  ///
+  /// `beforeID` of nil means the end of that group. Anything that is not a
+  /// list or a folder — a task drag passing over the sidebar — is ignored
+  /// rather than guessed at.
+  func placeDroppedItem(_ payload: String, before beforeID: String?, inFolderID folderID: String?) {
+    guard let store, let item = WorkspaceTaskDrag.sidebarItemID(from: payload) else { return }
+    taskEditor.flush()
+    perform {
+      if item.isFolder {
+        try store.placeFolder(id: item.id, before: beforeID, inParentFolderId: folderID)
+      } else {
+        try store.placeList(id: item.id, before: beforeID, inFolderId: folderID)
+      }
+      if let folderID, let folder = folders.first(where: { $0.id == folderID }) {
+        setFolderExpanded(folder, expanded: true)
+      }
+      try load()
+    }
+  }
+
   func moveDroppedItem(_ payload: String, toFolderID folderID: String?) {
     guard let store else { return }
     taskEditor.flush()
