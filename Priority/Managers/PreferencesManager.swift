@@ -90,9 +90,12 @@ import SwiftUI
   var quickAddHotkeyModifiers: Int {
     didSet { preferencesStore.set(quickAddHotkeyModifiers, for: .quickAddHotkeyModifiers) }
   }
-  /// Whether opening the window lands on the focus screen instead of the
-  /// lists. On by default: the first question the app is there to answer is
-  /// what to do next, and a board of everything is not that answer.
+  /// Whether opening the window lands on the focus screen rather than on
+  /// Today. Off by default now that Today exists: it answers the same question
+  /// — what to do next — without the ladder's conditions, time window and
+  /// estimate to commit to before anything may start. A restored session
+  /// overrides this either way, since a running clock is always what you came
+  /// back for.
   var opensOnFocusScreen: Bool {
     didSet { preferencesStore.set(opensOnFocusScreen, for: .opensOnFocusScreen) }
   }
@@ -178,7 +181,7 @@ import SwiftUI
       .quickAddHotkeyModifiers,
       default: AppCoordinator.CarbonModifier.hyper
     )
-    self.opensOnFocusScreen = preferencesStore.bool(.opensOnFocusScreen, default: true)
+    self.opensOnFocusScreen = preferencesStore.bool(.opensOnFocusScreen, default: false)
     self.quickAddLocationMode =
       QuickAddLocationMode(
         rawValue: preferencesStore.int(.quickAddLocationModeRawValue, default: 0)

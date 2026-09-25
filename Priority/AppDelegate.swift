@@ -153,8 +153,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // What to do next is the question the app exists to answer, so it is the
     // one the first screen asks. Decided before the window is built rather
     // than after, so the lists never flash up behind it.
-    if checkvistManager.preferences.opensOnFocusScreen {
+    //
+    // Today is that screen now. It asks the same question as the focus ladder
+    // without the ceremony of answering it — no conditions, no time window, no
+    // estimate to commit to before anything may begin. A session that survived
+    // the last quit wins over both: coming back to a running clock and being
+    // shown a list instead is the one case where the app knows better.
+    if workspace.activeFocusSession != nil || checkvistManager.preferences.opensOnFocusScreen {
       workspace.presentFocusScreen()
+    } else {
+      workspace.selectViewMode(.today)
     }
 
     // Constructing the workspace above also imports the old offline payload

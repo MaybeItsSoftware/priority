@@ -105,7 +105,7 @@ extension SettingsView {
         VStack(alignment: .leading, spacing: 2) {
           Toggle("Open on the focus screen", isOn: preferenceBinding(\.opensOnFocusScreen))
             .toggleStyle(.switch)
-          Text("The window comes up asking what to do next. Turn this off to land on your lists instead.")
+          Text("The window comes up on Today. Turn this on to land on the focus ladder instead, with its conditions and available time. A running session is shown either way.")
             .font(.caption)
             .foregroundColor(themeColor(.textSecondary))
         }
