@@ -269,11 +269,21 @@ a live clock and a strip of pause, skip, log and done, so a whole block runs
 without the list ever going away. Typing searches every task's title and notes,
 and offers to add what you typed to today.
 
+Anything already done is ticked off from here rather than somewhere else: each
+card's number becomes a tick when the pointer is over it, and `Shift+Return`
+does the same to the card you are on. Finishing plays whichever celebration is
+configured, wherever it was finished from.
+
 A task that owes the day a **daily contribution** is badged where it is read
 rather than gathered into a screen of its own — a daily is a requirement placed
 on an ordinary task, not a kind of item. Clicking the badge records today's
 contribution without starting a block; the task itself stays open until it is
-genuinely finished.
+genuinely finished, and ticking off such a task records the contribution rather
+than closing it.
+
+The window also carries a strip naming which of the four modes is up, and the
+two surfaces — Focus and Timeline — that take the pane away from them, so none
+of it is reachable only by a key you have to already know.
 
 | Key | Action |
 | --- | --- |
@@ -285,6 +295,9 @@ genuinely finished.
 | `Cmd+9` | The day's timeline |
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
+| `Return` | Start the card you are on, or finish the one running |
+| `Shift+Return` | Tick the card off without running a block |
+| `Cmd+Return` | Open the card in the main window |
 
 The digit row used to move the caret between the window's three panes. Changing
 what you are looking at is the bigger thing, so it took the row and pane focus
@@ -321,6 +334,16 @@ While a block is running:
 | `L` | Log progress and keep the task open |
 | `F` | Float it — a small always-on-top clock for working in another app |
 | `Esc` | Leave the pane. The block keeps running |
+
+The quality question is what turns minutes into points, so it is asked by
+default — but **Ask how each focus block went** in Settings turns it off, and
+blocks then close at ×1 without stopping.
+
+The floating clock is a **companion, not a remote control that needs its
+station**: it names the task, draws the block's progress as a hairline, and
+carries pause, log and done, so closing the main window while a block is running
+leaves the clock up rather than taking it away. It appears on its own whenever
+the last window closes on a running block.
 
 `Cmd+9` gives the same pane to the day's **timeline**: every block drawn against
 an hour ruler, with the running one growing live.
