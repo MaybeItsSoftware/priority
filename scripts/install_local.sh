@@ -9,6 +9,11 @@ set -euo pipefail
 # The existing app is moved aside rather than deleted, and /Applications is only
 # touched *after* a successful build, so a compile failure can never leave you
 # without a working app.
+#
+# Exactly one backup is kept. It used to keep every one it ever made, which came
+# to 389MB of superseded builds inside the repo's own tree — a rollback you would
+# use is the one from the install you just replaced, and the fifteen before it
+# are only disk.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 XCODEPROJ="$ROOT_DIR/Priority.xcodeproj"
@@ -50,6 +55,9 @@ if [[ -d "$INSTALL_PATH" ]]; then
   # `ditto` rather than `cp -R` so bundle metadata and symlinks survive intact.
   ditto "$INSTALL_PATH" "$BACKUP_PATH"
   rm -rf "$INSTALL_PATH"
+  # Everything older than the backup just taken.
+  find "$BACKUP_DIR" -maxdepth 1 -name "$APP_NAME.*" ! -name "$(basename "$BACKUP_PATH")" \
+    -exec rm -rf {} +
 fi
 
 echo "==> Installing to $INSTALL_PATH"
