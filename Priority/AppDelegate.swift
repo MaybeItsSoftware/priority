@@ -334,6 +334,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
+  /// Launching Priority while it is already running brings the window back.
+  ///
+  /// Required now that ⌘Q leaves the app alive as a status item: without it,
+  /// opening the app from Spotlight or the Finder reaches a process that is
+  /// already running and does nothing at all, which reads as the app being
+  /// broken rather than as it having been put away.
+  func applicationShouldHandleReopen(
+    _ sender: NSApplication, hasVisibleWindows: Bool
+  ) -> Bool {
+    guard !hasVisibleWindows else { return true }
+    showMainWindow()
+    return false
+  }
+
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
     switch AppTerminationPolicy.decision(
       explicitQuitRequested: explicitQuitRequested,
