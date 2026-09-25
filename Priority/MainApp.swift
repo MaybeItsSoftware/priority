@@ -51,7 +51,12 @@ struct MainApp: App {
           AppDelegate.shared.showMainWindow()
         }
       }
-      CommandMenu("View") {
+      // Into AppKit's own View menu rather than a second one beside it. A
+      // window with a toolbar is given that menu whether or not anything is
+      // put in it, so declaring `CommandMenu("View")` produced two menus with
+      // the same name — the system's holding Enter Full Screen, and ours
+      // holding everything you would go to that menu for.
+      CommandGroup(after: .toolbar) {
         // The places you can actually be, in the order the toolbar strip shows
         // them. This menu used to list the old Checkvist root views, a Refresh
         // and a Diagnostics button — the previous app's furniture, still
