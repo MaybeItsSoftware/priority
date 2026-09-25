@@ -331,7 +331,15 @@ Everything a block needs it can do on its own — pick the task, run the clock,
 pause it, log progress, and score the block when it ends. Nothing in it reaches
 for the main window, so **Priority needs no Dock icon** for any of it: close
 the main window and the app drops to the menu bar, and the panel keeps working
-exactly as before.
+exactly as before, keyboard included. Closing the window while the panel is up
+hands the caret straight back to it.
+
+Under the day's bar, a second line sets today against **the week it belongs
+to**: how many tasks you have finished today, how much time the week has taken
+so far, and what that comes to per day over the days that have actually
+happened. There is no target to configure first — the week is its own
+denominator, which is the only way to know whether a thin-feeling day really is
+one.
 
 | | |
 | --- | --- |
@@ -413,6 +421,40 @@ Each column header carries its card count. Give a column a **WIP limit** and the
 
 Dropping a card into a quadrant column places it on the matrix, the same write the Matrix view's drop makes. Columns defined only by priority, leafness or matrix-absence describe a task rather than ask something of it, so they accept no drops.
 
+## Repeating work
+
+Give a task a **period** — `daily`, `weekdays`, `weekly`, `every 3 days`,
+`every 2 weeks`, `every monday` — and finishing it schedules the next one.
+
+The occurrence you did stays done. It keeps the day it was finished on and
+counts towards the week like any other completed task, and a *new* task is
+written for the next time round, dated by stepping the cadence from the dates
+this one carried. A single row flipped back to open could only ever record the
+last time you did it, which is a week of work that reads as a week of nothing.
+
+Missing a few is not a reset: the cadence steps until it lands in the future,
+so `every 3 days` ignored for a fortnight comes back on its own grid rather
+than arriving already overdue. Nothing pushes the repeat into today — it
+carries a start date, and **the day already claims whatever starts today**.
+That pair is the whole of the autoscheduling; there is no third mechanism and
+nothing to turn on.
+
+The repeat arrives without a column or a ladder position, because a plan for a
+day nobody has made yet is not a plan.
+
+## The menu bar
+
+The status item is a **standing reminder**, not a launcher. It names the next
+thing on today — or, while a block is running, that task and its clock — and
+clicking it drops the day down as a menu you can start any task from without
+the app ever coming to the front. Overdue work is coloured; the tick marks
+whatever is running.
+
+It also **outlives the window**. `⌘Q` closes the windows and leaves the status
+item behind, because a reminder you can dismiss with a keystroke is not a
+reminder. The only quit that actually quits is **Quit Priority** in the status
+item's own menu.
+
 ## The window
 
 The menu bar panel is the point of this app, but it dismisses on any outside
@@ -420,7 +462,7 @@ click and it is 400pt wide — which is right for a glance and wrong for half an
 hour of reorganising, and leaves nowhere to look when something breaks. So the
 same seven views also open in an ordinary window.
 
-Open it from **the status item's right-click menu → Open Main Window**, from the
+Open it from **the status item's menu → Open Main Window**, from the
 command palette (`window`), or with `Cmd+0` once it is up. It is resizable,
 survives clicking away, remembers its frame, and every keybinding works in it
 exactly as it does in the panel — `Esc` cancels what you are typing but leaves

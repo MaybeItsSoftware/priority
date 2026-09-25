@@ -31,7 +31,11 @@ Relevant implementation locations:
 
 1. Local first. All normal task operations work with no account or network connection.
 2. No destructive migration. Import must copy source data, be idempotent, and report results.
-3. The desktop workspace is the only task-editing surface. The menu bar is a launcher/status surface only.
+3. The desktop workspace is the only task-editing surface. The menu bar is a
+   status surface: it names what is next, drops the day down as a menu you can
+   start work from, and outlives the window — `⌘Q` puts the windows away and
+   leaves it running, and only its own Quit item ends the process. It still
+   edits nothing.
 4. Preserve keyboard parity. Every common task operation must be possible without a mouse and be discoverable in the shortcut reference.
 5. Prefer small, reversible database migrations and test each migration with fixture databases.
 6. Do not delete legacy source/data until its desktop replacement exists and migration/export is verified.
@@ -55,6 +59,15 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 ### Task editing and organization
 
 - Add full task inspector fields: due date, estimate, tags, priority, recurrence, links/attachments as appropriate.
+  *Recurrence now does something: `PeriodicSchedule` in `PriorityCore` owns the
+  vocabulary (`daily`, `weekdays`, `weekly`, `every N days/weeks`, `every
+  <weekday>`) and completing a task that carries one closes that occurrence for
+  good and writes the next as a new task, dated by stepping the cadence from the
+  dates the finished one carried. It steps past a gap rather than restarting, so
+  an ignored rhythm returns in the future rather than already overdue. Nothing
+  pushes it into today — it carries a start date and the day claims whatever
+  starts today. `RecurrenceRule` is now a shell over the same parser rather than
+  a second copy of it.*
 - Create/delete/rename/reorder/move/indent/outdent tasks.
 - Support moving tasks between lists while preserving subtrees.
 - Implement multi-selection and bulk complete/move/tag/delete.
@@ -182,6 +195,14 @@ Goal: match the low-friction focus flow of Blitzit and add Super Productivity-st
 - Add manual start/stop tracking per task and project.
 - Persist work logs independently from task completion.
 - Add daily/weekly reports: focused time, estimates versus actuals, completed work, and project distribution.
+  *Partly done: tasks now record `completedAt` in a column of their own — it was
+  `updatedAt`, which moved whenever a finished task was edited — and
+  `WorkProgressSummary` gives today's completions and logged time the week's
+  equivalents as a denominator, along with the week's average over the days that
+  have actually elapsed. The focus panel shows it under the day's bar. It is
+  deliberately relative to the week rather than to a configured target, since a
+  goal you must set up before the number means anything is a goal you will not
+  set up. Estimates-versus-actuals and project distribution are still missing.*
 - Allow CSV/JSON export of time logs.
 
 ### Acceptance criteria
