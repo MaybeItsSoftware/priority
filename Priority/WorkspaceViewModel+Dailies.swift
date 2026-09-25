@@ -72,7 +72,14 @@ extension WorkspaceViewModel {
       let selectedID = focusLadderTaskID
       if let workspace { focusConditions = try store.conditions(in: workspace.id) }
       let now = Date.now
-      let ranking = NextUpSelector.evaluate(try store.nextUpCandidates(now: now), now: now, context: effectiveFocusContext)
+      let candidates = try store.nextUpCandidates(now: now)
+      // The day is gathered from every candidate rather than from the ranked
+      // ones: a task due today that a condition currently rules out is still
+      // part of today, and leaving it out would be the panel quietly deciding
+      // the day was shorter than it is.
+      todayPlan = DayPlanSelector.plan(
+        candidates: candidates, runningID: activeFocusSession?.activeTaskId, now: now)
+      let ranking = NextUpSelector.evaluate(candidates, now: now, context: effectiveFocusContext)
       let ranked = ranking.ranked
       focusLadder = ranked
       blockedFocusTasks = ranking.blocked

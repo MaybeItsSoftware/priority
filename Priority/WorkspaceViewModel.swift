@@ -640,6 +640,11 @@ enum WorkspaceSidebarItem: Identifiable {
   /// than computed, because every row needs a database round trip and the list
   /// is read on every render of the dailies surface.
   var dailyItems: [DailyItem] = []
+  /// Today's work and what put each task there: the Today column, plus
+  /// anything due today, overdue, or starting today. Derived on every
+  /// `reloadNextUp()` rather than written into the column, so clearing the
+  /// column still clears the plan and tomorrow's day is not yesterday's.
+  var todayPlan: [DayPlanEntry] = []
   /// What the focus screen offers, and why. Nil when there is nothing to do —
   /// which is a real state worth rendering, not an error.
   var nextUp: ScoredNextUp?

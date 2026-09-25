@@ -448,31 +448,38 @@ struct FocusPanelView: View {
 
   private var activeTaskID: String? { model.activeFocusTask?.id }
 
-  /// The day: whatever is in the Today column, with the running task first
-  /// even when it came from somewhere else.
+  /// The day, in the order it is read: the running block, the Today column as
+  /// it was arranged by hand, then everything the dates put there — overdue,
+  /// due today, starting today.
   ///
-  /// Falling back to the ranked candidates when Today is empty keeps the panel
-  /// useful for a workspace that never adopted the column — but they are
-  /// listed as plain tasks, not as a ladder to climb.
-  private var dayTasks: [WorkspaceTask] {
-    var tasks = model.todayTasks
-    if tasks.isEmpty {
-      tasks = model.focusLadder.prefix(8).compactMap { model.task(withID: $0.candidate.id) }
+  /// Falling back to the ranked candidates when all of that is empty keeps the
+  /// panel useful for a workspace that never adopted the column and dates
+  /// nothing — but they are listed as plain tasks, not as a ladder to climb.
+  private var day: [(task: WorkspaceTask, reason: DayPlanReason?)] {
+    let planned = model.todayPlan.compactMap { entry -> (WorkspaceTask, DayPlanReason)? in
+      guard let task = model.task(withID: entry.id) else { return nil }
+      return (task, entry.reason)
     }
-    guard let active = model.activeFocusTask else { return tasks }
-    return [active] + tasks.filter { $0.id != active.id }
+    if !planned.isEmpty { return planned.map { (task: $0.0, reason: $0.1) } }
+    return model.focusLadder.prefix(8)
+      .compactMap { model.task(withID: $0.candidate.id) }
+      .map { (task: $0, reason: nil) }
   }
+
+  private var dayTasks: [WorkspaceTask] { day.map(\.task) }
 
   /// Every row the keyboard can land on, in the order it sees them.
   private var rows: [FocusPanelRow] {
     let trimmed = query.trimmingCharacters(in: .whitespaces)
     if trimmed.isEmpty {
-      return dayTasks.enumerated().map { index, task in
+      return day.enumerated().map { index, entry in
         FocusPanelRow(
-          id: task.id, title: task.title,
-          listName: model.list(for: task)?.name,
-          detail: task.dueAt.map { "Due \($0.formatted(.relative(presentation: .named)))" },
-          kind: .task(task, index + 1, task.id == activeTaskID))
+          id: entry.task.id, title: entry.task.title,
+          listName: model.list(for: entry.task)?.name,
+          // Why it is in the day beats when it is due: "overdue" is the thing
+          // worth reading, and the deadline is what made it say that.
+          detail: detail(for: entry.task, reason: entry.reason),
+          kind: .task(entry.task, index + 1, entry.task.id == activeTaskID))
       }
     }
     var found: [FocusPanelRow] = results.prefix(10).map { result in
@@ -483,6 +490,16 @@ struct FocusPanelView: View {
     }
     found.append(FocusPanelRow(id: Self.createRowID, title: trimmed, listName: nil, detail: nil, kind: .create))
     return found
+  }
+
+  /// A derived reason is worth saying; `.planned` is not, because every card
+  /// under an empty field is in the day and saying so on each one is noise.
+  private func detail(for task: WorkspaceTask, reason: DayPlanReason?) -> String? {
+    switch reason {
+    case .overdue, .dueToday, .startsToday: return reason?.label
+    case .running, .planned, nil:
+      return task.dueAt.map { "Due \($0.formatted(.relative(presentation: .named)))" }
+    }
   }
 
   private var hasQueuedSuccessor: Bool {
