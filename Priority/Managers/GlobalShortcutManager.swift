@@ -5,7 +5,7 @@ import Combine
 @MainActor
 class GlobalShortcutManager {
   private enum RegisteredHotkeyID: UInt32 {
-    case togglePopover = 1
+    case toggleMainWindow = 1
     case quickAdd = 2
     case focusPanel = 3
   }
@@ -19,7 +19,7 @@ class GlobalShortcutManager {
   private var cancellables = Set<AnyCancellable>()
 
   // Event handlers
-  var onTogglePopover: (() -> Void)?
+  var onToggleMainWindow: (() -> Void)?
   var onQuickAdd: (() -> Void)?
   var onToggleFocusPanel: (() -> Void)?
 
@@ -69,8 +69,8 @@ class GlobalShortcutManager {
   func handleGlobalHotkeyPressed(id: UInt32) {
     guard let registeredID = RegisteredHotkeyID(rawValue: id) else { return }
     switch registeredID {
-    case .togglePopover:
-      onTogglePopover?()
+    case .toggleMainWindow:
+      onToggleMainWindow?()
     case .quickAdd:
       onQuickAdd?()
     case .focusPanel:
@@ -83,7 +83,7 @@ class GlobalShortcutManager {
 
     if manager.preferences.globalHotkeyEnabled {
       globalHotkeyRef = registerHotkey(
-        id: .togglePopover,
+        id: .toggleMainWindow,
         keyCode: manager.preferences.globalHotkeyKeyCode,
         modifiers: manager.preferences.globalHotkeyModifiers
       )

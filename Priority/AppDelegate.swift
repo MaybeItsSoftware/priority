@@ -68,7 +68,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     menuBarController.onQuit = { [weak self] in
       self?.menuQuit()
     }
-    menuBarController.usesDesktopWorkspace = true
 
     checkvistManager.focusSessionManager.onAlert = { [weak self] in
       guard let self else { return }
@@ -140,7 +139,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     shortcutManager = GlobalShortcutManager(manager: checkvistManager)
-    shortcutManager.onTogglePopover = { [weak self] in
+    shortcutManager.onToggleMainWindow = { [weak self] in
       self?.mainWindowController.toggle()
     }
     shortcutManager.onQuickAdd = { [weak self] in
