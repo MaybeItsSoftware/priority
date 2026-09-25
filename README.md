@@ -303,6 +303,19 @@ until you press `Esc` or the hotkey again. Drag it anywhere, drag its edges to
 resize, and it comes back the same next time. It is a panel you leave up while
 you work, not an overlay you summon and lose.
 
+What it shows is **the day as a list of cards** — whatever is in the Today
+column, numbered, each with its estimate and the time already on it, under a bar
+showing what the day is meant to cost against what it has cost so far. Press a
+card and it starts; the card you are on grows a live clock and its own strip of
+controls — pause, skip, log, done — while the rest of the list stays visible
+underneath. Finished work collects at the bottom, one line per task rather than
+one per sitting.
+
+It deliberately does **not** put you through the focus screen's questions.
+Conditions, an available-time window and an estimate to commit to before you may
+begin are how you decide what a day should be; this is the panel you keep open
+while working it, so pressing play on a row is the whole gesture.
+
 Everything a block needs it can do on its own — pick the task, run the clock,
 pause it, log progress, and score the block when it ends. Nothing in it reaches
 for the main window, so **Priority needs no Dock icon** for any of it: close
@@ -311,14 +324,13 @@ exactly as before.
 
 | | |
 | --- | --- |
-| **Empty field, nothing running** | The shortlist of what to start, in the order the ladder offers it |
-| **Empty field, block running** | That block: task, clock, pause, log and done |
-| **Anything typed** | Every task whose title or notes match, wherever it lives |
+| **Empty field** | Today's cards, running task first. A workspace with no Today column falls back to the ranked shortlist |
+| **Anything typed** | Every task whose title or notes match, wherever it lives, with *Add “…” to today* at the foot |
 
 | Key | Action |
 | --- | --- |
 | `↑` / `↓` | Choose |
-| `Return` | Start focus on it — or, with a block already running, queue it. On the running block, Done |
+| `Return` | Start it — or, with a block already running, queue it. On the running card, Done. On the add row, create it in Today |
 | `Cmd+Return` | Open it in the main window instead |
 | `Esc` | Clear the field, then hide the panel |
 | `Cmd+C` / `Cmd+V` | Copy and paste, sent straight to the field — an app with no Dock icon has no Edit menu to route them |

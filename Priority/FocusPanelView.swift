@@ -2,12 +2,14 @@ import PriorityCore
 import PriorityWorkspace
 import SwiftUI
 
-/// What the summoned panel shows: a field you are already typing into, and
-/// under it either the block you are running or the shortlist of what to start.
+/// The panel's contents: the day as a list of cards, with the one you are on
+/// carrying its own controls.
 ///
-/// The field is always there and always first responder, because the fastest
-/// path to a task is its name and the panel cannot know in advance whether you
-/// summoned it to check the clock or to go and find something.
+/// It deliberately does *not* put you through the focus screen's questions —
+/// conditions, an available-time window, an estimate to commit to before you
+/// may begin. That ceremony belongs to deciding what a day should be. This is
+/// the panel you keep open while working it, so a task is a row you press play
+/// on, and the row you are on grows a pause, a skip and a tick.
 struct FocusPanelView: View {
   @Environment(WorkspaceViewModel.self) private var model
   let summons: FocusPanelSummons
@@ -18,14 +20,19 @@ struct FocusPanelView: View {
   @State private var selectedID: String?
   @FocusState private var isFieldFocused: Bool
 
+  /// The id the create row answers to. A task's id is a UUID, so this cannot
+  /// collide with one.
+  private static let createRowID = "priority:create"
+
   var body: some View {
     VStack(spacing: 0) {
       if let pending = model.panelFocusCompletion {
         // Scoring a block is one question with one answer, so it gets the
-        // panel to itself rather than sitting under a search field that has
-        // nothing to offer while it is up.
+        // panel to itself rather than sitting under a list it cannot act on.
         ScrollView { WorkspaceFocusQualityPrompt(pending: pending, fixedWidth: nil) }
       } else {
+        header
+        summary
         field
         FocusRule()
         content
@@ -47,31 +54,29 @@ struct FocusPanelView: View {
       results = trimmed.isEmpty ? [] : model.searchResults(matching: trimmed)
       selectDefault()
     }
-    .onChange(of: model.focusLadder.map(\.id)) { _, _ in selectDefault() }
+    .onChange(of: rows.map(\.id)) { _, _ in selectDefault() }
   }
 
-  // MARK: - The field
+  // MARK: - Chrome
 
-  private var field: some View {
-    HStack(spacing: 10) {
-      Image(systemName: isRunning && query.isEmpty ? "timer" : "magnifyingglass")
-        .font(.system(size: 15))
-        .foregroundStyle(isRunning && query.isEmpty ? Color.accentColor : .secondary)
-      TextField(fieldPrompt, text: $query)
-        .textFieldStyle(.plain)
-        .font(.system(size: 19))
-        .focused($isFieldFocused)
-        .onKeyPress(.upArrow) { move(by: -1); return .handled }
-        .onKeyPress(.downArrow) { move(by: 1); return .handled }
-        .onKeyPress(.escape) { dismissOrClear(); return .handled }
-        .onKeyPress(keys: [.return], phases: .down) { press in
-          if press.modifiers.contains(.command) { revealSelection() } else { act() }
-          return .handled
-        }
+  private var header: some View {
+    HStack(spacing: 8) {
+      Text("Today")
+        .font(.system(size: 20, weight: .semibold))
+      MicroLabel(scopeName)
+      Spacer(minLength: 8)
       Text("\(FocusPoints.formatted(model.focusPoints.today)) pts")
         .font(.system(size: 11, design: .monospaced))
         .foregroundStyle(.tertiary)
         .help("Minutes focused today, multiplied by how well each block went")
+      Button { openInWindow() } label: {
+        Image(systemName: "macwindow")
+          .font(.system(size: 12, weight: .medium))
+      }
+      .buttonStyle(.plain)
+      .foregroundStyle(.tertiary)
+      .help("Open the main window (⌘↵)")
+      .accessibilityLabel("Open the main window")
       Button { onClose(.back) } label: {
         Image(systemName: "xmark")
           .font(.system(size: 11, weight: .semibold))
@@ -81,224 +86,428 @@ struct FocusPanelView: View {
       .help("Hide the panel (esc)")
       .accessibilityLabel("Hide the focus panel")
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 16)
+    .padding(.horizontal, 18)
+    .padding(.top, 16)
+    .padding(.bottom, 10)
   }
 
-  private var fieldPrompt: String {
-    if isRunning { return "Search to queue something else…" }
-    return "Search every task, or pick one below…"
+  /// What the day is supposed to cost against what it has cost so far. A bar
+  /// rather than a second row of numbers: the question it answers is "how far
+  /// through", which is a length, not a figure to read.
+  private var summary: some View {
+    let estimated = dayTasks.reduce(0) { $0 + ($1.estimateSeconds ?? 0) }
+    let logged = loggedToday
+    let fraction = estimated > 0 ? min(1, Double(logged) / Double(estimated)) : 0
+    return VStack(alignment: .leading, spacing: 6) {
+      HStack(spacing: 0) {
+        MicroLabel(estimated > 0 ? "Est \(duration(estimated))" : "No estimates yet")
+        Spacer(minLength: 8)
+        MicroLabel(logged > 0 ? "\(duration(logged)) logged" : "Nothing logged yet")
+      }
+      GeometryReader { proxy in
+        ZStack(alignment: .leading) {
+          Capsule().fill(Color.primary.opacity(0.08))
+          Capsule()
+            .fill(Color.accentColor)
+            .frame(width: max(fraction > 0 ? 3 : 0, proxy.size.width * fraction))
+        }
+      }
+      .frame(height: 4)
+    }
+    .padding(.horizontal, 18)
+    .padding(.bottom, 12)
   }
 
-  // MARK: - Body states
+  private var field: some View {
+    HStack(spacing: 9) {
+      Image(systemName: "magnifyingglass")
+        .font(.system(size: 12))
+        .foregroundStyle(.tertiary)
+      TextField("Search, or type to add a task…", text: $query)
+        .textFieldStyle(.plain)
+        .font(.system(size: 14))
+        .focused($isFieldFocused)
+        .onKeyPress(.upArrow) { move(by: -1); return .handled }
+        .onKeyPress(.downArrow) { move(by: 1); return .handled }
+        .onKeyPress(.escape) { dismissOrClear(); return .handled }
+        .onKeyPress(keys: [.return], phases: .down) { press in
+          if press.modifiers.contains(.command) { openInWindow() } else { activateSelection() }
+          return .handled
+        }
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+    .overlay(
+      RoundedRectangle(cornerRadius: 6)
+        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
+    .padding(.horizontal, 18)
+    .padding(.bottom, 12)
+  }
+
+  private var hints: some View {
+    HStack(spacing: 14) {
+      KeyHint("↑ ↓", "Choose")
+      KeyHint("↵", returnHint)
+      Spacer(minLength: 0)
+      KeyHint("esc", query.isEmpty ? "Hide" : "Clear")
+    }
+    .padding(.horizontal, 18)
+    .padding(.vertical, 9)
+  }
+
+  private var returnHint: String {
+    if selectedID == Self.createRowID { return "Add to today" }
+    if let id = selectedID, id == model.activeFocusTask?.id { return "Done" }
+    return "Start it"
+  }
+
+  // MARK: - The list
 
   @ViewBuilder
   private var content: some View {
-    if isRunning, query.isEmpty, let session = model.activeFocusSession, let task = model.activeFocusTask {
-      running(session: session, task: task)
-    } else if picks.isEmpty {
+    if rows.isEmpty {
       empty
     } else {
-      list
+      ScrollViewReader { proxy in
+        ScrollView {
+          LazyVStack(spacing: 6) {
+            ForEach(rows) { row in
+              view(for: row)
+                .id(row.id)
+            }
+            if query.isEmpty { addHint }
+            if !loggedBlocks.isEmpty { logged }
+          }
+          .padding(.horizontal, 14)
+          .padding(.vertical, 10)
+        }
+        .onChange(of: selectedID) { _, id in
+          guard let id else { return }
+          withAnimation(.easeOut(duration: 0.12)) { proxy.scrollTo(id, anchor: .center) }
+        }
+      }
     }
   }
 
   private var empty: some View {
     VStack(spacing: 6) {
       Spacer()
-      Text(query.isEmpty ? "Nothing is available right now" : "No matches")
+      Text(query.isEmpty ? "Nothing planned for today" : "No matches")
         .font(.callout)
         .foregroundStyle(.secondary)
       Text(query.isEmpty
-        ? "No task fits the current conditions, start times and available time."
-        : "Try part of a title, or a word from the notes.")
+        ? "Type a title and press Return to add the first one."
+        : "Return adds “\(query.trimmingCharacters(in: .whitespaces))” to today.")
         .font(.caption)
         .foregroundStyle(.tertiary)
+        .multilineTextAlignment(.center)
       Spacer()
     }
     .frame(maxWidth: .infinity)
+    .padding(.horizontal, 24)
   }
 
-  private var list: some View {
-    ScrollViewReader { proxy in
-      ScrollView {
-        LazyVStack(spacing: 0) {
-          ForEach(picks) { pick in
-            row(pick)
-              .id(pick.id)
-              .contentShape(Rectangle())
-              .onTapGesture { selectedID = pick.id; act() }
-          }
-        }
-        .padding(.vertical, 6)
-      }
-      .onChange(of: selectedID) { _, id in
-        guard let id else { return }
-        proxy.scrollTo(id, anchor: .center)
+  @ViewBuilder
+  private func view(for row: FocusPanelRow) -> some View {
+    switch row.kind {
+    case .create:
+      createRow(row)
+    case .task(let task, let index, let isActive):
+      if isActive, let session = model.activeFocusSession {
+        activeCard(task: task, index: index, session: session)
+      } else {
+        taskCard(task: task, index: index, listName: row.listName, detail: row.detail)
       }
     }
   }
 
-  private func row(_ pick: FocusPanelPick) -> some View {
-    let isSelected = pick.id == selectedID
-    return HStack(spacing: 10) {
-      Image(systemName: pick.icon)
-        .font(.system(size: 13))
-        .foregroundStyle(pick.tint)
-        .frame(width: 18)
-      VStack(alignment: .leading, spacing: 2) {
-        Text(pick.title)
-          .font(.system(size: 14, weight: .medium))
+  /// An ordinary row: what it is, what it should cost, what it has cost.
+  private func taskCard(task: WorkspaceTask, index: Int?, listName: String?, detail: String?) -> some View {
+    card(id: task.id) {
+      VStack(alignment: .leading, spacing: 5) {
+        HStack(spacing: 8) {
+          if let index {
+            Text("\(index)")
+              .font(.system(size: 11, weight: .semibold, design: .monospaced))
+              .foregroundStyle(.tertiary)
+              .frame(minWidth: 12, alignment: .trailing)
+          }
+          Text(task.title)
+            .font(.system(size: 14, weight: .medium))
+            .lineLimit(1)
+            .truncationMode(.tail)
+          Spacer(minLength: 8)
+          if let listName { MicroLabel(listName).lineLimit(1) }
+        }
+        HStack(spacing: 8) {
+          Text(task.estimateSeconds.map { duration($0) } ?? "No estimate")
+            .font(.system(size: 11))
+            .foregroundStyle(.tertiary)
+          if let detail {
+            Text(detail)
+              .font(.system(size: 11))
+              .foregroundStyle(.tertiary)
+              .lineLimit(1)
+          }
+          Spacer(minLength: 8)
+          Text(clock(model.taskLoggedSeconds[task.id] ?? 0))
+            .font(.system(size: 11, design: .monospaced))
+            .foregroundStyle(.tertiary)
+        }
+      }
+    } action: {
+      start(task)
+    }
+  }
+
+  /// The row you are on. Same card, grown: a live clock, and the controls that
+  /// only ever apply to the task actually running.
+  private func activeCard(task: WorkspaceTask, index: Int?, session: FocusSession) -> some View {
+    card(id: task.id, isActive: true) {
+      VStack(alignment: .leading, spacing: 9) {
+        HStack(spacing: 8) {
+          if let index {
+            Text("\(index)")
+              .font(.system(size: 11, weight: .semibold, design: .monospaced))
+              .foregroundStyle(Color.accentColor)
+              .frame(minWidth: 12, alignment: .trailing)
+          }
+          Text(task.title)
+            .font(.system(size: 15, weight: .semibold))
+            .lineLimit(2)
+          Spacer(minLength: 8)
+          if let list = model.list(for: task) { MicroLabel(list.name).lineLimit(1) }
+        }
+        HStack(spacing: 10) {
+          TimelineView(.periodic(from: .now, by: 1)) { context in
+            let reading = FocusTimerDisplay.reading(
+              elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
+              planned: TimeInterval(session.workDurationSeconds))
+            Text(reading.text)
+              .font(.system(size: 26, weight: .semibold, design: .monospaced))
+              .monospacedDigit()
+              .foregroundStyle(session.pausedAt == nil
+                ? (reading.isOverrun ? Color.orange : Color.accentColor) : Color.secondary)
+              .contentTransition(.numericText())
+          }
+          MicroLabel(
+            session.pausedAt == nil ? "of \(duration(session.workDurationSeconds))" : "paused",
+            tint: session.pausedAt == nil ? nil : Color.orange)
+          Spacer(minLength: 0)
+        }
+        controlStrip(session: session)
+      }
+    } action: {
+      finish()
+    }
+  }
+
+  /// Blitzit's strip, in Priority's vocabulary: pause, skip to the next queued
+  /// task, log the time without closing anything, and tick it off.
+  private func controlStrip(session: FocusSession) -> some View {
+    HStack(spacing: 4) {
+      control(session.pausedAt == nil ? "pause.fill" : "play.fill",
+        session.pausedAt == nil ? "Pause" : "Resume") { model.toggleFocusPause() }
+      control("forward.end.fill", "Skip to the next task in the queue") { skip() }
+        .disabled(!hasQueuedSuccessor)
+      control("clock.arrow.circlepath", "Log the time so far and leave the task open") { logProgress() }
+      Spacer(minLength: 0)
+      Button { finish() } label: {
+        Label("Done", systemImage: "checkmark")
+          .font(.system(size: 12, weight: .medium))
+      }
+      .buttonStyle(.borderedProminent)
+      .controlSize(.small)
+      .focusable(false)
+    }
+  }
+
+  private func control(_ symbol: String, _ help: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Image(systemName: symbol)
+        .font(.system(size: 12))
+        .frame(width: 26, height: 22)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.bordered)
+    .controlSize(.small)
+    .focusable(false)
+    .help(help)
+    .accessibilityLabel(help)
+  }
+
+  private func createRow(_ row: FocusPanelRow) -> some View {
+    card(id: row.id) {
+      HStack(spacing: 8) {
+        Image(systemName: "plus")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundStyle(Color.accentColor)
+        Text("Add “\(row.title)” to today")
+          .font(.system(size: 13, weight: .medium))
           .lineLimit(1)
-          .truncationMode(.tail)
-        if let detail = pick.detail {
-          Text(detail)
-            .font(.caption2)
+        Spacer(minLength: 0)
+      }
+    } action: {
+      createFromQuery()
+    }
+  }
+
+  private var addHint: some View {
+    HStack(spacing: 8) {
+      Image(systemName: "plus")
+        .font(.system(size: 11, weight: .semibold))
+      Text("ADD TASK")
+        .font(.system(size: 10, weight: .bold))
+        .tracking(1.5)
+      Spacer(minLength: 0)
+      Text("type a title, then ↵")
+        .font(.system(size: 11))
+    }
+    .foregroundStyle(.tertiary)
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .contentShape(Rectangle())
+    .onTapGesture { isFieldFocused = true }
+  }
+
+  /// One card shape for every row, so a row that gains controls is visibly the
+  /// same row rather than a different kind of thing.
+  private func card<Content: View>(
+    id: String, isActive: Bool = false, @ViewBuilder content: () -> Content,
+    action: @escaping () -> Void
+  ) -> some View {
+    let isSelected = id == selectedID
+    return content()
+      .padding(.horizontal, 12)
+      .padding(.vertical, 10)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(
+        isActive ? Color.accentColor.opacity(0.10) : Color.primary.opacity(isSelected ? 0.07 : 0.035),
+        in: RoundedRectangle(cornerRadius: 8))
+      .overlay(
+        RoundedRectangle(cornerRadius: 8)
+          .strokeBorder(
+            isActive ? Color.accentColor.opacity(0.55)
+              : Color.primary.opacity(isSelected ? 0.22 : 0.08),
+            lineWidth: 1))
+      .contentShape(RoundedRectangle(cornerRadius: 8))
+      .onTapGesture { selectedID = id; action() }
+  }
+
+  // MARK: - Today's logged work
+
+  private var logged: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(spacing: 0) {
+        MicroLabel("\(loggedBlocks.count) logged today")
+        Spacer(minLength: 8)
+        MicroLabel(duration(loggedToday))
+      }
+      .padding(.top, 8)
+      ForEach(loggedBlocks, id: \.title) { entry in
+        HStack(spacing: 8) {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 11))
+            .foregroundStyle(.tertiary)
+          Text(entry.title)
+            .font(.system(size: 12))
             .foregroundStyle(.secondary)
             .lineLimit(1)
+            .truncationMode(.tail)
+          Spacer(minLength: 8)
+          Text(duration(entry.seconds))
+            .font(.system(size: 11, design: .monospaced))
+            .foregroundStyle(.tertiary)
         }
       }
-      Spacer(minLength: 12)
-      if let listName = pick.listName {
-        MicroLabel(listName)
-          .lineLimit(1)
-      }
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 9)
-    .background(isSelected ? Color.accentColor.opacity(0.16) : .clear)
-    .overlay(alignment: .leading) {
-      if isSelected {
-        Rectangle().fill(Color.accentColor).frame(width: 2)
-      }
-    }
+    .padding(.horizontal, 12)
+    .padding(.top, 4)
   }
 
-  /// The running block, cut down to what you summoned the panel to see: what
-  /// you are on, how long it has been, and the one key that ends it.
-  private func running(session: FocusSession, task: WorkspaceTask) -> some View {
-    VStack(spacing: 14) {
-      Spacer(minLength: 0)
-      if let list = model.list(for: task) { MicroLabel(list.name) }
-      Text(task.title)
-        .font(.system(size: 21, weight: .semibold))
-        .multilineTextAlignment(.center)
-        .lineLimit(2)
-        .fixedSize(horizontal: false, vertical: true)
-      TimelineView(.periodic(from: .now, by: 1)) { context in
-        let reading = FocusTimerDisplay.reading(
-          elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
-          planned: TimeInterval(session.workDurationSeconds))
-        VStack(spacing: 4) {
-          Text(reading.text)
-            .font(.system(size: 54, weight: .semibold, design: .monospaced))
-            .monospacedDigit()
-            .foregroundStyle(session.pausedAt == nil
-              ? (reading.isOverrun ? Color.orange : Color.accentColor) : Color.secondary)
-            .contentTransition(.numericText())
-          MicroLabel(session.pausedAt == nil ? "of \(plannedMinutes(session))m" : "paused",
-            tint: session.pausedAt == nil ? nil : Color.orange)
-        }
-      }
-      HStack(spacing: 8) {
-        Button {
-          model.toggleFocusPause()
-        } label: {
-          Label(session.pausedAt == nil ? "Pause" : "Resume",
-            systemImage: session.pausedAt == nil ? "pause.fill" : "play.fill")
-        }
-        .buttonStyle(.bordered)
-        .focusable(false)
-        Button {
-          logProgress()
-        } label: {
-          Label("Log", systemImage: "clock.arrow.circlepath")
-        }
-        .buttonStyle(.bordered)
-        .focusable(false)
-        .help("Record the time so far and leave the task open")
-        Button {
-          finish()
-        } label: {
-          Label("Done", systemImage: "checkmark")
-        }
-        .buttonStyle(.borderedProminent)
-        .focusable(false)
-      }
-      Spacer(minLength: 0)
+  /// Today's blocks, one line per task rather than one per sitting: three
+  /// twenty-minute goes at the same thing is an hour on it, not three rows.
+  private var loggedBlocks: [(title: String, seconds: Int)] {
+    var order: [String] = []
+    var totals: [String: Int] = [:]
+    for block in model.todayWorkBlocks {
+      if totals[block.taskTitle] == nil { order.append(block.taskTitle) }
+      totals[block.taskTitle, default: 0] += block.seconds
     }
-    .padding(.horizontal, 24)
-    .frame(maxWidth: .infinity)
+    return order.map { (title: $0, seconds: totals[$0] ?? 0) }
   }
 
-  private func plannedMinutes(_ session: FocusSession) -> String {
-    FocusPoints.formatted(Double(session.workDurationSeconds) / 60)
+  private var loggedToday: Int { model.todayWorkBlocks.reduce(0) { $0 + $1.seconds } }
+
+  // MARK: - What is in the list
+
+  private var scopeName: String {
+    model.isEverythingSelected ? "Everything" : (model.selectedList?.name ?? "Workspace")
   }
 
-  // MARK: - Hints
+  private var activeTaskID: String? { model.activeFocusTask?.id }
 
-  private var hints: some View {
-    HStack(spacing: 14) {
-      if isRunning, query.isEmpty {
-        KeyHint("↵", "Done")
-        KeyHint("⌘↵", "Open in window")
-      } else {
-        KeyHint("↑ ↓", "Choose")
-        KeyHint("↵", isRunning ? "Queue it" : "Start focus")
-        KeyHint("⌘↵", "Open in window")
-      }
-      Spacer(minLength: 0)
-      KeyHint("esc", query.isEmpty ? "Hide" : "Clear")
+  /// The day: whatever is in the Today column, with the running task first
+  /// even when it came from somewhere else.
+  ///
+  /// Falling back to the ranked candidates when Today is empty keeps the panel
+  /// useful for a workspace that never adopted the column — but they are
+  /// listed as plain tasks, not as a ladder to climb.
+  private var dayTasks: [WorkspaceTask] {
+    var tasks = model.todayTasks
+    if tasks.isEmpty {
+      tasks = model.focusLadder.prefix(8).compactMap { model.task(withID: $0.candidate.id) }
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 10)
+    guard let active = model.activeFocusTask else { return tasks }
+    return [active] + tasks.filter { $0.id != active.id }
   }
 
-  // MARK: - What is on offer
-
-  private var isRunning: Bool { model.activeFocusSession != nil && model.activeFocusTask != nil }
-
-  /// The ladder when there is no query, matches when there is. Capped because
-  /// this is a shortlist to act on, not a list to read.
-  private var picks: [FocusPanelPick] {
-    if query.trimmingCharacters(in: .whitespaces).isEmpty {
-      return model.focusLadder.prefix(8).map { scored in
-        FocusPanelPick(
-          id: scored.candidate.id,
-          title: scored.candidate.title,
-          listName: model.task(withID: scored.candidate.id).flatMap { model.list(for: $0)?.name },
-          detail: model.focusExplanation(scored).localizedCapitalized,
-          icon: Self.icon(for: scored.reason),
-          tint: Self.tint(for: scored.reason))
+  /// Every row the keyboard can land on, in the order it sees them.
+  private var rows: [FocusPanelRow] {
+    let trimmed = query.trimmingCharacters(in: .whitespaces)
+    if trimmed.isEmpty {
+      return dayTasks.enumerated().map { index, task in
+        FocusPanelRow(
+          id: task.id, title: task.title,
+          listName: model.list(for: task)?.name,
+          detail: task.dueAt.map { "Due \($0.formatted(.relative(presentation: .named)))" },
+          kind: .task(task, index + 1, task.id == activeTaskID))
       }
     }
-    return results.prefix(12).map { result in
-      FocusPanelPick(
-        id: result.task.id,
-        title: result.task.title,
-        listName: result.list.name,
+    var found: [FocusPanelRow] = results.prefix(10).map { result in
+      FocusPanelRow(
+        id: result.task.id, title: result.task.title, listName: result.list.name,
         detail: result.notesSnippet,
-        icon: result.task.status == .completed ? "checkmark.circle" : "circle",
-        tint: .secondary)
+        kind: .task(result.task, nil, result.task.id == activeTaskID))
     }
+    found.append(FocusPanelRow(id: Self.createRowID, title: trimmed, listName: nil, detail: nil, kind: .create))
+    return found
   }
 
-  /// What a fresh summon looks like: an empty field with the caret in it.
+  private var hasQueuedSuccessor: Bool {
+    model.focusQueue.contains { $0.item.state == .queued && $0.task.id != activeTaskID }
+  }
+
+  // MARK: - Selection
+
+  /// What a fresh summon looks like: an empty field with the caret in it, and
+  /// the running task — or the top of the day — under the cursor.
   private func reset() {
     query = ""
     results = []
     isFieldFocused = true
-    selectDefault()
+    selectedID = activeTaskID ?? rows.first?.id
   }
 
   private func selectDefault() {
-    let ids = picks.map(\.id)
+    let ids = rows.map(\.id)
     if let selectedID, ids.contains(selectedID) { return }
     selectedID = ids.first
   }
 
   private func move(by offset: Int) {
-    let ids = picks.map(\.id)
+    let ids = rows.map(\.id)
     guard !ids.isEmpty else { return }
     let current = selectedID.flatMap { ids.firstIndex(of: $0) } ?? 0
     selectedID = ids[min(max(0, current + offset), ids.count - 1)]
@@ -310,23 +519,33 @@ struct FocusPanelView: View {
     if query.isEmpty { onClose(.back) } else { query = "" }
   }
 
-  /// Return. What it does depends on what the panel is showing, which is the
-  /// point: one key, always the obvious thing.
-  private func act() {
-    if isRunning, query.isEmpty { finish(); return }
-    guard let id = selectedID, let task = model.task(withID: id) else { return }
-    if isRunning {
-      // A session is already running, so a second pick joins the queue rather
-      // than interrupting the block that is underway.
+  private func activateSelection() {
+    guard let id = selectedID else { return }
+    if id == Self.createRowID { createFromQuery(); return }
+    if id == activeTaskID { finish(); return }
+    guard let task = model.task(withID: id) else { return }
+    start(task)
+  }
+
+  /// Starting from here is deliberately unconditional. The focus screen asks
+  /// whether a task is available and how long you mean to give it; pressing
+  /// play on a row is an answer to both, and the alert that would argue lives
+  /// in a window that is not on screen.
+  private func start(_ task: WorkspaceTask) {
+    guard task.id != activeTaskID else { finish(); return }
+    if model.activeFocusSession != nil {
       model.addToFocusQueue(task)
       query = ""
       return
     }
-    // Summoning a task by name is an explicit choice, so it is started even if
-    // the conditions would not have offered it — the alert that would ask
-    // about that lives in the main window, which is not on screen here.
     model.startFocus(on: task, override: true)
-    onClose(.back)
+    query = ""
+  }
+
+  private func skip() {
+    // Logging the current block is what advances the queue; nothing is thrown
+    // away by moving on.
+    model.requestFocusCompletion(completeTask: false, from: .panel)
   }
 
   /// Done. The question that follows is asked here rather than in the window:
@@ -342,12 +561,17 @@ struct FocusPanelView: View {
     model.requestFocusCompletion(completeTask: false, from: .panel)
   }
 
-  private func revealSelection() {
+  private func createFromQuery() {
+    let title = query.trimmingCharacters(in: .whitespaces)
+    guard !title.isEmpty else { return }
+    model.createBoardTask(named: title, in: model.boardColumns.first { $0.id == "today" })
+    query = ""
+  }
+
+  private func openInWindow() {
     onClose(.toWindow)
     AppDelegate.shared.showMainWindow()
-    if isRunning, query.isEmpty {
-      model.presentFocusScreen()
-    } else if let id = selectedID, let result = results.first(where: { $0.task.id == id }) {
+    if let id = selectedID, let result = results.first(where: { $0.task.id == id }) {
       model.reveal(result)
     } else if let id = selectedID, let task = model.task(withID: id) {
       model.selectTask(task)
@@ -355,43 +579,36 @@ struct FocusPanelView: View {
     }
   }
 
-  // MARK: - Reason vocabulary
+  // MARK: - Formatting
 
-  private static func icon(for reason: NextUpReason) -> String {
-    switch reason {
-    case .daily: return "arrow.triangle.2.circlepath"
-    case .overdue: return "exclamationmark.triangle.fill"
-    case .dueToday: return "calendar.badge.exclamationmark"
-    case .dueSoon: return "calendar"
-    case .today: return "sun.max"
-    case .importance: return "star.fill"
-    case .priority: return "flag.fill"
-    case .order: return "list.bullet"
-    case .condition: return "location.fill"
-    case .started: return "clock.badge.checkmark"
-    case .deadlineRisk: return "hourglass"
-    }
+  /// Hours and minutes, never seconds: an estimate measured to the second is
+  /// a precision nobody typed in.
+  private func duration(_ seconds: Int) -> String {
+    let minutes = max(0, seconds) / 60
+    if minutes < 60 { return "\(minutes)m" }
+    let remainder = minutes % 60
+    return remainder == 0 ? "\(minutes / 60)h" : "\(minutes / 60)h \(remainder)m"
   }
 
-  private static func tint(for reason: NextUpReason) -> Color {
-    switch reason {
-    case .daily: return .green
-    case .overdue: return .red
-    case .dueToday, .dueSoon, .deadlineRisk: return .orange
-    case .condition, .started, .today: return .accentColor
-    case .importance, .priority: return .purple
-    case .order: return .secondary
-    }
+  /// A stopwatch reading for time already spent on a task, so the column of
+  /// them lines up whatever the numbers are.
+  private func clock(_ seconds: Int) -> String {
+    let total = max(0, seconds)
+    return String(format: "%02d:%02d", total / 3600, (total % 3600) / 60)
   }
 }
 
-/// One offered task, however it was found. The ladder and the search index
-/// produce different shapes; the row only ever sees this one.
-private struct FocusPanelPick: Identifiable {
+/// One row of the panel, whatever put it there. The list only ever sees this.
+private struct FocusPanelRow: Identifiable {
+  enum Kind {
+    /// The task, its position in the day, and whether it is the one running.
+    case task(WorkspaceTask, Int?, Bool)
+    case create
+  }
+
   let id: String
   let title: String
   let listName: String?
   let detail: String?
-  let icon: String
-  let tint: Color
+  let kind: Kind
 }

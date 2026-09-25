@@ -285,6 +285,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Written only by `reloadFocus()`; read by the panel and the prompt.
   var focusPoints: FocusPointsSummary = .zero
   var focusHistoryDate = Date.now
+  /// Today's finished blocks, always today's. `focusHistory` follows the
+  /// timeline's own day picker, so a surface that means "today" cannot read it
+  /// — steering the timeline to last Tuesday would change what it said.
+  private(set) var todayWorkBlocks: [FocusWorkBlock] = []
   private(set) var focusHistory: [FocusWorkBlock] = []
   /// What the blocks in `focusHistory` were scored, keyed by block id — an
   /// award carries the block's own id. Blocks finished without a judgement
@@ -1235,6 +1239,9 @@ enum WorkspaceSidebarItem: Identifiable {
         focusQueue = []
       }
       focusPoints = try store.focusPointsSummary()
+      if let today = Calendar.current.dateInterval(of: .day, for: .now) {
+        todayWorkBlocks = try store.focusWorkBlocks(in: today)
+      }
       if let day = Calendar.current.dateInterval(of: .day, for: focusHistoryDate) {
         focusHistory = try store.focusWorkBlocks(in: day)
         focusHistoryAwards = Dictionary(

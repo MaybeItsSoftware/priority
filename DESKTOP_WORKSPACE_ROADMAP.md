@@ -63,9 +63,15 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 - ~~Add local full-text search across task title and notes (SQLite FTS is preferred).~~ Done: external-content FTS5 over title and notes, kept level by triggers. ⌘F.
 - ~~Reach focus without going to the app.~~ Done: a global hotkey (`⌃⌥⇧⌘F`) summons a
   floating focus panel over whatever you are in, with the caret already in its
-  field. Empty it offers the ladder, or the running block; typed it searches
-  every task's title and notes. Return starts or queues, ⌘Return opens the task
-  in the window, Escape hands the keyboard back to the app it interrupted.
+  field. Empty it shows the day as a list of numbered cards — the Today column,
+  each with its estimate and time-on-task, under a bar of planned against
+  logged — with the running card grown to carry a live clock and a pause / skip
+  / log / done strip. Typed it searches every task's title and notes and offers
+  to add what was typed to today. Return starts, queues or creates, ⌘Return
+  opens the task in the window, Escape hands the keyboard back to the app it
+  interrupted. It carries none of the focus screen's ceremony — conditions, a
+  time window, an estimate committed to up front — because that is how a day is
+  decided, and this is the surface for working one.
   It is a window you leave up rather than an overlay that vanishes on the next
   click — movable, resizable, and remembered — because the thing most worth
   seeing while you work elsewhere is the clock that is running. It is also

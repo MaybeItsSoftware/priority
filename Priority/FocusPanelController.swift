@@ -18,12 +18,12 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
   /// The size it comes up at the first time. After that its own frame is
   /// remembered, because a window you can move and resize but which forgets is
   /// worse than one you cannot move at all.
-  private static let defaultSize = NSSize(width: 640, height: 560)
-  private static let minSize = NSSize(width: 460, height: 380)
+  private static let defaultSize = NSSize(width: 420, height: 640)
+  private static let minSize = NSSize(width: 340, height: 380)
   /// Where the first one lands: slightly above centre, out of the way of the
   /// menu bar, on whichever screen the pointer is on.
   private static let verticalAnchor: CGFloat = 0.14
-  private static let frameAutosaveName = "PriorityFocusPanelV1"
+  private static let frameAutosaveName = "PriorityFocusPanelV2"
 
   private var panel: FocusPanelWindow?
   private var interruptedApp: NSRunningApplication?
