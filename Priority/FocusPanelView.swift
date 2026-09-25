@@ -113,9 +113,32 @@ struct FocusPanelView: View {
         }
       }
       .frame(height: 4)
+      weekLine
     }
     .padding(.horizontal, 18)
     .padding(.bottom, 12)
+  }
+
+  /// Today's finished work set against the week so far.
+  ///
+  /// The day's own bar answers "how far through today am I"; this answers the
+  /// question you only notice on a bad day — whether today is actually worse
+  /// than the rest of the week, or only feels it. The week is its own
+  /// denominator, so there is no target to set up before the line means
+  /// anything.
+  @ViewBuilder private var weekLine: some View {
+    let progress = model.workProgress
+    if progress.week.seconds > 0 || progress.week.completed > 0 {
+      HStack(spacing: 0) {
+        MicroLabel(
+          progress.today.completed == 1
+            ? "1 done today" : "\(progress.today.completed) done today")
+        Spacer(minLength: 8)
+        MicroLabel(
+          "\(duration(progress.week.seconds)) this week · \(duration(progress.averageSecondsPerDay))/day")
+      }
+      .padding(.top, 2)
+    }
   }
 
   private var field: some View {

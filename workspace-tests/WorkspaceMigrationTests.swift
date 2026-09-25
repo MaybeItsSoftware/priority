@@ -25,6 +25,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v13_legacy_visible_roots",
     "v14_nested_lists",
     "v15_kanban_board_history",
+    "v16_task_completion_time",
   ]
 
   private var directoryURL: URL!
@@ -155,18 +156,19 @@ final class WorkspaceMigrationTests: XCTestCase {
       }
       try db.execute(sql: "ALTER TABLE task_metadata DROP COLUMN planningJSON")
       try db.execute(sql: "ALTER TABLE task_lists DROP COLUMN completedAt")
-      for column in ["itemKind", "isPromoted", "archivedAt"] {
+      for column in ["completedAt", "itemKind", "isPromoted", "archivedAt"] {
         try db.execute(sql: "ALTER TABLE tasks DROP COLUMN \(column)")
       }
       try db.execute(sql: "DROP INDEX tasks_on_source")
       try db.execute(sql: "ALTER TABLE tasks DROP COLUMN sourceSystem")
       try db.execute(sql: "ALTER TABLE tasks DROP COLUMN sourceId")
       try db.execute(
-        sql: "DELETE FROM grdb_migrations WHERE identifier IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        sql: "DELETE FROM grdb_migrations WHERE identifier IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         arguments: ["v5_task_source_identity", "v6_inbox_as_a_system_list",
                     "v7_task_full_text_search", "v8_undo_journal", "v9_focus_block_start",
                     "v10_focus_points", "v11_stable_visible_roots", "v12_task_conditions_and_work",
-                    "v13_legacy_visible_roots", "v14_nested_lists", "v15_kanban_board_history"])
+                    "v13_legacy_visible_roots", "v14_nested_lists", "v15_kanban_board_history",
+                    "v16_task_completion_time"])
     }
 
     let migrated = try WorkspaceStore(databaseURL: url)

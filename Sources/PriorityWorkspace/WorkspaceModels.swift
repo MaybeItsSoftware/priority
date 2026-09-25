@@ -87,6 +87,10 @@ public struct WorkspaceTask: Codable, FetchableRecord, PersistableRecord, Identi
   public var itemKind: WorkspaceItemKind?
   public var isPromoted: Bool?
   public var archivedAt: Date?
+  /// When the task was closed, kept separately from `updatedAt` because
+  /// editing a finished task must not move the day it was finished on.
+  /// Nil whenever `status` is open, and cleared on reopening.
+  public var completedAt: Date? = nil
   public let createdAt: Date
   public var updatedAt: Date
 

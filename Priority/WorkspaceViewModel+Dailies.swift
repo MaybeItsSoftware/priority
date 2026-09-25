@@ -88,6 +88,7 @@ extension WorkspaceViewModel {
       // the day was shorter than it is.
       todayPlan = DayPlanSelector.plan(
         candidates: candidates, runningID: activeFocusSession?.activeTaskId, now: now)
+      workProgress = try store.workProgress(now: now)
       let ranking = NextUpSelector.evaluate(candidates, now: now, context: effectiveFocusContext)
       let ranked = ranking.ranked
       focusLadder = ranked

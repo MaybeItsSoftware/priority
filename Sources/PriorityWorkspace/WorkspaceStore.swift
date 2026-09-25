@@ -494,6 +494,10 @@ public final class WorkspaceStore: @unchecked Sendable {
     try journalledWrite("Change Status") { db in
       guard var task = try WorkspaceTask.fetchOne(db, key: taskId) else { return }
       task.status = status
+      // Only stamp a task that is newly closed. Re-closing an already closed
+      // task — which a sync or a repeated command can do — would otherwise
+      // move it into today and inflate the count.
+      task.completedAt = status == .open ? nil : (task.completedAt ?? now)
       task.updatedAt = now
       try task.update(db)
     }
@@ -1114,6 +1118,20 @@ public final class WorkspaceStore: @unchecked Sendable {
         table.column("id", .text).primaryKey()
         table.column("columnsJSON", .text).notNull()
       }
+      try WorkspaceStore.installChangeLogTriggers(db)
+    }
+    migrator.registerMigration("v16_task_completion_time") { db in
+      try db.alter(table: "tasks") { table in
+        table.add(column: "completedAt", .datetime)
+      }
+      // Existing rows only know when they were last touched. For a task that
+      // is already closed that is the closest thing to a completion date the
+      // schema ever recorded, so it is backfilled rather than left null —
+      // a week's history that starts empty would read as a week of no work.
+      try db.execute(sql: """
+        UPDATE tasks SET completedAt = updatedAt
+        WHERE status = 'completed' AND completedAt IS NULL
+        """)
       try WorkspaceStore.installChangeLogTriggers(db)
     }
 

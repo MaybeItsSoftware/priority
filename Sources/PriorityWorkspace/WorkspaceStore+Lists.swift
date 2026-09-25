@@ -94,6 +94,7 @@ extension WorkspaceStore {
       root.isPromoted = nil
       root.archivedAt = nil
       root.status = list.completedAt == nil ? .open : .completed
+      root.completedAt = list.completedAt
       root.sortOrder = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM tasks WHERE listId = ? AND parentTaskId IS ?", arguments: [destination.id, parentTaskId]) ?? 0
       root.updatedAt = now
       if wrapper == nil { try root.insert(db) }

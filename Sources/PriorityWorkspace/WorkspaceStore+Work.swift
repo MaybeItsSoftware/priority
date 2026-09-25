@@ -28,6 +28,31 @@ extension WorkspaceStore {
     }
   }
 
+  /// When each task in the interval was closed. Lists are left out: closing a
+  /// container is bookkeeping, not a unit of work done.
+  public func taskCompletions(in interval: DateInterval) throws -> [Date] {
+    try database.read { db in
+      try Date.fetchAll(db, sql: """
+        SELECT completedAt FROM tasks
+        WHERE completedAt IS NOT NULL AND completedAt >= ? AND completedAt < ?
+          AND COALESCE(itemKind, 'task') <> 'list'
+        ORDER BY completedAt
+        """, arguments: [interval.start, interval.end])
+    }
+  }
+
+  /// Today measured against the week it is part of.
+  public func workProgress(now: Date = .now, calendar: Calendar = .current) throws -> WorkProgress {
+    let start = WorkProgressSummary.startOfWeek(containing: now, calendar: calendar)
+    let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+    guard end > start else { return .empty }
+    let interval = DateInterval(start: start, end: end)
+    return WorkProgressSummary.summarise(
+      completions: try taskCompletions(in: interval),
+      blocks: try focusWorkBlocks(in: interval).map { (seconds: $0.seconds, recordedAt: $0.recordedAt) },
+      now: now, calendar: calendar)
+  }
+
   public func pauseFocusSession(id: String, now: Date = .now) throws {
     try database.write { db in
       guard var session = try FocusSession.fetchOne(db, key: id), session.phase == .running,

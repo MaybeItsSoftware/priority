@@ -645,6 +645,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// `reloadNextUp()` rather than written into the column, so clearing the
   /// column still clears the plan and tomorrow's day is not yesterday's.
   var todayPlan: [DayPlanEntry] = []
+  /// Tasks finished and time logged today, against the same for the week so
+  /// far. Refreshed alongside the day rather than on a ticker — it only moves
+  /// when work is finished or logged, which is exactly when the day reloads.
+  var workProgress: WorkProgress = .empty
   /// What the focus screen offers, and why. Nil when there is nothing to do —
   /// which is a real state worth rendering, not an error.
   var nextUp: ScoredNextUp?

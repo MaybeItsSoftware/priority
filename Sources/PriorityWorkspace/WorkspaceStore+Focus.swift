@@ -152,6 +152,7 @@ extension WorkspaceStore {
         outcome = .contributionLogged(seconds: credited)
       } else if completeTask, var task = activeTask {
         task.status = .completed
+        task.completedAt = task.completedAt ?? now
         task.updatedAt = now
         try task.update(db)
       }

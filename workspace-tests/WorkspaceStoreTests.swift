@@ -25,6 +25,48 @@ final class WorkspaceStoreTests: XCTestCase {
     XCTAssertEqual(try store.bootstrapIfNeeded().id, workspace.id)
   }
 
+  func testCompletionTimeIsStampedOnceAndClearedOnReopening() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)
+    let task = try store.createTask(listId: inbox.id, title: "Write it up")
+    let monday = Date(timeIntervalSince1970: 1_758_542_400)
+    let tuesday = monday.addingTimeInterval(86_400)
+
+    try store.setStatus(.completed, for: task.id, now: monday)
+    XCTAssertEqual(try store.task(id: task.id)?.completedAt, monday)
+
+    // Closing an already-closed task must not move the day it was finished on.
+    try store.setStatus(.completed, for: task.id, now: tuesday)
+    XCTAssertEqual(try store.task(id: task.id)?.completedAt, monday)
+
+    try store.setStatus(.open, for: task.id, now: tuesday)
+    XCTAssertNil(try store.task(id: task.id)?.completedAt)
+  }
+
+  func testWorkProgressSeparatesTodayFromTheWeekAndIgnoresLists() throws {
+    let workspace = try store.bootstrapIfNeeded()
+    let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC")!
+    calendar.firstWeekday = 2
+    // Wednesday 2025-09-24, mid-afternoon.
+    let now = Date(timeIntervalSince1970: 1_758_726_000)
+    let yesterday = now.addingTimeInterval(-86_400)
+
+    let today = try store.createTask(listId: inbox.id, title: "Today's task")
+    let earlier = try store.createTask(listId: inbox.id, title: "Monday's task")
+    try store.setStatus(.completed, for: today.id, now: now)
+    try store.setStatus(.completed, for: earlier.id, now: yesterday)
+    // A list closing is bookkeeping, not a unit of work.
+    let project = try store.createList(workspaceId: workspace.id, name: "Project")
+    try store.setListCompleted(true, id: project.id, now: now)
+
+    let progress = try store.workProgress(now: now, calendar: calendar)
+    XCTAssertEqual(progress.today.completed, 1)
+    XCTAssertEqual(progress.week.completed, 2)
+    XCTAssertEqual(progress.elapsedDays, 3)
+  }
+
   func testEverythingShowsVisibleRootsAcrossActiveListsWithoutChangingHierarchy() throws {
     let workspace = try store.bootstrapIfNeeded()
     let inbox = try XCTUnwrap(store.lists(in: workspace.id).first)
