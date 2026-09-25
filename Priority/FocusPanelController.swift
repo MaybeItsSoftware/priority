@@ -41,22 +41,17 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
   func show(model: WorkspaceViewModel) {
     let panel = makePanelIfNeeded(model: model)
     if !NSApp.isActive { interruptedApp = NSWorkspace.shared.frontmostApplication }
-    // Deliberately *not* `NSApp.activate`: activating raises every window the
-    // app owns, so summoning the panel dragged the main window up with it.
-    // A non-activating panel can take key on its own account, which is the
-    // whole reason for that style mask.
-    panel.makeKeyAndOrderFront(nil)
+    // Order and take key *before* activating, so the panel is what the app has
+    // forward when it becomes active.
+    panel.orderFrontRegardless()
+    panel.makeKey()
+    // `NSApp.activate(ignoringOtherApps:)` is `activateAllWindows`, which is
+    // why summoning the panel used to drag the main window up with it. This
+    // one brings the app forward with only its key window — the panel — and
+    // leaves everything else of Priority's where it was.
+    NSRunningApplication.current.activate()
     summons.count += 1
     model.reloadNextUp()
-    // Belt and braces. If the panel somehow did not take key — a state the
-    // window server is entitled to refuse — a panel that cannot be typed into
-    // is useless, so activating and raising the main window is the lesser
-    // failure.
-    DispatchQueue.main.async { [weak self] in
-      guard let self, self.panel === panel, panel.isVisible, !panel.isKeyWindow else { return }
-      NSApp.activate(ignoringOtherApps: true)
-      panel.makeKeyAndOrderFront(nil)
-    }
   }
 
   /// Closes the panel. `.back` hands the keyboard to whatever the hotkey
