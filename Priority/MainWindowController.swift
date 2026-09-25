@@ -59,6 +59,13 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     }
   }
 
+  /// Puts the window away without ending the session. The counterpart to
+  /// `show()` for a quit that is meant to leave the menu bar behind.
+  func hide() {
+    guard let window, window.isVisible else { return }
+    window.close()
+  }
+
   private func makeWindowIfNeeded() -> NSWindow {
     if let window { return window }
 

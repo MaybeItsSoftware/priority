@@ -102,13 +102,14 @@ final class CoreLogicRegressionTests: XCTestCase {
     )
   }
 
-  func testAppTerminationPolicyHonoursQuitOnceTheAppHasADockIcon() {
-    // Cmd-Q from the app menu never sets the explicit flag, so without this the
-    // shortcut would silently do nothing in windowed mode.
+  func testAppTerminationPolicyDismissesToTheMenuBarInsteadOfQuitting() {
+    // Cmd-Q from the app menu never sets the explicit flag. It has to do
+    // something visible — otherwise the shortcut looks broken — but it must not
+    // take the status item away with it.
     XCTAssertEqual(
       AppTerminationPolicy.decision(
         explicitQuitRequested: false, isRegularActivationPolicy: true),
-      .terminateNow
+      .dismissToMenuBar
     )
     XCTAssertEqual(
       AppTerminationPolicy.decision(

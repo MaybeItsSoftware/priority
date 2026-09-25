@@ -335,6 +335,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     ) {
     case .terminateNow:
       return .terminateNow
+    case .dismissToMenuBar:
+      // Flush first: from here on the app is only a status item, and a draft
+      // left in an editor that is about to be closed is a draft lost.
+      workspace?.taskEditor.flush()
+      focusPanelController.dismiss(.back)
+      mainWindowController.hide()
     case .cancel:
       break
     }
