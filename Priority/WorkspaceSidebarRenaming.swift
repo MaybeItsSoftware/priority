@@ -1,8 +1,14 @@
 import PriorityWorkspace
 import SwiftUI
 
-/// Use a real button for navigation so drag and rename gestures do not own
-/// the single-click action. Keep text-field interaction separate while editing.
+/// A selectable sidebar row, which is deliberately not a `Button`.
+///
+/// It was one, on the reasoning that a real button keeps the single-click
+/// action away from the drag and rename gestures. What that actually did was
+/// hand the whole row to the button: a button owns the mouse from the moment it
+/// goes down, so the `.onDrag` wrapped around this row never started and lists
+/// could not be dragged at all. A tap gesture yields to a drag that passes the
+/// distance threshold, which is the behaviour both need.
 struct WorkspaceSelectableListRow: View {
   @Environment(WorkspaceViewModel.self) private var model
   let list: TaskList
@@ -11,14 +17,18 @@ struct WorkspaceSelectableListRow: View {
     if model.isRenaming(.list(list)) {
       rowLabel
     } else {
-      Button {
-        model.selectList(list.id)
-        model.reportKeyboardFocus(.sidebar)
-      } label: {
-        rowLabel
-      }
-      .buttonStyle(.plain)
+      rowLabel
+        .onTapGesture { select() }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(list.name)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { select() }
     }
+  }
+
+  private func select() {
+    model.selectList(list.id)
+    model.reportKeyboardFocus(.sidebar)
   }
 
   private var rowLabel: some View {
@@ -30,7 +40,7 @@ struct WorkspaceSelectableListRow: View {
       Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.vertical, 5)
+    .padding(.vertical, 3)
     .contentShape(Rectangle())
   }
 }
@@ -115,40 +125,5 @@ struct WorkspaceRenameField: View {
     guard !didFinish else { return }
     didFinish = true
     onCancel()
-  }
-}
-
-/// The gap between two sidebar rows, as a drop target.
-///
-/// Dropping a list *on* another list nests it, which is a different and
-/// useful thing — so reordering needed somewhere else to land. This is that
-/// somewhere: a hairline that only shows itself while a drag is over it, so
-/// the sidebar does not grow a row of empty strips at rest.
-struct WorkspaceSidebarDropSeparator: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  /// The row this gap sits above, or nil for the gap after the last row.
-  let beforeID: String?
-  /// The folder this group belongs to; nil at the top level.
-  let folderID: String?
-
-  @State private var isTargeted = false
-
-  var body: some View {
-    Rectangle()
-      .fill(isTargeted ? Color.accentColor : .clear)
-      .frame(height: isTargeted ? 2 : 1)
-      .frame(maxWidth: .infinity)
-      // Bigger than it looks, because a 2pt target is one nobody can hit.
-      .padding(.vertical, 3)
-      .contentShape(Rectangle())
-      .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
-      .listRowSeparator(.hidden)
-      .listRowBackground(Color.clear)
-      .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isTargeted) { providers in
-        WorkspaceTaskDrag.readItemID(from: providers) { payload in
-          model.placeDroppedItem(payload, before: beforeID, inFolderID: folderID)
-        }
-      }
-      .accessibilityHidden(true)
   }
 }

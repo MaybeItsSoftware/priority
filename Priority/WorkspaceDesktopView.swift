@@ -183,7 +183,7 @@ struct WorkspaceDesktopView: View {
         } label: {
           Label("Everything", systemImage: "square.stack.3d.up")
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 5)
+            .padding(.vertical, 3)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -201,16 +201,15 @@ struct WorkspaceDesktopView: View {
           ForEach(model.promotedLists) { task in
             WorkspaceNestedListRow(task: task, promotedShortcut: true)
           }
-          ForEach(model.folders.filter { $0.parentFolderId == nil }) { folder in
-            WorkspaceSidebarDropSeparator(beforeID: folder.id, folderID: nil)
-            WorkspaceFolderTree(folder: folder)
+          let rootFolders = model.folders.filter { $0.parentFolderId == nil }
+          ForEach(rootFolders) { folder in
+            WorkspaceFolderTree(folder: folder, isLastInGroup: folder.id == rootFolders.last?.id)
           }
-          ForEach(model.lists.filter { $0.folderId == nil && $0.systemRole != .inbox }) { list in
-            WorkspaceSidebarDropSeparator(beforeID: list.id, folderID: nil)
-            sidebarListRow(list)
+          let rootLists = model.lists.filter { $0.folderId == nil && $0.systemRole != .inbox }
+          ForEach(rootLists) { list in
+            sidebarListRow(list, isLastInGroup: list.id == rootLists.last?.id)
             WorkspaceNestedListRows(list: list)
           }
-          WorkspaceSidebarDropSeparator(beforeID: nil, folderID: nil)
         } header: {
           HStack {
             Text("Lists")
@@ -232,6 +231,10 @@ struct WorkspaceDesktopView: View {
         }
       }
       .listStyle(.sidebar)
+      // A sidebar row is otherwise given the height AppKit reserves for a
+      // two-line source-list item, which on a list of one-line names reads as
+      // double spacing.
+      .environment(\.defaultMinListRowHeight, 22)
       .animation(.easeInOut(duration: 0.22), value: model.lists.map { "\($0.id)/\($0.folderId ?? "root")" })
       .animation(.easeInOut(duration: 0.22), value: model.folders.map { "\($0.id)/\($0.parentFolderId ?? "root")" })
       .animation(.easeInOut(duration: 0.22), value: model.nestedLists.map { "\($0.id)/\($0.task.parentTaskId ?? "root")/\($0.task.isPromoted == true)" })
@@ -273,7 +276,7 @@ struct WorkspaceDesktopView: View {
     .background(.bar)
   }
 
-  private func sidebarListRow(_ list: TaskList) -> some View {
+  private func sidebarListRow(_ list: TaskList, isLastInGroup: Bool = false) -> some View {
     WorkspaceSelectableListRow(list: list)
       .tag(Optional(list.id))
       .id(list.id)
@@ -281,18 +284,13 @@ struct WorkspaceDesktopView: View {
       .listRowBackground(
         WorkspaceSidebarSelectionBackground(
           isSelected: model.selectedFolderID == nil && model.currentSidebarID == list.id))
-      .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: Binding(
-        get: { model.dragDestinationListID == list.id },
-        set: { model.dragDestinationListID = $0 ? list.id : nil }
-      )) { providers in
-        WorkspaceTaskDrag.readItemID(from: providers) { payload in
-          model.moveDroppedItem(payload, toListID: list.id)
+      .workspaceSidebarDrop(isLastInGroup: isLastInGroup) { payload, placement in
+        switch placement {
+        case .into: model.moveDroppedItem(payload, toListID: list.id)
+        case .before: model.placeDroppedItem(payload, before: list.id, inFolderID: list.folderId)
+        case .after: model.placeDroppedItem(payload, before: nil, inFolderID: list.folderId)
         }
       }
-      .background(
-        model.dragDestinationListID == list.id ? Color.accentColor.opacity(0.16) : .clear,
-        in: RoundedRectangle(cornerRadius: 6)
-      )
       .contextMenu {
         Menu("Choose icon") {
           ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
@@ -905,18 +903,20 @@ private struct WorkspaceNestedListRow: View {
   @State private var isDropTargeted = false
 
   var body: some View {
-    Button { model.selectNestedList(task) } label: {
-      HStack(spacing: 7) {
-        Image(systemName: model.itemSymbol(for: task)).frame(width: 18)
-        Text(task.title).lineLimit(1).truncationMode(.middle).strikethrough(task.status != .open)
-        Spacer(minLength: 0)
-        if promotedShortcut { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary) }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.vertical, 5)
-      .contentShape(Rectangle())
+    HStack(spacing: 7) {
+      Image(systemName: model.itemSymbol(for: task)).frame(width: 18)
+      Text(task.title).lineLimit(1).truncationMode(.middle).strikethrough(task.status != .open)
+      Spacer(minLength: 0)
+      if promotedShortcut { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary) }
     }
-    .buttonStyle(.plain)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.vertical, 3)
+    .contentShape(Rectangle())
+    .onTapGesture { model.selectNestedList(task) }
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(task.title)
+    .accessibilityAddTraits(.isButton)
+    .accessibilityAction { model.selectNestedList(task) }
     .focusable().focusEffectDisabled()
     .id(promotedShortcut ? "promoted:\(task.id)" : task.id)
     .listRowBackground(WorkspaceSidebarSelectionBackground(
@@ -935,14 +935,16 @@ private struct WorkspaceNestedListRow: View {
 private struct WorkspaceFolderTree: View {
   @Environment(WorkspaceViewModel.self) private var model
   let folder: ListFolder
-  @State private var isDropTargeted = false
+  /// Whether this is the last folder among its siblings, and so the one whose
+  /// bottom edge means "at the end of the folders".
+  var isLastInGroup = false
 
   var body: some View {
     Group {
       folderHeader
       if model.isFolderExpanded(folder) {
-      ForEach(model.lists.filter { $0.folderId == folder.id && $0.systemRole != .inbox }) { list in
-        WorkspaceSidebarDropSeparator(beforeID: list.id, folderID: folder.id)
+      let folderLists = model.lists.filter { $0.folderId == folder.id && $0.systemRole != .inbox }
+      ForEach(folderLists) { list in
         WorkspaceSelectableListRow(list: list)
           .tag(Optional(list.id))
           .id(list.id)
@@ -950,18 +952,13 @@ private struct WorkspaceFolderTree: View {
           .listRowBackground(
             WorkspaceSidebarSelectionBackground(
               isSelected: model.selectedFolderID == nil && model.currentSidebarID == list.id))
-          .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: Binding(
-            get: { model.dragDestinationListID == list.id },
-            set: { model.dragDestinationListID = $0 ? list.id : nil }
-          )) { providers in
-            WorkspaceTaskDrag.readItemID(from: providers) { payload in
-              model.moveDroppedItem(payload, toListID: list.id)
+          .workspaceSidebarDrop(isLastInGroup: list.id == folderLists.last?.id) { payload, placement in
+            switch placement {
+            case .into: model.moveDroppedItem(payload, toListID: list.id)
+            case .before: model.placeDroppedItem(payload, before: list.id, inFolderID: folder.id)
+            case .after: model.placeDroppedItem(payload, before: nil, inFolderID: folder.id)
             }
           }
-          .background(
-            model.dragDestinationListID == list.id ? Color.accentColor.opacity(0.16) : .clear,
-            in: RoundedRectangle(cornerRadius: 6)
-          )
           .contextMenu {
             Button("Rename") { model.beginRenaming(.list(list)) }
             Button("List settings…") { model.showSettings(for: list) }
@@ -981,11 +978,9 @@ private struct WorkspaceFolderTree: View {
         WorkspaceNestedListRows(list: list)
       }
       .padding(.leading, 14)
-      WorkspaceSidebarDropSeparator(beforeID: nil, folderID: folder.id)
-        .padding(.leading, 14)
-      ForEach(model.folders.filter { $0.parentFolderId == folder.id }) { child in
-        WorkspaceSidebarDropSeparator(beforeID: child.id, folderID: folder.id)
-        WorkspaceFolderTree(folder: child)
+      let childFolders = model.folders.filter { $0.parentFolderId == folder.id }
+      ForEach(childFolders) { child in
+        WorkspaceFolderTree(folder: child, isLastInGroup: child.id == childFolders.last?.id)
       }
       .padding(.leading, 14)
       }
@@ -1010,12 +1005,15 @@ private struct WorkspaceFolderTree: View {
             onCommit: { model.renameFolder(folder, to: $0) },
             onCancel: { model.cancelRenaming(itemID: folder.id) })
         } else {
-          Button { model.selectFolder(folder) } label: {
-            Label(folder.name, systemImage: "folder")
-              .lineLimit(1)
-              .truncationMode(.middle)
-              .help(folder.name)
-          }
+          Label(folder.name, systemImage: "folder")
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .help(folder.name)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { model.selectFolder(folder) }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { model.selectFolder(folder) }
         }
       }
         .buttonStyle(.plain)
@@ -1026,7 +1024,7 @@ private struct WorkspaceFolderTree: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 4)
         .background(
-          isDropTargeted || folder.id == model.selectedFolderID ? Color.accentColor.opacity(0.14) : .clear,
+          folder.id == model.selectedFolderID ? Color.accentColor.opacity(0.14) : .clear,
           in: RoundedRectangle(cornerRadius: 5)
         )
         .overlay(
@@ -1038,9 +1036,11 @@ private struct WorkspaceFolderTree: View {
         )
         .contentShape(Rectangle())
         .onDrag { WorkspaceTaskDrag.provider(forFolder: folder.id) }
-        .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
-          WorkspaceTaskDrag.readItemID(from: providers) { payload in
-            model.moveDroppedItem(payload, toFolderID: folder.id)
+        .workspaceSidebarDrop(isLastInGroup: isLastInGroup && !model.isFolderExpanded(folder)) { payload, placement in
+          switch placement {
+          case .into: model.moveDroppedItem(payload, toFolderID: folder.id)
+          case .before: model.placeDroppedItem(payload, before: folder.id, inFolderID: folder.parentFolderId)
+          case .after: model.placeDroppedItem(payload, before: nil, inFolderID: folder.parentFolderId)
           }
         }
         .contextMenu {
