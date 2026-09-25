@@ -236,9 +236,19 @@ enum WorkspaceSidebarItem: Identifiable {
   var taskMoveRequest: WorkspaceItemMoveRequest?
   var taskQuickEditRequest: WorkspaceTaskQuickEditRequest?
   var dragDestinationListID: String?
-  /// Asks the view for the always-on-top companion. A counter rather than a
-  /// flag: the button and the F key both just want it shown, again.
-  var focusFloatRequest = 0
+  /// Asks the app shell for the always-on-top companion. A counter rather than
+  /// a flag: the button and the F key both just want it shown, again.
+  ///
+  /// The shell, not the window: the companion's whole job is to be the thing
+  /// still on screen once the window is not, so it cannot be owned by a view
+  /// that closes with it.
+  var focusFloatRequest = 0 {
+    didSet { onFocusFloatRequested?() }
+  }
+  /// Called when the floating companion is asked for.
+  @ObservationIgnored var onFocusFloatRequested: (() -> Void)?
+  /// Called when a running block stops being one, however it stopped.
+  @ObservationIgnored var onFocusSessionEnded: (() -> Void)?
   var showsKeyboardHelp = false
   var showsListNavigator = false
   var showsSearch = false
@@ -275,7 +285,14 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Incremented for every request, including a request for the already active
   /// region. SwiftUI observes this to make the native control first responder.
   var focusRequest = 0
-  var activeFocusSession: FocusSession?
+  /// The running block. Its `didSet` is how the app shell learns a session
+  /// ended without observing the model: the always-on-top companion has to be
+  /// taken down from outside any window, since it outlives all of them.
+  var activeFocusSession: FocusSession? {
+    didSet {
+      if activeFocusSession == nil, oldValue != nil { onFocusSessionEnded?() }
+    }
+  }
   private(set) var focusQueue: [FocusQueueTask] = []
   @ObservationIgnored var dailyTaskIDs: Set<String> = []
   /// The focus screen: one task, an estimate, and a way out. Presented over

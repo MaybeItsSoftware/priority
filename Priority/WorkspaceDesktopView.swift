@@ -10,7 +10,6 @@ struct WorkspaceDesktopView: View {
   @Environment(WorkspaceViewModel.self) private var model
   private let everythingSidebarID = "priority:everything"
   @State private var isTopLevelDropTargeted = false
-  @State private var floatingTimer = LocalFloatingFocusTimer()
   @FocusState private var focusedArea: WorkspaceFocusArea?
 
   var body: some View {
@@ -67,12 +66,6 @@ struct WorkspaceDesktopView: View {
     }
     .onChange(of: focusedArea) { _, area in
       model.reportKeyboardFocus(area)
-    }
-    .onChange(of: model.focusFloatRequest) { _, _ in
-      floatingTimer.show(model: model, activate: true)
-    }
-    .onChange(of: model.activeFocusSession?.id) { _, sessionID in
-      if sessionID == nil { floatingTimer.close() }
     }
   }
 

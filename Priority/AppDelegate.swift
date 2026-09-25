@@ -23,6 +23,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private(set) var shortcutManager: GlobalShortcutManager!
   private(set) var mainWindowController: MainWindowController!
   private(set) var focusPanelController = FocusPanelController()
+  /// The always-on-top companion. Owned here rather than by the desktop view,
+  /// because a running block has to stay visible after the window that started
+  /// it has gone — which is exactly when a small clock in the corner is the
+  /// only thing left saying what you are supposed to be doing.
+  private(set) var floatingTimer = LocalFloatingFocusTimer()
   private(set) var workspace: WorkspaceViewModel!
 
   private var preferencesWindow: NSWindow?
@@ -87,6 +92,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // The mirror needs the workspace, and the workspace has only just been
     // built — the coordinator is constructed before it.
     checkvistManager.workspaceStoreProvider = { [weak workspace] in workspace?.store }
+    workspace.onFocusFloatRequested = { [weak self] in
+      guard let self, let workspace = self.workspace else { return }
+      self.floatingTimer.show(model: workspace, activate: true)
+    }
+    workspace.onFocusSessionEnded = { [weak self] in
+      self?.floatingTimer.close()
+    }
     workspace.onLocalWrite = { [weak checkvistManager] in
       checkvistManager?.googleTasksMirror.scheduleSync()
     }
@@ -308,6 +320,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   ///   reporting itself visible — asking it would have left the Dock icon
   ///   behind after every close.
   private func applyActivationPolicy(hasOrdinaryWindow: Bool) {
+    // A block still running when the window goes away keeps a clock on screen
+    // without being asked. That is the state the companion exists for, and
+    // having to remember to press F before closing the window is exactly the
+    // kind of thing nobody remembers.
+    if let workspace, workspace.activeFocusSession != nil {
+      if hasOrdinaryWindow {
+        floatingTimer.close()
+      } else {
+        floatingTimer.show(model: workspace)
+      }
+    }
     let desired: NSApplication.ActivationPolicy = hasOrdinaryWindow ? .regular : .accessory
     guard NSApp.activationPolicy() != desired else { return }
     NSApp.setActivationPolicy(desired)
