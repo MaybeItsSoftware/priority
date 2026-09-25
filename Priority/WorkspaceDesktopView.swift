@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 
 struct WorkspaceDesktopView: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(AppCoordinator.self) private var manager
   private let everythingSidebarID = "priority:everything"
   @State private var isTopLevelDropTargeted = false
   @FocusState private var focusedArea: WorkspaceFocusArea?
@@ -101,6 +102,16 @@ struct WorkspaceDesktopView: View {
     }
     .sheet(isPresented: Bindable(model).showsKeyboardHelp) {
       WorkspaceKeyboardHelp()
+    }
+    // Diagnostics needs a titled window to attach a sheet to, and this is the
+    // only one the app has. `CommandExecutor` and the Workspace menu have always
+    // said it was a sheet on the main window and opened that window first to get
+    // one — but nothing here presented it, so both set the flag and showed you
+    // the workspace. The popover was the only surface that ever put it on screen.
+    .sheet(isPresented: Bindable(manager.popoverChrome).showsDiagnostics) {
+      DiagnosticsView()
+        .environment(manager)
+        .frame(minWidth: 620, minHeight: 520)
     }
     .sheet(item: Bindable(model).taskMoveRequest) { request in
       WorkspaceTaskMoveSheet(request: request)
