@@ -50,8 +50,28 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
     // one brings the app forward with only its key window — the panel — and
     // leaves everything else of Priority's where it was.
     NSRunningApplication.current.activate()
+    takeKey()
     summons.count += 1
     model.reloadNextUp()
+  }
+
+  /// Puts the keyboard in the panel, now and again once activation has settled.
+  ///
+  /// Taking key before the app is active does not stick: AppKit chooses a key
+  /// window as part of activating, and a borderless non-activating panel is
+  /// not what it chooses. Measured with the main window closed, the panel came
+  /// up frontmost but unfocused — visible, and impossible to type into, which
+  /// is the one thing a panel summoned by a hotkey has to do.
+  ///
+  /// Only the panel is touched, so this cannot bring anything else of
+  /// Priority's forward with it.
+  func takeKey() {
+    guard let panel, panel.isVisible else { return }
+    panel.makeKeyAndOrderFront(nil)
+    DispatchQueue.main.async { [weak self] in
+      guard let panel = self?.panel, panel.isVisible, !panel.isKeyWindow else { return }
+      panel.makeKeyAndOrderFront(nil)
+    }
   }
 
   /// Closes the panel. `.back` hands the keyboard to whatever the hotkey

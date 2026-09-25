@@ -310,6 +310,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     NSApp.setActivationPolicy(desired)
     if desired == .regular {
       NSApp.activate(ignoringOtherApps: true)
+    } else if focusPanelController.isVisible {
+      // Changing policy resigns the app's active state, and the panel's
+      // keyboard focus goes with it. Closing the main window while the panel
+      // is up must not reach into the panel — the whole point of the panel is
+      // that it does not depend on the window.
+      focusPanelController.takeKey()
     }
   }
 
