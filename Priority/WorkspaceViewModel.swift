@@ -3,6 +3,7 @@ import Foundation
 import Observation
 import PriorityCore
 import PriorityWorkspace
+import SwiftUI
 
 enum WorkspaceCreationKind: String, Identifiable {
   case list
@@ -42,22 +43,29 @@ enum WorkspaceFocusArea: Hashable {
 
 /// Views of the same local task model, rather than separate applications.
 enum WorkspaceViewMode: String, CaseIterable, Identifiable {
+  case today
   case board
   case outline
-  case dailies
   case matrix
   case focus
 
-  /// Planning projections live beside the current list. Focus is an action
-  /// on the Today queue, not a top-level place to navigate to.
-  static let planningModes: [WorkspaceViewMode] = [.board, .outline, .dailies, .matrix]
+  /// The places you can be. Today is first because it is the question the app
+  /// exists to answer; the rest are projections of the same tasks, read when
+  /// the answer looks wrong. Focus is an action on the day, not a place to
+  /// navigate to, so it is not among them.
+  ///
+  /// There is deliberately no Dailies here. A daily is a requirement placed on
+  /// an ordinary task — that it be contributed to each day — not a kind of item
+  /// with a room of its own. Such a task appears in Today like anything else
+  /// today has a claim on, badged for what it owes.
+  static let planningModes: [WorkspaceViewMode] = [.today, .board, .outline, .matrix]
 
   var id: String { rawValue }
   var title: String {
     switch self {
+    case .today: "Today"
     case .board: "Board"
     case .outline: "Outline"
-    case .dailies: "Dailies"
     case .matrix: "Matrix"
     case .focus: "Focus"
     }
@@ -65,11 +73,23 @@ enum WorkspaceViewMode: String, CaseIterable, Identifiable {
 
   var symbolName: String {
     switch self {
+    case .today: "sun.max"
     case .board: "rectangle.split.3x1"
     case .outline: "list.bullet.indent"
-    case .dailies: "checklist"
     case .matrix: "square.grid.2x2"
     case .focus: "timer"
+    }
+  }
+
+  /// Where the mode sits on the command-digit row, and what the View menu
+  /// prints beside it.
+  var shortcutDigit: Character? {
+    switch self {
+    case .today: "1"
+    case .board: "2"
+    case .outline: "3"
+    case .matrix: "4"
+    case .focus: nil
     }
   }
 }
@@ -169,7 +189,7 @@ enum WorkspaceSidebarItem: Identifiable {
   var boardColumnsByID: [String: WorkspaceKanbanColumn] = [:]
   var boardVisibleTaskIDs: Set<String> = []
   private(set) var matrixPositions: [String: TaskMatrixPosition] = [:]
-  var viewMode: WorkspaceViewMode = .board
+  var viewMode: WorkspaceViewMode = .today
   /// Virtual parent of every active list. The tasks remain stored in their
   /// own lists; this flag only changes which roots the views present.
   var isEverythingSelected = UserDefaults.standard.bool(forKey: WorkspaceViewModel.everythingScopeKey)
@@ -301,6 +321,18 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Minutes offered on the focus screen, seeded from the task's estimate.
   var focusEstimateMinutes: Double = 25
   var errorMessage: String?
+
+  /// How a role colour is resolved. Set by `AppDelegate` from the preferences
+  /// manager, so every workspace surface can reach the theme through the one
+  /// object it already has in the environment rather than each of them
+  /// reaching for `AppCoordinator` — or, as they did, for SwiftUI's stock
+  /// `.green` and `.orange`, which do not flip with the theme and are not the
+  /// colours the app is set in.
+  @ObservationIgnored var themeColorResolver: ((AppThemeColorToken) -> Color)?
+
+  func themeColor(_ token: AppThemeColorToken) -> Color {
+    themeColorResolver?(token) ?? token.fallback
+  }
 
   init(legacyStore: LocalTaskStore) {
     self.legacyStore = legacyStore
@@ -493,6 +525,7 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   func selectViewMode(_ mode: WorkspaceViewMode) {
+    if mode == .today { dayPresentationCount += 1 }
     viewMode = mode
     if isEverythingSelected { reloadOutline(refreshSidebar: false) }
     if mode == .focus, activeFocusSession == nil, let task = selectedTask {
@@ -680,12 +713,15 @@ enum WorkspaceSidebarItem: Identifiable {
   /// focus screen watches this and runs the celebration, because the mutation
   /// has to wait on an animation the model cannot see.
   var focusCompletionRequest = 0
+  /// Bumped whenever Today is asked for afresh, so the pane resets its search
+  /// field the way a fresh summon resets the panel's.
+  var dayPresentationCount = 0
 
   var visibleNavigationTasks: [WorkspaceTask] {
     switch viewMode {
+    case .today: dayItems.map(\.task)
     case .outline: outline.map(\.task)
     case .board: boardColumns.flatMap { tasks(in: $0) }
-    case .dailies: dailyProgressTasks
     case .matrix: boardTasks
     case .focus:
       if let activeFocusTask { [activeFocusTask] + focusQueue.map(\.task) } else { selectedTask.map { [$0] } ?? [] }

@@ -330,17 +330,17 @@ struct WorkspaceDesktopView: View {
   @ViewBuilder
   private var taskPane: some View {
     switch model.viewMode {
+    case .today:
+      // The same view the hotkey summons over other apps. One component, two
+      // mounts: the day cannot read differently depending on where you open it.
+      DayView(surface: .window, resetToken: model.dayPresentationCount)
+        .environment(model)
+        .background(Color(nsColor: .textBackgroundColor))
     case .board:
       WorkspaceKanbanBoard()
         .environment(model)
     case .outline:
       outlineTaskPane
-    case .dailies:
-      WorkspaceDailiesDashboard()
-        .environment(model)
-        .focusable()
-        .focused($focusedArea, equals: .tasks)
-        .focusEffectDisabled()
     case .matrix:
       WorkspaceMatrixDashboard()
         .environment(model)
@@ -1390,7 +1390,7 @@ private struct WorkspaceKeyboardHelp: View {
         Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 10) {
         key("↑ ↓ / J K", "Select visible tasks when the task surface has focus")
         key("⌘ 0", "Open Everything across all active lists")
-        key("⌘ 1 / ⌘ 2 / ⌘ 3", "Focus the sidebar or task surface; ⌘ 3 opens the inspector")
+        key("⌃ 1 / ⌃ 2 / ⌃ 3", "Focus the sidebar or task surface; ⌃ 3 opens the inspector")
         key("I", "Open or close the selected task’s inspector")
         key("EE / F2", "Edit the task title; F2 also renames a sidebar list or folder")
         key("DD / NN / TT / DR", "Edit due date, notes, tags, or repeating due settings")
@@ -1406,8 +1406,9 @@ private struct WorkspaceKeyboardHelp: View {
         key("Date picker: ← → / ↑ ↓", "Select a day / week immediately; Shift ← → changes month")
         key("Date picker: Tab", "Switch between calendar, hour, minute, and buttons")
         key("Picker: ↵ / Esc", "Save / cancel; Delete clears the selected planning value")
-        key("⌘ 4–7", "View this list as Board, Outline, Dailies, or Matrix")
+        key("⌘ 1–4", "Today, or this list as Board, Outline, or Matrix")
         key("⌘ 8", "Enter focus mode, or return to the running session")
+        key("Today: ↑ ↓ / ↵", "Choose a task; Return starts it, or finishes the one running")
         key("Focus: ↑ ↓ / J K", "Climb to less important work, or back down towards the most important")
         key("Focus: ↵ / Space", "Stage the task, then begin it with the estimate shown")
         key("Focus: X", "Tick the task off without starting a session")

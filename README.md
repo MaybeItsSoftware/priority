@@ -256,6 +256,40 @@ or the chip in the breadcrumb bar, which also says which answer is in force.
 All is the exception on purpose. It's the navigator you drill through to *set*
 the scope the other views read, so it's always strictly parented.
 
+## Today
+
+The window opens on **Today**: the day as a numbered list of cards, the same one
+the hotkey summons over other apps. One component, two mounts — a day that read
+differently depending on where you opened it would be two days.
+
+Each card carries what the task is, what it should cost, and what it has cost so
+far, under a bar of estimated against logged and a line setting today against
+the week it belongs to. `Return` on a card starts it; the card you are on grows
+a live clock and a strip of pause, skip, log and done, so a whole block runs
+without the list ever going away. Typing searches every task's title and notes,
+and offers to add what you typed to today.
+
+A task that owes the day a **daily contribution** is badged where it is read
+rather than gathered into a screen of its own — a daily is a requirement placed
+on an ordinary task, not a kind of item. Clicking the badge records today's
+contribution without starting a block; the task itself stays open until it is
+genuinely finished.
+
+| Key | Action |
+| --- | --- |
+| `Cmd+1` | Today |
+| `Cmd+2` | Board |
+| `Cmd+3` | Outline |
+| `Cmd+4` | Matrix |
+| `Cmd+8` | Focus — the pane that picks what to do next, or the block that is running |
+| `Cmd+9` | The day's timeline |
+| `Cmd+0` | Everything, across all active lists |
+| `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
+
+The digit row used to move the caret between the window's three panes. Changing
+what you are looking at is the bigger thing, so it took the row and pane focus
+moved to `Ctrl`.
+
 ## Focus
 
 Focus is where the app opens, because the first question it exists to answer is

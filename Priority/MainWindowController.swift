@@ -150,7 +150,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         self.workspace.desktopShortcutSequence.reset()
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
         let character = event.charactersIgnoringModifiers?.lowercased() ?? ""
-        let regionOrView = flags == [.command] && character.count == 1
+        let regionOrView = (flags == [.command] || flags == [.control]) && character.count == 1
           && "0123456789".contains(character)
         let cycleRegion = (flags == [.control] || flags == [.control, .shift]) && event.keyCode == 48
         let createItem = (flags == [.command] || flags == [.command, .shift]

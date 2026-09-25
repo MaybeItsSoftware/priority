@@ -201,23 +201,42 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// Command-digit: the regions and view modes, plus the focus screen on ⌘8
-  /// and the timeline on ⌘9.
+  /// Command-digit: the places you can be, in the order they are worth being
+  /// in — Today, Board, Outline, Matrix — plus the focus screen on ⌘8 and the
+  /// timeline on ⌘9.
+  ///
+  /// The digits used to address the window's three regions instead, which spent
+  /// the most reachable keys on moving the caret between panes. Region focus is
+  /// a smaller thing than changing what you are looking at, so it moved to
+  /// ⌃1–⌃3 and the modes took the row.
   private func handleViewSwitchKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
-
-    if flags == [.command] {
+    if flags == [.control] {
       switch event.charactersIgnoringModifiers {
-      case "0": selectEverything(); requestKeyboardFocus(.tasks); return true
       case "1": requestKeyboardFocus(.sidebar); return true
       case "2": requestKeyboardFocus(.tasks); return true
       case "3":
         if selectedTask == nil { selectedTaskID = visibleNavigationTasks.first?.id }
         requestKeyboardFocus(selectedTask == nil ? .tasks : .inspector)
         return true
-      case "4": selectViewMode(.board); requestKeyboardFocus(.tasks); return true
-      case "5": selectViewMode(.outline); requestKeyboardFocus(.tasks); return true
-      case "6": selectViewMode(.dailies); requestKeyboardFocus(.tasks); return true
-      case "7": selectViewMode(.matrix); requestKeyboardFocus(.tasks); return true
+      default: break
+      }
+    }
+
+    if flags == [.command] {
+      switch event.charactersIgnoringModifiers {
+      case "0": selectEverything(); requestKeyboardFocus(.tasks); return true
+      case "1", "2", "3", "4":
+        guard let character = event.charactersIgnoringModifiers?.first,
+          let mode = WorkspaceViewMode.planningModes.first(where: { $0.shortcutDigit == character })
+        else { return false }
+        // Leaving whichever full-pane surface is up is part of asking for a
+        // mode: ⌘1 on the timeline means "show me today", not "remember that I
+        // wanted today once the timeline is dismissed".
+        dismissFocusScreen()
+        dismissTimelineScreen()
+        selectViewMode(mode)
+        requestKeyboardFocus(.tasks)
+        return true
       case "8":
         // One key for the one surface. What it shows — a running session or
         // the ladder that picks one — is the screen's business, not the key's.

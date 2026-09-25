@@ -70,6 +70,28 @@ enum AppThemeColorToken: String, CaseIterable, Identifiable {
 
   var id: String { rawValue }
 
+  /// What the token resolves to when no theme is reachable — a view model or a
+  /// detached surface that has not been handed the preferences. Only the roles
+  /// views actually reach for outside the settings pane are listed with intent;
+  /// the rest fall back to the neutral they are named after.
+  var fallback: Color {
+    switch self {
+    case .success: return .green
+    case .warning: return .orange
+    case .danger: return .red
+    case .link: return .accentColor
+    case .selectionBackground: return .accentColor.opacity(0.2)
+    case .selectionForeground, .focusRing: return .accentColor
+    case .panelBackground: return Color(NSColor.windowBackgroundColor)
+    case .panelDivider: return Color(NSColor.separatorColor).opacity(0.85)
+    case .panelSurface: return .secondary.opacity(0.08)
+    case .panelSurfaceElevated: return .secondary.opacity(0.14)
+    case .textPrimary: return .primary
+    case .textSecondary: return .secondary
+    case .textMuted: return .secondary.opacity(0.8)
+    }
+  }
+
   var title: String {
     switch self {
     case .panelBackground: return "Panel Background"
