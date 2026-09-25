@@ -99,6 +99,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.onFocusSessionEnded = { [weak self] in
       self?.floatingTimer.close()
     }
+    // Finishing something is finishing something, whichever surface it
+    // happened on. Before this the flourish only ever played on the focus
+    // ladder, so the day list — the screen the app now opens on — was the one
+    // place where completing your last task of the day did nothing at all.
+    workspace.onCompletion = { [weak checkvistManager] event in
+      guard let celebration = checkvistManager?.celebration else { return }
+      Task { @MainActor in
+        _ = await celebration.runInline(event)
+        celebration.presentFlourish(for: event)
+      }
+    }
     workspace.onLocalWrite = { [weak checkvistManager] in
       checkvistManager?.googleTasksMirror.scheduleSync()
     }

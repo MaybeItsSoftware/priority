@@ -249,6 +249,10 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var onFocusFloatRequested: (() -> Void)?
   /// Called when a running block stops being one, however it stopped.
   @ObservationIgnored var onFocusSessionEnded: (() -> Void)?
+  /// Called when something is finished, wherever it was finished from. The
+  /// celebration lives in the app shell, so the model reports the occasion
+  /// rather than staging it.
+  @ObservationIgnored var onCompletion: ((CompletionEvent) -> Void)?
   var showsKeyboardHelp = false
   var showsListNavigator = false
   var showsSearch = false
@@ -368,6 +372,15 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Where quick capture lands. Found by role, so renaming it does not move it.
   var inboxList: TaskList? { lists.first { $0.systemRole == .inbox } }
   var selectedFolder: ListFolder? { folders.first { $0.id == selectedFolderID } }
+  /// Reports a finished task to whatever is staging celebrations, counting the
+  /// day's remaining work so the last one of the day can be marked as such.
+  func celebrateCompletion(of task: WorkspaceTask) {
+    guard let onCompletion else { return }
+    let remaining = dayItems.filter { $0.task.id != task.id }.count + 1
+    guard let event = completionEvent(for: task, remainingVisibleTaskCount: remaining) else { return }
+    onCompletion(event)
+  }
+
   func list(for task: WorkspaceTask) -> TaskList? { lists.first { $0.id == task.listId } }
 
   var scopeTask: WorkspaceTask? {
@@ -749,6 +762,7 @@ enum WorkspaceSidebarItem: Identifiable {
     guard let store else { return }
     perform {
       try store.setStatus(task.status == .open ? .completed : .open, for: task.id)
+      if task.status == .open { celebrateCompletion(of: task) }
       try reloadNestedLists()
       reloadOutline()
       reloadNextUp()

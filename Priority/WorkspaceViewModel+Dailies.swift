@@ -65,6 +65,7 @@ extension WorkspaceViewModel {
         try store.clearContribution(dailyId: item.daily.id, on: day)
       } else {
         try store.logContribution(dailyId: item.daily.id, now: day)
+        celebrateCompletion(of: task)
       }
       reloadDailies()
       reloadNextUp()
@@ -189,15 +190,26 @@ extension WorkspaceViewModel {
   /// stored state — which rung, whether it is a daily, how the day has gone —
   /// and the view has none of that.
   func focusCompletionEvent() -> CompletionEvent? {
-    guard let store, let task = focusLadderTask else { return nil }
+    guard let task = focusLadderTask else { return nil }
+    // The rung being ticked is still in the ladder, so one left means this is
+    // the last of them.
+    return completionEvent(for: task, remainingVisibleTaskCount: focusLadder.count)
+  }
+
+  /// What finishing this task is worth as an occasion: which kind of thing it
+  /// is, and whether it lands on a milestone.
+  ///
+  /// Every surface that can finish something builds one of these, so that the
+  /// reward for a day's last task does not depend on which screen you happened
+  /// to finish it from.
+  func completionEvent(for task: WorkspaceTask, remainingVisibleTaskCount: Int) -> CompletionEvent? {
+    guard let store else { return nil }
     let item = dailyItem(for: task)
     let kind: CompletionKind = item.map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id)
     let context = (try? store.completionContext()) ?? .init(ordinalToday: 1, streakDays: 0)
     let milestone = CompletionMilestonePolicy.milestone(
       for: kind,
-      // The rung being ticked is still in the ladder, so one left means this is
-      // the last of them.
-      remainingVisibleTaskCount: focusLadder.count,
+      remainingVisibleTaskCount: remainingVisibleTaskCount,
       ordinal: context.ordinalToday,
       streakDays: context.streakDays)
     return CompletionEvent(kind: kind, milestone: milestone, ordinal: context.ordinalToday)

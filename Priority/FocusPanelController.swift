@@ -116,7 +116,11 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
       rootView: FocusPanelView(summons: summons, onClose: { [weak self] in self?.dismiss($0) })
         .focusEffectDisabled()
         .font(Typography.interfaceFont)
-        .environment(model))
+        .environment(model)
+        // The panel finishes tasks, so it needs whatever stages the flourish
+        // for finishing one. Without this the reward would depend on which
+        // surface you happened to press Done on.
+        .environment(AppDelegate.shared.checkvistManager))
     // Without this the hosting controller sizes the *window* from the view's
     // ideal size, and this view has none — it is all `maxWidth: .infinity` —
     // so the panel collapsed to its minimum on every launch. The window owns

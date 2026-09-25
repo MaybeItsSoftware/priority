@@ -26,6 +26,7 @@ enum DaySurface {
 /// the row you are on grows a pause, a skip and a tick.
 struct DayView: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(AppCoordinator.self) private var manager
   let surface: DaySurface
   /// Changes whenever the surface is presented afresh, so it opens ready to
   /// type rather than holding the last thing that was searched.
@@ -35,6 +36,7 @@ struct DayView: View {
   @State private var query = ""
   @State private var results: [TaskSearchResult] = []
   @State private var selectedID: String?
+  @State private var hoveredID: String?
   @FocusState private var isFieldFocused: Bool
 
   /// The id the create row answers to. A task's id is a UUID, so this cannot
@@ -58,6 +60,16 @@ struct DayView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // Over the whole surface rather than the card: by the time this plays the
+    // card it belongs to has usually left the day, and a cleared day is
+    // exactly when the flourish has the most to say.
+    .overlay {
+      if let flourish = manager.celebration.activeFlourish?.view {
+        flourish
+          .allowsHitTesting(false)
+          .transition(.opacity)
+      }
+    }
     .onAppear { reset() }
     .onChange(of: resetToken) { _, _ in reset() }
     .onChange(of: query) { _, new in
@@ -167,7 +179,13 @@ struct DayView: View {
         .onKeyPress(.downArrow) { move(by: 1); return .handled }
         .onKeyPress(.escape) { dismissOrClear() }
         .onKeyPress(keys: [.return], phases: .down) { press in
-          if press.modifiers.contains(.command) { openInWindow() } else { activateSelection() }
+          if press.modifiers.contains(.command) {
+            openInWindow()
+          } else if press.modifiers.contains(.shift) {
+            tickOffSelection()
+          } else {
+            activateSelection()
+          }
           return .handled
         }
     }
@@ -267,12 +285,7 @@ struct DayView: View {
     card(id: task.id) {
       VStack(alignment: .leading, spacing: 5) {
         HStack(spacing: 8) {
-          if let index {
-            Text("\(index)")
-              .font(.system(size: 11, weight: .semibold, design: .monospaced))
-              .foregroundStyle(.tertiary)
-              .frame(minWidth: 12, alignment: .trailing)
-          }
+          marker(for: task, index: index)
           Text(task.title)
             .font(.system(size: 14, weight: .medium))
             .lineLimit(1)
@@ -302,6 +315,62 @@ struct DayView: View {
     } action: {
       start(task)
     }
+  }
+
+  /// A row's number, which becomes the way to tick it off when the pointer is
+  /// over it.
+  ///
+  /// Blitzit's list has a checkbox on every row and this one had nothing: the
+  /// day list could start work but not finish it, so anything already done had
+  /// to be closed somewhere else. The number and the tick share one slot
+  /// because the row is narrow and they are never both wanted at once.
+  private func marker(for task: WorkspaceTask, index: Int?) -> some View {
+    let isHovering = hoveredID == task.id
+    return Button {
+      tickOff(task)
+    } label: {
+      Group {
+        if isHovering {
+          Image(systemName: "checkmark.circle")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(model.themeColor(.success))
+        } else if let index {
+          Text("\(index)")
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .foregroundStyle(.tertiary)
+        } else {
+          Image(systemName: "circle")
+            .font(.system(size: 10))
+            .foregroundStyle(.tertiary)
+        }
+      }
+      .frame(width: 14, alignment: .trailing)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .focusable(false)
+    .help("Tick off without running a block (⇧↵)")
+    .accessibilityLabel("Tick off \(task.title)")
+  }
+
+  /// Finishing something that never needed a block. A task that owes the day a
+  /// contribution gets the contribution rather than being closed — that is the
+  /// distinction the daily model rests on, and it must hold wherever the tick
+  /// is pressed.
+  private func tickOff(_ task: WorkspaceTask) {
+    if model.isDailyProgressTask(task) {
+      guard !model.isDailyProgressComplete(task) else { return }
+      model.toggleDailyProgress(task)
+    } else {
+      model.toggleTask(task)
+    }
+    query = ""
+  }
+
+  private func tickOffSelection() {
+    guard let id = selectedID, id != Self.createRowID, let task = model.task(withID: id) else { return }
+    if id == activeTaskID { finish(); return }
+    tickOff(task)
   }
 
   /// The row you are on. Same card, grown: a live clock, and the controls that
@@ -419,21 +488,57 @@ struct DayView: View {
     action: @escaping () -> Void
   ) -> some View {
     let isSelected = id == selectedID
+    // The card being finished takes whatever the active celebration preset
+    // does to a row, so the tick, the tint and the collapse are the same
+    // gesture here as on the focus ladder.
+    let phase = celebrationPhase(forTaskID: id)
+    let treatment = manager.celebration.rowTreatment
+    let celebrating = phase != .idle
+    let success = model.themeColor(.success)
     return content()
       .padding(.horizontal, 12)
       .padding(.vertical, 10)
       .frame(maxWidth: .infinity, alignment: .leading)
+      .scaleEffect(treatment.rowScale(for: phase))
       .background(
-        isActive ? Color.accentColor.opacity(0.10) : Color.primary.opacity(isSelected ? 0.07 : 0.035),
+        celebrating
+          ? success.opacity(treatment.tintOpacity)
+          : (isActive ? Color.accentColor.opacity(0.10) : Color.primary.opacity(isSelected ? 0.07 : 0.035)),
         in: RoundedRectangle(cornerRadius: 8))
       .overlay(
         RoundedRectangle(cornerRadius: 8)
           .strokeBorder(
-            isActive ? Color.accentColor.opacity(0.55)
-              : Color.primary.opacity(isSelected ? 0.22 : 0.08),
+            celebrating ? success.opacity(0.55)
+              : (isActive ? Color.accentColor.opacity(0.55)
+                : Color.primary.opacity(isSelected ? 0.22 : 0.08)),
             lineWidth: 1))
+      .overlay { rowAccent(forTaskID: id) }
+      .opacity(treatment.fades && phase == .celebrating ? 0 : 1)
       .contentShape(RoundedRectangle(cornerRadius: 8))
+      .onHover { inside in
+        if inside { hoveredID = id } else if hoveredID == id { hoveredID = nil }
+      }
       .onTapGesture { selectedID = id; action() }
+  }
+
+  /// `.idle` for every card but the one actually being finished. A daily is
+  /// celebrated under its own identity, so the lookup has to go through the
+  /// task rather than assume the two ids are the same.
+  private func celebrationPhase(forTaskID id: String) -> CelebrationPhase {
+    guard let task = model.task(withID: id) else { return .idle }
+    return manager.celebration.phase(for: completionKind(for: task))
+  }
+
+  @ViewBuilder
+  private func rowAccent(forTaskID id: String) -> some View {
+    if celebrationPhase(forTaskID: id) != .idle, let task = model.task(withID: id) {
+      manager.celebration.rowAccent(for: completionKind(for: task))
+        .allowsHitTesting(false)
+    }
+  }
+
+  private func completionKind(for task: WorkspaceTask) -> CompletionKind {
+    model.dailyItem(for: task).map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id)
   }
 
   // MARK: - Today's logged work

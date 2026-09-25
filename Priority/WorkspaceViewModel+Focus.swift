@@ -194,6 +194,9 @@ extension WorkspaceViewModel {
         sessionId: pending.sessionID, elapsedSeconds: pending.seconds, qualityMultiplier: multiplier,
         completeTask: pending.completeTask, expectedBlockId: pending.blockID, context: effectiveFocusContext)
       pendingFocusCompletion = nil
+      if pending.completeTask, let task = task(withID: pending.taskID) {
+        celebrateCompletion(of: task)
+      }
       activeFocusSession = completion.session
       lastFocusOutcome = completion.outcome
       lastFocusAward = completion.award
