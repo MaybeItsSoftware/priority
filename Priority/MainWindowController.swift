@@ -19,6 +19,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   private var window: NSWindow?
   private var workspaceKeyMonitor: Any?
   private var shortcutShiftTap = DoubleTapModifier()
+  private var toolbarController: MainWindowToolbarController?
 
   /// Refreshes the menu bar title. Shared state means the window moving the
   /// cursor has to move the status item's label too, exactly as the panel does.
@@ -100,6 +101,13 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     window.delegate = self
     window.center()
 
+    // The strip that names which mode you are in. Without it the four of them
+    // were reachable only by a command-digit, and nothing on screen said which
+    // one you were looking at.
+    let toolbarController = MainWindowToolbarController(workspace: workspace)
+    toolbarController.onShowSettings = { [weak self] in self?.onShowSettings?() }
+    self.toolbarController = toolbarController
+    window.toolbar = toolbarController.makeToolbar()
     window.toolbarStyle = .unified
 
     window.setFrameAutosaveName("PriorityMainWindowV1")

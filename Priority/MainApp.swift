@@ -1,4 +1,5 @@
 import PriorityCore
+import PriorityWorkspace
 import SwiftUI
 
 /// The real entry point, so `--mcp-server` is handled before AppKit starts.
@@ -42,50 +43,74 @@ struct MainApp: App {
       // windowed user has a discoverable route to everything the keyboard
       // already does, and so the window can be reopened after it is closed.
       CommandGroup(after: .windowList) {
+        // Deliberately without ⌘0: that key means Everything, and a menu item
+        // shadows the workspace's own handler whenever the window is up —
+        // which is the only time this item is reachable at all, since a closed
+        // window leaves the app an accessory with no menu bar.
         Button("Priority") {
           AppDelegate.shared.showMainWindow()
         }
-        .keyboardShortcut("0", modifiers: .command)
       }
       CommandMenu("View") {
-        // Same order the tab strip uses, so the menu and the strip cannot
-        // disagree about what the tabs are or which order they are in.
-        //
-        // Read from the static rather than through `AppDelegate.shared`: this
-        // list is built while SwiftUI evaluates `body`, and the adaptor has not
-        // made the delegate by then — `shared` is still nil and the implicit
-        // unwrap trapped every launch. The *actions* below may reach through it
-        // freely, because a click cannot happen before the app has finished
-        // starting.
-        ForEach(AppCoordinator.storedRootTaskViewOrder, id: \.rawValue) { scope in
-          Button(scope.title) {
-            AppDelegate.shared.checkvistManager.taskNavigationService.setRootTaskView(scope)
+        // The places you can actually be, in the order the toolbar strip shows
+        // them. This menu used to list the old Checkvist root views, a Refresh
+        // and a Diagnostics button — the previous app's furniture, still
+        // standing in the one that replaced it.
+        ForEach(WorkspaceViewMode.planningModes) { mode in
+          let item = Button(mode.title) {
+            AppDelegate.shared.workspace.dismissFocusScreen()
+            AppDelegate.shared.workspace.dismissTimelineScreen()
+            AppDelegate.shared.workspace.selectViewMode(mode)
+            AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
+          }
+          if let digit = mode.shortcutDigit {
+            item.keyboardShortcut(KeyEquivalent(digit), modifiers: .command)
+          } else {
+            item
           }
         }
         Divider()
-        Button("Refresh") {
-          Task { await AppDelegate.shared.checkvistManager.syncService.fetchTopTask() }
+        Button("Focus") {
+          AppDelegate.shared.workspace.presentFocusScreen()
         }
-        .keyboardShortcut("r", modifiers: .command)
-        Button("Diagnostics") {
-          AppDelegate.shared.showMainWindow()
-          AppDelegate.shared.checkvistManager.popoverChrome.showsDiagnostics = true
+        .keyboardShortcut("8", modifiers: .command)
+        Button("Timeline") {
+          let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
+          if workspace.showsTimelineScreen {
+            workspace.dismissTimelineScreen()
+          } else {
+            workspace.presentTimelineScreen()
+          }
         }
-      }
-      CommandMenu("Workspace") {
-        Button("Focus Sidebar") {
-          AppDelegate.shared.workspace.requestKeyboardFocus(.sidebar)
-        }
-        .keyboardShortcut("1", modifiers: .command)
-        Button("Focus Task Outline") {
+        .keyboardShortcut("9", modifiers: .command)
+        Divider()
+        Button("Everything") {
+          AppDelegate.shared.workspace.selectEverything()
           AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
         }
-        .keyboardShortcut("2", modifiers: .command)
-        Button("Focus Inspector") {
-          AppDelegate.shared.workspace.requestKeyboardFocus(.inspector)
+        .keyboardShortcut("0", modifiers: .command)
+        Button("Inspector") {
+          AppDelegate.shared.workspace.toggleInspector()
         }
-        .keyboardShortcut("3", modifiers: .command)
         Divider()
+        Button("Sidebar") {
+          AppDelegate.shared.workspace.requestKeyboardFocus(.sidebar)
+        }
+        .keyboardShortcut("1", modifiers: .control)
+        Button("Task Surface") {
+          AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
+        }
+        .keyboardShortcut("2", modifiers: .control)
+        Button("Inspector Pane") {
+          let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
+          if workspace.selectedTask == nil {
+            workspace.selectedTaskID = workspace.visibleNavigationTasks.first?.id
+          }
+          workspace.requestKeyboardFocus(workspace.selectedTask == nil ? .tasks : .inspector)
+        }
+        .keyboardShortcut("3", modifiers: .control)
+      }
+      CommandMenu("Workspace") {
         Button("New Task") {
           AppDelegate.shared.workspace.requestTaskComposerFocus()
         }
@@ -99,6 +124,10 @@ struct MainApp: App {
         }
         .keyboardShortcut("n", modifiers: [.command, .option])
         Divider()
+        Button("Search…") {
+          AppDelegate.shared.workspace.showsSearch = true
+        }
+        .keyboardShortcut("f", modifiers: .command)
         Button("List Settings…") {
           AppDelegate.shared.workspace.showSelectedListSettings()
         }
@@ -116,6 +145,10 @@ struct MainApp: App {
           AppDelegate.shared.workspace.showsKeyboardHelp = true
         }
         .keyboardShortcut("/", modifiers: .command)
+        Button("Diagnostics") {
+          AppDelegate.shared.showMainWindow()
+          AppDelegate.shared.checkvistManager.popoverChrome.showsDiagnostics = true
+        }
       }
     }
   }
