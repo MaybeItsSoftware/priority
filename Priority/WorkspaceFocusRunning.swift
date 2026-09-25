@@ -66,7 +66,7 @@ struct WorkspaceFocusRunning: View {
           session.pausedAt == nil
             ? (reading.isOverrun ? "over the block" : "of \(plannedMinutes)m")
             : "paused",
-          tint: session.pausedAt == nil ? nil : Color.orange)
+          tint: session.pausedAt == nil ? nil : model.themeColor(.warning))
       }
     }
   }
@@ -175,7 +175,7 @@ struct WorkspaceFocusRunning: View {
               if let blocked = model.blockedFocusTasks.first(where: { $0.id == queued.task.id }) {
                 Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
                   .font(.caption2)
-                  .foregroundStyle(.orange)
+                  .foregroundStyle(model.themeColor(.warning))
                   .lineLimit(1)
               }
               Spacer(minLength: 0)

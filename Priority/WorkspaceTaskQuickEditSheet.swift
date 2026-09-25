@@ -69,7 +69,7 @@ struct WorkspaceTaskQuickEditSheet: View {
           Text("For example: daily, weekdays, weekly, or every 3 days.").font(.caption).foregroundStyle(.secondary)
         }
       }
-      if let error { Text(error).foregroundStyle(.red).font(.caption) }
+      if let error { Text(error).foregroundStyle(model.themeColor(.danger)).font(.caption) }
       HStack {
         Button("Cancel") { dismiss() }.focusable().keyboardShortcut(.cancelAction)
         if request.kind != .title { Button("Clear") { save(clear: true) }.focusable() }

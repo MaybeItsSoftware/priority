@@ -421,7 +421,7 @@ struct WorkspaceDesktopView: View {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
         Image(systemName: model.itemSymbol(for: item.task))
-          .foregroundStyle(item.task.status == .open ? Color.secondary : Color.green)
+          .foregroundStyle(item.task.status == .open ? Color.secondary : model.themeColor(.success))
       }
       .buttonStyle(.plain)
       .focusable()

@@ -218,7 +218,7 @@ struct WorkspaceFocusScreen: View {
                 Text(blocked.candidate.title).font(.caption.weight(.medium))
                 let urgency = NextUpSelector.score(blocked.candidate)
                 if [.overdue, .dueToday, .deadlineRisk].contains(urgency.reason) {
-                  Text(urgency.explanation).font(.caption2).foregroundStyle(.orange)
+                  Text(urgency.explanation).font(.caption2).foregroundStyle(model.themeColor(.warning))
                 }
                 Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
                   .font(.caption2).foregroundStyle(.secondary)
@@ -546,9 +546,12 @@ struct WorkspaceFocusScreen: View {
 
   private func tint(for reason: NextUpReason) -> Color {
     switch reason {
-    case .daily: return .green
-    case .overdue: return .red
-    case .dueToday, .dueSoon, .deadlineRisk: return .orange
+    // Status reads from the theme's four-way convention, so a retheme moves
+    // these with everything else. Purple stays a literal: it is categorical
+    // colour — "this one matters" — and has no status token to belong to.
+    case .daily: return model.themeColor(.success)
+    case .overdue: return model.themeColor(.danger)
+    case .dueToday, .dueSoon, .deadlineRisk: return model.themeColor(.warning)
     case .condition, .started: return .accentColor
     case .today: return .accentColor
     case .importance, .priority: return .purple

@@ -14,7 +14,7 @@ struct LocalTaskInspector: View {
       if let draft = model.taskEditor.draft(for: task.id) {
         editor(draft)
       } else if let error = model.taskEditor.errors[task.id] {
-        Text(error).foregroundStyle(.red)
+        Text(error).foregroundStyle(model.themeColor(.danger))
       } else {
         ProgressView()
       }
@@ -56,10 +56,10 @@ struct LocalTaskInspector: View {
       Text("Unsaved changes").font(.caption).foregroundStyle(.secondary)
     }
     if let error = model.taskEditor.errors[task.id] {
-      Text(error).font(.caption).foregroundStyle(.red)
+      Text(error).font(.caption).foregroundStyle(model.themeColor(.danger))
     }
     if let error = model.taskEditor.persistenceError {
-      Text(error).font(.caption).foregroundStyle(.red)
+      Text(error).font(.caption).foregroundStyle(model.themeColor(.danger))
     }
     ForEach(TaskEditorField.allCases.filter { draft.conflicts.contains($0) }, id: \.self) { field in
       VStack(alignment: .leading, spacing: 4) {
@@ -114,7 +114,7 @@ struct LocalTaskInspector: View {
       } ?? "")).font(.caption).foregroundStyle(.secondary)
       if let estimate = task.estimateSeconds, seconds >= estimate {
         Text("Estimate exhausted. Revise it or choose a session duration to keep making progress.")
-          .font(.caption).foregroundStyle(.orange)
+          .font(.caption).foregroundStyle(model.themeColor(.warning))
       }
     }
     Picker("Priority", selection: binding(\.priority, fallback: draft.values.priority)) {
@@ -281,7 +281,7 @@ private struct ListSettingsEditor: View {
         }
         LabeledContent("Tasks", value: "\(model.taskCount(for: list))")
       }
-      if let saveError { Text(saveError).font(.caption).foregroundStyle(.red) }
+      if let saveError { Text(saveError).font(.caption).foregroundStyle(model.themeColor(.danger)) }
       HStack {
         Button("Delete list", role: .destructive) {
           model.requestDeletion(of: .list(list))
@@ -353,7 +353,7 @@ private struct FolderSettingsEditor: View {
         }
         .focusable()
       }
-      if let saveError { Text(saveError).font(.caption).foregroundStyle(.red) }
+      if let saveError { Text(saveError).font(.caption).foregroundStyle(model.themeColor(.danger)) }
       HStack {
         Button("Delete folder", role: .destructive) {
           model.requestDeletion(of: .folder(folder))

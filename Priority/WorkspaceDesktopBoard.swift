@@ -326,7 +326,7 @@ struct WorkspaceKanbanCard: View {
         if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
       } label: {
         Image(systemName: model.itemSymbol(for: task))
-          .foregroundStyle(task.status == .open ? Color.secondary : Color.green)
+          .foregroundStyle(task.status == .open ? Color.secondary : model.themeColor(.success))
       }
       .buttonStyle(.plain)
       .focusable()

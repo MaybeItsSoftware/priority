@@ -95,7 +95,9 @@ private struct WorkspaceConditionsEditor: View {
           if model.errorMessage == nil { newName = "" }
         }.disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       }
-      if let error = model.errorMessage { Text(error).font(.caption).foregroundStyle(.red) }
+      if let error = model.errorMessage {
+        Text(error).font(.caption).foregroundStyle(model.themeColor(.danger))
+      }
       HStack { Spacer(); Button("Done") { dismiss() }.keyboardShortcut(.defaultAction) }
     }.padding(24).frame(width: 560, height: 420)
   }
@@ -182,7 +184,7 @@ struct WorkspaceTaskPlanningEditor: View {
       })).textFieldStyle(.roundedBorder)
       if let unavailable = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
         Text(unavailable.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-          .font(.caption).foregroundStyle(.orange)
+          .font(.caption).foregroundStyle(model.themeColor(.warning))
       }
       Button("Apply saved requirements and start to subtasks") { model.applyPlanningToDescendants(of: task) }
         .font(.caption).help("Copies saved conditions, start and block rules; keeps each subtask's own estimate and deadline")
@@ -223,7 +225,7 @@ struct WorkspaceTaskPlanningBadges: View {
       }
       if let blocked = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
         Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-          .foregroundStyle(.orange)
+          .foregroundStyle(model.themeColor(.warning))
       }
     }.font(.caption2).foregroundStyle(.secondary).lineLimit(2)
   }
