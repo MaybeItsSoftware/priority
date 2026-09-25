@@ -20,7 +20,7 @@ It works offline. It works from the terminal. And it exposes the whole surface t
 
 - [Install](#install) · [First run](#first-run)
 - [Keyboard flow](#keyboard-flow) · [Focus](#focus) · [Command palette](#command-palette)
-- [Views](#views) · [The window](#the-window) · [Diagnostics](#diagnostics) · [The dock row](#the-dock-row)
+- [Views](#views) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Diagnostics](#diagnostics)
 - [Daily log](#daily-log) · [Obsidian daily notes](#obsidian-daily-notes) · [AFFiNE](#affine)
 - [Command line](#command-line) · [MCP server](#mcp-server) · [Plugins](#plugins)
 - [Build from source](#build-from-source) · [Where your data lives](#where-your-data-lives)
@@ -47,7 +47,7 @@ Open Preferences with `Cmd+,`:
 | --- | --- |
 | 1 | Checkvist username and remote API key (from [checkvist.com/auth/profile](https://checkvist.com/auth/profile)) |
 | 2 | The checklist/list ID to work in |
-| 3 | Global hotkey to toggle the popover |
+| 3 | Global hotkey to show the window |
 | 4 | Focus panel hotkey — `⌃⌥⇧⌘F` by default |
 | 5 | Quick-add hotkey, and whether it targets the list root or a specific parent |
 | 6 | Day rollover hour — when your day starts, default 04:00 |
@@ -59,202 +59,40 @@ Onboarding boxes guide the Checkvist, Obsidian and Google Calendar setup. Each o
 
 ## Keyboard flow
 
-### Navigation
+The window is keyboard-first: every mode, every surface and every task action
+has a key, and the mode strip and the View and Workspace menus name them, so
+none of it is reachable only by something you already have to know.
 
 | Key | Action |
 | --- | --- |
-| `j` / `↓` | Next task |
-| `k` / `↑` | Previous task |
-| `l` / `→` | Expand the task — subtasks appear indented underneath — then step into them |
-| `h` / `←` | Collapse, step back out to the parent row, or leave the scope |
-| `Shift+→` / `Shift+←` | Zoom in: the list becomes that task's subtree, and back out. Also `]` / `[` |
-| `Ctrl+←` / `Ctrl+→` | Cycle root view |
-| `q` | All view |
-| `w` | Due view |
-| `e` | Tags view |
-| `r` | Priority view |
-| `t` | Kanban view |
-| `y` | Matrix view |
-| `u` | Daily view |
-| `?` | Every shortcut, on your own bindings — led by what applies in the view you're in |
-| `Esc` | Cancel input / close popover |
+| `Cmd+1`–`Cmd+4` | Today, Board, Outline, Matrix |
+| `Cmd+8` / `Cmd+9` | Focus / Timeline — both take the main pane |
+| `Cmd+0` | Everything, across all active lists |
+| `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
+| `j` / `k` / `↑` / `↓` | Move the selection |
+| `Return` | Start the card you are on, or finish the one running |
+| `Shift+Return` | Tick it off without running a block |
+| `Space` | Complete the selected task |
+| `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
+| `Cmd+F` | Search |
+| `Cmd+I` | List settings |
+| `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
+| `Cmd+/` | Every shortcut, in force |
+| `Esc` | Cancel what you are typing, or leave the surface you are in |
 
-### Task actions
-
-| Key | Action |
-| --- | --- |
-| `Space` | Complete |
-| `Shift+Space` | Invalidate ("won't do") |
-| `Enter` | Add sibling below |
-| `Alt+Enter` | Add sibling **above** |
-| `Shift+Enter` | Add child |
-| `Tab` / `Shift+Tab` | Indent / unindent |
-| `Cmd+D` | Duplicate — content only, no due date, tags or subtasks |
-| `Shift+A` | Quick-add at the configured location |
-| `dd` | Open the due-date calendar; arrows move the date, `Return` applies, `Esc` cancels |
-| `dt` | Type a due date and time (for example `today 14:30`) |
-| `Cmd+↑` / `Cmd+↓` | Move task |
-| `1`–`9` | Scoped priority rank, within the parent |
-| `Hyper+1`–`Hyper+9` | Absolute priority rank (`Ctrl+Cmd+Option+Shift`) |
-| `=` | Send to priority back |
-| `-` / `0` | Clear scoped priority |
-| `Hyper+-` | Clear absolute priority |
-| `'` | Start a focus session on the selected task, from any view |
-| `Cmd+Z` | Undo the last change |
-
-### Kanban
-
-| Key | Action |
-| --- | --- |
-| `h` / `←` | Previous column |
-| `l` / `→` | Next column |
-| `Cmd+←` / `Cmd+→` | Move task between columns |
-| `f` | Show this task in the All view, entering its subtasks if it has any |
-| *drag* | Drop a card on another to place it above that card, or below the last card to send it to the end. Dropping inside the same column reorders it without touching its due date, priority or position |
-
-### Matrix
-
-Placement is two keystrokes. `m` on its own spells the rest out in the status
-bar, so the vocabulary is one keypress away rather than something to memorise.
-Every sequence starter does this — `d` lists the due and start sequences, `g`
-the tag and link ones — built from the bindings in force, so a rebound sequence
-still names its real key.
-
-| Key | Action |
-| --- | --- |
-| `md` | Do — urgent and important |
-| `ms` | Schedule — important, not urgent |
-| `mg` | Delegate — urgent, not important (`g`, because `d` is Do) |
-| `me` | Eliminate — neither |
-| `m<u><i>` | An exact coordinate, each axis `-9` to `9`. `-` before a digit makes it negative: `m-3 5`, `m5-2`, `m-4-4` |
-| `m00` | Take the task off the matrix |
-| `mz` | Zoom into the selected dot's quadrant, so one box fills the grid. Again, `Esc` or `←` to zoom out. Clicking a quadrant's name does the same |
-| `ml` | Show or hide the unplaced list (also the dock's tray button) |
-| `↑` `↓` `←` `→` | Move the selection between dots — one coordinate at a time, nearest on the other axis breaking the tie. `j` `k` `h` `l` do the same. `↑` with nothing above it reaches the tab strip |
-| `⏎` | Open the dot the selection is on — lists everything standing on that point in the drawer. `↑` `↓` walk it, `←` or `Esc` closes it. Double-clicking a dot does the same |
-| *drag* | Drop a task anywhere on the grid to place it there. Drag from the unplaced list, or drag a placed dot to move it. Dropping a dot back into the list unplaces it |
-
-With the Matrix view open, placing a task steps the selection to the next
-unplaced one — the next entry in the drawer, wrapping once — so a backlog is
-sorted by typing `md` `ms` `me` down it without moving the cursor by hand. It
-walks the drawer's own list, so the count you can see is the number of presses
-left; an inherited coordinate counts as placed for both.
-
-A dot is usually a pile rather than a task. Inheritance gives a goal and its
-whole subtree the *same* coordinate, so forty tasks draw as one dot and the plot
-has no way to tell them apart — which is what opening a dot is for. The drawer
-lists the pile, marks the one task that chose the coordinate as `GOAL`, and
-selects whatever you move to, so the ordinary keys — done, due, tag, timer —
-apply without leaving the matrix.
-
-The arrows step by *level* rather than by distance, so repeated presses walk
-every distinct row and column of the plot and no dot is stranded — a
-nearest-neighbour rule leaves a dot alone in a corner that nothing can reach.
-From a task with no coordinate the first press joins the plot at the dot
-nearest the middle. The card along the bottom names whatever the keyboard is
-on, or whatever the pointer is on when it is over a dot; hovering elsewhere
-names nothing, because a dot only answers to a pointer inside its own
-catchment.
-
-The unplaced list is a drawer under the grid rather than a column beside it,
-and it is **off by default** — as a permanent rail it took 190 of the panel's
-400 points, which left the grid as the narrower half of its own view. Opening
-it lengthens the panel by the drawer's own height, so the grid stays the square
-it was. `m` on its own names the key in the status bar, along with the
-placement letters.
-
-A task with no coordinate of its own takes its nearest placed ancestor's, so
-placing a handful of goals classifies everything beneath them. An inherited
-coordinate is a starting point rather than the answer: the task's **own due
-date and priority rank** move it inside its goal's point — sooner is further
-right, higher-ranked is further up, and a task with neither sits below its
-siblings. Those are whole steps, with a small stable nudge on top to separate
-tasks the facts leave tied: the nudge is exactly half a step, so it fills its
-own cell and can never draw a task as more urgent than one genuinely due
-sooner. Without it the plot read as a lattice, because most tasks share a due
-date of *none* and a rank of *none*. The drift can never cross an axis, so it
-orders tasks within a quadrant and never argues with which quadrant the goal
-was put in. Inherited dots are drawn hollow because the position is read off
-the task rather than chosen for it.
-
-`Do` fills up faster than the other three, and a quadrant is only a quarter of
-the glass. Zooming rescales the window rather than the data: the same
-coordinates through a smaller frame, with the other three boxes out of view, the
-arrow keys confined to the one you are in, and a drop landing on a coordinate
-that belongs to it.
-
-Placing a task by hand overrides all of that — a coordinate you set is exactly
-where the dot goes. Where several tasks still land on the same point, the plot
-draws **one dot per point, not per task**: it grows with the pile, carries the
-count beside it, and `⏎` opens it.
-
-### Dailies
-
-| Key | Action |
-| --- | --- |
-| `j` / `k` | Move through the checklist |
-| `Space` | Tick / un-tick |
-| `Return` | Add a daily — stays open, so a whole routine can be typed in one go |
-| `a` / `i` | Rename the selected daily in place |
-| `Delete` | Delete it. Past days keep their record, and it can be restored in Preferences |
-| `Cmd+↑` / `Cmd+↓` | Reorder |
-| `Esc` | Cancel adding or renaming, discarding what's been typed |
+The full reference is [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md),
+and `Cmd+/` or a double-tap of Shift shows it in the app.
 
 ### Coming from Checkvist
 
 The desktop workspace supports Checkvist-style two-letter commands, including
-`uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll`, and `hc`, plus native undo/redo in the
-Edit menu. See the [desktop keyboard reference](docs/keyboard-shortcuts.md) or
-press `?` / double-tap Shift. Board arrows navigate every column, including
-empty ones; the sidebar outlines the list you are navigating.
+`uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll` and `hc`, plus native undo/redo in the
+Edit menu. Board arrows navigate every column, including empty ones; the
+sidebar outlines the list you are navigating.
 
-The mappings below describe the menu bar surface.
-
-Priority is a Checkvist client, so the gestures worth keeping are Checkvist's.
-`j` `k` and the arrows, `Space` and `Shift+Space`, `Enter` and `Shift+Enter`,
-`Tab` and `Shift+Tab`, `Shift+←` / `Shift+→` for hoisting, `⌘↑` / `⌘↓` to move,
-`Del`, `F2`, `1`–`9` and `0`, `/`, and the `dd` `dr` `gg` `sc` sequences all mean
-what they mean there. So does `?`.
-
-Where it can't match, it's for one reason: Checkvist spells most of its actions
-as two-letter sequences (`td`, `tt`, `ct`, `hf`, `ll`, `ee`, `nn`, `uu`), and
-Priority spends those same starter letters on single-key root tabs
-(`q w e r t y u`) and filter slots (`z x c v b n ,`). A letter can be a sequence
-starter or a shortcut, not both — pressing it has to either act or wait for a
-second key. The tabs won, because switching view is the thing you do most.
-
-The nearest equivalents:
-
-| Checkvist | Here | |
-| --- | --- | --- |
-| `td` schedule for today | `dt` | `t` is the Kanban tab |
-| `tt` tags | `gt` | `t` is the Kanban tab |
-| `ct` clear tags | `gu` | `c` is a filter slot |
-| `hf` hide future | `Shift+H` | `h` collapses |
-| `ll` go to a list | `Shift+L` | `l` expands |
-| `ee` / `ea` / `ei` edit | `F2` / `a` / `i` | `e` is the Tags tab |
-| `uu` undo | `Cmd+Z` | `u` is the Daily tab |
-| `om` distraction-free | `'` | focus session |
-
-All of them are rebindable in `Preferences → Keybindings` if you'd rather have
-the Checkvist spelling than the tab.
-
-### Integrations
-
-| Key | Action |
-| --- | --- |
-| `o` | Open the selected task in Obsidian |
-| `O` | Open in a new Obsidian window |
-| `gc` | Add to Google Calendar |
-
-### Scope
-
-Every view except **All** answers the same question the same way: does it show
-only this level, or everything below it? One toggle decides — `toggle children`,
-or the chip in the breadcrumb bar, which also says which answer is in force.
-
-All is the exception on purpose. It's the navigator you drill through to *set*
-the scope the other views read, so it's always strictly parented.
+The one-letter root tabs that used to collide with those sequences are gone
+with the menu bar panel they belonged to, so a sequence no longer has to
+compete with a tab for its starter letter.
 
 ## Today
 
@@ -305,10 +143,11 @@ moved to `Ctrl`.
 
 ## Focus
 
-Focus is where the app opens, because the first question it exists to answer is
-what to do next rather than what there is. `Cmd+8` from anywhere in the window
-takes the main pane; `Esc` gives it back. The preference **Open on the focus
-screen** turns the launch behaviour off without hiding the screen.
+Focus is the pane that answers what to do next when the day list is not enough
+— the ranked ladder, with the conditions and the time window that produced it.
+`Cmd+8` from anywhere in the window takes the main pane; `Esc` gives it back.
+The app opens on Today rather than here; the preference **Open on the focus
+screen** puts it back to opening here.
 
 The pane has two states and no third surface. With nothing running it is the
 **ladder**: one task at a time at full size, the ones you have climbed past
@@ -446,38 +285,33 @@ as a chord rather than a tap, so typing never trips it. Most commands accept sev
 
 Due values understand natural language and times: `due today 14:30`, `due tomorrow 9am`, `due next week`, `due 4pm fri`, `due next monday morning`. The time words `morning`, `noon`, `afternoon`, `evening`, `midnight`, `eod` and `cob` all resolve to configurable named times.
 
+The **Kanban**, **Matrix** and **View** families act on the Checkvist-side state
+the removed menu bar panel rendered. They still parse and still run; what they
+change no longer has a surface, so they are there for a workspace that has not
+finished migrating rather than for daily use.
+
 ## Views
 
-| View | Key | What it shows |
+Four planning modes, one focus screen, one timeline. The mode strip in the
+toolbar names the one you are in and every key that reaches the others.
+
+| Mode | Key | What it shows |
 | --- | --- | --- |
-| **All** | `q` | The full tree |
-| **Due** | `w` | Due and overdue, soonest first |
-| **Tags** | `e` | Grouped by tag |
-| **Priority** | `r` | Your ranked queue |
-| **Kanban** | `t` | Configurable columns, optionally in a row per goal |
-| **Matrix** | `y` | Eisenhower quadrants by importance and urgency, with what is still unplaced a keypress away underneath |
-| **Daily** | `u` | Dailies, the chart, and what you finished |
+| **Today** | `Cmd+1` | The day as a numbered list of cards — see [Today](#today) |
+| **Board** | `Cmd+2` | Columns of cards, dragged between and within |
+| **Outline** | `Cmd+3` | The list as a tree, indented, with the inspector beside it |
+| **Matrix** | `Cmd+4` | Eisenhower quadrants by importance and urgency |
+| **Focus** | `Cmd+8` | What to do next, or the block that is running |
+| **Timeline** | `Cmd+9` | The day as elapsed time rather than as a list |
 
-Kanban cards show the task text with tags stripped, a `P1`–`P9` priority badge, the due date with overdue/today highlighting, inline tags, and a subtask count. Columns are configured in Preferences and reorder by drag. Cards drag between and within columns; a hairline marks where the card will land.
+`Cmd+0` shows **Everything** — every active list at once, rather than the one
+the sidebar has selected.
 
-A column is defined by one or more conditions, and claims a task if it matches **any** of them. Columns are evaluated in order, so a task lands in the first one that claims it.
-
-| Condition | Claims |
-| --- | --- |
-| Tag | Tasks carrying `#tag` |
-| Due bucket | Overdue, ASAP, Today, Tomorrow, Next 7 days, … |
-| Matrix quadrant | Whatever sits in Do / Schedule / Delegate / Eliminate |
-| Priority rank | `P3 or higher` claims P1, P2 and P3 |
-| Has no subtasks | Only the leaves — the things you actually do, not the goals above them |
-| Not on the matrix | The board's own inbox: everything still unplaced |
-| Everything else | Whatever no earlier column took |
-
-Each column header carries its card count. Give a column a **WIP limit** and the count reads `4/3` and turns amber when it's over — advisory only, nothing is ever blocked.
-
-`kanban swimlanes` turns the board into a **row per top-level goal**, columns per state. A single row of columns tells you what state a task is in but never what it's *for*; with a tree that's mostly goal structure, that's the more useful axis. Every lane draws all its columns, including the empty ones — that emptiness is the comparison.
-
-Dropping a card into a quadrant column places it on the matrix, the same write the Matrix view's drop makes. Columns defined only by priority, leafness or matrix-absence describe a task rather than ask something of it, so they accept no drops.
-
+There used to be seven views instead, keyed `q` through `u`, inside a menu bar
+panel: All, Due, Tags, Priority, Kanban, Matrix and Daily. Due, Tags and
+Priority were filters over one list wearing the costume of separate places, and
+Daily was a dashboard for a thing that is now a badge on a task. What is left
+is the four that ask genuinely different questions.
 ## Repeating work
 
 Give a task a **period** — `daily`, `weekdays`, `weekly`, `every 3 days`,
@@ -514,38 +348,34 @@ item's own menu.
 
 ## The window
 
-The menu bar panel is the point of this app, but it dismisses on any outside
-click and it is 400pt wide — which is right for a glance and wrong for half an
-hour of reorganising, and leaves nowhere to look when something breaks. So the
-same seven views also open in an ordinary window.
+The window is the app. It opens on Today, carries the mode strip in its
+toolbar, and everything you can do you can do here: the sidebar of lists and
+folders, the four planning modes, the focus screen, the timeline, the
+inspector.
 
-Open it from **the status item's menu → Open Main Window**, from the
-command palette (`window`), or with `Cmd+0` once it is up. It is resizable,
-survives clicking away, remembers its frame, and every keybinding works in it
-exactly as it does in the panel — `Esc` cancels what you are typing but leaves
-the window alone.
+It used to be the second-class half of a pair. The first-class half was a
+400pt menu bar panel that dismissed on any outside click — right for a glance,
+wrong for half an hour of reorganising — and the window existed so the same
+views had somewhere to live that survived being clicked away. That panel is
+gone; what is left of the menu bar is a standing reminder and a way in.
 
-**Everything is shared.** One list, one cursor, one selected view, in both
-places at once: change tab in the window and the panel changes too. That is a
-deliberate limit rather than an oversight — the visible task list is derived
-from the tab, the cursor and the search text, so two surfaces showing different
-tabs would need two of everything underneath.
+Open it from **the status item's menu → Open Main Window**, from the command
+palette (`window`), or with the global hotkey. It is resizable, remembers its
+frame, and `Esc` leaves it alone.
 
 **A Dock icon appears while the window is open** and goes again when you close
 it. That is what buys you `Cmd-Tab`, `Cmd-W`, `Cmd-Q` and — the one you notice
-if it is missing — an Edit menu, without which copy and paste do nothing in the
-quick-add field.
+if it is missing — an Edit menu, without which copy and paste do nothing in
+the quick-add field.
 
-The toolbar carries a **list switcher**: the current list by name, every list
-you have, the offline workspace, and a Refresh. Switching here does the same
-full switch `Shift+L` and `list <name>` do — the cursor resets, the kanban
-filter clears, and the pending offline queue for the list you left is not
-carried into the one you arrived at.
+The **global focus panel** is the one surface that is not the window: it is
+the same day list, summoned over whatever app you are in, and it keeps working
+with every window closed.
 
 ## Diagnostics
 
-`⚕` in the window's toolbar or its dock row, `diagnostics` in the palette, or
-**View → Diagnostics**. It answers "why does this look wrong?":
+`diagnostics` in the command palette, or **Workspace → Diagnostics**. It opens as
+a sheet on the main window and answers "why does this look wrong?":
 
 - **Status** — connection, current list, network, sync age, open task count, and whether anything is queued offline.
 - **Health** — a green tick or an orange triangle per integration, with the detail underneath. The AFFiNE row lists every path it searched for the helper; the MCP row shows the resolved command; the Google Calendar and Google Tasks rows show whether the shared Google sign-in covers them.
@@ -557,37 +387,15 @@ issue. Both run it through a redactor first: anything labelled like a
 credential, and any bare token-shaped run, comes out as `<redacted>`. Check it
 before you post it anyway.
 
-## The dock row
-
-A narrow strip along the bottom, in every view. Right to left:
-
-| Button | Does |
-| --- | --- |
-| ⚙︎ Gear | Preferences |
-| ↻ Refresh | Re-fetch from Checkvist, with a spinner while it runs |
-| ↕ Resize | Reveal the drag strip — **panel only**, a window has a resize corner |
-| ⚕ Diagnostics | Open the diagnostics sheet — **window only** |
-| ▁▃▅ Graph | Show/hide the Daily chart — **Daily view only** |
-
-In the window the row also carries a sync readout on the left — "Synced 4m ago",
-"Offline · changes queued", or whatever last failed.
-
-**Each root view remembers its own height.** The Daily view stacks a checklist, a chart and a completions list where the All view is a single list, so one shared height would be wrong for one of them at all times. Drag the strip to set a height; double-click it to go back to sizing from the content.
-
-Heights are clamped to 240–900pt on write *and* on read at launch, so a stored value can never put the strip out of reach. If one somehow does:
-
-```bash
-defaults delete uk.co.maybeitsadam.priority panelHeightOverridesByRootView
-```
-
-Hiding the graph shortens the panel by exactly the chart's height, which turns the Daily view into a compact checklist on days you're only ticking things off.
-
 ## Daily log
 
-The Daily view (`u`) answers "what did I get done, and how does today compare?"
+What the app writes down about a day, and what reads it back.
 
 ### Dailies
-
+A daily is not a kind of item and not a view. It is a requirement placed on
+an ordinary task: contribute to this every day. The task keeps its place in
+its list and gains a badge on its card in Today that you tick to record the
+day's contribution, without starting a block.
 Recurring things you intend to do — habits, not tasks — sitting at the top of the view as a checklist.
 
 - **They reset at every rollover and never go overdue.** Miss one and it's a gap in the history: nothing to clear, nothing to reschedule. That's the whole reason they aren't Checkvist tasks with a `repeat daily` rule — a recurring *task* goes overdue and starts competing with real deadlines.
@@ -601,7 +409,7 @@ Recurring things you intend to do — habits, not tasks — sitting at the top o
 
 - **Recording is always on and always local.** Completions, reopens, invalidations, finished focus sessions and the day's plan are appended to `~/Library/Application Support/Priority/daylog.jsonl` — one JSON object per line, so it stays readable with `tail`, and a torn write costs one event rather than the file.
 - **Checkvist owns current state, the log owns history, Obsidian owns the archive.** Nothing syncs backwards, so there is no conflict resolution anywhere in this.
-- **The day's plan is derived, not authored.** At the first popover open after your rollover hour, whatever is due, overdue or starting that day is snapshotted. That's what the day's note measures its "N of M planned left" against — you never plan a day by hand.
+- **The day's plan is derived, not authored.** The first time you open the app after your rollover hour, whatever is due, overdue or starting that day is snapshotted. That's what the day's note measures its "N of M planned left" against — you never plan a day by hand.
 - **Deferring is not slipping.** Pushing a due date forward is recorded distinctly from letting a task rot, so the view doesn't nag about a decision you made deliberately.
 - **The day starts at your rollover hour, not midnight** (default 04:00), so a session finishing at 01:30 counts towards the day it belonged to.
 - **No backfill.** History starts the day you first run this build. The chart is drawn from day one regardless — a flat run of days is a true statement about a history that has just started — with a "collecting since" line underneath until the window fills.

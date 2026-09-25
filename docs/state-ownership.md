@@ -36,7 +36,7 @@ triggers a full rebuild. Fine for menu-bar-sized lists; not granular.
 Rebuilding lazily rather than eagerly matters because writes arrive in bursts — deleting a task
 touches `tasks`, both priority queues and the eisenhower levels, which is four invalidations for
 one user action. Reading `cache` always validates first, so external readers
-(`PopoverView`, `KanbanManager`, `KanbanTaskDataSourceAdapter`) cannot observe a stale snapshot.
+(`KanbanManager`, `KanbanTaskDataSourceAdapter`) cannot observe a stale snapshot.
 Inside `TaskListViewModel`, use the private `cacheStorage` to avoid re-entering the validity
 check on hot paths.
 
@@ -92,7 +92,7 @@ as long as it is queued — including across a relaunch.
 | `currentParentId: Int` | ✓ |
 | `currentSiblingIndex: Int` | — |
 | `rootScopeFocusLevel: Int` | — |
-| `isPopoverVisible: Bool` | — |
+| `isPopoverVisible: Bool` | — | *(the popover is gone; the flag is not yet)*
 
 ### `TaskListViewModel` — the derived view + the view-shaping toggles
 Owns the toggles that shape what's visible, *and* the rebuilt `cache`. These `didSet`s call
@@ -185,13 +185,13 @@ This optimistic-then-sync-then-rollback-or-enqueue shape recurs across mutations
 </content>
 </invoke>
 
-## Two shells, one set of state
+## One shell, one set of state
 
-The menu bar panel and the main window (`MainWindowController`) host the *same*
-`PopoverView` over the *same* `AppCoordinator`. Only `\.shellMode` differs, and
-the only thing it decides is chrome — the rules live in
-`PriorityCore/ShellMode.swift` as `ShellChrome.shows(_:in:)` rather than as
-`if` statements in the views, so they can be tested without SwiftUI.
+There used to be two: the menu bar panel and the main window hosted the *same*
+`PopoverView` over the *same* `AppCoordinator`, differing only in a `\.shellMode`
+that decided chrome. The panel and that view are gone, and with them the shell
+mode. `MainWindowController` is the only host of the legacy managers described
+above, and the workspace window is the only surface.
 
 **They are mirrors, not independent views, and that is a property of the state
 model rather than a decision that can be revisited cheaply.**

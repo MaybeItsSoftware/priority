@@ -56,8 +56,9 @@ separately from the app, which keeps its own.
 | `?` | Help |
 | `esc` | Quit |
 
-The letters are the app's, not a new set: `q` is the All view in the popover, so
-it is the All tab here too. That means **`q` does not quit** — `esc` does.
+The letters were the app's menu bar panel's, not a new set: `q` was its All view,
+so it is the All tab here too. That means **`q` does not quit** — `esc` does.
+The panel itself has been removed from the app; these letters outlived it.
 
 Each tab shapes the same data differently:
 
@@ -68,8 +69,8 @@ Each tab shapes the same data differently:
 - **Kanban** uses the columns you configured in the app, evaluated in order — a
   task belongs to the first column it matches, and a catch-all column takes only
   what the others left. The due-date bucketing is a port of the app's
-  `classifyDueBucket`, so the board agrees with the popover rather than
-  approximating it.
+  `classifyDueBucket`, so the board agrees with the app's own
+  bucketing rather than approximating it.
 - **Matrix** splits the Eisenhower placements into DO / SCHEDULE / DELEGATE /
   ELIMINATE, at zero on each axis. A task sitting at the origin has not been
   judged, so it is left out rather than filed under "eliminate".
@@ -299,8 +300,8 @@ interleave with one from the app. The CLI also re-reads the file inside the lock
 rather than saving a snapshot it loaded earlier, which is what stops a
 concurrent write being silently erased.
 
-The app watches its store directory, so a daily added here appears in the
-popover without a relaunch.
+The app watches its store directory, so a daily added here appears in the app
+without a relaunch.
 
 What is *not* writable from here is `metadata` — priority ranks, recurrence
 rules and start dates. Those live in `UserDefaults`, which the running app holds

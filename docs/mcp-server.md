@@ -89,7 +89,7 @@ Three things make that safe, and all three are load-bearing:
    anything added since. A mutation must be expressed as *what changed*.
 3. **A directory watcher.** `DailyLogService` watches the store directory (not
    the files — the rename would orphan a file watch) and reloads, so a daily
-   added here shows up in the popover without a relaunch.
+   added here shows up in the app without a relaunch.
 
 The serialised format is therefore a cross-process interface. Two constraints
 are pinned by `DailyDefinitionsStoreFormatTests`:
