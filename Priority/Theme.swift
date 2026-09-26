@@ -121,7 +121,7 @@ struct Theme: Equatable {
   static func font(_ face: ThemeFontFace, size: CGFloat, weight: ThemeFontWeight) -> Font {
     // A *request*: Priority ships no font files, so the named families are
     // tried against what is installed and the design is what you actually get
-    // until somebody installs Arvo. See `docs/theming.md`.
+    // until somebody installs Arvo. See `docs/plugins.md`.
     if let installed = face.families.first(where: { NSFont(name: $0, size: size) != nil }) {
       return Font.custom(installed, fixedSize: size).weight(swiftUIWeight(weight))
     }

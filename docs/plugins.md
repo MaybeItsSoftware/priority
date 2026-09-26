@@ -9,6 +9,7 @@ Priority ships with native plugins only. Plugins are self-contained and live und
 - `Priority/Plugins/Native/MCP/`
 - `Priority/Plugins/Native/DailyLog/`
 - `Priority/Plugins/Native/Celebration/`
+- `Priority/Plugins/Native/Theme/`
 
 `SettingsView` renders plugin settings from active native plugins through shared protocols.
 
@@ -25,6 +26,7 @@ Plugin contracts are defined under `Priority/Plugins/Protocols/`:
 - `DailyLogPlugin` (in its own file, `Protocols/DailyLogPluginProtocol.swift` — see below)
 - `CompletionCelebrationPlugin` (likewise, in
   `Protocols/CompletionCelebrationPluginProtocol.swift` — see below)
+- `ThemePlugin` (likewise, in `Protocols/ThemePluginProtocol.swift` — see below)
 - `PluginSettingsPageProviding`
 
 Plugin registration lives in `Priority/Plugins/Registry/PluginRegistry.swift`.
@@ -224,6 +226,80 @@ Two constraints a new preset must respect:
 `CompletionMilestonePolicy` decides the *occasion* — ordinary, list cleared,
 daily ticked, a run of consecutive days, or every tenth completion of the day.
 Presets choose how to render an occasion, never which occasion it is.
+
+### Theme (`ThemePlugin`)
+
+What the app looks like: a colour palette and a structure set, under an
+identity. Two themes ship — **Chalk**, the house style and the default, and
+**Pitch**, high-contrast and dark-forward — and the user picks one in the
+plugin's settings page.
+
+Shaped like `CompletionCelebrationPlugin` rather than like an integration, for
+the same reason: it is a menu. Every theme registers, `ThemeManager` applies
+the user's pick afterwards, and the registry is retained past
+`AppCoordinator.init` because the active plugin can change at runtime.
+
+A plugin declares three things and nothing else:
+
+- **`palette`** — two tables of literal hex (`light` and `dark`), read through
+  the semantic roles in `ThemeColorRole`. Components only ever name a role, so
+  a theme swap and an appearance flip are the same mechanism. Roles in
+  `ThemeColorRole.themeInvariant` — the letterbox behind a photo, the scrim
+  under chrome sitting on an image, the text on that scrim — answer from the
+  light table whatever the appearance, because the content underneath isn't
+  ours to theme.
+- **`structure`** — radii, border weights, the spacing scale and the type
+  treatment, including the **micro-label**: 10pt, bold, uppercase, 0.15em
+  tracking, muted. Use `.microLabel(theme)`; a hand-rolled
+  `.font(.system(size: 10, weight: .bold))` with an `.uppercased()` next to it
+  is the same thing written out longhand, and it will not flip.
+- **`preferredAppearance`** — advisory only. Light/dark/system stays the user's
+  own setting; a theme does not get to answer it on their behalf.
+
+`specification` composes the three with the `Plugin` identity and is defaulted,
+so a native theme is a registration rather than a place to keep hex — the hex
+lives in `Sources/PriorityCore/Theming/BuiltInThemeSpecifications.swift`, where
+it is covered by `corelogic-tests`.
+
+Like `DailyLog` and `Celebration`, this capability breaks two conventions for
+the one reason: the contract sits in `Protocols/ThemePluginProtocol.swift` and
+the whole `Native/Theme/` folder is excluded from the `PriorityPlugins` target,
+because it traffics in `PriorityCore` types and one file can only belong to one
+SPM target. Everything worth testing is therefore in `PriorityCore`:
+`ThemeColorValue` (hex parsing, WCAG luminance and contrast), `ThemePalette`
+(role resolution and the flip), and `ThemeSpecification.validate()`.
+
+**`validate()` is the guard rail.** A role missing from both tables is an
+error; unreadable body text, an accent under 3:1 where it has to carry a focus
+ring, a card you cannot tell from the page, a declared shadow, a gradient on
+chrome, an off-scale radius or a hairline that is really a border are warnings.
+An accent under 4.5:1 is a *note* — azure on chalk is 3.6:1, which is why it is
+for headlines, large text, UI components and fills and never a paragraph of
+body copy. The settings page prints the list.
+
+**Rendering through it.** `ThemeManager` owns which theme is active;
+`.themed(_:)` at each root — the window, the menu-bar popover, the settings
+window — resolves it against the appearance SwiftUI reports and puts a `Theme`
+in the environment. Views read `@Environment(\.theme)` and touch role names and
+scale names only: `theme.paper`, `theme.panelRadius`, `theme.space.md`,
+`theme.bodyFont()`. `ThemeHRule` / `ThemeVRule` replace `Divider()`, which
+draws the system separator and does not flip.
+
+**Fonts are requests, not files.** Priority ships no font files, so a
+`ThemeFontFace` names families in preference order and falls back to its
+`design`. Chalk asks for Arvo and gets a system serif until Arvo is installed.
+Shipping the real faces means adding the `.ttf`s to `Priority/Assets` (or a
+`Fonts/` resource folder), listing them under `ATSApplicationFontsPath` in the
+Info.plist, and honouring each face's licence — nothing in the contract changes.
+
+**What renders through it today.** The Eisenhower matrix, and the persistent
+shell chrome: the dock row, the resize strip, the sync readout, the top bevel,
+the breadcrumb bar and the scope chip. Everything else — the task list, the
+kanban board, the daily view, the focus session, settings — still resolves
+colour through `AppThemeColorToken` and `PreferencesManager.themeColor(for:)`,
+which is the older per-token override mechanism and is unrelated to this
+plugin. Both are live at once on purpose; a surface is migrated when its
+`themeColor(_:)` helper is gone.
 
 ## Verification
 
