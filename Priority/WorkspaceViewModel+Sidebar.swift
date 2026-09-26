@@ -159,6 +159,10 @@ extension WorkspaceViewModel {
   }
 
   func selectNestedList(_ task: WorkspaceTask) {
+    // Any other way of choosing a row moves the keyboard cursor there too,
+    // by letting it fall back to whatever is now selected.
+    sidebarCursorID = nil
+
     taskEditor.flush()
     dismissFocusScreen()
     selectedFolderID = nil

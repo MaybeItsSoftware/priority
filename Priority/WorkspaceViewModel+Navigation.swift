@@ -93,67 +93,6 @@ extension WorkspaceViewModel {
     selectFolder(ordered[min(max(0, index + offset), ordered.count - 1)])
   }
 
-  private enum SidebarNavigationTarget: Equatable {
-    case everything
-    case list(String)
-    case nestedList(String)
-    case folder(String)
-  }
-
-  /// Mirrors the visible sidebar order: Everything, Inbox, pinned shortcuts,
-  /// folders and their contents, then the ungrouped lists.
-  private var sidebarNavigationTargets: [SidebarNavigationTarget] {
-    var result: [SidebarNavigationTarget] = [.everything]
-    var visited = Set<String>()
-    func appendList(_ list: TaskList) {
-      result.append(.list(list.id))
-      result += nestedLists.filter { $0.task.listId == list.id }.map { .nestedList($0.id) }
-    }
-    func appendFolder(_ folder: ListFolder) {
-      guard visited.insert(folder.id).inserted else { return }
-      result.append(.folder(folder.id))
-      guard expandedFolderIDs.contains(folder.id) else { return }
-      for list in lists where list.folderId == folder.id && list.systemRole != .inbox {
-        appendList(list)
-      }
-      for child in folders where child.parentFolderId == folder.id {
-        appendFolder(child)
-      }
-    }
-    if let inbox = inboxList { appendList(inbox) }
-    result += promotedLists.map { .nestedList($0.id) }
-    for folder in folders where folder.parentFolderId == nil { appendFolder(folder) }
-    for list in lists where list.folderId == nil && list.systemRole != .inbox { appendList(list) }
-    return result
-  }
-
-  func moveSidebarSelection(by offset: Int) {
-    let targets = sidebarNavigationTargets
-    guard !targets.isEmpty else { return }
-    let current: SidebarNavigationTarget? = if let selectedFolderID {
-      .folder(selectedFolderID)
-    } else if isEverythingSelected {
-      .everything
-    } else if let scope = scopeTask, scope.isList {
-      .nestedList(scope.id)
-    } else if let selectedListID {
-      .list(selectedListID)
-    } else {
-      nil
-    }
-    let index = current.flatMap { targets.firstIndex(of: $0) }
-      ?? (offset < 0 ? targets.count : -1)
-    let target = targets[min(max(0, index + offset), targets.count - 1)]
-    switch target {
-    case .everything: selectEverything()
-    case .list(let id): selectList(id)
-    case .nestedList(let id):
-      if let task = task(withID: id) { selectNestedList(task) }
-    case .folder(let id):
-      if let folder = folders.first(where: { $0.id == id }) { selectFolder(folder) }
-    }
-  }
-
   private var orderedFolders: [ListFolder] {
     var result: [ListFolder] = []
     var visited = Set<String>()

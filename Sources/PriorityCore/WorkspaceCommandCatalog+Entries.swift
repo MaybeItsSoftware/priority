@@ -165,10 +165,12 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .folderSelectNext, title: "Select the next folder", group: "Lists",
       keys: ["ctrl+option+down"]),
-    .init(id: .listMoveUp, title: "Move the list up", group: "Lists", keys: ["cmd+up"], surface: .sidebar),
     .init(
-      id: .listMoveDown, title: "Move the list down", group: "Lists", keys: ["cmd+down"],
-      surface: .sidebar),
+      id: .listMoveUp, title: "Move the sidebar row up", group: "Lists", keys: ["cmd+up"],
+      surface: .sidebar, note: "Whatever you are on — a list, a folder, or a nested list"),
+    .init(
+      id: .listMoveDown, title: "Move the sidebar row down", group: "Lists", keys: ["cmd+down"],
+      surface: .sidebar, note: "Whatever you are on — a list, a folder, or a nested list"),
     .init(
       id: .listNewTaskDestination, title: "Choose where new tasks go", group: "Lists",
       keys: ["cmd+option+[", "cmd+option+]"], kind: .motion,
@@ -257,13 +259,16 @@ public enum WorkspaceCommandCatalog {
       keys: ["pageup", "pagedown"], kind: .motion),
     .init(
       id: .motionSidebarSelect, title: "Move through the sidebar", group: "Moving around",
-      keys: ["down", "up", "j", "k"], surface: .sidebar, kind: .motion),
+      keys: ["down", "up", "j", "k"], surface: .sidebar, kind: .motion,
+      note: "Every row, including Focus and the timeline; Home and End are the two ends"),
     .init(
-      id: .motionSidebarExpand, title: "Expand the folder, or enter the list",
-      group: "Moving around", keys: ["right", "enter"], surface: .sidebar, kind: .motion),
+      id: .motionSidebarExpand, title: "Open the row you are on",
+      group: "Moving around", keys: ["right", "enter"], surface: .sidebar, kind: .motion,
+      note: "Focus and the timeline open their screens, a folder expands, a list takes the keyboard"),
     .init(
       id: .motionSidebarCollapse, title: "Collapse the folder, or go up a level",
-      group: "Moving around", keys: ["left"], surface: .sidebar, kind: .motion),
+      group: "Moving around", keys: ["left"], surface: .sidebar, kind: .motion,
+      note: "Nothing to leave on Focus or the timeline, so it stays put"),
     .init(
       id: .motionBoardColumn, title: "Focus the next or previous column",
       group: "Moving around", keys: ["left", "right"], surface: .board, kind: .motion),

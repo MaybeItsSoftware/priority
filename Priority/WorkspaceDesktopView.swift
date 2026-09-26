@@ -254,7 +254,8 @@ struct WorkspaceDesktopView: View {
         .id(everythingSidebarID)
         .listRowBackground(
           WorkspaceSidebarSelectionBackground(
-            isSelected: model.isCurrentSidebarRow(everythingSidebarID)))
+            isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
+            rowID: "row:everything"))
         .tag(Optional(everythingSidebarID))
         .accessibilityLabel("Everything, all lists")
         if let inbox = model.inboxList {
@@ -307,8 +308,14 @@ struct WorkspaceDesktopView: View {
       .focusEffectDisabled()
       .onChange(of: model.focusRequest) { _, _ in
         if model.requestedFocusArea == .sidebar {
-          sidebarProxy.scrollTo(model.currentSidebarID)
+          sidebarProxy.scrollTo(model.sidebarCursorScrollID)
         }
+      }
+      // Arrowing past the bottom of the visible rows used to walk the cursor
+      // off screen, because only a focus request scrolled.
+      .onChange(of: model.sidebarCursorID) { _, _ in
+        guard let id = model.sidebarCursorScrollID else { return }
+        withAnimation(.easeInOut(duration: 0.12)) { sidebarProxy.scrollTo(id) }
       }
       }
 
@@ -347,7 +354,8 @@ struct WorkspaceDesktopView: View {
       .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
       .listRowBackground(
         WorkspaceSidebarSelectionBackground(
-          isSelected: model.isCurrentSidebarRow(list.id)))
+          isCurrent: model.isCurrentSidebarRow(list.id),
+          rowID: "list:\(list.id)"))
       .workspaceSidebarDrop(isLastInGroup: isLastInGroup) { payload, placement in
         switch placement {
         case .into: model.moveDroppedItem(payload, toListID: list.id)
@@ -944,20 +952,43 @@ struct WorkspaceItemActions: View {
 /// focus is the difference between a hairline and a ring. That is the house
 /// rule anyway: separation comes from borders, and selection is a border
 /// change rather than a heavier fill.
-private struct WorkspaceSidebarSelectionBackground: View {
+/// Two facts about a sidebar row, drawn as two different things.
+///
+/// `isCurrent` is which list is open — it persists, and it is what you are
+/// looking at in the main pane. `isCursor` is where the arrow keys are, which
+/// is usually the same row and deliberately is not always: standing on Focus
+/// or the timeline must not close the list you were reading. Conflating them
+/// meant those two rows could never be highlighted at all, because neither is
+/// a list to be current.
+///
+/// The fill says "open", the ring says "here". A ring needs the keyboard to
+/// mean anything, so it only draws while the sidebar has it.
+/// Internal rather than file-private: the Focus and timeline rows live in
+/// `WorkspaceFocusScreen.swift` and are sidebar rows like any other.
+struct WorkspaceSidebarSelectionBackground: View {
   @Environment(WorkspaceViewModel.self) private var model
-  let isSelected: Bool
+  var isCurrent = false
+  var rowID: String?
 
   private var hasKeyboard: Bool { model.keyboardFocusArea == .sidebar }
+  private var isCursor: Bool { hasKeyboard && rowID.map(model.isSidebarCursorRow) == true }
+
+  private var fill: Double {
+    if isCurrent { return isCursor ? 0.24 : 0.13 }
+    return isCursor ? 0.12 : 0
+  }
+
+  private var border: Color {
+    if isCursor { return .accentColor }
+    return isCurrent ? Color.accentColor.opacity(0.55) : .clear
+  }
 
   var body: some View {
     RoundedRectangle(cornerRadius: 6)
-      .fill(Color.accentColor.opacity(isSelected ? (hasKeyboard ? 0.24 : 0.13) : 0))
+      .fill(Color.accentColor.opacity(fill))
       .overlay(
         RoundedRectangle(cornerRadius: 6)
-          .strokeBorder(
-            isSelected ? Color.accentColor.opacity(hasKeyboard ? 1 : 0.55) : .clear,
-            lineWidth: hasKeyboard ? 2 : 1)
+          .strokeBorder(border, lineWidth: isCursor ? 2 : 1)
       )
   }
 }
@@ -1002,7 +1033,8 @@ private struct WorkspaceNestedListRow: View {
     .focusable().focusEffectDisabled()
     .id(promotedShortcut ? "promoted:\(task.id)" : task.id)
     .listRowBackground(WorkspaceSidebarSelectionBackground(
-      isSelected: model.isCurrentSidebarRow(task.id)))
+      isCurrent: model.isCurrentSidebarRow(task.id),
+      rowID: promotedShortcut ? "pinned:\(task.id)" : "nested:\(task.listId):\(task.id)"))
     .contextMenu { WorkspaceItemActions(task: task) }
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
     .background(isDropTargeted ? Color.accentColor.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 6))
@@ -1033,7 +1065,8 @@ private struct WorkspaceFolderTree: View {
           .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
           .listRowBackground(
             WorkspaceSidebarSelectionBackground(
-              isSelected: model.isCurrentSidebarRow(list.id)))
+              isCurrent: model.isCurrentSidebarRow(list.id),
+              rowID: "list:\(list.id)"))
           .workspaceSidebarDrop(isLastInGroup: list.id == folderLists.last?.id) { payload, placement in
             switch placement {
             case .into: model.moveDroppedItem(payload, toListID: list.id)
@@ -1070,7 +1103,6 @@ private struct WorkspaceFolderTree: View {
   }
 
   private var isCurrent: Bool { model.selectedFolderID == folder.id }
-  private var hasKeyboard: Bool { model.keyboardFocusArea == .sidebar }
 
   private var folderHeader: some View {
       HStack(spacing: 6) {
@@ -1109,20 +1141,14 @@ private struct WorkspaceFolderTree: View {
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 4)
-        // The same two facts as a list row, drawn the same way: the border
-        // says which folder you are on whether or not the sidebar is
-        // listening, and its weight says whether it is.
+        // The same component as every other sidebar row, rather than the same
+        // two opacities written out again: a folder that disagreed with a list
+        // about what "you are here" looks like is the bug this replaces.
         .background(
-          Color.accentColor.opacity(isCurrent ? (hasKeyboard ? 0.22 : 0.12) : 0),
-          in: RoundedRectangle(cornerRadius: 5)
-        )
-        .overlay(
-          RoundedRectangle(cornerRadius: 5)
-            .strokeBorder(
-              isCurrent ? Color.accentColor.opacity(hasKeyboard ? 1 : 0.55) : .clear,
-              lineWidth: hasKeyboard ? 2 : 1)
-        )
+          WorkspaceSidebarSelectionBackground(
+            isCurrent: isCurrent, rowID: "folder:\(folder.id)"))
         .contentShape(Rectangle())
+        .id(folder.id)
         .onDrag { WorkspaceTaskDrag.provider(forFolder: folder.id) }
         .workspaceSidebarDrop(isLastInGroup: isLastInGroup && !model.isFolderExpanded(folder)) { payload, placement in
           switch placement {

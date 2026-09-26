@@ -14,6 +14,7 @@ struct WorkspaceFocusLauncher: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Button {
+        model.sidebarCursorID = "row:focus"
         model.presentFocusScreen()
       } label: {
         VStack(alignment: .leading, spacing: 4) {
@@ -50,6 +51,10 @@ struct WorkspaceFocusLauncher: View {
         .overlay(
           RoundedRectangle(cornerRadius: 8)
             .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+        // Focus is a sidebar row, so it takes the sidebar's cursor ring. It
+        // could not be highlighted at all before, which is most of why
+        // arrowing up onto it felt like arrowing into nothing.
+        .overlay(WorkspaceSidebarSelectionBackground(rowID: "row:focus"))
         .contentShape(RoundedRectangle(cornerRadius: 8))
       }
       .buttonStyle(.plain)
@@ -57,7 +62,10 @@ struct WorkspaceFocusLauncher: View {
       .onHover { isHovering = $0 }
       .help(model.activeFocusSession == nil ? "Start a focus session on your next task" : "Return to the running session")
       .accessibilityLabel(model.activeFocusSession == nil ? "Start focus. Next up: \(headline)" : "Return to focus session")
-      Button { model.presentTimelineScreen() } label: {
+      Button {
+        model.sidebarCursorID = "row:timeline"
+        model.presentTimelineScreen()
+      } label: {
         HStack(spacing: 6) {
           Image(systemName: "chart.bar.doc.horizontal")
             .font(.system(size: 11, weight: .semibold))
@@ -68,6 +76,8 @@ struct WorkspaceFocusLauncher: View {
         .foregroundStyle(model.showsTimelineScreen ? Color.accentColor : .secondary)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .background(WorkspaceSidebarSelectionBackground(
+          isCurrent: model.showsTimelineScreen, rowID: "row:timeline"))
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)

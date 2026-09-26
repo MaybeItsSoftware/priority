@@ -256,6 +256,15 @@ enum WorkspaceSidebarItem: Identifiable {
   var dailyProgressRevision = 0
   var selectedListID: String?
   var selectedFolderID: String?
+  /// Where the sidebar's keyboard cursor is, as a row id from
+  /// `WorkspaceSidebarOutline`.
+  ///
+  /// Separate from `selectedListID` because two of the rows — Focus and the
+  /// timeline — are not lists and landing on one must not change what the
+  /// main pane is showing. It also fixes the pinned-list duplicate: the same
+  /// list is drawn twice, and only a row id can say which of the two you are
+  /// standing on.
+  var sidebarCursorID: String?
   var expandedFolderIDs: Set<String> = []
   var scopeTaskID: String?
   var nestedLists: [TaskOutlineItem] = []
@@ -548,6 +557,10 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   func selectList(_ id: String) {
+    // Any other way of choosing a row moves the keyboard cursor there too,
+    // by letting it fall back to whatever is now selected.
+    sidebarCursorID = nil
+
     guard lists.contains(where: { $0.id == id }) else { return }
     taskEditor.flush()
     dismissFocusScreen()
@@ -569,6 +582,10 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   func selectEverything() {
+    // Any other way of choosing a row moves the keyboard cursor there too,
+    // by letting it fall back to whatever is now selected.
+    sidebarCursorID = nil
+
     taskEditor.flush()
     dismissFocusScreen()
     if let selectedListID { newTaskListID = selectedListID }
@@ -587,6 +604,10 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   func selectFolder(_ folder: ListFolder) {
+    // Any other way of choosing a row moves the keyboard cursor there too,
+    // by letting it fall back to whatever is now selected.
+    sidebarCursorID = nil
+
     dismissFocusScreen()
     selectedFolderID = folder.id
     selectedTaskID = nil

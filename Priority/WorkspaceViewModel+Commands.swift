@@ -124,8 +124,8 @@ extension WorkspaceViewModel {
     case .folderMoveDown: if let folder = selectedFolder { moveFolderWithinSiblings(folder, by: 1) }
     case .folderSelectPrevious: moveFolderSelection(by: -1)
     case .folderSelectNext: moveFolderSelection(by: 1)
-    case .listMoveUp: if let list = selectedList { moveListWithinFolder(list, by: -1) }
-    case .listMoveDown: if let list = selectedList { moveListWithinFolder(list, by: 1) }
+    case .listMoveUp: reorderSidebarCursor(by: -1)
+    case .listMoveDown: reorderSidebarCursor(by: 1)
 
     // MARK: Window
     case .windowUndo: undoLastChange()
@@ -196,10 +196,8 @@ extension WorkspaceViewModel {
   }
 
   private func moveSelectionWithinSiblings(by offset: Int) {
-    if keyboardFocusArea == .sidebar, let folder = selectedFolder {
-      moveFolderWithinSiblings(folder, by: offset)
-    } else if keyboardFocusArea == .sidebar, let list = selectedList {
-      moveListWithinFolder(list, by: offset)
+    if keyboardFocusArea == .sidebar {
+      reorderSidebarCursor(by: offset)
     } else if let task = selectedTask {
       moveTaskWithinSiblings(task, by: offset)
     }

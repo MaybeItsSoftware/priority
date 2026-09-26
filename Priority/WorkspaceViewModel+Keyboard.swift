@@ -401,19 +401,16 @@ extension WorkspaceViewModel {
       case 126:  // Up
         moveSidebarSelection(by: -1)
       case 36, 76:  // Return / keypad Enter
-        if let folder = selectedFolder {
-          toggleFolderExpansion(folder)
-        } else {
-          enterTaskSurfaceFromSidebar()
-        }
+        activateSidebarCursor(expandOnly: false)
       case 124:  // Right
-        if let folder = selectedFolder {
-          setFolderExpanded(folder, expanded: true)
-        } else {
-          enterTaskSurfaceFromSidebar()
-        }
+        activateSidebarCursor(expandOnly: true)
       case 123:  // Left
-        if let folder = selectedFolder, expandedFolderIDs.contains(folder.id) {
+        // Focus and the timeline are not in anything, so there is nothing for
+        // left to leave. Doing nothing beats selecting Everything, which would
+        // change the pane behind a key that was asked to go outwards.
+        if sidebarCursorRow?.selectsAList == false {
+          break
+        } else if let folder = selectedFolder, expandedFolderIDs.contains(folder.id) {
           setFolderExpanded(folder, expanded: false)
         } else if let scope = scopeTask, scope.isList {
           leaveTaskScope()
@@ -427,8 +424,8 @@ extension WorkspaceViewModel {
           selectEverything()
         }
       case 120: run(.listRename)
-      case 115: selectEverything()
-      case 119: moveSidebarSelection(by: 10000)
+      case 115: moveSidebarSelectionToEnd(first: true)
+      case 119: moveSidebarSelectionToEnd(first: false)
       case 116: moveSidebarSelection(by: -8)
       case 121: moveSidebarSelection(by: 8)
       case 53:  // Escape
