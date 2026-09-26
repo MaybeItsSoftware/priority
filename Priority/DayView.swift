@@ -72,6 +72,12 @@ struct DayView: View {
     }
     .onAppear { reset() }
     .onChange(of: resetToken) { _, _ in reset() }
+    // The window's key router asks for the caret back when a key the day owns
+    // arrives without it. The panel is never in that position — nothing else
+    // in it can take focus — so it ignores the request.
+    .onChange(of: model.dayFieldFocusRequest) { _, _ in
+      if !surface.isPanel { isFieldFocused = true }
+    }
     .onChange(of: query) { _, new in
       let trimmed = new.trimmingCharacters(in: .whitespaces)
       results = trimmed.isEmpty ? [] : model.searchResults(matching: trimmed)
@@ -639,18 +645,28 @@ struct DayView: View {
   private var hasQueuedSuccessor: Bool {
     model.focusQueue.contains { $0.item.state == .queued && $0.task.id != activeTaskID }
   }
+}
 
-  // MARK: - Selection
+// MARK: - Selection
 
+/// Which row is under the cursor, and what a fresh presentation looks like.
+/// An extension rather than more of the struct: the body above is already at
+/// the length SwiftLint is willing to read in one piece.
+extension DayView {
   /// What a fresh presentation looks like: an empty field with the caret in it,
   /// and the running task — or the top of the day — under the cursor.
   private func reset() {
     query = ""
     results = []
-    // The pane is entered by a shortcut from somewhere else in the window, and
-    // stealing the caret would make every ⌘1 a typing surprise. The panel is
-    // summoned *to* be typed into.
-    isFieldFocused = surface.isPanel
+    // Both surfaces take the caret. The pane used to withhold it, on the
+    // grounds that ⌘1 should not be a typing surprise — but Today is the
+    // screen the app launches on now, and every key the day advertises hangs
+    // off this field, so withholding it meant the hints below promised ↑ ↓ ↵
+    // to a pane where none of them did anything until you clicked. Switching
+    // away still works: `MainWindowController` lets ⌘-digit, ⌘F, ⌘N and ⌘/
+    // through the text-editing filter precisely so a focused field is not a
+    // trap.
+    isFieldFocused = true
     selectedID = activeTaskID ?? rows.first?.id
   }
 

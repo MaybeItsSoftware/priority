@@ -537,6 +537,20 @@ extension WorkspaceViewModel {
 
   /// The task list, the board, and the inspector's escape hatch.
   private func handleTaskSurfaceKey(_ event: NSEvent) -> Bool {
+    // Today is not an outline. It keeps its own selection in its own view, and
+    // the outline selection these keys move is not on screen there — so
+    // arrowing around the day did nothing visible at all whenever its field
+    // had lost the caret. Hand the caret back rather than move something
+    // nobody can see; the pane takes the key itself from then on.
+    if viewMode == .today, keyboardFocusArea != .inspector {
+      switch event.keyCode {
+      case 36, 49, 76, 123, 124, 125, 126:
+        dayFieldFocusRequest += 1
+        return true
+      default:
+        break
+      }
+    }
     if keyboardFocusArea == .inspector {
       if event.keyCode == 53 {
         isInspectorVisible = false
