@@ -251,6 +251,7 @@ public enum ShortcutReference {
     "up": "↑", "down": "↓", "left": "←", "right": "→",
     "enter": "↩", "tab": "⇥", "escape": "⎋", "delete": "⌫",
     "space": "Space", "comma": ",", "f2": "F2",
+    "home": "Home", "end": "End", "pageup": "PgUp", "pagedown": "PgDn",
   ]
 
   /// Only where the action's own title leaves something material unsaid.
