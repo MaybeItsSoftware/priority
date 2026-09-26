@@ -17,7 +17,7 @@ struct WorkspaceKanbanBoard: View {
   @State private var visibleColumnIDs: Set<String> = []
 
   var body: some View {
-    if model.selectedList == nil && !model.isEverythingSelected {
+    if model.selectedList == nil && !model.isMultiListScope {
       ContentUnavailableView("No list selected", systemImage: "rectangle.split.3x1")
     } else {
       GeometryReader { geometry in

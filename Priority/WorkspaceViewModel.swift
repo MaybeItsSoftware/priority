@@ -143,7 +143,7 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Read once by `migrateLegacyDailiesIfNeeded`, never written again.
   private static let dailyProgressTaskIDsKey = "localWorkspaceDailyProgressTaskIDsV1"
   private static let dailyMigrationKey = "localWorkspaceMigratedDailiesV1"
-  private static let everythingScopeKey = "localWorkspaceEverythingScopeV1"
+  static let everythingScopeKey = "localWorkspaceEverythingScopeV1"
   /// Names the service a task was imported from, and so which identifiers its
   /// `sourceId` values belong to. Stored on the task, hence not free to change.
   static let checkvistSourceSystem = "checkvist"
@@ -496,7 +496,11 @@ enum WorkspaceSidebarItem: Identifiable {
       selectedListID = nil
       scopeTaskID = nil
     }
-    if !isEverythingSelected && (selectedListID == nil || !lists.contains(where: { $0.id == selectedListID })) {
+    // A folder scope has no selected list on purpose, so it must not be read
+    // as "nothing is selected" and repaired into one on the next reload.
+    let hasFolderScope = selectedFolderID.map { id in folders.contains { $0.id == id } } ?? false
+    if !isEverythingSelected && !hasFolderScope
+      && (selectedListID == nil || !lists.contains(where: { $0.id == selectedListID })) {
       scopeTaskID = nil
       selectedTaskID = nil
       isInspectorVisible = false
@@ -607,11 +611,7 @@ enum WorkspaceSidebarItem: Identifiable {
     // Any other way of choosing a row moves the keyboard cursor there too,
     // by letting it fall back to whatever is now selected.
     sidebarCursorID = nil
-
-    dismissFocusScreen()
-    selectedFolderID = folder.id
-    selectedTaskID = nil
-    isInspectorVisible = false
+    enterFolderScope(folder)
   }
 
   func enterTask(_ task: WorkspaceTask) {
@@ -619,6 +619,13 @@ enum WorkspaceSidebarItem: Identifiable {
     if isEverythingSelected {
       isEverythingSelected = false
       UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
+      selectedListID = task.listId
+      newTaskListID = task.listId
+    }
+    // Going into a task means going into the list that holds it, so a folder
+    // scope ends here the same way Everything does.
+    if selectedFolderID != nil {
+      selectedFolderID = nil
       selectedListID = task.listId
       newTaskListID = task.listId
     }
@@ -1023,9 +1030,13 @@ enum WorkspaceSidebarItem: Identifiable {
     }
     do {
       if refreshSidebar { try reloadNestedLists() }
-      if isEverythingSelected {
+      if isEverythingSelected || folderScopeListIDs != nil {
         if viewMode == .outline {
-          outline = try workspace.map { try store.actionableTasks(in: $0.id).map { TaskOutlineItem(task: $0, depth: 0) } } ?? []
+          let scope = folderScopeListIDs
+          outline = try workspace.map {
+            try store.actionableTasks(in: $0.id, limitedTo: scope)
+              .map { TaskOutlineItem(task: $0, depth: 0) }
+          } ?? []
         } else {
           outline = []
         }
@@ -1046,6 +1057,7 @@ enum WorkspaceSidebarItem: Identifiable {
 
   var boardConfigurationKey: String {
     if isEverythingSelected { return "everything/root" }
+    if let selectedFolderID { return "folder:\(selectedFolderID)/root" }
     return "\(selectedListID ?? "none")/\(scopeTaskID ?? "root")"
   }
 
@@ -1064,9 +1076,10 @@ enum WorkspaceSidebarItem: Identifiable {
       return
     }
     do {
-      if isEverythingSelected {
+      if isEverythingSelected || folderScopeListIDs != nil {
         boardParentTaskID = nil
-        boardTasks = try workspace.map { try store.actionableTasks(in: $0.id) } ?? []
+        let scope = folderScopeListIDs
+        boardTasks = try workspace.map { try store.actionableTasks(in: $0.id, limitedTo: scope) } ?? []
       } else if let selectedListID {
         let parentID: String?
         if let scopeTaskID {

@@ -177,8 +177,21 @@ extension WorkspaceStore {
     return result
   }
 
-  public func actionableTasks(in workspaceId: String) throws -> [WorkspaceTask] {
-    try lists(in: workspaceId).filter { $0.completedAt == nil }.flatMap { list in
+  /// - Parameter listIds: when given, only these lists contribute, in the
+  ///   order they are listed. A folder scope passes the folder's lists here,
+  ///   so the combined view is the same query Everything runs, narrowed.
+  public func actionableTasks(
+    in workspaceId: String, limitedTo listIds: [String]? = nil
+  ) throws -> [WorkspaceTask] {
+    let all = try lists(in: workspaceId).filter { $0.completedAt == nil }
+    let scoped: [TaskList]
+    if let listIds {
+      let byID = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+      scoped = listIds.compactMap { byID[$0] }
+    } else {
+      scoped = all
+    }
+    return try scoped.flatMap { list in
       let items = try outline(in: list.id).map(\.task)
       let inactive = Self.inactiveContainerItems(items)
       return items.filter {

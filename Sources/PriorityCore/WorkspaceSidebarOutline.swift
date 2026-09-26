@@ -177,3 +177,34 @@ public enum WorkspaceSidebarOutline {
     return rows.first { $0.subjectID == subjectID }
   }
 }
+
+extension WorkspaceSidebarOutline {
+  /// Every list inside a folder, including the ones inside its sub-folders.
+  ///
+  /// A folder is a place lists are kept, so being in one means being in all of
+  /// them — the same relationship Everything has to the whole workspace, one
+  /// level down. Sub-folders are included because a folder you have collapsed
+  /// is still a folder you are inside; a scope that changed depending on which
+  /// triangles happened to be open would be a scope you could not predict.
+  ///
+  /// Order follows the sidebar: this folder's own lists first, then each
+  /// sub-folder's, so the combined view reads in the order the tree does.
+  /// `visited` makes a malformed parent chain terminate rather than hang.
+  public static func listIDs(
+    inFolder folderID: String,
+    folders: [SidebarFolderDescriptor],
+    lists: [SidebarListDescriptor]
+  ) -> [String] {
+    var visited: Set<String> = []
+    var result: [String] = []
+
+    func descend(_ id: String) {
+      guard visited.insert(id).inserted else { return }
+      result.append(contentsOf: lists.filter { $0.folderID == id }.map(\.id))
+      for child in folders where child.parentFolderID == id { descend(child.id) }
+    }
+
+    descend(folderID)
+    return result
+  }
+}

@@ -147,3 +147,60 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
       WorkspaceSidebarOutline.rowMatching(subjectID: "gone", isEverything: false, in: rows))
   }
 }
+
+/// Which lists a folder stands for.
+final class WorkspaceFolderScopeTests: XCTestCase {
+  private func folder(_ id: String, in parent: String? = nil) -> SidebarFolderDescriptor {
+    SidebarFolderDescriptor(id: id, parentFolderID: parent)
+  }
+
+  private func list(_ id: String, in folder: String?) -> SidebarListDescriptor {
+    SidebarListDescriptor(id: id, folderID: folder)
+  }
+
+  func testAFolderStandsForItsOwnLists() {
+    let ids = WorkspaceSidebarOutline.listIDs(
+      inFolder: "work",
+      folders: [folder("work")],
+      lists: [list("a", in: "work"), list("b", in: "work"), list("loose", in: nil)])
+    XCTAssertEqual(ids, ["a", "b"])
+  }
+
+  func testSubFolderListsAreIncludedEvenWhenCollapsed() {
+    // Collapsing a folder hides rows; it does not move the lists out of it.
+    let ids = WorkspaceSidebarOutline.listIDs(
+      inFolder: "work",
+      folders: [folder("work"), folder("clients", in: "work"), folder("deep", in: "clients")],
+      lists: [list("a", in: "work"), list("b", in: "clients"), list("c", in: "deep")])
+    XCTAssertEqual(ids, ["a", "b", "c"])
+  }
+
+  func testTheFoldersOwnListsComeFirst() {
+    let ids = WorkspaceSidebarOutline.listIDs(
+      inFolder: "work",
+      folders: [folder("work"), folder("clients", in: "work")],
+      lists: [list("nested", in: "clients"), list("own", in: "work")])
+    XCTAssertEqual(ids.first, "own")
+  }
+
+  func testASiblingFolderIsNotIncluded() {
+    let ids = WorkspaceSidebarOutline.listIDs(
+      inFolder: "work",
+      folders: [folder("work"), folder("home")],
+      lists: [list("a", in: "work"), list("b", in: "home")])
+    XCTAssertEqual(ids, ["a"])
+  }
+
+  func testAnEmptyFolderStandsForNothing() {
+    XCTAssertTrue(WorkspaceSidebarOutline.listIDs(
+      inFolder: "work", folders: [folder("work")], lists: []).isEmpty)
+  }
+
+  func testACycleInTheParentChainTerminates() {
+    let ids = WorkspaceSidebarOutline.listIDs(
+      inFolder: "a",
+      folders: [folder("a", in: "b"), folder("b", in: "a")],
+      lists: [list("one", in: "a"), list("two", in: "b")])
+    XCTAssertEqual(Set(ids), ["one", "two"])
+  }
+}

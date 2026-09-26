@@ -11,11 +11,11 @@ extension WorkspaceViewModel {
   func createTask(named title: String) {
     if taskInsertionReference != nil { createRelativeTask(named: title); return }
     guard let store,
-      let destinationID = isEverythingSelected ? newTaskListID : selectedListID,
+      let destinationID = isMultiListScope ? (folderScopeDestinationID ?? newTaskListID) : selectedListID,
       let destinationList = lists.first(where: { $0.id == destinationID })
     else { return }
     perform {
-      let parentID = isEverythingSelected
+      let parentID = isMultiListScope
         ? try visibleRootParentTaskID(for: destinationList, store: store) : scopeTaskID
       let task = try store.createTask(listId: destinationID, title: title, parentTaskId: parentID)
       selectedTaskID = task.id
@@ -46,12 +46,12 @@ extension WorkspaceViewModel {
   func createBoardTask(named title: String, in column: WorkspaceKanbanColumn? = nil, atTop: Bool = false) {
     if column == nil && taskInsertionReference != nil { createRelativeTask(named: title); return }
     guard let store,
-      let destinationID = isEverythingSelected ? newTaskListID : selectedListID,
+      let destinationID = isMultiListScope ? (folderScopeDestinationID ?? newTaskListID) : selectedListID,
       let destinationList = lists.first(where: { $0.id == destinationID })
     else { return }
     let column = column ?? boardColumns.first { $0.id == activeBoardColumnID }
     perform {
-      let parentID = isEverythingSelected
+      let parentID = isMultiListScope
         ? try visibleRootParentTaskID(for: destinationList, store: store) : boardParentTaskID
       let task = try store.createTask(listId: destinationID, title: title, parentTaskId: parentID,
         kanbanColumn: column?.id, atTop: atTop)
@@ -86,6 +86,7 @@ extension WorkspaceViewModel {
 
   var currentBoardScopeTitle: String {
     if isEverythingSelected { return "Everything" }
+    if let folder = scopedFolder { return folder.name }
     return scopeTask?.title ?? selectedList?.name ?? "Board"
   }
 

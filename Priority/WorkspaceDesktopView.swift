@@ -421,7 +421,7 @@ struct WorkspaceDesktopView: View {
 
   @ViewBuilder
   private var outlineTaskPane: some View {
-    if model.isEverythingSelected || model.selectedList != nil {
+    if model.isMultiListScope || model.selectedList != nil {
       let outlineByList = Dictionary(grouping: model.outline) { $0.task.listId }
       VStack(spacing: 0) {
         HStack {
@@ -451,8 +451,10 @@ struct WorkspaceDesktopView: View {
         .padding(20)
 
         List {
-          if model.isEverythingSelected {
-            ForEach(model.lists) { list in
+          if model.isMultiListScope {
+            // Grouped by list, because the point of a combined view is seeing
+            // where each task came from. A folder shows only its own lists.
+            ForEach(model.scopeLists) { list in
               Section {
                 let items = outlineByList[list.id] ?? []
                 if items.isEmpty {
@@ -575,8 +577,8 @@ private struct WorkspaceMatrixDashboard: View {
       VStack(alignment: .leading, spacing: 14) {
         Text("EISENHOWER MATRIX")
           .font(.title2.weight(.semibold))
-        Text(model.isEverythingSelected
-          ? "Place work across all lists; each task keeps its own list and project."
+        Text(model.isMultiListScope
+          ? "Place work across every list in scope; each task keeps its own list and project."
           : "Place the direct tasks in this project; each project keeps its own matrix.")
           .font(.callout)
           .foregroundStyle(.secondary)
@@ -674,7 +676,7 @@ private struct WorkspaceMatrixTaskRow: View {
       .truncationMode(.tail)
       .help(task.title)
       .frame(maxWidth: .infinity, alignment: .leading)
-      if model.isEverythingSelected, let list = model.list(for: task) {
+      if model.isMultiListScope, let list = model.list(for: task) {
         Text(list.name)
           .font(.caption2)
           .foregroundStyle(.secondary)
@@ -1348,9 +1350,9 @@ struct WorkspaceScopedTaskComposer: View {
         GlobalQuickCaptureComposer()
       } else {
         HStack(spacing: 10) {
-          if model.isEverythingSelected {
+          if model.isMultiListScope {
             Picker("In list", selection: Bindable(model).newTaskListID) {
-              ForEach(model.lists) { list in
+              ForEach(model.scopeLists) { list in
                 Text(list.name).tag(Optional(list.id))
               }
             }
