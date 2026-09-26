@@ -286,6 +286,18 @@ enum WorkspaceSidebarItem: Identifiable {
   }
   /// Called when the floating companion is asked for.
   @ObservationIgnored var onFocusFloatRequested: (() -> Void)?
+  /// Bumped when a block is started deliberately, to hand the session over to
+  /// the tray and put the window away.
+  ///
+  /// Focus is for working somewhere else. Leaving the window up in front of
+  /// the thing you just committed to doing means the first act of every block
+  /// is getting rid of it — so the app does that itself, and the tray becomes
+  /// the surface the session runs on.
+  var focusHandoffRequest = 0 {
+    didSet { onFocusHandoffRequested?() }
+  }
+  /// Called when a deliberate start should close the window and raise the tray.
+  @ObservationIgnored var onFocusHandoffRequested: (() -> Void)?
   /// Called when a running block stops being one, however it stopped.
   @ObservationIgnored var onFocusSessionEnded: (() -> Void)?
   /// Whether finishing a block should stop and ask how it went. Read at the

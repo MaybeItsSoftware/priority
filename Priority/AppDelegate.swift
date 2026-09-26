@@ -96,7 +96,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     workspace.onFocusFloatRequested = { [weak self] in
       guard let self, let workspace = self.workspace else { return }
-      self.floatingTimer.show(model: workspace, activate: true)
+      self.focusPanelController.show(model: workspace)
+    }
+    // Starting a block deliberately puts the window away and leaves the tray.
+    // Hiding first, so `applyActivationPolicy` has already dropped the app to
+    // `.accessory` by the time the panel takes key — otherwise the Dock icon
+    // flickers back as the panel activates the app.
+    workspace.onFocusHandoffRequested = { [weak self] in
+      guard let self, let workspace = self.workspace else { return }
+      self.mainWindowController.hide()
+      self.focusPanelController.show(model: workspace)
     }
     workspace.onFocusSessionEnded = { [weak self] in
       self?.floatingTimer.close()
@@ -341,16 +350,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   ///   reporting itself visible — asking it would have left the Dock icon
   ///   behind after every close.
   private func applyActivationPolicy(hasOrdinaryWindow: Bool) {
-    // A block still running when the window goes away keeps a clock on screen
-    // without being asked. That is the state the companion exists for, and
-    // having to remember to press F before closing the window is exactly the
-    // kind of thing nobody remembers.
-    if let workspace, workspace.activeFocusSession != nil {
-      if hasOrdinaryWindow {
-        floatingTimer.close()
-      } else {
-        floatingTimer.show(model: workspace)
-      }
+    // A block still running when the window goes away keeps the day on screen
+    // without being asked. That is the state the tray exists for, and having
+    // to remember to press F before closing the window is exactly the kind of
+    // thing nobody remembers.
+    if let workspace, workspace.activeFocusSession != nil,
+      !hasOrdinaryWindow, !focusPanelController.isVisible {
+      focusPanelController.show(model: workspace)
     }
     let desired: NSApplication.ActivationPolicy = hasOrdinaryWindow ? .regular : .accessory
     guard NSApp.activationPolicy() != desired else { return }

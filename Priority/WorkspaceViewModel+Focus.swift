@@ -48,8 +48,11 @@ extension WorkspaceViewModel {
       reloadFocus()
       reloadNextUp()
       // Wherever the start came from — the board, a daily, the ladder — the
-      // pane it lands on is the session. There is nowhere else for it to be.
+      // pane it lands on is the session, so reopening the window comes back to
+      // the block rather than to the plan. Where the block actually *runs* is
+      // the tray: a deliberate start hands over to it and closes the window.
       showsFocusScreen = true
+      if !automatic { focusHandoffRequest += 1 }
     }
   }
 
@@ -129,6 +132,7 @@ extension WorkspaceViewModel {
       reloadFocus()
       reloadNextUp()
       showsFocusScreen = true
+      focusHandoffRequest += 1
     }
   }
 
