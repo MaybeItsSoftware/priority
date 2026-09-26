@@ -174,6 +174,15 @@ extension WorkspaceViewModel {
   }
 
   func enterTaskSurfaceFromSidebar() {
+    // Today keeps its own selection and its own caret, so entering it means
+    // handing the search field back rather than picking a row in an outline
+    // that is not on screen. Without this, right-arrow out of the sidebar
+    // landed on a pane where none of the day's keys worked.
+    if viewMode == .today {
+      requestKeyboardFocus(.tasks)
+      dayFieldFocusRequest += 1
+      return
+    }
     if viewMode == .board {
       let backlog = boardColumns.first { $0.id == "backlog" } ?? boardColumns.first
       focusedBoardColumnID = backlog?.id
@@ -196,14 +205,23 @@ extension WorkspaceViewModel {
     requestKeyboardFocus(.sidebar)
   }
 
+  /// Left steps out by one, whatever "out" currently means: out of a task's
+  /// children, then out of a list into everything, then out of the selection.
+  ///
+  /// The last step used to be a no-op — pressing left on a pane with nothing
+  /// left to leave did nothing at all, so the key looked broken at exactly the
+  /// point you were trying to get somewhere. It now leaves the pane, which is
+  /// what the board has always done at its first column.
   func leaveSelectedTaskScope() {
     if scopeTaskID != nil {
       leaveTaskScope()
     } else if selectedTaskID == nil && !isEverythingSelected {
       selectEverything()
-    } else {
+    } else if selectedTaskID != nil {
       selectedTaskID = nil
       isInspectorVisible = false
+    } else {
+      returnToCurrentListInSidebar()
     }
   }
 

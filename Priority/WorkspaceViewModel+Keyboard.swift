@@ -544,7 +544,13 @@ extension WorkspaceViewModel {
     // nobody can see; the pane takes the key itself from then on.
     if viewMode == .today, keyboardFocusArea != .inspector {
       switch event.keyCode {
-      case 36, 49, 76, 123, 124, 125, 126:
+      // Left is out of the pane entirely, which is the one key here the day
+      // itself has no answer for. The rest belong to the day, so the caret
+      // goes back and the pane takes them from then on.
+      case 123:
+        returnToCurrentListInSidebar()
+        return true
+      case 36, 49, 76, 124, 125, 126:
         dayFieldFocusRequest += 1
         return true
       default:

@@ -183,6 +183,7 @@ struct DayView: View {
         .focused($isFieldFocused)
         .onKeyPress(.upArrow) { move(by: -1); return .handled }
         .onKeyPress(.downArrow) { move(by: 1); return .handled }
+        .onKeyPress(.leftArrow) { leaveForSidebar() }
         .onKeyPress(.escape) { dismissOrClear() }
         .onKeyPress(keys: [.return], phases: .down) { press in
           if press.modifiers.contains(.command) {
@@ -209,6 +210,11 @@ struct DayView: View {
     HStack(spacing: 14) {
       KeyHint("↑ ↓", "Choose")
       KeyHint("↵", returnHint)
+      // Only while it does something: with a query in the field the caret
+      // owns left, and advertising a key that is busy is worse than silence.
+      if !surface.isPanel && query.isEmpty {
+        KeyHint("←", "Lists")
+      }
       Spacer(minLength: 0)
       if surface.isPanel {
         KeyHint("esc", query.isEmpty ? "Hide" : "Clear")
@@ -681,6 +687,19 @@ extension DayView {
     guard !ids.isEmpty else { return }
     let current = selectedID.flatMap { ids.firstIndex(of: $0) } ?? 0
     selectedID = ids[min(max(0, current + offset), ids.count - 1)]
+  }
+
+  /// Left is out, the same as it is on the board and in the outline: the day
+  /// has no hierarchy of its own to step out of, so one press goes straight to
+  /// the list it came from, with the sidebar taking the keyboard.
+  ///
+  /// Only with an empty field. Once there is a query in it, left and right are
+  /// the caret's, and a search box you cannot move around in is worse than no
+  /// shortcut. The panel has no sidebar to reach, so it declines.
+  private func leaveForSidebar() -> KeyPress.Result {
+    guard query.isEmpty, !surface.isPanel else { return .ignored }
+    model.returnToCurrentListInSidebar()
+    return .handled
   }
 
   // MARK: - Acting
