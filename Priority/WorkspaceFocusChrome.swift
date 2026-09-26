@@ -1,3 +1,4 @@
+import PriorityCore
 import SwiftUI
 
 /// The small shared vocabulary every focus surface is built from — the pane,
@@ -11,6 +12,7 @@ import SwiftUI
 /// headers and chip captions all use it, so hierarchy reads from surface and
 /// position rather than from label size.
 struct MicroLabel: View {
+  @Environment(\.theme) private var theme
   let text: String
   var tint: Color?
 
@@ -19,11 +21,13 @@ struct MicroLabel: View {
     self.tint = tint
   }
 
+  // The size, weight, tracking and case are the theme's, not this view's.
+  // They were written out here as 10/bold/1.5/uppercase, which is the house
+  // figure — but a figure copied into a view is a figure a theme cannot
+  // change, and the point of the micro-label is that it is one decision.
   var body: some View {
-    Text(text.uppercased())
-      .font(.system(size: 10, weight: .bold))
-      .tracking(1.5)
-      .foregroundStyle(tint ?? Color.secondary)
+    Text(text)
+      .microLabel(theme, color: tint)
   }
 }
 
@@ -31,25 +35,29 @@ struct MicroLabel: View {
 /// than in a reference sheet, because a shortcut you have to go and look up is
 /// a shortcut nobody learns.
 struct KeyCap: View {
+  @Environment(\.theme) private var theme
   let key: String
 
   init(_ key: String) { self.key = key }
 
+  // A control-radius chip in the monospaced face, bordered rather than
+  // filled — rule 1, and the one radius scale rather than the 4 this used.
   var body: some View {
     Text(key)
-      .font(.system(size: 10, weight: .medium, design: .monospaced))
-      .foregroundStyle(.secondary)
+      .font(theme.monoFont(size: 10, weight: .medium))
+      .foregroundStyle(theme.muted)
       .padding(.horizontal, 5)
       .padding(.vertical, 2)
-      .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
+      .background(theme.well, in: RoundedRectangle(cornerRadius: theme.controlRadius))
       .overlay(
-        RoundedRectangle(cornerRadius: 4)
-          .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1))
+        RoundedRectangle(cornerRadius: theme.controlRadius)
+          .strokeBorder(theme.border, lineWidth: theme.hairline))
   }
 }
 
 /// `key` then `label`, for the hint rows along the foot of a focus surface.
 struct KeyHint: View {
+  @Environment(\.theme) private var theme
   let key: String
   let label: String
 
@@ -62,8 +70,8 @@ struct KeyHint: View {
     HStack(spacing: 5) {
       KeyCap(key)
       Text(label)
-        .font(.caption2)
-        .foregroundStyle(.tertiary)
+        .font(theme.bodyFont(size: 11))
+        .foregroundStyle(theme.dim)
     }
   }
 }
@@ -71,9 +79,11 @@ struct KeyHint: View {
 /// The hairline that separates one band of a focus surface from the next.
 /// Separation is a 1px rule here, never a shadow and never a nested card.
 struct FocusRule: View {
+  @Environment(\.theme) private var theme
+
   var body: some View {
     Rectangle()
-      .fill(Color.primary.opacity(0.08))
-      .frame(height: 1)
+      .fill(theme.border)
+      .frame(height: theme.hairline)
   }
 }

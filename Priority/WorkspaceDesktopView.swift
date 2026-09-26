@@ -969,6 +969,7 @@ struct WorkspaceItemActions: View {
 /// `WorkspaceFocusScreen.swift` and are sidebar rows like any other.
 struct WorkspaceSidebarSelectionBackground: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   var isCurrent = false
   var rowID: String?
 
@@ -981,16 +982,16 @@ struct WorkspaceSidebarSelectionBackground: View {
   }
 
   private var border: Color {
-    if isCursor { return .accentColor }
-    return isCurrent ? Color.accentColor.opacity(0.55) : .clear
+    if isCursor { return theme.focusRing }
+    return isCurrent ? theme.color(.primary, opacity: 0.55) : .clear
   }
 
   var body: some View {
-    RoundedRectangle(cornerRadius: 6)
-      .fill(Color.accentColor.opacity(fill))
+    RoundedRectangle(cornerRadius: theme.controlRadius)
+      .fill(theme.color(.primary, opacity: fill))
       .overlay(
-        RoundedRectangle(cornerRadius: 6)
-          .strokeBorder(border, lineWidth: isCursor ? 2 : 1)
+        RoundedRectangle(cornerRadius: theme.controlRadius)
+          .strokeBorder(border, lineWidth: isCursor ? theme.focusRingWidth : theme.hairline)
       )
   }
 }
