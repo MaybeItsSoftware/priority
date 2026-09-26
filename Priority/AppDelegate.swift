@@ -27,7 +27,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   /// because a running block has to stay visible after the window that started
   /// it has gone — which is exactly when a small clock in the corner is the
   /// only thing left saying what you are supposed to be doing.
-  private(set) var floatingTimer = LocalFloatingFocusTimer()
   private(set) var workspace: WorkspaceViewModel!
 
   private var preferencesWindow: NSWindow?
@@ -106,9 +105,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       guard let self, let workspace = self.workspace else { return }
       self.mainWindowController.hide()
       self.focusPanelController.show(model: workspace)
-    }
-    workspace.onFocusSessionEnded = { [weak self] in
-      self?.floatingTimer.close()
     }
     // Finishing something is finishing something, whichever surface it
     // happened on. Before this the flourish only ever played on the focus

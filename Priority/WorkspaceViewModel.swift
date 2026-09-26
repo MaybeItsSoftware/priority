@@ -298,8 +298,6 @@ enum WorkspaceSidebarItem: Identifiable {
   }
   /// Called when a deliberate start should close the window and raise the tray.
   @ObservationIgnored var onFocusHandoffRequested: (() -> Void)?
-  /// Called when a running block stops being one, however it stopped.
-  @ObservationIgnored var onFocusSessionEnded: (() -> Void)?
   /// Whether finishing a block should stop and ask how it went. Read at the
   /// moment of asking rather than stored, so changing the preference takes
   /// effect on the next block rather than the next launch.
@@ -344,14 +342,13 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Incremented for every request, including a request for the already active
   /// region. SwiftUI observes this to make the native control first responder.
   var focusRequest = 0
-  /// The running block. Its `didSet` is how the app shell learns a session
-  /// ended without observing the model: the always-on-top companion has to be
-  /// taken down from outside any window, since it outlives all of them.
-  var activeFocusSession: FocusSession? {
-    didSet {
-      if activeFocusSession == nil, oldValue != nil { onFocusSessionEnded?() }
-    }
-  }
+  /// The running block.
+  ///
+  /// This used to tell the app shell when a session ended, so the always-on-top
+  /// strip could be taken down from outside any window. The tray is not taken
+  /// down: finishing a block is the moment you want to see what is next, and
+  /// the tray is the surface the scoring happened on.
+  var activeFocusSession: FocusSession?
   private(set) var focusQueue: [FocusQueueTask] = []
   @ObservationIgnored var dailyTaskIDs: Set<String> = []
   /// The focus screen: one task, an estimate, and a way out. Presented over
