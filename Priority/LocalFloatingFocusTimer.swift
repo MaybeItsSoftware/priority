@@ -5,9 +5,19 @@ import SwiftUI
 
 /// The compact companion to the desktop Focus Panel. It intentionally exposes
 /// only the current task and momentum actions; planning remains in the window.
+///
+/// It collapses to a single row when the pointer is not on it, so what sits
+/// over your other work while a block runs is a strip of task and clock rather
+/// than a card of buttons. Hovering brings the buttons back, which means the
+/// resting state can be small enough to leave on screen without it being in
+/// the way of the thing you are supposed to be doing.
 @MainActor
 final class LocalFloatingFocusTimer: NSObject, NSWindowDelegate {
   private var panel: NSPanel?
+
+  static let width: CGFloat = 330
+  static let collapsedHeight: CGFloat = 40
+  static let expandedHeight: CGFloat = 166
 
   func show(model: WorkspaceViewModel, activate: Bool = false) {
     let panel = makePanel(model: model)
@@ -26,7 +36,7 @@ final class LocalFloatingFocusTimer: NSObject, NSWindowDelegate {
   private func makePanel(model: WorkspaceViewModel) -> NSPanel {
     if let panel { return panel }
     let panel = NSPanel(
-      contentRect: NSRect(x: 0, y: 0, width: 330, height: 166),
+      contentRect: NSRect(x: 0, y: 0, width: Self.width, height: Self.collapsedHeight),
       styleMask: [.titled, .closable, .utilityWindow, .fullSizeContentView],
       backing: .buffered,
       defer: false)
@@ -40,11 +50,34 @@ final class LocalFloatingFocusTimer: NSObject, NSWindowDelegate {
     panel.delegate = self
     panel.center()
     panel.contentViewController = NSHostingController(
-      rootView: LocalFloatingFocusTimerView(onClose: { [weak self] in self?.close() })
+      rootView: LocalFloatingFocusTimerView(
+        onClose: { [weak self] in self?.close() },
+        onExpandedChange: { [weak self] expanded in self?.setExpanded(expanded) })
         .focusEffectDisabled()
         .environment(model))
     self.panel = panel
+    setExpanded(false)
     return panel
+  }
+
+  /// Grows and shrinks the panel around its **top** edge.
+  ///
+  /// A window's origin is its bottom-left, so resizing it by height alone
+  /// would slide the strip you are pointing at downwards and out from under
+  /// the pointer — which immediately un-hovers it, collapsing it again. Held
+  /// by the top edge it expands downwards and stays put.
+  private func setExpanded(_ expanded: Bool) {
+    guard let panel else { return }
+    // The close button would sit on top of the collapsed row's text. It is
+    // reachable the moment the panel is expanded, which is the moment anyone
+    // reaches for it.
+    panel.standardWindowButton(.closeButton)?.isHidden = !expanded
+    let height = expanded ? Self.expandedHeight : Self.collapsedHeight
+    var frame = panel.frame
+    guard frame.height != height else { return }
+    frame.origin.y += frame.height - height
+    frame.size.height = height
+    panel.setFrame(frame, display: true, animate: false)
   }
 }
 
@@ -57,8 +90,62 @@ final class LocalFloatingFocusTimer: NSObject, NSWindowDelegate {
 private struct LocalFloatingFocusTimerView: View {
   @Environment(WorkspaceViewModel.self) private var model
   let onClose: () -> Void
+  let onExpandedChange: (Bool) -> Void
+  @State private var isHovering = false
+
+  /// With no session there is nothing to collapse to — the panel is then a
+  /// message and a way out, and both have to stay readable.
+  private var isExpanded: Bool { isHovering || model.activeFocusSession == nil }
 
   var body: some View {
+    Group {
+      if isExpanded {
+        expandedBody
+      } else {
+        collapsedRow
+      }
+    }
+    .frame(
+      width: LocalFloatingFocusTimer.width,
+      height: isExpanded
+        ? LocalFloatingFocusTimer.expandedHeight : LocalFloatingFocusTimer.collapsedHeight,
+      alignment: .topLeading)
+    .onHover { hovering in
+      isHovering = hovering
+      onExpandedChange(isExpanded)
+    }
+    .onChange(of: model.activeFocusSession == nil) { _, _ in
+      onExpandedChange(isExpanded)
+    }
+  }
+
+  /// The resting state: what is running, and how long it has been.
+  private var collapsedRow: some View {
+    HStack(spacing: 8) {
+      if let session = model.activeFocusSession, let task = model.activeFocusTask {
+        Circle()
+          .fill(tint(session: session, overrun: false))
+          .frame(width: 6, height: 6)
+        Text(task.title)
+          .font(.callout)
+          .lineLimit(1)
+          .truncationMode(.tail)
+        Spacer(minLength: 6)
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+          let reading = reading(session: session, now: context.date)
+          Text(reading.text)
+            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+            .monospacedDigit()
+            .contentTransition(.numericText())
+            .foregroundStyle(tint(session: session, overrun: reading.isOverrun))
+        }
+      }
+    }
+    .padding(.horizontal, 12)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  private var expandedBody: some View {
     VStack(alignment: .leading, spacing: 10) {
       if let session = model.activeFocusSession, let task = model.activeFocusTask {
         VStack(alignment: .leading, spacing: 3) {
@@ -112,7 +199,6 @@ private struct LocalFloatingFocusTimerView: View {
       }
     }
     .padding(16)
-    .frame(width: 330, height: 166, alignment: .topLeading)
   }
 
   /// The block's shape as a length rather than a second figure to read.
