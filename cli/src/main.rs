@@ -9,6 +9,7 @@ mod mcp;
 mod tests;
 mod tools;
 mod tui;
+mod workspace;
 
 use checkvist::{CheckvistClient, CheckvistConfig};
 use clap::Parser;
@@ -16,6 +17,7 @@ use config::Config;
 use error::ToolError;
 use local::LocalState;
 use tools::Tools;
+use workspace::Workspace;
 
 fn main() -> std::process::ExitCode {
     // The CLI's own config, not the app's — see `config.rs`. Loaded before
@@ -25,6 +27,7 @@ fn main() -> std::process::ExitCode {
     let tools = Tools {
         client: CheckvistClient::new(CheckvistConfig::resolve(&config)),
         local: LocalState::resolve(&config),
+        workspace: Workspace::resolve(&config),
     };
 
     // `--mcp-server` is accepted as a bare flag, not just as the `mcp`

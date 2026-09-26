@@ -159,6 +159,16 @@ pub enum Command {
         days: i64,
     },
 
+    /// What the focus timer is doing right now.
+    Focus,
+
+    /// Focused time already recorded, newest first.
+    Focused {
+        /// How many logical days back to include, ending today.
+        #[arg(long, short = 'd', default_value_t = 1, value_name = "N")]
+        days: i64,
+    },
+
     /// Show your dailies with today's schedule and tick state.
     Dailies,
 
@@ -475,6 +485,13 @@ pub fn resolve(cli: &Cli) -> Result<(String, Map<String, Value>)> {
             "daily_log_fetch"
         }
 
+        Command::Focus => "focus_status",
+
+        Command::Focused { days } => {
+            arguments.insert("days".into(), json!(days));
+            "focus_history"
+        }
+
         Command::Dailies => "dailies_list",
         Command::Metadata => "task_metadata",
 
@@ -593,8 +610,67 @@ pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
         "task_matrix_set" => render_matrix_set(payload),
         "daily_add" | "daily_update" => render_daily(payload),
         "daily_tick" => render_tick(payload),
+        "focus_status" => render_focus(payload),
+        "focus_history" => render_focused(payload),
         _ => render_task(payload),
     }
+}
+
+fn render_focus(payload: &Value) {
+    if payload["running"] != Value::Bool(true) {
+        return println!("  Nothing running.");
+    }
+    let task = payload["task"].as_str().unwrap_or("(unknown task)");
+    let clock = payload["clock"].as_str().unwrap_or("");
+    let state = if payload["overrun"] == Value::Bool(true) {
+        format!("{clock} over")
+    } else {
+        format!("{clock} left")
+    };
+    println!("  {task}");
+    println!(
+        "  {state}{}",
+        if payload["paused"] == Value::Bool(true) {
+            match payload["paused_at"].as_str() {
+                Some(at) => format!("  — paused since {at}"),
+                None => "  — paused".into(),
+            }
+        } else {
+            String::new()
+        }
+    );
+    let queued: Vec<&Value> = payload["queue"]
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter(|item| item["state"] == json!("queued"))
+                .collect()
+        })
+        .unwrap_or_default();
+    if !queued.is_empty() {
+        println!("\n  Next:");
+        for item in queued {
+            println!("    {}", item["task"].as_str().unwrap_or("(unknown task)"));
+        }
+    }
+}
+
+fn render_focused(payload: &Value) {
+    let blocks = payload["blocks"].as_array().cloned().unwrap_or_default();
+    if blocks.is_empty() {
+        return println!("  (nothing recorded)");
+    }
+    for block in &blocks {
+        let at = block["recorded_at"].as_str().unwrap_or("");
+        let seconds = block["seconds"].as_i64().unwrap_or(0);
+        println!(
+            "  {at}  {:>5}m  {}",
+            seconds / 60,
+            block["task"].as_str().unwrap_or("")
+        );
+    }
+    println!("\n  {} total", payload["total"].as_str().unwrap_or(""));
 }
 
 fn render_lists(payload: &Value) {

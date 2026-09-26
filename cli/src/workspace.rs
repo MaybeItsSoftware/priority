@@ -1,0 +1,267 @@
+//! Read-only access to the app's workspace database.
+//!
+//! Everything else in this crate is a peer of the macOS app that happens to
+//! read the same files. This module is the one place that reaches into the
+//! app's own store — `~/Library/Application Support/Priority/priority.sqlite`
+//! — and it does so **read-only**, by opening the connection with
+//! `SQLITE_OPEN_READ_ONLY` rather than by promising to behave.
+//!
+//! It exists because of a bug that took a hand-written `SELECT` to find: the
+//! menu bar reported a focus block as nineteen hours long, and nothing
+//! reachable from the CLI or the MCP server could see a focus session at all.
+//! An assistant asked "what is the timer doing?" could only guess. Now it can
+//! look.
+//!
+//! Read-only is not a limitation to work around later. Writes to this database
+//! go through `WorkspaceStore` on the Swift side, which owns migrations,
+//! journalling for undo, and the day-log side effects of finishing a block —
+//! all of which a second writer would quietly skip. Anything here that wants
+//! to change something should ask the app to.
+//!
+//! What it deliberately does **not** do is recompute policy. Which task is
+//! next, whether one is available in the current context, how a day is
+//! scored: those live in `PriorityCore` and would be a second implementation
+//! to keep in step, which is exactly what the app's MCP server stopped having.
+//! These are row reads and arithmetic the schema already implies.
+
+use crate::error::{Result, ToolError};
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
+use rusqlite::{Connection, OpenFlags};
+use serde_json::{Value, json};
+use std::path::PathBuf;
+
+pub struct Workspace {
+    pub database_path: PathBuf,
+}
+
+impl Workspace {
+    /// `$PRIORITY_MCP_DB_PATH`, then `database_path` in the CLI's config file,
+    /// then the app's own location. The overrides are how the tests reach a
+    /// fixture database, and how a non-standard install stays reachable.
+    pub fn resolve(config: &crate::config::Config) -> Self {
+        Workspace {
+            database_path: config
+                .resolve_path("PRIORITY_MCP_DB_PATH", "database_path")
+                .0
+                .unwrap_or_else(default_database_path),
+        }
+    }
+
+    fn open(&self) -> Result<Connection> {
+        if !self.database_path.exists() {
+            return Err(ToolError::new(format!(
+                "No workspace database at {}. Open Priority once, or set database_path.",
+                self.database_path.display()
+            )));
+        }
+        Connection::open_with_flags(
+            &self.database_path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI,
+        )
+        .map_err(|error| {
+            ToolError::new(format!(
+                "Could not read {}: {error}",
+                self.database_path.display()
+            ))
+        })
+    }
+
+    /// What the focus timer is actually doing.
+    ///
+    /// The elapsed figure is the session's own definition — accumulated
+    /// seconds plus, only when it is not paused, the time since the active
+    /// task started. Wall clock since `startedAt` is the calculation that
+    /// produced the nineteen-hour reading, and it is not offered here even as
+    /// a convenience.
+    pub fn focus_status(&self, now: DateTime<Utc>) -> Result<Value> {
+        let connection = self.open()?;
+        let session = connection
+            .query_row(
+                "SELECT id, startedAt, phase, activeTaskId, workDurationSeconds, \
+                 activeTaskStartedAt, accumulatedSeconds, pausedAt, checkpointAt \
+                 FROM focus_sessions WHERE phase <> 'finished' \
+                 ORDER BY startedAt DESC LIMIT 1",
+                [],
+                |row| {
+                    Ok(SessionRow {
+                        id: row.get(0)?,
+                        started_at: row.get(1)?,
+                        phase: row.get(2)?,
+                        active_task_id: row.get(3)?,
+                        work_duration_seconds: row.get(4)?,
+                        active_task_started_at: row.get(5)?,
+                        accumulated_seconds: row.get::<_, Option<i64>>(6)?.unwrap_or(0),
+                        paused_at: row.get(7)?,
+                        checkpoint_at: row.get(8)?,
+                    })
+                },
+            )
+            .map_err(map_query_error)
+            .ok();
+
+        let Some(session) = session else {
+            return Ok(json!({ "running": false }));
+        };
+
+        let paused = session.paused_at.is_some();
+        let live = if paused {
+            0
+        } else {
+            parse_stored(&session.active_task_started_at)
+                .map(|start| (now - start).num_seconds().max(0))
+                .unwrap_or(0)
+        };
+        let elapsed = session.accumulated_seconds.max(0) + live;
+        let remaining = session.work_duration_seconds - elapsed;
+
+        let title = session
+            .active_task_id
+            .as_deref()
+            .and_then(|id| self.task_title(&connection, id));
+
+        Ok(json!({
+            "running": true,
+            "session_id": session.id,
+            "phase": session.phase,
+            "paused": paused,
+            "paused_at": local_string(&session.paused_at),
+            "started_at": local_string(&Some(session.started_at.clone())),
+            "checkpoint_at": local_string(&session.checkpoint_at),
+            "task_id": session.active_task_id,
+            "task": title,
+            "elapsed_seconds": elapsed,
+            "planned_seconds": session.work_duration_seconds,
+            "remaining_seconds": remaining,
+            "overrun": remaining < 0,
+            "clock": clock(remaining.abs()),
+            "queue": self.queue(&connection, &session.id)?,
+        }))
+    }
+
+    /// What the day's focused time was spent on, newest first. Straight out of
+    /// `focus_work_blocks`, which is what the app's own timeline reads.
+    pub fn focus_history(&self, since: DateTime<Local>, until: DateTime<Local>) -> Result<Value> {
+        let connection = self.open()?;
+        let mut statement = connection
+            .prepare(
+                "SELECT taskTitle, seconds, recordedAt, taskId FROM focus_work_blocks \
+                 WHERE recordedAt >= ?1 AND recordedAt < ?2 ORDER BY recordedAt DESC",
+            )
+            .map_err(map_query_error)?;
+        let rows = statement
+            .query_map(
+                [
+                    stored_string(since.with_timezone(&Utc)),
+                    stored_string(until.with_timezone(&Utc)),
+                ],
+                |row| {
+                    Ok(json!({
+                        "task": row.get::<_, String>(0)?,
+                        "seconds": row.get::<_, i64>(1)?,
+                        "recorded_at": local_string(&Some(row.get::<_, String>(2)?)),
+                        "task_id": row.get::<_, Option<String>>(3)?,
+                    }))
+                },
+            )
+            .map_err(map_query_error)?
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(map_query_error)?;
+        let total: i64 = rows
+            .iter()
+            .map(|block| block["seconds"].as_i64().unwrap_or(0))
+            .sum();
+        Ok(json!({
+            "from": since.format("%Y-%m-%d %H:%M").to_string(),
+            "until": until.format("%Y-%m-%d %H:%M").to_string(),
+            "total_seconds": total,
+            "total": clock(total),
+            "blocks": rows,
+        }))
+    }
+
+    fn queue(&self, connection: &Connection, session_id: &str) -> Result<Vec<Value>> {
+        let mut statement = connection
+            .prepare(
+                "SELECT q.state, q.plannedSeconds, t.title FROM focus_queue_items q \
+                 LEFT JOIN tasks t ON t.id = q.taskId \
+                 WHERE q.sessionId = ?1 ORDER BY q.sortOrder",
+            )
+            .map_err(map_query_error)?;
+        let rows = statement
+            .query_map([session_id], |row| {
+                Ok(json!({
+                    "state": row.get::<_, String>(0)?,
+                    "planned_seconds": row.get::<_, Option<i64>>(1)?,
+                    "task": row.get::<_, Option<String>>(2)?,
+                }))
+            })
+            .map_err(map_query_error)?
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(map_query_error)?;
+        Ok(rows)
+    }
+
+    fn task_title(&self, connection: &Connection, id: &str) -> Option<String> {
+        connection
+            .query_row("SELECT title FROM tasks WHERE id = ?1", [id], |row| {
+                row.get::<_, String>(0)
+            })
+            .ok()
+    }
+}
+
+struct SessionRow {
+    id: String,
+    started_at: String,
+    phase: String,
+    active_task_id: Option<String>,
+    work_duration_seconds: i64,
+    active_task_started_at: String,
+    accumulated_seconds: i64,
+    paused_at: Option<String>,
+    checkpoint_at: Option<String>,
+}
+
+pub fn default_database_path() -> PathBuf {
+    crate::config::default_store_directory().join("priority.sqlite")
+}
+
+/// GRDB stores dates as `YYYY-MM-DD HH:MM:SS.SSS` in UTC, with the
+/// milliseconds sometimes absent.
+fn parse_stored(value: &str) -> Option<DateTime<Utc>> {
+    for format in ["%Y-%m-%d %H:%M:%S%.f", "%Y-%m-%dT%H:%M:%S%.fZ"] {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(value, format) {
+            return Some(Utc.from_utc_datetime(&naive));
+        }
+    }
+    None
+}
+
+fn stored_string(value: DateTime<Utc>) -> String {
+    value.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
+}
+
+/// Stored UTC in, the reader's own clock out — a timestamp you have to convert
+/// in your head is a timestamp you misread.
+fn local_string(value: &Option<String>) -> Option<String> {
+    value.as_deref().and_then(parse_stored).map(|date| {
+        date.with_timezone(&Local)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+    })
+}
+
+fn clock(seconds: i64) -> String {
+    let hours = seconds / 3_600;
+    let minutes = (seconds % 3_600) / 60;
+    let secs = seconds % 60;
+    if hours > 0 {
+        format!("{hours}:{minutes:02}:{secs:02}")
+    } else {
+        format!("{minutes}:{secs:02}")
+    }
+}
+
+fn map_query_error(error: rusqlite::Error) -> ToolError {
+    ToolError::new(format!("Workspace query failed: {error}"))
+}

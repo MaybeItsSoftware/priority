@@ -12,7 +12,7 @@ Priority ships an MCP stdio server so an AI assistant can work directly with you
 
 ## What It Can Do
 
-The server exposes 21 MCP tools, in two groups.
+The server exposes 23 MCP tools, in three groups.
 
 **Checkvist tools** — these reach the Checkvist API directly, so they work
 whether or not the app is running:
@@ -47,6 +47,15 @@ Checkvist has no representation for:
 | `daily_update` | Rename, reschedule, archive/unarchive a daily | write |
 | `daily_tick` | Tick or un-tick a daily for today | write |
 
+**Workspace tools** — these read the app's own database,
+`~/Library/Application Support/Priority/priority.sqlite`, and are the only
+part of the server that does:
+
+| Tool | What it does | |
+|---|---|---|
+| `focus_status` | What the focus timer is doing: the task, paused or running, elapsed and planned seconds, and the queue behind it | read |
+| `focus_history` | Focused time already recorded over the last N logical days, newest first | read |
+
 Notes:
 
 - The Checkvist tools talk directly to the Checkvist API.
@@ -55,6 +64,18 @@ Notes:
 - The local tools need no IPC. They read the app's preferences plist by bundle
   id and the day-log files at the same Application Support path, under the same
   `flock` protocol the app uses.
+- The workspace tools open the database with `SQLITE_OPEN_READ_ONLY`, so they
+  are read-only by the connection rather than by convention. They work while
+  the app is running — SQLite's WAL mode is built for exactly that — and need
+  no IPC. They do **not** recompute any of the app's policy: which task is
+  next, whether one is available in the current context, how a day is scored
+  all live in `PriorityCore`, and a second implementation of them here is the
+  thing this server stopped having. These are row reads and arithmetic the
+  schema already implies. `database_path` in the CLI's config, or
+  `$PRIORITY_MCP_DB_PATH`, points them elsewhere.
+- Writing to that database stays with the app. `WorkspaceStore` owns the
+  migrations, the journalling that makes undo work, and the day-log side
+  effects of finishing a block; a second writer would skip all three.
 - `task_metadata` is read-only, and stays that way. Priorities, recurrence and
   start dates live in `UserDefaults`, which the running app holds in memory and
   rewrites on its own schedule — there is no equivalent of the file lock below

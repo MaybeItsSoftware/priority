@@ -46,6 +46,9 @@ fn tools_for(local: LocalState) -> Tools {
             base_url: "https://checkvist.invalid".into(),
         }),
         local,
+        workspace: crate::workspace::Workspace {
+            database_path: std::env::temp_dir().join("priority-tests-missing.sqlite"),
+        },
     }
 }
 
@@ -727,7 +730,7 @@ fn every_advertised_tool_is_actually_implemented() {
 }
 
 #[test]
-fn the_tool_surface_is_twenty_one_uniquely_named_tools() {
+fn the_tool_surface_is_twenty_three_uniquely_named_tools() {
     let definitions = tool_definitions();
     let mut names: Vec<&str> = definitions
         .iter()
@@ -737,7 +740,7 @@ fn the_tool_surface_is_twenty_one_uniquely_named_tools() {
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), total, "duplicate tool name");
-    assert_eq!(total, 21);
+    assert_eq!(total, 23);
 
     for definition in &definitions {
         assert!(
@@ -1050,10 +1053,16 @@ fn the_lock_file_is_a_sibling_of_the_file_it_protects() {
     // different file with a free lock. The path is also the interface with the
     // other two implementations — get it wrong and it stops excluding them
     // without ever failing.
-    let lock = crate::lock::FileLock::protecting(&PathBuf::from("/tmp/x/dailies.json"));
+    // A directory of its own rather than a fixed path: `/tmp/x` was whatever
+    // the machine happened to have there, and a stray file of that name failed
+    // this test for a reason that had nothing to do with locking.
+    let directory = std::env::temp_dir().join(format!("priority-lock-{}", std::process::id()));
+    std::fs::create_dir_all(&directory).expect("scratch directory");
+    let protected = directory.join("dailies.json");
+    let lock = crate::lock::FileLock::protecting(&protected);
     let mut held = None;
     lock.with_exclusive(|| {
-        held = Some(std::fs::metadata("/tmp/x/dailies.json.lock").is_ok());
+        held = Some(std::fs::metadata(directory.join("dailies.json.lock")).is_ok());
         Ok(())
     })
     .expect("lock");
@@ -1113,4 +1122,184 @@ fn a_malformed_placement_is_rejected_rather_than_guessed_at() {
             "`{bad}` should be rejected"
         );
     }
+}
+
+// -- the app's workspace, read-only ------------------------------------------
+
+/// A throwaway database with only the columns these reads touch. The real
+/// schema is GRDB's and has more; what matters here is the shape of the read.
+fn workspace_fixture(rows: &[&str]) -> crate::workspace::Workspace {
+    let unique = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let path = std::env::temp_dir().join(format!(
+        "priority-ws-{}-{unique}.sqlite",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let connection = rusqlite::Connection::open(&path).expect("fixture database");
+    connection
+        .execute_batch(
+            "CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL);
+             CREATE TABLE focus_sessions (id TEXT PRIMARY KEY, startedAt DATETIME NOT NULL,
+               endedAt DATETIME, phase TEXT NOT NULL, activeTaskId TEXT,
+               workDurationSeconds INTEGER NOT NULL, breakDurationSeconds INTEGER,
+               breakEndsAt DATETIME, activeTaskStartedAt DATETIME NOT NULL,
+               activeBlockId TEXT, accumulatedSeconds INTEGER, pausedAt DATETIME,
+               checkpointAt DATETIME);
+             CREATE TABLE focus_queue_items (id TEXT PRIMARY KEY, sessionId TEXT NOT NULL,
+               taskId TEXT NOT NULL, sortOrder INTEGER NOT NULL, state TEXT NOT NULL,
+               completedAt DATETIME, skippedAt DATETIME, createdAt DATETIME NOT NULL,
+               plannedSeconds INTEGER);
+             CREATE TABLE focus_work_blocks (id TEXT PRIMARY KEY, sessionId TEXT, taskId TEXT,
+               taskTitle TEXT NOT NULL, seconds INTEGER NOT NULL, recordedAt DATETIME NOT NULL,
+               originalTaskId TEXT);",
+        )
+        .expect("fixture schema");
+    for row in rows {
+        connection.execute_batch(row).expect("fixture row");
+    }
+    crate::workspace::Workspace {
+        database_path: path,
+    }
+}
+
+fn utc(text: &str) -> chrono::DateTime<chrono::Utc> {
+    chrono::NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S")
+        .map(|naive| chrono::TimeZone::from_utc_datetime(&chrono::Utc, &naive))
+        .expect("timestamp")
+}
+
+/// The reading that started all this. A block paused seconds after it started
+/// and left overnight had been reported as nineteen hours, because the clock
+/// was wall time since `startedAt`. Paused time does not accrue.
+#[test]
+fn a_paused_block_does_not_accrue_while_it_is_paused() {
+    let workspace = workspace_fixture(&[
+        "INSERT INTO tasks VALUES ('t1', 'Read 5 min');",
+        "INSERT INTO focus_sessions (id, startedAt, phase, activeTaskId, workDurationSeconds,
+           activeTaskStartedAt, accumulatedSeconds, pausedAt)
+         VALUES ('s1', '2026-09-25 15:21:38.349', 'running', 't1', 1500,
+           '2026-09-25 15:21:38.349', 0, '2026-09-25 15:21:38.830');",
+    ]);
+
+    let status = workspace
+        .focus_status(utc("2026-09-26 10:00:00"))
+        .expect("status");
+
+    assert_eq!(status["running"], json!(true));
+    assert_eq!(status["paused"], json!(true));
+    assert_eq!(status["task"], json!("Read 5 min"));
+    assert_eq!(status["elapsed_seconds"], json!(0));
+    assert_eq!(status["remaining_seconds"], json!(1500));
+    assert_eq!(status["clock"], json!("25:00"));
+    assert_eq!(status["overrun"], json!(false));
+}
+
+#[test]
+fn a_running_block_counts_from_the_active_task_rather_than_the_session() {
+    let workspace = workspace_fixture(&[
+        "INSERT INTO tasks VALUES ('t2', 'Write the report');",
+        // Accumulated from an earlier task in the same session, plus four
+        // minutes on this one.
+        "INSERT INTO focus_sessions (id, startedAt, phase, activeTaskId, workDurationSeconds,
+           activeTaskStartedAt, accumulatedSeconds)
+         VALUES ('s2', '2026-09-26 08:00:00.000', 'running', 't2', 600,
+           '2026-09-26 09:56:00.000', 60);",
+    ]);
+
+    let status = workspace
+        .focus_status(utc("2026-09-26 10:00:00"))
+        .expect("status");
+
+    assert_eq!(status["elapsed_seconds"], json!(300));
+    assert_eq!(status["remaining_seconds"], json!(300));
+    assert_eq!(status["clock"], json!("5:00"));
+}
+
+#[test]
+fn overrun_is_reported_as_overrun_rather_than_as_negative_time() {
+    let workspace = workspace_fixture(&[
+        "INSERT INTO tasks VALUES ('t3', 'Long one');",
+        "INSERT INTO focus_sessions (id, startedAt, phase, activeTaskId, workDurationSeconds,
+           activeTaskStartedAt, accumulatedSeconds)
+         VALUES ('s3', '2026-09-26 09:00:00.000', 'running', 't3', 600,
+           '2026-09-26 09:00:00.000', 0);",
+    ]);
+
+    let status = workspace
+        .focus_status(utc("2026-09-26 09:12:30"))
+        .expect("status");
+
+    assert_eq!(status["overrun"], json!(true));
+    assert_eq!(status["remaining_seconds"], json!(-150));
+    assert_eq!(status["clock"], json!("2:30"));
+}
+
+/// A finished session is not a running one, however recently it ended.
+#[test]
+fn a_finished_session_reads_as_nothing_running() {
+    let workspace = workspace_fixture(&[
+        "INSERT INTO focus_sessions (id, startedAt, phase, workDurationSeconds,
+           activeTaskStartedAt) VALUES ('s4', '2026-09-26 09:00:00.000', 'finished', 1500,
+           '2026-09-26 09:00:00.000');",
+    ]);
+
+    let status = workspace
+        .focus_status(utc("2026-09-26 09:30:00"))
+        .expect("status");
+
+    assert_eq!(status["running"], json!(false));
+}
+
+#[test]
+fn recorded_blocks_come_back_newest_first_with_a_total() {
+    let workspace = workspace_fixture(&[
+        "INSERT INTO focus_work_blocks (id, taskTitle, seconds, recordedAt)
+         VALUES ('b1', 'Morning', 900, '2026-09-26 08:00:00.000');",
+        "INSERT INTO focus_work_blocks (id, taskTitle, seconds, recordedAt)
+         VALUES ('b2', 'Afternoon', 1500, '2026-09-26 14:00:00.000');",
+        "INSERT INTO focus_work_blocks (id, taskTitle, seconds, recordedAt)
+         VALUES ('b3', 'Last week', 600, '2026-09-19 14:00:00.000');",
+    ]);
+
+    let since = Local.with_ymd_and_hms(2026, 9, 26, 4, 0, 0).unwrap();
+    let until = Local.with_ymd_and_hms(2026, 9, 27, 4, 0, 0).unwrap();
+    let history = workspace.focus_history(since, until).expect("history");
+
+    let blocks = history["blocks"].as_array().expect("blocks");
+    assert_eq!(blocks.len(), 2);
+    assert_eq!(blocks[0]["task"], json!("Afternoon"));
+    assert_eq!(blocks[1]["task"], json!("Morning"));
+    assert_eq!(history["total_seconds"], json!(2400));
+    assert_eq!(history["total"], json!("40:00"));
+}
+
+/// The one guarantee worth pinning: the connection is opened read-only, so a
+/// bug here cannot corrupt the app's store.
+#[test]
+fn the_workspace_connection_refuses_to_write() {
+    let workspace = workspace_fixture(&["INSERT INTO tasks VALUES ('t5', 'Untouchable');"]);
+    let connection = rusqlite::Connection::open_with_flags(
+        &workspace.database_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_URI,
+    )
+    .expect("read-only connection");
+
+    assert!(
+        connection
+            .execute("UPDATE tasks SET title = 'changed' WHERE id = 't5'", [])
+            .is_err()
+    );
+}
+
+/// A missing database is a sentence, not a stack trace — the common cause is
+/// simply never having opened the app.
+#[test]
+fn a_missing_database_says_where_it_looked() {
+    let workspace = crate::workspace::Workspace {
+        database_path: std::env::temp_dir().join("priority-definitely-absent.sqlite"),
+    };
+    let error = workspace
+        .focus_status(utc("2026-09-26 10:00:00"))
+        .expect_err("should fail");
+    assert!(error.message.contains("priority-definitely-absent.sqlite"));
 }

@@ -581,5 +581,25 @@ pub fn tool_definitions() -> Vec<Value> {
                 "additionalProperties": false,
             },
         }),
+        json!({
+            "name": "focus_status",
+            "description": "What the focus timer is doing right now: the task, whether it is paused, elapsed and planned seconds, and the queue behind it. Read directly from the app's workspace database, read-only.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "focus_history",
+            "description": "Focused time already recorded, newest first, over the last N logical days. Read directly from the app's workspace database, read-only.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "days": { "type": "integer", "minimum": 1, "maximum": 90, "default": 1 },
+                },
+                "additionalProperties": false,
+            },
+        }),
     ]
 }

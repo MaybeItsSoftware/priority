@@ -13,6 +13,7 @@
 use crate::checkvist::CheckvistClient;
 use crate::error::{Result, ToolError};
 use crate::local::LocalState;
+use crate::workspace::Workspace;
 use chrono::Local;
 use serde_json::{Map, Value, json};
 
@@ -24,6 +25,8 @@ pub struct ToolOutcome {
 pub struct Tools {
     pub client: CheckvistClient,
     pub local: LocalState,
+    /// Read-only, and the only thing here that reads the app's own database.
+    pub workspace: Workspace,
 }
 
 impl Tools {
@@ -306,6 +309,37 @@ impl Tools {
                     "Daily already in that state"
                 };
                 Ok(outcome(title, payload))
+            }
+
+            // -- the app's workspace, read-only ------------------------------
+            "focus_status" => {
+                let payload = self.workspace.focus_status(chrono::Utc::now())?;
+                let title = if payload["running"] == Value::Bool(true) {
+                    if payload["paused"] == Value::Bool(true) {
+                        "Focus paused"
+                    } else {
+                        "Focus running"
+                    }
+                } else {
+                    "No focus session"
+                };
+                Ok(outcome(title, payload))
+            }
+
+            "focus_history" => {
+                let days = as_optional_int(arguments.get("days"))?
+                    .filter(|n| *n != 0)
+                    .unwrap_or(1);
+                if !(1..=90).contains(&days) {
+                    return Err(ToolError::new("days must be between 1 and 90."));
+                }
+                // Logical days, so a block worked at one in the morning counts
+                // towards the evening it belonged to rather than the next day.
+                let now = Local::now();
+                let until = self.local.logical_day(now) + chrono::Duration::days(1);
+                let since = until - chrono::Duration::days(days);
+                let payload = self.workspace.focus_history(since, until)?;
+                Ok(outcome(format!("Focused time ({days} day(s))"), payload))
             }
 
             _ => Err(ToolError::new(format!("Unknown tool: {name}"))),
