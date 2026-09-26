@@ -1,0 +1,278 @@
+import XCTest
+
+@testable import PriorityCore
+
+final class ThemeSpecificationTests: XCTestCase {
+  private func value(_ hex: String) -> ThemeColorValue {
+    ThemeColorValue(hex: hex)!
+  }
+
+  // MARK: - The built-ins
+
+  func testBothBuiltInThemesAreRegisteredUnderDistinctIdentifiers() {
+    let identifiers = BuiltInThemeSpecifications.all.map(\.identifier)
+    XCTAssertEqual(identifiers.count, Set(identifiers).count)
+    XCTAssertEqual(
+      BuiltInThemeSpecifications.specification(withIdentifier: "native.theme.chalk")?.name,
+      "Chalk"
+    )
+    XCTAssertNil(BuiltInThemeSpecifications.specification(withIdentifier: "native.theme.nope"))
+  }
+
+  func testNoBuiltInRoleResolvesToTheDebugColour() {
+    for specification in BuiltInThemeSpecifications.all {
+      for appearance in ThemeAppearance.allCases {
+        for role in ThemeColorRole.allCases {
+          XCTAssertNotEqual(
+            specification.color(role, in: appearance),
+            .unresolved,
+            "\(specification.identifier).\(appearance.rawValue).\(role.rawValue) is unresolved — "
+              + "either the hex is a typo or the role was never given a value"
+          )
+        }
+      }
+    }
+  }
+
+  func testChalkReproducesTheHouseStyleExactly() {
+    let chalk = BuiltInThemeSpecifications.chalk
+    XCTAssertEqual(chalk.color(.paper, in: .light).hexString, "#FAF8F4")
+    XCTAssertEqual(chalk.color(.raised, in: .light).hexString, "#FFFFFF")
+    XCTAssertEqual(chalk.color(.ink, in: .light).hexString, "#444054")
+    XCTAssertEqual(chalk.color(.border, in: .light).hexString, "#E6E4EA")
+    XCTAssertEqual(chalk.color(.mutedText, in: .light).hexString, "#6E6B7C")
+    XCTAssertEqual(chalk.color(.dimText, in: .light).hexString, "#B6B3BF")
+    XCTAssertEqual(chalk.color(.primary, in: .light).hexString, "#007FFF")
+    XCTAssertEqual(chalk.color(.success, in: .light).hexString, "#4CC38E")
+    XCTAssertEqual(chalk.color(.danger, in: .light).hexString, "#D62246")
+    XCTAssertEqual(chalk.color(.warning, in: .light).hexString, "#FFBF00")
+    XCTAssertEqual(chalk.color(.paper, in: .dark).hexString, "#1C1A23")
+    XCTAssertEqual(chalk.color(.raised, in: .dark).hexString, "#25232F")
+    XCTAssertEqual(chalk.color(.border, in: .dark).hexString, "#34313F")
+  }
+
+  /// "Warm at the paper end, cool at the ink end", stated as a property rather
+  /// than as six hex strings: the page is warmer than neutral, and the ink is
+  /// cooler than neutral.
+  func testChalkNeutralsRunWarmAtThePaperEndAndCoolAtTheInkEnd() {
+    let chalk = BuiltInThemeSpecifications.chalk
+    let paper = chalk.color(.paper, in: .light)
+    XCTAssertGreaterThan(paper.red, paper.green)
+    XCTAssertGreaterThan(paper.green, paper.blue)
+
+    let ink = chalk.color(.ink, in: .light)
+    XCTAssertGreaterThan(ink.blue, ink.green)
+    XCTAssertGreaterThan(ink.red, ink.green, "grape, not blue-grey")
+  }
+
+  func testChalkAccentsKeepTheirHexAcrossTheFlip() {
+    let chalk = BuiltInThemeSpecifications.chalk
+    for role in [ThemeColorRole.primary, .success, .danger, .warning,
+      .categoricalPurple, .categoricalPink, .categoricalOrange] {
+      XCTAssertEqual(
+        chalk.color(role, in: .light),
+        chalk.color(role, in: .dark),
+        "\(role.rawValue) should keep its hex in dark mode and be used at low alpha instead"
+      )
+    }
+  }
+
+  func testPitchIsGenuinelyADifferentThemeAndNotACopy() {
+    let chalk = BuiltInThemeSpecifications.chalk
+    let pitch = BuiltInThemeSpecifications.pitch
+    XCTAssertNotEqual(chalk.palette, pitch.palette)
+    XCTAssertNotEqual(chalk.structure, pitch.structure)
+    XCTAssertNotEqual(
+      chalk.color(.paper, in: .dark),
+      pitch.color(.paper, in: .dark)
+    )
+    XCTAssertGreaterThan(pitch.structure.border.hairline, chalk.structure.border.hairline)
+    XCTAssertLessThan(pitch.structure.radius.panel, chalk.structure.radius.panel)
+  }
+
+  func testBuiltInThemesRaiseNoErrorsOrWarnings() {
+    for specification in BuiltInThemeSpecifications.all {
+      let blocking = specification.validate().filter { $0.severity != .note }
+      XCTAssertTrue(
+        blocking.isEmpty,
+        "\(specification.identifier): \(blocking.map(\.message).joined(separator: "; "))"
+      )
+    }
+  }
+
+  /// Azure on chalk is 3.6:1. That is not a bug to fix, it is a constraint to
+  /// record — and the audit records it as a note rather than a warning.
+  func testAzureOnChalkIsReportedAsLargeTextOnly() {
+    let issues = BuiltInThemeSpecifications.chalk.validate()
+    let largeTextOnly = issues.compactMap { issue -> (ThemeColorRole, ThemeAppearance)? in
+      if case .largeTextOnly(let role, let appearance, _) = issue { return (role, appearance) }
+      return nil
+    }
+    XCTAssertTrue(largeTextOnly.contains { $0.0 == .primary && $0.1 == .light })
+    XCTAssertTrue(issues.allSatisfy { $0.severity == .note })
+  }
+
+  func testPitchClearsBodyTextAAEverywhere() {
+    let pitch = BuiltInThemeSpecifications.pitch
+    for appearance in ThemeAppearance.allCases {
+      for role in ThemeColorRole.bodyTextRoles {
+        let ratio = ThemeContrastAudit.ratio(role, on: .paper, in: appearance, of: pitch.palette)
+        XCTAssertGreaterThanOrEqual(ratio, ThemeContrastAudit.bodyTextMinimum)
+      }
+      for role in ThemeContrastAudit.accentRoles {
+        let ratio = ThemeContrastAudit.ratio(role, on: .paper, in: appearance, of: pitch.palette)
+        XCTAssertGreaterThanOrEqual(
+          ratio, ThemeContrastAudit.bodyTextMinimum,
+          "\(role.rawValue) in \(appearance.rawValue) is only \(ratio):1"
+        )
+      }
+    }
+  }
+
+  // MARK: - The audit itself
+
+  private func palette(
+    paper: String,
+    ink: String,
+    muted: String,
+    accent: String,
+    raised: String
+  ) -> ThemePalette {
+    var table: [ThemeColorRole: ThemeColorValue] = Dictionary(
+      uniqueKeysWithValues: ThemeColorRole.allCases.map { ($0, value("#808080")) }
+    )
+    table[.paper] = value(paper)
+    table[.ink] = value(ink)
+    table[.mutedText] = value(muted)
+    table[.primary] = value(accent)
+    table[.raised] = value(raised)
+    return ThemePalette(light: table, dark: table)
+  }
+
+  private func specification(_ palette: ThemePalette) -> ThemeSpecification {
+    ThemeSpecification(
+      identifier: "test",
+      name: "Test",
+      summary: "",
+      palette: palette,
+      structure: BuiltInThemeSpecifications.chalk.structure
+    )
+  }
+
+  func testMissingRoleIsAnError() {
+    let spec = ThemeSpecification(
+      identifier: "test",
+      name: "Test",
+      summary: "",
+      palette: ThemePalette(light: [:], dark: [:]),
+      structure: BuiltInThemeSpecifications.chalk.structure
+    )
+    let issues = spec.validate()
+    XCTAssertTrue(issues.contains { $0.severity == .error })
+    XCTAssertEqual(issues.first?.severity, .error, "worst first")
+  }
+
+  func testUnreadableBodyTextIsAWarning() {
+    let spec = specification(
+      palette(
+        paper: "#ffffff", ink: "#cccccc", muted: "#dddddd", accent: "#0032c8", raised: "#f0f0f3"))
+    let belowAA = spec.validate().compactMap { issue -> ThemeColorRole? in
+      if case .bodyTextBelowAA(let role, _, _) = issue { return role }
+      return nil
+    }
+    XCTAssertTrue(belowAA.contains(.ink))
+    XCTAssertTrue(belowAA.contains(.mutedText))
+  }
+
+  func testAccentBelowThreeToOneIsAWarningNotANote() {
+    let spec = specification(
+      palette(
+        paper: "#ffffff", ink: "#000000", muted: "#2f2f3a", accent: "#fff4c8", raised: "#f0f0f3"))
+    let issue = spec.validate().first { issue in
+      if case .accentBelowUIMinimum(let role, _, _) = issue { return role == .primary }
+      return false
+    }
+    XCTAssertNotNil(issue)
+    XCTAssertEqual(issue?.severity, .warning)
+  }
+
+  func testACardYouCannotSeeAgainstThePageIsReported() {
+    let spec = specification(
+      palette(
+        paper: "#ffffff", ink: "#000000", muted: "#2f2f3a", accent: "#0032c8", raised: "#ffffff"))
+    XCTAssertTrue(
+      spec.validate().contains { issue in
+        if case .raisedIndistinctFromPaper = issue { return true }
+        return false
+      }
+    )
+  }
+
+  // MARK: - Structure
+
+  func testShadowsAndGradientsOnChromeAreReported() {
+    let chalk = BuiltInThemeSpecifications.chalk.structure
+    let loud = ThemeStructure(
+      radius: chalk.radius,
+      border: chalk.border,
+      spacing: chalk.spacing,
+      typography: chalk.typography,
+      usesShadows: true,
+      usesGradientsOnChrome: true
+    )
+    let issues = ThemeStructureAudit.findings(for: loud)
+    XCTAssertTrue(issues.contains(.shadowsUsed))
+    XCTAssertTrue(issues.contains(.gradientsOnChrome))
+  }
+
+  func testAPillThatIsNotAPillBreaksTheRadiusScale() {
+    let chalk = BuiltInThemeSpecifications.chalk.structure
+    let broken = ThemeStructure(
+      radius: ThemeRadiusScale(panel: 8, control: 6, pill: 12, shell: 20),
+      border: chalk.border,
+      spacing: chalk.spacing,
+      typography: chalk.typography
+    )
+    XCTAssertTrue(ThemeStructureAudit.findings(for: broken).contains(.radiusScaleOutOfOrder))
+  }
+
+  func testShellRadiusOffTheReservedRangeIsReportedButZeroIsNot() {
+    let chalk = BuiltInThemeSpecifications.chalk.structure
+    func structure(shell: Double) -> ThemeStructure {
+      ThemeStructure(
+        radius: ThemeRadiusScale(panel: 8, control: 6, pill: 9999, shell: shell),
+        border: chalk.border,
+        spacing: chalk.spacing,
+        typography: chalk.typography
+      )
+    }
+    XCTAssertTrue(
+      ThemeStructureAudit.findings(for: structure(shell: 12))
+        .contains(.shellRadiusOffScale(value: 12)))
+    XCTAssertEqual(ThemeStructureAudit.findings(for: structure(shell: 0)), [])
+    XCTAssertEqual(ThemeStructureAudit.findings(for: structure(shell: 22)), [])
+  }
+
+  func testAHeavyHairlineIsNoLongerAHairline() {
+    let chalk = BuiltInThemeSpecifications.chalk.structure
+    let heavy = ThemeStructure(
+      radius: chalk.radius,
+      border: ThemeBorderScale(hairline: 4, emphasis: 6, focusRing: 6),
+      spacing: chalk.spacing,
+      typography: chalk.typography
+    )
+    XCTAssertTrue(ThemeStructureAudit.findings(for: heavy).contains(.hairlineTooHeavy(value: 4)))
+  }
+
+  /// The house style states tracking in em; SwiftUI wants points. One place
+  /// does the conversion, so a 10pt micro-label tracks 1.5pt.
+  func testMicroLabelTrackingConvertsFromEmToPoints() {
+    let label = BuiltInThemeSpecifications.chalk.structure.typography.microLabel
+    XCTAssertEqual(label.size, 10)
+    XCTAssertEqual(label.tracking, 0.15, accuracy: 0.0001)
+    XCTAssertEqual(label.trackingPoints, 1.5, accuracy: 0.0001)
+    XCTAssertTrue(label.isUppercased)
+    XCTAssertEqual(label.weight, .bold)
+    XCTAssertEqual(label.role, .mutedText)
+  }
+}
