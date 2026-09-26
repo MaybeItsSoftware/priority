@@ -92,13 +92,12 @@ import SwiftUI
 
   var orderedRootTaskViews: [RootTaskView] { Self.storedRootTaskViewOrder }
 
-  /// The tab order, read straight from `UserDefaults`.
+  /// The legacy tab order, read straight from `UserDefaults`.
   ///
-  /// `static` because the `View` menu in `MainApp` needs it while SwiftUI is
-  /// building the App's `body`, and that happens *before*
-  /// `@NSApplicationDelegateAdaptor` has made the delegate — so anything
-  /// reaching it through `AppDelegate.shared` there force-unwraps nil and traps
-  /// on launch. Nothing here needs an instance: the order is a defaults key.
+  /// Nothing writes the key any more: the settings pane that reordered these
+  /// tabs went with the tabs themselves, and the `View` menu lists
+  /// `WorkspaceViewMode` instead. The read stays so an order saved by an
+  /// earlier build still drives what is left of root-tab cycling.
   static var storedRootTaskViewOrder: [RootTaskView] {
     if let data = UserDefaults.standard.data(forKey: "rootTaskViewOrder"),
       let rawValues = try? JSONDecoder().decode([Int].self, from: data)
@@ -111,13 +110,6 @@ import SwiftUI
       }
     }
     return RootTaskView.allCases
-  }
-
-  func saveRootTaskViewOrder(_ views: [RootTaskView]) {
-    let rawValues = views.map { $0.rawValue }
-    if let data = try? JSONEncoder().encode(rawValues) {
-      UserDefaults.standard.set(data, forKey: "rootTaskViewOrder")
-    }
   }
 
   enum CarbonKey {

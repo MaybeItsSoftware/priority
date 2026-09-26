@@ -164,17 +164,6 @@ extension SettingsView {
         .padding(.top, 4)
       }
       
-      Section(header: Text("View Modes Order")) {
-        VStack(alignment: .leading, spacing: 10) {
-          Text("Drag to reorder the view mode tabs")
-            .font(.caption)
-            .foregroundColor(themeColor(.textSecondary))
-          
-          ModeOrderList(manager: checkvistManager)
-        }
-        .padding(.top, 4)
-      }
-
       Section(header: Text("Named Times")) {
         VStack(alignment: .leading, spacing: 10) {
           Text("Customize what hour named times resolve to when scheduling tasks.")

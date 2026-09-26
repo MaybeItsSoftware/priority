@@ -459,43 +459,6 @@ struct SettingsView: View {
   }
 }
 
-struct ModeOrderList: View {
-  var manager: AppCoordinator
-  @State private var orderedModes: [RootTaskView] = []
-
-  var body: some View {
-    List {
-      ForEach(orderedModes, id: \.rawValue) { mode in
-        HStack(spacing: 8) {
-          Image(systemName: "line.3.horizontal")
-            .foregroundColor(.secondary)
-          Text(mode.title)
-          Spacer(minLength: 0)
-          if manager.taskListViewModel.rootTaskView == mode {
-            Text("Current")
-              .font(.caption2)
-              .foregroundColor(.secondary)
-          }
-        }
-        .padding(.vertical, 2)
-      }
-      .onMove(perform: moveModes)
-    }
-    .listStyle(.inset)
-    .frame(minHeight: 150, maxHeight: 210)
-    .onAppear(perform: syncModeOrder)
-  }
-
-  private func syncModeOrder() {
-    orderedModes = manager.orderedRootTaskViews
-  }
-
-  private func moveModes(from source: IndexSet, to destination: Int) {
-    orderedModes.move(fromOffsets: source, toOffset: destination)
-    manager.saveRootTaskViewOrder(orderedModes)
-  }
-}
-
 struct NamedTimePickerRow: View {
   let label: String
   @Binding var hour: Int
