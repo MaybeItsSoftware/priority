@@ -64,6 +64,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     menuBarController.onShowFocusPanel = { [weak self] in
       self?.showFocusPanel()
     }
+    menuBarController.onQuickAdd = { [weak self] in
+      self?.triggerQuickAddFromHotkey()
+    }
     menuBarController.onQuit = { [weak self] in
       self?.menuQuit()
     }

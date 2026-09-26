@@ -11,6 +11,7 @@ class MenuBarController: NSObject {
   var onShowSettings: (() -> Void)?
   var onShowMainWindow: (() -> Void)?
   var onShowFocusPanel: (() -> Void)?
+  var onQuickAdd: (() -> Void)?
   var onQuit: (() -> Void)?
   /// The local workspace, read only for the focus session the status item
   /// reports. Weak because the workspace outlives nothing here.
@@ -86,7 +87,10 @@ class MenuBarController: NSObject {
   /// app coming to the front.
   private func showStatusItemContextMenu() {
     let menu = NSMenu()
+    appendSessionItems(to: menu)
     appendDayItems(to: menu)
+    menu.addItem(withTitle: "Quick Add…", action: #selector(menuQuickAdd), keyEquivalent: "")
+      .target = self
     menu.addItem(withTitle: "Focus Panel", action: #selector(menuFocusPanel), keyEquivalent: "")
       .target = self
     menu.addItem(withTitle: "Open Main Window", action: #selector(menuMainWindow), keyEquivalent: "")
@@ -100,6 +104,72 @@ class MenuBarController: NSObject {
     statusItem.menu = menu
     statusItem.button?.performClick(nil)
     statusItem.menu = nil
+  }
+
+  /// The running block, and the three things you can do to it.
+  ///
+  /// Until this the menu bar could only *start* work: the status item showed a
+  /// clock you could not stop, and pausing or closing a block meant going back
+  /// to a window you had deliberately put away. A companion you have to leave
+  /// to act on is a readout, not a surface.
+  ///
+  /// Closing a block routes through the focus panel rather than acting
+  /// directly, because the quality prompt has to have somewhere to appear —
+  /// answering "how did that go?" is part of closing it, and a prompt raised
+  /// against a hidden surface is a block that silently never finishes.
+  private func appendSessionItems(to menu: NSMenu) {
+    guard let workspace,
+      let session = workspace.activeFocusSession,
+      session.phase != .finished,
+      let task = workspace.activeFocusTask
+    else { return }
+
+    let header = NSMenuItem(
+      title: Self.truncatedFocusTitle(task.title, limit: 44), action: nil, keyEquivalent: "")
+    header.isEnabled = false
+    menu.addItem(header)
+
+    // A prompt already waiting is the only thing worth offering: pausing or
+    // re-closing a block whose question is open would answer it by accident.
+    if workspace.pendingFocusCompletion != nil {
+      let prompt = NSMenuItem(
+        title: "How did that go?", action: #selector(menuFocusPanel), keyEquivalent: "")
+      prompt.target = self
+      prompt.indentationLevel = 1
+      menu.addItem(prompt)
+      menu.addItem(.separator())
+      return
+    }
+
+    let reading = FocusTimerDisplay.reading(
+      elapsed: TimeInterval(session.elapsedSeconds(now: .now)),
+      planned: TimeInterval(session.workDurationSeconds))
+    let clock = NSMenuItem(
+      title: reading.isOverrun ? "\(reading.text) over" : "\(reading.text) left",
+      action: nil, keyEquivalent: "")
+    clock.isEnabled = false
+    clock.indentationLevel = 1
+    menu.addItem(clock)
+
+    let isPaused = session.pausedAt != nil
+    let pause = NSMenuItem(
+      title: isPaused ? "Resume" : "Pause", action: #selector(menuTogglePause), keyEquivalent: "")
+    pause.target = self
+    pause.indentationLevel = 1
+    menu.addItem(pause)
+
+    let done = NSMenuItem(title: "Done", action: #selector(menuFinishTask), keyEquivalent: "")
+    done.target = self
+    done.indentationLevel = 1
+    done.toolTip = "Complete the task and close the block"
+    menu.addItem(done)
+
+    let stop = NSMenuItem(title: "End Block", action: #selector(menuEndBlock), keyEquivalent: "")
+    stop.target = self
+    stop.indentationLevel = 1
+    stop.toolTip = "Close the block and keep the task"
+    menu.addItem(stop)
+    menu.addItem(.separator())
   }
 
   /// Today as menu items, each of which starts a focus session on the task.
@@ -164,6 +234,31 @@ class MenuBarController: NSObject {
     onQuit?()
   }
 
+  @objc private func menuQuickAdd() {
+    onQuickAdd?()
+  }
+
+  @objc private func menuTogglePause() {
+    workspace?.toggleFocusPause()
+  }
+
+  @objc private func menuFinishTask() {
+    closeBlock(completingTask: true)
+  }
+
+  @objc private func menuEndBlock() {
+    closeBlock(completingTask: false)
+  }
+
+  /// Raises the panel first, then asks. The prompt is shown by whichever
+  /// surface requested it, so requesting from a surface that is not up leaves
+  /// the question unanswerable and the block half-closed.
+  private func closeBlock(completingTask: Bool) {
+    guard let workspace else { return }
+    onShowFocusPanel?()
+    workspace.requestFocusCompletion(completeTask: completingTask, from: .panel)
+  }
+
   /// Starts a session on the task the menu item carries, overriding whatever
   /// is running — picking a different task from the day is a decision to work
   /// on that instead, not a request to queue it behind the current block.
@@ -215,7 +310,11 @@ class MenuBarController: NSObject {
     statusItem?.button?.image = nil
     statusItem?.button?.imagePosition = .noImage
     statusItem?.button?.attributedTitle = NSAttributedString(string: title, attributes: attributes)
-    statusItem?.button?.toolTip = isPaused ? "Paused: \(task.title)" : "Focusing: \(task.title)"
+    if workspace.pendingFocusCompletion != nil {
+      statusItem?.button?.toolTip = "Waiting on how that block went: \(task.title)"
+    } else {
+      statusItem?.button?.toolTip = isPaused ? "Paused: \(task.title)" : "Focusing: \(task.title)"
+    }
     statusItem?.length = NSStatusItem.variableLength
     statusItem?.button?.layer?.mask = nil
     return true
@@ -290,6 +389,9 @@ class MenuBarController: NSObject {
       // Starting or ending a session swaps the status item between launcher
       // and clock; the per-second redraw is the ticker's job, not this one's.
       _ = self.workspace?.activeFocusSession
+      // A block waiting on its quality answer is stopped but not finished, and
+      // the status item should not read as though you paused it yourself.
+      _ = self.workspace?.pendingFocusCompletion
       // And the day itself, so the reminder names what is actually next rather
       // than whatever was next when the app launched.
       _ = self.workspace?.todayPlan
