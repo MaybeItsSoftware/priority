@@ -429,7 +429,10 @@ extension WorkspaceViewModel {
       case 116: moveSidebarSelection(by: -8)
       case 121: moveSidebarSelection(by: 8)
       case 53:  // Escape
-        selectedFolderID = nil
+        // Leaving a folder has to land somewhere. It used to fall back on
+        // whichever list was still selected behind it; a folder scope has no
+        // such list, so clearing it on its own would empty the pane.
+        if selectedFolderID != nil { run(.goEverything) }
       default:
         switch event.charactersIgnoringModifiers?.lowercased() {
         case "j": moveSidebarSelection(by: 1)
