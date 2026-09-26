@@ -196,6 +196,45 @@ enum WorkspaceSidebarItem: Identifiable {
   var newTaskListID: String?
   var listIcons = UserDefaults.standard.dictionary(forKey: "workspaceListIconsV1") as? [String: String] ?? [:]
 
+  /// Whether the sidebar takes a column at all. Persisted, because a sidebar
+  /// you collapsed is a decision about how you work rather than about this
+  /// session — reopening the window to find it back is the annoying part.
+  var isSidebarVisible = UserDefaults.standard.object(forKey: WorkspaceViewModel.sidebarVisibleKey) as? Bool ?? true {
+    didSet { UserDefaults.standard.set(isSidebarVisible, forKey: Self.sidebarVisibleKey) }
+  }
+
+  /// The width the sidebar was last dragged to.
+  ///
+  /// `HSplitView` sizes a pane from its `idealWidth` and then forgets whatever
+  /// you dragged it to, so the column reset to 185 on every launch. Recording
+  /// the laid-out width here and feeding it back as the ideal is what makes
+  /// the drag stick.
+  var sidebarWidth: CGFloat = {
+    let stored = UserDefaults.standard.double(forKey: WorkspaceViewModel.sidebarWidthKey)
+    guard stored > 0 else { return WorkspaceViewModel.defaultSidebarWidth }
+    return min(max(CGFloat(stored), WorkspaceViewModel.minSidebarWidth), WorkspaceViewModel.maxSidebarWidth)
+  }() {
+    didSet {
+      guard sidebarWidth != oldValue else { return }
+      UserDefaults.standard.set(Double(sidebarWidth), forKey: Self.sidebarWidthKey)
+    }
+  }
+
+  static let minSidebarWidth: CGFloat = 140
+  static let maxSidebarWidth: CGFloat = 420
+  static let defaultSidebarWidth: CGFloat = 185
+  private static let sidebarVisibleKey = "localWorkspaceSidebarVisibleV1"
+  private static let sidebarWidthKey = "localWorkspaceSidebarWidthV1"
+
+  /// Collapsing while the sidebar holds the keyboard hands focus to the tasks,
+  /// rather than leaving it on a pane that is no longer on screen.
+  func toggleSidebar() {
+    isSidebarVisible.toggle()
+    if !isSidebarVisible, keyboardFocusArea == .sidebar {
+      requestKeyboardFocus(.tasks)
+    }
+  }
+
   static let availableListIcons: [(symbol: String, label: String)] = [
     ("list.bullet", "List"), ("tray", "Inbox"), ("briefcase", "Work"),
     ("graduationcap", "Study"), ("hammer", "Projects"), ("house", "Home"),

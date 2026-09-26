@@ -98,8 +98,21 @@ struct MainApp: App {
           AppDelegate.shared.workspace.toggleInspector()
         }
         Divider()
+        // Deliberately a fixed title rather than Hide/Show: every other item
+        // here touches `AppDelegate.shared` only inside its action, which runs
+        // long after launch. A title that reads the workspace is evaluated
+        // while the menu is being built, which is before the delegate is
+        // installed — and that crashed the app on startup.
+        Button("Toggle Sidebar") {
+          AppDelegate.shared.workspace.toggleSidebar()
+        }
+        .keyboardShortcut("s", modifiers: [.command, .control])
         Button("Sidebar") {
-          AppDelegate.shared.workspace.requestKeyboardFocus(.sidebar)
+          let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
+          // Focusing a collapsed sidebar has to open it first, or the
+          // shortcut moves focus somewhere you cannot see.
+          if !workspace.isSidebarVisible { workspace.toggleSidebar() }
+          workspace.requestKeyboardFocus(.sidebar)
         }
         .keyboardShortcut("1", modifiers: .control)
         Button("Task Surface") {

@@ -11,6 +11,9 @@ struct WorkspaceDesktopView: View {
   @Environment(AppCoordinator.self) private var manager
   private let everythingSidebarID = "priority:everything"
   @State private var isTopLevelDropTargeted = false
+  /// The sidebar width the current divider drag started from, so the gesture
+  /// measures a translation rather than accumulating deltas.
+  @State private var dragStartWidth: CGFloat?
   @FocusState private var focusedArea: WorkspaceFocusArea?
 
   var body: some View {
@@ -20,13 +23,60 @@ struct WorkspaceDesktopView: View {
   }
 
   private var workspaceLayout: some View {
-    HSplitView {
+    // The sidebar sits outside the `HSplitView` and carries its own divider.
+    //
+    // Inside it, the column was a resizable pane like any other, so the split
+    // view handed it a share of any width the window had spare — on a wide
+    // display it opened at 367pt having been asked for 185. Worse, once that
+    // laid-out width was being remembered it ratcheted: each launch started
+    // wider than the last. An explicit width can only be changed by dragging
+    // the handle, which is the behaviour "remember what I dragged it to"
+    // actually needs.
+    HStack(spacing: 0) {
       // The sidebar stays through focus mode: setting up a session often means
       // looking at which list something came from, and losing your place in the
       // workspace to do that is its own distraction.
-      sidebar
-        .focusSection()
-        .frame(minWidth: 155, idealWidth: 185, maxWidth: 230)
+      if model.isSidebarVisible {
+        sidebar
+          .focusSection()
+          .frame(width: model.sidebarWidth)
+        sidebarResizeHandle
+      }
+      mainAndInspector
+    }
+    .frame(minWidth: 760, minHeight: 520)
+  }
+
+  /// A one-point rule with an eight-point grab area either side of it: the
+  /// visible line stays a hairline while the target stays something you can
+  /// actually hit.
+  private var sidebarResizeHandle: some View {
+    Divider()
+      .frame(width: 1)
+      .overlay(
+        Rectangle()
+          .fill(Color.clear)
+          .frame(width: 9)
+          .contentShape(Rectangle())
+          .onHover { inside in
+            if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+          }
+          .gesture(
+            DragGesture(minimumDistance: 1, coordinateSpace: .global)
+              .onChanged { value in
+                let base = dragStartWidth ?? model.sidebarWidth
+                if dragStartWidth == nil { dragStartWidth = base }
+                model.sidebarWidth = min(
+                  max(base + value.translation.width, WorkspaceViewModel.minSidebarWidth),
+                  WorkspaceViewModel.maxSidebarWidth)
+              }
+              .onEnded { _ in dragStartWidth = nil }
+          )
+      )
+  }
+
+  private var mainAndInspector: some View {
+    HSplitView {
       // Focus mode takes the main pane rather than floating over it. A sheet
       // leaves the board visible round the edges, which is the one thing the
       // screen exists to stop. The timeline is the same kind of surface and
@@ -54,7 +104,6 @@ struct WorkspaceDesktopView: View {
           .frame(minWidth: 210, idealWidth: 250, maxWidth: 320)
       }
     }
-    .frame(minWidth: 760, minHeight: 520)
     .onAppear {
       if model.requestedFocusArea != .tasks || (model.viewMode != .board && model.viewMode != .outline) {
         focusedArea = model.requestedFocusArea
