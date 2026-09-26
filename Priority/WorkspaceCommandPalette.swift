@@ -9,6 +9,11 @@ struct KeyCapRow: View {
 
   var body: some View {
     HStack(spacing: 4) {
+      if keys.isEmpty {
+        // Blank would read as "we forgot to print it". One command really has
+        // no key of its own, and saying so is the honest answer.
+        Text("no key").font(.system(size: 9)).foregroundStyle(.quaternary)
+      }
       ForEach(Array(keys.enumerated()), id: \.offset) { index, key in
         if index > 0 {
           Text("or").font(.system(size: 9)).foregroundStyle(.quaternary)
