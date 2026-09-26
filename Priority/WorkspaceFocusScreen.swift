@@ -114,6 +114,7 @@ struct WorkspaceFocusScreen: View {
     VStack(spacing: 0) {
       header
       FocusRule()
+      staleNotice
       // One screen, two states: choosing what to do, and then doing it. They
       // were a pane and a sheet before, which made returning to a running
       // session a different gesture from starting one.
@@ -153,6 +154,34 @@ struct WorkspaceFocusScreen: View {
   // MARK: - Chrome
 
   private var isRunning: Bool { model.activeFocusSession != nil && model.activeFocusTask != nil }
+
+  /// Says what launch did with the block left over from last time.
+  ///
+  /// Quitting pauses the running block, so every quit leaves one behind. The
+  /// app now settles it on the way back in rather than restoring a session
+  /// from a day that is over — but a block that quietly vanished is its own
+  /// small mystery, and this is the screen you would come looking for it on.
+  @ViewBuilder private var staleNotice: some View {
+    if model.staleFocusResolution != .keep {
+      HStack(spacing: 8) {
+        Image(systemName: "clock.arrow.circlepath")
+          .font(.system(size: 11, weight: .semibold))
+        Text(
+          model.staleFocusResolution == .close
+            ? "A block left paused on an earlier day was closed out. Its time is on the timeline for that day."
+            : "A block left paused on an earlier day was ended. It had no time on it to keep.")
+          .font(.caption)
+        Spacer(minLength: 0)
+        Button("Dismiss") { model.staleFocusResolution = .keep }
+          .buttonStyle(.plain)
+          .font(.caption)
+      }
+      .foregroundStyle(.secondary)
+      .padding(.horizontal, 14)
+      .padding(.vertical, 8)
+      FocusRule()
+    }
+  }
 
   /// The same bar in both states, so leaving is always in the same place and
   /// the day's total never moves out from under you.

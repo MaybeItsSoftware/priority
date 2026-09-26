@@ -349,6 +349,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// down: finishing a block is the moment you want to see what is next, and
   /// the tray is the surface the scoring happened on.
   var activeFocusSession: FocusSession?
+  /// What launch did with the block left over from last time. Read by the
+  /// focus screen so a session that was closed out says so, rather than simply
+  /// not being there.
+  var staleFocusResolution: StaleFocusResolution = .keep
   private(set) var focusQueue: [FocusQueueTask] = []
   @ObservationIgnored var dailyTaskIDs: Set<String> = []
   /// The focus screen: one task, an estimate, and a way out. Presented over
@@ -412,6 +416,10 @@ enum WorkspaceSidebarItem: Identifiable {
     do {
       self.store = try WorkspaceStore()
       try self.store?.recoverInterruptedFocus()
+      // And then settle it: a block paused on a day that is over is finished
+      // here rather than restored as the running session. Without this every
+      // quit left a paused block behind that nothing ever cleared.
+      self.staleFocusResolution = try self.store?.resolveStaleFocusSession() ?? .keep
       try load()
       restoreSuggestedContext()
     } catch {

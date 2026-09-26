@@ -128,3 +128,44 @@ extension WorkspaceStore {
     }
   }
 }
+
+extension WorkspaceStore {
+  /// Settles whatever was left paused when the app last went away.
+  ///
+  /// Quitting pauses the running block, so a paused session is the normal
+  /// state of a closed app rather than a sign of anything. What was missing was
+  /// the other half: on the way back in, a block from a day that is over gets
+  /// closed rather than restored. Left un-settled it reappeared as the running
+  /// session — on the focus screen, and in the menu bar, as the thing you were
+  /// supposedly in the middle of.
+  ///
+  /// Crediting is dated at the pause, not at now, so the sitting lands in the
+  /// day it happened; the timeline for that day is where it shows up.
+  /// `StaleFocusPolicy` holds the decision and is tested on its own.
+  @discardableResult
+  public func resolveStaleFocusSession(
+    now: Date = .now, boundary: DayBoundary = DayBoundary(), context: FocusContext = FocusContext()
+  ) throws -> StaleFocusResolution {
+    guard let session = try activeFocusSession() else { return .keep }
+    let resolution = StaleFocusPolicy.resolution(
+      pausedAt: session.pausedAt,
+      accumulatedSeconds: max(0, session.accumulatedSeconds ?? 0),
+      hasActiveTask: session.activeTaskId != nil,
+      now: now, boundary: boundary)
+    let endedAt = session.pausedAt ?? now
+    switch resolution {
+    case .keep:
+      break
+    case .close:
+      // `completeTask: false` — the block ran out of day, which says nothing
+      // about whether the task is done.
+      try completeActiveFocusTask(
+        sessionId: session.id, elapsedSeconds: max(0, session.accumulatedSeconds ?? 0),
+        completeTask: false, expectedBlockId: session.activeBlockId, context: context, now: endedAt)
+      try finishFocusSession(id: session.id, now: endedAt)
+    case .discard:
+      try finishFocusSession(id: session.id, now: endedAt)
+    }
+    return resolution
+  }
+}
