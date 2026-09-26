@@ -112,7 +112,7 @@ There used to be two implementations of the same MCP server — one in Swift ins
 
 ## Working Loop
 
-Two things happen on every piece of work here without being asked for.
+Three things happen on every piece of work here without being asked for.
 
 **Commit as you go, straight onto `main`.** Not one commit at the end — one per
 coherent change, each of them green. This is a deliberate override of the
@@ -127,6 +127,21 @@ Where the work splits into several commits, order them so each one's tree
 builds on its own — a history you can't bisect is a history you can only read.
 `git worktree add` on a candidate commit checks that without disturbing the
 working tree.
+
+**Reinstall the app, every time, yourself.**
+
+```bash
+./scripts/install_local.sh
+```
+
+This is already the standing instruction in `AGENTS.md`, repeated here because
+that file is not always loaded. It builds Release, backs up the existing
+`/Applications/Priority.app`, replaces it and relaunches — and it is part of
+finishing the work, not a step to hand back. A passing `xcodebuild` is not
+completion: what the user actually runs is the installed bundle, and until it
+is replaced every fix is still only a claim. Check the output for
+`** BUILD SUCCEEDED **` and for the `Installed.` line, and report a failure
+rather than a summary. The workflow is authorised; do not ask first.
 
 **Reinstall after anything under `cli/`.**
 
