@@ -220,7 +220,7 @@ struct SettingsView: View {
   private var builtInPluginSettingsPages: [BuiltInPluginSettingsDescriptor] {
     checkvistManager.activePluginSettingsPages.map {
       BuiltInPluginSettingsDescriptor(
-        pluginIdentifier: $0.pluginIdentifier,
+        pluginIdentifier: $0.settingsCardIdentifier,
         displayName: $0.displayName,
         pluginDescription: $0.pluginDescription,
         settingsIconSystemName: $0.settingsIconSystemName,

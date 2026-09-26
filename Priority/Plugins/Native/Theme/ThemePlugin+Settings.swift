@@ -17,6 +17,12 @@ extension ThemePlugin where Self: PluginSettingsPageProviding {
   }
 
   func sidebarStatusLabel(manager: AppCoordinator) -> String { "Active theme" }
+
+  /// The capability's slot, not this theme's. Switching theme swaps which
+  /// plugin vends the page; if the card's id went with it, the sidebar would
+  /// lose its selection on every switch and throw the user out of the page
+  /// they were switching from.
+  var settingsCardIdentifier: String { "native.theme" }
 }
 
 extension ChalkThemePlugin: PluginSettingsPageProviding {}
