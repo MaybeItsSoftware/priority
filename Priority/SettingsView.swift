@@ -116,10 +116,6 @@ struct HotkeyRecorderField: NSViewRepresentable {
 // MARK: - Settings View
 
 struct SettingsView: View {
-  // `ShortcutReferenceItem`, `ShortcutReferenceGroup`, and
-  // `ShortcutCategoryDescriptor` live with the keybindings pane —
-  // see `SettingsView+KeybindingsPane.swift`.
-
   private struct BuiltInPluginSettingsDescriptor: Identifiable {
     let pluginIdentifier: String
     let displayName: String
@@ -160,7 +156,6 @@ struct SettingsView: View {
   @State var didAutoloadCheckvistLists = false
   @State var mergeSourceListId = ""
   @State var mergeDestinationListId = ""
-  @State var shortcutSearchText = ""
 
   var preferences: PreferencesManager {
     checkvistManager.preferences
