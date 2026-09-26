@@ -42,7 +42,6 @@ let pluginTargetExcludes = [
   "Priority/CommandExecutor.swift",
   "Priority/DailyLogDataSourceAdapter.swift",
   "Priority/IntegrationDataSourceAdapter.swift",
-  "Priority/KanbanSettingsView.swift",
   "Priority/KanbanTaskDataSourceAdapter.swift",
   "Priority/LifecycleController.swift",
   "Priority/ListScopedPriorityStore.swift",
@@ -83,7 +82,6 @@ let pluginTargetExcludes = [
   "Priority/UndoService.swift",
 
   // Plugin subtrees / files that are app-only or conflict with PluginModelStubs
-  "Priority/Plugins/MCP",
   "Priority/Plugins/Registry",
   "Priority/Plugins/Native/OfflineTaskSyncPlugin.swift",
   "Priority/Plugins/Native/Checkvist/CheckvistAPIClient.swift",
@@ -189,7 +187,6 @@ let appLogicTargetExcludes = [
   "Priority/CommandExecutor.swift",
   "Priority/DailyLogDataSourceAdapter.swift",
   "Priority/IntegrationDataSourceAdapter.swift",
-  "Priority/KanbanSettingsView.swift",
   "Priority/KanbanTaskDataSourceAdapter.swift",
   "Priority/LifecycleController.swift",
   "Priority/MainApp.swift",
@@ -218,7 +215,6 @@ let appLogicTargetExcludes = [
   // Plugin subtrees (AppLogic pulls OfflineTaskSyncPlugin.swift and
   // PluginProtocols.swift as sources; everything else is app-only or lives in
   // PriorityPlugins).
-  "Priority/Plugins/MCP",
   "Priority/Plugins/Registry",
   "Priority/Plugins/Protocols/PluginProtocols.swift",
   "Priority/Plugins/Protocols/PluginSettingsPageProviding.swift",
