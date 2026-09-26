@@ -123,6 +123,18 @@ extension WorkspaceViewModel {
     return selectedListID
   }
 
+  /// Whether a sidebar row is the one you are actually on. A folder being
+  /// selected takes the mark off the lists, because the folder is then what
+  /// the arrow keys are pointed at.
+  ///
+  /// One predicate rather than the same pair of comparisons at each row: the
+  /// background and the label both need the answer, and a row whose outline
+  /// and whose name disagreed about being current would be worse than either
+  /// cue on its own.
+  func isCurrentSidebarRow(_ id: String) -> Bool {
+    selectedFolderID == nil && currentSidebarID == id
+  }
+
   func reloadNestedLists() throws {
     guard let store else { return }
     nestedLists = []

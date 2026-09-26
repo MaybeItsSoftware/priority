@@ -66,6 +66,10 @@ struct WorkspaceListRowLabel: View {
       } else {
         Text(list.name)
           .strikethrough(list.completedAt != nil)
+          // Weight, so the current list survives being looked at quickly and
+          // survives the tint being hard to see — against the sidebar's own
+          // material a wash of accent is not much on its own.
+          .fontWeight(model.isCurrentSidebarRow(list.id) ? .semibold : .regular)
           .lineLimit(1)
           .truncationMode(.middle)
           .help(list.name)
