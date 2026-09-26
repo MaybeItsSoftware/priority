@@ -144,6 +144,9 @@ import SwiftUI
   /// Which completion celebration is active, and the flourish the popover
   /// overlay is currently showing.
   let celebration: CompletionCelebrationManager
+  /// Which `ThemePlugin` the app renders through. Like `celebration`, it
+  /// retains the registry because the choice is switchable at runtime.
+  let theme: ThemeManager
   /// Popover chrome — the dock row, the resize strip, per-view heights.
   let popoverChrome: PopoverChromeManager
   /// What has failed this session. Nothing else in the app retains a failure
@@ -325,6 +328,7 @@ import SwiftUI
       registry: pluginRegistry
     )
     self.celebration = celebration
+    self.theme = ThemeManager(preferencesStore: preferencesStore, registry: pluginRegistry)
     // The other half of the cancellation contract. `runInline` has always
     // promised to return false when the user moved on mid-animation, and every
     // preset carried a `catch` for it, but nothing in the app ever cancelled
@@ -659,6 +663,10 @@ extension AppCoordinator {
       integrations.googleTasksPlugin as any Plugin,
       integrations.mcpIntegrationPlugin as any Plugin,
       dailyLog.plugin as any Plugin,
+      // Only the *active* theme, not every registered one: themes are a menu,
+      // and listing both would put two cards in the sidebar for one setting.
+      // The card's page picks between them.
+      theme.activeThemePlugin as any Plugin,
     ].compactMap { $0 as? any PluginSettingsPageProviding }
   }
 }

@@ -12,9 +12,13 @@ final class PluginRegistry {
   private(set) var mcpIntegrationPluginsByIdentifier: [String: any MCPIntegrationPlugin] = [:]
   private(set) var dailyLogPluginsByIdentifier: [String: any DailyLogPlugin] = [:]
   private(set) var celebrationPluginsByIdentifier: [String: any CompletionCelebrationPlugin] = [:]
+  private(set) var themePluginsByIdentifier: [String: any ThemePlugin] = [:]
   /// Registration order, so the settings picker lists presets the way
   /// `nativeFirst()` writes them rather than in dictionary order.
   private(set) var celebrationPluginOrder: [String] = []
+  /// Likewise for themes — the default should be first in the picker because
+  /// it is the default, not because "Chalk" sorts before "Pitch".
+  private(set) var themePluginOrder: [String] = []
 
   private(set) var activeCheckvistSyncPluginIdentifier: String?
   private(set) var activeObsidianPluginIdentifier: String?
@@ -24,6 +28,7 @@ final class PluginRegistry {
   private(set) var activeMCPIntegrationPluginIdentifier: String?
   private(set) var activeDailyLogPluginIdentifier: String?
   private(set) var activeCelebrationPluginIdentifier: String?
+  private(set) var activeThemePluginIdentifier: String?
 
   var activeCheckvistSyncPlugin: (any CheckvistSyncPlugin)? {
     guard let activeCheckvistSyncPluginIdentifier else { return nil }
@@ -63,6 +68,18 @@ final class PluginRegistry {
   var activeCelebrationPlugin: (any CompletionCelebrationPlugin)? {
     guard let activeCelebrationPluginIdentifier else { return nil }
     return celebrationPluginsByIdentifier[activeCelebrationPluginIdentifier]
+  }
+
+  var activeThemePlugin: (any ThemePlugin)? {
+    guard let activeThemePluginIdentifier else { return nil }
+    return themePluginsByIdentifier[activeThemePluginIdentifier]
+  }
+
+  /// Every registered theme, in registration order. The second list-them-all
+  /// accessor, for the second capability that is a menu rather than an
+  /// integration — see `celebrationPlugins`.
+  var themePlugins: [any ThemePlugin] {
+    themePluginOrder.compactMap { themePluginsByIdentifier[$0] }
   }
 
   /// Every registered preset, in registration order.
@@ -133,6 +150,16 @@ final class PluginRegistry {
     }
   }
 
+  func register(_ plugin: any ThemePlugin, activate: Bool = false) {
+    if themePluginsByIdentifier[plugin.pluginIdentifier] == nil {
+      themePluginOrder.append(plugin.pluginIdentifier)
+    }
+    themePluginsByIdentifier[plugin.pluginIdentifier] = plugin
+    if activate || activeThemePluginIdentifier == nil {
+      activeThemePluginIdentifier = plugin.pluginIdentifier
+    }
+  }
+
   @discardableResult
   func activateCheckvistSyncPlugin(identifier: String) -> Bool {
     guard checkvistSyncPluginsByIdentifier[identifier] != nil else { return false }
@@ -189,6 +216,13 @@ final class PluginRegistry {
     return true
   }
 
+  @discardableResult
+  func activateThemePlugin(identifier: String) -> Bool {
+    guard themePluginsByIdentifier[identifier] != nil else { return false }
+    activeThemePluginIdentifier = identifier
+    return true
+  }
+
   static func nativeFirst() -> PluginRegistry {
     let registry = PluginRegistry()
     registry.register(NativeCheckvistSyncPlugin(), activate: true)
@@ -209,6 +243,10 @@ final class PluginRegistry {
     registry.register(StrikeCelebrationPlugin(), activate: true)
     registry.register(FoldCelebrationPlugin())
     registry.register(SparkCelebrationPlugin())
+    // Themes, likewise a menu. Chalk is the house style and the default;
+    // Pitch is registered so the swap has somewhere to go.
+    registry.register(ChalkThemePlugin(), activate: true)
+    registry.register(PitchThemePlugin())
     return registry
   }
 }

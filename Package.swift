@@ -56,6 +56,8 @@ let pluginTargetExcludes = [
   "Priority/MainWindowController.swift",
   "Priority/MainWindowToolbar.swift",
   "Priority/WindowContentSizing.swift",
+  // The SwiftUI projection of a `PriorityCore` theme. SwiftUI, so app-only.
+  "Priority/Theme.swift",
   // App-only: reads UserDefaults and Application Support directly at startup.
   "Priority/LegacyNameMigration.swift",
   "Priority/PreferencesStore.swift",
@@ -118,6 +120,12 @@ let pluginTargetExcludes = [
   // and is covered by `corelogic-tests`.
   "Priority/Plugins/Native/Celebration",
   "Priority/Plugins/Protocols/CompletionCelebrationPluginProtocol.swift",
+  // App-only for the DailyLog reason exactly: a theme traffics in
+  // `PriorityCore` types (`ThemePalette`, `ThemeStructure`), one file can't
+  // belong to two SPM targets, and the palette arithmetic worth testing is
+  // already in `Sources/PriorityCore/Theming/` under `corelogic-tests`.
+  "Priority/Plugins/Native/Theme",
+  "Priority/Plugins/Protocols/ThemePluginProtocol.swift",
 ]
 
 // Anything that is *not* an AppLogic source. Mirrors `pluginTargetExcludes` but
@@ -168,6 +176,7 @@ let appLogicTargetExcludes = [
   "Priority/Managers/QuickEntryManager.swift",
   "Priority/Managers/RecurrenceManager.swift",
   "Priority/Managers/StartDateManager.swift",
+  "Priority/Managers/ThemeManager.swift",
   "Priority/Managers/TimerManager.swift",
 
   // Models — AppLogic only wants UndoableAction.swift and CheckvistConnectionState.swift;
@@ -210,6 +219,7 @@ let appLogicTargetExcludes = [
   "Priority/SettingsView+ThemePane.swift",
   "Priority/TaskNavigationService.swift",
   "Priority/TaskTreeFormatter.swift",
+  "Priority/Theme.swift",
   "Priority/Typography.swift",
 
   // Plugin subtrees (AppLogic pulls OfflineTaskSyncPlugin.swift and
@@ -220,6 +230,7 @@ let appLogicTargetExcludes = [
   "Priority/Plugins/Protocols/PluginSettingsPageProviding.swift",
   "Priority/Plugins/Protocols/DailyLogPluginProtocol.swift",
   "Priority/Plugins/Protocols/CompletionCelebrationPluginProtocol.swift",
+  "Priority/Plugins/Protocols/ThemePluginProtocol.swift",
   "Priority/Plugins/Native/AFFiNE",
   "Priority/Plugins/Native/Celebration",
   "Priority/Plugins/Native/Checkvist",
@@ -229,6 +240,7 @@ let appLogicTargetExcludes = [
   "Priority/Plugins/Native/GoogleTasks",
   "Priority/Plugins/Native/MCP",
   "Priority/Plugins/Native/Obsidian",
+  "Priority/Plugins/Native/Theme",
   "Priority/Plugins/User",
 ]
 

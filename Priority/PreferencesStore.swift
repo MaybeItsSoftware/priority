@@ -38,6 +38,11 @@ final class PreferencesStore {
     case quickAddLocationModeRawValue
     case quickAddSpecificParentTaskId
     case appThemeRawValue
+    /// `pluginIdentifier` of the chosen `ThemePlugin` — the palette and
+    /// structure the app renders through. Distinct from `appThemeRawValue`,
+    /// which is the light/dark/system question a theme does not get to answer
+    /// on the user's behalf.
+    case activeThemePluginIdentifier
     case themeAccentPresetRawValue
     case themeCustomAccentHex
     case themeColorTokenHexOverrides

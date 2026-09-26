@@ -79,6 +79,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       .environment(manager.taskListViewModel)
       .environment(manager.repository)
       .frame(minWidth: Self.minContentSize.width, minHeight: Self.minContentSize.height)
+      .themed(manager.theme)
     let hostingController = NSHostingController(rootView: rootView)
 
     let window = NSWindow(

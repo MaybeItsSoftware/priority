@@ -246,6 +246,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       .font(Typography.interfaceFont)
       .environment(checkvistManager)
       .environment(navState)
+      .themed(checkvistManager.theme)
       .frame(minWidth: 720, idealWidth: 820, minHeight: 560, idealHeight: 660)
     let hostingController = NSHostingController(rootView: rootView)
 
