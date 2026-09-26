@@ -103,24 +103,11 @@ public enum Command: Equatable, Sendable {
   case refreshMCPPath
   case copyMCPClientConfig
   case openMCPGuide
-  case switchTab(String)
-  case cycleTab(Int)
-  case cycleFilter(Int)
   case quickAdd
-  case kanbanMove(Int)
-  case kanbanFocus(Int)
-  case kanbanShowInAll
-  case kanbanDrillIn
-  case kanbanPopOut
-  case kanbanFocusMode
-  case kanbanToggleSwimlanes
   case toggleContext
   case toggleChildrenInMenus
   case editAtStart
   case openCommandPalette
-  case setUrgency(Double)
-  case setImportance(Double)
-  case matrix(Double, Double)
   case unknown(String)
 }
 
@@ -181,33 +168,6 @@ public enum CommandEngine {
       submitImmediately: false),
     .init(
       label: "Remove tag", command: "untag ", preview: "Remove #tag from task", keybind: "gu",
-      submitImmediately: false),
-    .init(
-      label: "Matrix: Do", command: "matrix do",
-      preview: "Urgent and important", keybind: "md", submitImmediately: true),
-    .init(
-      label: "Matrix: Schedule", command: "matrix schedule",
-      preview: "Important, not urgent", keybind: "ms", submitImmediately: true),
-    .init(
-      label: "Matrix: Delegate", command: "matrix delegate",
-      preview: "Urgent, not important", keybind: "mg", submitImmediately: true),
-    .init(
-      label: "Matrix: Eliminate", command: "matrix eliminate",
-      preview: "Neither urgent nor important", keybind: "me", submitImmediately: true),
-    .init(
-      label: "Set matrix coordinates", command: "matrix ",
-      preview: "Set urgency and importance (-9 to 9, e.g. matrix 5 -2)", keybind: "m",
-      submitImmediately: false),
-    .init(
-      label: "Clear matrix placement", command: "clear matrix",
-      preview: "Take the task off the matrix", keybind: "m00", submitImmediately: true),
-    .init(
-      label: "Set urgency", command: "urgency ",
-      preview: "Set Eisenhower urgency (-9 to 9, 0 is middle)", keybind: nil,
-      submitImmediately: false),
-    .init(
-      label: "Set importance", command: "importance ",
-      preview: "Set Eisenhower importance (-9 to 9, 0 is middle)", keybind: nil,
       submitImmediately: false),
     .init(
       label: "Set priority", command: "priority ",
@@ -384,42 +344,6 @@ public enum CommandEngine {
       label: "Collapse all", command: "collapse all",
       preview: "Shut every expanded task", keybind: nil, submitImmediately: true),
     .init(
-      label: "Switch to All tab", command: "tab all",
-      preview: "Show all tasks", keybind: nil, submitImmediately: true,
-      boundActionRawValue: "rootTabAll"),
-    .init(
-      label: "Switch to Due tab", command: "tab due",
-      preview: "Show tasks grouped by due bucket", keybind: nil, submitImmediately: true,
-      boundActionRawValue: "rootTabDue"),
-    .init(
-      label: "Switch to Tags tab", command: "tab tags",
-      preview: "Show tasks filtered by tag", keybind: nil, submitImmediately: true,
-      boundActionRawValue: "rootTabTags"),
-    .init(
-      label: "Switch to Priority tab", command: "tab priority",
-      preview: "Show prioritised tasks", keybind: nil, submitImmediately: true,
-      boundActionRawValue: "rootTabPriority"),
-    .init(
-      label: "Switch to Kanban tab", command: "tab kanban",
-      preview: "Show the kanban board", keybind: nil, submitImmediately: true,
-      boundActionRawValue: "rootTabKanban"),
-    .init(
-      label: "Cycle root tab next", command: "cycle tab next",
-      preview: "Move to the next root tab", keybind: nil, submitImmediately: true,
-      boundActionRawValue: "rootCycleTabNext"),
-    .init(
-      label: "Cycle root tab previous", command: "cycle tab previous",
-      preview: "Move to the previous root tab", keybind: nil, submitImmediately: true,
-      boundActionRawValue: "rootCycleTabPrevious"),
-    .init(
-      label: "Cycle root filter next", command: "cycle filter next",
-      preview: "Move to the next bucket / tag in the current view", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "rootCycleFilterNext"),
-    .init(
-      label: "Cycle root filter previous", command: "cycle filter previous",
-      preview: "Move to the previous bucket / tag in the current view", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "rootCycleFilterPrevious"),
-    .init(
       label: "Quick add task", command: "quick add",
       preview: "Open the configured quick add prompt", keybind: nil, submitImmediately: true,
       boundActionRawValue: "quickAdd"),
@@ -435,42 +359,6 @@ public enum CommandEngine {
       label: "Toggle children in menus", command: "toggle children",
       preview: "Show siblings + descendants (default) or just siblings in non-All views",
       keybind: nil, submitImmediately: true),
-    .init(
-      label: "Kanban: move task to next column", command: "kanban move right",
-      preview: "Push the selected task one column right", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "kanbanMoveRight"),
-    .init(
-      label: "Kanban: move task to previous column", command: "kanban move left",
-      preview: "Push the selected task one column left", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "kanbanMoveLeft"),
-    .init(
-      label: "Kanban: focus next column", command: "kanban focus right",
-      preview: "Move column focus right without moving the task", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "kanbanFocusRight"),
-    .init(
-      label: "Kanban: focus previous column", command: "kanban focus left",
-      preview: "Move column focus left without moving the task", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "kanbanFocusLeft"),
-    .init(
-      label: "Kanban: rows per goal (swimlanes)", command: "kanban swimlanes",
-      preview: "Group the board into a row per top-level goal", keybind: nil,
-      submitImmediately: true),
-    .init(
-      label: "Kanban: show selected in All view", command: "kanban show in all",
-      preview: "Open the selected kanban task in the All-tab tree", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "kanbanShowInAll"),
-    .init(
-      label: "Kanban: drill into selected task", command: "kanban drill in",
-      preview: "Filter kanban to the selected task's children", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "kanbanEnterTaskChildren"),
-    .init(
-      label: "Kanban: exit to parent scope", command: "kanban pop out",
-      preview: "Move kanban scope up one level", keybind: nil, submitImmediately: true,
-      boundActionRawValue: "kanbanExitToTaskParent"),
-    .init(
-      label: "Kanban: focus selected task", command: "kanban focus mode",
-      preview: "Open focus panel and press Enter to start timing", keybind: nil,
-      submitImmediately: true, boundActionRawValue: "kanbanFocusMode"),
   ]
 
   public static func filteredSuggestions(query: String, limit: Int? = nil) -> [CommandPaletteSuggestion]
@@ -552,43 +440,6 @@ public enum CommandEngine {
     if cmd.hasPrefix("list ") {
       return .list(String(cmd.dropFirst(5)).trimmingCharacters(in: .whitespaces))
     }
-    if cmd == "kanban swimlanes" || cmd == "kanban lanes" || cmd == "swimlanes" {
-      return .kanbanToggleSwimlanes
-    }
-    if cmd.hasPrefix("matrix ") {
-      let raw = String(cmd.dropFirst(7)).trimmingCharacters(in: .whitespaces)
-      // `matrix do` has been in the README since the view shipped, but only the
-      // two-number form was ever parsed, so the documented spelling silently
-      // did nothing.
-      if let quadrant = MatrixQuadrant.named(raw) {
-        let point = quadrant.representativeCoordinate
-        return .matrix(point.urgency, point.importance)
-      }
-      if raw == "clear" || raw == "none" || raw == "off" {
-        return .matrix(0, 0)
-      }
-      let parts = raw.split(separator: " ")
-      if parts.count >= 2,
-         let u = Double(parts[0]), u >= -9 && u <= 9,
-         let i = Double(parts[1]), i >= -9 && i <= 9 {
-        return .matrix(u, i)
-      }
-    }
-    if cmd == "clear matrix" {
-      return .matrix(0, 0)
-    }
-    if cmd.hasPrefix("urgency ") {
-      let raw = String(cmd.dropFirst(8)).trimmingCharacters(in: .whitespaces)
-      if let level = Double(raw), level >= -9 && level <= 9 {
-        return .setUrgency(level)
-      }
-    }
-    if cmd.hasPrefix("importance ") {
-      let raw = String(cmd.dropFirst(11)).trimmingCharacters(in: .whitespaces)
-      if let level = Double(raw), level >= -9 && level <= 9 {
-        return .setImportance(level)
-      }
-    }
     if cmd.hasPrefix("priority ") {
       let raw = String(cmd.dropFirst(9)).trimmingCharacters(in: .whitespaces)
       if raw == "back" || raw == "end" {
@@ -656,24 +507,7 @@ public enum CommandEngine {
     if cmd == "open mcp guide" || cmd == "mcp guide" {
       return .openMCPGuide
     }
-    if cmd.hasPrefix("tab ") {
-      return .switchTab(String(cmd.dropFirst(4)).trimmingCharacters(in: .whitespaces))
-    }
-    if cmd == "cycle tab next" { return .cycleTab(1) }
-    if cmd == "cycle tab previous" || cmd == "cycle tab prev" { return .cycleTab(-1) }
-    if cmd == "cycle filter next" { return .cycleFilter(1) }
-    if cmd == "cycle filter previous" || cmd == "cycle filter prev" { return .cycleFilter(-1) }
     if cmd == "quick add" { return .quickAdd }
-    if cmd == "kanban move right" || cmd == "kanban right" { return .kanbanMove(1) }
-    if cmd == "kanban move left" || cmd == "kanban left" { return .kanbanMove(-1) }
-    if cmd == "kanban focus right" { return .kanbanFocus(1) }
-    if cmd == "kanban focus left" { return .kanbanFocus(-1) }
-    if cmd == "kanban show in all" || cmd == "kanban show all" { return .kanbanShowInAll }
-    if cmd == "kanban drill in" || cmd == "kanban enter" { return .kanbanDrillIn }
-    if cmd == "kanban pop out" || cmd == "kanban pop" || cmd == "kanban exit" {
-      return .kanbanPopOut
-    }
-    if cmd == "kanban focus mode" || cmd == "focus mode" { return .kanbanFocusMode }
     if cmd == "toggle context" { return .toggleContext }
     if cmd == "toggle children" || cmd == "toggle subtree" { return .toggleChildrenInMenus }
     if cmd == "edit start" { return .editAtStart }

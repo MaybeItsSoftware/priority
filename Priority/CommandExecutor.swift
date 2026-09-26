@@ -115,76 +115,8 @@ final class CommandExecutor {
       manager.taskNavigationService.collapseAll()
       manager.statusMessage = "Collapsed everything"
       return
-    case .switchTab(let raw):
-      let view: RootTaskView?
-      switch raw {
-      case "all": view = .all
-      case "due": view = .due
-      case "tags": view = .tags
-      case "priority", "prio": view = .priority
-      case "kanban", "board": view = .kanban
-      case "eisenhower", "matrix": view = .eisenhower
-      case "daily", "today", "log": view = .daily
-      default: view = nil
-      }
-      if let view {
-        manager.taskNavigationService.setRootTaskView(view)
-      } else {
-        manager.repository.errorMessage =
-          "Unknown tab: \(raw). Try: tab all|due|tags|priority|kanban|eisenhower|daily"
-      }
-      return
-    case .cycleTab(let direction):
-      manager.taskNavigationService.cycleRootTaskView(direction: direction)
-      return
-    case .cycleFilter(let direction):
-      manager.taskNavigationService.cycleRootScopeFilter(direction: direction)
-      return
     case .quickAdd:
       _ = manager.taskMutationService.beginQuickAddEntry()
-      return
-    case .kanbanMove(let direction):
-      manager.taskListViewModel.rootTaskView = .kanban
-      manager.moveCurrentTaskToKanbanColumn(direction: direction)
-      return
-    case .kanbanFocus(let direction):
-      manager.taskListViewModel.rootTaskView = .kanban
-      manager.kanban.focusKanbanColumn(direction: direction)
-      return
-    case .kanbanShowInAll:
-      guard let task = manager.kanban.currentKanbanTask else {
-        manager.repository.errorMessage = "No kanban task selected."
-        return
-      }
-      let childCounts = manager.taskListViewModel.childCountByTaskId()
-      manager.taskListViewModel.rootTaskView = .all
-      manager.navigationState.rootScopeFocusLevel = 0
-      if childCounts[task.id, default: 0] > 0 {
-        manager.navigationState.currentParentId = task.id
-        manager.navigationState.currentSiblingIndex = 0
-      } else {
-        manager.taskNavigationService.navigate(to: task)
-      }
-      return
-    case .kanbanDrillIn:
-      manager.taskListViewModel.rootTaskView = .kanban
-      manager.kanban.enterSelectedTaskAsScope()
-      return
-    case .kanbanPopOut:
-      manager.taskListViewModel.rootTaskView = .kanban
-      manager.kanban.exitToParentScope()
-      return
-    case .kanbanToggleSwimlanes:
-      manager.kanban.swimlanesByGoal.toggle()
-      manager.statusMessage =
-        manager.kanban.swimlanesByGoal
-        ? "Board grouped by goal." : "Board ungrouped."
-    case .kanbanFocusMode:
-      guard let task = manager.taskListViewModel.currentTask else {
-        manager.repository.errorMessage = "No task selected."
-        return
-      }
-      manager.focusSessionManager.presentPrompt(forTaskId: task.id)
       return
     case .toggleContext:
       manager.preferences.showTaskBreadcrumbContext.toggle()
@@ -316,19 +248,6 @@ final class CommandExecutor {
       await manager.taskMutationService.updateTask(task: task, content: cleaned)
       manager.statusMessage = "Removed tag: #\(tagName)"
       manager.statusMessage = "Removed tag: #\(tagName)"
-    case .matrix(let u, let i):
-      manager.repository.setUrgency(taskId: task.id, level: u)
-      manager.repository.setImportance(taskId: task.id, level: i)
-      manager.statusMessage = "Matrix: (\(u), \(i))"
-      manager.statusMessage = "Matrix: (\(u), \(i))"
-    case .setUrgency(let level):
-      manager.repository.setUrgency(taskId: task.id, level: level)
-      manager.statusMessage = "Urgency: \(level)"
-      manager.statusMessage = "Urgency: \(level)"
-    case .setImportance(let level):
-      manager.repository.setImportance(taskId: task.id, level: level)
-      manager.statusMessage = "Importance: \(level)"
-      manager.statusMessage = "Importance: \(level)"
     case .priority(let rank):
       manager.taskMutationService.setPriorityForCurrentTask(rank)
     case .priorityBack:
