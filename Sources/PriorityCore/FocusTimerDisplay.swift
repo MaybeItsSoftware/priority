@@ -35,10 +35,6 @@ public enum FocusTimerDisplay {
     return Reading(text: "+" + clock(-remaining), isOverrun: true)
   }
 
-  public static func reading(since start: Date, planned: TimeInterval, now: Date = .now) -> Reading {
-    reading(elapsed: now.timeIntervalSince(start), planned: planned)
-  }
-
   /// `m:ss` under an hour, `h:mm:ss` beyond it — the menu bar is too narrow to
   /// spend two characters on a leading zero that is almost always there.
   private static func clock(_ seconds: Int) -> String {

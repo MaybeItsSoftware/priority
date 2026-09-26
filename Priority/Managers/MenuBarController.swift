@@ -189,10 +189,22 @@ class MenuBarController: NSObject {
       let task = workspace.activeFocusTask
     else { return false }
 
-    startFocusTickerIfNeeded()
+    let isPaused = session.pausedAt != nil
+    // Nothing to redraw while it is paused, and the ticker is the only reason
+    // this runs once a second.
+    if isPaused { stopFocusTicker() } else { startFocusTickerIfNeeded() }
+
+    // Elapsed comes from the session rather than from wall clock since
+    // `startedAt`, which got two things wrong: a paused block went on accruing,
+    // and the queue moving to a second task credited it with the first one's
+    // sitting. Left paused overnight, that reported nineteen hours of reading.
     let reading = FocusTimerDisplay.reading(
-      since: session.startedAt, planned: TimeInterval(session.workDurationSeconds))
-    let title = "\(Self.truncatedFocusTitle(task.title))  \(reading.text)"
+      elapsed: TimeInterval(session.elapsedSeconds(now: .now)),
+      planned: TimeInterval(session.workDurationSeconds))
+    // Paused says so on its face: a stopped clock and a block that simply has
+    // not moved yet read identically otherwise.
+    let clock = isPaused ? "\u{23F8} \(reading.text)" : reading.text
+    let title = "\(Self.truncatedFocusTitle(task.title))  \(clock)"
 
     let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.menuBarFont(ofSize: 0).pointSize, weight: .regular)
     var attributes: [NSAttributedString.Key: Any] = [.font: font, .paragraphStyle: Self.clippingParagraphStyle]
@@ -203,7 +215,7 @@ class MenuBarController: NSObject {
     statusItem?.button?.image = nil
     statusItem?.button?.imagePosition = .noImage
     statusItem?.button?.attributedTitle = NSAttributedString(string: title, attributes: attributes)
-    statusItem?.button?.toolTip = "Focusing: \(task.title)"
+    statusItem?.button?.toolTip = isPaused ? "Paused: \(task.title)" : "Focusing: \(task.title)"
     statusItem?.length = NSStatusItem.variableLength
     statusItem?.button?.layer?.mask = nil
     return true
