@@ -33,57 +33,31 @@ extension WorkspaceViewModel {
     return handleTaskSurfaceKey(event)
   }
 
+  /// A completed two-key sequence, resolved through the catalogue rather than
+  /// through a `switch` of its own.
+  ///
+  /// This used to be twenty hand-written cases sitting a few hundred lines
+  /// from the reference sheet that described them, which is how `sd` came to
+  /// be documented and `dr` not. Now the sequence *is* the catalogue entry's
+  /// key, so a row that prints a shortcut is a row that runs it.
   private func handleCheckvistCommand(_ command: String) -> Bool {
-    switch command {
-    case "uu": undoLastChange()
-    case "ll": showsListNavigator = true
-    case "gh": selectEverything(); requestKeyboardFocus(.sidebar)
-    case "mm": requestMoveSelectedTask()
-    case "ee": editSelectedTaskTitle()
-    case "dd": quickEdit(.due)
-    case "nn": quickEdit(.notes)
-    case "tt": quickEdit(.tags)
-    case "dr": quickEdit(.recurrence)
-    case "td": editTaskValues { $0.dueAt = Calendar.current.startOfDay(for: .now); $0.dueDate = nil }
-    case "tm": editTaskValues { $0.dueAt = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now)); $0.dueDate = nil }
-    case "cd": editTaskValues { $0.dueAt = nil; $0.dueDate = nil }
-    case "cn": editTaskValues { $0.notes = "" }
-    case "ct": editTaskValues { $0.tags = "" }
-    case "hc":
-      hidesCompletedTasks.toggle()
-      reloadOutline()
-      if let selectedTaskID, !visibleNavigationTasks.contains(where: { $0.id == selectedTaskID }) {
-        self.selectedTaskID = nil
-      }
-    case "sd": toggleInspector()
-    case "oo": showSelectedListSettings()
-    case "pc":
-      if selectedTask != nil { requestKeyboardFocus(.inspector) }
-    case "xx":
-      if let task = selectedTask { moveDroppedItem(task.id, toFolderID: nil) }
-    case "gg":
-      if let task = selectedTask, let store,
-        let snapshot = try? store.taskEditorSnapshot(for: task.id),
-        let link = snapshot.metadata.externalLinks.first, let url = URL(string: link),
-        ["https", "http", "obsidian"].contains(url.scheme?.lowercased() ?? "") {
-        NSWorkspace.shared.open(url)
-      }
-    default: return false
-    }
+    guard let match = WorkspaceCommandCatalog.command(forKey: command, on: commandSurface)
+    else { return false }
+    run(match.id)
     return true
   }
 
-  private func quickEdit(_ kind: WorkspaceTaskQuickEditKind) {
+  func quickEdit(_ kind: WorkspaceTaskQuickEditKind) {
     guard let task = selectedTask else { return }
     taskQuickEditRequest = WorkspaceTaskQuickEditRequest(task: task, kind: kind)
   }
 
-  private func editSelectedTaskTitle() {
+  func editSelectedTaskTitle() {
     if keyboardFocusArea == .sidebar { beginRenamingSelection() }
     else { quickEdit(.title) }
   }
 
-  private func editTaskValues(_ change: (inout TaskEditorValues) -> Void) {
+  func editTaskValues(_ change: (inout TaskEditorValues) -> Void) {
     guard let task = selectedTask, let store else { return }
     perform {
       var draft = TaskEditorDraft(snapshot: try store.taskEditorSnapshot(for: task.id))
@@ -95,7 +69,7 @@ extension WorkspaceViewModel {
     }
   }
 
-  private func invalidateTask(_ task: WorkspaceTask) {
+  func invalidateTask(_ task: WorkspaceTask) {
     guard let store else { return }
     perform {
       try store.setStatus(task.status == .cancelled ? .open : .cancelled, for: task.id)
@@ -104,7 +78,7 @@ extension WorkspaceViewModel {
     }
   }
 
-  private func selectTaskAtEnd(first: Bool) {
+  func selectTaskAtEnd(first: Bool) {
     let candidates = viewMode == .board
       ? boardColumns.first(where: { $0.id == activeBoardColumnID }).map { tasks(in: $0) } ?? []
       : visibleNavigationTasks
@@ -117,17 +91,17 @@ extension WorkspaceViewModel {
   private func handleTimelineKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     guard flags.isEmpty else { return false }
     switch event.keyCode {
-    case 53: dismissTimelineScreen(); return true
+    case 53: run(.timelineClose); return true
     // Left goes back in time, which is also up the list: earlier is further
     // from now, and the arrow points the way the day moves.
-    case 123: moveTimelineDay(by: -1); return true
-    case 124: moveTimelineDay(by: 1); return true
+    case 123: run(.timelinePreviousDay); return true
+    case 124: run(.timelineNextDay); return true
     default: break
     }
     switch event.charactersIgnoringModifiers?.lowercased() {
-    case "h": moveTimelineDay(by: -1); return true
-    case "l": moveTimelineDay(by: 1); return true
-    case "t": showTimelineToday(); return true
+    case "h": run(.timelinePreviousDay); return true
+    case "l": run(.timelineNextDay); return true
+    case "t": run(.timelineToday); return true
     default: return true
     }
   }
@@ -142,18 +116,18 @@ extension WorkspaceViewModel {
     guard flags.isEmpty else { return false }
     switch event.keyCode {
     case 36, 76:  // Return, Enter — finish the block, which is what Done does.
-      requestFocusCompletion()
+      run(.focusFinish)
       return true
     case 53:  // Escape leaves the pane; the block keeps running behind it.
-      dismissFocusScreen()
+      run(.focusLeave)
       return true
     default:
       break
     }
     switch event.charactersIgnoringModifiers?.lowercased() {
-    case "p": toggleFocusPause(); return true
-    case "l": requestFocusCompletion(completeTask: false); return true
-    case "f": requestFocusFloat(); return true
+    case "p": run(.focusPause); return true
+    case "l": run(.focusLogAndKeep); return true
+    case "f": run(.focusFloat); return true
     default: return false
     }
   }
@@ -176,27 +150,27 @@ extension WorkspaceViewModel {
       if stagedTaskID != nil { unstageFocusTask() } else { dismissFocusScreen() }
       return true
     case 126:  // Up
-      moveFocusLadder(by: 1)
+      run(.focusLadderUp)
       return true
     case 125:  // Down
-      moveFocusLadder(by: -1)
+      run(.focusLadderDown)
       return true
     case 36, 76:  // Return, Enter
-      if stagedTaskID == nil { stageFocusLadderSelection() } else { beginStagedFocus() }
+      run(stagedTaskID == nil ? .focusStage : .focusBegin)
       return true
     default:
       break
     }
     switch event.charactersIgnoringModifiers?.lowercased() {
-    case "k": moveFocusLadder(by: 1); return true
-    case "j": moveFocusLadder(by: -1); return true
+    case "k": run(.focusLadderUp); return true
+    case "j": run(.focusLadderDown); return true
     // Not completed here: the celebration is allowed to cancel, and only the
     // view can play it. Same path as the button, so both animate.
-    case "x": focusCompletionRequest += 1; return true
-    case "l": deferFocusLadderSelection(); return true
+    case "x": run(.focusTickOff); return true
+    case "l": run(.focusDefer); return true
     // Space stages rather than ticking off: on a screen whose whole purpose is
     // starting work, the big key should start work.
-    case " ": if stagedTaskID == nil { stageFocusLadderSelection() } else { beginStagedFocus() }; return true
+    case " ": run(stagedTaskID == nil ? .focusStage : .focusBegin); return true
     default: return false
     }
   }
@@ -212,41 +186,33 @@ extension WorkspaceViewModel {
   private func handleViewSwitchKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     if flags == [.control] {
       switch event.charactersIgnoringModifiers {
-      case "1": requestKeyboardFocus(.sidebar); return true
-      case "2": requestKeyboardFocus(.tasks); return true
-      case "3":
-        if selectedTask == nil { selectedTaskID = visibleNavigationTasks.first?.id }
-        requestKeyboardFocus(selectedTask == nil ? .tasks : .inspector)
-        return true
+      case "1": run(.goSidebarRegion); return true
+      case "2": run(.goTaskRegion); return true
+      case "3": run(.goInspectorRegion); return true
       default: break
       }
     }
 
     if flags == [.command] {
       switch event.charactersIgnoringModifiers {
-      case "0": selectEverything(); requestKeyboardFocus(.tasks); return true
-      case "1", "2", "3", "4":
-        guard let character = event.charactersIgnoringModifiers?.first,
-          let mode = WorkspaceViewMode.planningModes.first(where: { $0.shortcutDigit == character })
-        else { return false }
-        // Leaving whichever full-pane surface is up is part of asking for a
-        // mode: ⌘1 on the timeline means "show me today", not "remember that I
-        // wanted today once the timeline is dismissed".
-        dismissFocusScreen()
-        dismissTimelineScreen()
-        selectViewMode(mode)
-        requestKeyboardFocus(.tasks)
-        return true
+      case "0": run(.goEverything); return true
+      // Leaving whichever full-pane surface is up is part of asking for a
+      // mode — see `run(_:)`. ⌘1 on the timeline means "show me today", not
+      // "remember that I wanted today once the timeline is dismissed".
+      case "1": run(.goToday); return true
+      case "2": run(.goBoard); return true
+      case "3": run(.goOutline); return true
+      case "4": run(.goMatrix); return true
       case "8":
         // One key for the one surface. What it shows — a running session or
         // the ladder that picks one — is the screen's business, not the key's.
-        presentFocusScreen()
+        run(.goFocus)
         return true
       case "9":
         // A toggle rather than a second way in: the timeline answers a question
         // in a glance, and pressing the same key to put it away again is what
         // makes it cheap enough to glance at.
-        if showsTimelineScreen { dismissTimelineScreen() } else { presentTimelineScreen() }
+        run(.goTimeline)
         return true
       default: break
       }
@@ -262,14 +228,12 @@ extension WorkspaceViewModel {
     }
 
     if (flags == [.control] || flags == [.control, .shift]), event.charactersIgnoringModifiers?.lowercased() == "z" {
-      if flags.contains(.shift) { redoLastUndoneChange() } else { undoLastChange() }
+      run(flags.contains(.shift) ? .windowRedo : .windowUndo)
       return true
     }
     if keyboardFocusArea == .tasks {
       if event.keyCode == 48 && (flags.isEmpty || flags == [.shift]) {
-        if let task = selectedTask {
-          if flags.contains(.shift) { outdentTask(task) } else { indentTask(task) }
-        }
+        run(flags.contains(.shift) ? .taskOutdent : .taskIndent)
         return true
       }
       if (event.keyCode == 36 || event.keyCode == 76) && (flags == [.option] || flags == [.shift]) {
@@ -278,30 +242,32 @@ extension WorkspaceViewModel {
       }
       if flags == [.shift] {
         switch event.keyCode {
-        case 124: enterSelectedTask(); return true
-        case 123: leaveSelectedTaskScope(); return true
-        case 49:
-          if let task = selectedTask { invalidateTask(task) }
-          return true
+        case 124: run(.planEnterTask); return true
+        case 123: run(.planLeaveTask); return true
+        case 49: run(.taskInvalidate); return true
         default: break
         }
       }
     }
     if flags == [.command] {
       if event.charactersIgnoringModifiers?.lowercased() == "n" {
-        requestTaskComposerFocus()
+        run(.taskNew)
+        return true
+      }
+      if event.charactersIgnoringModifiers?.lowercased() == "k" {
+        run(.goCommandPalette)
         return true
       }
     }
     if flags == [.command, .shift] {
       if event.charactersIgnoringModifiers?.lowercased() == "n" {
-        requestListCreationForSelection()
+        run(.listNew)
         return true
       }
     }
     if flags == [.command, .option] {
       if event.charactersIgnoringModifiers?.lowercased() == "n" {
-        requestFolderCreationForSelection()
+        run(.folderNew)
         return true
       }
       if isEverythingSelected {
@@ -311,16 +277,11 @@ extension WorkspaceViewModel {
         default: break
         }
       }
-      if let folder = selectedFolder {
+      if selectedFolder != nil {
         switch event.keyCode {
-        case 125:
-          moveFolderWithinSiblings(folder, by: 1)
-          return true
-        case 126:
-          moveFolderWithinSiblings(folder, by: -1)
-          return true
-        default:
-          break
+        case 125: run(.folderMoveDown); return true
+        case 126: run(.folderMoveUp); return true
+        default: break
         }
       }
     }
@@ -331,52 +292,29 @@ extension WorkspaceViewModel {
   private func handleListChordKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     if flags == [.command] {
       switch event.charactersIgnoringModifiers?.lowercased() {
-      case "i":
-        showSelectedListSettings()
-        return true
-      case "/":
-        showsKeyboardHelp = true
-        return true
-      case "f":
-        presentSearch()
-        return true
-      case "r":
-        beginRenamingSelection()
-        return true
-      case "z":
-        undoLastChange()
-        return true
+      case "i": run(.listSettings); return true
+      case "/": run(.goKeyboardReference); return true
+      case "f": run(.goSearch); return true
+      case "r": run(.listRename); return true
+      case "z": run(.windowUndo); return true
       default:
         break
       }
     }
     if flags == [.command, .shift] {
       switch event.charactersIgnoringModifiers?.lowercased() {
-      case "l":
-        if let task = keyboardFocusArea == .sidebar ? scopeTask : selectedTask ?? scopeTask { convertItem(task) }
-        else if let list = selectedList, !list.isSystemList { convertListToTask(list) }
-        return true
-      case "p":
-        if let task = keyboardFocusArea == .sidebar ? scopeTask : selectedTask ?? scopeTask { toggleListPromotion(task) }
-        return true
-      case "x":
-        toggleCurrentListCompletion()
-        return true
-      case "a":
-        archiveSelectedList()
-        return true
+      case "l": run(.taskConvertToList); return true
+      case "p": run(.taskPromoteList); return true
+      case "x": run(.listComplete); return true
+      case "a": run(.listArchive); return true
       case "c":
-        if viewMode == .board { newKanbanColumnRequest = true; return true }
+        if viewMode == .board { run(.planBoardNewColumn); return true }
         return false
       case "d":
-        if let task = selectedTask { setDailyProgressTask(task, enabled: !isDailyProgressTask(task)); return true }
+        if selectedTask != nil { run(.taskToggleDaily); return true }
         return false
-      case "r":
-        restoreMostRecentlyArchivedList()
-        return true
-      case "z":
-        redoLastUndoneChange()
-        return true
+      case "r": run(.listRestore); return true
+      case "z": run(.windowRedo); return true
       default:
         break
       }
@@ -387,56 +325,33 @@ extension WorkspaceViewModel {
   /// Reordering, deletion, the matrix quadrants and the help sheet.
   private func handleOrderingKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     if flags == [.command, .shift] && (event.keyCode == 51 || event.keyCode == 117) {
-      requestDeletionOfSelectedSidebarItem()
+      run(.listDelete)
       return true
     }
     if flags == [.control, .option] {
       switch event.keyCode {
-      case 125:
-        moveFolderSelection(by: 1)
-        return true
-      case 126:
-        moveFolderSelection(by: -1)
-        return true
-      default:
-        break
+      case 125: run(.folderSelectNext); return true
+      case 126: run(.folderSelectPrevious); return true
+      default: break
       }
     }
     if flags == [.shift], event.characters == "?" {
-      showsKeyboardHelp = true
+      run(.goKeyboardReference)
       return true
     }
     if flags == [.command] || flags == [.control] {
       switch event.keyCode {
-      case 125:  // Cmd+Down
-        if keyboardFocusArea == .sidebar, let folder = selectedFolder {
-          moveFolderWithinSiblings(folder, by: 1)
-        } else if keyboardFocusArea == .sidebar, let list = selectedList {
-          moveListWithinFolder(list, by: 1)
-        } else if let task = selectedTask {
-          moveTaskWithinSiblings(task, by: 1)
-        }
-        return true
-      case 126:  // Cmd+Up
-        if keyboardFocusArea == .sidebar, let folder = selectedFolder {
-          moveFolderWithinSiblings(folder, by: -1)
-        } else if keyboardFocusArea == .sidebar, let list = selectedList {
-          moveListWithinFolder(list, by: -1)
-        } else if let task = selectedTask {
-          moveTaskWithinSiblings(task, by: -1)
-        }
-        return true
+      // One command either way: what moves is whatever the caret is standing
+      // on, which `run(_:)` resolves rather than each key restating it.
+      case 125: run(.taskMoveDown); return true
+      case 126: run(.taskMoveUp); return true
       default: break
       }
     }
     if flags == [.command, .option], keyboardFocusArea == .tasks {
       switch event.keyCode {
-      case 123:
-        if let task = selectedTask { outdentTask(task) }
-        return true
-      case 124:
-        if let task = selectedTask { indentTask(task) }
-        return true
+      case 123: run(.taskOutdent); return true
+      case 124: run(.taskIndent); return true
       default: break
       }
     }
@@ -447,12 +362,12 @@ extension WorkspaceViewModel {
   /// unmodified keys that open the inspector and the move sheet.
   private func handlePlacementKey(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
     if flags == [.option], keyboardFocusArea == .tasks {
-      if event.charactersIgnoringModifiers?.lowercased() == "t" { quickEdit(.estimate); return true }
-      if event.charactersIgnoringModifiers?.lowercased() == "s" { quickEdit(.start); return true }
+      if event.charactersIgnoringModifiers?.lowercased() == "t" { run(.taskEditEstimate); return true }
+      if event.charactersIgnoringModifiers?.lowercased() == "s" { run(.taskEditStart); return true }
       if viewMode == .board, keyboardNavigationSurfaceActive {
         switch event.keyCode {
-        case 123: moveSelectedTaskToAdjacentColumn(by: -1); return true
-        case 124: moveSelectedTaskToAdjacentColumn(by: 1); return true
+        case 123: run(.planBoardMoveCardLeft); return true
+        case 124: run(.planBoardMoveCardRight); return true
         default: break
         }
       }
@@ -472,7 +387,7 @@ extension WorkspaceViewModel {
       return true
     }
     if event.charactersIgnoringModifiers?.lowercased() == "i" {
-      toggleInspector()
+      run(.taskToggleInspector)
       return true
     }
     return false
@@ -511,7 +426,7 @@ extension WorkspaceViewModel {
         } else if !isEverythingSelected {
           selectEverything()
         }
-      case 120: beginRenamingSelection()
+      case 120: run(.listRename)
       case 115: selectEverything()
       case 119: moveSidebarSelection(by: 10000)
       case 116: moveSidebarSelection(by: -8)
@@ -522,8 +437,8 @@ extension WorkspaceViewModel {
         switch event.charactersIgnoringModifiers?.lowercased() {
         case "j": moveSidebarSelection(by: 1)
         case "k": moveSidebarSelection(by: -1)
-        case "/": presentSearch()
-        case "?": showsKeyboardHelp = true
+        case "/": run(.goSearch)
+        case "?": run(.goKeyboardReference)
         default: return false
         }
       }
@@ -572,49 +487,41 @@ extension WorkspaceViewModel {
     case 126:  // ↑
       moveTaskSelection(by: -1)
     case 124:  // →
-      if viewMode == .board {
-        focusAdjacentBoardColumn(by: 1)
-      } else {
-        enterSelectedTask()
-      }
+      if viewMode == .board { focusAdjacentBoardColumn(by: 1) } else { run(.planEnterTask) }
     case 123:  // ←
-      if viewMode == .board {
-        focusAdjacentBoardColumn(by: -1)
-      } else {
-        leaveSelectedTaskScope()
-      }
+      if viewMode == .board { focusAdjacentBoardColumn(by: -1) } else { run(.planLeaveTask) }
     case 120:  // F2
-      editSelectedTaskTitle()
+      run(.taskRename)
     case 115: selectTaskAtEnd(first: true)
     case 119: selectTaskAtEnd(first: false)
     case 116: moveTaskSelection(by: -8)
     case 121: moveTaskSelection(by: 8)
     case 36, 76:  // Return / keypad Enter
-      if viewMode == .board && selectedTask == nil { requestTaskComposerFocus() }
-      else if viewMode == .board { enterSelectedTask() }
+      if viewMode == .board && selectedTask == nil { run(.taskNew) }
+      else if viewMode == .board { run(.planEnterTask) }
       else { requestRelativeTaskComposerFocus() }
     case 49:  // Space
-      toggleSelectedTask()
+      run(.taskComplete)
     case 51, 117:  // Delete / forward delete
-      deleteSelectedTask()
+      run(.taskDelete)
     case 53:  // Escape
       dismissKeyboardContext()
     default:
       switch event.charactersIgnoringModifiers?.lowercased() {
       case "j": moveTaskSelection(by: 1)
       case "k": moveTaskSelection(by: -1)
-      case "l": enterSelectedTask()
-      case "h": leaveSelectedTaskScope()
-      case "x", " ": toggleSelectedTask()
-      case "f": focusSelectedTask()
+      case "l": run(.planEnterTask)
+      case "h": run(.planLeaveTask)
+      case "x", " ": run(.taskComplete)
+      case "f": run(.taskStartFocus)
       case "[":
-        if scopeTaskID != nil { leaveSelectedTaskScope() }
+        if scopeTaskID != nil { run(.planLeaveTask) }
         requestKeyboardFocus(.tasks)
       case "]":
-        enterSelectedTask()
+        run(.planEnterTask)
         requestKeyboardFocus(.tasks)
-      case "/": presentSearch()
-      case "?": showsKeyboardHelp = true
+      case "/": run(.goSearch)
+      case "?": run(.goKeyboardReference)
       default: return false
       }
     }

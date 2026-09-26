@@ -148,7 +148,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
           otherModifiersHeld: !flags.subtracting(.shift).isEmpty, at: event.timestamp),
           !self.isEditingText(in: window) {
           self.workspace.desktopShortcutSequence.reset()
-          self.workspace.showsKeyboardHelp = true
+          // Checkvist's ⇧⇧ opens its command palette, and this app had no
+          // palette to open, so it raised the reference sheet instead. Now
+          // there is one, the gesture means what it means everywhere else.
+          self.workspace.run(.goCommandPalette)
           return nil
         }
         return event
@@ -166,10 +169,15 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         let chooseDestination = flags == [.command, .option]
           && (character == "[" || character == "]")
         let help = flags == [.command] && character == "/"
+        // ⌘K is how you leave a field to do something else, so it has to work
+        // from inside one — the same reasoning as ⌘F below.
+        let palette = flags == [.command] && character == "k"
         // Search, but deliberately not undo: inside a text field ⌘Z belongs to
         // the text being typed, not to the workspace behind it.
         let search = flags == [.command] && character == "f"
-        guard regionOrView || cycleRegion || createItem || chooseDestination || help || search else {
+        guard regionOrView || cycleRegion || createItem || chooseDestination || help || search
+          || palette
+        else {
           return event
         }
       }

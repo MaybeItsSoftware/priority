@@ -306,6 +306,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// celebration lives in the app shell, so the model reports the occasion
   /// rather than staging it.
   @ObservationIgnored var onCompletion: ((CompletionEvent) -> Void)?
+  /// The command palette. Opens on ⌘K and is the one surface that lists every
+  /// key the workspace answers to, whether or not it can run it for you.
+  var showsCommandPalette = false
   var showsKeyboardHelp = false
   var showsListNavigator = false
   var showsSearch = false

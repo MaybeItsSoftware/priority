@@ -149,6 +149,9 @@ struct WorkspaceDesktopView: View {
     .sheet(isPresented: Bindable(model).showsListNavigator) {
       WorkspaceListNavigator().environment(model)
     }
+    .sheet(isPresented: Bindable(model).showsCommandPalette) {
+      WorkspaceCommandPalette()
+    }
     .sheet(isPresented: Bindable(model).showsKeyboardHelp) {
       WorkspaceKeyboardHelp()
     }
@@ -1452,101 +1455,82 @@ private struct WorkspaceListNavigator: View {
   }
 }
 
+/// The full keyboard reference, read off the same catalogue the keys are.
+///
+/// It used to be seventy rows typed out by hand next to a switch statement
+/// that did the actual work, so the two could disagree and did — it credited
+/// `u` with undo months after `u` became something else. Nothing here is
+/// written twice: a row exists because a command exists, and prints the key
+/// that command is bound to.
+///
+/// ⌘K reaches the same list and can run what it lands on; this stays for the
+/// times the question really is "show me everything" rather than "do this".
 private struct WorkspaceKeyboardHelp: View {
+  @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.dismiss) private var dismiss
+
+  private var groups: [(name: String, commands: [WorkspaceCommand])] {
+    var order: [String] = []
+    var byGroup: [String: [WorkspaceCommand]] = [:]
+    for command in WorkspaceCommandCatalog.all {
+      if byGroup[command.group] == nil { order.append(command.group) }
+      byGroup[command.group, default: []].append(command)
+    }
+    return order.map { ($0, byGroup[$0] ?? []) }
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
       HStack {
-        Text("Keyboard navigation").font(.title3.weight(.semibold))
+        Text("Keyboard reference").font(.title3.weight(.semibold))
         Spacer()
         Button("Done") { dismiss() }
           .focusable()
           .keyboardShortcut(.defaultAction)
       }
+      Text("⌘K opens the same list and runs what you pick.")
+        .font(.callout)
+        .foregroundStyle(.secondary)
       ScrollView {
-        Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 10) {
-        key("↑ ↓ / J K", "Select visible tasks when the task surface has focus")
-        key("⌘ 0", "Open Everything across all active lists")
-        key("⌃ 1 / ⌃ 2 / ⌃ 3", "Focus the sidebar or task surface; ⌃ 3 opens the inspector")
-        key("I", "Open or close the selected task’s inspector")
-        key("EE / F2", "Edit the task title; F2 also renames a sidebar list or folder")
-        key("DD / NN / TT / DR", "Edit due date, notes, tags, or repeating due settings")
-        key("TD / TM / CD", "Due today / tomorrow / clear due date")
-        key("CN / CT", "Clear notes / tags")
-        key("⌥ S / ⌥ T", "Edit start date / time estimate")
-        key("0–9", "Set task priority; 0 clears it")
-        key("HC", "Hide or show completed tasks")
-        key("LL / GH", "Find or create a list / open Everything")
-        key("SD / OO / PC", "Toggle inspector / list settings / show task progress")
-        key("XX / GG", "Extract a branch as a list / open its first linked URL")
-        key("Home / End / PgUp / PgDown", "Navigate to either end, or eight tasks at a time")
-        key("Date picker: ← → / ↑ ↓", "Select a day / week immediately; Shift ← → changes month")
-        key("Date picker: Tab", "Switch between calendar, hour, minute, and buttons")
-        key("Picker: ↵ / Esc", "Save / cancel; Delete clears the selected planning value")
-        key("⌘ 1–4", "Today, or this list as Board, Outline, or Matrix")
-        key("⌘ 8", "Enter focus mode, or return to the running session")
-        key("Today: ↑ ↓ / ↵", "Choose a task; Return starts it, or finishes the one running")
-        key("Focus: ↑ ↓ / J K", "Climb to less important work, or back down towards the most important")
-        key("Focus: ↵ / Space", "Stage the task, then begin it with the estimate shown")
-        key("Focus: X", "Tick the task off without starting a session")
-        key("Focus: ⌥ ↑ / ↓", "Move the task itself up or down the ladder, fixing your own order")
-        key("Focus: L", "Schedule it for later so it stops being offered")
-        key("⌘ 9", "Open the timeline of the day's focused work, or close it")
-        key("Timeline: ← → / H L", "Step back or forward a day; T returns to today")
-        key("⌃ Tab / ⌃ ⇧ Tab", "Move focus forward or backward between those regions")
-        key("Task surface: Tab / ⇧ Tab", "Indent / outdent; controls and text fields retain normal Tab navigation")
-        key("Sidebar: ↑ ↓ / J K", "Select Everything, then its visible lists and folders")
-        key("Sidebar: ← → / Return", "Collapse, expand, or toggle the selected folder")
-        key("Board: ← → / Return", "Focus any column; Return opens a task or adds to an empty column")
-        key("Outline: ← →", "Leave or enter a task’s subtasks; ← again returns to the sidebar")
-        key("Today: ↑ ↓ / ← / Return", "Choose a task, ← returns to the sidebar, Return starts the block")
-        key("Outline: Return / ⌥ Return / ⇧ Return", "Add below / above / as a child")
-        key("⇧ → / ⇧ ←", "Open the selected branch / return to its parent")
-        key("Space", "Complete or reopen selected task")
-        key("⇧ Space", "Invalidate or reopen selected task")
-        key("⌘ ⌥ → / ←", "Indent or outdent the selected task")
-        key("⌥ → / ←", "Move the selected board card to the next or previous column")
-        key("⌥ 1–4", "Place the selected matrix task in a quadrant")
-        key("⌘ ⇧ D", "Commit to the selected task daily, or stop")
-        key("⌘ ⇧ C", "Add a board column")
-        key("⌘ ↑ / ⌘ ↓", "Move the selected task, or the current list when no task is selected")
-        key("Board card drop", "Drop on a sibling card to place it before that card")
-        key("Delete", "Delete the selected task and its subtasks")
-        key("F", "Start focus, or add to the active focus queue")
-        key("MM", "Move the selected task or list, including its contents, to a list or folder")
-        key("[ / ]", "Return to the parent list / open the selected task as a list")
-        key("⌘ ⇧ L", "Convert selected task to a list, or list back to a task")
-        key("⌘ ⇧ P", "Promote / unpin a nested list in the sidebar")
-        key("⌘ ⇧ X", "Complete / reopen the current list")
-        key("⌘ N", "Add a task")
-        key("⌘ ⌥ [ / ]", "Choose the destination sub-list when adding in Everything")
-        key("⌘ S", "Save edits in the task inspector")
-        key("⌘ ⇧ N", "Create a nested list in the task pane; otherwise create a sidebar list")
-        key("⌘ ⌥ N", "Create a folder; when a folder is selected, create it there")
-        key("⌘ R", "Rename the selected list or folder in place")
-        key("⌘ I", "Open settings for the selected list or folder")
-        key("⌘ F", "Search every task’s title and notes")
-        key("UU / ⌘ Z / ⌘ ⇧ Z", "Undo / undo / redo the last complete workspace action")
-        key("⌘ ⇧ A / ⌘ ⇧ R", "Archive the current list / restore the most recently archived list")
-        key("⌃ ⌥ ↑ / ↓", "Select the previous or next folder")
-        key("⌘ ⌥ ↑ / ↓", "Reorder the selected folder among its siblings")
-        key("⌘ ⇧ Delete", "Delete the selected folder or current list")
-        key("? / ⌘ / / ⇧ ⇧", "Show this keyboard reference")
-        key("Esc", "Clear selection or leave the current task scope")
+        VStack(alignment: .leading, spacing: 18) {
+          ForEach(groups, id: \.name) { group in
+            VStack(alignment: .leading, spacing: 8) {
+              Text(group.name)
+                .font(.system(size: 10, weight: .bold))
+                .textCase(.uppercase)
+                .kerning(1.2)
+                .foregroundStyle(.secondary)
+              ForEach(group.commands) { command in
+                row(command)
+              }
+            }
+          }
         }
+        .padding(.trailing, 6)
       }
       .frame(maxHeight: 520)
     }
     .padding(28)
-    .frame(width: 480)
+    .frame(width: 560)
   }
 
-  @ViewBuilder
-  private func key(_ shortcut: String, _ description: String) -> some View {
-    GridRow {
-      Text(shortcut).font(.system(.body, design: .monospaced).weight(.semibold))
-      Text(description).foregroundStyle(.secondary)
+  private func row(_ command: WorkspaceCommand) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: 12) {
+      VStack(alignment: .leading, spacing: 2) {
+        Text(command.title)
+        if let note = command.note {
+          Text(note).font(.caption).foregroundStyle(.tertiary)
+        }
+      }
+      Spacer(minLength: 12)
+      if command.surface != .anywhere {
+        Text(command.surface.title)
+          .font(.system(size: 9, weight: .bold))
+          .textCase(.uppercase)
+          .kerning(1.1)
+          .foregroundStyle(.quaternary)
+      }
+      KeyCapRow(keys: command.displayKeys)
     }
   }
 }

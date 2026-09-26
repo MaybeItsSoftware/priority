@@ -77,11 +77,18 @@ none of it is reachable only by something you already have to know.
 | `Cmd+F` | Search |
 | `Cmd+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
-| `Cmd+/` | Every shortcut, in force |
+| `Cmd+K` | The command palette — everything the workspace can do, and its key |
+| `Cmd+/` | The same commands, grouped as a reference |
 | `Esc` | Cancel what you are typing, or leave the surface you are in |
 
-The full reference is [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md),
-and `Cmd+/` or a double-tap of Shift shows it in the app.
+The table above is the short version. The complete one is in the app: `Cmd+K`,
+or a **double-tap of Shift**, opens the palette, and `Cmd+/` shows the same
+commands as a grouped reference. Both are rendered from a single catalogue in
+`Sources/PriorityCore/WorkspaceCommandCatalog.swift`, which is also what the
+key router dispatches through — so a key, a palette row and a reference row
+cannot disagree about what happens. [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md)
+covers the behaviour a table cannot: sequence timing, which keys survive a text
+field, and which surfaces take the keyboard outright.
 
 ### Coming from Checkvist
 
@@ -259,10 +266,36 @@ Preferences → Keybindings.
 
 ## Command palette
 
-Open with `:`, `;`, `Cmd+K` — or a **double-tap of Shift**, as in Checkvist. A
-modifier on its own produces no key-down event, so `⇧⇧` is recognised as a
-gesture rather than bound as a shortcut; Shift held for a capital letter counts
-as a chord rather than a tap, so typing never trips it. Most commands accept several spellings — `unrepeat`, `no repeat`, `remove repeat` and `clear repeat` all do the same thing.
+`Cmd+K`, or a **double-tap of Shift**, as in Checkvist. A modifier on its own
+produces no key-down event, so `⇧⇧` is recognised as a gesture rather than
+bound as a shortcut; Shift held for a capital letter counts as a chord rather
+than a tap, so typing never trips it. It opens from inside a text field too,
+since leaving the field to do something else is most of what it is for.
+
+Type to narrow. A prefix of the name beats a match in the middle of it, the
+initials work (`atk` finds *Add a task*), and so does typing the key itself —
+`cmd+shift+d` finds the command that key runs, which is the answer to "what
+was that shortcut again" as often as the name is. Commands for the surface you
+are on sort first; the rest stay listed rather than disappearing, because the
+palette is also how you find out that a surface you are not on has the thing
+you want.
+
+Every row carries its key, and rows that have no key say so plainly rather
+than looking unbound. Rows for the arrows, `J`/`K`, `Home`/`End` and the
+priority digits are listed too, dimmed and not selectable: they move a cursor,
+and the palette has already taken the keyboard away from wherever that cursor
+was, so running one from a list would do nothing you could see. They are shown
+because "what can I press here" is a fair question about them.
+
+### Typed commands
+
+Separately from the palette above, `CommandEngine` parses a text command
+language inherited from the Checkvist-era menu bar panel. **It currently has no
+surface** — `AppCoordinator.executeCommandInput` has no callers — so the
+families below parse and are tested but cannot be reached from the app. They
+are documented because the parser is still there and still correct, not because
+you can type them today. Most accept several spellings: `unrepeat`, `no
+repeat`, `remove repeat` and `clear repeat` all do the same thing.
 
 | Family | Commands |
 | --- | --- |
@@ -286,9 +319,9 @@ as a chord rather than a tap, so typing never trips it. Most commands accept sev
 Due values understand natural language and times: `due today 14:30`, `due tomorrow 9am`, `due next week`, `due 4pm fri`, `due next monday morning`. The time words `morning`, `noon`, `afternoon`, `evening`, `midnight`, `eod` and `cob` all resolve to configurable named times.
 
 The **Kanban**, **Matrix** and **View** families act on the Checkvist-side state
-the removed menu bar panel rendered. They still parse and still run; what they
-change no longer has a surface, so they are there for a workspace that has not
-finished migrating rather than for daily use.
+the removed menu bar panel rendered. What they change no longer has a surface
+either, so they are doubly stranded — a workspace that has not finished
+migrating, reachable by nothing.
 
 ## Views
 
