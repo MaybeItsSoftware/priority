@@ -43,20 +43,16 @@ struct WorkspaceTimelineScreen: View {
 
   private var header: some View {
     HStack(spacing: 12) {
-      Text("TIMELINE")
-        .font(.caption.weight(.bold))
-        .tracking(1.5)
-        .foregroundStyle(.secondary)
+      MicroLabel("Timeline")
       dayControls
       Spacer()
       Button("Leave") { model.dismissTimelineScreen() }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
         .focusable()
-      keyCap("esc")
+      KeyCap("esc")
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 12)
+    .focusSurfaceBand()
   }
 
   private var dayControls: some View {
@@ -82,31 +78,14 @@ struct WorkspaceTimelineScreen: View {
   private var footer: some View {
     HStack(spacing: 14) {
       Spacer()
-      hint("← →", "Change day")
-      hint("t", "Today")
+      KeyHint("← →", "Change day")
+      KeyHint("t", "Today")
       Text("Active work time; pauses are not drawn, so a block paused mid-way reads as one span.")
         .font(.caption2)
         .foregroundStyle(.tertiary)
       Spacer()
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 10)
-  }
-
-  private func hint(_ key: String, _ label: String) -> some View {
-    HStack(spacing: 5) {
-      keyCap(key)
-      Text(label).font(.caption2).foregroundStyle(.tertiary)
-    }
-  }
-
-  private func keyCap(_ key: String) -> some View {
-    Text(key)
-      .font(.caption2.monospaced())
-      .foregroundStyle(.secondary)
-      .padding(.horizontal, 5)
-      .padding(.vertical, 2)
-      .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
+    .focusSurfaceBand()
   }
 
   // MARK: - The day
@@ -143,7 +122,7 @@ struct WorkspaceTimelineScreen: View {
         .font(.callout)
         .foregroundStyle(.secondary)
     }
-    .padding(.horizontal, 20)
+    .focusSurfaceGutter()
     .padding(.vertical, 14)
   }
 
@@ -163,7 +142,7 @@ struct WorkspaceTimelineScreen: View {
         if let offset = day.nowOffsetMinutes { nowRule(atMinutes: offset) }
       }
       .frame(maxWidth: .infinity, minHeight: CGFloat(day.layout.hourCount) * Self.hourHeight + 16, alignment: .topLeading)
-      .padding(.horizontal, 20)
+      .focusSurfaceGutter()
       .padding(.vertical, 16)
     }
     .overlay {

@@ -187,7 +187,7 @@ struct WorkspaceFocusScreen: View {
           .font(.caption)
       }
       .foregroundStyle(.secondary)
-      .padding(.horizontal, 14)
+      .padding(.horizontal, FocusSurfaceMetrics.noticeGutter)
       .padding(.vertical, 8)
       FocusRule()
     }
@@ -217,8 +217,7 @@ struct WorkspaceFocusScreen: View {
         .focusable()
       KeyCap("esc")
     }
-    .padding(.horizontal, 24)
-    .padding(.vertical, 12)
+    .focusSurfaceBand()
   }
 
   /// Picking the next thing: the conditions it has to satisfy, the ladder of
@@ -226,7 +225,7 @@ struct WorkspaceFocusScreen: View {
   private var chooser: some View {
     VStack(spacing: 0) {
       WorkspaceFocusContextControls()
-        .padding(.horizontal, 24)
+        .focusSurfaceGutter()
         .padding(.top, 12)
       if model.focusLadder.isEmpty {
         emptyState
@@ -271,7 +270,7 @@ struct WorkspaceFocusScreen: View {
       .frame(maxHeight: 100)
     }
     .font(.caption)
-    .padding(.horizontal, 24)
+    .focusSurfaceGutter()
     .padding(.bottom, 8)
   }
 
@@ -289,8 +288,7 @@ struct WorkspaceFocusScreen: View {
       }
       Spacer()
     }
-    .padding(.horizontal, 24)
-    .padding(.vertical, 12)
+    .focusSurfaceBand()
   }
 
   private var emptyState: some View {

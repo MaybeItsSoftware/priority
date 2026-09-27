@@ -187,7 +187,7 @@ struct WorkspaceFocusRunning: View {
       }
       .frame(maxHeight: 96)
     }
-    .padding(.horizontal, 24)
+    .focusSurfaceGutter()
     .padding(.vertical, 14)
   }
 

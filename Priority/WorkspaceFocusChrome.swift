@@ -87,3 +87,38 @@ struct FocusRule: View {
       .frame(height: theme.hairline)
   }
 }
+
+/// The band geometry every full-pane surface is laid out on.
+///
+/// Focus and the timeline are the same kind of thing — a surface that takes the
+/// whole pane, with a titled band across the top and a hint band across the
+/// bottom — and they were built to different figures. Focus used a 24pt gutter
+/// and 12pt bands; the timeline used 20pt and 12/14/10, so switching between
+/// them with ⌘8 and ⌘9 shifted every edge on screen and made the two read as
+/// unrelated screens rather than two views of the same day.
+///
+/// Numbers rather than a container view, because the bands differ in what they
+/// hold and only agree on where their edges are.
+enum FocusSurfaceMetrics {
+  /// The side gutter, shared by the bands and the content between them.
+  static let gutter: CGFloat = 24
+  /// The height contribution of the top and bottom bands. One figure: a header
+  /// taller than its footer makes a pane look like it is sliding upwards.
+  static let band: CGFloat = 12
+  /// The gutter for a notice strip inset inside a band — narrower on purpose,
+  /// so it reads as sitting within the surface rather than as another band.
+  static let noticeGutter: CGFloat = 14
+}
+
+extension View {
+  /// A band across the top or bottom of a full-pane surface.
+  func focusSurfaceBand() -> some View {
+    padding(.horizontal, FocusSurfaceMetrics.gutter)
+      .padding(.vertical, FocusSurfaceMetrics.band)
+  }
+
+  /// The side gutter on its own, for the content between the bands.
+  func focusSurfaceGutter() -> some View {
+    padding(.horizontal, FocusSurfaceMetrics.gutter)
+  }
+}
