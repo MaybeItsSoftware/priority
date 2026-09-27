@@ -28,7 +28,6 @@ extension WorkspaceViewModel {
     case .board: return .board
     case .outline: return .outline
     case .matrix: return .matrix
-    case .focus: return .focus
     }
   }
 

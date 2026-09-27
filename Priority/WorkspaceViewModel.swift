@@ -47,7 +47,6 @@ enum WorkspaceViewMode: String, CaseIterable, Identifiable {
   case board
   case outline
   case matrix
-  case focus
 
   /// The places you can be. Today is first because it is the question the app
   /// exists to answer; the rest are projections of the same tasks, read when
@@ -67,7 +66,6 @@ enum WorkspaceViewMode: String, CaseIterable, Identifiable {
     case .board: "Board"
     case .outline: "Outline"
     case .matrix: "Matrix"
-    case .focus: "Focus"
     }
   }
 
@@ -77,7 +75,6 @@ enum WorkspaceViewMode: String, CaseIterable, Identifiable {
     case .board: "rectangle.split.3x1"
     case .outline: "list.bullet.indent"
     case .matrix: "square.grid.2x2"
-    case .focus: "timer"
     }
   }
 
@@ -92,7 +89,6 @@ enum WorkspaceViewMode: String, CaseIterable, Identifiable {
     case .board: .goBoard
     case .outline: .goOutline
     case .matrix: .goMatrix
-    case .focus: nil
     }
   }
 }
@@ -652,9 +648,6 @@ enum WorkspaceSidebarItem: Identifiable {
     if mode == .today { dayPresentationCount += 1 }
     viewMode = mode
     if isEverythingSelected { reloadOutline(refreshSidebar: false) }
-    if mode == .focus, activeFocusSession == nil, let task = selectedTask {
-      startFocus(on: task)
-    }
   }
 
   func leaveTaskScope() {
@@ -851,8 +844,6 @@ enum WorkspaceSidebarItem: Identifiable {
     case .outline: outline.map(\.task)
     case .board: boardColumns.flatMap { tasks(in: $0) }
     case .matrix: boardTasks
-    case .focus:
-      if let activeFocusTask { [activeFocusTask] + focusQueue.map(\.task) } else { selectedTask.map { [$0] } ?? [] }
     }
   }
 

@@ -442,12 +442,6 @@ struct WorkspaceDesktopView: View {
         .focusable()
         .focused($focusedArea, equals: .tasks)
         .focusEffectDisabled()
-    case .focus:
-      WorkspaceFocusDashboard()
-        .environment(model)
-        .focusable()
-        .focused($focusedArea, equals: .tasks)
-        .focusEffectDisabled()
     }
   }
 
@@ -593,68 +587,6 @@ struct WorkspaceDesktopView: View {
     .focused($focusedArea, equals: .inspector)
     .focusEffectDisabled()
     .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.inspector) })
-  }
-}
-
-private struct WorkspaceFocusDashboard: View {
-  @Environment(WorkspaceViewModel.self) private var model
-
-  var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 18) {
-        Text("FOCUS")
-          .font(.title2.weight(.semibold))
-        WorkspaceFocusContextControls()
-        if let task = model.activeFocusTask {
-          Text(task.title)
-            .font(.title3.weight(.medium))
-            .lineLimit(2)
-            .truncationMode(.tail)
-          Text("Focus mode is active. Complete the current task to advance the queue.")
-            .foregroundStyle(.secondary)
-          Text("\(FocusPoints.formatted(model.focusPoints.today)) points today over \(model.focusPoints.blocksToday) blocks")
-            .font(.callout.monospacedDigit())
-            .foregroundStyle(.secondary)
-          HStack {
-            Button("Complete current") { model.requestFocusCompletion() }
-              .buttonStyle(.borderedProminent)
-              .focusable()
-            Button("End session", role: .destructive) { model.finishFocus() }
-              .buttonStyle(.bordered)
-              .focusable()
-          }
-          if !model.focusQueue.isEmpty {
-            Divider()
-            Text("UP NEXT").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-            ForEach(model.focusQueue) { item in
-              Text(item.task.title)
-                .lineLimit(1)
-                .help(item.task.title)
-            }
-          }
-        } else if let task = model.selectedTask {
-          Text("Ready to focus on \(task.title).")
-            .foregroundStyle(.secondary)
-            .lineLimit(2)
-          Button("Start focus") { model.startFocus(on: task) }
-            .buttonStyle(.borderedProminent)
-            .focusable()
-        } else {
-          ContentUnavailableView(
-            "Choose a task to focus on",
-            systemImage: "bolt.fill",
-            description: Text("Select a card or task, then open Focus."))
-        }
-        Divider()
-        Button { model.presentTimelineScreen() } label: {
-          Label("See the day's timeline", systemImage: "chart.bar.doc.horizontal")
-            .font(.callout)
-        }
-        .buttonStyle(.plain)
-        .focusable()
-      }
-      .padding(24)
-    }
   }
 }
 
