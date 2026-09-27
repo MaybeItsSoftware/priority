@@ -64,12 +64,13 @@ struct WorkspaceListRowLabel: View {
           onCommit: { model.renameList(list, to: $0) },
           onCancel: { model.cancelRenaming(itemID: list.id) })
       } else {
+        // No weight change for the current row. A name that thickens when you
+        // arrow onto it reflows the row it sits in and makes a list's own
+        // identity depend on where the cursor happens to be; the highlight
+        // behind it already says "this one" in a way that costs the text
+        // nothing.
         Text(list.name)
           .strikethrough(list.completedAt != nil)
-          // Weight, so the current list survives being looked at quickly and
-          // survives the tint being hard to see — against the sidebar's own
-          // material a wash of accent is not much on its own.
-          .fontWeight(model.isCurrentSidebarRow(list.id) ? .semibold : .regular)
           .lineLimit(1)
           .truncationMode(.middle)
           .help(list.name)

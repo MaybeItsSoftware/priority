@@ -257,7 +257,6 @@ struct WorkspaceDesktopView: View {
           model.reportKeyboardFocus(.sidebar)
         } label: {
           Label("Everything", systemImage: "square.stack.3d.up")
-            .fontWeight(model.isCurrentSidebarRow(everythingSidebarID) ? .semibold : .regular)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 3)
             .contentShape(Rectangle())
@@ -786,7 +785,6 @@ private struct WorkspaceNestedListRow: View {
         .lineLimit(1)
         .truncationMode(.middle)
         .strikethrough(task.status != .open)
-        .fontWeight(model.isCurrentSidebarRow(task.id) ? .semibold : .regular)
       Spacer(minLength: 0)
       if promotedShortcut { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary) }
     }
@@ -891,7 +889,6 @@ private struct WorkspaceFolderTree: View {
             onCancel: { model.cancelRenaming(itemID: folder.id) })
         } else {
           Label(folder.name, systemImage: "folder")
-            .fontWeight(isCurrent ? .semibold : .regular)
             .lineLimit(1)
             .truncationMode(.middle)
             .help(folder.name)
