@@ -134,7 +134,10 @@ extension WorkspaceViewModel {
 
     // MARK: Lists and folders
     case .listNew: requestListCreationForSelection()
-    case .listRename: beginRenamingSelection()
+    case .listRename:
+      // The rename happens in the sidebar row, so it has to be on screen.
+      if !isSidebarVisible { toggleSidebar() }
+      beginRenamingSelection()
     case .listSettings: showSelectedListSettings()
     case .listArchive: archiveSelectedList()
     case .listRestore: restoreMostRecentlyArchivedList()

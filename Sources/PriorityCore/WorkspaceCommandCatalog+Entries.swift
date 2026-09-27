@@ -146,7 +146,11 @@ public enum WorkspaceCommandCatalog {
 
   private static let lists: [WorkspaceCommand] = [
     .init(id: .listNew, title: "Create a list", group: "Lists", keys: ["cmd+shift+n"]),
-    .init(id: .listRename, title: "Rename the list or folder", group: "Lists", keys: ["cmd+r", "f2"], surface: .sidebar),
+    // ⌘R from anywhere; F2 only in the sidebar, because on a task pane F2
+    // renames the task.
+    .init(
+      id: .listRename, title: "Rename the list or folder", group: "Lists", keys: ["cmd+r"],
+      surfaceKeys: [.sidebar: ["f2"]], note: "From a task pane, the list you are in"),
     .init(id: .listSettings, title: "Open list settings", group: "Lists", keys: ["cmd+i", "oo"]),
     .init(id: .listArchive, title: "Archive the current list", group: "Lists", keys: ["cmd+shift+a"]),
     .init(

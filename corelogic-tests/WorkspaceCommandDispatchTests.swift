@@ -56,6 +56,17 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "h", on: .outline)?.id, .planLeaveTask)
   }
 
+  /// Phase 1 made ⌘R sidebar-only by following the catalogue strictly. It
+  /// renames the current list from the task panes too; F2 stays the task's
+  /// rename there and the row's in the sidebar.
+  func testCommandRRenamesTheListFromEveryPane() {
+    for surface in Self.planningPanes + [.sidebar] {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+r", on: surface)?.id, .listRename)
+    }
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "f2", on: .sidebar)?.id, .listRename)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "f2", on: .outline)?.id, .taskRename)
+  }
+
   // MARK: - Surfaces that own the keyboard
 
   /// Keys the focus screen does not answer to used to fall through to the
