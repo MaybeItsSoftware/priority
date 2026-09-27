@@ -27,6 +27,7 @@ enum DaySurface {
 struct DayView: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(AppCoordinator.self) private var manager
+  @Environment(\.theme) private var theme
   let surface: DaySurface
   /// Changes whenever the surface is presented afresh, so it opens ready to
   /// type rather than holding the last thing that was searched.
@@ -89,14 +90,19 @@ struct DayView: View {
   // MARK: - Chrome
 
   private var header: some View {
-    HStack(spacing: 8) {
-      Text("Today")
-        .font(.system(size: 20, weight: .semibold))
-      MicroLabel(scopeName)
-      Spacer(minLength: 8)
+    // The same band as every other mode, so ⌘1 does not move the content down
+    // by a different amount than ⌘2 does. The panel mounts this view too, and
+    // gets its own two controls on the end of it.
+    WorkspacePaneHeader(title: "Today") {
+      Text(scopeName)
+        .font(theme.bodyFont(size: 11))
+        .foregroundStyle(theme.muted)
+        .lineLimit(1)
+    } trailing: {
       Text("\(FocusPoints.formatted(model.focusPoints.today)) pts")
-        .font(.system(size: 11, design: .monospaced))
-        .foregroundStyle(.tertiary)
+        .font(theme.monoFont(size: 10))
+        .foregroundStyle(theme.dim)
+        .monospacedDigit()
         .help("Minutes focused today, multiplied by how well each block went")
       if surface.isPanel {
         Button { openInWindow() } label: {
@@ -117,9 +123,6 @@ struct DayView: View {
         .accessibilityLabel("Hide the focus panel")
       }
     }
-    .padding(.horizontal, 18)
-    .padding(.top, 16)
-    .padding(.bottom, 10)
   }
 
   /// What the day is supposed to cost against what it has cost so far. A bar

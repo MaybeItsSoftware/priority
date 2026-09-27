@@ -198,12 +198,16 @@ struct WorkspaceFocusScreen: View {
   /// The same bar in both states, so leaving is always in the same place and
   /// the day's total never moves out from under you.
   private var header: some View {
-    HStack(spacing: 12) {
-      MicroLabel(isRunning ? "In session" : "Focus", tint: isRunning ? theme.primary : nil)
-      Spacer(minLength: 0)
+    WorkspacePaneHeader(title: isRunning ? "In session" : "Focus") {
+      Text(isRunning ? "The block you are running" : "What to pick up next")
+        .font(theme.bodyFont(size: 11))
+        .foregroundStyle(isRunning ? theme.primary : theme.muted)
+        .lineLimit(1)
+    } trailing: {
       Text("\(FocusPoints.formatted(model.focusPoints.today)) pts today")
-        .font(.system(size: 11, design: .monospaced))
-        .foregroundStyle(.secondary)
+        .font(theme.monoFont(size: 10))
+        .foregroundStyle(theme.dim)
+        .monospacedDigit()
         .help("Minutes focused, multiplied by how well each block went")
       Button { model.presentTimelineScreen() } label: {
         Image(systemName: "chart.bar.doc.horizontal")
@@ -219,7 +223,6 @@ struct WorkspaceFocusScreen: View {
         .focusable()
       KeyCap("esc")
     }
-    .focusSurfaceBand()
   }
 
   /// Picking the next thing: the conditions it has to satisfy, the ladder of

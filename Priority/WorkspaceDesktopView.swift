@@ -426,31 +426,14 @@ struct WorkspaceDesktopView: View {
     if model.isMultiListScope || model.selectedList != nil {
       let outlineByList = Dictionary(grouping: model.outline) { $0.task.listId }
       VStack(spacing: 0) {
-        HStack {
-          VStack(alignment: .leading, spacing: 3) {
-            Text(model.currentBoardScopeTitle)
-              .font(.title2.weight(.semibold))
-              .lineLimit(1)
-              .truncationMode(.middle)
-            if let scope = model.scopeTask {
-              Button {
-                model.leaveTaskScope()
-              } label: {
-                Label(scope.title, systemImage: "chevron.left")
-                  .font(.caption)
-                  .lineLimit(1)
-              }
-              .buttonStyle(.plain)
-              .foregroundStyle(.secondary)
-            } else {
-              Text("Open tasks and projects")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
+        WorkspacePaneHeader(title: model.currentBoardScopeTitle) {
+          if let scope = model.scopeTask {
+            WorkspacePaneScopeExit(title: scope.title) { model.leaveTaskScope() }
           }
-          Spacer()
+        } trailing: {
+          WorkspacePaneCount(count: model.outline.filter { $0.task.status == .open }.count)
         }
-        .padding(20)
+        FocusRule()
 
         List {
           if model.isMultiListScope {
@@ -566,57 +549,80 @@ struct WorkspaceDesktopView: View {
 
 private struct WorkspaceMatrixDashboard: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
 
-  private let quadrants: [(title: String, urgency: Int, importance: Int, tint: Color)] = [
-    ("Do now", 1, 1, .red),
-    ("Schedule", 0, 1, .blue),
-    ("Delegate", 1, 0, .orange),
-    ("Eliminate", 0, 0, .gray),
-  ]
+  /// The quadrant's meaning picks its colour out of the house palette: urgent
+  /// and important is the danger hue, schedule is the app's own primary, and
+  /// delegate is the warning hue. These were SwiftUI's `.red`, `.blue`,
+  /// `.orange` and `.gray` — stock framework hues, which do not flip with the
+  /// theme and are the one thing the house style rules out by name.
+  private var quadrants: [(title: String, urgency: Int, importance: Int, tint: Color)] {
+    [
+      ("Do now", 1, 1, theme.danger),
+      ("Schedule", 0, 1, theme.primary),
+      ("Delegate", 1, 0, theme.warning),
+      ("Eliminate", 0, 0, theme.dim),
+    ]
+  }
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 14) {
-        Text("EISENHOWER MATRIX")
-          .font(.title2.weight(.semibold))
-        Text(model.isMultiListScope
-          ? "Place work across every list in scope; each task keeps its own list and project."
-          : "Place the direct tasks in this project; each project keeps its own matrix.")
-          .font(.callout)
-          .foregroundStyle(.secondary)
-        let unplaced = model.boardTasks.filter {
-          let position = model.matrixPosition(for: $0)
-          return position.urgency == nil || position.importance == nil
-        }
-        if !unplaced.isEmpty {
-          VStack(alignment: .leading, spacing: 8) {
-            Text("UNPLACED")
-              .font(.caption.weight(.bold))
-              .foregroundStyle(.secondary)
-            ForEach(unplaced) { task in
-              WorkspaceMatrixTaskRow(task: task)
+    let unplaced = model.boardTasks.filter {
+      let position = model.matrixPosition(for: $0)
+      return position.urgency == nil || position.importance == nil
+    }
+    return VStack(spacing: 0) {
+      // The matrix used to name itself in 22pt caps and never name the list it
+      // was showing, which is the one thing the other modes put at the top.
+      WorkspacePaneHeader(title: model.currentBoardScopeTitle) {
+        Text(
+          model.isMultiListScope
+            ? "Urgency across every list in scope"
+            : "Urgency within this project")
+          .font(theme.bodyFont(size: 11))
+          .foregroundStyle(theme.muted)
+          .lineLimit(1)
+      } trailing: {
+        WorkspacePaneCount(count: unplaced.count, noun: "unplaced")
+      }
+      FocusRule()
+      ScrollView {
+        VStack(alignment: .leading, spacing: theme.space.md) {
+          if !unplaced.isEmpty {
+            VStack(alignment: .leading, spacing: theme.space.sm) {
+              MicroLabel("Unplaced")
+              ForEach(unplaced) { task in
+                WorkspaceMatrixTaskRow(task: task)
+                  .environment(model)
+              }
+            }
+            .padding(theme.space.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.well, in: RoundedRectangle(cornerRadius: theme.panelRadius))
+            .overlay(
+              RoundedRectangle(cornerRadius: theme.panelRadius)
+                .strokeBorder(theme.border, lineWidth: theme.hairline))
+          }
+          LazyVGrid(
+            columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: theme.space.md
+          ) {
+            ForEach(quadrants, id: \.title) { quadrant in
+              WorkspaceMatrixQuadrant(
+                title: quadrant.title, urgency: quadrant.urgency, importance: quadrant.importance,
+                tint: quadrant.tint)
                 .environment(model)
             }
           }
-          .padding(12)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
         }
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-          ForEach(quadrants, id: \.title) { quadrant in
-            WorkspaceMatrixQuadrant(
-              title: quadrant.title, urgency: quadrant.urgency, importance: quadrant.importance, tint: quadrant.tint)
-              .environment(model)
-          }
-        }
+        .focusSurfaceGutter()
+        .padding(.vertical, theme.space.md)
       }
-      .padding(20)
     }
   }
 }
 
 private struct WorkspaceMatrixQuadrant: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let title: String
   let urgency: Int
   let importance: Int
@@ -631,24 +637,35 @@ private struct WorkspaceMatrixQuadrant: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(title.uppercased())
-        .font(.caption.weight(.bold))
-        .foregroundStyle(tint)
+    VStack(alignment: .leading, spacing: theme.space.sm) {
+      HStack(spacing: theme.space.xs) {
+        MicroLabel(title, tint: tint)
+        Spacer(minLength: 0)
+        Text("\(tasks.count)")
+          .font(theme.monoFont(size: 10))
+          .foregroundStyle(theme.dim)
+          .monospacedDigit()
+      }
       ForEach(tasks) { task in
         WorkspaceMatrixTaskRow(task: task)
           .environment(model)
       }
-      if tasks.isEmpty { Text("No tasks").font(.caption).foregroundStyle(.tertiary) }
+      if tasks.isEmpty {
+        Text("Drop a task here").font(theme.bodyFont(size: 11)).foregroundStyle(theme.dim)
+      }
     }
-    .padding(12)
+    .padding(theme.space.md)
     .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+    // A tinted fill plus a border of the same hue, which is the house treatment
+    // for a status surface — not a solid block, and not a shadow.
     .background(
-      isDropTargeted ? tint.opacity(0.22) : tint.opacity(0.08),
-      in: RoundedRectangle(cornerRadius: 12))
+      tint.opacity(isDropTargeted ? Theme.statusBorderOpacity : Theme.statusFillOpacity),
+      in: RoundedRectangle(cornerRadius: theme.panelRadius))
     .overlay(
-      RoundedRectangle(cornerRadius: 12)
-        .stroke(isDropTargeted ? tint : .clear, lineWidth: 2))
+      RoundedRectangle(cornerRadius: theme.panelRadius)
+        .strokeBorder(
+          tint.opacity(isDropTargeted ? 1 : Theme.statusBorderOpacity),
+          lineWidth: isDropTargeted ? theme.emphasisBorder : theme.hairline))
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
       WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
         guard let task = model.task(withID: taskID),

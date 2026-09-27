@@ -28,6 +28,16 @@ struct WorkspaceKanbanBoard: View {
         let available = geometry.size.width - 36 - 14 * (columnCount - 1)
         let columnWidth = max(172, min(340, available / columnCount))
         VStack(spacing: 0) {
+          // The board said nowhere on its face which list it was showing, so
+          // ⌘2 from the outline took the scope name off the screen.
+          WorkspacePaneHeader(title: model.currentBoardScopeTitle) {
+            if let scope = model.scopeTask {
+              WorkspacePaneScopeExit(title: scope.title) { model.leaveTaskScope() }
+            }
+          } trailing: {
+            WorkspacePaneCount(count: model.boardColumns.reduce(0) { $0 + model.tasks(in: $1).count })
+          }
+          FocusRule()
           ScrollViewReader { scrollProxy in
             GeometryReader { viewport in
               ScrollView(.horizontal) {
@@ -42,7 +52,7 @@ struct WorkspaceKanbanBoard: View {
                   }
                 }
                 .scrollTargetLayout()
-                .padding(18)
+                .padding(FocusSurfaceMetrics.gutter)
                 .background(WorkspaceHorizontalOverscrollDisabler())
               }
               .onScrollTargetVisibilityChange(idType: String.self, threshold: 0.9) { ids in

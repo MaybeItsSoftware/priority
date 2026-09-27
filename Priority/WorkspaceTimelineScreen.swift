@@ -43,17 +43,27 @@ struct WorkspaceTimelineScreen: View {
   // MARK: - Chrome
 
   private var header: some View {
-    HStack(spacing: 12) {
-      MicroLabel("Timeline")
+    // The day this is, in the place every other surface puts what you are
+    // looking at. The micro-label said "Timeline", which the toolbar toggle and
+    // the sidebar row were already saying, and left the date buried in a date
+    // picker in the middle of the row.
+    WorkspacePaneHeader(title: model.timelineShowsToday ? "Today" : dayTitle) {
+      Text("Where the focused time went")
+        .font(theme.bodyFont(size: 11))
+        .foregroundStyle(theme.muted)
+    } trailing: {
       dayControls
-      Spacer()
       Button("Leave") { model.dismissTimelineScreen() }
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .font(theme.bodyFont(size: 11))
+        .foregroundStyle(theme.muted)
         .focusable()
       KeyCap("esc")
     }
-    .focusSurfaceBand()
+  }
+
+  private var dayTitle: String {
+    model.focusHistoryDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
   }
 
   private var dayControls: some View {
