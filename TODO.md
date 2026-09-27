@@ -101,18 +101,24 @@ worth doing but is not a tooltip change.
 `NSScreen.visibleFrame`, so unplugging a monitor can strand the window
 off-screen with no way back but deleting the preference. Small fix.
 
-### Most surfaces still ignore the theme
+### Surfaces that still ignore the theme
 
-The theme plugin is real and switchable, and what now renders through it is the
-four shared primitives (`MicroLabel`, `KeyCap`, `KeyHint`, `FocusRule`), every
-selection in the app (`WorkspaceSelection`), the board card's surface, the
-timeline's chrome and the toolbar. Still on `Color.accentColor` and literal
-radii: the inspector, the matrix, the condition editors, the task composer, the
-focus launcher and all of Settings bar the theme page.
+What renders through it now: the four shared primitives (`MicroLabel`, `KeyCap`,
+`KeyHint`, `FocusRule`), the toolbar, the board card, the one selection
+treatment on all seven surfaces that draw one, the timeline's chrome and its
+per-task hues, and the focus screens' state colours.
+
+What does not: the outline pane's own decoration, the inspector, Today beyond
+its selection, the move sheet, the quick-edit sheet, the sidebar drop targets,
+the focus quality prompt, the day tray (`DayView`), and all of Settings bar the
+theme page. Roughly 25 `Color.accentColor` uses remain, concentrated in
+`WorkspaceDesktopView`, `DayView` and `WorkspaceTaskQuickEditSheet`.
+
+### Two theme mechanisms are still live
 
 A useful count while migrating: `grep -c accentColor Priority/*.swift`.
 
-Two mechanisms are therefore live at once — the plugin, and the older
+Two mechanisms are live at once — the plugin, and the older
 `AppThemeColorToken` / `PreferencesManager.themeColor(for:)` with its per-token
 overrides and theme JSON import/export. A surface counts as migrated when its
 local `themeColor(_:)` helper is gone. See `docs/plugins.md`.
