@@ -733,8 +733,12 @@ enum WorkspaceSidebarItem: Identifiable {
 
   func selectViewMode(_ mode: WorkspaceViewMode) {
     if mode == .today { dayPresentationCount += 1 }
+    let changed = viewMode != mode
     viewMode = mode
-    if isEverythingSelected { reloadOutline(refreshSidebar: false) }
+    // Everything's outline is only gathered while the outline is showing, so
+    // a change of mode may need it. Asking for the mode already on screen —
+    // as launch does — cannot, and re-reading every list for it was waste.
+    if isEverythingSelected && changed { reloadOutline(refreshSidebar: false) }
   }
 
   func leaveTaskScope() {
