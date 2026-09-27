@@ -85,6 +85,20 @@ These cannot be verified from a build; they need someone to click.
 - **The three new keys.** `⌘⌃C` removes the column the selected card is in,
   `o` on the focus ladder drops your own order, and both now print their key in
   their tooltip. `⌘⌃C` is deliberately not `⇧⌘⌫`, which still deletes the list.
+- **The one header band, in all five modes.** `⌘1`→`⌘2`→`⌘3`→`⌘4`→`⌘8`→`⌘9`
+  in sequence: nothing should move but the content. The title size is 17pt for
+  all of them, which is smaller than the 20 and 22 it replaces — if the scope
+  name now reads too quiet, it is one figure (`WorkspacePaneHeader.titleSize`).
+- **The inspector's new order.** Title, then Start focus, then Notes, Plan,
+  When, Filing, Links, Structure, Save. Worth checking the order matches how
+  you actually work through a task, because it was guessed from what the
+  controls are rather than from watching anyone use them.
+- **The board column's two rings.** Drag a card over a column, then arrow into
+  one. The drop target is the primary hue at 2pt; the keyboard is the focus ring
+  at a hairline. They used to be the same 2pt accent ring.
+- **Did anything want the fifth view mode?** `WorkspaceViewMode.focus` and its
+  dashboard are gone. Nothing reached them, but if a muscle-memory key lands on
+  a pane that is now missing, that is where it went.
 
 ### One on-screen control still has no key
 
@@ -103,16 +117,16 @@ off-screen with no way back but deleting the preference. Small fix.
 
 ### Surfaces that still ignore the theme
 
-What renders through it now: the four shared primitives (`MicroLabel`, `KeyCap`,
-`KeyHint`, `FocusRule`), the toolbar, the board card, the one selection
-treatment on all seven surfaces that draw one, the timeline's chrome and its
-per-task hues, and the focus screens' state colours.
+What renders through it now: the shared primitives (`MicroLabel`, `KeyCap`,
+`KeyHint`, `FocusRule`, `WorkspacePaneHeader`, `SheetTitle`,
+`InspectorSection`), the toolbar, the board card and column, the one selection
+treatment everywhere it is drawn, the timeline including its per-task hues, the
+focus screens, the matrix, the inspector, the sidebar and the task composer.
 
-What does not: the outline pane's own decoration, the inspector, Today beyond
-its selection, the move sheet, the quick-edit sheet, the sidebar drop targets,
-the focus quality prompt, the day tray (`DayView`), and all of Settings bar the
-theme page. Roughly 25 `Color.accentColor` uses remain, concentrated in
-`WorkspaceDesktopView`, `DayView` and `WorkspaceTaskQuickEditSheet`.
+What does not: the move sheet, the quick-edit sheet, the sidebar drop targets,
+the focus quality prompt, most of the day tray (`DayView`), and all of Settings
+bar the theme page. Around 20 `Color.accentColor` uses remain, concentrated in
+`DayView` and `WorkspaceTaskQuickEditSheet`.
 
 ### Two theme mechanisms are still live
 
