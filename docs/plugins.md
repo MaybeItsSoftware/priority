@@ -230,9 +230,16 @@ Presets choose how to render an occasion, never which occasion it is.
 ### Theme (`ThemePlugin`)
 
 What the app looks like: a colour palette and a structure set, under an
-identity. Two themes ship — **Chalk**, the house style and the default, and
-**Pitch**, high-contrast and dark-forward — and the user picks one in the
-plugin's settings page.
+identity. Two themes ship — **Chalk**, the house style and the default, which
+follows the system's Light/Dark setting, and **Chalk Dark**, the same palette
+with the appearance fixed for running the app dark on a light desktop — and the
+user picks one in the plugin's settings page.
+
+Chalk Dark shares Chalk's `palette` and `structure` objects outright rather
+than restating their hexes, so the two cannot drift; what makes it a theme of
+its own is an identity and a `lockedAppearance`. A theme that sets that field
+*is* that appearance, and picking it by name is the request — which is why it
+overrides the system setting where an ordinary theme does not.
 
 Shaped like `CompletionCelebrationPlugin` rather than like an integration, for
 the same reason: it is a menu. Every theme registers, `ThemeManager` applies

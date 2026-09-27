@@ -16,5 +16,5 @@ struct ChalkThemePlugin: ThemePlugin {
 
   var palette: ThemePalette { specificationValue.palette }
   var structure: ThemeStructure { specificationValue.structure }
-  var preferredAppearance: ThemeAppearance? { specificationValue.preferredAppearance }
+  var lockedAppearance: ThemeAppearance? { specificationValue.lockedAppearance }
 }

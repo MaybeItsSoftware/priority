@@ -7,10 +7,19 @@ public struct ThemeSpecification: Equatable, Sendable {
   public let identifier: String
   public let name: String
   public let summary: String
-  /// Advisory only: which appearance the theme was drawn for. The appearance
-  /// actually in force still comes from the user's own light/dark/system
-  /// setting — a theme does not get to override that behind their back.
-  public let preferredAppearance: ThemeAppearance?
+  /// A theme that exists in one appearance only.
+  ///
+  /// `nil` is the normal case: the theme has both tables and follows the
+  /// system, so macOS's light/dark setting decides. A theme that sets this is
+  /// saying it *is* that appearance — "Chalk Dark" is not Chalk with a
+  /// preference, it is the dark half offered as a thing you can pick.
+  ///
+  /// This used to be advisory, on the reasoning that a theme should not
+  /// override the system setting behind the user's back. That reasoning does
+  /// not survive the theme being named after its appearance and chosen from a
+  /// menu: picking "Chalk Dark" *is* the request, and honouring it everywhere
+  /// except on screen would be the surprising behaviour.
+  public let lockedAppearance: ThemeAppearance?
   public let palette: ThemePalette
   public let structure: ThemeStructure
 
@@ -18,14 +27,14 @@ public struct ThemeSpecification: Equatable, Sendable {
     identifier: String,
     name: String,
     summary: String,
-    preferredAppearance: ThemeAppearance? = nil,
+    lockedAppearance: ThemeAppearance? = nil,
     palette: ThemePalette,
     structure: ThemeStructure
   ) {
     self.identifier = identifier
     self.name = name
     self.summary = summary
-    self.preferredAppearance = preferredAppearance
+    self.lockedAppearance = lockedAppearance
     self.palette = palette
     self.structure = structure
   }

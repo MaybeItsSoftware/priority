@@ -29,7 +29,7 @@ protocol ThemePlugin: Plugin {
   /// Advisory only. A theme may say which appearance it was drawn for, so the
   /// settings page can mention it; the appearance actually in force stays the
   /// user's own light/dark/system choice.
-  var preferredAppearance: ThemeAppearance? { get }
+  var lockedAppearance: ThemeAppearance? { get }
 
   /// The two payloads plus the identity, as the one value the rest of the app
   /// passes around. Defaulted — a plugin supplies the parts.
@@ -38,14 +38,14 @@ protocol ThemePlugin: Plugin {
 
 extension ThemePlugin {
   var themeIconSystemName: String { "paintpalette" }
-  var preferredAppearance: ThemeAppearance? { nil }
+  var lockedAppearance: ThemeAppearance? { nil }
 
   var specification: ThemeSpecification {
     ThemeSpecification(
       identifier: pluginIdentifier,
       name: displayName,
       summary: pluginDescription,
-      preferredAppearance: preferredAppearance,
+      lockedAppearance: lockedAppearance,
       palette: palette,
       structure: structure
     )

@@ -178,12 +178,14 @@ private struct ThemedModifier: ViewModifier {
   let manager: ThemeManager
 
   func body(content: Content) -> some View {
-    content.environment(
+    let specification = manager.specification
+    // A theme that exists in one appearance only wins over the system
+    // setting, because choosing it by name is choosing that appearance.
+    let appearance = specification.lockedAppearance
+      ?? (colorScheme == .dark ? .dark : .light)
+    return content.environment(
       \.theme,
-      Theme(
-        specification: manager.specification,
-        appearance: colorScheme == .dark ? .dark : .light
-      )
+      Theme(specification: specification, appearance: appearance)
     )
   }
 }

@@ -77,17 +77,27 @@ final class ThemeSpecificationTests: XCTestCase {
     }
   }
 
-  func testPitchIsGenuinelyADifferentThemeAndNotACopy() {
+  /// Chalk Dark is deliberately *not* a second palette. It shares Chalk's
+  /// outright, so the two cannot drift; what makes it a different theme is
+  /// that it has an identity of its own and fixes the appearance.
+  func testChalkDarkIsChalkWithTheAppearanceFixed() {
     let chalk = BuiltInThemeSpecifications.chalk
-    let pitch = BuiltInThemeSpecifications.pitch
-    XCTAssertNotEqual(chalk.palette, pitch.palette)
-    XCTAssertNotEqual(chalk.structure, pitch.structure)
-    XCTAssertNotEqual(
-      chalk.color(.paper, in: .dark),
-      pitch.color(.paper, in: .dark)
-    )
-    XCTAssertGreaterThan(pitch.structure.border.hairline, chalk.structure.border.hairline)
-    XCTAssertLessThan(pitch.structure.radius.panel, chalk.structure.radius.panel)
+    let dark = BuiltInThemeSpecifications.chalkDark
+    XCTAssertEqual(chalk.palette, dark.palette)
+    XCTAssertEqual(chalk.structure, dark.structure)
+    XCTAssertNotEqual(chalk.identifier, dark.identifier)
+    XCTAssertNil(chalk.lockedAppearance, "Chalk follows the system")
+    XCTAssertEqual(dark.lockedAppearance, .dark)
+  }
+
+  /// The point of locking it: the colours you get are the dark ones whatever
+  /// the desktop is set to.
+  func testChalkDarkResolvesToTheDarkTable() {
+    let dark = BuiltInThemeSpecifications.chalkDark
+    XCTAssertEqual(dark.color(.paper, in: .dark).hexString.lowercased(), "#1c1a23")
+    XCTAssertEqual(
+      dark.color(.paper, in: .dark),
+      BuiltInThemeSpecifications.chalk.color(.paper, in: .dark))
   }
 
   func testBuiltInThemesRaiseNoErrorsOrWarnings() {
@@ -112,20 +122,16 @@ final class ThemeSpecificationTests: XCTestCase {
     XCTAssertTrue(issues.allSatisfy { $0.severity == .note })
   }
 
-  func testPitchClearsBodyTextAAEverywhere() {
-    let pitch = BuiltInThemeSpecifications.pitch
-    for appearance in ThemeAppearance.allCases {
-      for role in ThemeColorRole.bodyTextRoles {
-        let ratio = ThemeContrastAudit.ratio(role, on: .paper, in: appearance, of: pitch.palette)
-        XCTAssertGreaterThanOrEqual(ratio, ThemeContrastAudit.bodyTextMinimum)
-      }
-      for role in ThemeContrastAudit.accentRoles {
-        let ratio = ThemeContrastAudit.ratio(role, on: .paper, in: appearance, of: pitch.palette)
-        XCTAssertGreaterThanOrEqual(
-          ratio, ThemeContrastAudit.bodyTextMinimum,
-          "\(role.rawValue) in \(appearance.rawValue) is only \(ratio):1"
-        )
-      }
+  /// Chalk's own dark table has to clear AA for body text, which it does and
+  /// which the light one does not have to be asked twice about. Checked
+  /// separately from the whole-theme audit so a regression here names itself.
+  func testChalkDarkClearsBodyTextAA() {
+    let palette = BuiltInThemeSpecifications.chalkDark.palette
+    for role in ThemeColorRole.bodyTextRoles {
+      let ratio = ThemeContrastAudit.ratio(role, on: .paper, in: .dark, of: palette)
+      XCTAssertGreaterThanOrEqual(
+        ratio, ThemeContrastAudit.bodyTextMinimum,
+        "\(role.rawValue) on the dark page is only \(ratio):1")
     }
   }
 

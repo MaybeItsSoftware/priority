@@ -26,7 +26,7 @@ extension ThemePlugin where Self: PluginSettingsPageProviding {
 }
 
 extension ChalkThemePlugin: PluginSettingsPageProviding {}
-extension PitchThemePlugin: PluginSettingsPageProviding {}
+extension ChalkDarkThemePlugin: PluginSettingsPageProviding {}
 
 struct ThemeSettingsPage: View {
   let manager: AppCoordinator
@@ -49,9 +49,9 @@ struct ThemeSettingsPage: View {
           .font(.caption)
           .foregroundStyle(.secondary)
 
-        if let preferred = themeManager.specification.preferredAppearance {
+        if let locked = themeManager.specification.lockedAppearance {
           Text(
-            "Drawn for \(preferred.rawValue) mode. Appearance still follows your Light/Dark/System setting above — a theme does not get to change that for you."
+            "Always \(locked.rawValue), whatever your desktop is set to — that is what picking this one means. Choose Chalk to follow your Light/Dark/System setting instead."
           )
           .font(.caption)
           .foregroundStyle(.secondary)

@@ -17,7 +17,7 @@ final class PluginRegistry {
   /// `nativeFirst()` writes them rather than in dictionary order.
   private(set) var celebrationPluginOrder: [String] = []
   /// Likewise for themes — the default should be first in the picker because
-  /// it is the default, not because "Chalk" sorts before "Pitch".
+  /// it is the default, not because one name sorts before the other.
   private(set) var themePluginOrder: [String] = []
 
   private(set) var activeCheckvistSyncPluginIdentifier: String?
@@ -243,10 +243,11 @@ final class PluginRegistry {
     registry.register(StrikeCelebrationPlugin(), activate: true)
     registry.register(FoldCelebrationPlugin())
     registry.register(SparkCelebrationPlugin())
-    // Themes, likewise a menu. Chalk is the house style and the default;
-    // Pitch is registered so the swap has somewhere to go.
+    // Themes, likewise a menu. Chalk is the house style and follows the
+    // system; Chalk Dark is the same palette with the appearance fixed, for
+    // running the app dark on a light desktop.
     registry.register(ChalkThemePlugin(), activate: true)
-    registry.register(PitchThemePlugin())
+    registry.register(ChalkDarkThemePlugin())
     return registry
   }
 }

@@ -8,23 +8,6 @@ record of what happened.
 
 ## Decisions owed
 
-### Pitch, the second theme
-
-`BuiltInThemeSpecifications.pitch` is a high-contrast theme invented to prove
-the theme picker works. It is not the house style: near-black ink `#0b0b0f` on
-white, a heavy `#0032c8` blue in place of azure, 2pt rules instead of
-hairlines, squared corners. Every hex in it was made up.
-
-Look at it in **Settings → Plugins → Chalk Theme** and decide: keep it, replace
-it, or delete it.
-
-**Recommendation: replace it with a dark Chalk.** The house style already
-specifies its own dark values — the grape hue pulled down, page `#1c1a23`,
-raised `#25232f`, border `#34313f`, accents keeping their hex at low alpha —
-so a dark Chalk would be a real second theme rather than an invented one. It is
-one dictionary in `Sources/PriorityCore/Theming/BuiltInThemeSpecifications.swift`
-and the audit tests will say if it fails a contrast rule.
-
 ### What `→` should do within Today
 
 Currently unbound. The candidate is "open the selected task in its list",
@@ -124,7 +107,9 @@ Worth an eye from someone who owns the palette:
 
 - **Dark `altRow`, `borderMuted` and `inputBorder`** have no stated hex in the
   house style. They were derived from the grape ramp as `#211f29`, `#2d2b38`
-  and `#403d4d`.
+  and `#403d4d`. These now carry more weight than they did, because Chalk Dark
+  is a theme someone may sit in all day rather than only what Chalk becomes
+  after sunset.
 - **How status accents are scored.** Emerald is 2.08:1 on chalk and amber
   1.56:1, so holding every accent to 4.5:1 would condemn the house palette.
   The audit instead holds only `primary` to 3:1 — it carries focus rings and
