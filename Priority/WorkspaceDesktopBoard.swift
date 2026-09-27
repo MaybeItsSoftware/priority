@@ -14,7 +14,6 @@ import UniformTypeIdentifiers
 
 struct WorkspaceKanbanBoard: View {
   @Environment(WorkspaceViewModel.self) private var model
-  @State private var visibleColumnIDs: Set<String> = []
 
   var body: some View {
     if model.selectedList == nil && !model.isMultiListScope {
@@ -38,32 +37,7 @@ struct WorkspaceKanbanBoard: View {
             WorkspacePaneCount(count: model.boardColumns.reduce(0) { $0 + model.tasks(in: $1).count })
           }
           FocusRule()
-          ScrollViewReader { scrollProxy in
-            GeometryReader { viewport in
-              ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: 14) {
-                  ForEach(model.boardColumns) { column in
-                    WorkspaceKanbanColumnView(
-                      column: column,
-                      width: columnWidth,
-                      height: max(100, viewport.size.height - 36))
-                      .environment(model)
-                      .id(column.id)
-                  }
-                }
-                .scrollTargetLayout()
-                .padding(FocusSurfaceMetrics.gutter)
-                .background(WorkspaceHorizontalOverscrollDisabler())
-              }
-              .onScrollTargetVisibilityChange(idType: String.self, threshold: 0.9) { ids in
-                visibleColumnIDs = Set(ids)
-              }
-            }
-            .onChange(of: model.activeBoardColumnID) { _, columnID in
-              guard let columnID, !visibleColumnIDs.contains(columnID) else { return }
-              scrollProxy.scrollTo(columnID, anchor: .center)
-            }
-          }
+          WorkspaceKanbanColumnStrip(columnWidth: columnWidth)
           WorkspaceScopedTaskComposer(board: true)
             .environment(model)
           .padding(14)
@@ -74,21 +48,69 @@ struct WorkspaceKanbanBoard: View {
   }
 }
 
+/// The columns themselves. The one part of the board that reads the
+/// selection, so an arrow key redraws this strip and the columns whose answer
+/// changed, not the board's header, composer and geometry.
+private struct WorkspaceKanbanColumnStrip: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  let columnWidth: CGFloat
+  @State private var visibleColumnIDs: Set<String> = []
+
+  var body: some View {
+    let activeColumnID = model.activeBoardColumnID
+    let tasksHaveKeyboard = model.keyboardFocusArea == .tasks
+    let selectedID = model.selectedTaskID
+    let selectedColumnID = selectedID.flatMap { model.boardColumnID(forTaskID: $0) }
+    ScrollViewReader { scrollProxy in
+      GeometryReader { viewport in
+        ScrollView(.horizontal) {
+          LazyHStack(alignment: .top, spacing: 14) {
+            ForEach(model.boardColumns) { column in
+              WorkspaceKanbanColumnView(
+                column: column,
+                width: columnWidth,
+                height: max(100, viewport.size.height - 36),
+                hasKeyboard: tasksHaveKeyboard && activeColumnID == column.id,
+                tasksHaveKeyboard: tasksHaveKeyboard,
+                selectedCardID: column.id == selectedColumnID ? selectedID : nil)
+                .environment(model)
+                .id(column.id)
+            }
+          }
+          .scrollTargetLayout()
+          .padding(FocusSurfaceMetrics.gutter)
+          .background(WorkspaceHorizontalOverscrollDisabler())
+        }
+        .onScrollTargetVisibilityChange(idType: String.self, threshold: 0.9) { ids in
+          visibleColumnIDs = Set(ids)
+        }
+      }
+      .onChange(of: activeColumnID) { _, columnID in
+        guard let columnID, !visibleColumnIDs.contains(columnID) else { return }
+        scrollProxy.scrollTo(columnID, anchor: .center)
+      }
+    }
+  }
+}
+
 struct WorkspaceKanbanColumnView: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let column: WorkspaceKanbanColumn
   let width: CGFloat
   let height: CGFloat
+  /// Whether the arrow keys are in this column.
+  let hasKeyboard: Bool
+  /// Whether the task pane holds the keyboard at all.
+  let tasksHaveKeyboard: Bool
+  /// The selected card, when it is one of this column's; nil otherwise, so a
+  /// selection moving between two other columns does not redraw this one.
+  let selectedCardID: String?
   @State private var isDropTargeted = false
   @State private var isAddingAtTop = false
   @State private var topTaskTitle = ""
   @State private var visibleCardIDs: Set<String> = []
   @FocusState private var topComposerFocused: Bool
-
-  private var hasKeyboard: Bool {
-    model.keyboardFocusArea == .tasks && model.activeBoardColumnID == column.id
-  }
 
   private var columnBorder: Color {
     if isDropTargeted { return theme.primary }
@@ -156,7 +178,10 @@ struct WorkspaceKanbanColumnView: View {
         ScrollView(.vertical) {
           LazyVStack(alignment: .leading, spacing: 10) {
             ForEach(tasks) { task in
-              WorkspaceKanbanCard(task: task, column: column)
+              WorkspaceKanbanCard(
+                task: task, column: column,
+                isSelected: task.id == selectedCardID,
+                hasKeyboard: tasksHaveKeyboard && task.id == selectedCardID)
                 .environment(model)
                 .id(task.id)
             }
@@ -191,13 +216,12 @@ struct WorkspaceKanbanColumnView: View {
         .onScrollTargetVisibilityChange(idType: String.self) { ids in
           visibleCardIDs = Set(ids)
         }
-        .onChange(of: model.selectedTaskID) { _, id in
-          guard let id, !visibleCardIDs.contains(id),
-            tasks.contains(where: { $0.id == id }) else { return }
+        .onChange(of: selectedCardID) { _, id in
+          guard let id, !visibleCardIDs.contains(id) else { return }
           cardProxy.scrollTo(id, anchor: .center)
         }
         .onAppear {
-          if let id = model.selectedTaskID, tasks.contains(where: { $0.id == id }) {
+          if let id = selectedCardID {
             cardProxy.scrollTo(id, anchor: .center)
           }
         }
@@ -245,9 +269,10 @@ struct WorkspaceKanbanCard: View {
   @State private var newSubtaskTitle = ""
   let task: WorkspaceTask
   let column: WorkspaceKanbanColumn
-
-  private var isSelected: Bool { task.id == model.selectedTaskID }
-  private var hasKeyboard: Bool { isSelected && model.keyboardFocusArea == .tasks }
+  /// Handed in rather than read from the model, so moving the selection
+  /// redraws the two cards it moved between and no others.
+  let isSelected: Bool
+  let hasKeyboard: Bool
 
   var body: some View {
     cardSurface
@@ -271,8 +296,8 @@ struct WorkspaceKanbanCard: View {
           model.reportKeyboardFocus(.tasks)
         }
       }
-      .onChange(of: model.selectedTaskID) { _, id in
-        if id == task.id && !isCardFocused { isCardFocused = true }
+      .onChange(of: isSelected) { _, selected in
+        if selected && !isCardFocused { isCardFocused = true }
       }
       .onKeyPress(keys: [.space, .return, .upArrow, .downArrow, .leftArrow, .rightArrow, "i"]) { press in
         handleCardKey(press)
@@ -391,13 +416,13 @@ struct WorkspaceKanbanCard: View {
       Button {
         if model.activeFocusSession == nil {
           model.startFocus(on: task)
-        } else if model.activeFocusTask?.id == task.id {
+        } else if model.activeFocusSession?.activeTaskId == task.id {
           model.presentFocusScreen()
         } else {
           model.addToFocusQueue(task)
         }
       } label: {
-        Image(systemName: model.activeFocusTask?.id == task.id ? "bolt.fill" :
+        Image(systemName: model.activeFocusSession?.activeTaskId == task.id ? "bolt.fill" :
           model.activeFocusSession == nil ? "bolt" : "plus")
           .font(.caption)
       }

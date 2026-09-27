@@ -149,6 +149,14 @@ extension WorkspaceViewModel {
       if nestedLists != index.nestedLists { nestedLists = index.nestedLists }
       if archivedNestedLists != index.archivedNestedLists { archivedNestedLists = index.archivedNestedLists }
       if listTaskCounts != index.taskCounts { listTaskCounts = index.taskCounts }
+      var layout = Hasher()
+      for list in lists { layout.combine(list.id); layout.combine(list.folderId) }
+      for folder in folders { layout.combine(folder.id); layout.combine(folder.parentFolderId) }
+      for item in nestedLists {
+        layout.combine(item.id); layout.combine(item.task.parentTaskId); layout.combine(item.task.isPromoted == true)
+      }
+      let key = layout.finalize()
+      if sidebarLayoutKey != key { sidebarLayoutKey = key }
     } catch {
       errorMessage = error.localizedDescription
     }

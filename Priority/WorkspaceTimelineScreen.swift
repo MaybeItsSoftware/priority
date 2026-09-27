@@ -25,10 +25,11 @@ struct WorkspaceTimelineScreen: View {
     VStack(spacing: 0) {
       header
       Divider()
-      // Ticking each second keeps the running block growing and the "now" rule
-      // moving; everything else on screen is a finished record and does not
-      // care what time it is.
-      TimelineView(.periodic(from: .now, by: 1)) { context in
+      // Ticking keeps the running block growing and the "now" rule moving;
+      // everything else on screen is a finished record and does not care what
+      // time it is. So it ticks by the second only while a block is running,
+      // and otherwise at the pace the rule moves — about a point a minute.
+      TimelineView(.periodic(from: .now, by: tickInterval)) { context in
         content(now: context.date)
       }
       Divider()
@@ -38,6 +39,14 @@ struct WorkspaceTimelineScreen: View {
     .background(Color(nsColor: .textBackgroundColor))
     .onAppear { model.reloadFocus() }
     .onChange(of: model.focusHistoryDate) { _, _ in model.reloadFocus() }
+  }
+
+  /// How often the day is redrawn. A past day never changes while you read
+  /// it; today changes by the minute, or by the second while a block runs.
+  private var tickInterval: TimeInterval {
+    guard model.timelineShowsToday else { return 3600 }
+    if let session = model.activeFocusSession, session.pausedAt == nil, session.activeTaskId != nil { return 1 }
+    return 60
   }
 
   // MARK: - Chrome

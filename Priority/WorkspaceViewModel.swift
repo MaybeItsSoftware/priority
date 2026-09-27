@@ -341,7 +341,19 @@ enum WorkspaceSidebarItem: Identifiable {
   var creationIsNested = false
   var creationTaskParentID: String?
   var creationTaskListID: String?
-  var selectedTaskID: String?
+  var selectedTaskID: String? {
+    didSet {
+      let has = selectedTaskID != nil
+      if hasSelectedTask != has { hasSelectedTask = has }
+    }
+  }
+  /// Whether anything is selected, which changes far less often than what is.
+  /// The window shell reads this, so moving the selection does not redraw it.
+  private(set) var hasSelectedTask = false
+  /// Stands for where every list, folder and nested list sits, so the sidebar
+  /// can animate a move without building arrays to compare on each render.
+  /// Set by `reloadNestedListsNow()`.
+  var sidebarLayoutKey = 0
   var focusedBoardColumnID: String?
 
   var activeBoardColumnID: String? {

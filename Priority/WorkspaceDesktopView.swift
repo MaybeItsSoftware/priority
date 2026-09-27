@@ -10,8 +10,6 @@ struct WorkspaceDesktopView: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(AppCoordinator.self) private var manager
   @Environment(\.theme) private var theme
-  private let everythingSidebarID = "priority:everything"
-  @State private var isTopLevelDropTargeted = false
   /// The sidebar width the current divider drag started from, so the gesture
   /// measures a translation rather than accumulating deltas.
   @State private var dragStartWidth: CGFloat?
@@ -39,7 +37,7 @@ struct WorkspaceDesktopView: View {
       // looking at which list something came from, and losing your place in the
       // workspace to do that is its own distraction.
       if model.isSidebarVisible {
-        sidebar
+        WorkspaceSidebarPane(focusedArea: $focusedArea)
           .focusSection()
           .frame(width: model.sidebarWidth)
         sidebarResizeHandle
@@ -149,8 +147,12 @@ struct WorkspaceDesktopView: View {
       .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
       // Selection remains light-weight; only I or an explicit inspector
       // command opens the editor and consumes the third pane.
-      if model.isInspectorVisible && model.selectedTask != nil && !model.showsFocusScreen && !model.showsTimelineScreen {
-        inspector
+      //
+      // `hasSelectedTask` rather than `selectedTask`: this body holds the whole
+      // window, and reading the selection itself would redraw all of it on
+      // every arrow key.
+      if model.isInspectorVisible && model.hasSelectedTask && !model.showsFocusScreen && !model.showsTimelineScreen {
+        WorkspaceInspectorPane(focusedArea: $focusedArea)
           .focusSection()
           .frame(minWidth: 210, idealWidth: 250, maxWidth: 320)
       }
@@ -260,7 +262,43 @@ struct WorkspaceDesktopView: View {
     }
   }
 
-  private var sidebar: some View {
+  @ViewBuilder
+  private var taskPane: some View {
+    switch model.viewMode {
+    case .today:
+      // The same view the hotkey summons over other apps. One component, two
+      // mounts: the day cannot read differently depending on where you open it.
+      DayView(surface: .window, resetToken: model.dayPresentationCount)
+        .environment(model)
+        .background(Color(nsColor: .textBackgroundColor))
+    case .board:
+      WorkspaceKanbanBoard()
+        .environment(model)
+    case .outline:
+      WorkspaceOutlinePane()
+    case .matrix:
+      WorkspaceMatrixDashboard()
+        .environment(model)
+        .focusable()
+        .focused($focusedArea, equals: .tasks)
+        .focusEffectDisabled()
+    }
+  }
+}
+
+/// The left-hand column: lists, folders and the focus launcher.
+///
+/// Its own view rather than a computed property of the window, so moving the
+/// sidebar's cursor redraws the sidebar and nothing else, and a keystroke in
+/// the task pane does not redraw it at all.
+private struct WorkspaceSidebarPane: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  var focusedArea: FocusState<WorkspaceFocusArea?>.Binding
+  private let everythingSidebarID = "priority:everything"
+  @State private var isTopLevelDropTargeted = false
+
+  var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       sidebarHeader
       WorkspaceFocusLauncher()
@@ -379,11 +417,12 @@ struct WorkspaceDesktopView: View {
       // two-line source-list item, which on a list of one-line names reads as
       // double spacing.
       .environment(\.defaultMinListRowHeight, 22)
-      .animation(.easeInOut(duration: 0.22), value: model.lists.map { "\($0.id)/\($0.folderId ?? "root")" })
-      .animation(.easeInOut(duration: 0.22), value: model.folders.map { "\($0.id)/\($0.parentFolderId ?? "root")" })
-      .animation(.easeInOut(duration: 0.22), value: model.nestedLists.map { "\($0.id)/\($0.task.parentTaskId ?? "root")/\($0.task.isPromoted == true)" })
+      // One number standing for where every list, folder and nested list
+      // sits, worked out when they are reloaded rather than as three arrays of
+      // strings on every render.
+      .animation(.easeInOut(duration: 0.22), value: model.sidebarLayoutKey)
       .focusable()
-      .focused($focusedArea, equals: .sidebar)
+      .focused(focusedArea, equals: .sidebar)
       .focusEffectDisabled()
       .onChange(of: model.focusRequest) { _, _ in
         if model.requestedFocusArea == .sidebar {
@@ -481,173 +520,6 @@ struct WorkspaceDesktopView: View {
           Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
         }
       }
-  }
-
-  @ViewBuilder
-  private var taskPane: some View {
-    switch model.viewMode {
-    case .today:
-      // The same view the hotkey summons over other apps. One component, two
-      // mounts: the day cannot read differently depending on where you open it.
-      DayView(surface: .window, resetToken: model.dayPresentationCount)
-        .environment(model)
-        .background(Color(nsColor: .textBackgroundColor))
-    case .board:
-      WorkspaceKanbanBoard()
-        .environment(model)
-    case .outline:
-      outlineTaskPane
-    case .matrix:
-      WorkspaceMatrixDashboard()
-        .environment(model)
-        .focusable()
-        .focused($focusedArea, equals: .tasks)
-        .focusEffectDisabled()
-    }
-  }
-
-  @ViewBuilder
-  private var outlineTaskPane: some View {
-    if model.isMultiListScope || model.selectedList != nil {
-      let outlineByList = Dictionary(grouping: model.outline) { $0.task.listId }
-      VStack(spacing: 0) {
-        WorkspacePaneHeader(title: model.currentBoardScopeTitle) {
-          if let scope = model.scopeTask {
-            WorkspacePaneScopeExit(title: scope.title) { model.leaveTaskScope() }
-          }
-        } trailing: {
-          WorkspacePaneCount(count: model.outline.filter { $0.task.status == .open }.count)
-        }
-        FocusRule()
-
-        List {
-          if model.isMultiListScope {
-            // Grouped by list, because the point of a combined view is seeing
-            // where each task came from. A folder shows only its own lists.
-            ForEach(model.scopeLists) { list in
-              Section {
-                let items = outlineByList[list.id] ?? []
-                if items.isEmpty {
-                  Text("No tasks").foregroundStyle(.tertiary)
-                } else {
-                  ForEach(items) { item in taskRow(item) }
-                }
-              } header: {
-                Button(list.name) { model.selectList(list.id) }
-                  .buttonStyle(.plain)
-                  .focusable()
-                  .lineLimit(1)
-                  .truncationMode(.middle)
-                  .help(list.name)
-              }
-            }
-          } else {
-            ForEach(model.outline) { item in taskRow(item) }
-          }
-        }
-        .listStyle(.inset)
-        .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.tasks) })
-
-        WorkspaceScopedTaskComposer(board: false)
-          .environment(model)
-          .padding(14)
-      }
-    } else {
-      ContentUnavailableView("No list selected", systemImage: "list.bullet")
-    }
-  }
-
-  private func taskRow(_ item: TaskOutlineItem) -> some View {
-    HStack(spacing: 8) {
-      Button {
-        if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
-      } label: {
-        Image(systemName: model.itemSymbol(for: item.task))
-          .foregroundStyle(item.task.status == .open ? theme.muted : theme.success)
-      }
-      .buttonStyle(.plain)
-      .focusable()
-
-      Button(item.task.title) {
-        model.selectTask(item.task)
-        model.reportKeyboardFocus(.tasks)
-      }
-        .buttonStyle(.plain)
-        .focusable()
-        .lineLimit(1)
-        .truncationMode(.tail)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .help(item.task.title)
-        .strikethrough(item.task.status != .open)
-        .foregroundStyle(item.task.status == .open ? .primary : .secondary)
-      WorkspaceTaskPlanningBadges(task: item.task).frame(maxWidth: 170, alignment: .leading)
-    }
-    .padding(.leading, CGFloat(item.depth) * 16)
-    .contentShape(Rectangle())
-    .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
-    .workspaceSelection(
-      isSelected: item.task.id == model.selectedTaskID,
-      hasKeyboard: model.keyboardFocusArea == .tasks && item.task.id == model.selectedTaskID
-    )
-    .onTapGesture { model.selectTask(item.task) }
-    .contextMenu { WorkspaceItemActions(task: item.task) }
-    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: Binding(
-      get: { model.dragDestinationListID == item.task.id },
-      set: { model.dragDestinationListID = $0 ? item.task.id : nil }
-    )) { providers in
-      guard item.task.isList else { return false }
-      return WorkspaceTaskDrag.readItemID(from: providers) { payload in
-        model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)
-      }
-    }
-    .overlay(RoundedRectangle(cornerRadius: 6)
-      .stroke(model.dragDestinationListID == item.task.id && item.task.isList ? Color.accentColor : .clear, lineWidth: 2))
-  }
-
-  private var inspector: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      // The pane names the task rather than itself. "INSPECTOR" told you
-      // something you could already see; which task you are editing is the
-      // thing that is genuinely ambiguous when the selection moves behind you.
-      WorkspacePaneHeader(title: model.selectedTask?.title ?? "Nothing selected") {
-        if let task = model.selectedTask, let list = model.list(for: task) {
-          Text(list.name)
-            .font(theme.bodyFont(size: 11))
-            .foregroundStyle(theme.muted)
-            .lineLimit(1)
-        }
-      }
-      FocusRule()
-      // The editor is about twenty-five controls tall. It was in a plain
-      // VStack, so on anything short of a full-height window the last of them
-      // — Save, Revert and Start focus — were simply off the bottom with no
-      // way to reach them.
-      ScrollView {
-        if let task = model.selectedTask {
-          VStack(alignment: .leading, spacing: theme.space.md) {
-            LocalTaskInspector(
-              task: task,
-              focusRequest: model.focusRequest,
-              requestedFocusArea: model.requestedFocusArea)
-              .environment(model)
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .focusSurfaceGutter()
-          .padding(.vertical, theme.space.md)
-        } else {
-          Text("Select a task to see its notes, schedule, estimate, and focus controls here.")
-            .font(theme.bodyFont(size: 12))
-            .foregroundStyle(theme.muted)
-            .focusSurfaceGutter()
-            .padding(.vertical, theme.space.md)
-        }
-      }
-    }
-    .background(.background)
-    .focusable()
-    .focused($focusedArea, equals: .inspector)
-    .focusEffectDisabled()
-    .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.inspector) })
   }
 }
 

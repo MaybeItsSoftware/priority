@@ -71,8 +71,10 @@ extension WorkspaceViewModel {
   }
 
   func descendants(of task: WorkspaceTask) -> [TaskOutlineItem] {
-    _ = taskContentRevision
+    // A board card's descendants are observed directly; only the fallback
+    // below needs to hear that the rows it read have been replaced.
     if let cached = boardDescendants[task.id] { return cached }
+    _ = taskContentRevision
     if let cached = descendantCache[task.id] { return cached }
     guard let store else { return [] }
     let items = (try? store.outline(in: task.listId, parentTaskId: task.id)) ?? []
@@ -108,14 +110,26 @@ extension WorkspaceViewModel {
     return boardColumnsByID[id] ?? boardColumns.first
   }
 
+  /// Assigns only what changed: every card and column reads these, and an
+  /// assignment is a redraw whether or not the value moved.
   func rebuildBoardIndex() {
-    boardColumnsByID = Dictionary(boardColumns.map { ($0.id, $0) },
-                                  uniquingKeysWith: { first, _ in first })
+    let byID = Dictionary(boardColumns.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    if boardColumnsByID != byID { boardColumnsByID = byID }
     let tasks = boardTasks + boardCrossColumnTasks
-    boardVisibleTaskIDs = Set(tasks.map(\.id))
-    boardTasksByColumn = Dictionary(grouping: tasks) { task in
+    let visible = Set(tasks.map(\.id))
+    if boardVisibleTaskIDs != visible { boardVisibleTaskIDs = visible }
+    let grouped = Dictionary(grouping: tasks) { task in
       column(for: task)?.id ?? ""
     }
+    if boardTasksByColumn != grouped { boardTasksByColumn = grouped }
+  }
+
+  /// The column a visible card sits in, by id alone — so the board can ask
+  /// where the selection is without resolving the selected task.
+  func boardColumnID(forTaskID id: String) -> String? {
+    guard boardVisibleTaskIDs.contains(id) else { return nil }
+    let columnID = boardTaskColumns[id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
+    return (boardColumnsByID[columnID] ?? boardColumns.first)?.id
   }
 
   func moveTask(_ task: WorkspaceTask, toKanbanColumn column: WorkspaceKanbanColumn) {
