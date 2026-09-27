@@ -10,6 +10,9 @@ mod tests;
 mod tools;
 mod tui;
 mod workspace;
+mod workspace_tasks;
+#[cfg(test)]
+mod workspace_tests;
 
 use checkvist::{CheckvistClient, CheckvistConfig};
 use clap::Parser;

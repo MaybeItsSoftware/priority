@@ -1,12 +1,13 @@
 # CLI Guide
 
 `priority` is a Rust command-line tool for the same data the app works with:
-your Checkvist lists, your dailies, and your day log.
+your local workspace (folders, lists and tasks), your Checkvist lists, your
+dailies, and your day log.
 
 It is a peer of the app rather than a remote control for it. It talks to the
-Checkvist API directly and reads Priority's local files off disk, so every
-command works whether or not the app is running — and the writes take the same
-file lock the app does, so both can be open at once.
+Checkvist API directly and reads and writes Priority's local files off disk, so
+every command works whether or not the app is running. The writes take the same
+locks the app does, so both can be open at once.
 
 ```bash
 ./scripts/install_cli.sh     # builds release and links `priority` onto your PATH
@@ -194,6 +195,9 @@ elsewhere for a CLI-only setup.
   dailies     Show your dailies with today's schedule and tick state
   daily       Create, change or tick a daily
   metadata    Priority's own state: ranks, recurrence, start dates, matrix, board
+  ws          The app's local workspace: folders, lists and tasks (alias: workspace)
+  focus       What the focus timer is doing
+  focused     Focused time already recorded
   auth        Store, check or clear this CLI's Checkvist credentials
   mcp         Run as an MCP stdio server
   tools       List the tools this binary exposes
@@ -239,10 +243,44 @@ week rather than sitting on fixed days, counted from the day you set it. The two
 are alternatives — passing both is refused rather than silently resolved — and
 `--weekdays` on an existing cycle ends it, restoring the days it had before.
 
+### The local workspace
+
+`priority ws` works on the tree the app shows, in
+`~/Library/Application Support/Priority/priority.sqlite`, not on Checkvist. Its
+ids are the workspace's UUIDs, and `ws tree` / `ws tasks` print them beside
+every row. The global `--list-id` is a Checkvist id and is ignored here.
+
+```bash
+priority ws tree                                   # folders, lists, nested lists
+priority ws tasks <LIST_ID>                        # a list's open tasks as a tree
+priority ws tasks <LIST_ID> --all --parent <TASK_ID>
+
+priority ws add Read the paper --list <LIST_ID> \
+  --link 'obsidian://open?vault=Studies&file=Paper' -c this-week
+priority ws add Section 3 --parent <TASK_ID> -n "Start with the proofs"
+priority ws update <TASK_ID> --title "Read the paper twice" --link https://example.com
+priority ws update <TASK_ID> --no-links
+priority ws update <TASK_ID> --kind list --pin      # nested list, pinned to the sidebar
+priority ws done <TASK_ID>
+priority ws move <TASK_ID> --parent <TASK_ID>       # the subtree comes too
+priority ws move <TASK_ID> --list <LIST_ID> --position 1
+priority ws to-list <TASK_ID> --folder <FOLDER_ID>  # promote to its own list
+priority ws new-folder Computer Science
+priority ws new-list Revision --folder <FOLDER_ID>
+priority ws move-list <LIST_ID> --folder <FOLDER_ID>
+priority ws rm <TASK_ID>
+```
+
+These write while the app is open. Each command is one step in the app's Undo
+menu, labelled "MCP: …", and the app picks the change up within about a
+second. `docs/mcp-server.md` explains how that is made safe. The one thing
+refused is completing a repeating task, since only the app can schedule its
+next occurrence.
+
 ### The escape hatch
 
-Every command is one of the nineteen MCP tools under a friendlier name. If you
-want the tool directly:
+Every command is one of the MCP tools under a friendlier name. If you want the
+tool directly:
 
 ```bash
 priority tools
@@ -316,13 +354,17 @@ cli/
   src/
     main.rs       entry point; --mcp-server is intercepted before argument parsing
     cli.rs        subcommands, the auth commands, and the renderings
-    tools.rs      the nineteen tools, implemented once
+    tools.rs      the tools, implemented once
     checkvist.rs  the API client
     config.rs     ~/.config/priority/config.json, and the environment-first rule
     local.rs      dailies, day log, and preferences, off disk
     lock.rs       flock(2), on the same lock files the app takes
+    workspace.rs  the app's database, read-only: the focus timer and its history
+    workspace_tasks.rs  the app's database, read and written: folders, lists, tasks
     mcp.rs        the JSON-RPC stdio server and the tool schemas
     tests.rs      unit tests
+    workspace_tests.rs  the workspace writes, against scratch copies of the real schema
+    fixtures/workspace_schema.sql  that schema, from scripts/dump_workspace_schema.sh
 ```
 
 `cli.rs` and `mcp.rs` are both front ends onto `tools.rs`. Neither implements a

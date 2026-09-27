@@ -25,7 +25,8 @@ pub struct ToolOutcome {
 pub struct Tools {
     pub client: CheckvistClient,
     pub local: LocalState,
-    /// Read-only, and the only thing here that reads the app's own database.
+    /// The app's own database. The focus reads are read-only; the task tree
+    /// is written under the app's undo journal (`workspace_tasks.rs`).
     pub workspace: Workspace,
 }
 
@@ -342,8 +343,174 @@ impl Tools {
                 Ok(outcome(format!("Focused time ({days} day(s))"), payload))
             }
 
+            // -- the app's local task tree, read and written ------------------
+            "workspace_tree" => {
+                let include_archived = as_bool(arguments.get("include_archived"), false)?;
+                Ok(outcome(
+                    "Workspace folders and lists",
+                    self.workspace.tree(include_archived)?,
+                ))
+            }
+
+            "workspace_tasks" => {
+                let list_id = required_string(arguments, "list_id")?;
+                let parent = as_id(arguments.get("parent_task_id"));
+                let include_closed = as_bool(arguments.get("include_closed"), false)?;
+                let payload = self
+                    .workspace
+                    .tasks(&list_id, parent.as_deref(), include_closed)?;
+                let title = format!(
+                    "Tasks in \"{}\" ({} shown)",
+                    payload["list"]["name"].as_str().unwrap_or(&list_id),
+                    payload["task_count"]
+                );
+                Ok(outcome(title, payload))
+            }
+
+            "workspace_task_add" => {
+                let parent_task_id = as_id(arguments.get("parent_task_id"));
+                // The parent names its own list, so either is enough.
+                let list_id = match (as_id(arguments.get("list_id")), &parent_task_id) {
+                    (Some(list_id), _) => list_id,
+                    (None, Some(parent)) => self.workspace.list_of_task(parent)?,
+                    (None, None) => {
+                        return Err(ToolError::new(
+                            "Missing required argument: list_id (or a parent_task_id).",
+                        ));
+                    }
+                };
+                let task = crate::workspace_tasks::NewTask {
+                    list_id,
+                    title: required_string(arguments, "title")?,
+                    parent_task_id,
+                    notes: as_string(arguments.get("notes")).unwrap_or_default(),
+                    external_links: as_string_list(arguments.get("external_links"))?
+                        .unwrap_or_default(),
+                    kanban_column: as_string(arguments.get("kanban_column")),
+                    kind: as_string(arguments.get("kind")).unwrap_or_else(|| "task".into()),
+                    at_top: as_bool(arguments.get("at_top"), false)?,
+                };
+                Ok(outcome("Task created", self.workspace.add_task(task)?))
+            }
+
+            "workspace_task_update" => {
+                let task_id = required_string(arguments, "task_id")?;
+                let edit = crate::workspace_tasks::TaskEdit {
+                    title: as_string(arguments.get("title")),
+                    notes: as_string(arguments.get("notes")),
+                    external_links: as_string_list(arguments.get("external_links"))?,
+                    status: as_string(arguments.get("status")).map(|s| s.trim().to_lowercase()),
+                    // Present-but-null clears the column; absent leaves it.
+                    kanban_column: arguments
+                        .get("kanban_column")
+                        .map(|value| as_string(Some(value))),
+                    kind: as_string(arguments.get("kind")).map(|s| s.trim().to_lowercase()),
+                    pinned: match arguments.get("pinned") {
+                        None | Some(Value::Null) => None,
+                        value => Some(as_bool(value, false)?),
+                    },
+                };
+                Ok(outcome(
+                    "Task updated",
+                    self.workspace.update_task(&task_id, edit)?,
+                ))
+            }
+
+            "workspace_task_move" => {
+                let task_id = required_string(arguments, "task_id")?;
+                let parent = as_id(arguments.get("parent_task_id"));
+                let list_id = as_id(arguments.get("list_id"));
+                let position = as_optional_int(arguments.get("position"))?;
+                Ok(outcome(
+                    "Task moved",
+                    self.workspace.move_task(
+                        &task_id,
+                        parent.as_deref(),
+                        list_id.as_deref(),
+                        position,
+                    )?,
+                ))
+            }
+
+            "workspace_task_to_list" => {
+                let task_id = required_string(arguments, "task_id")?;
+                let folder_id = as_id(arguments.get("folder_id"));
+                Ok(outcome(
+                    "Task promoted to its own list",
+                    self.workspace
+                        .task_to_list(&task_id, folder_id.as_deref())?,
+                ))
+            }
+
+            "workspace_task_delete" => {
+                let task_id = required_string(arguments, "task_id")?;
+                Ok(outcome(
+                    "Task deleted",
+                    self.workspace.delete_task(&task_id)?,
+                ))
+            }
+
+            "workspace_folder_create" => {
+                let name = required_string(arguments, "name")?;
+                let parent = as_id(arguments.get("parent_folder_id"));
+                Ok(outcome(
+                    "Folder created",
+                    self.workspace.create_folder(&name, parent.as_deref())?,
+                ))
+            }
+
+            "workspace_list_create" => {
+                let name = required_string(arguments, "name")?;
+                let folder_id = as_id(arguments.get("folder_id"));
+                Ok(outcome(
+                    "List created",
+                    self.workspace.create_list(&name, folder_id.as_deref())?,
+                ))
+            }
+
+            "workspace_list_move" => {
+                let list_id = required_string(arguments, "list_id")?;
+                let folder_id = as_id(arguments.get("folder_id"));
+                Ok(outcome(
+                    "List moved",
+                    self.workspace.move_list(&list_id, folder_id.as_deref())?,
+                ))
+            }
+
             _ => Err(ToolError::new(format!("Unknown tool: {name}"))),
         }
+    }
+}
+
+/// A workspace id, where empty means absent: a client that cannot send null
+/// can still say "top level" or "no parent".
+pub fn as_id(value: Option<&Value>) -> Option<String> {
+    as_string(value)
+        .map(|text| text.trim().to_string())
+        .filter(|text| !text.is_empty())
+}
+
+/// An array of strings. A bare string is taken as a one-item list, since that
+/// is what a client means by `"external_links": "https://…"`.
+pub fn as_string_list(value: Option<&Value>) -> Result<Option<Vec<String>>> {
+    match value {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(text)) => Ok(Some(vec![text.clone()])),
+        Some(Value::Array(items)) => items
+            .iter()
+            .map(|item| match item {
+                Value::String(text) => Ok(text.clone()),
+                other => Err(ToolError::new(format!(
+                    "Expected an array of strings, found {}.",
+                    type_name(other)
+                ))),
+            })
+            .collect::<Result<Vec<_>>>()
+            .map(Some),
+        Some(other) => Err(ToolError::new(format!(
+            "Expected an array of strings, got {}.",
+            type_name(other)
+        ))),
     }
 }
 

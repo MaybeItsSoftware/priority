@@ -12,7 +12,7 @@ Priority ships an MCP stdio server so an AI assistant can work directly with you
 
 ## What It Can Do
 
-The server exposes 23 MCP tools, in three groups.
+The server exposes 33 MCP tools, in three groups.
 
 **Checkvist tools** — these reach the Checkvist API directly, so they work
 whether or not the app is running:
@@ -47,14 +47,26 @@ Checkvist has no representation for:
 | `daily_update` | Rename, reschedule, archive/unarchive a daily | write |
 | `daily_tick` | Tick or un-tick a daily for today | write |
 
-**Workspace tools** — these read the app's own database,
-`~/Library/Application Support/Priority/priority.sqlite`, and are the only
-part of the server that does:
+**Workspace tools** — these reach the app's own database,
+`~/Library/Application Support/Priority/priority.sqlite`, which is the app's
+source of truth. It is the tree the app actually shows, not the Checkvist edge of
+it, and the only part of the server that touches it. Ids here are the
+workspace's uppercase UUIDs, not Checkvist's integers:
 
 | Tool | What it does | |
 |---|---|---|
 | `focus_status` | What the focus timer is doing: the task, paused or running, elapsed and planned seconds, and the queue behind it | read |
 | `focus_history` | Focused time already recorded over the last N logical days, newest first | read |
+| `workspace_tree` | Folders, lists (with `folder_id`, open-task counts, visible root) and nested lists | read |
+| `workspace_tasks` | One list's task tree: ids, titles, notes, status, kind, kanban column, external links | read |
+| `workspace_task_add` | Create a task or nested list, at a list's top level or under a parent, with notes, links and a column | write |
+| `workspace_task_update` | Title, notes, links, status, column, kind (task ⇄ nested list), sidebar pin | write |
+| `workspace_task_move` | Reparent (subtree follows, across lists too) and/or reorder by 1-based position | write |
+| `workspace_task_to_list` | Promote a task to a standalone list, optionally in a folder, keeping its subtasks | write |
+| `workspace_task_delete` | Delete a task and its subtree | write |
+| `workspace_folder_create` | Create a folder, optionally inside another | write |
+| `workspace_list_create` | Create a list, optionally in a folder | write |
+| `workspace_list_move` | Move a list into a folder, or to the top level | write |
 
 Notes:
 
@@ -64,18 +76,66 @@ Notes:
 - The local tools need no IPC. They read the app's preferences plist by bundle
   id and the day-log files at the same Application Support path, under the same
   `flock` protocol the app uses.
-- The workspace tools open the database with `SQLITE_OPEN_READ_ONLY`, so they
-  are read-only by the connection rather than by convention. They work while
-  the app is running — SQLite's WAL mode is built for exactly that — and need
-  no IPC. They do **not** recompute any of the app's policy: which task is
-  next, whether one is available in the current context, how a day is scored
-  all live in `PriorityCore`, and a second implementation of them here is the
-  thing this server stopped having. These are row reads and arithmetic the
-  schema already implies. `database_path` in the CLI's config, or
+- The focus tools open the database with `SQLITE_OPEN_READ_ONLY`, so they are
+  read-only by the connection rather than by convention, and they stay that
+  way: finishing a block has day-log and scoring side effects that live in
+  `WorkspaceStore`, and a second writer would skip them. None of the workspace
+  tools recompute the app's policy. Which task is next, whether one is
+  available in the current context and how a day is scored all live in
+  `PriorityCore`, and a second implementation of them here is the thing this
+  server stopped having. `database_path` in the CLI's config, or
   `$PRIORITY_MCP_DB_PATH`, points them elsewhere.
-- Writing to that database stays with the app. `WorkspaceStore` owns the
-  migrations, the journalling that makes undo work, and the day-log side
-  effects of finishing a block; a second writer would skip all three.
+- The task-tree writes work **while the app is running**. See
+  [How the workspace writes stay safe](#how-the-workspace-writes-stay-safe).
+
+### How the workspace writes stay safe
+
+The `workspace_*` write tools make the CLI a second writer to a database that
+`WorkspaceStore` (Swift, GRDB) owns. That is safe because of four things
+(`cli/src/workspace_tasks.rs`):
+
+1. **Each write copies a `WorkspaceStore` method, row for row.** The method is
+   named in its doc comment: `createTask`, `setStatus`, `setKanbanColumn`,
+   `moveTask`, `moveTaskToFolder`, `setItemKind`, `setNestedListPromoted`,
+   `createFolder`, `createList`, `moveList`, `deleteTask`. That covers the
+   sort-order conventions (append is `MAX + 1`, a reorder re-numbers densely),
+   uppercase UUIDs, GRDB's UTC `YYYY-MM-DD HH:MM:SS.SSS` timestamps, lazily
+   created `task_metadata` rows with `'[]'` defaults, and the same refusals
+   (no cycles, and no extracting a list's own visible root). The search
+   index is kept level by the schema's own FTS triggers. If you change one of
+   those Swift methods, the Rust one has to follow.
+2. **Every write is one undo step, labelled `MCP: …`.** Each runs inside the
+   same protocol as `journalledWrite`: arm `undo_control` with a fresh group
+   and label, let the database's `change_log` triggers record the rows, disarm,
+   clear redo if anything changed, and trim the journal to 100 steps, all in
+   one transaction. The app's Undo menu then offers, say, "Undo MCP: New Task",
+   and undoing it replays those rows exactly like one of its own. A refused
+   write rolls back, journal entries included.
+3. **SQLite does the locking.** `BEGIN IMMEDIATE` takes the write lock up
+   front, with a 5-second busy timeout on both sides, so each writer waits out
+   the other rather than failing. Foreign keys are on, as in the app, so a
+   delete cascades to subtasks. A database older than the schema these writes
+   target (`v16_task_completion_time`) is refused rather than written.
+4. **The app notices.** GRDB's observation only sees the app's own writes, so
+   `WorkspaceViewModel+ExternalWrites.swift` polls `PRAGMA data_version` once a
+   second on the pool's writer connection. That number moves only when *another*
+   connection commits. When it moves, the app flushes any draft being typed,
+   reloads the way it does after undo, and reconciles open editors against the
+   new rows, so a field changed on both sides shows as a conflict instead of
+   being lost.
+
+Promotion follows the app's model. `workspace_task_to_list` is the app's
+"drop on a folder / the top level" (`moveTaskToFolder`). It creates a list
+named after the task, with the source list's colour, and keeps the task itself
+as the new list's `visibleRootTaskId`, turned into `itemKind = 'list'`, so its
+subtasks become the list's contents with ids and hierarchy intact. The lighter
+"nested list pinned to the sidebar" (`isPromoted`) is
+`workspace_task_update` with `kind: "list", pinned: true`, and the task stays
+where it is.
+
+Deliberately not here: completing a **repeating** task. Its next occurrence is
+scheduled from a `PeriodicSchedule` that only `PriorityCore` can parse, so the
+tool refuses rather than ending the series. Complete those in the app.
 - `task_metadata` is read-only, and stays that way. Priorities, recurrence and
   start dates live in `UserDefaults`, which the running app holds in memory and
   rewrites on its own schedule — there is no equivalent of the file lock below

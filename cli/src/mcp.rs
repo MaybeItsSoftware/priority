@@ -602,4 +602,172 @@ pub fn tool_definitions() -> Vec<Value> {
             },
         }),
     ]
+    .into_iter()
+    .chain(workspace_tool_definitions())
+    .collect()
+}
+
+/// The tools that edit the app's own local workspace rather than Checkvist.
+/// Ids here are the workspace's UUID strings, not Checkvist's integers, and
+/// every write lands in the app's Undo menu as "MCP: …".
+fn workspace_tool_definitions() -> Vec<Value> {
+    let id = |description: &str| json!({ "type": "string", "description": description });
+    let links = json!({
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "URLs the task links to. Priority opens the first http, https or obsidian:// link from the task with its open-link command.",
+    });
+    let column = json!({
+        "type": ["string", "null"],
+        "description": "Kanban column id, e.g. backlog, in-progress, this-week, waiting-on, today (the defaults). Null or \"\" clears it, which puts the card in the board's first column.",
+    });
+
+    vec![
+        json!({
+            "name": "workspace_tree",
+            "description": "Priority's local workspace, the app's source of truth: folders, lists (with folder_id and open task counts) and nested lists, each with its id. Start here to find a list_id or folder_id.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "include_archived": { "type": "boolean", "default": false },
+                },
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_tasks",
+            "description": "One local list's tasks as a tree: ids, titles, notes, status, kind (task or nested list), kanban column and external links. Open tasks only unless include_closed.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "list_id": id("From workspace_tree."),
+                    "parent_task_id": id("Only this task's subtree."),
+                    "include_closed": { "type": "boolean", "default": false },
+                },
+                "required": ["list_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_add",
+            "description": "Create a task in a local list, at the end of its siblings (or first, with at_top). Pass parent_task_id to create a subtask; list_id may then be omitted.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "list_id": id("From workspace_tree."),
+                    "title": { "type": "string", "minLength": 1 },
+                    "parent_task_id": id("Create it as a subtask of this task."),
+                    "notes": { "type": "string" },
+                    "external_links": links,
+                    "kanban_column": column,
+                    "kind": { "type": "string", "enum": ["task", "list"], "default": "task", "description": "list makes a nested list." },
+                    "at_top": { "type": "boolean", "default": false },
+                },
+                "required": ["title"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_update",
+            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind or sidebar pin. Fields left out are unchanged; one call is one undo step. Completing a repeating task is refused: do that in Priority, which schedules the next occurrence.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task_id": id("From workspace_tasks."),
+                    "title": { "type": "string", "minLength": 1 },
+                    "notes": { "type": "string" },
+                    "external_links": links,
+                    "status": { "type": "string", "enum": ["open", "completed", "cancelled"] },
+                    "kanban_column": column,
+                    "kind": {
+                        "type": "string", "enum": ["task", "list"],
+                        "description": "'list' makes it a nested list in place (it stays where it is; its subtasks become the nested list's contents). To make a standalone sidebar list instead, use workspace_task_to_list.",
+                    },
+                    "pinned": {
+                        "type": "boolean",
+                        "description": "Pin a nested list to the sidebar (the app's 'Promote to sidebar'), or unpin it. Only for kind 'list'.",
+                    },
+                },
+                "required": ["task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_move",
+            "description": "Reparent and/or reorder a local task, with its whole subtree. parent_task_id moves it under that task (in that task's list). list_id alone moves it to that list's top level. position (1-based) places it among its siblings afterwards; alone, it just reorders.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task_id": id("From workspace_tasks."),
+                    "parent_task_id": id("New parent."),
+                    "list_id": id("Destination list's top level, when no parent is given."),
+                    "position": { "type": "integer", "minimum": 1 },
+                },
+                "required": ["task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_to_list",
+            "description": "Promote a task to a standalone list of its own, as dropping it on a folder or the sidebar's Lists heading does in the app. The list is named after the task, the task stays as the list's hidden root, and its subtasks become the list's contents with their ids unchanged.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task_id": id("From workspace_tasks."),
+                    "folder_id": id("Folder to put the new list in. Omit for the top level."),
+                },
+                "required": ["task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_delete",
+            "description": "Delete a local task and its whole subtree. Undoable from Priority's Undo menu.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "task_id": id("From workspace_tasks.") },
+                "required": ["task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_folder_create",
+            "description": "Create a sidebar folder, at the end of the top level or inside parent_folder_id.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "minLength": 1 },
+                    "parent_folder_id": id("Nest it inside this folder."),
+                },
+                "required": ["name"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_list_create",
+            "description": "Create an empty local list, at the top level or inside folder_id.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "minLength": 1 },
+                    "folder_id": id("From workspace_tree."),
+                },
+                "required": ["name"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_list_move",
+            "description": "Move a local list into a folder, or to the top level when folder_id is omitted. It goes to the end of its new siblings.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "list_id": id("From workspace_tree."),
+                    "folder_id": id("Destination folder. Omit for the top level."),
+                },
+                "required": ["list_id"],
+                "additionalProperties": false,
+            },
+        }),
+    ]
 }

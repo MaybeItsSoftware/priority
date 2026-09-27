@@ -1,28 +1,28 @@
-//! Read-only access to the app's workspace database.
+//! Access to the app's workspace database.
 //!
 //! Everything else in this crate is a peer of the macOS app that happens to
-//! read the same files. This module is the one place that reaches into the
-//! app's own store — `~/Library/Application Support/Priority/priority.sqlite`
-//! — and it does so **read-only**, by opening the connection with
-//! `SQLITE_OPEN_READ_ONLY` rather than by promising to behave.
+//! read the same files. This module and `workspace_tasks.rs` are the places
+//! that reach into the app's own store —
+//! `~/Library/Application Support/Priority/priority.sqlite`.
 //!
-//! It exists because of a bug that took a hand-written `SELECT` to find: the
-//! menu bar reported a focus block as nineteen hours long, and nothing
-//! reachable from the CLI or the MCP server could see a focus session at all.
-//! An assistant asked "what is the timer doing?" could only guess. Now it can
-//! look.
+//! This half is **read-only**, and says so by opening the connection with
+//! `SQLITE_OPEN_READ_ONLY` rather than by promising to behave. It exists
+//! because of a bug that took a hand-written `SELECT` to find: the menu bar
+//! reported a focus block as nineteen hours long, and nothing reachable from
+//! the CLI or the MCP server could see a focus session at all. An assistant
+//! asked "what is the timer doing?" could only guess. Now it can look.
 //!
-//! Read-only is not a limitation to work around later. Writes to this database
-//! go through `WorkspaceStore` on the Swift side, which owns migrations,
-//! journalling for undo, and the day-log side effects of finishing a block —
-//! all of which a second writer would quietly skip. Anything here that wants
-//! to change something should ask the app to.
+//! The focus tables stay read-only on purpose: finishing a block has day-log
+//! and scoring side effects that live in `WorkspaceStore`, and a second writer
+//! would quietly skip them. The task tree — folders, lists and tasks — is the
+//! exception, written by `workspace_tasks.rs` under the same undo journal the
+//! app uses. Its header says what it copies from `WorkspaceStore` and why.
 //!
-//! What it deliberately does **not** do is recompute policy. Which task is
-//! next, whether one is available in the current context, how a day is
-//! scored: those live in `PriorityCore` and would be a second implementation
-//! to keep in step, which is exactly what the app's MCP server stopped having.
-//! These are row reads and arithmetic the schema already implies.
+//! What neither does is recompute policy. Which task is next, whether one is
+//! available in the current context, how a day is scored: those live in
+//! `PriorityCore` and would be a second implementation to keep in step, which
+//! is exactly what the app's MCP server stopped having. These are row reads,
+//! row writes, and arithmetic the schema already implies.
 
 use crate::error::{Result, ToolError};
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
@@ -47,23 +47,50 @@ impl Workspace {
         }
     }
 
-    fn open(&self) -> Result<Connection> {
+    pub(crate) fn open(&self) -> Result<Connection> {
         if !self.database_path.exists() {
             return Err(ToolError::new(format!(
                 "No workspace database at {}. Open Priority once, or set database_path.",
                 self.database_path.display()
             )));
         }
-        Connection::open_with_flags(
-            &self.database_path,
-            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI,
-        )
-        .map_err(|error| {
+        let failed = |error: rusqlite::Error| {
             ToolError::new(format!(
                 "Could not read {}: {error}",
                 self.database_path.display()
             ))
-        })
+        };
+        let probe = |connection: &Connection| {
+            connection.query_row("SELECT COUNT(*) FROM sqlite_master", [], |row| {
+                row.get::<_, i64>(0)
+            })
+        };
+
+        let read_only = Connection::open_with_flags(
+            &self.database_path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI,
+        )
+        .map_err(failed)?;
+        if probe(&read_only).is_ok() {
+            return Ok(read_only);
+        }
+        // The database is in WAL mode, and a read-only connection cannot
+        // create the `-shm` index a WAL reader needs. While the app is running
+        // it has one open, but its last connection deletes it on quit, so a
+        // strictly read-only open works only while Priority is up. The
+        // fallback is still read-only, just enforced by SQLite's
+        // `query_only` rather than by the open flags. It has no CREATE flag,
+        // so it cannot make a database that was not there.
+        let connection = Connection::open_with_flags(
+            &self.database_path,
+            OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_URI,
+        )
+        .map_err(failed)?;
+        connection
+            .pragma_update(None, "query_only", true)
+            .map_err(failed)?;
+        probe(&connection).map_err(failed)?;
+        Ok(connection)
     }
 
     /// What the focus timer is actually doing.
@@ -228,7 +255,7 @@ pub fn default_database_path() -> PathBuf {
 
 /// GRDB stores dates as `YYYY-MM-DD HH:MM:SS.SSS` in UTC, with the
 /// milliseconds sometimes absent.
-fn parse_stored(value: &str) -> Option<DateTime<Utc>> {
+pub(crate) fn parse_stored(value: &str) -> Option<DateTime<Utc>> {
     for format in ["%Y-%m-%d %H:%M:%S%.f", "%Y-%m-%dT%H:%M:%S%.fZ"] {
         if let Ok(naive) = NaiveDateTime::parse_from_str(value, format) {
             return Some(Utc.from_utc_datetime(&naive));
@@ -237,13 +264,13 @@ fn parse_stored(value: &str) -> Option<DateTime<Utc>> {
     None
 }
 
-fn stored_string(value: DateTime<Utc>) -> String {
+pub(crate) fn stored_string(value: DateTime<Utc>) -> String {
     value.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
 }
 
 /// Stored UTC in, the reader's own clock out — a timestamp you have to convert
 /// in your head is a timestamp you misread.
-fn local_string(value: &Option<String>) -> Option<String> {
+pub(crate) fn local_string(value: &Option<String>) -> Option<String> {
     value.as_deref().and_then(parse_stored).map(|date| {
         date.with_timezone(&Local)
             .format("%Y-%m-%d %H:%M:%S")
@@ -262,6 +289,6 @@ fn clock(seconds: i64) -> String {
     }
 }
 
-fn map_query_error(error: rusqlite::Error) -> ToolError {
+pub(crate) fn map_query_error(error: rusqlite::Error) -> ToolError {
     ToolError::new(format!("Workspace query failed: {error}"))
 }

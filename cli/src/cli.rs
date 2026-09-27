@@ -181,6 +181,17 @@ pub enum Command {
     /// Priority's own per-task state: priority ranks, recurrence, start dates.
     Metadata,
 
+    /// The app's local workspace: folders, lists and tasks, read and edited.
+    ///
+    /// Ids are the workspace's UUIDs, not Checkvist's. Every change is one
+    /// step in Priority's Undo menu, labelled "MCP: …", and a running app
+    /// picks it up within about a second.
+    #[command(visible_alias = "workspace")]
+    Ws {
+        #[command(subcommand)]
+        command: WsCommand,
+    },
+
     /// Store, check or clear this CLI's Checkvist credentials.
     Auth {
         #[command(subcommand)]
@@ -275,6 +286,123 @@ pub enum DailyCommand {
         /// Un-tick it instead.
         #[arg(long)]
         off: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum WsCommand {
+    /// Folders, lists and nested lists, with their ids.
+    Tree {
+        /// Include archived lists and nested lists.
+        #[arg(long)]
+        archived: bool,
+    },
+    /// One list's tasks as a tree.
+    Tasks {
+        list_id: String,
+        /// Only this task's subtree.
+        #[arg(long, short = 'p', value_name = "TASK_ID")]
+        parent: Option<String>,
+        /// Include completed and cancelled tasks.
+        #[arg(long, short = 'a')]
+        all: bool,
+    },
+    /// Create a task. Needs --list or --parent.
+    Add {
+        #[arg(required = true, num_args = 1.., value_name = "TITLE")]
+        title: Vec<String>,
+        #[arg(long = "list", value_name = "LIST_ID")]
+        list: Option<String>,
+        /// Create it as a subtask of this task.
+        #[arg(long, short = 'p', value_name = "TASK_ID")]
+        parent: Option<String>,
+        #[arg(long, short = 'n', value_name = "TEXT")]
+        notes: Option<String>,
+        /// An external link. Repeat for several.
+        #[arg(long = "link", value_name = "URL")]
+        links: Vec<String>,
+        /// Kanban column id: backlog, in-progress, this-week, waiting-on, today.
+        #[arg(long, short = 'c', value_name = "COLUMN")]
+        column: Option<String>,
+        /// Make it a nested list rather than a task.
+        #[arg(long)]
+        nested_list: bool,
+        /// First among its siblings rather than last.
+        #[arg(long)]
+        top: bool,
+    },
+    /// Change a task's title, notes, links, status or column.
+    Update {
+        task_id: String,
+        #[arg(long, short = 't', value_name = "TITLE")]
+        title: Option<String>,
+        #[arg(long, short = 'n', value_name = "TEXT")]
+        notes: Option<String>,
+        /// Replace the links with these. Repeat for several.
+        #[arg(long = "link", value_name = "URL", conflicts_with = "no_links")]
+        links: Vec<String>,
+        /// Remove every link.
+        #[arg(long)]
+        no_links: bool,
+        /// open, completed or cancelled.
+        #[arg(long, short = 's', value_name = "STATUS")]
+        status: Option<String>,
+        /// Kanban column id. An empty string clears it.
+        #[arg(long, short = 'c', value_name = "COLUMN")]
+        column: Option<String>,
+        /// task, or list to make it a nested list in place.
+        #[arg(long, value_name = "KIND")]
+        kind: Option<String>,
+        /// Pin a nested list to the sidebar.
+        #[arg(long, conflicts_with = "unpin")]
+        pin: bool,
+        /// Unpin a nested list from the sidebar.
+        #[arg(long)]
+        unpin: bool,
+    },
+    /// Complete a task.
+    Done { task_id: String },
+    /// Reopen a task.
+    Reopen { task_id: String },
+    /// Move a task (and its subtree) under a new parent, to a list's top
+    /// level, and/or to a 1-based position among its siblings.
+    Move {
+        task_id: String,
+        #[arg(long, short = 'p', value_name = "TASK_ID")]
+        parent: Option<String>,
+        #[arg(long = "list", value_name = "LIST_ID", conflicts_with = "parent")]
+        list: Option<String>,
+        #[arg(long, value_name = "N")]
+        position: Option<i64>,
+    },
+    /// Promote a task to a standalone list of its own.
+    ToList {
+        task_id: String,
+        /// Put the new list in this folder rather than at the top level.
+        #[arg(long, short = 'f', value_name = "FOLDER_ID")]
+        folder: Option<String>,
+    },
+    /// Delete a task and its subtree.
+    Rm { task_id: String },
+    /// Create a folder.
+    NewFolder {
+        #[arg(required = true, num_args = 1.., value_name = "NAME")]
+        name: Vec<String>,
+        #[arg(long, short = 'p', value_name = "FOLDER_ID")]
+        parent: Option<String>,
+    },
+    /// Create a list.
+    NewList {
+        #[arg(required = true, num_args = 1.., value_name = "NAME")]
+        name: Vec<String>,
+        #[arg(long, short = 'f', value_name = "FOLDER_ID")]
+        folder: Option<String>,
+    },
+    /// Move a list into a folder, or to the top level without --folder.
+    MoveList {
+        list_id: String,
+        #[arg(long, short = 'f', value_name = "FOLDER_ID")]
+        folder: Option<String>,
     },
 }
 
@@ -563,9 +691,135 @@ pub fn resolve(cli: &Cli) -> Result<(String, Map<String, Value>)> {
                 "daily_tick"
             }
         },
+
+        Command::Ws { command } => {
+            // The global --list-id is a Checkvist list. Workspace commands
+            // name their own, so it must not leak in as one of theirs.
+            arguments.remove("list_id");
+            resolve_workspace(command, &mut arguments)
+        }
     };
 
     Ok((name.to_string(), arguments))
+}
+
+fn resolve_workspace(command: &WsCommand, arguments: &mut Map<String, Value>) -> &'static str {
+    match command {
+        WsCommand::Tree { archived } => {
+            arguments.insert("include_archived".into(), json!(archived));
+            "workspace_tree"
+        }
+        WsCommand::Tasks {
+            list_id,
+            parent,
+            all,
+        } => {
+            arguments.insert("list_id".into(), json!(list_id));
+            insert_if_some(arguments, "parent_task_id", parent.as_deref());
+            arguments.insert("include_closed".into(), json!(all));
+            "workspace_tasks"
+        }
+        WsCommand::Add {
+            title,
+            list,
+            parent,
+            notes,
+            links,
+            column,
+            nested_list,
+            top,
+        } => {
+            arguments.insert("title".into(), json!(title.join(" ")));
+            insert_if_some(arguments, "list_id", list.as_deref());
+            insert_if_some(arguments, "parent_task_id", parent.as_deref());
+            insert_if_some(arguments, "notes", notes.as_deref());
+            if !links.is_empty() {
+                arguments.insert("external_links".into(), json!(links));
+            }
+            insert_if_some(arguments, "kanban_column", column.as_deref());
+            if *nested_list {
+                arguments.insert("kind".into(), json!("list"));
+            }
+            if *top {
+                arguments.insert("at_top".into(), json!(true));
+            }
+            "workspace_task_add"
+        }
+        WsCommand::Update {
+            task_id,
+            title,
+            notes,
+            links,
+            no_links,
+            status,
+            column,
+            kind,
+            pin,
+            unpin,
+        } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            insert_if_some(arguments, "title", title.as_deref());
+            insert_if_some(arguments, "notes", notes.as_deref());
+            if *no_links || !links.is_empty() {
+                arguments.insert("external_links".into(), json!(links));
+            }
+            insert_if_some(arguments, "status", status.as_deref());
+            insert_if_some(arguments, "kanban_column", column.as_deref());
+            insert_if_some(arguments, "kind", kind.as_deref());
+            if *pin || *unpin {
+                arguments.insert("pinned".into(), json!(*pin));
+            }
+            "workspace_task_update"
+        }
+        WsCommand::Done { task_id } | WsCommand::Reopen { task_id } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            let status = if matches!(command, WsCommand::Done { .. }) {
+                "completed"
+            } else {
+                "open"
+            };
+            arguments.insert("status".into(), json!(status));
+            "workspace_task_update"
+        }
+        WsCommand::Move {
+            task_id,
+            parent,
+            list,
+            position,
+        } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            insert_if_some(arguments, "parent_task_id", parent.as_deref());
+            insert_if_some(arguments, "list_id", list.as_deref());
+            if let Some(position) = position {
+                arguments.insert("position".into(), json!(position));
+            }
+            "workspace_task_move"
+        }
+        WsCommand::ToList { task_id, folder } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            insert_if_some(arguments, "folder_id", folder.as_deref());
+            "workspace_task_to_list"
+        }
+        WsCommand::Rm { task_id } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            "workspace_task_delete"
+        }
+        WsCommand::NewFolder { name, parent } => {
+            arguments.insert("name".into(), json!(name.join(" ")));
+            insert_if_some(arguments, "parent_folder_id", parent.as_deref());
+            "workspace_folder_create"
+        }
+        WsCommand::NewList { name, folder } => {
+            arguments.insert("name".into(), json!(name.join(" ")));
+            insert_if_some(arguments, "folder_id", folder.as_deref());
+            "workspace_list_create"
+        }
+        WsCommand::MoveList { list_id, folder } => {
+            arguments.insert("list_id".into(), json!(list_id));
+            insert_if_some(arguments, "folder_id", folder.as_deref());
+            "workspace_list_move"
+        }
+    }
 }
 
 fn insert_if_some(arguments: &mut Map<String, Value>, key: &str, value: Option<&str>) {
@@ -612,6 +866,11 @@ pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
         "daily_tick" => render_tick(payload),
         "focus_status" => render_focus(payload),
         "focus_history" => render_focused(payload),
+        "workspace_tree" => render_workspace_tree(payload),
+        "workspace_tasks" => render_workspace_tasks(payload),
+        "workspace_task_add" | "workspace_task_update" | "workspace_task_move" => {
+            render_workspace_task(payload, 0)
+        }
         _ => render_task(payload),
     }
 }
@@ -961,6 +1220,112 @@ fn render_task(payload: &Value) {
         }
     }
     render_fallback(payload);
+}
+
+/// Folders as headings with their lists beneath, then the lists in no folder:
+/// the sidebar's shape, with the ids a follow-up command needs.
+fn render_workspace_tree(payload: &Value) {
+    let empty = Vec::new();
+    let folders = payload["folders"].as_array().unwrap_or(&empty);
+    let lists = payload["lists"].as_array().unwrap_or(&empty);
+    for folder in folders.iter().filter(|f| f["parent_folder_id"].is_null()) {
+        render_folder(folder, 1, folders, lists);
+    }
+    for list in lists.iter().filter(|l| l["folder_id"].is_null()) {
+        render_workspace_list(list, 1);
+    }
+    if let Some(nested) = payload["nested_lists"].as_array().filter(|n| !n.is_empty()) {
+        println!("\n  Nested lists");
+        for list in nested {
+            let pinned = if list["is_promoted"] == json!(true) {
+                "  (pinned)"
+            } else {
+                ""
+            };
+            println!(
+                "    {}  {}{pinned}",
+                text_of(&list["title"]),
+                text_of(&list["id"])
+            );
+        }
+    }
+}
+
+fn render_folder(folder: &Value, depth: usize, folders: &[Value], lists: &[Value]) {
+    println!(
+        "{}▸ {}  {}",
+        "  ".repeat(depth),
+        text_of(&folder["name"]),
+        text_of(&folder["id"])
+    );
+    for child in folders
+        .iter()
+        .filter(|f| f["parent_folder_id"] == folder["id"])
+    {
+        render_folder(child, depth + 1, folders, lists);
+    }
+    for list in lists.iter().filter(|l| l["folder_id"] == folder["id"]) {
+        render_workspace_list(list, depth + 1);
+    }
+}
+
+fn render_workspace_list(list: &Value, depth: usize) {
+    let marks: String = [
+        (list["system_role"] == json!("inbox"), " (inbox)"),
+        (list["is_archived"] == json!(true), " (archived)"),
+        (!list["completed_at"].is_null(), " (completed)"),
+    ]
+    .iter()
+    .filter(|(on, _)| *on)
+    .map(|(_, mark)| *mark)
+    .collect();
+    println!(
+        "{}{}{marks}  [{} open]  {}",
+        "  ".repeat(depth),
+        text_of(&list["name"]),
+        list["open_task_count"],
+        text_of(&list["id"])
+    );
+}
+
+fn render_workspace_tasks(payload: &Value) {
+    fn walk(nodes: &Value, depth: usize) {
+        for node in nodes.as_array().into_iter().flatten() {
+            render_workspace_task(node, depth);
+            walk(&node["children"], depth + 1);
+        }
+    }
+    walk(&payload["tasks"], 0);
+}
+
+fn render_workspace_task(task: &Value, depth: usize) {
+    if task.get("id").is_none() {
+        return render_fallback(task);
+    }
+    let mark = match (task["kind"].as_str(), task["status"].as_str()) {
+        (Some("list"), _) => "≡",
+        (_, Some("completed")) => "✓",
+        (_, Some("cancelled")) => "×",
+        _ => "·",
+    };
+    let column = task["kanban_column"]
+        .as_str()
+        .map(|column| format!("  [{column}]"))
+        .unwrap_or_default();
+    let indent = "  ".repeat(depth + 1);
+    println!(
+        "{indent}{mark} {}{column}  {}",
+        text_of(&task["title"]),
+        text_of(&task["id"])
+    );
+    for link in task["external_links"].as_array().into_iter().flatten() {
+        println!("{indent}    ↗ {}", text_of(link));
+    }
+    if let Some(notes) = task["notes"].as_str().filter(|notes| !notes.is_empty()) {
+        for line in notes.lines() {
+            println!("{indent}    {line}");
+        }
+    }
 }
 
 fn render_fallback(payload: &Value) {
