@@ -279,7 +279,7 @@ struct WorkspaceFocusScreen: View {
               if let task = model.task(withID: blocked.id) {
                 model.selectTask(task)
                 model.showsFocusScreen = false
-                model.isInspectorVisible = true
+                model.showRightDock(.inspector)
               }
             } label: {
               VStack(alignment: .leading, spacing: 2) {

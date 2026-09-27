@@ -35,25 +35,6 @@ extension WorkspaceViewModel {
     return completedTasks.first
   }
 
-  /// One key, three states, the way an editor's panel toggle behaves: closed
-  /// opens it and takes the keyboard, open-but-elsewhere brings the keyboard
-  /// over, and open-and-focused closes it. A toggle that only shows and hides is
-  /// a pane you have to reach for separately, which is a pane you read once.
-  func toggleDoneRail() {
-    guard isDoneRailVisible else {
-      isDoneRailVisible = true
-      reloadCompleted()
-      requestKeyboardFocus(.done)
-      return
-    }
-    guard keyboardFocusArea == .done else {
-      requestKeyboardFocus(.done)
-      return
-    }
-    isDoneRailVisible = false
-    requestKeyboardFocus(.tasks)
-  }
-
   func leaveDoneRail() {
     guard keyboardFocusArea == .done else { return }
     requestKeyboardFocus(.tasks)

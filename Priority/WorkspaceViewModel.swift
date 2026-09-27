@@ -267,30 +267,45 @@ enum WorkspaceSidebarItem: Identifiable {
     }
   }
 
-  /// Whether the done rail takes a column. Persisted for the sidebar's reason:
-  /// whether you want your finished work on screen is a way of working, not a
-  /// decision to make again every launch.
-  var isDoneRailVisible = UserDefaults.standard.bool(forKey: WorkspaceViewModel.doneRailVisibleKey) {
-    didSet { UserDefaults.standard.set(isDoneRailVisible, forKey: Self.doneRailVisibleKey) }
+  /// Whether the right dock — the inspector and the done rail, as tabs — takes
+  /// a column. Persisted for the sidebar's reason: whether you want it on
+  /// screen is a way of working, not a decision to make again every launch.
+  /// Until the dock existed, this was the done rail's own flag, and its value
+  /// carries over.
+  var isRightDockVisible = UserDefaults.standard.object(forKey: WorkspaceViewModel.rightDockVisibleKey) as? Bool
+    ?? UserDefaults.standard.bool(forKey: WorkspaceViewModel.doneRailVisibleKey) {
+    didSet { UserDefaults.standard.set(isRightDockVisible, forKey: Self.rightDockVisibleKey) }
+  }
+
+  /// Which of the dock's tabs is showing. Persisted with the dock.
+  var rightDockTab = WorkspaceDockTab(
+    rawValue: UserDefaults.standard.string(forKey: WorkspaceViewModel.rightDockTabKey) ?? "") ?? .done {
+    didSet { UserDefaults.standard.set(rightDockTab.rawValue, forKey: Self.rightDockTabKey) }
   }
 
   /// An explicit width with a handle of its own, for the sidebar's reason: a
   /// pane that takes a share of whatever the window has spare is a pane whose
-  /// width you cannot set.
-  var doneRailWidth: CGFloat = {
-    let stored = UserDefaults.standard.double(forKey: WorkspaceViewModel.doneRailWidthKey)
-    guard stored > 0 else { return WorkspaceViewModel.defaultDoneRailWidth }
-    return min(max(CGFloat(stored), WorkspaceViewModel.minDoneRailWidth), WorkspaceViewModel.maxDoneRailWidth)
+  /// width you cannot set. Seeded from the done rail's old width.
+  var rightDockWidth: CGFloat = {
+    let defaults = UserDefaults.standard
+    let stored = defaults.double(forKey: WorkspaceViewModel.rightDockWidthKey)
+    let legacy = defaults.double(forKey: WorkspaceViewModel.doneRailWidthKey)
+    let width = stored > 0 ? stored : legacy
+    guard width > 0 else { return WorkspaceViewModel.defaultRightDockWidth }
+    return min(max(CGFloat(width), WorkspaceViewModel.minRightDockWidth), WorkspaceViewModel.maxRightDockWidth)
   }() {
     didSet {
-      guard doneRailWidth != oldValue else { return }
-      UserDefaults.standard.set(Double(doneRailWidth), forKey: Self.doneRailWidthKey)
+      guard rightDockWidth != oldValue else { return }
+      UserDefaults.standard.set(Double(rightDockWidth), forKey: Self.rightDockWidthKey)
     }
   }
 
-  static let minDoneRailWidth: CGFloat = 180
-  static let maxDoneRailWidth: CGFloat = 460
-  static let defaultDoneRailWidth: CGFloat = 250
+  static let minRightDockWidth: CGFloat = 210
+  static let maxRightDockWidth: CGFloat = 480
+  static let defaultRightDockWidth: CGFloat = 280
+  private static let rightDockVisibleKey = "localWorkspaceRightDockVisibleV1"
+  private static let rightDockTabKey = "localWorkspaceRightDockTabV1"
+  private static let rightDockWidthKey = "localWorkspaceRightDockWidthV1"
   private static let doneRailWidthKey = "localWorkspaceDoneRailWidthV1"
 
   static let minSidebarWidth: CGFloat = 140
@@ -364,7 +379,6 @@ enum WorkspaceSidebarItem: Identifiable {
     return boardColumns.first(where: { $0.id == focusedBoardColumnID })?.id
       ?? boardColumns.first?.id
   }
-  var isInspectorVisible = false
   var dragDestinationListID: String?
   /// Asks the app shell for the always-on-top companion. A counter rather than
   /// a flag: the button and the F key both just want it shown, again.
@@ -586,7 +600,6 @@ enum WorkspaceSidebarItem: Identifiable {
       && (selectedListID == nil || !lists.contains(where: { $0.id == selectedListID })) {
       scopeTaskID = nil
       selectedTaskID = nil
-      isInspectorVisible = false
       // On the first desktop launch, put a migrated user straight into their
       // existing work rather than an empty Inbox. This also covers people who
       // ran an earlier preview that completed the import before the desktop
@@ -661,7 +674,6 @@ enum WorkspaceSidebarItem: Identifiable {
     taskInsertionReference = nil
     desktopShortcutSequence.reset()
     selectedTaskID = nil
-    isInspectorVisible = false
     // The inbox is a queue to empty, not a board to plan, so it opens as a
     // flat outline whatever the last list was shown as.
     viewMode = lists.first(where: { $0.id == id })?.systemRole == .inbox ? .outline : .board
@@ -685,7 +697,6 @@ enum WorkspaceSidebarItem: Identifiable {
     taskInsertionReference = nil
     desktopShortcutSequence.reset()
     selectedTaskID = nil
-    isInspectorVisible = false
     viewMode = .board
     reloadOutline(refreshSidebar: false)
   }
@@ -717,7 +728,6 @@ enum WorkspaceSidebarItem: Identifiable {
     selectedFolderID = nil
     scopeTaskID = task.id
     focusedBoardColumnID = nil
-    isInspectorVisible = false
     viewMode = .board
     reloadOutline(refreshSidebar: false)
   }
@@ -769,7 +779,7 @@ enum WorkspaceSidebarItem: Identifiable {
       selectedTaskID = visibleNavigationTasks.first?.id
     }
     if area == .sidebar { taskInsertionReference = nil }
-    if area == .inspector { isInspectorVisible = true }
+    if let tab = WorkspaceDockTab(area: area) { showRightDock(tab) }
     requestedFocusArea = area
     keyboardFocusArea = area
     focusRequest += 1
@@ -779,17 +789,6 @@ enum WorkspaceSidebarItem: Identifiable {
     if area != keyboardFocusArea { desktopShortcutSequence.reset() }
     keyboardNavigationSurfaceActive = area != nil
     if let area { keyboardFocusArea = area }
-  }
-
-  func toggleInspector() {
-    if isInspectorVisible {
-      isInspectorVisible = false
-      requestKeyboardFocus(.tasks)
-    } else {
-      if selectedTask == nil { selectedTaskID = visibleNavigationTasks.first?.id }
-      guard selectedTask != nil else { return }
-      requestKeyboardFocus(.inspector)
-    }
   }
 
   func requestMoveSelectedTask() {
@@ -813,8 +812,12 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   func cycleKeyboardFocus(by offset: Int) {
-    let areas: [WorkspaceFocusArea] = selectedTask == nil || !isInspectorVisible
-      ? [.sidebar, .tasks] : [.sidebar, .tasks, .inspector]
+    var areas: [WorkspaceFocusArea] = isSidebarVisible ? [.sidebar, .tasks] : [.tasks]
+    // The dock's tab is a stop when it has something to hold the keyboard:
+    // the inspector needs a task, the rail does not.
+    if isRightDockVisible, rightDockTab == .done || selectedTask != nil {
+      areas.append(rightDockTab.area)
+    }
     let current = areas.firstIndex(of: keyboardFocusArea) ?? 0
     let destination = (current + offset + areas.count) % areas.count
     requestKeyboardFocus(areas[destination])
@@ -972,7 +975,6 @@ enum WorkspaceSidebarItem: Identifiable {
         reloadOutline()
       }
       selectedTaskID = isEverythingSelected || listId == selectedListID ? task.id : nil
-      if selectedTaskID == nil { isInspectorVisible = false }
     }
   }
 
@@ -1005,7 +1007,6 @@ enum WorkspaceSidebarItem: Identifiable {
     perform {
       try store.deleteTask(id: task.id)
       selectedTaskID = nil
-      isInspectorVisible = false
       if scopeTaskID == task.id { scopeTaskID = task.parentTaskId }
       reloadOutline()
       reloadFocus()

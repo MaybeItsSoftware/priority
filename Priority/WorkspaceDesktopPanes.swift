@@ -2,7 +2,8 @@ import PriorityCore
 import PriorityWorkspace
 import SwiftUI
 
-/// The outline and the inspector, as views of their own.
+/// The outline, as a view of its own. (The inspector, which was split out
+/// alongside it, now lives in the right dock — `WorkspaceRightDock.swift`.)
 ///
 /// Both used to be computed properties of `WorkspaceDesktopView`, which meant
 /// the window's one body read the selection — and SwiftUI redraws a body when
@@ -126,61 +127,5 @@ struct WorkspaceOutlineRow: View {
     }
     .overlay(RoundedRectangle(cornerRadius: 6)
       .stroke(model.dragDestinationListID == item.task.id && item.task.isList ? Color.accentColor : .clear, lineWidth: 2))
-  }
-}
-
-/// The right-hand editor. It is the one pane that has to redraw when the
-/// selection moves, since it shows the selection, so it reads it here rather
-/// than making the window read it.
-struct WorkspaceInspectorPane: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
-  var focusedArea: FocusState<WorkspaceFocusArea?>.Binding
-
-  var body: some View {
-    let selected = model.selectedTask
-    VStack(alignment: .leading, spacing: 0) {
-      // The pane names the task rather than itself. "INSPECTOR" told you
-      // something you could already see; which task you are editing is the
-      // thing that is genuinely ambiguous when the selection moves behind you.
-      WorkspacePaneHeader(title: selected?.title ?? "Nothing selected") {
-        if let task = selected, let list = model.list(for: task) {
-          Text(list.name)
-            .font(theme.bodyFont(size: 11))
-            .foregroundStyle(theme.muted)
-            .lineLimit(1)
-        }
-      }
-      FocusRule()
-      // The editor is about twenty-five controls tall. It was in a plain
-      // VStack, so on anything short of a full-height window the last of them
-      // — Save, Revert and Start focus — were simply off the bottom with no
-      // way to reach them.
-      ScrollView {
-        if let task = selected {
-          VStack(alignment: .leading, spacing: theme.space.md) {
-            LocalTaskInspector(
-              task: task,
-              focusRequest: model.focusRequest,
-              requestedFocusArea: model.requestedFocusArea)
-              .environment(model)
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .focusSurfaceGutter()
-          .padding(.vertical, theme.space.md)
-        } else {
-          Text("Select a task to see its notes, schedule, estimate, and focus controls here.")
-            .font(theme.bodyFont(size: 12))
-            .foregroundStyle(theme.muted)
-            .focusSurfaceGutter()
-            .padding(.vertical, theme.space.md)
-        }
-      }
-    }
-    .background(.background)
-    .focusable()
-    .focused(focusedArea, equals: .inspector)
-    .focusEffectDisabled()
-    .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.inspector) })
   }
 }

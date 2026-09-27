@@ -158,7 +158,6 @@ extension WorkspaceViewModel {
       selectEverything()
     } else if selectedTaskID != nil {
       selectedTaskID = nil
-      isInspectorVisible = false
     } else {
       returnToCurrentListInSidebar()
     }
@@ -179,10 +178,7 @@ extension WorkspaceViewModel {
   }
 
   func dismissKeyboardContext() {
-    if isInspectorVisible {
-      isInspectorVisible = false
-      requestKeyboardFocus(.tasks)
-    } else if scopeTaskID != nil {
+    if scopeTaskID != nil {
       leaveTaskScope()
     } else {
       selectedTaskID = nil

@@ -54,7 +54,6 @@ extension WorkspaceViewModel {
         }
         if !isEverythingSelected && listID != selectedListID && selectedTaskID == task.id {
           selectedTaskID = nil
-          isInspectorVisible = false
         }
       }
       try load()
@@ -265,7 +264,6 @@ extension WorkspaceViewModel {
       try store.deleteList(id: list.id)
       selectedListID = nil
       selectedTaskID = nil
-      isInspectorVisible = false
       try load()
     }
   }

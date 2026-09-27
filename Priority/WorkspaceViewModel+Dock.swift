@@ -1,0 +1,114 @@
+import Foundation
+import PriorityCore
+import PriorityWorkspace
+
+/// The tabs of the right dock.
+enum WorkspaceDockTab: String, CaseIterable, Identifiable {
+  case inspector
+  case done
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .inspector: "Inspector"
+    case .done: "Done"
+    }
+  }
+
+  var symbolName: String {
+    switch self {
+    case .inspector: "sidebar.trailing"
+    case .done: "checkmark.circle"
+    }
+  }
+
+  /// The keyboard region the tab is.
+  var area: WorkspaceFocusArea {
+    switch self {
+    case .inspector: .inspector
+    case .done: .done
+    }
+  }
+
+  /// The catalogue entry that toggles the dock onto this tab.
+  var command: WorkspaceCommandID {
+    switch self {
+    case .inspector: .windowToggleInspectorPane
+    case .done: .windowToggleDoneRail
+    }
+  }
+
+  init?(area: WorkspaceFocusArea) {
+    switch area {
+    case .inspector: self = .inspector
+    case .done: self = .done
+    case .sidebar, .tasks: return nil
+    }
+  }
+}
+
+/// The right dock: the inspector and the done rail as two tabs of one
+/// resizable column.
+///
+/// They were two columns, each with its own idea of when to be on screen. The
+/// inspector closed itself on about fifteen kinds of navigation — choosing a
+/// list, entering a task, undoing, an external write — so the pane you had
+/// opened on purpose kept going away under you, and the done rail took a third
+/// column beside it. One dock, one width, one visibility, all persisted, and it
+/// only goes away when you put it away.
+@MainActor
+extension WorkspaceViewModel {
+  var isInspectorVisible: Bool { isRightDockVisible && rightDockTab == .inspector }
+  var isDoneRailVisible: Bool { isRightDockVisible && rightDockTab == .done }
+
+  /// Shows the dock on `tab`, loading what the tab needs. Does not move the
+  /// keyboard; the callers that mean to do that say so.
+  func showRightDock(_ tab: WorkspaceDockTab) {
+    let wasShowingDone = isDoneRailVisible
+    if rightDockTab != tab { rightDockTab = tab }
+    if !isRightDockVisible { isRightDockVisible = true }
+    if tab == .done && !wasShowingDone { reloadCompleted() }
+  }
+
+  /// Puts the dock away, handing the keyboard back to the tasks if it had it.
+  func hideRightDock() {
+    isRightDockVisible = false
+    completedTasks = []
+    if keyboardFocusArea == .inspector || keyboardFocusArea == .done {
+      requestKeyboardFocus(.tasks)
+    }
+  }
+
+  /// The status bar's dock button: on or off, keeping whichever tab it was on.
+  func toggleRightDock() {
+    if isRightDockVisible { hideRightDock() } else { showRightDock(rightDockTab) }
+  }
+
+  /// For the rail, one key, three states, the way an editor's panel toggle behaves: hidden
+  /// (or on the other tab) opens it on this one and takes the keyboard,
+  /// open-but-elsewhere brings the keyboard over, and open-and-focused puts it
+  /// away. A toggle that only shows and hides is a pane you have to reach for
+  /// separately, which is a pane you read once.
+  ///
+  /// The inspector only takes the keyboard when there is a task to inspect;
+  /// with none it opens on its empty state and the keys stay on the tasks.
+  func toggleDockTab(_ tab: WorkspaceDockTab) {
+    let isShowing = isRightDockVisible && rightDockTab == tab
+    // The inspector hides from anywhere: `i` on a task is "show me this" and
+    // pressed again "enough", without first walking into the pane.
+    if isShowing && (tab == .inspector || keyboardFocusArea == tab.area) {
+      hideRightDock()
+      return
+    }
+    showRightDock(tab)
+    if tab == .inspector {
+      if selectedTask == nil { selectedTaskID = visibleNavigationTasks.first?.id }
+      if selectedTask == nil { return }
+    }
+    requestKeyboardFocus(tab.area)
+  }
+
+  func toggleInspector() { toggleDockTab(.inspector) }
+  func toggleDoneRail() { toggleDockTab(.done) }
+}

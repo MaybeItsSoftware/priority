@@ -36,7 +36,6 @@ extension WorkspaceViewModel {
       // task that no longer exists leaves the inspector showing a ghost.
       if let selectedTaskID, (try? store.task(id: selectedTaskID)) ?? nil == nil {
         self.selectedTaskID = nil
-        isInspectorVisible = false
       }
       if let scopeTaskID, (try? store.task(id: scopeTaskID)) ?? nil == nil {
         self.scopeTaskID = nil

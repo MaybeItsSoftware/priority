@@ -17,19 +17,14 @@ struct WorkspaceDoneRail: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      WorkspacePaneHeader(title: "Done") {
+      // No close button: the dock's tab strip and the status bar already hold
+      // the one control that puts it away.
+      HStack {
         WorkspaceDoneSummary()
-      } trailing: {
-        Button {
-          model.run(.windowToggleDoneRail)
-        } label: {
-          Image(systemName: "sidebar.trailing")
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(theme.muted)
-        .commandHelp(.windowToggleDoneRail)
-        .accessibilityLabel("Hide finished work")
+        Spacer(minLength: 0)
       }
+      .padding(.horizontal, theme.space.md)
+      .padding(.vertical, theme.space.xs)
       FocusRule()
       if model.completedTasks.isEmpty {
         empty

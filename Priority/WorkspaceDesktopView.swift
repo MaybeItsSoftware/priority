@@ -10,11 +10,7 @@ struct WorkspaceDesktopView: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(AppCoordinator.self) private var manager
   @Environment(\.theme) private var theme
-  /// The sidebar width the current divider drag started from, so the gesture
-  /// measures a translation rather than accumulating deltas.
-  @State private var dragStartWidth: CGFloat?
   @FocusState private var focusedArea: WorkspaceFocusArea?
-  @State private var doneDragStartWidth: CGFloat?
 
   var body: some View {
     workspace
@@ -27,15 +23,16 @@ struct WorkspaceDesktopView: View {
   }
 
   private var workspaceLayout: some View {
-    // The sidebar sits outside the `HSplitView` and carries its own divider.
+    // Three columns with explicit, persisted widths and a handle each, rather
+    // than an `HSplitView`.
     //
-    // Inside it, the column was a resizable pane like any other, so the split
-    // view handed it a share of any width the window had spare — on a wide
-    // display it opened at 367pt having been asked for 185. Worse, once that
-    // laid-out width was being remembered it ratcheted: each launch started
-    // wider than the last. An explicit width can only be changed by dragging
-    // the handle, which is the behaviour "remember what I dragged it to"
-    // actually needs.
+    // Inside a split view the sidebar was a resizable pane like any other, so
+    // it was handed a share of any width the window had spare — on a wide
+    // display it opened at 367pt having been asked for 185, and once that
+    // width was remembered it ratcheted wider every launch. The right-hand
+    // panes had the same problem the other way: on a window with nothing
+    // spare they were laid out at no width at all. An explicit width changes
+    // only when you drag it.
     HStack(spacing: 0) {
       // The sidebar stays through focus mode: setting up a session often means
       // looking at which list something came from, and losing your place in the
@@ -44,123 +41,24 @@ struct WorkspaceDesktopView: View {
         WorkspaceSidebarPane(focusedArea: $focusedArea)
           .focusSection()
           .frame(width: model.sidebarWidth)
-        sidebarResizeHandle
+        WorkspaceResizeHandle(
+          width: Bindable(model).sidebarWidth, grows: .trailing,
+          range: WorkspaceViewModel.minSidebarWidth...WorkspaceViewModel.maxSidebarWidth)
       }
-      mainAndInspector
-      // Outside the split view, and on the same terms as the left sidebar: an
-      // explicit width and a handle. Inside `HSplitView` it was a third pane
-      // dividing what was already spoken for, and on a window with nothing
-      // spare it was laid out at no width at all — which is the same thing as
-      // not being there.
-      //
-      // Gone while a full-pane screen is up: focus is the one place the app
-      // should not be showing you a tally, and the timeline is already a reading
-      // of the same day at greater length.
-      if model.isDoneRailVisible && !model.showsFocusScreen && !model.showsTimelineScreen {
-        doneRailResizeHandle
-        WorkspaceDoneRail()
-          .environment(model)
-          // Claimed the way the sidebar claims its own area: a `requestedFocusArea`
-          // no view answers to is handed straight back, so the rail would take the
-          // keyboard and lose it again on the next layout pass.
-          .focusable()
-          .focusEffectDisabled()
-          .focused($focusedArea, equals: .done)
+      mainPane
+      // Gone while a full-pane screen is up, without forgetting that it was
+      // open: focus is the one place the app should not be showing you a
+      // tally, and the timeline is already a reading of the same day.
+      if model.isRightDockVisible && !model.showsFocusScreen && !model.showsTimelineScreen {
+        WorkspaceResizeHandle(
+          width: Bindable(model).rightDockWidth, grows: .leading,
+          range: WorkspaceViewModel.minRightDockWidth...WorkspaceViewModel.maxRightDockWidth)
+        WorkspaceRightDock(focusedArea: $focusedArea)
           .focusSection()
-          .frame(width: model.doneRailWidth)
+          .frame(width: model.rightDockWidth)
       }
     }
     .frame(minWidth: 760, minHeight: 520)
-  }
-
-  /// A one-point rule with an eight-point grab area either side of it: the
-  /// visible line stays a hairline while the target stays something you can
-  /// actually hit.
-  private var sidebarResizeHandle: some View {
-    Divider()
-      .frame(width: 1)
-      .overlay(
-        Rectangle()
-          .fill(Color.clear)
-          .frame(width: 9)
-          .contentShape(Rectangle())
-          .onHover { inside in
-            if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
-          }
-          .gesture(
-            DragGesture(minimumDistance: 1, coordinateSpace: .global)
-              .onChanged { value in
-                let base = dragStartWidth ?? model.sidebarWidth
-                if dragStartWidth == nil { dragStartWidth = base }
-                model.sidebarWidth = min(
-                  max(base + value.translation.width, WorkspaceViewModel.minSidebarWidth),
-                  WorkspaceViewModel.maxSidebarWidth)
-              }
-              .onEnded { _ in dragStartWidth = nil }
-          )
-      )
-  }
-
-  /// The sidebar's handle mirrored. Dragging left widens the rail, so the
-  /// translation is subtracted.
-  private var doneRailResizeHandle: some View {
-    Divider()
-      .frame(width: 1)
-      .overlay(
-        Rectangle()
-          .fill(Color.clear)
-          .frame(width: 9)
-          .contentShape(Rectangle())
-          .onHover { inside in
-            if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
-          }
-          .gesture(
-            DragGesture(minimumDistance: 1, coordinateSpace: .global)
-              .onChanged { value in
-                let base = doneDragStartWidth ?? model.doneRailWidth
-                if doneDragStartWidth == nil { doneDragStartWidth = base }
-                model.doneRailWidth = min(
-                  max(base - value.translation.width, WorkspaceViewModel.minDoneRailWidth),
-                  WorkspaceViewModel.maxDoneRailWidth)
-              }
-              .onEnded { _ in doneDragStartWidth = nil }
-          )
-      )
-  }
-
-  private var mainAndInspector: some View {
-    HSplitView {
-      // Focus mode takes the main pane rather than floating over it. A sheet
-      // leaves the board visible round the edges, which is the one thing the
-      // screen exists to stop. The timeline is the same kind of surface and
-      // takes the pane the same way — it is read at the scale of a day.
-      Group {
-        if model.showsFocusScreen {
-          WorkspaceFocusScreen()
-            .environment(model)
-        } else if model.showsTimelineScreen {
-          WorkspaceTimelineScreen()
-            .environment(model)
-        } else {
-          taskPane
-        }
-      }
-      .animation(.easeInOut(duration: 0.15), value: model.showsFocusScreen)
-      .animation(.easeInOut(duration: 0.15), value: model.showsTimelineScreen)
-      .focusSection()
-      .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
-      // Selection remains light-weight; only I or an explicit inspector
-      // command opens the editor and consumes the third pane.
-      //
-      // `hasSelectedTask` rather than `selectedTask`: this body holds the whole
-      // window, and reading the selection itself would redraw all of it on
-      // every arrow key.
-      if model.isInspectorVisible && model.hasSelectedTask && !model.showsFocusScreen && !model.showsTimelineScreen {
-        WorkspaceInspectorPane(focusedArea: $focusedArea)
-          .focusSection()
-          .frame(minWidth: 210, idealWidth: 250, maxWidth: 320)
-      }
-    }
     .onAppear {
       if model.requestedFocusArea != .tasks || (model.viewMode != .board && model.viewMode != .outline) {
         focusedArea = model.requestedFocusArea
@@ -174,6 +72,28 @@ struct WorkspaceDesktopView: View {
     .onChange(of: focusedArea) { _, area in
       model.reportKeyboardFocus(area)
     }
+  }
+
+  private var mainPane: some View {
+    // Focus mode takes the main pane rather than floating over it. A sheet
+    // leaves the board visible round the edges, which is the one thing the
+    // screen exists to stop. The timeline is the same kind of surface and
+    // takes the pane the same way — it is read at the scale of a day.
+    Group {
+      if model.showsFocusScreen {
+        WorkspaceFocusScreen()
+          .environment(model)
+      } else if model.showsTimelineScreen {
+        WorkspaceTimelineScreen()
+          .environment(model)
+      } else {
+        taskPane
+      }
+    }
+    .animation(.easeInOut(duration: 0.15), value: model.showsFocusScreen)
+    .animation(.easeInOut(duration: 0.15), value: model.showsTimelineScreen)
+    .focusSection()
+    .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
   }
 
   private var workspaceAlerts: some View {

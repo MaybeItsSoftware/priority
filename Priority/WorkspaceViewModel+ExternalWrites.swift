@@ -73,7 +73,6 @@ extension WorkspaceViewModel {
       // Same clean-up as after undo: whatever was selected may be gone.
       if let selectedTaskID, (try? store.task(id: selectedTaskID)) ?? nil == nil {
         self.selectedTaskID = nil
-        isInspectorVisible = false
       }
       if let scopeTaskID, (try? store.task(id: scopeTaskID)) ?? nil == nil {
         self.scopeTaskID = nil

@@ -67,7 +67,6 @@ extension WorkspaceViewModel {
     taskInsertionReference = nil
     desktopShortcutSequence.reset()
     selectedTaskID = nil
-    isInspectorVisible = false
     newTaskListID = folderScopeDestinationID
     if viewMode == .today { viewMode = .board }
     reloadOutline(refreshSidebar: false)

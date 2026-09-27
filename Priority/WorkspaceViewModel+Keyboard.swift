@@ -109,7 +109,8 @@ extension WorkspaceViewModel {
       // such list, so clearing it on its own would empty the pane.
       if selectedFolderID != nil { run(.goEverything) }
     case .inspector:
-      isInspectorVisible = false
+      // Back to the work, leaving the dock where it is. It used to close:
+      // a pane that vanishes whenever you leave it is one you reopen all day.
       requestKeyboardFocus(.tasks)
     default:
       dismissKeyboardContext()
