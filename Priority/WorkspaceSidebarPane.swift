@@ -162,15 +162,9 @@ struct WorkspaceSidebarPane: View {
         // Named, not just drawn: two bare glyphs in a bottom bar gave no clue
         // which was which, and neither said it had a key.
         AddWorkspaceItemButton(
-          title: "New list", systemImage: "plus", command: .listNew, showsTitle: true
-        ) { name in
-          model.createList(named: name)
-        }
+          title: "New list", systemImage: "plus", command: .listNew, kind: .list, showsTitle: true)
         AddWorkspaceItemButton(
-          title: "New folder", systemImage: "folder.badge.plus", command: .folderNew
-        ) { name in
-          model.createFolder(named: name)
-        }
+          title: "New folder", systemImage: "folder.badge.plus", command: .folderNew, kind: .folder)
         Spacer(minLength: 0)
         if !model.archivedLists.isEmpty || !model.archivedNestedLists.isEmpty {
           Menu {
@@ -463,57 +457,30 @@ private struct WorkspaceFolderTree: View {
   }
 }
 
+/// A footer button that asks for a new list or folder. The name is taken in
+/// the overlay, the same place ⌘⇧N and the list finder take it, rather than
+/// in a popover of its own that only the mouse could open.
 private struct AddWorkspaceItemButton: View {
+  @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let title: String
   let systemImage: String
   let command: WorkspaceCommandID
+  let kind: WorkspaceCreationKind
   var showsTitle = false
-  let onSubmit: (String) -> Void
-  @State private var isPresenting = false
-  @State private var name = ""
-  @FocusState private var nameIsFocused: Bool
 
   var body: some View {
     Button {
-      isPresenting = true
+      model.requestCreation(kind)
     } label: {
-      HStack(spacing: 4) {
+      HStack(spacing: theme.space.xs) {
         Image(systemName: systemImage)
         if showsTitle {
-          Text(title).font(theme.bodyFont(size: 11))
+          Text(title).font(theme.bodyFont(size: theme.type.microLabel.size))
         }
       }
     }
     .focusable()
     .commandHelp(command, note: title)
-    .popover(isPresented: $isPresenting) {
-      VStack(alignment: .leading, spacing: 10) {
-        SheetTitle(title)
-        TextField("Name", text: $name)
-          .focused($nameIsFocused)
-          .onSubmit { submit() }
-        HStack {
-          Spacer()
-          Button("Cancel") { isPresenting = false }
-            .focusable()
-            .keyboardShortcut(.cancelAction)
-          Button("Add") { submit() }
-            .focusable()
-            .keyboardShortcut(.defaultAction)
-            .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }
-      }
-      .padding()
-      .frame(width: 220)
-      .onAppear { nameIsFocused = true }
-    }
-  }
-
-  private func submit() {
-    guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-    onSubmit(name)
-    name = ""
-    isPresenting = false
   }
 }

@@ -34,8 +34,8 @@ struct KeyCapRow: View {
 /// and the key come from the same catalogue entry.
 struct WorkspaceCommandPalette: View {
   @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.dismiss) private var dismiss
-  @FocusState private var isFieldFocused: Bool
+  @Environment(\.theme) private var theme
+  let overlayID: String
 
   @State private var query = ""
   @State private var selection: WorkspaceCommandID?
@@ -51,65 +51,50 @@ struct WorkspaceCommandPalette: View {
   }
 
   var body: some View {
+    let matches = matches
     VStack(alignment: .leading, spacing: 0) {
-      field
-      Divider()
-      if matches.isEmpty { empty } else { list }
-      Divider()
-      footer
+      WorkspaceOverlayField(
+        symbol: "command", prompt: "Run a command, or find a key", text: $query,
+        context: model.commandSurface.title)
+      FocusRule()
+      if matches.isEmpty {
+        WorkspaceOverlayHint(text: "Nothing matches “\(query)”.")
+          .frame(height: WorkspaceOverlayMetrics.listHeight)
+      } else {
+        list(matches)
+      }
+      WorkspaceOverlayFooter(
+        hints: "↑↓ choose · ↩ run · esc close",
+        trailing: "\(matches.count) of \(WorkspaceCommandCatalog.all.count)")
     }
-    .frame(width: 620, height: 480)
-    .onAppear {
-      isFieldFocused = true
-      selection = runnable.first
-    }
+    .onAppear { selection = runnable.first }
     .onChange(of: query) { _, _ in selection = runnable.first }
-    .onExitCommand { dismiss() }
-  }
-
-  private var field: some View {
-    HStack(spacing: 8) {
-      Image(systemName: "command").foregroundStyle(.secondary)
-      TextField("Run a command, or find a key", text: $query)
-        .textFieldStyle(.plain)
-        .font(.title3)
-        .focused($isFieldFocused)
-        .onSubmit { runSelection() }
-        .onKeyPress(.upArrow) { move(by: -1); return .handled }
-        .onKeyPress(.downArrow) { move(by: 1); return .handled }
-      Text(model.commandSurface.title)
-        .font(.system(size: 10, weight: .bold))
-        .textCase(.uppercase)
-        .kerning(1.2)
-        .foregroundStyle(.secondary)
+    .overlayKeys(model, id: overlayID) { key in
+      if let step = WorkspaceOverlayStep.offset(for: key) {
+        move(by: step)
+        return true
+      }
+      guard key == "enter" else { return false }
+      runSelection()
+      return true
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 16)
   }
 
-  private var empty: some View {
-    Text("Nothing matches “\(query)”.")
-      .font(.callout)
-      .foregroundStyle(.secondary)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-  }
-
-  private var list: some View {
+  private func list(_ matches: [WorkspaceCommandQuery.Match]) -> some View {
     ScrollViewReader { proxy in
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
           ForEach(matches) { match in
             row(match)
               .id(match.id)
-              .contentShape(Rectangle())
               .onTapGesture { run(match.command) }
           }
         }
-        .padding(.vertical, 4)
       }
+      .frame(height: WorkspaceOverlayMetrics.listHeight)
       .onChange(of: selection) { _, id in
         guard let id else { return }
-        withAnimation(.easeOut(duration: 0.12)) { proxy.scrollTo(id, anchor: .center) }
+        proxy.scrollTo(id, anchor: .center)
       }
     }
   }
@@ -118,43 +103,25 @@ struct WorkspaceCommandPalette: View {
     let command = match.command
     let isSelected = selection == command.id
     let isMotion = command.kind == .motion
-    return HStack(alignment: .firstTextBaseline, spacing: 12) {
-      VStack(alignment: .leading, spacing: 2) {
+    return HStack(alignment: .firstTextBaseline, spacing: theme.space.md) {
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text(command.title)
-          .font(.body)
+          .font(theme.bodyFont())
           // A motion is still readable, just visibly not a thing you can pick.
-          .foregroundStyle(isMotion ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+          .foregroundStyle(isMotion ? theme.muted : theme.ink)
         if let note = command.note {
-          Text(note).font(.caption).foregroundStyle(.tertiary)
+          Text(note)
+            .font(theme.bodyFont(size: theme.type.microLabel.size))
+            .foregroundStyle(theme.dim)
         }
       }
-      Spacer(minLength: 12)
+      Spacer(minLength: theme.space.md)
       if command.surface != .anywhere, command.surface != model.commandSurface {
-        Text(command.surface.title)
-          .font(.system(size: 9, weight: .bold))
-          .textCase(.uppercase)
-          .kerning(1.1)
-          .foregroundStyle(.quaternary)
+        MicroLabel(command.surface.title)
       }
       KeyCapRow(keys: command.displayKeys)
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 7)
-    .background(
-      WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: isSelected)
-        .padding(.horizontal, 10))
-  }
-
-  private var footer: some View {
-    HStack(spacing: 14) {
-      Text("↑↓ choose · ↩ run · esc close")
-      Spacer()
-      Text("\(matches.count) of \(WorkspaceCommandCatalog.all.count)")
-    }
-    .font(.caption)
-    .foregroundStyle(.tertiary)
-    .padding(.horizontal, 20)
-    .padding(.vertical, 10)
+    .overlayRow(isSelected: isSelected)
   }
 
   private func move(by offset: Int) {
@@ -174,10 +141,12 @@ struct WorkspaceCommandPalette: View {
 
   private func run(_ command: WorkspaceCommand) {
     guard command.kind == .action else { return }
-    // Dismiss first: several of these put the caret somewhere — a composer, a
-    // rename field, the sidebar — and a sheet still on screen would take it
-    // straight back.
-    dismiss()
+    // Closed first, handing the keyboard back to the region it came from:
+    // several of these put the caret somewhere else — a composer, a rename
+    // field, the sidebar — or open an overlay of their own, and this one
+    // still being up would toggle that shut. Those that move the caret move
+    // it after this, so they win.
+    model.dismissOverlay()
     model.run(command.id)
   }
 }

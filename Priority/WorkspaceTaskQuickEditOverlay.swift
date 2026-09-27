@@ -25,10 +25,16 @@ struct WorkspaceTaskQuickEditRequest: Identifiable {
   let kind: WorkspaceTaskQuickEditKind
 }
 
-struct WorkspaceTaskQuickEditSheet: View {
+/// One field of one task, edited without opening the inspector: `t` for the
+/// estimate, `dd` for the due date, and so on. Drawn by the overlay host.
+///
+/// Return saves, whatever is being edited — notes included, where ⇧↩ is the
+/// new line. Escape is the host's and always cancels.
+struct WorkspaceTaskQuickEditOverlay: View {
+  let overlayID: String
   let request: WorkspaceTaskQuickEditRequest
   @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.dismiss) private var dismiss
+  @Environment(\.theme) private var theme
   @State private var date = Date()
   @State private var text = ""
   @State private var error: String?
@@ -38,57 +44,110 @@ struct WorkspaceTaskQuickEditSheet: View {
   private var isDate: Bool { request.kind == .due || request.kind == .start }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text(request.kind.label).font(.title3.bold())
-      Text(request.task.title).foregroundStyle(.secondary).lineLimit(2)
-      if isDate {
-        calendarView
-        HStack {
-          Text("Time")
-          timePart(.hour, field: .hour)
-          Text(":")
-          timePart(.minute, field: .minute)
-        }
-        Text("Arrows: day/week · Shift ← →: month · Tab: time · Return: save · Delete: clear")
-          .font(.caption).foregroundStyle(.secondary)
-      } else if request.kind == .notes {
-        TextEditor(text: $text)
-          .focused($focus, equals: .text)
-          .frame(height: 180)
-          .accessibilityLabel("Task notes")
-      } else {
-        TextField(request.kind == .estimate ? "Minutes" : request.kind.label, text: $text)
-          .textFieldStyle(.roundedBorder).focused($focus, equals: .text)
-          .onSubmit { save() }
-        if request.kind == .estimate {
-          Text("Enter minutes; ↑ ↓ adjusts by 5, Shift ↑ ↓ by 30.")
-            .font(.caption).foregroundStyle(.secondary)
-        } else if request.kind == .tags {
-          Text("Separate tags with commas.").font(.caption).foregroundStyle(.secondary)
-        } else if request.kind == .recurrence {
-          Text("For example: daily, weekdays, weekly, or every 3 days.").font(.caption).foregroundStyle(.secondary)
+    VStack(alignment: .leading, spacing: 0) {
+      header
+      FocusRule()
+      VStack(alignment: .leading, spacing: theme.space.sm) {
+        editor
+        if let error {
+          Text(error).font(theme.bodyFont(size: theme.type.microLabel.size)).foregroundStyle(theme.danger)
         }
       }
-      if let error { Text(error).foregroundStyle(model.themeColor(.danger)).font(.caption) }
-      HStack {
-        Button("Cancel") { dismiss() }.focusable().keyboardShortcut(.cancelAction)
-        if request.kind != .title { Button("Clear") { save(clear: true) }.focusable() }
-        Spacer()
-        Button("Save") { save() }.focusable().keyboardShortcut(request.kind == .notes ? "s" : .return, modifiers: request.kind == .notes ? .command : [])
+      .padding(theme.space.md)
+      WorkspaceOverlayFooter(hints: hints, trailing: request.kind == .title ? nil : "⌘⌫ clear")
+    }
+    .onAppear {
+      load()
+      DispatchQueue.main.async { focus = isDate ? .calendar : .text }
+    }
+    .overlayKeys(model, id: overlayID) { key in
+      switch key {
+      case "enter", "cmd+enter":
+        save()
+        return true
+      case "up", "down", "shift+up", "shift+down":
+        guard request.kind == .estimate else { return false }
+        adjustEstimate(key.hasSuffix("up") ? 1 : -1, shift: key.hasPrefix("shift"))
+        return true
+      case "cmd+backspace":
+        guard request.kind != .title else { return false }
+        save(clear: true)
+        return true
+      default:
+        return false
       }
     }
-    .padding(24).frame(width: 420)
-    .onAppear { load(); focus = isDate ? .calendar : .text }
-    .onKeyPress(.upArrow, phases: [.down, .repeat]) { press in adjustEstimate(1, shift: press.modifiers.contains(.shift)) }
-    .onKeyPress(.downArrow, phases: [.down, .repeat]) { press in adjustEstimate(-1, shift: press.modifiers.contains(.shift)) }
-    .onKeyPress(.delete) {
-      guard isDate else { return .ignored }
-      save(clear: true); return .handled
+  }
+
+  private var header: some View {
+    HStack(spacing: theme.space.sm) {
+      MicroLabel(request.kind.label)
+      Text(request.task.title)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.muted)
+        .lineLimit(1)
+        .truncationMode(.tail)
+      Spacer(minLength: 0)
+      if request.kind != .title {
+        Button("Clear") { save(clear: true) }
+          .buttonStyle(.plain)
+          .foregroundStyle(theme.muted)
+      }
+      Button("Save") { save() }
+        .buttonStyle(.plain)
+        .foregroundStyle(theme.primary)
+    }
+    .font(theme.bodyFont())
+    .padding(.horizontal, theme.space.md)
+    .padding(.vertical, theme.space.sm)
+  }
+
+  @ViewBuilder
+  private var editor: some View {
+    if isDate {
+      calendarView
+      HStack(spacing: theme.space.xs) {
+        MicroLabel("Time")
+        timePart(.hour, field: .hour)
+        Text(":").foregroundStyle(theme.muted)
+        timePart(.minute, field: .minute)
+      }
+    } else if request.kind == .notes {
+      TextEditor(text: $text)
+        .font(theme.bodyFont())
+        .scrollContentBackground(.hidden)
+        .focused($focus, equals: .text)
+        .frame(height: WorkspaceOverlayMetrics.listHeight / 2)
+        .padding(theme.space.xs)
+        .overlay(
+          RoundedRectangle(cornerRadius: theme.controlRadius)
+            .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
+        .accessibilityLabel("Task notes")
+    } else {
+      TextField(request.kind == .estimate ? "Minutes" : request.kind.label, text: $text)
+        .textFieldStyle(.plain)
+        .font(theme.bodyFont())
+        .focused($focus, equals: .text)
+        .padding(theme.space.xs)
+        .overlay(
+          RoundedRectangle(cornerRadius: theme.controlRadius)
+            .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
+    }
+  }
+
+  private var hints: String {
+    switch request.kind {
+    case .due, .start: "arrows day/week · ⇧←→ month · tab time · ↩ save · esc cancel"
+    case .estimate: "minutes · ↑↓ ±5 · ⇧↑↓ ±30 · ↩ save · esc cancel"
+    case .notes: "↩ save · ⇧↩ new line · esc cancel"
+    case .tags: "comma separated · ↩ save · esc cancel"
+    case .recurrence: "daily, weekdays, every 3 days · ↩ save · esc cancel"
+    case .title: "↩ save · esc cancel"
     }
   }
 
   private var calendarView: some View {
-    VStack(spacing: 10) {
+    VStack(spacing: theme.space.sm) {
       HStack {
         Button { move(.month, -1) } label: { Image(systemName: "chevron.left") }
           .focusable()
@@ -103,36 +162,34 @@ struct WorkspaceTaskQuickEditSheet: View {
       LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7)) {
         ForEach(0..<7, id: \.self) { index in
           Text(calendar.veryShortWeekdaySymbols[(calendar.firstWeekday - 1 + index) % 7])
-            .foregroundStyle(.secondary)
+            .foregroundStyle(theme.muted)
         }
         ForEach(0..<42, id: \.self) { index in
           let day = gridDay(index)
           Text(day, format: .dateTime.day())
-            .frame(maxWidth: .infinity).padding(.vertical, 6)
-            .foregroundStyle(calendar.isDate(day, equalTo: date, toGranularity: .month) ? Color.primary : Color.secondary)
-            .background(calendar.isDate(day, inSameDayAs: date) ? Color.accentColor.opacity(0.3) : Color.clear,
-                        in: RoundedRectangle(cornerRadius: 6))
+            .frame(maxWidth: .infinity).padding(.vertical, theme.space.xs)
+            .foregroundStyle(calendar.isDate(day, equalTo: date, toGranularity: .month) ? theme.ink : theme.dim)
+            .workspaceSelection(isSelected: calendar.isDate(day, inSameDayAs: date), hasKeyboard: false)
             .onTapGesture { selectDay(day) }
         }
       }
     }
-    .padding(8)
+    .padding(theme.space.sm)
     .focusable().focusEffectDisabled().focused($focus, equals: .calendar)
-    .background(focus == .calendar ? Color.accentColor.opacity(0.08) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 8))
+    .overlay(
+      RoundedRectangle(cornerRadius: theme.controlRadius)
+        .strokeBorder(focus == .calendar ? theme.focusRing : theme.border, lineWidth: theme.hairline))
     .onKeyPress(.leftArrow, phases: [.down, .repeat]) { press in move(press.modifiers.contains(.shift) ? .month : .day, -1); return .handled }
     .onKeyPress(.rightArrow, phases: [.down, .repeat]) { press in move(press.modifiers.contains(.shift) ? .month : .day, 1); return .handled }
     .onKeyPress(.upArrow) { move(.day, -7); return .handled }
     .onKeyPress(.downArrow) { move(.day, 7); return .handled }
     .onKeyPress(.delete) { save(clear: true); return .handled }
-    .onKeyPress(.return) { save(); return .handled }
   }
 
   private func timePart(_ component: Calendar.Component, field: Field) -> some View {
     Text(String(format: "%02d", calendar.component(component, from: date)))
-      .monospacedDigit().padding(8)
-      .background(focus == field ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.1),
-                  in: RoundedRectangle(cornerRadius: 6))
+      .monospacedDigit().padding(theme.space.xs)
+      .workspaceSelection(isSelected: focus == field, hasKeyboard: focus == field)
       .focusable().focused($focus, equals: field)
       .accessibilityLabel(component == .hour ? "Hour" : "Minute")
       .onTapGesture { focus = field }
@@ -140,7 +197,6 @@ struct WorkspaceTaskQuickEditSheet: View {
       .onKeyPress(.downArrow) { move(component, -1); return .handled }
       .onKeyPress(.leftArrow) { focus = field == .minute ? .hour : .calendar; return .handled }
       .onKeyPress(.rightArrow) { focus = field == .hour ? .minute : .calendar; return .handled }
-      .onKeyPress(.return) { save(); return .handled }
   }
 
   private func gridDay(_ index: Int) -> Date {
@@ -159,10 +215,8 @@ struct WorkspaceTaskQuickEditSheet: View {
     date = calendar.date(byAdding: component, value: amount, to: date) ?? date
   }
 
-  private func adjustEstimate(_ amount: Int, shift: Bool) -> KeyPress.Result {
-    guard request.kind == .estimate else { return .ignored }
+  private func adjustEstimate(_ amount: Int, shift: Bool) {
     text = String(max(1, (Int(text) ?? 25) + amount * (shift ? 30 : 5)))
-    return .handled
   }
 
   private func load() {
@@ -202,7 +256,7 @@ struct WorkspaceTaskQuickEditSheet: View {
       _ = try store.saveTaskEditor(draft)
       model.taskEditor.refresh(store: store)
       model.reloadOutline(); model.reloadDailies(); model.reloadFocus(); model.reloadNextUp()
-      dismiss()
+      model.dismissOverlay()
     } catch { self.error = error.localizedDescription }
   }
 }

@@ -325,7 +325,6 @@ enum WorkspaceSidebarItem: Identifiable {
     listIcons[list.id] = symbol
     UserDefaults.standard.set(listIcons, forKey: "workspaceListIconsV1")
   }
-  var newKanbanColumnRequest = false
   var dailyProgressRevision = 0
   var selectedListID: String?
   var selectedFolderID: String?
@@ -366,8 +365,6 @@ enum WorkspaceSidebarItem: Identifiable {
       ?? boardColumns.first?.id
   }
   var isInspectorVisible = false
-  var taskMoveRequest: WorkspaceItemMoveRequest?
-  var taskQuickEditRequest: WorkspaceTaskQuickEditRequest?
   var dragDestinationListID: String?
   /// Asks the app shell for the always-on-top companion. A counter rather than
   /// a flag: the button and the F key both just want it shown, again.
@@ -400,19 +397,16 @@ enum WorkspaceSidebarItem: Identifiable {
   /// celebration lives in the app shell, so the model reports the occasion
   /// rather than staging it.
   @ObservationIgnored var onCompletion: ((CompletionEvent) -> Void)?
-  /// The command palette. Opens on ⌘K and is the one surface that lists every
-  /// key the workspace answers to, whether or not it can run it for you.
-  var showsCommandPalette = false
-  var showsKeyboardHelp = false
-  var showsListNavigator = false
-  var showsSearch = false
+  /// The palette, search, the list finder and the rest of what used to be
+  /// sheets. One at a time, by construction — see `WorkspaceOverlay.swift`.
+  var activeOverlay: WorkspaceOverlay?
+  @ObservationIgnored var overlayKeyHandler: WorkspaceOverlayKeyHandler?
   var searchQuery = "" { didSet { refreshSearchResults() } }
   var searchIncludesCompleted = false { didSet { refreshSearchResults() } }
   /// Written only by `refreshSearchResults()`; internal rather than
   /// `private(set)` so that method can live in `WorkspaceViewModel+Search.swift`.
   var searchResults: [TaskSearchResult] = []
   var selectedSearchResultID: String?
-  var creationRequest: WorkspaceCreationKind?
   var creationParentFolderID: String?
   var sidebarEditor: WorkspaceSidebarEditor?
   /// The list or folder currently showing a rename field, by its own id.
@@ -803,8 +797,8 @@ enum WorkspaceSidebarItem: Identifiable {
       if let scope = scopeTask, scope.isList {
         requestMove(scope)
       } else if let list = selectedList, !list.isSystemList {
-        taskMoveRequest = WorkspaceItemMoveRequest(payload: WorkspaceTaskDrag.listPrefix + list.id,
-          title: list.name, sourceListID: list.id, taskID: nil)
+        presentOverlay(.move(WorkspaceItemMoveRequest(payload: WorkspaceTaskDrag.listPrefix + list.id,
+          title: list.name, sourceListID: list.id, taskID: nil)))
       }
       return
     }
@@ -814,8 +808,8 @@ enum WorkspaceSidebarItem: Identifiable {
   }
 
   func requestMove(_ task: WorkspaceTask) {
-    taskMoveRequest = WorkspaceItemMoveRequest(payload: task.id, title: task.title,
-      sourceListID: task.listId, taskID: task.id)
+    presentOverlay(.move(WorkspaceItemMoveRequest(payload: task.id, title: task.title,
+      sourceListID: task.listId, taskID: task.id)))
   }
 
   func cycleKeyboardFocus(by offset: Int) {
@@ -829,7 +823,7 @@ enum WorkspaceSidebarItem: Identifiable {
   func requestCreation(_ kind: WorkspaceCreationKind, in parentFolderID: String? = nil) {
     creationIsNested = false
     creationParentFolderID = parentFolderID
-    creationRequest = kind
+    presentOverlay(.create(kind))
   }
 
   func requestListCreationForSelection() {

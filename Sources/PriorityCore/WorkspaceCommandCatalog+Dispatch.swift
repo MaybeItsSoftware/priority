@@ -29,7 +29,7 @@ extension WorkspaceCommandCatalog {
   /// in front of it (the palette, the reference, search), or belongs to the
   /// window rather than to the pane.
   ///
-  /// `goListNavigator` is deliberately absent. Its key is `ll`, and admitting
+  /// `goListNavigator` is deliberately absent. One of its keys is `ll`, and admitting
   /// it would make `l` a sequence starter on the ladder and the running block,
   /// where `l` means something on its own — so it would wait out the timeout.
   public static let reachableFromFullPaneScreens: Set<WorkspaceCommandID> = [
@@ -46,7 +46,7 @@ extension WorkspaceCommandCatalog {
     .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline,
     .goSidebarRegion, .goTaskRegion, .goInspectorRegion, .goCycleRegion,
     .taskNew, .listNew, .folderNew, .listNewTaskDestination,
-    .goKeyboardReference, .goCommandPalette, .goSearch,
+    .goKeyboardReference, .goCommandPalette, .goSearch, .goListNavigator,
   ]
 
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.

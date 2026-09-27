@@ -169,7 +169,7 @@ extension WorkspaceViewModel {
 
   func quickEdit(_ kind: WorkspaceTaskQuickEditKind) {
     guard let task = selectedTask else { return }
-    taskQuickEditRequest = WorkspaceTaskQuickEditRequest(task: task, kind: kind)
+    presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: task, kind: kind)))
   }
 
   func editSelectedTaskTitle() {

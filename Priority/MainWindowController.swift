@@ -132,10 +132,14 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 
   // MARK: - Keyboard
 
-  /// Desktop navigation deliberately ignores text responders, so task titles,
-  /// notes, search fields, and creation sheets retain normal macOS editing.
-  /// Every other key is routed to the local workspace — never the old
-  /// menu-bar/Checkvist command router.
+  /// Desktop navigation deliberately ignores text responders, so task titles
+  /// and notes retain normal macOS editing. Every other key is routed to the
+  /// local workspace — never the old menu-bar/Checkvist command router.
+  ///
+  /// The monitor stays live while an overlay is up — the palette, search, the
+  /// list finder — and offers it every key first. That is what lets ⌘K open
+  /// the palette from inside search, which no sheet could: an attached sheet
+  /// is a second window, and this monitor stands down for one.
   private func installWorkspaceKeyMonitorIfNeeded() {
     guard workspaceKeyMonitor == nil else { return }
     workspaceKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
@@ -158,6 +162,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         return event
       }
       self.shortcutShiftTap.keyPressed()
+      if self.workspace.activeOverlay != nil {
+        self.workspace.desktopShortcutSequence.reset()
+        // Nothing an overlay leaves unconsumed reaches the workspace behind
+        // it: it goes to the overlay's own field, or nowhere.
+        return self.workspace.handleOverlayKey(event) ? nil : event
+      }
       if self.isEditingText(in: window) {
         self.workspace.desktopShortcutSequence.reset()
         // Only the chords that are how you leave a field to do something else

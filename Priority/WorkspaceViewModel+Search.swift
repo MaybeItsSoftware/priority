@@ -11,7 +11,7 @@ extension WorkspaceViewModel {
     searchQuery = ""
     searchResults = []
     selectedSearchResultID = nil
-    showsSearch = true
+    presentOverlay(.search)
   }
 
   /// Re-runs the query. Called from the query and filter bindings rather than
@@ -59,7 +59,7 @@ extension WorkspaceViewModel {
   /// parent and a hit can be at any depth — landing on a view where the task
   /// is not visible would be a worse answer than not searching at all.
   func reveal(_ result: TaskSearchResult) {
-    showsSearch = false
+    dismissOverlay(restoringFocus: false)
     batchingRefreshes {
       if result.list.id != selectedListID || isEverythingSelected {
         selectList(result.list.id)

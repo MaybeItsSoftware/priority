@@ -231,7 +231,7 @@ extension WorkspaceViewModel {
     creationTaskListID = listID
     creationTaskParentID = parent?.id ?? (try? selectedList.flatMap { try store.visibleRootParentTaskID(for: $0) })
     creationIsNested = true
-    creationRequest = .list
+    presentOverlay(.create(.list))
   }
 
   func createNestedList(named name: String) {
@@ -293,7 +293,7 @@ extension WorkspaceViewModel {
     if let folder = selectedFolder {
       beginRenaming(.folder(folder))
     } else if let scope = scopeTask, scope.isList {
-      taskQuickEditRequest = WorkspaceTaskQuickEditRequest(task: scope, kind: .title)
+      presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: scope, kind: .title)))
     } else if let list = selectedList {
       beginRenaming(.list(list))
     }

@@ -96,10 +96,10 @@ extension WorkspaceViewModel {
     case .goFocus: presentFocusScreen()
     case .goTimeline:
       if showsTimelineScreen { dismissTimelineScreen() } else { presentTimelineScreen() }
-    case .goListNavigator: showsListNavigator = true
+    case .goListNavigator: presentOverlay(.listNavigator)
     case .goSearch: presentSearch()
-    case .goCommandPalette: showsCommandPalette = true
-    case .goKeyboardReference: showsKeyboardHelp = true
+    case .goCommandPalette: presentOverlay(.commandPalette)
+    case .goKeyboardReference: presentOverlay(.keyboardReference)
     case .goSidebarRegion: requestKeyboardFocus(.sidebar)
     case .goTaskRegion: requestKeyboardFocus(.tasks)
     case .goInspectorRegion:
@@ -151,7 +151,7 @@ extension WorkspaceViewModel {
       // sidebar once there is nothing left to leave; the bracket never did.
       if key != "[" || scopeTaskID != nil { leaveSelectedTaskScope() }
     case .planHideCompleted: toggleHiddenCompletedTasks()
-    case .planBoardNewColumn: newKanbanColumnRequest = true
+    case .planBoardNewColumn: presentOverlay(.newBoardColumn)
     case .planBoardMoveCardLeft: moveSelectedTaskToAdjacentColumn(by: -1)
     case .planBoardMoveCardRight: moveSelectedTaskToAdjacentColumn(by: 1)
     case .planBoardRemoveColumn:

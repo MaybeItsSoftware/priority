@@ -54,7 +54,7 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .goTimeline, title: "Show the day's timeline", group: "Go", keys: ["cmd+9"],
       note: "Press again to close it"),
-    .init(id: .goListNavigator, title: "Find or create a list", group: "Go", keys: ["ll"]),
+    .init(id: .goListNavigator, title: "Find or create a list", group: "Go", keys: ["cmd+p", "ll"]),
     .init(
       id: .goSearch, title: "Search every task", group: "Go", keys: ["cmd+f", "/"],
       note: "Titles and notes"),

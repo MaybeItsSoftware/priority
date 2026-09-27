@@ -179,9 +179,7 @@ extension WorkspaceViewModel {
   }
 
   func dismissKeyboardContext() {
-    if showsKeyboardHelp {
-      showsKeyboardHelp = false
-    } else if isInspectorVisible {
+    if isInspectorVisible {
       isInspectorVisible = false
       requestKeyboardFocus(.tasks)
     } else if scopeTaskID != nil {

@@ -175,7 +175,7 @@ struct MainApp: App {
         .commandShortcut(.folderNew)
         Divider()
         Button("Search…") {
-          AppDelegate.shared.workspace.showsSearch = true
+          AppDelegate.shared.workspace.run(.goSearch)
         }
         .commandShortcut(.goSearch)
         Button("List Settings…") {
@@ -196,7 +196,7 @@ struct MainApp: App {
         }
         .commandShortcut(.goCommandPalette)
         Button("Keyboard Help") {
-          AppDelegate.shared.workspace.showsKeyboardHelp = true
+          AppDelegate.shared.workspace.run(.goKeyboardReference)
         }
         .commandShortcut(.goKeyboardReference)
         Button("Diagnostics") {
