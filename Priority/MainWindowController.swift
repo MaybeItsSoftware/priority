@@ -160,24 +160,13 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       self.shortcutShiftTap.keyPressed()
       if self.isEditingText(in: window) {
         self.workspace.desktopShortcutSequence.reset()
-        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
-        let character = event.charactersIgnoringModifiers?.lowercased() ?? ""
-        let regionOrView = (flags == [.command] || flags == [.control]) && character.count == 1
-          && "0123456789".contains(character)
-        let cycleRegion = (flags == [.control] || flags == [.control, .shift]) && event.keyCode == 48
-        let createItem = (flags == [.command] || flags == [.command, .shift]
-          || flags == [.command, .option]) && character == "n"
-        let chooseDestination = flags == [.command, .option]
-          && (character == "[" || character == "]")
-        let help = flags == [.command] && character == "/"
-        // ⌘K is how you leave a field to do something else, so it has to work
-        // from inside one — the same reasoning as ⌘F below.
-        let palette = flags == [.command] && character == "k"
-        // Search, but deliberately not undo: inside a text field ⌘Z belongs to
-        // the text being typed, not to the workspace behind it.
-        let search = flags == [.command] && character == "f"
-        guard regionOrView || cycleRegion || createItem || chooseDestination || help || search
-          || palette
+        // Only the chords that are how you leave a field to do something else
+        // — the views, the regions, creating, search, the palette, the
+        // reference. The catalogue says which (`reachableFromTextField`), so
+        // this list cannot drift from the keys it names. ⌘Z is deliberately
+        // not one: inside a field it belongs to the text being typed.
+        guard let key = event.workspaceCommandKey,
+          WorkspaceCommandCatalog.reachesIntoTextField(key, on: self.workspace.commandSurface)
         else {
           return event
         }
