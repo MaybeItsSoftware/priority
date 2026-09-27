@@ -80,7 +80,7 @@ extension WorkspaceViewModel {
       requestKeyboardFocus(selectedTask == nil ? .tasks : .inspector)
 
     // MARK: Task
-    case .taskNew: if key == "enter" { addTaskFromReturn() } else { requestTaskComposerFocus() }
+    case .taskNew: addTaskBelowSelection()
     case .taskNewAbove: requestRelativeTaskComposerFocus(above: true)
     case .taskNewChild: requestRelativeTaskComposerFocus(child: true)
     case .taskComplete: toggleSelectedTask()
@@ -115,7 +115,10 @@ extension WorkspaceViewModel {
     case .taskMoveDown: moveSelectionWithinSiblings(by: 1)
 
     // MARK: Plan
-    case .planEnterTask: enterSelectedTask()
+    // Return is "open the task" on every task surface. With nothing to open
+    // it adds one, so an empty list still answers to it.
+    case .planEnterTask:
+      if key == "enter" && selectedTask == nil { requestTaskComposerFocus() } else { enterSelectedTask() }
     case .planLeaveTask:
       // `[` only ever leaves a task. `h` and ← hand the keyboard back to the
       // sidebar once there is nothing left to leave; the bracket never did.

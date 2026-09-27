@@ -73,12 +73,15 @@ public enum WorkspaceCommandCatalog {
   // MARK: - Task
 
   private static let task: [WorkspaceCommand] = [
-    .init(id: .taskNew, title: "Add a task", group: "Task", keys: ["cmd+n", "enter"]),
+    .init(
+      id: .taskNew, title: "Add a task", group: "Task", keys: ["cmd+n"],
+      note: "Below the selected task in the outline and the matrix"),
     .init(id: .taskNewAbove, title: "Add a task above", group: "Task", keys: ["option+enter"]),
-    .init(id: .taskNewChild, title: "Add a subtask", group: "Task", keys: ["shift+enter"]),
+    .init(id: .taskNewChild, title: "Add a subtask", group: "Task", keys: ["option+shift+enter"]),
+    // ⇧↩ ticks off on every task surface, as it always did on Today.
     .init(
       id: .taskComplete, title: "Complete or reopen the task", group: "Task",
-      keys: ["space", "x"]),
+      keys: ["space", "x", "shift+enter"]),
     .init(
       id: .taskInvalidate, title: "Cancel or reinstate the task", group: "Task",
       keys: ["shift+space"], note: "Cancelled, rather than done — it stopped mattering"),
@@ -133,8 +136,9 @@ public enum WorkspaceCommandCatalog {
 
   private static let plan: [WorkspaceCommand] = [
     .init(
-      id: .planEnterTask, title: "Open the task's subtasks", group: "Plan",
-      keys: ["right", "shift+right", "l", "]"]),
+      id: .planEnterTask, title: "Open the task", group: "Plan",
+      keys: ["enter", "right", "shift+right", "l", "]"],
+      note: "Its subtasks, as a board. Return with nothing selected adds a task"),
     .init(
       id: .planLeaveTask, title: "Leave the task's subtasks", group: "Plan",
       keys: ["left", "shift+left", "h", "["],

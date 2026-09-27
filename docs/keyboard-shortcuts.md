@@ -111,9 +111,26 @@ own, so the bare task keys — `Space`, `x`, `Delete`, the digits, `Tab` — do 
 reach through them to the selected task. They keep the chords, `/`, `?`, `i`
 and `Esc`, and the sidebar and done rail keep the two-letter sequences.
 
+## Return and Shift-Return
+
+They mean the same thing on every task surface:
+
+- **Return opens the task you are on.** On Today that is starting its card —
+  a task on the day *is* a block to run — and, on the card that is running,
+  finishing it. On the board, the outline and the matrix it opens the task's
+  subtasks as a board of their own. With nothing selected — an empty column,
+  an empty list — Return adds a task instead, so it is never dead.
+- **Shift-Return ticks the task off** without running a block, as Space and
+  `x` do.
+- Adding is `Cmd+N` (below the selected task in the outline and the matrix),
+  `Option+Return` (above it) and `Option+Shift+Return` (a subtask).
+
+The outline used to add a task on Return and a subtask on Shift-Return, while
+Today started and ticked. One key meaning two things depending on the pane is
+exactly what a keyboard-first app cannot afford, and Today's meaning is the one
+a Blitzit-style day is built on.
+
 The board keeps Left/Right for column navigation, including empty columns.
-Enter opens a selected task's nested board, or focuses the add-task field in an
-empty column. Alt Enter and Shift Enter add above/as a child in the board too.
 Escape cancels task entry and returns to navigation.
 
 ## Undo

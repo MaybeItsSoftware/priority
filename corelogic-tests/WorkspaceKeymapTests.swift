@@ -44,14 +44,14 @@ final class WorkspaceKeymapTests: XCTestCase {
     }
     // The defaults stay: a binding adds a key, it does not replace the others.
     XCTAssertEqual(bindings.command(forKey: "x", on: .outline)?.id, .taskComplete)
-    XCTAssertEqual(bindings.byID[.taskComplete]?.displayKeys, ["Space", "X", "⌘⇧K"])
+    XCTAssertEqual(bindings.byID[.taskComplete]?.displayKeys, ["Space", "X", "⇧↩", "⌘⇧K"])
   }
 
   func testABindingTakesTheKeyFromWhoeverHadItOnTheSameSurface() {
     let (bindings, issues) = resolve(#"[{"bindings": {"x": "taskDelete"}}]"#)
     XCTAssertTrue(issues.isEmpty, "\(issues)")
     XCTAssertEqual(bindings.command(forKey: "x", on: .outline)?.id, .taskDelete)
-    XCTAssertEqual(bindings.byID[.taskComplete]?.keys, ["space"])
+    XCTAssertEqual(bindings.byID[.taskComplete]?.keys, ["space", "shift+enter"])
     // A different surface's own `x` is a different binding, and stays.
     XCTAssertEqual(bindings.command(forKey: "x", on: .focus)?.id, .focusTickOff)
   }
@@ -84,7 +84,7 @@ final class WorkspaceKeymapTests: XCTestCase {
     XCTAssertTrue(issues.isEmpty, "\(issues)")
     XCTAssertNil(bindings.command(forKey: "x", on: .outline))
     XCTAssertNil(bindings.command(forKey: "x", on: .focus))
-    XCTAssertEqual(bindings.byID[.taskComplete]?.keys, ["space"])
+    XCTAssertEqual(bindings.byID[.taskComplete]?.keys, ["space", "shift+enter"])
   }
 
   func testNullInAContextUnbindsOnThatSurfaceOnly() {

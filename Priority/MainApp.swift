@@ -162,7 +162,7 @@ struct MainApp: App {
       }
       CommandMenu("Workspace") {
         Button("New Task") {
-          AppDelegate.shared.workspace.requestTaskComposerFocus()
+          AppDelegate.shared.workspace.run(.taskNew)
         }
         .commandShortcut(.taskNew)
         Button("New List") {

@@ -88,15 +88,15 @@ extension WorkspaceViewModel {
 
   // MARK: - What the direction keys mean, per region
 
-  /// Return on a task pane: the board opens the card you are on, or adds one
-  /// to an empty column; everywhere else it adds a task below the selection.
-  func addTaskFromReturn() {
-    if viewMode == .board && selectedTask == nil {
-      requestTaskComposerFocus()
-    } else if viewMode == .board {
-      enterSelectedTask()
-    } else {
+  /// ⌘N: below the selected task where a list reads top to bottom — the
+  /// outline and the matrix's rows — and into the composer everywhere else.
+  /// Return used to do this on the outline while it opened the card on the
+  /// board and started it on Today; Return now opens the task everywhere.
+  func addTaskBelowSelection() {
+    if selectedTask != nil && (viewMode == .outline || viewMode == .matrix) {
       requestRelativeTaskComposerFocus()
+    } else {
+      requestTaskComposerFocus()
     }
   }
 

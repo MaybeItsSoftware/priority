@@ -70,10 +70,10 @@ none of it is reachable only by something you already have to know.
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
 | `j` / `k` / `↑` / `↓` | Move the selection |
-| `Return` | Start the card you are on, or finish the one running |
-| `Shift+Return` | Tick it off without running a block |
-| `Space` | Complete the selected task |
+| `Return` | Open the task you are on — on Today, start its card (or finish the one running); elsewhere, open its subtasks. With nothing selected, add a task |
+| `Shift+Return` / `Space` | Tick the task off without running a block |
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
+| `Alt+Return` / `Alt+Shift+Return` | New task above the selection / new subtask |
 | `Cmd+F` | Search |
 | `Cmd+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
