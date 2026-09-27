@@ -141,8 +141,7 @@ struct WorkspaceCommandPalette: View {
     .padding(.horizontal, 20)
     .padding(.vertical, 7)
     .background(
-      RoundedRectangle(cornerRadius: 6)
-        .fill(Color.accentColor.opacity(isSelected ? 0.16 : 0))
+      WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: isSelected)
         .padding(.horizontal, 10))
   }
 

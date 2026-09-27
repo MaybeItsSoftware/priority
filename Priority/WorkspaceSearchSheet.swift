@@ -96,7 +96,7 @@ struct WorkspaceSearchSheet: View {
     }
     .padding(.horizontal, 20)
     .padding(.vertical, 8)
-    .background(isSelected ? Color.accentColor.opacity(0.18) : .clear)
+    .workspaceSelection(isSelected: isSelected, hasKeyboard: isSelected, radius: 0)
   }
 
   private func hint(_ text: String) -> some View {

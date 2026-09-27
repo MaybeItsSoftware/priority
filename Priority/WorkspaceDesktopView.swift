@@ -515,9 +515,9 @@ struct WorkspaceDesktopView: View {
     .padding(.leading, CGFloat(item.depth) * 22)
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
-    .background(
-      item.task.id == model.selectedTaskID ? Color.accentColor.opacity(0.14) : .clear,
-      in: RoundedRectangle(cornerRadius: 6)
+    .workspaceSelection(
+      isSelected: item.task.id == model.selectedTaskID,
+      hasKeyboard: model.keyboardFocusArea == .tasks && item.task.id == model.selectedTaskID
     )
     .onTapGesture { model.selectTask(item.task) }
     .contextMenu { WorkspaceItemActions(task: item.task) }
@@ -688,9 +688,9 @@ private struct WorkspaceMatrixTaskRow: View {
     .padding(6)
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
-    .background(
-      task.id == model.selectedTaskID ? Color.accentColor.opacity(0.17) : .clear,
-      in: RoundedRectangle(cornerRadius: 6))
+    .workspaceSelection(
+      isSelected: task.id == model.selectedTaskID,
+      hasKeyboard: model.keyboardFocusArea == .tasks && task.id == model.selectedTaskID)
     .focusable()
     .focused($isRowFocused)
     .focusEffectDisabled()
@@ -969,30 +969,18 @@ struct WorkspaceItemActions: View {
 /// `WorkspaceFocusScreen.swift` and are sidebar rows like any other.
 struct WorkspaceSidebarSelectionBackground: View {
   @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
   var isCurrent = false
   var rowID: String?
 
-  private var hasKeyboard: Bool { model.keyboardFocusArea == .sidebar }
-  private var isCursor: Bool { hasKeyboard && rowID.map(model.isSidebarCursorRow) == true }
-
-  private var fill: Double {
-    if isCurrent { return isCursor ? 0.24 : 0.13 }
-    return isCursor ? 0.12 : 0
-  }
-
-  private var border: Color {
-    if isCursor { return theme.focusRing }
-    return isCurrent ? theme.color(.primary, opacity: 0.55) : .clear
+  /// The sidebar is the one place where "selected" and "under the keyboard"
+  /// routinely name different rows, so the cursor is looked up per row rather
+  /// than inherited from the region.
+  private var isCursor: Bool {
+    model.keyboardFocusArea == .sidebar && rowID.map(model.isSidebarCursorRow) == true
   }
 
   var body: some View {
-    RoundedRectangle(cornerRadius: theme.controlRadius)
-      .fill(theme.color(.primary, opacity: fill))
-      .overlay(
-        RoundedRectangle(cornerRadius: theme.controlRadius)
-          .strokeBorder(border, lineWidth: isCursor ? theme.focusRingWidth : theme.hairline)
-      )
+    WorkspaceSelectionBackground(isSelected: isCurrent, hasKeyboard: isCursor)
   }
 }
 
@@ -1449,8 +1437,7 @@ private struct WorkspaceListNavigator: View {
                 Label(destination.title, systemImage: destination.task == nil ? "list.bullet" : "list.bullet.indent")
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .padding(8)
-                  .background(index == selection ? Color.accentColor.opacity(0.17) : .clear,
-                    in: RoundedRectangle(cornerRadius: 6))
+                  .workspaceSelection(isSelected: index == selection, hasKeyboard: index == selection)
               }
               .buttonStyle(.plain)
               .id(index)

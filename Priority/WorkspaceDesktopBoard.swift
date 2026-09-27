@@ -209,12 +209,16 @@ struct WorkspaceKanbanColumnView: View {
 
 struct WorkspaceKanbanCard: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   @FocusState private var isCardFocused: Bool
   @State private var isExpanded = false
   @State private var isDropTargeted = false
   @State private var newSubtaskTitle = ""
   let task: WorkspaceTask
   let column: WorkspaceKanbanColumn
+
+  private var isSelected: Bool { task.id == model.selectedTaskID }
+  private var hasKeyboard: Bool { isSelected && model.keyboardFocusArea == .tasks }
 
   var body: some View {
     cardSurface
@@ -267,13 +271,25 @@ struct WorkspaceKanbanCard: View {
     }
     .padding(10)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(
-      task.id == model.selectedTaskID ? Color.accentColor.opacity(0.17) : Color.clear,
-      in: RoundedRectangle(cornerRadius: 9)
-    )
-    .overlay(RoundedRectangle(cornerRadius: 9).stroke(
-      isDropTargeted ? Color.accentColor : Color.primary.opacity(0.15),
-      lineWidth: isDropTargeted ? 2 : 1))
+    // A card is a raised surface with a hairline, and *then* a selection on
+    // top of it — the two were one expression at radius 9, which is not on the
+    // scale and left the selected card no ring to show for holding the keyboard.
+    .background {
+      let shape = RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous)
+      ZStack {
+        shape.fill(theme.raised)
+        WorkspaceSelectionBackground(
+          isSelected: isSelected, hasKeyboard: hasKeyboard, radius: theme.panelRadius)
+      }
+    }
+    .overlay {
+      let shape = RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous)
+      // Nothing when the selection is already drawing an edge, so the card
+      // never carries two borders of different colours at once.
+      shape.strokeBorder(
+        isDropTargeted ? theme.primary : (isSelected ? .clear : theme.border),
+        lineWidth: isDropTargeted ? theme.emphasisBorder : theme.hairline)
+    }
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
