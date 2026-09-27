@@ -31,11 +31,18 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
   }
 
   private let workspace: WorkspaceViewModel
+  /// Each toolbar item is its own `NSHostingView`, hung off the window's
+  /// titlebar rather than off the content view, so none of them sits below the
+  /// `.themed(_:)` at the window root. Without this they read the environment's
+  /// default — the house style in light — and the toolbar stayed light while the
+  /// window went dark.
+  private let theme: ThemeManager
 
   var onShowSettings: (() -> Void)?
 
-  init(workspace: WorkspaceViewModel) {
+  init(workspace: WorkspaceViewModel, theme: ThemeManager) {
     self.workspace = workspace
+    self.theme = theme
     super.init()
   }
 
@@ -134,7 +141,8 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
     let item = NSToolbarItem(itemIdentifier: identifier)
     item.label = label
     item.paletteLabel = label
-    let hostingView = NSHostingView(rootView: content().focusEffectDisabled())
+    let hostingView = NSHostingView(
+      rootView: content().focusEffectDisabled().themed(theme))
     hostingView.sizingOptions = [.intrinsicContentSize]
     item.view = hostingView
     item.minSize = NSSize(width: minWidth, height: 24)
@@ -152,6 +160,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
 /// clicking anything.
 struct WorkspaceModeStrip: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
 
   var body: some View {
     HStack(spacing: 2) {
@@ -169,16 +178,15 @@ struct WorkspaceModeStrip: View {
             Text(mode.title)
               .font(.system(size: 11, weight: .medium))
           }
-          .foregroundStyle(isCurrent ? Color.accentColor : .secondary)
-          .padding(.horizontal, 8)
+          .foregroundStyle(isCurrent ? theme.primary : theme.muted)
+          .padding(.horizontal, theme.space.sm)
           .padding(.vertical, 4)
-          .background(
-            isCurrent ? Color.accentColor.opacity(0.14) : .clear,
-            in: RoundedRectangle(cornerRadius: 6))
-          .overlay(
-            RoundedRectangle(cornerRadius: 6)
-              .strokeBorder(isCurrent ? Color.accentColor.opacity(0.35) : .clear, lineWidth: 1))
-          .contentShape(RoundedRectangle(cornerRadius: 6))
+          // The same selection every other row in the app draws. The strip had
+          // its own fill at 0.14 and its own edge at 0.35, which made "where I
+          // am" look like a different kind of fact in the toolbar than in the
+          // sidebar — and it was the accent colour, so it never went dark.
+          .workspaceSelection(isSelected: isCurrent, hasKeyboard: false)
+          .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
         }
         .buttonStyle(.plain)
         .help(
@@ -202,17 +210,17 @@ struct WorkspacePaneToggle: View {
   let isOn: () -> Bool
   let toggle: () -> Void
 
+  @Environment(\.theme) private var theme
+
   var body: some View {
     let on = isOn()
     Button(action: toggle) {
       Image(systemName: symbol)
         .font(.system(size: 13, weight: .medium))
-        .foregroundStyle(on ? Color.accentColor : .secondary)
+        .foregroundStyle(on ? theme.primary : theme.muted)
         .frame(width: 26, height: 22)
-        .background(
-          on ? Color.accentColor.opacity(0.14) : .clear,
-          in: RoundedRectangle(cornerRadius: 6))
-        .contentShape(RoundedRectangle(cornerRadius: 6))
+        .workspaceSelection(isSelected: on, hasKeyboard: false)
+        .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
     }
     .buttonStyle(.plain)
     .commandHelp(command, note: title)

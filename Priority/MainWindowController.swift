@@ -105,7 +105,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     // The strip that names which mode you are in. Without it the four of them
     // were reachable only by a command-digit, and nothing on screen said which
     // one you were looking at.
-    let toolbarController = MainWindowToolbarController(workspace: workspace)
+    let toolbarController = MainWindowToolbarController(workspace: workspace, theme: manager.theme)
     toolbarController.onShowSettings = { [weak self] in self?.onShowSettings?() }
     self.toolbarController = toolbarController
     window.toolbar = toolbarController.makeToolbar()
