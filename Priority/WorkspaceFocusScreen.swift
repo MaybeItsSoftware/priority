@@ -13,77 +13,36 @@ struct WorkspaceFocusLauncher: View {
   @State private var isHovering = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Button {
+    VStack(alignment: .leading, spacing: 2) {
+      WorkspaceSidebarActionRow(
+        symbol: model.activeFocusSession == nil ? "target" : "timer",
+        title: model.activeFocusSession == nil ? "Focus" : "In session",
+        detail: headline,
+        command: .goFocus,
+        isCurrent: model.activeFocusSession != nil,
+        rowID: "row:focus",
+        help: model.activeFocusSession == nil
+          ? "Start a focus session on your next task" : "Return to the running session"
+      ) {
         model.sidebarCursorID = "row:focus"
         model.presentFocusScreen()
-      } label: {
-        VStack(alignment: .leading, spacing: 4) {
-          HStack(spacing: 6) {
-            Image(systemName: model.activeFocusSession == nil ? "target" : "timer")
-              .font(.system(size: 11, weight: .semibold))
-            MicroLabel(
-              model.activeFocusSession == nil ? "Focus" : "In session",
-              tint: model.activeFocusSession == nil ? theme.muted : theme.primary)
-            Spacer(minLength: 0)
-            KeyCap("⌘8")
-          }
-          .foregroundStyle(model.activeFocusSession == nil ? theme.muted : theme.primary)
-
-          Text(headline)
-            .font(.callout.weight(.medium))
-            .lineLimit(2)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .foregroundStyle(.primary)
-
-          if let detail {
-            Text(detail)
-              .font(.caption2)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
-          }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(
-          isHovering ? Color.primary.opacity(0.07) : Color.primary.opacity(0.03),
-          in: RoundedRectangle(cornerRadius: 8))
-        .overlay(
-          RoundedRectangle(cornerRadius: 8)
-            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
-        // Focus is a sidebar row, so it takes the sidebar's cursor ring. It
-        // could not be highlighted at all before, which is most of why
-        // arrowing up onto it felt like arrowing into nothing.
-        .overlay(WorkspaceSidebarSelectionBackground(rowID: "row:focus"))
-        .contentShape(RoundedRectangle(cornerRadius: 8))
       }
-      .buttonStyle(.plain)
-      .focusable()
-      .onHover { isHovering = $0 }
-      .help(model.activeFocusSession == nil ? "Start a focus session on your next task" : "Return to the running session")
-      .accessibilityLabel(model.activeFocusSession == nil ? "Start focus. Next up: \(headline)" : "Return to focus session")
-      Button {
+      .accessibilityLabel(
+        model.activeFocusSession == nil
+          ? "Start focus. Next up: \(headline)" : "Return to focus session")
+
+      WorkspaceSidebarActionRow(
+        symbol: "chart.bar.doc.horizontal",
+        title: "Timeline",
+        detail: detail,
+        command: .goTimeline,
+        isCurrent: model.showsTimelineScreen,
+        rowID: "row:timeline",
+        help: "See where the day's focused time went"
+      ) {
         model.sidebarCursorID = "row:timeline"
         model.presentTimelineScreen()
-      } label: {
-        HStack(spacing: 6) {
-          Image(systemName: "chart.bar.doc.horizontal")
-            .font(.system(size: 11, weight: .semibold))
-          MicroLabel("Timeline", tint: model.showsTimelineScreen ? theme.primary : theme.muted)
-          Spacer(minLength: 0)
-          KeyCap("⌘9")
-        }
-        .foregroundStyle(model.showsTimelineScreen ? theme.primary : theme.muted)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(WorkspaceSidebarSelectionBackground(
-          isCurrent: model.showsTimelineScreen, rowID: "row:timeline"))
-        .contentShape(Rectangle())
       }
-      .buttonStyle(.plain)
-      .focusable()
-      .help("See where the day's focused time went")
     }
   }
 
@@ -92,10 +51,76 @@ struct WorkspaceFocusLauncher: View {
     return model.nextUp?.candidate.title ?? "Nothing to pick up"
   }
 
-  private var detail: String? {
-    if model.activeFocusSession != nil { return "Session running" }
-    guard let scored = model.nextUp else { return "Add a task or a daily to get started" }
-    return model.focusExplanation(scored).localizedCapitalized
+  /// The timeline row's second line: what the day has actually cost so far,
+  /// which is the question you open the timeline to answer. It used to explain
+  /// why the *focus* row had picked what it had — a sentence about a different
+  /// row, sitting under this one.
+  private var detail: String {
+    let points = FocusPoints.formatted(model.focusPoints.today)
+    return model.focusPoints.today > 0 ? "\(points) pts today" : "Nothing logged yet"
+  }
+}
+
+/// A sidebar row that opens a surface rather than selecting a list.
+///
+/// Focus was a bordered card at `Color.primary.opacity(0.03)` on a literal
+/// radius 8; Timeline was a bare row; Everything below them is a `List` row. So
+/// the top of the sidebar had three shapes for three rows that do the same kind
+/// of thing, and only one of them named its key. They are one row now, and the
+/// key comes out of the catalogue rather than being typed in as "⌘8".
+struct WorkspaceSidebarActionRow: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  @State private var isHovering = false
+
+  let symbol: String
+  let title: String
+  var detail: String?
+  let command: WorkspaceCommandID
+  var isCurrent = false
+  let rowID: String
+  var help: String?
+  let action: () -> Void
+
+  private var key: String? {
+    WorkspaceCommandCatalog[command].displayKeys.first
+  }
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: theme.space.xs) {
+        Image(systemName: symbol)
+          .font(.system(size: 11, weight: .semibold))
+          .frame(width: 16)
+          .foregroundStyle(isCurrent ? theme.primary : theme.muted)
+        VStack(alignment: .leading, spacing: 1) {
+          Text(title)
+            .font(theme.bodyFont(size: 12, weight: isCurrent ? .semibold : .regular))
+            .lineLimit(1)
+          if let detail {
+            Text(detail)
+              .font(theme.bodyFont(size: 10))
+              .foregroundStyle(theme.dim)
+              .lineLimit(1)
+              .truncationMode(.tail)
+          }
+        }
+        Spacer(minLength: theme.space.xs)
+        if let key { KeyCap(key) }
+      }
+      .padding(.horizontal, theme.space.sm)
+      .padding(.vertical, 5)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(
+        theme.color(.primary, opacity: isHovering ? 0.06 : 0),
+        in: RoundedRectangle(cornerRadius: theme.controlRadius))
+      .background(WorkspaceSidebarSelectionBackground(isCurrent: isCurrent, rowID: rowID))
+      .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
+    }
+    .buttonStyle(.plain)
+    .focusable()
+    .onHover { isHovering = $0 }
+    .commandHelp(command, note: help)
   }
 }
 
