@@ -21,6 +21,23 @@ public enum WorkspaceCommandCatalog {
     bindings.byID[id]!
   }
 
+  /// The menu bar's Task menu, in sections. Every action in the Task group is
+  /// in it except "Add a task", which the Workspace menu carries, and "Clear
+  /// the priority", which sits under the menu's priority digits; a test holds
+  /// the menu to that, so a new task command cannot be left out of it.
+  public static let taskMenu: [[WorkspaceCommandID]] = [
+    [.taskComplete, .taskInvalidate, .taskStartFocus, .taskDelete],
+    [.taskNewAbove, .taskNewChild],
+    [
+      .taskRename, .taskEditDue, .taskEditStart, .taskEditEstimate, .taskEditNotes,
+      .taskEditTags, .taskEditRecurrence,
+    ],
+    [.taskDueToday, .taskDueTomorrow, .taskClearDue, .taskClearNotes, .taskClearTags],
+    [.taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown, .taskMove],
+    [.taskConvertToList, .taskPromoteList, .taskExtractBranch],
+    [.taskToggleDaily, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
+  ]
+
   // MARK: - Go
 
   private static let go: [WorkspaceCommand] = [
@@ -68,15 +85,15 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .taskDelete, title: "Delete the task", group: "Task", keys: ["delete"],
       note: "Takes its subtasks with it"),
-    .init(id: .taskRename, title: "Rename the task", group: "Task", keys: ["ee", "f2"]),
-    .init(id: .taskEditDue, title: "Edit the due date", group: "Task", keys: ["dd"]),
-    .init(id: .taskEditNotes, title: "Edit the notes", group: "Task", keys: ["nn"]),
-    .init(id: .taskEditTags, title: "Edit the tags", group: "Task", keys: ["tt"]),
-    .init(id: .taskEditRecurrence, title: "Edit how it repeats", group: "Task", keys: ["dr"]),
+    .init(id: .taskRename, title: "Rename the task", group: "Task", keys: ["ee", "f2", "cmd+shift+e"]),
+    .init(id: .taskEditDue, title: "Edit the due date", group: "Task", keys: ["dd", "cmd+d"]),
+    .init(id: .taskEditNotes, title: "Edit the notes", group: "Task", keys: ["nn", "cmd+ctrl+n"]),
+    .init(id: .taskEditTags, title: "Edit the tags", group: "Task", keys: ["tt", "cmd+ctrl+t"]),
+    .init(id: .taskEditRecurrence, title: "Edit how it repeats", group: "Task", keys: ["dr", "cmd+ctrl+r"]),
     .init(id: .taskEditStart, title: "Edit the start date", group: "Task", keys: ["option+s"]),
     .init(id: .taskEditEstimate, title: "Edit the time estimate", group: "Task", keys: ["option+t"]),
-    .init(id: .taskDueToday, title: "Due today", group: "Task", keys: ["td"]),
-    .init(id: .taskDueTomorrow, title: "Due tomorrow", group: "Task", keys: ["tm"]),
+    .init(id: .taskDueToday, title: "Due today", group: "Task", keys: ["td", "cmd+t"]),
+    .init(id: .taskDueTomorrow, title: "Due tomorrow", group: "Task", keys: ["tm", "cmd+shift+t"]),
     .init(id: .taskClearDue, title: "Clear the due date", group: "Task", keys: ["cd"]),
     .init(id: .taskClearNotes, title: "Clear the notes", group: "Task", keys: ["cn"]),
     .init(id: .taskClearTags, title: "Clear the tags", group: "Task", keys: ["ct"]),
@@ -90,7 +107,7 @@ public enum WorkspaceCommandCatalog {
       id: .taskStartFocus, title: "Start focus on the task", group: "Task", keys: ["f"],
       note: "Or add it to the queue behind a running block"),
     .init(
-      id: .taskMove, title: "Move the task or list", group: "Task", keys: ["mm"],
+      id: .taskMove, title: "Move the task or list", group: "Task", keys: ["mm", "cmd+shift+m"],
       note: "Including everything under it"),
     .init(
       id: .taskConvertToList, title: "Convert to a list, or back", group: "Task",
@@ -99,7 +116,7 @@ public enum WorkspaceCommandCatalog {
       id: .taskPromoteList, title: "Promote or unpin a nested list", group: "Task",
       keys: ["cmd+shift+p"]),
     .init(id: .taskExtractBranch, title: "Extract the branch as a list", group: "Task", keys: ["xx"]),
-    .init(id: .taskOpenLink, title: "Open the task's first link", group: "Task", keys: ["gg"]),
+    .init(id: .taskOpenLink, title: "Open the task's first link", group: "Task", keys: ["gg", "cmd+o"]),
     .init(id: .taskShowProgress, title: "Show the task's progress", group: "Task", keys: ["pc"]),
     .init(
       id: .taskToggleInspector, title: "Open or close the inspector", group: "Task",

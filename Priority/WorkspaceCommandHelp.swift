@@ -63,7 +63,9 @@ extension WorkspaceCommand {
   var menuShortcut: KeyboardShortcut? {
     for token in keys {
       let parts = token.split(separator: "+").map(String.init)
-      guard parts.count > 1, let key = parts.last, key.count == 1 else { continue }
+      guard parts.count > 1, let key = parts.last,
+        let equivalent = key.count == 1 ? KeyEquivalent(Character(key)) : Self.namedEquivalents[key]
+      else { continue }
       var modifiers: EventModifiers = []
       for part in parts.dropLast() {
         switch part {
@@ -75,10 +77,24 @@ extension WorkspaceCommand {
         }
       }
       guard modifiers.contains(.command) || modifiers.contains(.control) else { continue }
-      return KeyboardShortcut(KeyEquivalent(Character(key)), modifiers: modifiers)
+      // A menu's key equivalent is answered before the text field under the
+      // caret sees the key, so ⌘← and ⇧⌘↑ would stop moving and selecting in
+      // every field. Only arrows with ⌥ or ⌃ as well are left to the menu.
+      if Self.arrows.contains(key), !modifiers.contains(.option), !modifiers.contains(.control) {
+        continue
+      }
+      return KeyboardShortcut(equivalent, modifiers: modifiers)
     }
     return nil
   }
+
+  private static let arrows: Set<String> = ["up", "down", "left", "right"]
+
+  private static let namedEquivalents: [String: KeyEquivalent] = [
+    "up": .upArrow, "down": .downArrow, "left": .leftArrow, "right": .rightArrow,
+    "delete": .delete, "enter": .return, "tab": .tab, "space": .space,
+    "escape": .escape, "comma": ",",
+  ]
 }
 
 extension View {

@@ -59,9 +59,33 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
     XCTAssertEqual(keyless, [.windowOpenKeymap, .windowReloadKeymap, .focusBegin])
   }
 
+  func testTheTaskMenuCarriesEveryTaskAction() {
+    let listed = WorkspaceCommandCatalog.taskMenu.flatMap { $0 }
+    XCTAssertEqual(listed.count, Set(listed).count, "the Task menu lists a command twice")
+    let expected = WorkspaceCommandCatalog.defaults
+      .filter { $0.group == "Task" && $0.kind == .action }
+      .map(\.id)
+      .filter { $0 != .taskNew && $0 != .taskClearPriority }
+    XCTAssertEqual(Set(listed), Set(expected))
+  }
+
+  /// Where a task command's only key was a two-letter sequence, it has a
+  /// chord as well, so the Task menu can print one beside it.
+  func testTheFieldEditorsHaveAChordForTheMenu() {
+    for id: WorkspaceCommandID in [
+      .taskRename, .taskEditDue, .taskEditNotes, .taskEditTags, .taskEditRecurrence,
+      .taskDueToday, .taskDueTomorrow, .taskMove, .taskOpenLink,
+    ] {
+      XCTAssertTrue(
+        WorkspaceCommandCatalog.defaults.first { $0.id == id }!.keys
+          .contains(where: WorkspaceCommandCatalog.isChord),
+        "\(id) has no chord")
+    }
+  }
+
   func testNamedKeysRenderAsSymbols() {
     XCTAssertEqual(WorkspaceCommandCatalog[.goToday].displayKeys, ["⌘1"])
-    XCTAssertEqual(WorkspaceCommandCatalog[.taskRename].displayKeys, ["E E", "F2"])
+    XCTAssertEqual(WorkspaceCommandCatalog[.taskRename].displayKeys, ["E E", "F2", "⌘⇧E"])
     XCTAssertEqual(WorkspaceCommandCatalog[.motionSelectEnds].displayKeys, ["Home", "End"])
     XCTAssertEqual(WorkspaceCommandCatalog[.taskDelete].displayKeys, ["⌫"])
   }

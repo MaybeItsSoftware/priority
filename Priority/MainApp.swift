@@ -132,6 +132,34 @@ struct MainApp: App {
         }
         .commandShortcut(.goInspectorRegion)
       }
+      // Every task action, with its key where it has a chord. The palette
+      // lists them too, but only once you know to open it; a menu is where a
+      // Mac user looks, and where the key is printed beside the name.
+      CommandMenu("Task") {
+        ForEach(WorkspaceCommandCatalog.taskMenu.indices, id: \.self) { index in
+          if index > 0 { Divider() }
+          ForEach(WorkspaceCommandCatalog.taskMenu[index], id: \.self) { id in
+            Button(WorkspaceCommandCatalog[id].title) {
+              AppDelegate.shared.workspace.run(id)
+            }
+            .commandShortcut(id)
+          }
+        }
+        Divider()
+        // The digits are one catalogue row that reads which digit ran it, so
+        // the menu passes the digit as the key.
+        Menu("Set Priority") {
+          ForEach(1..<10) { digit in
+            Button("Priority \(digit)") {
+              AppDelegate.shared.workspace.run(.motionSetPriority, key: String(digit))
+            }
+          }
+          Divider()
+          Button(WorkspaceCommandCatalog[.taskClearPriority].title) {
+            AppDelegate.shared.workspace.run(.taskClearPriority)
+          }
+        }
+      }
       CommandMenu("Workspace") {
         Button("New Task") {
           AppDelegate.shared.workspace.requestTaskComposerFocus()
