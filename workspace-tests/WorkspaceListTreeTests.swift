@@ -1,0 +1,120 @@
+import Foundation
+import PriorityCore
+import PriorityWorkspace
+import XCTest
+
+/// The in-memory shapes the desktop now builds from one read of a list have
+/// to be exactly what the store's per-shape queries answered, or the refresh
+/// that stopped asking the store four times would be drawing a different tree.
+final class WorkspaceListTreeTests: XCTestCase {
+  private var directory: URL!
+  private var store: WorkspaceStore!
+  private var workspaceID: String!
+  private var list: TaskList!
+  private var other: TaskList!
+
+  override func setUpWithError() throws {
+    directory = FileManager.default.temporaryDirectory.appendingPathComponent("ListTree-\(UUID().uuidString)")
+    store = try WorkspaceStore(databaseURL: directory.appendingPathComponent("tasks.sqlite"))
+    workspaceID = try store.bootstrapIfNeeded().id
+    list = try store.createList(workspaceId: workspaceID, name: "Work")
+    other = try store.createList(workspaceId: workspaceID, name: "Home")
+  }
+
+  override func tearDownWithError() throws {
+    store = nil
+    try? FileManager.default.removeItem(at: directory)
+  }
+
+  /// A tree with every awkward case in it: nesting, a nested list, an
+  /// archived nested list with children, a finished task and a closed list.
+  private func seed() throws -> (project: WorkspaceTask, nested: WorkspaceTask, archived: WorkspaceTask) {
+    let project = try store.createTask(listId: list.id, title: "Project")
+    _ = try store.createTask(listId: list.id, title: "Step one", parentTaskId: project.id)
+    let done = try store.createTask(listId: list.id, title: "Step two", parentTaskId: project.id)
+    try store.setStatus(.completed, for: done.id)
+    let nested = try store.createTask(listId: list.id, title: "Reading", kind: .list)
+    let inner = try store.createTask(listId: list.id, title: "Papers", parentTaskId: nested.id, kind: .list)
+    _ = try store.createTask(listId: list.id, title: "Paper A", parentTaskId: inner.id)
+    let archived = try store.createTask(listId: list.id, title: "Old", kind: .list)
+    _ = try store.createTask(listId: list.id, title: "Hidden", parentTaskId: archived.id)
+    try store.setNestedListArchived(true, id: archived.id)
+    let closed = try store.createTask(listId: list.id, title: "Closed", kind: .list)
+    _ = try store.createTask(listId: list.id, title: "Inside closed", parentTaskId: closed.id)
+    try store.setStatus(.completed, for: closed.id)
+    _ = try store.createTask(listId: other.id, title: "Groceries")
+    return (project, nested, archived)
+  }
+
+  func testTreeShapesMatchTheStoresOwnQueries() throws {
+    let seeded = try seed()
+    let tree = try store.listTree(in: list.id)
+    for parent in [nil, seeded.project.id, seeded.nested.id, seeded.archived.id] {
+      XCTAssertEqual(tree.outline(under: parent), try store.outline(in: list.id, parentTaskId: parent))
+      XCTAssertEqual(tree.visibleOutline(under: parent), try store.visibleOutline(in: list.id, parentTaskId: parent))
+      XCTAssertEqual(tree.children(of: parent), try store.tasks(in: list.id, parentTaskId: parent))
+    }
+    XCTAssertEqual(
+      tree.visibleRootParentTaskID(registeredRootId: list.visibleRootTaskId),
+      try store.visibleRootParentTaskID(for: list))
+  }
+
+  func testActionableTasksMatchAcrossLists() throws {
+    _ = try seed()
+    let lists = try store.lists(in: workspaceID)
+    let trees = try store.listTrees(in: lists.map(\.id))
+    let shaped = lists.flatMap { trees[$0.id]?.actionableTasks(visibleRootTaskId: $0.visibleRootTaskId) ?? [] }
+    XCTAssertEqual(shaped, try store.actionableTasks(in: workspaceID))
+    XCTAssertFalse(shaped.contains { $0.title == "Hidden" || $0.title == "Inside closed" || $0.isList })
+  }
+
+  func testVisibleRootIsOnlyTheWrapperWhileItIsTheOnlyRoot() throws {
+    let wrapper = try store.createTask(listId: list.id, title: "Wrapper")
+    let child = try store.createTask(listId: list.id, title: "Child", parentTaskId: wrapper.id)
+    let tree = try store.listTree(in: list.id)
+    XCTAssertEqual(tree.visibleRootParentTaskID(registeredRootId: wrapper.id), wrapper.id)
+    XCTAssertNil(tree.visibleRootParentTaskID(registeredRootId: child.id))
+    XCTAssertNil(tree.visibleRootParentTaskID(registeredRootId: nil))
+    _ = try store.createTask(listId: list.id, title: "Second root")
+    XCTAssertNil(try store.listTree(in: list.id).visibleRootParentTaskID(registeredRootId: wrapper.id))
+  }
+
+  func testSidebarIndexCountsEveryTaskAndNestsListsByListDepth() throws {
+    let seeded = try seed()
+    let lists = try store.lists(in: workspaceID)
+    let index = WorkspaceSidebarIndex(lists: lists, trees: try store.listTrees(in: lists.map(\.id)))
+
+    XCTAssertEqual(index.taskCounts[list.id], try store.outline(in: list.id).count)
+    XCTAssertEqual(index.taskCounts[other.id], 1)
+    // Reading and its nested Papers; Closed is a list too, just finished.
+    XCTAssertEqual(index.nestedLists.map(\.task.title), ["Reading", "Papers", "Closed"])
+    XCTAssertEqual(index.nestedLists.map(\.depth), [0, 1, 0])
+    XCTAssertEqual(index.archivedNestedLists.map(\.id), [seeded.archived.id])
+  }
+
+  func testTasksByIDReadsOnlyWhatExists() throws {
+    let task = try store.createTask(listId: list.id, title: "One")
+    let found = try store.tasks(ids: [task.id, "missing", task.id])
+    XCTAssertEqual(found.keys.sorted(), [task.id])
+    XCTAssertTrue(try store.tasks(ids: []).isEmpty)
+  }
+
+  func testNextUpSnapshotAgreesWithTheIndividualReads() throws {
+    let task = try store.createTask(listId: list.id, title: "Write report")
+    _ = try store.createTask(listId: other.id, title: "Groceries")
+    let now = Date.now
+    let snapshot = try store.nextUpSnapshot(
+      workspaceId: workspaceID, context: FocusContext(), runningID: nil, now: now)
+    let candidates = try store.nextUpCandidates(now: now)
+    let ranking = NextUpSelector.evaluate(candidates, now: now, context: FocusContext())
+
+    XCTAssertEqual(snapshot.ranking.ranked, ranking.ranked)
+    XCTAssertEqual(snapshot.todayPlan, DayPlanSelector.plan(candidates: candidates, now: now))
+    XCTAssertEqual(snapshot.loggedSeconds, try store.loggedWorkTotals())
+    XCTAssertEqual(snapshot.planning, try store.taskPlanningValues())
+    XCTAssertEqual(snapshot.conditions, try store.conditions(in: workspaceID))
+    XCTAssertEqual(snapshot.workProgress, try store.workProgress(now: now))
+    // The day falls back to the ranking, so its rows travel with it.
+    XCTAssertEqual(snapshot.dayTasks[task.id], try store.task(id: task.id))
+  }
+}

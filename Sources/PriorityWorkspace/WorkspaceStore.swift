@@ -361,23 +361,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func outline(in listId: String, parentTaskId: String? = nil) throws -> [TaskOutlineItem] {
-    let tasks = try database.read { db in
-      try WorkspaceTask.filter(Column("listId") == listId)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-    }
-    let children = Dictionary(grouping: tasks, by: \.parentTaskId)
-    var result: [TaskOutlineItem] = []
-    var visited = Set<String>()
-
-    func append(_ parent: String?, depth: Int) {
-      for task in children[parent, default: []] where visited.insert(task.id).inserted {
-        result.append(TaskOutlineItem(task: task, depth: depth))
-        append(task.id, depth: depth + 1)
-      }
-    }
-
-    append(parentTaskId, depth: 0)
-    return result
+    try listTree(in: listId).outline(under: parentTaskId)
   }
 
   /// The direct children used by a project's own Kanban board. Descendants are

@@ -191,25 +191,14 @@ extension WorkspaceStore {
     } else {
       scoped = all
     }
-    return try scoped.flatMap { list in
-      let items = try outline(in: list.id).map(\.task)
-      let inactive = Self.inactiveContainerItems(items)
-      return items.filter {
-        !$0.isList && $0.id != list.visibleRootTaskId && !inactive.contains($0.id)
-          && $0.status == .open
-      }
+    let trees = try listTrees(in: scoped.map(\.id))
+    return scoped.flatMap { list in
+      trees[list.id]?.actionableTasks(visibleRootTaskId: list.visibleRootTaskId) ?? []
     }
   }
 
   public func visibleOutline(in listId: String, parentTaskId: String? = nil) throws -> [TaskOutlineItem] {
-    let items = try outline(in: listId, parentTaskId: parentTaskId)
-    var archivedDepth: Int?
-    return items.filter { item in
-      if let depth = archivedDepth, item.depth <= depth { archivedDepth = nil }
-      if archivedDepth != nil { return false }
-      if item.task.isList && item.task.archivedAt != nil { archivedDepth = item.depth; return false }
-      return true
-    }
+    try listTree(in: listId).visibleOutline(under: parentTaskId)
   }
 
   static func validateActionableTask(_ db: Database, id: String) throws {
