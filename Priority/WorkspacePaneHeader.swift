@@ -127,3 +127,36 @@ struct InspectorSection<Content: View>: View {
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
+
+/// A sheet's own title, and optionally the thing it is about.
+///
+/// Seven sheets set this themselves: five at `.title3.weight(.semibold)`, the
+/// conditions editor at plain `.title2`, and the add-list popover at
+/// `.headline`. A sheet is the most modal thing in the app and the least
+/// forgiving place to be guessing at hierarchy.
+struct SheetTitle: View {
+  @Environment(\.theme) private var theme
+  let title: String
+  var subject: String?
+
+  init(_ title: String, subject: String? = nil) {
+    self.title = title
+    self.subject = subject
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(title)
+        .font(theme.displayFont(size: 15, weight: .semibold))
+      if let subject {
+        Text(subject)
+          .font(theme.bodyFont(size: 11))
+          .foregroundStyle(theme.muted)
+          .lineLimit(2)
+          .truncationMode(.tail)
+          .help(subject)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}

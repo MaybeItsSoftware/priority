@@ -383,7 +383,7 @@ private struct ListSettingsEditor: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("List settings").font(.title3.weight(.semibold))
+      SheetTitle("List settings")
       Form {
         TextField("Name", text: $name)
           .focused($nameIsFocused)
@@ -484,7 +484,7 @@ private struct FolderSettingsEditor: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Folder settings").font(.title3.weight(.semibold))
+      SheetTitle("Folder settings")
       Form {
         TextField("Name", text: $name)
           .focused($nameIsFocused)

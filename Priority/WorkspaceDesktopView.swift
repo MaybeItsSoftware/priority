@@ -625,12 +625,7 @@ private struct WorkspaceTaskMoveSheet: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Move to list or folder")
-        .font(.title3.weight(.semibold))
-      Text(request.title)
-        .lineLimit(2)
-        .truncationMode(.tail)
-        .help(request.title)
+      SheetTitle("Move to list or folder", subject: request.title)
       Picker("Destination", selection: $destinationID) {
         ForEach(destinations) { list in
           Text(list.name).tag(Optional(list.id))
@@ -673,7 +668,7 @@ private struct NewKanbanColumnSheet: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("New board column").font(.title3.weight(.semibold))
+      SheetTitle("New board column")
       TextField("Column name", text: $name)
         .focused($isFocused)
         .onSubmit { submit() }
@@ -942,6 +937,7 @@ private struct WorkspaceFolderTree: View {
 }
 
 struct TaskComposer: View {
+  @Environment(\.theme) private var theme
   @State private var title = ""
   @FocusState private var isFocused: Bool
   let focusRequest: Int
@@ -957,15 +953,24 @@ struct TaskComposer: View {
   var body: some View {
     HStack {
       Image(systemName: "plus")
-        .foregroundStyle(.secondary)
+        .foregroundStyle(theme.muted)
       TextField("Add a task", text: $title)
         .textFieldStyle(.plain)
         .focused($isFocused)
         .onSubmit { submit() }
         .onExitCommand { title = ""; isFocused = false; onCancel() }
+      // The field you type into most often, and the only way to know you could
+      // have got here with a key was to find it in the palette.
+      if !isFocused, title.isEmpty {
+        KeyCap(WorkspaceCommandHelpText.firstKey(for: .taskNew))
+      }
     }
-    .padding(10)
-    .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+    .padding(theme.space.sm)
+    .background(theme.well, in: RoundedRectangle(cornerRadius: theme.controlRadius))
+    .overlay(
+      RoundedRectangle(cornerRadius: theme.controlRadius)
+        .strokeBorder(isFocused ? theme.focusRing : theme.inputBorder,
+          lineWidth: isFocused ? theme.focusRingWidth : theme.hairline))
     .onChange(of: focusRequest) { _, _ in isFocused = true }
   }
 
@@ -1154,7 +1159,7 @@ private struct WorkspaceCreationSheet: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text(kind.title).font(.title3.weight(.semibold))
+      SheetTitle(kind.title)
       TextField("Name", text: $name)
         .focused($isFocused)
         .onSubmit { submit() }
@@ -1280,7 +1285,7 @@ private struct WorkspaceKeyboardHelp: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
       HStack {
-        Text("Keyboard reference").font(.title3.weight(.semibold))
+        SheetTitle("Keyboard reference")
         Spacer()
         Button("Done") { dismiss() }
           .focusable()
@@ -1359,7 +1364,7 @@ private struct AddWorkspaceItemButton: View {
     .commandHelp(command, note: title)
     .popover(isPresented: $isPresenting) {
       VStack(alignment: .leading, spacing: 10) {
-        Text(title).font(.headline)
+        SheetTitle(title)
         TextField("Name", text: $name)
           .focused($nameIsFocused)
           .onSubmit { submit() }

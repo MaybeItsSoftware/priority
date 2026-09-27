@@ -79,9 +79,9 @@ private struct WorkspaceConditionsEditor: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Conditions").font(.title2)
-      Text("Tasks refer to conditions by identity. Renaming keeps their requirements intact.")
-        .font(.caption).foregroundStyle(.secondary)
+      SheetTitle(
+        "Conditions",
+        subject: "Tasks refer to conditions by identity. Renaming keeps their requirements intact.")
       ScrollView {
         VStack(spacing: 12) {
           ForEach(model.focusConditions) { condition in WorkspaceConditionEditorRow(condition: condition) }

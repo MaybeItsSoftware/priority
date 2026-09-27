@@ -24,6 +24,12 @@ extension View {
 }
 
 enum WorkspaceCommandHelpText {
+  /// The command's first rendered key, for a key cap drawn beside a control.
+  /// Empty when it has none, which `KeyCap` renders as nothing worth showing.
+  static func firstKey(for id: WorkspaceCommandID) -> String {
+    WorkspaceCommandCatalog.byID[id]?.displayKeys.first ?? ""
+  }
+
   static func text(for id: WorkspaceCommandID, note: String? = nil) -> String {
     guard let command = WorkspaceCommandCatalog.byID[id] else { return note ?? "" }
     let subject = note ?? command.title
