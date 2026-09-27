@@ -222,3 +222,34 @@ the bounded in-memory record that closes that gap. It is fed from
 `LifecycleController`, chained onto the existing `onError` / `onStatus` /
 `onErrorMessageSet` handlers — **those are single closure slots, not multicast**,
 so anything else that wants to observe them has to chain too, not replace.
+
+## The desktop workspace: one refresh per action
+
+Everything above is the legacy Checkvist stack. The desktop window reads
+`WorkspaceViewModel`, which does not use the bus; it refreshes through
+`WorkspaceViewModel+Refresh.swift`.
+
+- A reload called inside `perform { }` (a write) or `batchingRefreshes { }`
+  (navigation) only marks a `WorkspaceRefresh` flag — `.outline`, `.board`,
+  `.sidebar`, `.dailies`, `.nextUp`. When the outermost block ends the marks are
+  served once, in that order, and `perform`'s side effects (draft refresh,
+  `onLocalWrite`) run once. A reload called outside any block runs at once.
+- Reading `visibleNavigationTasks` mid-block serves the marks first, so code
+  that changes scope and then asks what is on screen sees the new scope. Any
+  other read of derived state after a reload in the same block must call
+  `flushPendingRefresh()` itself.
+- Each list is read once per refresh (`WorkspaceListTree`, cached in
+  `listTreeCache`); the outline, board, descendants and sidebar are shaped from
+  it in memory. Pass `refreshSidebar: false` when a change cannot touch a list
+  or a count — a plain task's status or title.
+- `.nextUp` is ranked off the main thread (`WorkspaceNextUpSnapshot`) and
+  applied when it lands, unless something was written meanwhile
+  (`writeEpoch`), in which case it is read again. `reloadNextUpNow()` is the
+  synchronous form for the few callers that read the ladder on the next line.
+- After a refresh `taskCache` holds every task a surface names — board, outline,
+  nested lists, done rail, the day, the selection, the running block — so
+  `task(withID:)` in a view body is a lookup, not a query. `dayItems`, the
+  undo/redo labels and the outline's grouping are stored, not computed.
+- Views take selection as values (`isSelected`, `hasKeyboard`,
+  `selectedCardID`) from a parent that reads `selectedTaskID` once, so an arrow
+  key re-renders the two rows it moved between.
