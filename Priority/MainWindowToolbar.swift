@@ -78,7 +78,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
       return hostedItem(identifier: itemIdentifier, label: "Focus", minWidth: 30, maxWidth: 30) {
         AnyView(
           WorkspacePaneToggle(
-            symbol: "timer", title: "Focus", shortcut: "⌘8",
+            symbol: "timer", title: "Focus", command: .goFocus,
             isOn: { self.workspace.showsFocusScreen },
             toggle: {
               if self.workspace.showsFocusScreen {
@@ -94,7 +94,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
       return hostedItem(identifier: itemIdentifier, label: "Timeline", minWidth: 30, maxWidth: 30) {
         AnyView(
           WorkspacePaneToggle(
-            symbol: "chart.bar.doc.horizontal", title: "Timeline", shortcut: "⌘9",
+            symbol: "chart.bar.doc.horizontal", title: "Timeline", command: .goTimeline,
             isOn: { self.workspace.showsTimelineScreen },
             toggle: {
               if self.workspace.showsTimelineScreen {
@@ -181,7 +181,9 @@ struct WorkspaceModeStrip: View {
           .contentShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)
-        .help(mode.shortcutDigit.map { "\(mode.title) (⌘\($0))" } ?? mode.title)
+        .help(
+          mode.command.map { WorkspaceCommandHelpText.text(for: $0, note: mode.title) }
+            ?? mode.title)
         .accessibilityLabel(mode.title)
         .accessibilityAddTraits(isCurrent ? [.isSelected] : [])
       }
@@ -194,7 +196,9 @@ struct WorkspaceModeStrip: View {
 struct WorkspacePaneToggle: View {
   let symbol: String
   let title: String
-  let shortcut: String
+  /// The catalogue entry, so the tooltip's key comes from the same table the
+  /// keyboard reads rather than from a literal beside it.
+  let command: WorkspaceCommandID
   let isOn: () -> Bool
   let toggle: () -> Void
 
@@ -211,7 +215,7 @@ struct WorkspacePaneToggle: View {
         .contentShape(RoundedRectangle(cornerRadius: 6))
     }
     .buttonStyle(.plain)
-    .help("\(title) (\(shortcut))")
+    .commandHelp(command, note: title)
     .accessibilityLabel(title)
     .accessibilityAddTraits(on ? [.isSelected] : [])
   }

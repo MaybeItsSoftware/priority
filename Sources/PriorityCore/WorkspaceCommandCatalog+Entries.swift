@@ -182,6 +182,12 @@ public enum WorkspaceCommandCatalog {
   private static let window: [WorkspaceCommand] = [
     .init(id: .windowUndo, title: "Undo", group: "Window", keys: ["cmd+z", "uu", "ctrl+z"]),
     .init(id: .windowRedo, title: "Redo", group: "Window", keys: ["cmd+shift+z", "ctrl+shift+z"]),
+    .init(
+      id: .windowToggleSidebar, title: "Show or hide the sidebar", group: "Window",
+      keys: ["cmd+ctrl+s"]),
+    .init(
+      id: .windowToggleInspectorPane, title: "Show or hide the inspector", group: "Window",
+      keys: ["cmd+ctrl+i"], note: "Same pane as ⌘I on a task, without selecting one"),
   ]
 
   // MARK: - Focus

@@ -83,12 +83,15 @@ enum WorkspaceViewMode: String, CaseIterable, Identifiable {
 
   /// Where the mode sits on the command-digit row, and what the View menu
   /// prints beside it.
-  var shortcutDigit: Character? {
+  /// The catalogue entry that goes here, rather than the key itself. The digit
+  /// used to be written out here as well as in the router, the toolbar tooltip
+  /// and the menu — four copies of ⌘1.
+  var command: WorkspaceCommandID? {
     switch self {
-    case .today: "1"
-    case .board: "2"
-    case .outline: "3"
-    case .matrix: "4"
+    case .today: .goToday
+    case .board: .goBoard
+    case .outline: .goOutline
+    case .matrix: .goMatrix
     case .focus: nil
     }
   }

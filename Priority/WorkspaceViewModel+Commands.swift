@@ -130,6 +130,8 @@ extension WorkspaceViewModel {
     // MARK: Window
     case .windowUndo: undoLastChange()
     case .windowRedo: redoLastUndoneChange()
+    case .windowToggleSidebar: toggleSidebar()
+    case .windowToggleInspectorPane: toggleInspector()
 
     // MARK: Focus
     case .focusLadderUp: moveFocusLadder(by: 1)

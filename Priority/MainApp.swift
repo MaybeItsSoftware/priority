@@ -28,9 +28,9 @@ struct MainApp: App {
     .commands {
       CommandGroup(replacing: .undoRedo) {
         Button("Undo") { AppDelegate.shared.workspace.applyHistoryFromMenu(redo: false) }
-          .keyboardShortcut("z", modifiers: .command)
+          .commandShortcut(.windowUndo)
         Button("Redo") { AppDelegate.shared.workspace.applyHistoryFromMenu(redo: true) }
-          .keyboardShortcut("z", modifiers: [.command, .shift])
+          .commandShortcut(.windowRedo)
       }
       CommandGroup(replacing: .appSettings) {
         Button("Preferences...") {
@@ -68,8 +68,8 @@ struct MainApp: App {
             AppDelegate.shared.workspace.selectViewMode(mode)
             AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
           }
-          if let digit = mode.shortcutDigit {
-            item.keyboardShortcut(KeyEquivalent(digit), modifiers: .command)
+          if let command = mode.command {
+            item.commandShortcut(command)
           } else {
             item
           }
@@ -78,7 +78,7 @@ struct MainApp: App {
         Button("Focus") {
           AppDelegate.shared.workspace.presentFocusScreen()
         }
-        .keyboardShortcut("8", modifiers: .command)
+        .commandShortcut(.goFocus)
         Button("Timeline") {
           let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
           if workspace.showsTimelineScreen {
@@ -87,16 +87,17 @@ struct MainApp: App {
             workspace.presentTimelineScreen()
           }
         }
-        .keyboardShortcut("9", modifiers: .command)
+        .commandShortcut(.goTimeline)
         Divider()
         Button("Everything") {
           AppDelegate.shared.workspace.selectEverything()
           AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
         }
-        .keyboardShortcut("0", modifiers: .command)
+        .commandShortcut(.goEverything)
         Button("Inspector") {
           AppDelegate.shared.workspace.toggleInspector()
         }
+        .commandShortcut(.windowToggleInspectorPane)
         Divider()
         // Deliberately a fixed title rather than Hide/Show: every other item
         // here touches `AppDelegate.shared` only inside its action, which runs
@@ -106,7 +107,7 @@ struct MainApp: App {
         Button("Toggle Sidebar") {
           AppDelegate.shared.workspace.toggleSidebar()
         }
-        .keyboardShortcut("s", modifiers: [.command, .control])
+        .commandShortcut(.windowToggleSidebar)
         Button("Sidebar") {
           let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
           // Focusing a collapsed sidebar has to open it first, or the
@@ -114,11 +115,11 @@ struct MainApp: App {
           if !workspace.isSidebarVisible { workspace.toggleSidebar() }
           workspace.requestKeyboardFocus(.sidebar)
         }
-        .keyboardShortcut("1", modifiers: .control)
+        .commandShortcut(.goSidebarRegion)
         Button("Task Surface") {
           AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
         }
-        .keyboardShortcut("2", modifiers: .control)
+        .commandShortcut(.goTaskRegion)
         Button("Inspector Pane") {
           let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
           if workspace.selectedTask == nil {
@@ -126,43 +127,47 @@ struct MainApp: App {
           }
           workspace.requestKeyboardFocus(workspace.selectedTask == nil ? .tasks : .inspector)
         }
-        .keyboardShortcut("3", modifiers: .control)
+        .commandShortcut(.goInspectorRegion)
       }
       CommandMenu("Workspace") {
         Button("New Task") {
           AppDelegate.shared.workspace.requestTaskComposerFocus()
         }
-        .keyboardShortcut("n", modifiers: .command)
+        .commandShortcut(.taskNew)
         Button("New List") {
           AppDelegate.shared.workspace.requestListCreationForSelection()
         }
-        .keyboardShortcut("n", modifiers: [.command, .shift])
+        .commandShortcut(.listNew)
         Button("New Folder") {
           AppDelegate.shared.workspace.requestFolderCreationForSelection()
         }
-        .keyboardShortcut("n", modifiers: [.command, .option])
+        .commandShortcut(.folderNew)
         Divider()
         Button("Search…") {
           AppDelegate.shared.workspace.showsSearch = true
         }
-        .keyboardShortcut("f", modifiers: .command)
+        .commandShortcut(.goSearch)
         Button("List Settings…") {
           AppDelegate.shared.workspace.showSelectedListSettings()
         }
-        .keyboardShortcut("i", modifiers: .command)
+        .commandShortcut(.listSettings)
         Button("Archive Current List") {
           AppDelegate.shared.workspace.archiveSelectedList()
         }
-        .keyboardShortcut("a", modifiers: [.command, .shift])
+        .commandShortcut(.listArchive)
         Button("Restore Most Recently Archived List") {
           AppDelegate.shared.workspace.restoreMostRecentlyArchivedList()
         }
-        .keyboardShortcut("r", modifiers: [.command, .shift])
+        .commandShortcut(.listRestore)
         Divider()
+        Button("Command Palette…") {
+          AppDelegate.shared.workspace.run(.goCommandPalette)
+        }
+        .commandShortcut(.goCommandPalette)
         Button("Keyboard Help") {
           AppDelegate.shared.workspace.showsKeyboardHelp = true
         }
-        .keyboardShortcut("/", modifiers: .command)
+        .commandShortcut(.goKeyboardReference)
         Button("Diagnostics") {
           AppDelegate.shared.showMainWindow()
           AppDelegate.shared.checkvistManager.popoverChrome.showsDiagnostics = true

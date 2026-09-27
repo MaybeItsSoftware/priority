@@ -212,21 +212,23 @@ struct WorkspaceDesktopView: View {
   private var sidebar: some View {
     VStack(alignment: .leading, spacing: 0) {
       HStack {
-        Text("PRIORITY")
-          .font(.caption.weight(.bold))
-          .foregroundStyle(.secondary)
+        // The app's own name, which the window title, the Dock icon and the
+        // menu bar were already saying. A pane's eyebrow should name the pane.
+        MicroLabel("Workspace")
         Spacer()
         Menu {
-          Button(model.undoLabel.map { "Undo \($0)" } ?? "Undo") { model.undoLastChange() }
+          Button(model.undoLabel.map { "Undo \($0)" } ?? "Undo") { model.run(.windowUndo) }
             .disabled(model.undoLabel == nil)
-          Button(model.redoLabel.map { "Redo \($0)" } ?? "Redo") { model.redoLastUndoneChange() }
+            .commandShortcut(.windowUndo)
+          Button(model.redoLabel.map { "Redo \($0)" } ?? "Redo") { model.run(.windowRedo) }
             .disabled(model.redoLabel == nil)
+            .commandShortcut(.windowRedo)
         } label: {
           Image(systemName: "arrow.uturn.backward")
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .help("Undo or redo workspace changes")
+        .commandHelp(.windowUndo, note: "Undo or redo workspace changes")
         .accessibilityLabel("Workspace history")
       }
       .padding(.horizontal, 16)
@@ -339,7 +341,7 @@ struct WorkspaceDesktopView: View {
             Image(systemName: "archivebox")
           }
           .focusable()
-          .help("Restore archived lists")
+          .commandHelp(.listRestore, note: "Restore archived lists")
         }
       }
       .padding(10)
@@ -1348,7 +1350,7 @@ struct WorkspaceScopedTaskComposer: View {
             .pickerStyle(.menu)
             .focusable()
             .frame(width: 170)
-            .help("Choose the sub-list for new tasks")
+            .commandHelp(.listNewTaskDestination, note: "Choose the sub-list for new tasks")
           }
           TaskComposer(focusRequest: model.taskComposerFocusRequest, onCancel: {
             model.taskInsertionReference = nil

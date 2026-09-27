@@ -110,3 +110,57 @@ final class WorkspaceCommandQueryTests: XCTestCase {
     XCTAssertFalse(WorkspaceCommandQuery.isSubsequence("tda", of: "add a task"))
   }
 }
+
+/// The catalogue is now the only place the keys are written down: the router
+/// reads it, the palette lists it, the tooltips quote it, and the main menu
+/// derives its `keyboardShortcut` from it. That last one fails *silently* —
+/// a token the parser does not recognise yields no menu key rather than an
+/// error — so the shape of every token needs a test of its own.
+final class WorkspaceCommandTokenShapeTests: XCTestCase {
+  private static let modifiers: Set<String> = ["cmd", "shift", "option", "ctrl"]
+
+  func testEveryModifierInEveryTokenIsOneTheAppKnows() {
+    for command in WorkspaceCommandCatalog.all {
+      for token in command.keys {
+        let parts = token.split(separator: "+").map(String.init)
+        guard parts.count > 1 else { continue }
+        for modifier in parts.dropLast() {
+          XCTAssertTrue(
+            Self.modifiers.contains(modifier),
+            "\(command.id) binds \(token), whose modifier \"\(modifier)\" is not one of \(Self.modifiers.sorted())")
+        }
+      }
+    }
+  }
+
+  func testTokensAreLowercaseAndUnpadded() {
+    for command in WorkspaceCommandCatalog.all {
+      for token in command.keys {
+        XCTAssertEqual(token, token.lowercased(), "\(command.id) binds \(token) with capitals")
+        XCTAssertEqual(
+          token, token.trimmingCharacters(in: .whitespaces),
+          "\(command.id) binds \(token) with surrounding space")
+      }
+    }
+  }
+
+  /// `cmd` first is the repository's convention, and a tooltip renders tokens in
+  /// the order they are written.
+  func testCommandIsWrittenFirstAmongModifiers() {
+    for command in WorkspaceCommandCatalog.all {
+      for token in command.keys {
+        let parts = token.split(separator: "+").map(String.init)
+        guard let index = parts.firstIndex(of: "cmd") else { continue }
+        XCTAssertEqual(index, 0, "\(command.id) binds \(token); cmd goes first")
+      }
+    }
+  }
+
+  func testEveryCommandRendersAtLeastOneKeyOrDeclaresItHasNone() {
+    for command in WorkspaceCommandCatalog.all where !command.keys.isEmpty {
+      XCTAssertFalse(
+        command.displayKeys.isEmpty,
+        "\(command.id) binds \(command.keys) but renders nothing, so no tooltip or palette row can show it")
+    }
+  }
+}

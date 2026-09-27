@@ -98,7 +98,7 @@ struct WorkspaceKanbanColumnView: View {
         .buttonStyle(.plain)
         .focusable()
         .accessibilityLabel("Add task at top of \(column.title)")
-        .help("Add highest-priority task in \(column.title)")
+        .commandHelp(.taskNew, note: "Add highest-priority task in \(column.title)")
         if model.boardColumns.count > 1 {
           Button(role: .destructive) {
             model.removeKanbanColumn(column)
@@ -222,7 +222,7 @@ struct WorkspaceKanbanCard: View {
 
   var body: some View {
     cardSurface
-      .help("Drag to move. Enter opens its Kanban board; Option Left/Right moves columns.")
+      .help("Drag to move. \(WorkspaceCommandHelpText.text(for: .planEnterTask)); \(WorkspaceCommandHelpText.text(for: .planBoardMoveCardLeft))")
       .focusable()
       .focused($isCardFocused)
       .focusEffectDisabled()
@@ -375,7 +375,9 @@ struct WorkspaceKanbanCard: View {
       .buttonStyle(.plain)
       .focusable()
       .accessibilityLabel(model.activeFocusSession == nil ? "Focus on \(task.title)" : "Add \(task.title) to focus")
-      .help(model.activeFocusSession == nil ? "Start focus" : "Add to focus queue")
+      .commandHelp(
+        .taskStartFocus,
+        note: model.activeFocusSession == nil ? "Start focus" : "Add to focus queue")
       }
       Button {
         isExpanded.toggle()
@@ -453,7 +455,7 @@ struct WorkspaceKanbanCard: View {
       }
       .menuStyle(.borderlessButton)
       .focusable()
-      .help("Move \(item.task.title) to a column")
+      .commandHelp(.taskMove, note: "Move \(item.task.title) to a column")
     }
     .font(.caption)
     .padding(.leading, CGFloat(item.depth) * 10)

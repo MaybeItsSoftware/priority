@@ -209,7 +209,7 @@ struct WorkspaceFocusScreen: View {
       .buttonStyle(.plain)
       .foregroundStyle(.secondary)
       .focusable()
-      .help("See where the day's focused time went (⌘9)")
+      .commandHelp(.goTimeline)
       Button("Leave") { model.dismissFocusScreen() }
         .buttonStyle(.plain)
         .font(.caption)

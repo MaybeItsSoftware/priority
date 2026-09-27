@@ -40,7 +40,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case folderSelectNext, listMoveUp, listMoveDown, listNewTaskDestination
 
   // Window
-  case windowUndo, windowRedo
+  case windowUndo, windowRedo, windowToggleSidebar, windowToggleInspectorPane
 
   // Focus surface
   case focusLadderUp, focusLadderDown, focusStage, focusBegin, focusTickOff
