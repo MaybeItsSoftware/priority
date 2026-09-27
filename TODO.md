@@ -59,7 +59,9 @@ These cannot be verified from a build; they need someone to click.
 - **The sidebar's two cues.** Arrow onto Focus: the list you were reading should
   stay open behind it, the ring should read as "you are here" and the fill as
   "this is open". If that distinction is too fine to carry, the fill should go
-  and the cursor row should simply be unmistakable.
+  and the cursor row should simply be unmistakable. These now carry the whole
+  job: the current row no longer thickens its name, so if it reads too quietly
+  the resting fill is one figure (`WorkspaceSelection.restingFill`, 0.13).
 - **`⌘↑` / `⌘↓` on a nested list.** That path did nothing at all before, so it
   is the least-exercised thing in the sidebar work.
 - **Folder scope.** Is the board the right mode to land in, or should it keep
