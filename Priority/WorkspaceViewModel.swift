@@ -39,6 +39,10 @@ enum WorkspaceFocusArea: Hashable {
   case sidebar
   case tasks
   case inspector
+  /// The right-hand rail of finished work. A region rather than a scroll view
+  /// with a click target, because the app's premise is that anything you can
+  /// reach you can reach from the keyboard.
+  case done
 }
 
 /// Views of the same local task model, rather than separate applications.
@@ -217,6 +221,13 @@ enum WorkspaceSidebarItem: Identifiable {
       guard sidebarWidth != oldValue else { return }
       UserDefaults.standard.set(Double(sidebarWidth), forKey: Self.sidebarWidthKey)
     }
+  }
+
+  /// Whether the done rail takes a column. Persisted for the sidebar's reason:
+  /// whether you want your finished work on screen is a way of working, not a
+  /// decision to make again every launch.
+  var isDoneRailVisible = UserDefaults.standard.bool(forKey: WorkspaceViewModel.doneRailVisibleKey) {
+    didSet { UserDefaults.standard.set(isDoneRailVisible, forKey: Self.doneRailVisibleKey) }
   }
 
   static let minSidebarWidth: CGFloat = 140
@@ -799,6 +810,11 @@ enum WorkspaceSidebarItem: Identifiable {
   /// far. Refreshed alongside the day rather than on a ticker — it only moves
   /// when work is finished or logged, which is exactly when the day reloads.
   var workProgress: WorkProgress = .empty
+  /// What the done rail shows: tasks closed within its window, newest first.
+  /// Loaded only while the rail is open — see `reloadCompleted()`.
+  var completedTasks: [WorkspaceTask] = []
+  /// The row the rail's cursor is on, or nil for "the newest thing finished".
+  var doneCursorID: String?
   /// What the focus screen offers, and why. Nil when there is nothing to do —
   /// which is a real state worth rendering, not an error.
   var nextUp: ScoredNextUp?
@@ -1044,6 +1060,10 @@ enum WorkspaceSidebarItem: Identifiable {
       }
       if hidesCompletedTasks { outline.removeAll { $0.task.status != .open } }
       reloadBoard()
+      // The rail is a view of the same writes. Hooked in here rather than at
+      // every mutation because this is the one funnel they all pass through,
+      // and it costs nothing while the rail is closed.
+      reloadCompleted()
     } catch {
       errorMessage = error.localizedDescription
     }

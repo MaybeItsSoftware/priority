@@ -41,6 +41,24 @@ extension WorkspaceStore {
     }
   }
 
+  /// The tasks closed since `since`, newest first.
+  ///
+  /// Lists are left out for the reason `taskCompletions(in:)` leaves them out:
+  /// closing a container is bookkeeping, not a unit of work done, and a rail
+  /// meant to show what you got through should not be padded with it. Cancelled
+  /// tasks are kept — deciding not to do something is a real outcome, and the
+  /// caller can tell them apart by `status`.
+  public func completedTasks(since: Date, limit: Int = 300) throws -> [WorkspaceTask] {
+    try database.read { db in
+      try WorkspaceTask
+        .filter(Column("completedAt") != nil && Column("completedAt") >= since)
+        .filter(sql: "COALESCE(itemKind, 'task') <> 'list'")
+        .order(Column("completedAt").desc, Column("id").desc)
+        .limit(limit)
+        .fetchAll(db)
+    }
+  }
+
   /// Today measured against the week it is part of.
   public func workProgress(now: Date = .now, calendar: Calendar = .current) throws -> WorkProgress {
     let start = WorkProgressSummary.startOfWeek(containing: now, calendar: calendar)

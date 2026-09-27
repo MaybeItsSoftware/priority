@@ -21,6 +21,7 @@ extension WorkspaceViewModel {
     if showsFocusScreen {
       return activeFocusSession != nil && activeFocusTask != nil ? .focusRunning : .focus
     }
+    if keyboardFocusArea == .done { return .done }
     if keyboardFocusArea == .sidebar { return .sidebar }
     if keyboardFocusArea == .inspector { return .inspector }
     switch viewMode {
@@ -159,6 +160,12 @@ extension WorkspaceViewModel {
     case .timelineToday: showTimelineToday()
     case .timelineClose: dismissTimelineScreen()
 
+    // MARK: Done rail
+    case .windowToggleDoneRail: toggleDoneRail()
+    case .doneReveal: if let task = doneCursorTask { revealDoneTask(task) }
+    case .doneReopen: if let task = doneCursorTask { reopenDoneTask(task) }
+    case .doneClose: leaveDoneRail()
+
     // MARK: Motions
     //
     // Listed in the palette so the reference is complete, but not runnable
@@ -167,7 +174,8 @@ extension WorkspaceViewModel {
     case .goCycleRegion, .planMatrixPlace, .listNewTaskDestination,
       .focusReorder, .motionSelectNext, .motionSelectPrevious, .motionSelectEnds,
       .motionSelectPage, .motionSidebarSelect, .motionSidebarExpand,
-      .motionSidebarCollapse, .motionBoardColumn, .motionDismiss, .motionSetPriority:
+      .motionSidebarCollapse, .motionBoardColumn, .motionDismiss, .motionSetPriority,
+      .motionDoneSelect:
       break
     }
   }

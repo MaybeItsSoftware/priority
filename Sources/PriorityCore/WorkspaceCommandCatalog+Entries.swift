@@ -7,7 +7,8 @@ import Foundation
 /// top to bottom.
 public enum WorkspaceCommandCatalog {
 
-  public static let all: [WorkspaceCommand] = go + task + plan + lists + window + focus + timeline + motions
+  public static let all: [WorkspaceCommand] =
+    go + task + plan + lists + window + focus + timeline + done + motions
 
   public static let byID: [WorkspaceCommandID: WorkspaceCommand] = Dictionary(
     uniqueKeysWithValues: all.map { ($0.id, $0) })
@@ -192,6 +193,10 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .windowToggleInspectorPane, title: "Show or hide the inspector", group: "Window",
       keys: ["cmd+ctrl+i"], note: "Same pane as ⌘I on a task, without selecting one"),
+    .init(
+      id: .windowToggleDoneRail, title: "Show or hide what you have finished", group: "Window",
+      keys: ["cmd+ctrl+d"],
+      note: "Opens it and takes the keyboard; again from inside it closes it"),
   ]
 
   // MARK: - Focus
@@ -254,6 +259,22 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .timelineClose, title: "Close the timeline", group: "Timeline", keys: ["escape"],
       surface: .timeline),
+  ]
+
+  // MARK: - Done rail
+
+  private static let done: [WorkspaceCommand] = [
+    .init(
+      id: .motionDoneSelect, title: "Move through what you finished", group: "Done",
+      keys: ["down", "up", "j", "k"], surface: .done, kind: .motion),
+    .init(
+      id: .doneReveal, title: "Open it where it lives", group: "Done", keys: ["enter"],
+      surface: .done, note: "Leaves the rail and selects the task in its own list"),
+    .init(
+      id: .doneReopen, title: "Put it back on the list", group: "Done", keys: ["r"],
+      surface: .done),
+    .init(
+      id: .doneClose, title: "Leave the rail", group: "Done", keys: ["escape"], surface: .done),
   ]
 
   // MARK: - Motions

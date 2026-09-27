@@ -7,7 +7,7 @@ import Foundation
 /// do belong to a region rather than to a view.
 public enum WorkspaceCommandSurface: String, CaseIterable, Sendable {
   case anywhere, today, board, outline, matrix, sidebar, inspector
-  case focus, focusRunning, timeline
+  case focus, focusRunning, timeline, done
 
   public var title: String {
     switch self {
@@ -21,6 +21,7 @@ public enum WorkspaceCommandSurface: String, CaseIterable, Sendable {
     case .focus: "Focus ladder"
     case .focusRunning: "Running block"
     case .timeline: "Timeline"
+    case .done: "Done rail"
     }
   }
 }

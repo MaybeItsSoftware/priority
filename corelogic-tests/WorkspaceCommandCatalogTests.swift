@@ -218,6 +218,10 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "sidebar:k", "sidebar:j", "sidebar:f2", "sidebar:cmd+up", "sidebar:cmd+down",
       // On the board ←/→ change column instead of entering and leaving a task.
       "board:left", "board:right",
+      // The done rail is a list of its own, so the list keys walk it, ⏎ opens
+      // the finished task where it lives, and escape gives the keyboard back to
+      // the work rather than clearing a selection the rail does not hold.
+      "done:up", "done:down", "done:k", "done:j", "done:enter", "done:escape",
     ]
     XCTAssertEqual(
       overrides, expected,

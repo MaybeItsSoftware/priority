@@ -41,6 +41,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
 
   // Window
   case windowUndo, windowRedo, windowToggleSidebar, windowToggleInspectorPane
+  case windowToggleDoneRail
 
   // Focus surface
   case focusLadderUp, focusLadderDown, focusStage, focusBegin, focusTickOff
@@ -49,6 +50,9 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
 
   // Timeline surface
   case timelinePreviousDay, timelineNextDay, timelineToday, timelineClose
+
+  // Done rail
+  case doneReveal, doneReopen, doneClose, motionDoneSelect
 
   // Motions
   case motionSelectNext, motionSelectPrevious, motionSelectEnds, motionSelectPage

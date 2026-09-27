@@ -27,6 +27,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
     static let modes = NSToolbarItem.Identifier("PriorityModes")
     static let focus = NSToolbarItem.Identifier("PriorityFocus")
     static let timeline = NSToolbarItem.Identifier("PriorityTimeline")
+    static let done = NSToolbarItem.Identifier("PriorityDone")
     static let settings = NSToolbarItem.Identifier("PrioritySettings")
   }
 
@@ -62,6 +63,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
       .flexibleSpace,
       ItemID.focus,
       ItemID.timeline,
+      ItemID.done,
       ItemID.settings,
     ]
   }
@@ -110,6 +112,16 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
                 self.workspace.presentTimelineScreen()
               }
             })
+            .environment(self.workspace))
+      }
+
+    case ItemID.done:
+      return hostedItem(identifier: itemIdentifier, label: "Done", minWidth: 30, maxWidth: 30) {
+        AnyView(
+          WorkspacePaneToggle(
+            symbol: "checkmark.circle", title: "Done", command: .windowToggleDoneRail,
+            isOn: { self.workspace.isDoneRailVisible },
+            toggle: { self.workspace.toggleDoneRail() })
             .environment(self.workspace))
       }
 

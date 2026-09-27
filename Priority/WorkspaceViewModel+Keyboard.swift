@@ -29,6 +29,7 @@ extension WorkspaceViewModel {
       case .pass: break
       }
     } else { desktopShortcutSequence.reset() }
+    if keyboardFocusArea == .done { return handleDoneRailKey(event) }
     if keyboardFocusArea == .sidebar { return handleSidebarKey(event) }
     return handleTaskSurfaceKey(event)
   }
@@ -448,6 +449,32 @@ extension WorkspaceViewModel {
     // Once an inspector control has focus, AppKit/SwiftUI owns Return, Space,
     // arrows, and Tab. Do not turn those into task commands.
     return false
+  }
+
+  /// The done rail. Short because the rail does four things, and deliberately
+  /// unmodified: a region that holds the keyboard should answer bare arrows.
+  private func handleDoneRailKey(_ event: NSEvent) -> Bool {
+    switch event.keyCode {
+    case 125: moveDoneCursor(by: 1)
+    case 126: moveDoneCursor(by: -1)
+    case 121: moveDoneCursor(by: 8)
+    case 116: moveDoneCursor(by: -8)
+    case 115: doneCursorID = completedTasks.first?.id
+    case 119: doneCursorID = completedTasks.last?.id
+    case 36, 76: run(.doneReveal)
+    // Left, like leaving any pane on the right: back towards the work.
+    case 123, 53: run(.doneClose)
+    default:
+      switch event.charactersIgnoringModifiers?.lowercased() {
+      case "j": moveDoneCursor(by: 1)
+      case "k": moveDoneCursor(by: -1)
+      case "r": run(.doneReopen)
+      case "/": run(.goSearch)
+      case "?": run(.goKeyboardReference)
+      default: return false
+      }
+    }
+    return true
   }
 
   /// The task list, the board, and the inspector's escape hatch.

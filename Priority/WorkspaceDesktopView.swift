@@ -104,6 +104,21 @@ struct WorkspaceDesktopView: View {
           .focusSection()
           .frame(minWidth: 210, idealWidth: 250, maxWidth: 320)
       }
+      // Outermost on the right, and gone while a full-pane screen is up: focus
+      // is the one place the app should not be showing you a tally, and the
+      // timeline is already a reading of the same day at greater length.
+      if model.isDoneRailVisible && !model.showsFocusScreen && !model.showsTimelineScreen {
+        WorkspaceDoneRail()
+          .environment(model)
+          // Claimed the way the sidebar claims its own area: a `requestedFocusArea`
+          // no view answers to is handed straight back, so the rail would take the
+          // keyboard and lose it again on the next layout pass.
+          .focusable()
+          .focusEffectDisabled()
+          .focused($focusedArea, equals: .done)
+          .focusSection()
+          .frame(minWidth: 220, idealWidth: 260, maxWidth: 340)
+      }
     }
     .onAppear {
       if model.requestedFocusArea != .tasks || (model.viewMode != .board && model.viewMode != .outline) {
