@@ -8,6 +8,7 @@ import SwiftUI
 /// consequence gets pressed once and then avoided. When a session is already
 /// running it becomes the way back to it rather than a second start.
 struct WorkspaceFocusLauncher: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
   @State private var isHovering = false
 
@@ -23,11 +24,11 @@ struct WorkspaceFocusLauncher: View {
               .font(.system(size: 11, weight: .semibold))
             MicroLabel(
               model.activeFocusSession == nil ? "Focus" : "In session",
-              tint: model.activeFocusSession == nil ? .secondary : Color.accentColor)
+              tint: model.activeFocusSession == nil ? theme.muted : theme.primary)
             Spacer(minLength: 0)
             KeyCap("⌘8")
           }
-          .foregroundStyle(model.activeFocusSession == nil ? .secondary : Color.accentColor)
+          .foregroundStyle(model.activeFocusSession == nil ? theme.muted : theme.primary)
 
           Text(headline)
             .font(.callout.weight(.medium))
@@ -69,11 +70,11 @@ struct WorkspaceFocusLauncher: View {
         HStack(spacing: 6) {
           Image(systemName: "chart.bar.doc.horizontal")
             .font(.system(size: 11, weight: .semibold))
-          MicroLabel("Timeline", tint: model.showsTimelineScreen ? Color.accentColor : .secondary)
+          MicroLabel("Timeline", tint: model.showsTimelineScreen ? theme.primary : theme.muted)
           Spacer(minLength: 0)
           KeyCap("⌘9")
         }
-        .foregroundStyle(model.showsTimelineScreen ? Color.accentColor : .secondary)
+        .foregroundStyle(model.showsTimelineScreen ? theme.primary : theme.muted)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(WorkspaceSidebarSelectionBackground(
@@ -106,6 +107,7 @@ struct WorkspaceFocusLauncher: View {
 /// the current task moves the whole column up by one, so the screen reads as
 /// progress rather than as a list you are indexing into.
 struct WorkspaceFocusScreen: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(AppCoordinator.self) private var manager
 
@@ -197,7 +199,7 @@ struct WorkspaceFocusScreen: View {
   /// the day's total never moves out from under you.
   private var header: some View {
     HStack(spacing: 12) {
-      MicroLabel(isRunning ? "In session" : "Focus", tint: isRunning ? Color.accentColor : nil)
+      MicroLabel(isRunning ? "In session" : "Focus", tint: isRunning ? theme.primary : nil)
       Spacer(minLength: 0)
       Text("\(FocusPoints.formatted(model.focusPoints.today)) pts today")
         .font(.system(size: 11, design: .monospaced))
@@ -553,7 +555,7 @@ struct WorkspaceFocusScreen: View {
         ForEach([5, 10, 15, 25, 45, 60, 90], id: \.self) { minutes in
           Button("\(minutes)m") { model.focusEstimateMinutes = Double(minutes) }
             .buttonStyle(.bordered)
-            .tint(model.focusEstimateMinutes == Double(minutes) ? Color.accentColor : Color.secondary)
+            .tint(model.focusEstimateMinutes == Double(minutes) ? theme.primary : theme.muted)
             .focusable()
         }
       }
@@ -590,8 +592,8 @@ struct WorkspaceFocusScreen: View {
     case .daily: return model.themeColor(.success)
     case .overdue: return model.themeColor(.danger)
     case .dueToday, .dueSoon, .deadlineRisk: return model.themeColor(.warning)
-    case .condition, .started: return .accentColor
-    case .today: return .accentColor
+    case .condition, .started: return theme.primary
+    case .today: return theme.primary
     case .importance, .priority: return .purple
     case .order: return .secondary
     }

@@ -11,6 +11,7 @@ import SwiftUI
 /// pane size the gaps are as legible as the blocks, which is most of the
 /// point: what you did not work on is the finding.
 struct WorkspaceTimelineScreen: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
 
   /// Points per hour of ruler. Tall enough that a ten-minute block is still a
@@ -92,7 +93,7 @@ struct WorkspaceTimelineScreen: View {
 
   @ViewBuilder
   private func content(now: Date) -> some View {
-    let day = TimelineDay(model: model, now: now)
+    let day = TimelineDay(model: model, now: now, theme: theme)
     VStack(spacing: 0) {
       summary(day)
       Divider()
@@ -239,10 +240,10 @@ struct WorkspaceTimelineScreen: View {
     HStack(spacing: 0) {
       Text("now")
         .font(.caption2.weight(.bold))
-        .foregroundStyle(Color.accentColor)
+        .foregroundStyle(theme.primary)
         .frame(width: Self.rulerWidth - 8, alignment: .trailing)
         .padding(.trailing, 8)
-      Rectangle().fill(Color.accentColor.opacity(0.8)).frame(height: 1)
+      Rectangle().fill(theme.primary.opacity(0.8)).frame(height: theme.hairline)
     }
     .offset(y: CGFloat(offset) / 60 * Self.hourHeight)
     .allowsHitTesting(false)
@@ -323,7 +324,7 @@ private struct TimelineDay {
     let blocks: Int
   }
 
-  @MainActor init(model: WorkspaceViewModel, now: Date) {
+  @MainActor init(model: WorkspaceViewModel, now: Date, theme: Theme) {
     let calendar = Calendar.current
     date = model.focusHistoryDate
     isToday = calendar.isDateInToday(model.focusHistoryDate)
@@ -360,7 +361,9 @@ private struct TimelineDay {
     }
     .sorted { $0.seconds == $1.seconds ? $0.id < $1.id : $0.seconds > $1.seconds }
 
-    hues = Dictionary(uniqueKeysWithValues: summaries.enumerated().map { ($0.element.id, Self.palette[$0.offset % Self.palette.count]) })
+    let palette = Self.palette(theme)
+    fallbackHue = theme.primary
+    hues = Dictionary(uniqueKeysWithValues: summaries.enumerated().map { ($0.element.id, palette[$0.offset % palette.count]) })
 
     if isToday, let interval = calendar.dateInterval(of: .day, for: model.focusHistoryDate), interval.contains(now) {
       let offset = now.timeIntervalSince(layout.start) / 60
@@ -381,8 +384,23 @@ private struct TimelineDay {
   }
 
   func colour(forTask key: String) -> Color {
-    hues[key] ?? .accentColor
+    hues[key] ?? fallbackHue
   }
 
-  private static let palette: [Color] = [.blue, .teal, .purple, .orange, .pink, .indigo, .green]
+  /// Per-task identity colour, which is the one thing the extra hues in the
+  /// house palette are for. This was SwiftUI's own `.blue`, `.teal`, `.indigo`
+  /// and the rest — stock framework hues, which the style forbids precisely
+  /// because they do not flip with the theme and are not on brand.
+  ///
+  /// Primary leads, so a single-task day reads as the app's own colour, and
+  /// danger is left out: a red bar on a chart of work you did says something
+  /// this chart does not mean.
+  private static func palette(_ theme: Theme) -> [Color] {
+    [
+      theme.primary, theme.color(.categoricalPurple), theme.success,
+      theme.color(.categoricalOrange), theme.color(.categoricalPink), theme.warning,
+    ]
+  }
+
+  private let fallbackHue: Color
 }

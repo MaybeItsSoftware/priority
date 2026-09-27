@@ -3,6 +3,7 @@ import PriorityWorkspace
 import SwiftUI
 
 struct WorkspaceFocusContextControls: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
   @State private var showsConditions = false
 
@@ -19,7 +20,7 @@ struct WorkspaceFocusContextControls: View {
           }) { condition in
             Button(condition.name) { model.toggleFocusCondition(condition) }
               .buttonStyle(.bordered)
-              .tint(model.focusContext.conditionIDs.contains(condition.id) ? Color.accentColor : Color.secondary)
+              .tint(model.focusContext.conditionIDs.contains(condition.id) ? theme.primary : theme.muted)
               .help(condition.isLocation ? "Current location" : "Available capability")
           }
           Button { showsConditions = true } label: { Image(systemName: "slider.horizontal.3") }

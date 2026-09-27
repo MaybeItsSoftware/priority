@@ -12,6 +12,7 @@ import SwiftUI
 /// competing for the same small box. Here it is the pane, so the clock can be
 /// the size the clock deserves.
 struct WorkspaceFocusRunning: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
   let session: FocusSession
   let task: WorkspaceTask
@@ -210,6 +211,6 @@ struct WorkspaceFocusRunning: View {
 
   private func clockTint(overrun: Bool) -> Color {
     if session.pausedAt != nil { return .secondary }
-    return overrun ? .orange : .accentColor
+    return overrun ? theme.warning : theme.primary
   }
 }
