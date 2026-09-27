@@ -4,11 +4,12 @@ import SwiftUI
 /// Keybindings pane for `SettingsView`: the three global hotkeys, the Quick
 /// Add target they capture to, and the card builder they share.
 ///
-/// It used to carry two more sections — an editor for every
-/// `ConfigurableShortcutAction` and a searchable shortcut reference — both of
-/// which configured `KeyboardShortcutRouter`. The router went with the popover
-/// surface, so those bindings were settings that changed nothing. What is left
-/// is live: `GlobalShortcutManager` registers these three with Carbon.
+/// It used to carry two more sections — a per-action shortcut editor and a
+/// searchable reference — both of which configured a key router that went with
+/// the popover, so they were settings that changed nothing. What is left is
+/// live: `GlobalShortcutManager` registers these three with Carbon. The
+/// window's own keys are rebound in `keymap.json` — see
+/// `docs/keyboard-shortcuts.md`.
 extension SettingsView {
   var keybindingsPane: some View {
     Group {

@@ -21,20 +21,4 @@ final class CommandPaletteKeybindTests: XCTestCase {
       shared.isEmpty,
       "shortcuts claimed by more than one row: \(shared)")
   }
-
-  /// A sequence starter on its own is not a shortcut for anything, with one
-  /// exception: `m`, which the digits complete into the very command it sits on.
-  func testAPrintedShortcutIsNotABareSequenceStarter() {
-    let starters = Set(
-      ConfigurableShortcutAction.twoKeySequenceActions
-        .flatMap { $0.defaultBinding.split(separator: ",") }
-        .compactMap { $0.trimmingCharacters(in: .whitespaces).first.map(String.init) })
-
-    for suggestion in CommandEngine.suggestions {
-      guard let keybind = suggestion.keybind, keybind.count == 1 else { continue }
-      XCTAssertFalse(
-        starters.contains(keybind.lowercased()) && suggestion.command != "matrix ",
-        "\(suggestion.label) prints the bare starter \(keybind)")
-    }
-  }
 }

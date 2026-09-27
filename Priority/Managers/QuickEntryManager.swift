@@ -19,7 +19,6 @@ import PriorityCore
   // dailies — and every surface had to know which. It is now owned entirely by
   // the latter, as `completingKind` + `phase`, read through `phase(for:)`.
   var commandSuggestionIndex: Int = 0
-  var keyBuffer: String = ""
   /// The date highlighted by the `dd` calendar. It lives beside the other
   /// quick-entry state so the popover and main window share one selection and
   /// the global key router can move it without reaching into a SwiftUI view.
@@ -32,7 +31,6 @@ import PriorityCore
   @ObservationIgnored private let cacheInvalidationBus: CacheInvalidationBus
   @ObservationIgnored var integrationFlagsProvider:
     (() -> (obsidian: Bool, affine: Bool, googleCalendar: Bool, mcp: Bool))?
-  @ObservationIgnored var shortcutBindingProvider: ((ConfigurableShortcutAction) -> String)?
 
   init(cacheInvalidationBus: CacheInvalidationBus = CacheInvalidationBus()) {
     self.cacheInvalidationBus = cacheInvalidationBus
@@ -131,65 +129,14 @@ import PriorityCore
     }
 
     return filtered.map { suggestion in
-      let keybind = resolvedKeybindLabel(for: suggestion)
-      return CommandSuggestion(
+      CommandSuggestion(
         label: suggestion.label,
         command: suggestion.command,
         preview: suggestion.preview,
-        keybind: keybind,
+        keybind: suggestion.keybind,
         submitImmediately: suggestion.submitImmediately
       )
     }
-  }
-
-  private func resolvedKeybindLabel(for suggestion: CommandPaletteSuggestion) -> String? {
-    guard
-      let raw = suggestion.boundActionRawValue,
-      let action = ConfigurableShortcutAction(rawValue: raw),
-      let provider = shortcutBindingProvider
-    else { return suggestion.keybind }
-    let binding = provider(action).trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !binding.isEmpty else { return suggestion.keybind }
-    return Self.formatBinding(binding)
-  }
-
-  /// Formats a comma-separated raw binding string (e.g. "cmd+k,;,shift+;") into a
-  /// compact display like "⌘K · ;" suitable for the palette row.
-  static func formatBinding(_ raw: String) -> String {
-    raw.split(separator: ",")
-      .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-      .filter { !$0.isEmpty }
-      .map(prettifyToken)
-      .joined(separator: " · ")
-  }
-
-  private static func prettifyToken(_ token: String) -> String {
-    let parts = token.lowercased().split(separator: "+")
-    var modifiers = ""
-    var key = ""
-    for part in parts {
-      switch part {
-      case "cmd": modifiers += "⌘"
-      case "shift": modifiers += "⇧"
-      case "ctrl": modifiers += "⌃"
-      case "option", "opt", "alt": modifiers += "⌥"
-      default: key = String(part)
-      }
-    }
-    let prettyKey: String
-    switch key {
-    case "left": prettyKey = "←"
-    case "right": prettyKey = "→"
-    case "up": prettyKey = "↑"
-    case "down": prettyKey = "↓"
-    case "enter", "return": prettyKey = "⏎"
-    case "tab": prettyKey = "⇥"
-    case "escape", "esc": prettyKey = "⎋"
-    case "space": prettyKey = "␣"
-    case "delete", "del": prettyKey = "⌫"
-    default: prettyKey = key.count == 1 ? key.uppercased() : key.capitalized
-    }
-    return modifiers + prettyKey
   }
 
   func selectNextCommandSuggestion(

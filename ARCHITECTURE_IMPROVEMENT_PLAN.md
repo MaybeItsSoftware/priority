@@ -42,6 +42,13 @@ into the state described above.
 
 ### 1. `KeyboardShortcutRouter.handle` is a single ~950-line function
 
+**Superseded.** The router went with the popover, and the desktop workspace
+dispatches through `WorkspaceCommandCatalog` instead. The pieces below outlived
+it unused and were deleted in phase 5 of `docs/zed-overhaul-plan.md`; only
+`ShortcutKeyToken.nameByKeyCode` and `ShortcutReference.display(token:)`
+remain, because the catalogue spells and renders keys with them. What follows
+is the record of what they found.
+
 **Mostly addressed.** Three pure pieces are out, in `PriorityCore` and tested:
 
 - `ShortcutKeyToken` — the token spelling (`"cmd+k"`, `"shift+enter"`), next to

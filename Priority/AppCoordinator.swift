@@ -59,37 +59,6 @@ import SwiftUI
 
   @ObservationIgnored private var statusMessageGeneration = 0
 
-  /// What a half-typed key sequence should say, or nil when none is pending.
-  ///
-  /// On the coordinator rather than in a view because the legacy panel had to
-  /// *reserve* room for the line before drawing it, so its layout and its
-  /// content needed the same answer and a second reading of the key buffer
-  /// would have drifted from the first. That panel is gone; the sequence hint
-  /// stays here because the buffer it reads still does.
-  var sequenceInputHint: String? {
-    let buffer = quickEntry.keyBuffer.lowercased()
-    guard !buffer.isEmpty else { return nil }
-
-    let matrixStarters = ShortcutSequenceBuffer.starters(
-      fromBindings: preferences.shortcutBinding(for: .sequenceMatrixCoord)
-        .split(separator: ",").map(String.init))
-    if let hint = ShortcutSequenceBuffer.matrixHint(
-      for: buffer, matrixStarters: matrixStarters)
-    {
-      return hint
-    }
-
-    let sequences = ConfigurableShortcutAction.twoKeySequenceActions
-      .flatMap { action -> [(keys: String, label: String)] in
-        guard let label = action.sequenceHintLabel else { return [] }
-        return preferences.shortcutBinding(for: action)
-          .split(separator: ",")
-          .map { (keys: String($0).trimmingCharacters(in: .whitespacesAndNewlines), label: label) }
-      }
-    return ShortcutSequenceBuffer.hint(forBuffer: buffer, sequences: sequences)
-      ?? "Sequence: \(buffer)…"
-  }
-
   var orderedRootTaskViews: [RootTaskView] { Self.storedRootTaskViewOrder }
 
   /// The legacy tab order, read straight from `UserDefaults`.

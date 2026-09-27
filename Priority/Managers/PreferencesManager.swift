@@ -112,9 +112,6 @@ import SwiftUI
   var quickAddSpecificParentTaskId: String {
     didSet { preferencesStore.set(quickAddSpecificParentTaskId, for: .quickAddSpecificParentTaskId) }
   }
-  var customizableShortcutsByAction: [String: String] {
-    didSet { preferencesStore.set(customizableShortcutsByAction, for: .customizableShortcutsByAction) }
-  }
   var maxTitleWidth: Double {
     didSet { preferencesStore.set(maxTitleWidth, for: .maxTitleWidth) }
   }
@@ -195,7 +192,6 @@ import SwiftUI
         rawValue: preferencesStore.int(.quickAddLocationModeRawValue, default: 0)
       ) ?? .defaultRoot
     self.quickAddSpecificParentTaskId = preferencesStore.string(.quickAddSpecificParentTaskId)
-    self.customizableShortcutsByAction = preferencesStore.stringDictionary(.customizableShortcutsByAction)
     self.maxTitleWidth = preferencesStore.double(.maxTitleWidth, default: 150.0)
     self.showTaskBreadcrumbContext = preferencesStore.bool(.showTaskBreadcrumbContext, default: false)
     self.namedTimeMorningHour = preferencesStore.int(.namedTimeMorningHour, default: 9)
@@ -232,56 +228,6 @@ import SwiftUI
       eodHour: namedTimeEodHour
     )
     return CommandEngine.resolveDueDate(input, config: config)
-  }
-
-  var configurableShortcutActions: [ConfigurableShortcutAction] {
-    ConfigurableShortcutAction.allCases
-  }
-
-  func shortcutBinding(for action: ConfigurableShortcutAction) -> String {
-    let override =
-      customizableShortcutsByAction[action.rawValue]?.trimmingCharacters(
-        in: .whitespacesAndNewlines
-      )
-      ?? ""
-    return override.isEmpty ? action.defaultBinding : override
-  }
-
-  func setShortcutBinding(_ rawBinding: String, for action: ConfigurableShortcutAction) {
-    let normalized = rawBinding.trimmingCharacters(in: .whitespacesAndNewlines)
-    let normalizedDefault =
-      action.defaultBinding.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    let normalizedInput = normalized.lowercased()
-
-    if normalizedInput.isEmpty || normalizedInput == normalizedDefault {
-      customizableShortcutsByAction.removeValue(forKey: action.rawValue)
-      return
-    }
-    customizableShortcutsByAction[action.rawValue] = normalized
-  }
-
-  func resetConfigurableShortcutBindings() {
-    customizableShortcutsByAction = [:]
-  }
-
-  func shortcutMatches(action: ConfigurableShortcutAction, keyToken: String) -> Bool {
-    let normalizedToken = keyToken.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    guard !normalizedToken.isEmpty else { return false }
-    return Set(
-      shortcutBinding(for: action).split(separator: ",").map {
-        String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-      }
-    ).contains(normalizedToken)
-  }
-
-  func shortcutMatchesSequence(action: ConfigurableShortcutAction, sequence: String) -> Bool {
-    let normalizedSequence = sequence.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    guard !normalizedSequence.isEmpty else { return false }
-    return Set(
-      shortcutBinding(for: action).split(separator: ",").map {
-        String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-      }
-    ).contains(normalizedSequence)
   }
 
   var themeAccentColor: Color {

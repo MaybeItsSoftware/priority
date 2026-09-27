@@ -86,9 +86,6 @@ final class LifecycleController {
         coordinator.integrations.mcpIntegrationEnabled
       )
     }
-    coordinator.quickEntry.shortcutBindingProvider = { [weak coordinator] action in
-      coordinator?.preferences.shortcutBinding(for: action) ?? action.defaultBinding
-    }
     coordinator.startDates.dateResolver = { [weak coordinator] input in
       coordinator?.preferences.resolveDueDate(input) ?? input
     }
