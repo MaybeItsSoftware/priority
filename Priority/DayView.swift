@@ -348,7 +348,7 @@ struct DayView: View {
         if isHovering {
           Image(systemName: "checkmark.circle")
             .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(model.themeColor(.success))
+            .foregroundStyle(theme.success)
         } else if let index {
           Text("\(index)")
             .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -415,12 +415,12 @@ struct DayView: View {
               .font(.system(size: 26, weight: .semibold, design: .monospaced))
               .monospacedDigit()
               .foregroundStyle(session.pausedAt == nil
-                ? (reading.isOverrun ? model.themeColor(.warning) : Color.accentColor) : Color.secondary)
+                ? (reading.isOverrun ? theme.warning : theme.primary) : theme.muted)
               .contentTransition(.numericText())
           }
           MicroLabel(
             session.pausedAt == nil ? "of \(duration(session.workDurationSeconds))" : "paused",
-            tint: session.pausedAt == nil ? nil : model.themeColor(.warning))
+            tint: session.pausedAt == nil ? nil : theme.warning)
           Spacer(minLength: 0)
         }
         controlStrip(session: session)
@@ -509,7 +509,7 @@ struct DayView: View {
     let phase = celebrationPhase(forTaskID: id)
     let treatment = manager.celebration.rowTreatment
     let celebrating = phase != .idle
-    let success = model.themeColor(.success)
+    let success = theme.success
     return content()
       .padding(.horizontal, 12)
       .padding(.vertical, 10)
@@ -812,6 +812,7 @@ extension DayView {
 /// by having done it, not by sitting down to it.
 struct DailyBadge: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let task: WorkspaceTask
   let isDoneToday: Bool
 
@@ -821,7 +822,7 @@ struct DailyBadge: View {
     } label: {
       Image(systemName: isDoneToday ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
         .font(.system(size: 10, weight: .semibold))
-        .foregroundStyle(isDoneToday ? model.themeColor(.success) : Color.secondary)
+        .foregroundStyle(isDoneToday ? theme.success : theme.muted)
         .frame(width: 16, height: 16)
         .contentShape(Rectangle())
     }

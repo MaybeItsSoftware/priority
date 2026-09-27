@@ -508,7 +508,7 @@ struct WorkspaceDesktopView: View {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
         Image(systemName: model.itemSymbol(for: item.task))
-          .foregroundStyle(item.task.status == .open ? Color.secondary : model.themeColor(.success))
+          .foregroundStyle(item.task.status == .open ? theme.muted : theme.success)
       }
       .buttonStyle(.plain)
       .focusable()
@@ -527,7 +527,7 @@ struct WorkspaceDesktopView: View {
         .foregroundStyle(item.task.status == .open ? .primary : .secondary)
       WorkspaceTaskPlanningBadges(task: item.task).frame(maxWidth: 170, alignment: .leading)
     }
-    .padding(.leading, CGFloat(item.depth) * 22)
+    .padding(.leading, CGFloat(item.depth) * 16)
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
     .workspaceSelection(

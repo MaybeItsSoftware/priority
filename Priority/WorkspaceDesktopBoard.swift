@@ -76,6 +76,7 @@ struct WorkspaceKanbanBoard: View {
 
 struct WorkspaceKanbanColumnView: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let column: WorkspaceKanbanColumn
   let width: CGFloat
   let height: CGFloat
@@ -85,19 +86,30 @@ struct WorkspaceKanbanColumnView: View {
   @State private var visibleCardIDs: Set<String> = []
   @FocusState private var topComposerFocused: Bool
 
+  private var hasKeyboard: Bool {
+    model.keyboardFocusArea == .tasks && model.activeBoardColumnID == column.id
+  }
+
+  private var columnBorder: Color {
+    if isDropTargeted { return theme.primary }
+    return hasKeyboard ? theme.focusRing : theme.border
+  }
+
   var body: some View {
     let tasks = model.tasks(in: column)
     VStack(alignment: .leading, spacing: 10) {
-      HStack(spacing: 8) {
-        Text(column.title.uppercased())
-          .font(.caption.weight(.bold))
-          .foregroundStyle(.secondary)
+      HStack(spacing: theme.space.xs) {
+        // The micro-label exists for exactly this and was being hand-rolled
+        // one point smaller with no tracking, so column titles read narrower
+        // than every other eyebrow in the app.
+        MicroLabel(column.title)
           .lineLimit(1)
           .truncationMode(.tail)
           .help(column.title)
         Text("\(tasks.count)")
-          .font(.caption.monospacedDigit())
-          .foregroundStyle(.tertiary)
+          .font(theme.monoFont(size: 10))
+          .foregroundStyle(theme.dim)
+          .monospacedDigit()
         Spacer()
         Button {
           isAddingAtTop = true
@@ -113,9 +125,10 @@ struct WorkspaceKanbanColumnView: View {
           Button(role: .destructive) {
             model.removeKanbanColumn(column)
           } label: {
-            Image(systemName: "minus.circle")
+            Image(systemName: "minus")
           }
           .buttonStyle(.plain)
+          .foregroundStyle(theme.muted)
           .focusable()
           .commandHelp(.planBoardRemoveColumn, note: "Remove \(column.title)")
         }
@@ -155,12 +168,14 @@ struct WorkspaceKanbanColumnView: View {
                 Text(isDropTargeted ? "Drop card here" : "Drop cards here")
                   .font(.caption.weight(.medium))
               }
-              .foregroundStyle(isDropTargeted ? Color.accentColor : Color.secondary)
+              .foregroundStyle(isDropTargeted ? theme.primary : theme.dim)
               .frame(maxWidth: .infinity)
-              .padding(.vertical, 20)
+              .padding(.vertical, theme.space.lg)
               .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                  .stroke(isDropTargeted ? Color.accentColor : Color.secondary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5]))
+                RoundedRectangle(cornerRadius: theme.controlRadius)
+                  .stroke(
+                    isDropTargeted ? theme.primary : theme.border,
+                    style: StrokeStyle(lineWidth: theme.hairline, dash: [5]))
               )
             }
 
@@ -188,15 +203,19 @@ struct WorkspaceKanbanColumnView: View {
         }
       }
     }
-    .padding(12)
+    .padding(theme.space.md)
     .frame(width: width, alignment: .topLeading)
     .frame(height: height, alignment: .topLeading)
     .background(
-      isDropTargeted ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.05),
-      in: RoundedRectangle(cornerRadius: 12))
+      isDropTargeted ? theme.color(.primary, opacity: 0.12) : theme.well,
+      in: RoundedRectangle(cornerRadius: theme.panelRadius))
+    // A column is a surface, so it gets a hairline like every other surface. It
+    // had none, and borrowed the drop target's 2pt accent ring to show that the
+    // keyboard was in it — so "a card is about to land here" and "the arrow keys
+    // are in this column" looked identical.
     .overlay(
-      RoundedRectangle(cornerRadius: 12)
-        .stroke(isDropTargeted || (model.keyboardFocusArea == .tasks && model.activeBoardColumnID == column.id) ? Color.accentColor : .clear, lineWidth: 2)
+      RoundedRectangle(cornerRadius: theme.panelRadius)
+        .strokeBorder(columnBorder, lineWidth: isDropTargeted ? theme.emphasisBorder : theme.hairline)
     )
     .simultaneousGesture(TapGesture().onEnded {
       if tasks.isEmpty {
