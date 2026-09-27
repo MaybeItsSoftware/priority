@@ -16,6 +16,7 @@ struct WorkspaceDesktopView: View {
   /// measures a translation rather than accumulating deltas.
   @State private var dragStartWidth: CGFloat?
   @FocusState private var focusedArea: WorkspaceFocusArea?
+  @State private var doneDragStartWidth: CGFloat?
 
   var body: some View {
     workspace.task { await model.monitorFocus() }
@@ -44,6 +45,28 @@ struct WorkspaceDesktopView: View {
         sidebarResizeHandle
       }
       mainAndInspector
+      // Outside the split view, and on the same terms as the left sidebar: an
+      // explicit width and a handle. Inside `HSplitView` it was a third pane
+      // dividing what was already spoken for, and on a window with nothing
+      // spare it was laid out at no width at all — which is the same thing as
+      // not being there.
+      //
+      // Gone while a full-pane screen is up: focus is the one place the app
+      // should not be showing you a tally, and the timeline is already a reading
+      // of the same day at greater length.
+      if model.isDoneRailVisible && !model.showsFocusScreen && !model.showsTimelineScreen {
+        doneRailResizeHandle
+        WorkspaceDoneRail()
+          .environment(model)
+          // Claimed the way the sidebar claims its own area: a `requestedFocusArea`
+          // no view answers to is handed straight back, so the rail would take the
+          // keyboard and lose it again on the next layout pass.
+          .focusable()
+          .focusEffectDisabled()
+          .focused($focusedArea, equals: .done)
+          .focusSection()
+          .frame(width: model.doneRailWidth)
+      }
     }
     .frame(minWidth: 760, minHeight: 520)
   }
@@ -76,6 +99,33 @@ struct WorkspaceDesktopView: View {
       )
   }
 
+  /// The sidebar's handle mirrored. Dragging left widens the rail, so the
+  /// translation is subtracted.
+  private var doneRailResizeHandle: some View {
+    Divider()
+      .frame(width: 1)
+      .overlay(
+        Rectangle()
+          .fill(Color.clear)
+          .frame(width: 9)
+          .contentShape(Rectangle())
+          .onHover { inside in
+            if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+          }
+          .gesture(
+            DragGesture(minimumDistance: 1, coordinateSpace: .global)
+              .onChanged { value in
+                let base = doneDragStartWidth ?? model.doneRailWidth
+                if doneDragStartWidth == nil { doneDragStartWidth = base }
+                model.doneRailWidth = min(
+                  max(base - value.translation.width, WorkspaceViewModel.minDoneRailWidth),
+                  WorkspaceViewModel.maxDoneRailWidth)
+              }
+              .onEnded { _ in doneDragStartWidth = nil }
+          )
+      )
+  }
+
   private var mainAndInspector: some View {
     HSplitView {
       // Focus mode takes the main pane rather than floating over it. A sheet
@@ -103,21 +153,6 @@ struct WorkspaceDesktopView: View {
         inspector
           .focusSection()
           .frame(minWidth: 210, idealWidth: 250, maxWidth: 320)
-      }
-      // Outermost on the right, and gone while a full-pane screen is up: focus
-      // is the one place the app should not be showing you a tally, and the
-      // timeline is already a reading of the same day at greater length.
-      if model.isDoneRailVisible && !model.showsFocusScreen && !model.showsTimelineScreen {
-        WorkspaceDoneRail()
-          .environment(model)
-          // Claimed the way the sidebar claims its own area: a `requestedFocusArea`
-          // no view answers to is handed straight back, so the rail would take the
-          // keyboard and lose it again on the next layout pass.
-          .focusable()
-          .focusEffectDisabled()
-          .focused($focusedArea, equals: .done)
-          .focusSection()
-          .frame(minWidth: 220, idealWidth: 260, maxWidth: 340)
       }
     }
     .onAppear {
@@ -283,10 +318,12 @@ struct WorkspaceDesktopView: View {
         }
         .buttonStyle(.plain)
         .id(everythingSidebarID)
-        .listRowBackground(
+        .padding(.horizontal, 4)
+        .background(
           WorkspaceSidebarSelectionBackground(
             isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
             rowID: "row:everything"))
+        .listRowBackground(Color.clear)
         .tag(Optional(everythingSidebarID))
         .accessibilityLabel("Everything, all lists")
         if let inbox = model.inboxList {
@@ -406,10 +443,12 @@ struct WorkspaceDesktopView: View {
       .tag(Optional(list.id))
       .id(list.id)
       .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
-      .listRowBackground(
+      .padding(.horizontal, 4)
+      .background(
         WorkspaceSidebarSelectionBackground(
           isCurrent: model.isCurrentSidebarRow(list.id),
           rowID: "list:\(list.id)"))
+      .listRowBackground(Color.clear)
       .workspaceSidebarDrop(isLastInGroup: isLastInGroup) { payload, placement in
         switch placement {
         case .into: model.moveDroppedItem(payload, toListID: list.id)
@@ -766,6 +805,10 @@ struct WorkspaceItemActions: View {
 /// mean anything, so it only draws while the sidebar has it.
 /// Internal rather than file-private: the Focus and timeline rows live in
 /// `WorkspaceFocusScreen.swift` and are sidebar rows like any other.
+/// Always applied with `.background`, never `.listRowBackground`. A `.sidebar`
+/// List draws its own row chrome and swallowed the row background whole: the
+/// folder header, which had always used a plain background, was the only row in
+/// the sidebar that showed a selection at all.
 struct WorkspaceSidebarSelectionBackground: View {
   @Environment(WorkspaceViewModel.self) private var model
   var isCurrent = false
@@ -821,9 +864,11 @@ private struct WorkspaceNestedListRow: View {
     .accessibilityAction { model.selectNestedList(task) }
     .focusable().focusEffectDisabled()
     .id(promotedShortcut ? "promoted:\(task.id)" : task.id)
-    .listRowBackground(WorkspaceSidebarSelectionBackground(
+    .padding(.horizontal, 4)
+    .background(WorkspaceSidebarSelectionBackground(
       isCurrent: model.isCurrentSidebarRow(task.id),
       rowID: promotedShortcut ? "pinned:\(task.id)" : "nested:\(task.listId):\(task.id)"))
+    .listRowBackground(Color.clear)
     .contextMenu { WorkspaceItemActions(task: task) }
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
     .background(isDropTargeted ? Color.accentColor.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 6))
@@ -852,10 +897,12 @@ private struct WorkspaceFolderTree: View {
           .tag(Optional(list.id))
           .id(list.id)
           .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
-          .listRowBackground(
+          .padding(.horizontal, 4)
+          .background(
             WorkspaceSidebarSelectionBackground(
               isCurrent: model.isCurrentSidebarRow(list.id),
               rowID: "list:\(list.id)"))
+          .listRowBackground(Color.clear)
           .workspaceSidebarDrop(isLastInGroup: list.id == folderLists.last?.id) { payload, placement in
             switch placement {
             case .into: model.moveDroppedItem(payload, toListID: list.id)

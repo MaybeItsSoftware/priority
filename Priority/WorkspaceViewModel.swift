@@ -230,6 +230,25 @@ enum WorkspaceSidebarItem: Identifiable {
     didSet { UserDefaults.standard.set(isDoneRailVisible, forKey: Self.doneRailVisibleKey) }
   }
 
+  /// An explicit width with a handle of its own, for the sidebar's reason: a
+  /// pane that takes a share of whatever the window has spare is a pane whose
+  /// width you cannot set.
+  var doneRailWidth: CGFloat = {
+    let stored = UserDefaults.standard.double(forKey: WorkspaceViewModel.doneRailWidthKey)
+    guard stored > 0 else { return WorkspaceViewModel.defaultDoneRailWidth }
+    return min(max(CGFloat(stored), WorkspaceViewModel.minDoneRailWidth), WorkspaceViewModel.maxDoneRailWidth)
+  }() {
+    didSet {
+      guard doneRailWidth != oldValue else { return }
+      UserDefaults.standard.set(Double(doneRailWidth), forKey: Self.doneRailWidthKey)
+    }
+  }
+
+  static let minDoneRailWidth: CGFloat = 180
+  static let maxDoneRailWidth: CGFloat = 460
+  static let defaultDoneRailWidth: CGFloat = 250
+  private static let doneRailWidthKey = "localWorkspaceDoneRailWidthV1"
+
   static let minSidebarWidth: CGFloat = 140
   static let maxSidebarWidth: CGFloat = 420
   static let defaultSidebarWidth: CGFloat = 185

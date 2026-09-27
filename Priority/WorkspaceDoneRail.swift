@@ -40,11 +40,11 @@ struct WorkspaceDoneRail: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(theme.altRow)
     .overlay(alignment: .leading) {
-      // The region edge, on the same terms as every other: the focus ring when
-      // the keyboard is here, a hairline when it is not.
+      // Only while the keyboard is here. The resize handle beside it is already
+      // a hairline, and two rules a point apart is a seam, not an edge.
       Rectangle()
-        .fill(hasKeyboard ? theme.focusRing : theme.border)
-        .frame(width: hasKeyboard ? theme.focusRingWidth : theme.hairline)
+        .fill(hasKeyboard ? theme.focusRing : Color.clear)
+        .frame(width: theme.focusRingWidth)
     }
     .contentShape(Rectangle())
     .onTapGesture { model.reportKeyboardFocus(.done) }
