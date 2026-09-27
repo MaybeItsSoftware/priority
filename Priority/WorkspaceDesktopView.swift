@@ -220,7 +220,12 @@ struct WorkspaceDesktopView: View {
       sidebarRows
       sidebarFooter
     }
-    .background(.bar)
+    // Not `.bar`. A vibrant material re-tints whatever is behind the window,
+    // so the selection wash — 13% of the accent, the same figure that reads
+    // clearly on every other surface — was being averaged into the desktop and
+    // arriving as nothing. Row weight was covering for that. On a flat surface
+    // the wash composites the way it was tuned to.
+    .background(theme.altRow)
   }
 
   private var sidebarHeader: some View {
@@ -315,6 +320,9 @@ struct WorkspaceDesktopView: View {
         }
       }
       .listStyle(.sidebar)
+      // `.sidebar` is kept for its row metrics and disclosure behaviour, but
+      // its own vibrancy is not wanted over the flat surface above.
+      .scrollContentBackground(.hidden)
       // A sidebar row is otherwise given the height AppKit reserves for a
       // two-line source-list item, which on a list of one-line names reads as
       // double spacing.
