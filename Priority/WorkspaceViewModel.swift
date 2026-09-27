@@ -169,6 +169,7 @@ enum WorkspaceSidebarItem: Identifiable {
   /// `WorkspaceViewModel+ExternalWrites.swift`.
   @ObservationIgnored var externalWriteToken: Int?
   @ObservationIgnored var externalWriteTimer: Timer?
+  @ObservationIgnored var externalWriteCheckInFlight = false
   let taskEditor = WorkspaceTaskEditor()
 
   private(set) var workspace: Workspace?

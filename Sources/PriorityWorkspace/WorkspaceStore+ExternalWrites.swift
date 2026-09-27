@@ -12,8 +12,20 @@ extension WorkspaceStore {
   /// so it is read on the pool's writer, the only connection this process
   /// writes through. Every commit it reports is therefore someone else's.
   public func externalChangeToken() throws -> Int {
-    try database.writeWithoutTransaction { db in
-      try Int.fetchOne(db, sql: "PRAGMA data_version") ?? 0
-    }
+    try database.writeWithoutTransaction { db in try Self.dataVersion(db) }
+  }
+
+  /// The same token, read without holding the calling thread.
+  ///
+  /// It still has to be the writer's connection — any other one would count
+  /// this process's own commits too — but awaiting it means a poll that lands
+  /// behind a write waits on the writer's queue rather than on the main
+  /// thread.
+  public func readExternalChangeToken() async throws -> Int {
+    try await database.writeWithoutTransaction { db in try Self.dataVersion(db) }
+  }
+
+  private static func dataVersion(_ db: Database) throws -> Int {
+    try Int.fetchOne(db, sql: "PRAGMA data_version") ?? 0
   }
 }

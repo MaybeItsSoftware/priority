@@ -13,9 +13,10 @@ import os
 ///
 /// The check is `PRAGMA data_version` on the store's writer connection
 /// (`WorkspaceStore.externalChangeToken`), which moves only on another
-/// connection's commit. It is one integer read a second on the main actor,
-/// where every workspace write already runs, so it never races the app's own
-/// writes. When it moves, the view model reloads the way undo does, since an
+/// connection's commit. It is one integer read a second, awaited on the
+/// writer's queue so the main thread never waits behind a write, and since the
+/// writer never counts its own commits, the app's writes cannot be mistaken
+/// for someone else's. When it moves, the view model reloads the way undo does, since an
 /// external write is the same kind of event: rows changed underneath the
 /// screen, possibly including whatever is selected.
 ///
@@ -43,11 +44,21 @@ extension WorkspaceViewModel {
     externalWriteTimer = timer
   }
 
+  /// Awaits the token rather than reading it in line, so a poll that lands
+  /// behind a write waits on the writer's queue instead of holding the main
+  /// thread. One check at a time: a tick that finds the last still waiting
+  /// skips, and a burst of writes is one reload per tick at most.
   func checkForExternalWrites() {
-    guard let store, let token = try? store.externalChangeToken() else { return }
-    guard token != externalWriteToken else { return }
-    externalWriteToken = token
-    reloadAfterExternalWrite()
+    guard let store, !externalWriteCheckInFlight else { return }
+    externalWriteCheckInFlight = true
+    Task { @MainActor [weak self] in
+      let token = try? await store.readExternalChangeToken()
+      guard let self else { return }
+      self.externalWriteCheckInFlight = false
+      guard let token, token != self.externalWriteToken else { return }
+      self.externalWriteToken = token
+      self.reloadAfterExternalWrite()
+    }
   }
 
   private func reloadAfterExternalWrite() {

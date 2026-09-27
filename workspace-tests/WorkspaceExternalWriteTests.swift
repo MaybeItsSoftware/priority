@@ -44,6 +44,23 @@ final class WorkspaceExternalWriteTests: XCTestCase {
       .first { $0.id == listID }?.name, "Elsewhere")
   }
 
+  /// The poll the app runs is the awaited form; it has to agree with the
+  /// synchronous one on both counts.
+  func testTheAwaitedTokenAgreesWithTheSynchronousOne() async throws {
+    let before = try await store.readExternalChangeToken()
+    XCTAssertEqual(before, try store.externalChangeToken())
+    _ = try store.createTask(listId: listID, title: "Mine")
+    let afterOwnWrite = try await store.readExternalChangeToken()
+    XCTAssertEqual(afterOwnWrite, before)
+    let other = try DatabaseQueue(path: databaseURL.path)
+    let listID: String = listID
+    try await other.write { db in
+      try db.execute(sql: "UPDATE task_lists SET name = 'Elsewhere' WHERE id = ?", arguments: [listID])
+    }
+    let afterOtherWrite = try await store.readExternalChangeToken()
+    XCTAssertNotEqual(afterOtherWrite, before)
+  }
+
   /// The statements `cli/src/workspace_tasks.rs` runs for `workspace_task_add`
   /// with a link, inside its `journalled` wrapper. If the app's undo cannot
   /// take this back in one step, the two writers disagree about the journal.
