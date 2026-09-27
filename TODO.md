@@ -47,6 +47,25 @@ worktree's copies of everything, roughly doubling the count. Filter with
 
 These cannot be verified from a build; they need someone to click.
 
+- **The done rail.** `⌘⌃D`. It should open on the right of the inspector with the
+  keyboard already in it, `↑↓`/`kj` should walk the list across day headings as
+  one sequence, `⏎` should land on the task in its own list with completions no
+  longer hidden, `R` should put it back on the list, and `←` should hand the
+  keyboard back to the work. Pressing `⌘⌃D` again from inside it closes it;
+  pressing it while the keyboard is elsewhere should bring the keyboard over
+  rather than close the rail.
+- **The rail's window is five weeks** (`WorkspaceViewModel.doneRailWindowDays`).
+  Say if that is the wrong depth — too short to see a pattern, or long enough to
+  feel like an archive.
+- **Cancelled tasks appear in the rail**, drawn apart from completed ones. Say if
+  they should not be there at all: they leave the open list the same way, which
+  is the argument for listing them, but they are not progress.
+- **The flattened sidebar.** It is `theme.altRow` rather than `.bar` now, so it
+  no longer picks up what is behind the window. Check the selection wash reads,
+  and that the sidebar still separates from the pane beside it.
+- **Timeline then a list.** Click Timeline, then click any list. The list should
+  open. This was silently broken.
+
 - **The focus handoff.** Start a block from a board card. The window should
   close, the Dock icon should go, and the tray should come up with the running
   task at the top. Score the block on the tray: the window should stay closed.
