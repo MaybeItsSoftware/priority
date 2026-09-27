@@ -138,9 +138,16 @@ import os
 
   private func runPass() async throws {
     guard let store = storeProvider() else { return }
-    var ledger = ledgerStore.load()
+    // The ledger file and the whole-workspace read are the heavy, local half
+    // of a pass, and nothing on screen waits for either, so they run off the
+    // main thread. The pass itself stays serial: `isRunning` was set before
+    // the first suspension, so nothing can start another in the meantime.
+    let ledgerStore = self.ledgerStore
+    var ledger = await Task.detached(priority: .utility) { ledgerStore.load() }.value
 
-    let (localLists, localTasks) = try snapshot(store: store)
+    let (localLists, localTasks) = try await Task.detached(priority: .utility) {
+      try Self.snapshot(store: store)
+    }.value
     let remoteLists = try await plugin.fetchTaskLists()
     // Only the lists this mirror owns are read. An unrelated Google Tasks list
     // is none of Priority's business, and fetching it would only invite the
@@ -165,7 +172,8 @@ import os
     try await apply(plan.operations, ledger: &ledger, store: store)
     record(plan.conflicts, titles: titlesByLocalID)
 
-    try ledgerStore.save(ledger)
+    let finished = ledger
+    try await Task.detached(priority: .utility) { try ledgerStore.save(finished) }.value
     mirroredTaskCount = ledger.tasks.count
   }
 
@@ -174,7 +182,7 @@ import os
   /// Archived lists are left out rather than filtered later: to the mirror,
   /// archiving is the list ceasing to exist, which is what makes its Google
   /// copy go away.
-  private func snapshot(store: WorkspaceStore) throws
+  nonisolated private static func snapshot(store: WorkspaceStore) throws
     -> ([GoogleTasksMirror.LocalList], [GoogleTasksMirror.LocalTask])
   {
     // A workspace that will not resolve is not the same thing as a workspace
@@ -186,12 +194,14 @@ import os
       throw GoogleTasksMirrorError.workspaceUnavailable
     }
     let lists = try store.lists(in: workspace.id, includingArchived: false)
+    // One read of every list rather than one per list.
+    let trees = try store.listTrees(in: lists.map(\.id))
     var localLists: [GoogleTasksMirror.LocalList] = []
     var localTasks: [GoogleTasksMirror.LocalTask] = []
 
     for list in lists {
       localLists.append(.init(id: list.id, name: list.name))
-      for item in try store.outline(in: list.id) {
+      for item in trees[list.id]?.outline() ?? [] {
         let task = item.task
         // A list-shaped task is a container, and a container is a Google list
         // rather than a task in one. Cancelled work is not work to do.
