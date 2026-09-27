@@ -102,3 +102,28 @@ struct WorkspacePaneScopeExit: View {
     .commandHelp(.planLeaveTask, note: "Back to \(title)")
   }
 }
+
+/// A named group of controls in the inspector.
+///
+/// The inspector was one flat run of about twenty-five controls with two
+/// hand-rolled eyebrows in it ("NOTES", "LINKS", both at `caption2` rather than
+/// the micro-label's 10pt with tracking) and no grouping anywhere else, so
+/// finding the estimate field meant reading every label on the way down.
+struct InspectorSection<Content: View>: View {
+  @Environment(\.theme) private var theme
+  let title: String
+  @ViewBuilder var content: Content
+
+  init(_ title: String, @ViewBuilder content: () -> Content) {
+    self.title = title
+    self.content = content()
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
+      MicroLabel(title)
+      content
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}

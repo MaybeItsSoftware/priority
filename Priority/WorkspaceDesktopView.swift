@@ -550,25 +550,44 @@ struct WorkspaceDesktopView: View {
   }
 
   private var inspector: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text("INSPECTOR")
-        .font(.caption.weight(.bold))
-        .foregroundStyle(.secondary)
-      Divider()
-      if let task = model.selectedTask {
-        LocalTaskInspector(
-          task: task,
-          focusRequest: model.focusRequest,
-          requestedFocusArea: model.requestedFocusArea)
-          .environment(model)
-      } else {
-        Text("Select a task to see its notes, schedule, estimate, and focus controls here.")
-          .font(.callout)
-          .foregroundStyle(.secondary)
+    VStack(alignment: .leading, spacing: 0) {
+      // The pane names the task rather than itself. "INSPECTOR" told you
+      // something you could already see; which task you are editing is the
+      // thing that is genuinely ambiguous when the selection moves behind you.
+      WorkspacePaneHeader(title: model.selectedTask?.title ?? "Nothing selected") {
+        if let task = model.selectedTask, let list = model.list(for: task) {
+          Text(list.name)
+            .font(theme.bodyFont(size: 11))
+            .foregroundStyle(theme.muted)
+            .lineLimit(1)
+        }
       }
-      Spacer()
+      FocusRule()
+      // The editor is about twenty-five controls tall. It was in a plain
+      // VStack, so on anything short of a full-height window the last of them
+      // — Save, Revert and Start focus — were simply off the bottom with no
+      // way to reach them.
+      ScrollView {
+        if let task = model.selectedTask {
+          VStack(alignment: .leading, spacing: theme.space.md) {
+            LocalTaskInspector(
+              task: task,
+              focusRequest: model.focusRequest,
+              requestedFocusArea: model.requestedFocusArea)
+              .environment(model)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .focusSurfaceGutter()
+          .padding(.vertical, theme.space.md)
+        } else {
+          Text("Select a task to see its notes, schedule, estimate, and focus controls here.")
+            .font(theme.bodyFont(size: 12))
+            .foregroundStyle(theme.muted)
+            .focusSurfaceGutter()
+            .padding(.vertical, theme.space.md)
+        }
+      }
     }
-    .padding(18)
     .background(.background)
     .focusable()
     .focused($focusedArea, equals: .inspector)

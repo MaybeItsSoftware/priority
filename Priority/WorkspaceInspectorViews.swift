@@ -4,6 +4,7 @@ import SwiftUI
 
 struct LocalTaskInspector: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let task: WorkspaceTask
   let focusRequest: Int
   let requestedFocusArea: WorkspaceFocusArea
@@ -14,7 +15,7 @@ struct LocalTaskInspector: View {
       if let draft = model.taskEditor.draft(for: task.id) {
         editor(draft)
       } else if let error = model.taskEditor.errors[task.id] {
-        Text(error).foregroundStyle(model.themeColor(.danger))
+        Text(error).foregroundStyle(theme.danger)
       } else {
         ProgressView()
       }
@@ -30,36 +31,43 @@ struct LocalTaskInspector: View {
     .onDisappear { model.taskEditor.flush() }
   }
 
+  /// The editor, in the order you actually work through a task.
+  ///
+  /// It used to open with "Convert to task" — and on a list, with five
+  /// structural buttons — before the title field, and it ended with "Start
+  /// focus", which is the single most common thing anyone does to a task. So
+  /// the first control was the most destructive and the last was the most used.
+  ///
+  /// Now: what it is, then what you do with it, then its content, then its
+  /// plan, then its dates, then where it lives, and only then the structural
+  /// changes that turn it into something else.
   @ViewBuilder
   private func editor(_ draft: TaskEditorDraft) -> some View {
-    Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
-      .focusable()
-    if task.isList {
-      Picker("Icon", selection: Binding(
-        get: { model.itemSymbol(for: task) },
-        set: { model.setNestedListIcon($0, for: task) }
-      )) {
-        ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
-          Label(icon.label, systemImage: icon.symbol).tag(icon.symbol)
-        }
-      }.focusable()
-      Button(task.isPromoted == true ? "Unpin from sidebar" : "Promote to sidebar") { model.toggleListPromotion(task) }.focusable()
-      Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }.focusable()
-      Button("Archive list") { model.archiveNestedList(task) }.focusable()
-    }
+    title(draft)
+    primaryAction
+    notes(draft)
+    planning(draft)
+    scheduling(draft)
+    filing(draft)
+    structure
+    saveControls(draft)
+  }
+
+  @ViewBuilder
+  private func title(_ draft: TaskEditorDraft) -> some View {
     TextField("Task title", text: binding(\.title, fallback: draft.values.title))
       .font(.headline)
       .textFieldStyle(.plain)
       .focused($titleIsFocused)
       .onSubmit { model.saveTaskEditor(task) }
     if draft.isDirty {
-      Text("Unsaved changes").font(.caption).foregroundStyle(.secondary)
+      Text("Unsaved changes").font(theme.bodyFont(size: 11)).foregroundStyle(theme.muted)
     }
     if let error = model.taskEditor.errors[task.id] {
-      Text(error).font(.caption).foregroundStyle(model.themeColor(.danger))
+      Text(error).font(theme.bodyFont(size: 11)).foregroundStyle(theme.danger)
     }
     if let error = model.taskEditor.persistenceError {
-      Text(error).font(.caption).foregroundStyle(model.themeColor(.danger))
+      Text(error).font(theme.bodyFont(size: 11)).foregroundStyle(theme.danger)
     }
     ForEach(TaskEditorField.allCases.filter { draft.conflicts.contains($0) }, id: \.self) { field in
       VStack(alignment: .leading, spacing: 4) {
@@ -72,102 +80,238 @@ struct LocalTaskInspector: View {
         }
         .buttonStyle(.bordered)
       }
+      .padding(theme.space.sm)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(
+        theme.warning.opacity(Theme.statusFillOpacity),
+        in: RoundedRectangle(cornerRadius: theme.controlRadius))
+      .overlay(
+        RoundedRectangle(cornerRadius: theme.controlRadius)
+          .strokeBorder(theme.warning.opacity(Theme.statusBorderOpacity), lineWidth: theme.hairline))
     }
-    Text("NOTES").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
-    TextEditor(text: binding(\.notes, fallback: draft.values.notes))
-      .font(.callout)
-      .frame(minHeight: 120)
-      .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
-    WorkspaceTaskPlanningEditor(task: task, values: draft.values)
-    Toggle("Due date", isOn: Binding(
-      get: { model.taskEditor.draft(for: task.id).map { $0.values.dueAt != nil || $0.values.dueDate != nil } ?? false },
-      set: { enabled in model.taskEditor.edit(task.id) {
-        if enabled { $0.dueDate = $0.dueDate ?? TaskCalendarDate.string(.now); $0.dueAt = nil } else { $0.dueAt = nil; $0.dueDate = nil }
-      } }
-    ))
-      .toggleStyle(.switch).focusable()
-    if draft.values.dueAt != nil || draft.values.dueDate != nil {
-      Toggle("Exact deadline time", isOn: Binding(
-        get: { model.taskEditor.draft(for: task.id)?.values.dueAt != nil },
-        set: { exact in model.taskEditor.edit(task.id) {
-          if exact { $0.dueAt = $0.dueDate.flatMap { TaskCalendarDate.date($0) } ?? .now; $0.dueDate = nil } else { $0.dueDate = TaskCalendarDate.string($0.dueAt ?? .now); $0.dueAt = nil }
-        } }))
-        .toggleStyle(.switch)
+  }
+
+  /// What you came here to do. A list has nothing to focus on, so it gets
+  /// nothing rather than a button that would do nothing.
+  @ViewBuilder
+  private var primaryAction: some View {
+    if !task.isList {
+      if model.activeFocusSession != nil {
+        HStack(spacing: theme.space.xs) {
+          Button { model.addToFocusQueue(task) } label: {
+            Label("Add to queue", systemImage: "plus.circle")
+          }
+          .buttonStyle(.borderedProminent)
+          .focusable()
+          Button("Open focus") { model.run(.goFocus) }.buttonStyle(.link).focusable()
+        }
+      } else {
+        Button { model.startFocus(on: task) } label: {
+          Label("Start focus", systemImage: "bolt.fill")
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .focusable()
+        .commandHelp(.taskStartFocus, note: "Start a block on this task")
+      }
     }
-    if let day = draft.values.dueDate {
-      DatePicker("Due", selection: Binding(
-        get: { TaskCalendarDate.date(model.taskEditor.draft(for: task.id)?.values.dueDate ?? day) ?? .now },
-        set: { date in model.taskEditor.edit(task.id) { $0.dueDate = TaskCalendarDate.string(date); $0.dueAt = nil } }
-      ), displayedComponents: [.date])
+  }
+
+  @ViewBuilder
+  private func notes(_ draft: TaskEditorDraft) -> some View {
+    InspectorSection("Notes") {
+      TextEditor(text: binding(\.notes, fallback: draft.values.notes))
+        .font(.callout)
+        .frame(minHeight: 120)
+        .overlay(
+          RoundedRectangle(cornerRadius: theme.controlRadius)
+            .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
     }
-    if let dueAt = draft.values.dueAt {
-      DatePicker("Due", selection: Binding(
-        get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
-        set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }
-      ), displayedComponents: [.date, .hourAndMinute]).focusable()
-    }
-    TextField("Estimate (minutes)", text: binding(\.estimateMinutes, fallback: draft.values.estimateMinutes))
+  }
+
+  @ViewBuilder
+  private func planning(_ draft: TaskEditorDraft) -> some View {
+    InspectorSection("Plan") {
+      WorkspaceTaskPlanningEditor(task: task, values: draft.values)
+      Picker("Priority", selection: binding(\.priority, fallback: draft.values.priority)) {
+        Text("None").tag(0)
+        Text("Low").tag(1)
+        Text("Medium").tag(2)
+        Text("High").tag(3)
+        Text("Urgent").tag(4)
+      }.focusable()
+      TextField(
+        "Estimate (minutes)", text: binding(\.estimateMinutes, fallback: draft.values.estimateMinutes)
+      )
       .textFieldStyle(.roundedBorder)
-    if let seconds = model.taskLoggedSeconds[task.id], seconds > 0 {
-      Text("Worked \(FocusPoints.formatted(Double(seconds) / 60)) minutes" + (task.estimateSeconds.map {
-        "; approximately \(FocusPoints.formatted(Double(max(0, $0 - seconds)) / 60)) minutes remain"
-      } ?? "")).font(.caption).foregroundStyle(.secondary)
-      if let estimate = task.estimateSeconds, seconds >= estimate {
-        Text("Estimate exhausted. Revise it or choose a session duration to keep making progress.")
-          .font(.caption).foregroundStyle(model.themeColor(.warning))
+      if let seconds = model.taskLoggedSeconds[task.id], seconds > 0 {
+        Text(
+          "Worked \(FocusPoints.formatted(Double(seconds) / 60)) minutes"
+            + (task.estimateSeconds.map {
+              "; approximately \(FocusPoints.formatted(Double(max(0, $0 - seconds)) / 60)) minutes remain"
+            } ?? "")
+        )
+        .font(theme.bodyFont(size: 11)).foregroundStyle(theme.muted)
+        if let estimate = task.estimateSeconds, seconds >= estimate {
+          Text("Estimate exhausted. Revise it or choose a session duration to keep making progress.")
+            .font(theme.bodyFont(size: 11)).foregroundStyle(theme.warning)
+        }
       }
     }
-    Picker("Priority", selection: binding(\.priority, fallback: draft.values.priority)) {
-      Text("None").tag(0)
-      Text("Low").tag(1)
-      Text("Medium").tag(2)
-      Text("High").tag(3)
-      Text("Urgent").tag(4)
-    }.focusable()
-    TextField("Tags", text: binding(\.tags, fallback: draft.values.tags), prompt: Text("Work, launch"))
-    TextField("Repeat", text: binding(\.recurrenceRule, fallback: draft.values.recurrenceRule), prompt: Text("Every Monday"))
-    Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
-      .toggleStyle(.switch)
-      .focusable()
-      .help("Show this ongoing task in Dailies without completing the task itself")
-    Text("LINKS").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
-    TextEditor(text: binding(\.links, fallback: draft.values.links))
-      .font(.callout)
-      .frame(minHeight: 52, maxHeight: 90)
-      .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
-    Menu("Move to list") {
-      ForEach(model.lists.filter { $0.id != task.listId }) { list in
-        Button(list.name) { model.moveTask(task, toListId: list.id) }
+  }
+
+  @ViewBuilder
+  private func scheduling(_ draft: TaskEditorDraft) -> some View {
+    InspectorSection("When") {
+      Toggle(
+        "Due date",
+        isOn: Binding(
+          get: {
+            model.taskEditor.draft(for: task.id).map {
+              $0.values.dueAt != nil || $0.values.dueDate != nil
+            } ?? false
+          },
+          set: { enabled in
+            model.taskEditor.edit(task.id) {
+              if enabled {
+                $0.dueDate = $0.dueDate ?? TaskCalendarDate.string(.now)
+                $0.dueAt = nil
+              } else {
+                $0.dueAt = nil
+                $0.dueDate = nil
+              }
+            }
+          }
+        )
+      )
+      .toggleStyle(.switch).focusable()
+      if draft.values.dueAt != nil || draft.values.dueDate != nil {
+        Toggle(
+          "Exact deadline time",
+          isOn: Binding(
+            get: { model.taskEditor.draft(for: task.id)?.values.dueAt != nil },
+            set: { exact in
+              model.taskEditor.edit(task.id) {
+                if exact {
+                  $0.dueAt = $0.dueDate.flatMap { TaskCalendarDate.date($0) } ?? .now
+                  $0.dueDate = nil
+                } else {
+                  $0.dueDate = TaskCalendarDate.string($0.dueAt ?? .now)
+                  $0.dueAt = nil
+                }
+              }
+            })
+        )
+        .toggleStyle(.switch)
       }
-    }.focusable()
+      if let day = draft.values.dueDate {
+        DatePicker(
+          "Due",
+          selection: Binding(
+            get: {
+              TaskCalendarDate.date(model.taskEditor.draft(for: task.id)?.values.dueDate ?? day)
+                ?? .now
+            },
+            set: { date in
+              model.taskEditor.edit(task.id) {
+                $0.dueDate = TaskCalendarDate.string(date)
+                $0.dueAt = nil
+              }
+            }
+          ), displayedComponents: [.date])
+      }
+      if let dueAt = draft.values.dueAt {
+        DatePicker(
+          "Due",
+          selection: Binding(
+            get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
+            set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }
+          ), displayedComponents: [.date, .hourAndMinute]
+        ).focusable()
+      }
+      TextField(
+        "Repeat", text: binding(\.recurrenceRule, fallback: draft.values.recurrenceRule),
+        prompt: Text("Every Monday"))
+      Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
+        .toggleStyle(.switch)
+        .focusable()
+        .help("Show this ongoing task in Dailies without completing the task itself")
+    }
+  }
+
+  @ViewBuilder
+  private func filing(_ draft: TaskEditorDraft) -> some View {
+    InspectorSection("Filing") {
+      TextField("Tags", text: binding(\.tags, fallback: draft.values.tags), prompt: Text("Work, launch"))
+      Menu("Move to list") {
+        ForEach(model.lists.filter { $0.id != task.listId }) { list in
+          Button(list.name) { model.moveTask(task, toListId: list.id) }
+        }
+      }
+      .focusable()
+      .commandHelp(.taskMove)
+      if !task.isList {
+        Button { model.addTaskToGoogleCalendar(task) } label: {
+          Label("Add to Google Calendar", systemImage: "calendar.badge.plus")
+        }
+        .buttonStyle(.bordered)
+        .focusable()
+        .help("Create a linked event using the task's due date or start time")
+      }
+    }
+    InspectorSection("Links") {
+      TextEditor(text: binding(\.links, fallback: draft.values.links))
+        .font(.callout)
+        .frame(minHeight: 52, maxHeight: 90)
+        .overlay(
+          RoundedRectangle(cornerRadius: theme.controlRadius)
+            .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
+    }
+  }
+
+  /// Turning the thing into a different kind of thing. Last, because it is what
+  /// you least often want and what you can least easily undo.
+  @ViewBuilder
+  private var structure: some View {
+    InspectorSection("Structure") {
+      Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
+        .focusable()
+        .commandHelp(task.isList ? .taskPromoteList : .taskConvertToList)
+      if task.isList {
+        Picker(
+          "Icon",
+          selection: Binding(
+            get: { model.itemSymbol(for: task) },
+            set: { model.setNestedListIcon($0, for: task) }
+          )
+        ) {
+          ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
+            Label(icon.label, systemImage: icon.symbol).tag(icon.symbol)
+          }
+        }.focusable()
+        Button(task.isPromoted == true ? "Unpin from sidebar" : "Pin to sidebar") {
+          model.toggleListPromotion(task)
+        }.focusable()
+        Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
+          .focusable()
+        Button("Archive list") { model.archiveNestedList(task) }.focusable()
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func saveControls(_ draft: TaskEditorDraft) -> some View {
+    FocusRule()
     HStack {
       Button("Save") { model.saveTaskEditor(task) }
         .buttonStyle(.bordered)
         .keyboardShortcut("s", modifiers: .command)
-        .disabled(!draft.isDirty || draft.isUnavailable || !draft.conflicts.isEmpty
-          || draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .disabled(
+          !draft.isDirty || draft.isUnavailable || !draft.conflicts.isEmpty
+            || draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       Button("Revert") { model.revertTaskEditor(task) }
         .disabled(!draft.isDirty)
-    }
-    Divider()
-    if !task.isList {
-      Button { model.addTaskToGoogleCalendar(task) } label: {
-        Label("Add to Google Calendar", systemImage: "calendar.badge.plus")
-      }
-      .buttonStyle(.bordered)
-      .tint(.blue)
-      .focusable()
-      .help("Create a linked event using the task's due date or start time")
-    }
-    if !task.isList, model.activeFocusSession != nil {
-      Button { model.addToFocusQueue(task) } label: {
-        Label("Add to focus queue", systemImage: "plus.circle")
-      }.buttonStyle(.borderedProminent).focusable()
-      Button("Open focus") { model.presentFocusScreen() }.buttonStyle(.link).focusable()
-    } else if !task.isList {
-      Button { model.startFocus(on: task) } label: {
-        Label("Start focus", systemImage: "bolt.fill")
-      }.buttonStyle(.borderedProminent).focusable()
+      Spacer(minLength: 0)
     }
   }
 
