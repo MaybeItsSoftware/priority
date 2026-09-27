@@ -165,6 +165,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Called after any local write, so the Google Tasks mirror can push it.
   /// Coalesced on the far side — this fires far more often than it syncs.
   @ObservationIgnored var onLocalWrite: (() -> Void)?
+  /// The watch for writes made by another process. See
+  /// `WorkspaceViewModel+ExternalWrites.swift`.
+  @ObservationIgnored var externalWriteToken: Int?
+  @ObservationIgnored var externalWriteTimer: Timer?
   let taskEditor = WorkspaceTaskEditor()
 
   private(set) var workspace: Workspace?
@@ -463,6 +467,7 @@ enum WorkspaceSidebarItem: Identifiable {
       self.staleFocusResolution = try self.store?.resolveStaleFocusSession() ?? .keep
       try load()
       restoreSuggestedContext()
+      watchForExternalWrites()
     } catch {
       self.store = nil
       self.errorMessage = error.localizedDescription
