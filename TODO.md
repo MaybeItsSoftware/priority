@@ -70,6 +70,28 @@ These cannot be verified from a build; they need someone to click.
   look different; check that nothing does.
 - **The outline's last `←`.** With no task selected and Everything already
   showing, `←` drops into the sidebar. That may be one press too many.
+- **The one selection treatment, on every surface.** A selected row now carries
+  a ring when its region has the keyboard and only a fill when it does not. Six
+  surfaces changed to get there — the outline, Today, the board, search, the
+  palette, the move sheet — and the figures came from the sidebar, where they
+  were tuned as a pair. Worth arrowing between the sidebar and the task surface
+  to check the ring reads as "this responds to me" rather than as noise.
+- **The menu keys, all of them.** Nineteen literal `keyboardShortcut` calls
+  became catalogue lookups, so a wrong lookup is a menu item with the wrong key
+  or none. Open every menu and check what it prints beside each item.
+- **⌘⌃S and the inspector toggle.** Both were menu-only and are now catalogue
+  entries, so they also answer from the window monitor and appear in the
+  palette. Check they do not fire while you are typing in a field.
+- **The three new keys.** `⌘⌃C` removes the column the selected card is in,
+  `o` on the focus ladder drops your own order, and both now print their key in
+  their tooltip. `⌘⌃C` is deliberately not `⇧⌘⌫`, which still deletes the list.
+
+### One on-screen control still has no key
+
+The subtask disclosure on a board card is `@State` local to the card, so no
+command can reach it — the model does not know which cards are open. Giving it
+a key means moving that state onto the workspace, keyed by task id, which is
+worth doing but is not a tooltip change.
 
 ## Code
 
@@ -81,11 +103,14 @@ off-screen with no way back but deleting the preference. Small fix.
 
 ### Most surfaces still ignore the theme
 
-The theme plugin is real and switchable, but only four shared primitives
-(`MicroLabel`, `KeyCap`, `KeyHint`, `FocusRule`) and the sidebar's selection
-background render through it. The board, the outline pane, the inspector,
-Today, the timeline and all of Settings bar the theme page still use
-`Color.accentColor` and literal radii.
+The theme plugin is real and switchable, and what now renders through it is the
+four shared primitives (`MicroLabel`, `KeyCap`, `KeyHint`, `FocusRule`), every
+selection in the app (`WorkspaceSelection`), the board card's surface, the
+timeline's chrome and the toolbar. Still on `Color.accentColor` and literal
+radii: the inspector, the matrix, the condition editors, the task composer, the
+focus launcher and all of Settings bar the theme page.
+
+A useful count while migrating: `grep -c accentColor Priority/*.swift`.
 
 Two mechanisms are therefore live at once — the plugin, and the older
 `AppThemeColorToken` / `PreferencesManager.themeColor(for:)` with its per-token

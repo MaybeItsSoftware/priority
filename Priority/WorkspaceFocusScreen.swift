@@ -280,11 +280,12 @@ struct WorkspaceFocusScreen: View {
       KeyHint("↑ ↓", "Move through")
       KeyHint("⌥ ↑ ↓", "Reorder within urgency")
       if model.hasManualFocusOrder {
-        Button("Reset order") { model.clearManualFocusOrder() }
+        Button("Reset order") { model.run(.focusResetOrder) }
           .buttonStyle(.plain)
           .font(.caption2)
           .foregroundStyle(.secondary)
           .focusable()
+          .commandHelp(.focusResetOrder)
       }
       Spacer()
     }

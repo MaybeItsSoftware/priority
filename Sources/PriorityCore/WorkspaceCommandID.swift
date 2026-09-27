@@ -32,7 +32,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   // Plan
   case planEnterTask, planLeaveTask, planHideCompleted
   case planBoardNewColumn, planBoardMoveCardLeft, planBoardMoveCardRight
-  case planMatrixPlace
+  case planBoardRemoveColumn, planMatrixPlace
 
   // Lists and folders
   case listNew, listRename, listSettings, listArchive, listRestore, listComplete
@@ -45,7 +45,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   // Focus surface
   case focusLadderUp, focusLadderDown, focusStage, focusBegin, focusTickOff
   case focusDefer, focusReorder, focusPause, focusLogAndKeep, focusFloat
-  case focusFinish, focusLeave
+  case focusFinish, focusLeave, focusResetOrder
 
   // Timeline surface
   case timelinePreviousDay, timelineNextDay, timelineToday, timelineClose

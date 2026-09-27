@@ -110,6 +110,13 @@ extension WorkspaceViewModel {
     case .planBoardNewColumn: newKanbanColumnRequest = true
     case .planBoardMoveCardLeft: moveSelectedTaskToAdjacentColumn(by: -1)
     case .planBoardMoveCardRight: moveSelectedTaskToAdjacentColumn(by: 1)
+    case .planBoardRemoveColumn:
+      // The card you are on names the column, the way ⌥← and ⌥→ do. There is
+      // no separate "current column" to consult, and inventing one so a key
+      // could delete something would be worse than asking for a selection.
+      if boardColumns.count > 1, let task = selectedTask, let column = column(for: task) {
+        removeKanbanColumn(column)
+      }
 
     // MARK: Lists and folders
     case .listNew: requestListCreationForSelection()
@@ -144,6 +151,7 @@ extension WorkspaceViewModel {
     case .focusLogAndKeep: requestFocusCompletion(completeTask: false)
     case .focusFloat: requestFocusFloat()
     case .focusFinish: requestFocusCompletion()
+    case .focusResetOrder: clearManualFocusOrder()
     case .focusLeave: dismissFocusScreen()
 
     // MARK: Timeline

@@ -131,6 +131,10 @@ public enum WorkspaceCommandCatalog {
       id: .planBoardMoveCardRight, title: "Move the card a column right", group: "Plan",
       keys: ["option+right"], surface: .board),
     .init(
+      id: .planBoardRemoveColumn, title: "Remove this board column", group: "Plan",
+      keys: ["cmd+ctrl+c"], surface: .board,
+      note: "The column the selected card is in. ⇧⌘⌫ still deletes the list"),
+    .init(
       id: .planMatrixPlace, title: "Place the task in a quadrant", group: "Plan",
       keys: ["option+1", "option+2", "option+3", "option+4"], surface: .matrix, kind: .motion,
       note: "1 urgent and important, 2 important, 3 urgent, 4 neither"),
@@ -231,6 +235,10 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .focusLeave, title: "Leave the focus screen", group: "Focus", keys: ["escape"],
       surface: .focusRunning, note: "The block keeps running behind it"),
+    .init(
+      id: .focusResetOrder, title: "Drop your own order of the ladder", group: "Focus",
+      keys: ["o"], surface: .focus,
+      note: "Back to the computed order, which is what the ladder is for"),
   ]
 
   // MARK: - Timeline

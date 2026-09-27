@@ -107,7 +107,7 @@ struct WorkspaceKanbanColumnView: View {
           }
           .buttonStyle(.plain)
           .focusable()
-          .help("Remove \(column.title)")
+          .commandHelp(.planBoardRemoveColumn, note: "Remove \(column.title)")
         }
       }
 
