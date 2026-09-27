@@ -183,7 +183,7 @@ extension WorkspaceViewModel {
       var draft = TaskEditorDraft(snapshot: try store.taskEditorSnapshot(for: task.id))
       change(&draft.values)
       _ = try store.saveTaskEditor(draft)
-      reloadOutline()
+      reloadOutline(refreshSidebar: task.isList)
       reloadDailies()
       reloadNextUp()
     }
@@ -193,7 +193,7 @@ extension WorkspaceViewModel {
     guard let store else { return }
     perform {
       try store.setStatus(task.status == .cancelled ? .open : .cancelled, for: task.id)
-      reloadOutline()
+      reloadOutline(refreshSidebar: task.isList)
       reloadNextUp()
     }
   }

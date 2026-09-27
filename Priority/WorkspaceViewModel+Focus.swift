@@ -129,7 +129,8 @@ extension WorkspaceViewModel {
   func startFocusFromToday(plannedSeconds: Int? = nil) {
     guard let store else { return }
     if activeFocusSession != nil { showsFocusScreen = true; return }
-    reloadNextUp()
+    // Read on the next line, so it cannot wait for the background ranking.
+    reloadNextUpNow()
     let available = Set(focusLadder.map(\.id))
     let planned = todayTasks.filter { available.contains($0.id) }
     guard let first = planned.first else { errorMessage = "No Today task is available in this context and time window."; return }
@@ -190,7 +191,7 @@ extension WorkspaceViewModel {
       sessionID: session.id, taskID: task.id, title: task.title,
       seconds: session.elapsedSeconds(now: now), completeTask: completeTask,
       blockID: session.activeBlockId, wasPaused: session.pausedAt != nil)
-    perform { try store?.pauseFocusSession(id: session.id, now: now); reloadFocus() }
+    perform(mirrors: false) { try store?.pauseFocusSession(id: session.id, now: now); reloadFocus() }
     // Someone who has said they only want the minutes gets them: the block
     // closes at the neutral multiplier and nothing is put in the way of the
     // next one.
@@ -201,7 +202,7 @@ extension WorkspaceViewModel {
   /// time spent answering the quality question.
   func cancelFocusCompletion() {
     if let pending = pendingFocusCompletion, !pending.wasPaused {
-      perform { try store?.resumeFocusSession(id: pending.sessionID); reloadFocus() }
+      perform(mirrors: false) { try store?.resumeFocusSession(id: pending.sessionID); reloadFocus() }
     }
     pendingFocusCompletion = nil
   }

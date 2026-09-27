@@ -4,7 +4,7 @@ import PriorityWorkspace
 
 /// One task in today, and why it is there. `reason` is nil only for the
 /// fallback ranking, where nothing chose the task at all.
-struct DayItem: Identifiable {
+struct DayItem: Identifiable, Equatable {
   let task: WorkspaceTask
   let reason: DayPlanReason?
 
@@ -18,12 +18,22 @@ struct DayItem: Identifiable {
 extension WorkspaceViewModel {
   // MARK: - Dailies
 
+  /// Marks the dailies stale; see `refresh(_:)`. Reading them is not a
+  /// write, so it no longer passes through `perform` and its side effects.
   func reloadDailies() {
+    refresh(.dailies)
+  }
+
+  func reloadDailiesNow() {
     guard let store else { return }
-    perform {
-      dailyItems = try store.dailies()
-      dailyTaskIDs = Set(try store.allDailies().map(\.taskId))
+    do {
+      let items = try store.dailies()
+      let ids = Set(try store.allDailies().map(\.taskId))
+      if dailyItems != items { dailyItems = items }
+      dailyTaskIDs = ids
       dailyProgressRevision += 1
+    } catch {
+      errorMessage = error.localizedDescription
     }
   }
 
@@ -74,60 +84,23 @@ extension WorkspaceViewModel {
 
   // MARK: - Next up
 
+  /// Marks the day and the ladder stale. They are ranked off the main thread
+  /// and land a moment later; a caller that reads `focusLadder` on the next
+  /// line wants `reloadNextUpNow()` instead. See `WorkspaceViewModel+Refresh`.
   func reloadNextUp() {
-    guard let store else { return }
-    perform {
-      taskLoggedSeconds = try store.loggedWorkTotals()
-      taskPlanningByID = try store.taskPlanningValues()
-      let selectedID = focusLadderTaskID
-      if let workspace { focusConditions = try store.conditions(in: workspace.id) }
-      let now = Date.now
-      let candidates = try store.nextUpCandidates(now: now)
-      // The day is gathered from every candidate rather than from the ranked
-      // ones: a task due today that a condition currently rules out is still
-      // part of today, and leaving it out would be the panel quietly deciding
-      // the day was shorter than it is.
-      todayPlan = DayPlanSelector.plan(
-        candidates: candidates, runningID: activeFocusSession?.activeTaskId, now: now)
-      workProgress = try store.workProgress(now: now)
-      let ranking = NextUpSelector.evaluate(candidates, now: now, context: effectiveFocusContext)
-      let ranked = ranking.ranked
-      focusLadder = ranked
-      blockedFocusTasks = ranking.blocked
-      nextFocusEvaluationAt = ranking.nextEvaluationAt
-      if let id = selectedID, let index = ranked.firstIndex(where: { $0.candidate.id == id }) {
-        focusLadderIndex = index
-      } else {
-        focusLadderIndex = min(focusLadderIndex, max(0, ranked.count - 1))
-      }
-      if let stagedTaskID, !ranked.contains(where: { $0.id == stagedTaskID }) { self.stagedTaskID = nil }
-      nextUp = ranked.first
-      if allowsQueueResume && activeFocusSession != nil && activeFocusSession?.activeTaskId == nil {
-        try store.resumeEligibleFocusQueue(context: effectiveFocusContext, now: now)
-        reloadFocus()
-      }
-    }
+    refresh(.nextUp)
   }
 
-  /// Today, resolved to tasks, with whatever put each one there.
-  ///
-  /// Every surface that shows the day reads this rather than deriving its own:
-  /// the panel, the focus screen and the menu bar have to agree about what
-  /// today is, and three copies of the same fallback is how they stop agreeing.
-  ///
-  /// Falling back to the ranked candidates keeps it useful for a workspace that
-  /// never adopted the Today column and dates nothing — but those are listed as
-  /// plain tasks, with no reason, because none of them were chosen.
-  var dayItems: [DayItem] {
-    let planned = todayPlan.compactMap { entry -> DayItem? in
-      guard let task = task(withID: entry.id) else { return nil }
-      return DayItem(task: task, reason: entry.reason)
-    }
-    if !planned.isEmpty { return planned }
-    return focusLadder.prefix(8)
-      .compactMap { task(withID: $0.candidate.id) }
-      .map { DayItem(task: $0, reason: nil) }
-  }
+  // `dayItems` — today, resolved to tasks, with whatever put each one there —
+  // is stored on the class and rebuilt by `rebuildDayItems()`.
+  //
+  // Every surface that shows the day reads it rather than deriving its own:
+  // the panel, the focus screen and the menu bar have to agree about what
+  // today is, and three copies of the same fallback is how they stop agreeing.
+  //
+  // Falling back to the ranked candidates keeps it useful for a workspace that
+  // never adopted the Today column and dates nothing — but those are listed as
+  // plain tasks, with no reason, because none of them were chosen.
 
   // MARK: - The focus ladder
 
@@ -261,10 +234,6 @@ extension WorkspaceViewModel {
       try store.clearFocusOrder()
       reloadNextUp()
     }
-  }
-
-  var hasManualFocusOrder: Bool {
-    (try? store?.hasManualFocusOrder()) == true
   }
 
   /// Defers the task under the cursor. The default is tomorrow morning, which

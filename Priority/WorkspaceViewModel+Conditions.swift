@@ -98,13 +98,13 @@ extension WorkspaceViewModel {
   func pauseFocus() {
     synchroniseFocusClock(now: .now)
     guard let session = activeFocusSession else { return }
-    perform { try store?.pauseFocusSession(id: session.id); reloadFocus() }
+    perform(mirrors: false) { try store?.pauseFocusSession(id: session.id); reloadFocus() }
   }
 
   func toggleFocusPause() {
     synchroniseFocusClock(now: .now)
     guard let session = activeFocusSession else { return }
-    perform {
+    perform(mirrors: false) {
       if session.pausedAt == nil { try store?.pauseFocusSession(id: session.id) } else { try store?.resumeFocusSession(id: session.id) }
       reloadFocus()
     }
@@ -119,7 +119,7 @@ extension WorkspaceViewModel {
     if let session = activeFocusSession, session.pausedAt == nil,
       let elapsed = FocusClockPolicy.adjustedElapsed(previousElapsed: session.elapsedSeconds(now: lastFocusClockAt),
                                                      wallDelta: wallDelta, uptimeDelta: uptimeDelta) {
-      perform { try store?.rebaseFocusClock(id: session.id, elapsedSeconds: elapsed, now: now); reloadFocus() }
+      perform(mirrors: false) { try store?.rebaseFocusClock(id: session.id, elapsedSeconds: elapsed, now: now); reloadFocus() }
     }
     lastFocusClockAt = now; lastFocusUptime = uptime
     return clockChanged
@@ -137,7 +137,7 @@ extension WorkspaceViewModel {
       lastFocusTimeZone = TimeZone.current.identifier
       if let session = activeFocusSession, session.pausedAt == nil, session.activeTaskId != nil {
         if now.timeIntervalSince(lastFocusCheckpointAt) >= 30 {
-          perform { try store?.checkpointFocusSession(id: session.id, now: now); reloadFocus() }
+          perform(mirrors: false) { try store?.checkpointFocusSession(id: session.id, now: now); reloadFocus() }
           lastFocusCheckpointAt = now
         }
         if session.elapsedSeconds(now: now) >= session.workDurationSeconds,

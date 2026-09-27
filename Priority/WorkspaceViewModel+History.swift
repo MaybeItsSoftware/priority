@@ -7,14 +7,8 @@ import PriorityWorkspace
 /// present state.
 @MainActor
 extension WorkspaceViewModel {
-  var undoLabel: String? {
-    _ = taskContentRevision
-    return (try? store?.undoableLabel()) ?? nil
-  }
-  var redoLabel: String? {
-    _ = taskContentRevision
-    return (try? store?.redoableLabel()) ?? nil
-  }
+  // `undoLabel` and `redoLabel` are stored on the class and refreshed after
+  // each write by `refreshHistoryLabels()`.
 
   func undoLastChange() {
     apply(forUndo: true) { try $0.undo() }

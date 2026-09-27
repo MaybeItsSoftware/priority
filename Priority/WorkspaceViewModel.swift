@@ -175,12 +175,48 @@ enum WorkspaceSidebarItem: Identifiable {
   private(set) var folders: [ListFolder] = []
   private(set) var lists: [TaskList] = []
   private(set) var archivedLists: [TaskList] = []
-  private(set) var outline: [TaskOutlineItem] = []
+  private(set) var outline: [TaskOutlineItem] = [] {
+    didSet {
+      outlineByList = Dictionary(grouping: outline) { $0.task.listId }
+      outlineOpenCount = outline.reduce(0) { $0 + ($1.task.status == .open ? 1 : 0) }
+    }
+  }
+  /// The outline grouped by list and its open count, derived once per reload
+  /// rather than on every render of the combined outline.
+  private(set) var outlineByList: [String: [TaskOutlineItem]] = [:]
+  private(set) var outlineOpenCount = 0
   private(set) var boardTasks: [WorkspaceTask] = []
-  private(set) var taskContentRevision = 0
-  @ObservationIgnored private var taskCache: [String: WorkspaceTask] = [:]
-  @ObservationIgnored private var missingTaskIDs: Set<String> = []
+  /// Bumped whenever `taskCache` is rebuilt, so a view that resolved a task
+  /// by id re-resolves it. Written by `rebuildTaskCache()`.
+  var taskContentRevision = 0
+  @ObservationIgnored var taskCache: [String: WorkspaceTask] = [:]
+  @ObservationIgnored var missingTaskIDs: Set<String> = []
   @ObservationIgnored var descendantCache: [String: [TaskOutlineItem]] = [:]
+  /// The board's cards and everything beneath them, as the last refresh read
+  /// them. Held so the task cache can be rebuilt without reading them again.
+  @ObservationIgnored var boardTreeTasks: [WorkspaceTask] = []
+  /// Board column layouts by scope key, as `kanbanBoardConfigurations`
+  /// returned them. That call is a write transaction and a JSON decode per
+  /// scope, so it is made once per load and again only when a layout changes.
+  @ObservationIgnored var boardColumnConfigurations: [String: Data]?
+
+  // The refresh machinery. See `WorkspaceViewModel+Refresh.swift`.
+  @ObservationIgnored var pendingRefresh: WorkspaceRefresh = []
+  @ObservationIgnored var refreshDepth = 0
+  @ObservationIgnored var performFailed = false
+  @ObservationIgnored var performShouldMirror = false
+  /// Moves on every refresh, so a ranking read before it knows it is stale.
+  @ObservationIgnored var writeEpoch = 0
+  @ObservationIgnored var nextUpRequested = false
+  @ObservationIgnored var nextUpLaunchQueued = false
+  @ObservationIgnored var nextUpGeneration = 0
+  @ObservationIgnored var listTreeCache: [String: WorkspaceListTree] = [:]
+  /// The rows behind the day, as the last ranking read them.
+  @ObservationIgnored var dayTaskSnapshot: [String: WorkspaceTask] = [:]
+  /// The history menu's labels. Read after writes by `refreshHistoryLabels()`
+  /// rather than queried each time the menu is drawn.
+  var undoLabel: String?
+  var redoLabel: String?
   var listTaskCounts: [String: Int] = [:]
   private(set) var boardCrossColumnTasks: [WorkspaceTask] = []
   private(set) var boardDescendants: [String: [TaskOutlineItem]] = [:]
@@ -466,6 +502,9 @@ enum WorkspaceSidebarItem: Identifiable {
       // quit left a paused block behind that nothing ever cleared.
       self.staleFocusResolution = try self.store?.resolveStaleFocusSession() ?? .keep
       try load()
+      // Ranked here rather than in the background: the first screen is the
+      // day, and it should not paint empty and then fill.
+      reloadNextUpNow()
       restoreSuggestedContext()
       watchForExternalWrites()
     } catch {
@@ -556,10 +595,10 @@ enum WorkspaceSidebarItem: Identifiable {
       self.selectedFolderID = nil
     }
     try migrateLegacyDailiesIfNeeded(store: store)
-    reloadOutline()
+    // Rows can have changed anywhere, including a board's column layout.
+    boardColumnConfigurations = nil
     reloadFocus()
-    reloadDailies()
-    reloadNextUp()
+    refresh([.outline, .sidebar, .dailies, .nextUp])
   }
 
   /// Brings both kinds of pre-existing daily into the new model, once.
@@ -830,6 +869,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// `reloadNextUp()` rather than written into the column, so clearing the
   /// column still clears the plan and tomorrow's day is not yesterday's.
   var todayPlan: [DayPlanEntry] = []
+  /// Today, resolved to tasks. Stored rather than computed: it is read on
+  /// every render of the day and of the menu bar, and resolving it used to
+  /// cost a query per row. Rebuilt by `rebuildDayItems()`.
+  var dayItems: [DayItem] = []
   /// Tasks finished and time logged today, against the same for the week so
   /// far. Refreshed alongside the day rather than on a ticker — it only moves
   /// when work is finished or logged, which is exactly when the day reloads.
@@ -847,6 +890,8 @@ enum WorkspaceSidebarItem: Identifiable {
   var focusLadder: [ScoredNextUp] = []
   /// Which rung the cursor is on. Climbing means accepting less priority.
   var focusLadderIndex = 0
+  /// Whether the ladder carries hand-placed positions. Set with the ranking.
+  var hasManualFocusOrder = false
   var focusConditions: [TaskCondition] = []
   var taskLoggedSeconds: [String: Int] = [:]
   var taskPlanningByID: [String: TaskPlanning] = [:]
@@ -879,7 +924,10 @@ enum WorkspaceSidebarItem: Identifiable {
   var dayFieldFocusRequest = 0
 
   var visibleNavigationTasks: [WorkspaceTask] {
-    switch viewMode {
+    // Mid-`perform`, a scope change has only been marked. Whoever asks what is
+    // on screen wants the answer after it, not before.
+    if !pendingRefresh.isEmpty { flushPendingRefresh() }
+    return switch viewMode {
     case .today: dayItems.map(\.task)
     case .outline: outline.map(\.task)
     case .board: boardColumns.flatMap { tasks(in: $0) }
@@ -892,8 +940,9 @@ enum WorkspaceSidebarItem: Identifiable {
     perform {
       try store.setStatus(task.status == .open ? .completed : .open, for: task.id)
       if task.status == .open { celebrateCompletion(of: task) }
-      try reloadNestedLists()
-      reloadOutline()
+      // An ordinary task's status is not something the sidebar shows: its
+      // counts include finished tasks, and only lists are drawn there.
+      reloadOutline(refreshSidebar: task.isList)
       reloadNextUp()
     }
   }
@@ -917,7 +966,7 @@ enum WorkspaceSidebarItem: Identifiable {
     guard let store else { return }
     perform {
       try store.moveTaskWithinSiblings(id: task.id, by: offset)
-      reloadOutline()
+      reloadOutline(refreshSidebar: task.isList)
     }
   }
 
@@ -925,7 +974,7 @@ enum WorkspaceSidebarItem: Identifiable {
     guard let store else { return }
     perform {
       try store.indentTask(id: task.id)
-      reloadOutline()
+      reloadOutline(refreshSidebar: task.isList)
     }
   }
 
@@ -933,7 +982,7 @@ enum WorkspaceSidebarItem: Identifiable {
     guard let store else { return }
     perform {
       try store.outdentTask(id: task.id)
-      reloadOutline()
+      reloadOutline(refreshSidebar: task.isList)
     }
   }
 
@@ -1054,7 +1103,17 @@ enum WorkspaceSidebarItem: Identifiable {
     }
   }
 
+  /// Marks the main pane stale; see `refresh(_:)`. Pass `refreshSidebar:
+  /// false` when the change cannot have touched a list or a count.
   func reloadOutline(refreshSidebar: Bool = true) {
+    refresh(refreshSidebar ? [.outline, .sidebar] : .outline)
+  }
+
+  func reloadBoard() {
+    refresh(.board)
+  }
+
+  func reloadOutlineNow() {
     guard let store else {
       outline = []
       boardTasks = []
@@ -1063,27 +1122,22 @@ enum WorkspaceSidebarItem: Identifiable {
       return
     }
     do {
-      if refreshSidebar { try reloadNestedLists() }
+      var items: [TaskOutlineItem]
       if isEverythingSelected || folderScopeListIDs != nil {
-        if viewMode == .outline {
-          let scope = folderScopeListIDs
-          outline = try workspace.map {
-            try store.actionableTasks(in: $0.id, limitedTo: scope)
-              .map { TaskOutlineItem(task: $0, depth: 0) }
-          } ?? []
-        } else {
-          outline = []
-        }
+        items = viewMode == .outline
+          ? try actionableScopeTasks(store: store).map { TaskOutlineItem(task: $0, depth: 0) } : []
       } else if let selectedListID {
-        let parentID = try scopeTaskID ?? selectedList.flatMap {
-          try visibleRootParentTaskID(for: $0, store: store)
+        let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
+        let parentID = scopeTaskID ?? selectedList.flatMap {
+          tree?.visibleRootParentTaskID(registeredRootId: $0.visibleRootTaskId)
         }
-        outline = try store.visibleOutline(in: selectedListID, parentTaskId: parentID)
+        items = tree?.visibleOutline(under: parentID) ?? []
       } else {
-        outline = []
+        items = []
       }
-      if hidesCompletedTasks { outline.removeAll { $0.task.status != .open } }
-      reloadBoard()
+      if hidesCompletedTasks { items.removeAll { $0.task.status != .open } }
+      if outline != items { outline = items }
+      reloadBoardNow()
       // The rail is a view of the same writes. Hooked in here rather than at
       // every mutation because this is the one funnel they all pass through,
       // and it costs nothing while the rail is closed.
@@ -1093,54 +1147,66 @@ enum WorkspaceSidebarItem: Identifiable {
     }
   }
 
+  /// Every open, doable task in a combined scope, in sidebar order: the same
+  /// answer as `WorkspaceStore.actionableTasks`, shaped from this refresh's
+  /// shared reads.
+  private func actionableScopeTasks(store: WorkspaceStore) throws -> [WorkspaceTask] {
+    let open = lists.filter { $0.completedAt == nil }
+    let scoped: [TaskList]
+    if let ids = folderScopeListIDs {
+      let byID = Dictionary(open.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+      scoped = ids.compactMap { byID[$0] }
+    } else {
+      scoped = open
+    }
+    let trees = try listTrees(for: scoped.map(\.id), store: store)
+    return scoped.flatMap { trees[$0.id]?.actionableTasks(visibleRootTaskId: $0.visibleRootTaskId) ?? [] }
+  }
+
   var boardConfigurationKey: String {
     if isEverythingSelected { return "everything/root" }
     if let selectedFolderID { return "folder:\(selectedFolderID)/root" }
     return "\(selectedListID ?? "none")/\(scopeTaskID ?? "root")"
   }
 
-  func reloadBoard() {
+  func reloadBoardNow() {
     defer { rebuildBoardIndex() }
-    taskCache.removeAll(keepingCapacity: true)
-    missingTaskIDs.removeAll(keepingCapacity: true)
-    descendantCache.removeAll(keepingCapacity: true)
-    defer { taskContentRevision += 1 }
     guard let store else {
       boardTasks = []
       boardCrossColumnTasks = []
       boardDescendants = [:]
       boardTaskParents = [:]
       boardParentTaskID = nil
+      boardTreeTasks = []
       return
     }
     do {
+      var tasks: [WorkspaceTask]
+      let parentTaskID: String?
       if isEverythingSelected || folderScopeListIDs != nil {
-        boardParentTaskID = nil
-        let scope = folderScopeListIDs
-        boardTasks = try workspace.map { try store.actionableTasks(in: $0.id, limitedTo: scope) } ?? []
+        parentTaskID = nil
+        tasks = try actionableScopeTasks(store: store)
       } else if let selectedListID {
-        let parentID: String?
-        if let scopeTaskID {
-          parentID = scopeTaskID
-        } else if let list = selectedList {
-          parentID = try visibleRootParentTaskID(for: list, store: store)
-        } else {
-          parentID = nil
+        let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
+        parentTaskID = scopeTaskID ?? selectedList.flatMap {
+          tree?.visibleRootParentTaskID(registeredRootId: $0.visibleRootTaskId)
         }
-        boardParentTaskID = parentID
-        boardTasks = try store.tasks(in: selectedListID, parentTaskId: parentID)
+        tasks = tree?.children(of: parentTaskID) ?? []
       } else {
-        boardParentTaskID = nil
-        boardTasks = []
+        parentTaskID = nil
+        tasks = []
       }
-      boardTasks.removeAll { ($0.isList && $0.archivedAt != nil) || (hidesCompletedTasks && $0.status != .open) }
-      let boardIDs = Set(boardTasks.map(\.id))
+      if boardParentTaskID != parentTaskID { boardParentTaskID = parentTaskID }
+      tasks.removeAll { ($0.isList && $0.archivedAt != nil) || (hidesCompletedTasks && $0.status != .open) }
+      let boardIDs = Set(tasks.map(\.id))
       var descendants: [String: [TaskOutlineItem]] = Dictionary(
-        uniqueKeysWithValues: boardTasks.map { ($0.id, []) })
+        uniqueKeysWithValues: tasks.map { ($0.id, []) })
       var parents: [String: WorkspaceTask] = [:]
-      for listID in Set(boardTasks.map(\.listId)) {
+      let listIDs = Array(Set(tasks.map(\.listId)))
+      let trees = try listTrees(for: listIDs, store: store)
+      for listID in listIDs {
         var ancestors: [TaskOutlineItem] = []
-        for item in try store.visibleOutline(in: listID) {
+        for item in trees[listID]?.visibleOutline() ?? [] {
           while let last = ancestors.last, last.depth >= item.depth {
             ancestors.removeLast()
           }
@@ -1152,58 +1218,73 @@ enum WorkspaceSidebarItem: Identifiable {
           ancestors.append(item)
         }
       }
-      boardDescendants = descendants
-      boardTaskParents = parents
       var treeIDs = Set<String>()
-      let boardTreeTasks = (boardTasks + boardTasks.flatMap { root in
+      let treeTasks = (tasks + tasks.flatMap { root in
         descendants[root.id, default: []].map(\.task)
       }).filter { treeIDs.insert($0.id).inserted }
-      let metadata = try store.boardMetadata(for: boardTreeTasks.map(\.id))
-      boardTaskColumns = metadata.columns
-      taskCache = Dictionary(uniqueKeysWithValues: boardTreeTasks.map { ($0.id, $0) })
-      boardCrossColumnTasks = boardTreeTasks.filter { task in
+      let metadata = try store.boardMetadata(for: treeTasks.map(\.id))
+      let columnsByTask = metadata.columns
+      let crossColumn = treeTasks.filter { task in
         if hidesCompletedTasks && task.status != .open { return false }
         guard !task.isList else { return false }
         guard !boardIDs.contains(task.id), let parent = parents[task.id] else { return false }
-        let taskColumn = boardTaskColumns[task.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-        let parentColumn = boardTaskColumns[parent.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
+        let taskColumn = columnsByTask[task.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
+        let parentColumn = columnsByTask[parent.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
         return taskColumn != parentColumn
       }
-      let legacy = UserDefaults.standard.dictionary(forKey: Self.kanbanColumnsKey) as? [String: Data] ?? [:]
-      let configurations = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: boardConfigurationKey)
-      var columns: [WorkspaceKanbanColumn]
-      if let encoded = configurations[boardConfigurationKey],
-        let decoded = try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: encoded), !decoded.isEmpty {
-        columns = decoded
-      } else {
-        columns = WorkspaceKanbanColumn.blitzitDefaults
-      }
-      if isEverythingSelected {
-        let usedColumnIDs = Set(boardTaskColumns.values)
-        for list in lists {
-          guard let encoded = configurations["\(list.id)/root"],
-            let listColumns = try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: encoded)
-          else { continue }
-          for column in listColumns where usedColumnIDs.contains(column.id)
-            && !columns.contains(where: { $0.id == column.id }) {
-            columns.append(column)
-          }
-        }
-      } else {
-        let usedColumnIDs = Set(boardTaskColumns.values)
-        let globalColumns = configurations["everything/root"]
-          .flatMap { try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: $0) } ?? []
-        for column in globalColumns + WorkspaceKanbanColumn.blitzitDefaults
-          where usedColumnIDs.contains(column.id)
-            && !columns.contains(where: { $0.id == column.id }) {
-          columns.append(column)
-        }
-      }
-      boardColumns = columns
-      matrixPositions = metadata.positions
+      let columns = try resolvedBoardColumns(usedColumnIDs: Set(columnsByTask.values), store: store)
+      // Assigned only when they differ, so a refresh that changed nothing on
+      // the board does not redraw every card.
+      boardTreeTasks = treeTasks
+      if boardTasks != tasks { boardTasks = tasks }
+      if boardDescendants != descendants { boardDescendants = descendants }
+      if boardTaskParents != parents { boardTaskParents = parents }
+      if boardTaskColumns != columnsByTask { boardTaskColumns = columnsByTask }
+      if boardCrossColumnTasks != crossColumn { boardCrossColumnTasks = crossColumn }
+      if boardColumns != columns { boardColumns = columns }
+      if matrixPositions != metadata.positions { matrixPositions = metadata.positions }
     } catch {
       errorMessage = error.localizedDescription
     }
+  }
+
+  /// The current scope's columns, plus any column a card on it is filed under
+  /// that the scope's own layout does not list.
+  private func resolvedBoardColumns(usedColumnIDs: Set<String>, store: WorkspaceStore) throws -> [WorkspaceKanbanColumn] {
+    let key = boardConfigurationKey
+    // The store call also seeds a layout for a scope that has none, so it is
+    // made again for a scope this cache has not seen.
+    if boardColumnConfigurations?[key] == nil {
+      let legacy = UserDefaults.standard.dictionary(forKey: Self.kanbanColumnsKey) as? [String: Data] ?? [:]
+      boardColumnConfigurations = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: key)
+    }
+    let configurations = boardColumnConfigurations ?? [:]
+    func decode(_ key: String) -> [WorkspaceKanbanColumn]? {
+      configurations[key].flatMap { try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: $0) }
+    }
+    var columns: [WorkspaceKanbanColumn]
+    if let decoded = decode(key), !decoded.isEmpty {
+      columns = decoded
+    } else {
+      columns = WorkspaceKanbanColumn.blitzitDefaults
+    }
+    if isEverythingSelected {
+      for list in lists {
+        guard let listColumns = decode("\(list.id)/root") else { continue }
+        for column in listColumns where usedColumnIDs.contains(column.id)
+          && !columns.contains(where: { $0.id == column.id }) {
+          columns.append(column)
+        }
+      }
+    } else {
+      let globalColumns = decode("everything/root") ?? []
+      for column in globalColumns + WorkspaceKanbanColumn.blitzitDefaults
+        where usedColumnIDs.contains(column.id)
+          && !columns.contains(where: { $0.id == column.id }) {
+        columns.append(column)
+      }
+    }
+    return columns
   }
 
   /// Some Checkvist imports have a single transport root repeating the list
@@ -1238,19 +1319,6 @@ enum WorkspaceSidebarItem: Identifiable {
         focusHistoryAwards = Dictionary(
           try store.focusAwards(onDayOf: focusHistoryDate).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
       }
-    } catch {
-      errorMessage = error.localizedDescription
-    }
-  }
-
-  func perform(_ work: () throws -> Void) {
-    do {
-      try work()
-      if let store { taskEditor.refresh(store: store) }
-      errorMessage = nil
-      // Every local write funnels through here, which makes it the one place
-      // the Google Tasks mirror has to be told about. It coalesces.
-      onLocalWrite?()
     } catch {
       errorMessage = error.localizedDescription
     }

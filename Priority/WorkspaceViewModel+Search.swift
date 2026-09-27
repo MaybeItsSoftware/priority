@@ -60,12 +60,14 @@ extension WorkspaceViewModel {
   /// is not visible would be a worse answer than not searching at all.
   func reveal(_ result: TaskSearchResult) {
     showsSearch = false
-    if result.list.id != selectedListID || isEverythingSelected {
-      selectList(result.list.id)
+    batchingRefreshes {
+      if result.list.id != selectedListID || isEverythingSelected {
+        selectList(result.list.id)
+      }
+      scopeTaskID = nil
+      viewMode = .outline
+      reloadOutline(refreshSidebar: false)
     }
-    scopeTaskID = nil
-    viewMode = .outline
-    reloadOutline()
     selectedTaskID = result.task.id
     requestKeyboardFocus(.tasks)
   }

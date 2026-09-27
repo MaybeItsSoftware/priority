@@ -94,13 +94,15 @@ extension WorkspaceViewModel {
   func revealDoneTask(_ task: WorkspaceTask) {
     doneCursorID = task.id
     leaveFullPaneScreens()
-    if task.listId != selectedListID || isEverythingSelected { selectList(task.listId) }
-    scopeTaskID = nil
-    viewMode = .outline
-    // Something ticked off is invisible in an outline that hides completions,
-    // so revealing one has to stop hiding them or the reveal shows nothing.
-    hidesCompletedTasks = false
-    reloadOutline()
+    batchingRefreshes {
+      if task.listId != selectedListID || isEverythingSelected { selectList(task.listId) }
+      scopeTaskID = nil
+      viewMode = .outline
+      // Something ticked off is invisible in an outline that hides completions,
+      // so revealing one has to stop hiding them or the reveal shows nothing.
+      hidesCompletedTasks = false
+      reloadOutline(refreshSidebar: false)
+    }
     selectedTaskID = task.id
     requestKeyboardFocus(.tasks)
   }
@@ -112,8 +114,7 @@ extension WorkspaceViewModel {
     let successor = completedTasks.first { $0.id != task.id }?.id
     perform {
       try store.setStatus(.open, for: task.id)
-      try reloadNestedLists()
-      reloadOutline()
+      reloadOutline(refreshSidebar: task.isList)
       reloadNextUp()
       reloadDailies()
       doneCursorID = successor

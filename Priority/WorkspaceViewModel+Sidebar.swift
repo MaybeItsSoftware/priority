@@ -16,9 +16,11 @@ extension WorkspaceViewModel {
 
   func openItemList(_ task: WorkspaceTask) {
     taskEditor.flush()
-    enterTask(task)
-    selectedTaskID = nil
-    requestKeyboardFocus(.tasks)
+    batchingRefreshes {
+      enterTask(task)
+      selectedTaskID = nil
+      requestKeyboardFocus(.tasks)
+    }
   }
 
   func moveIntoNestedList(_ task: WorkspaceTask, parent: WorkspaceTask) {
@@ -135,27 +137,21 @@ extension WorkspaceViewModel {
     selectedFolderID == nil && currentSidebarID == id
   }
 
-  func reloadNestedLists() throws {
+  /// Marks the sidebar stale; see `refresh(_:)`.
+  func reloadNestedLists() {
+    refresh(.sidebar)
+  }
+
+  func reloadNestedListsNow() {
     guard let store else { return }
-    nestedLists = []
-    archivedNestedLists = []
-    var counts: [String: Int] = [:]
-    for list in lists {
-      var ancestors: [TaskOutlineItem] = []
-      let items = try store.outline(in: list.id)
-      counts[list.id] = items.count
-      for item in items {
-        while let last = ancestors.last, last.depth >= item.depth { ancestors.removeLast() }
-        if item.task.isList && item.id != list.visibleRootTaskId {
-          if item.task.archivedAt != nil { archivedNestedLists.append(item.task) }
-          if item.task.archivedAt == nil && !ancestors.contains(where: { $0.task.isList && $0.task.archivedAt != nil }) {
-            nestedLists.append(TaskOutlineItem(task: item.task, depth: ancestors.filter { $0.task.isList && $0.id != list.visibleRootTaskId }.count))
-          }
-        }
-        ancestors.append(item)
-      }
+    do {
+      let index = WorkspaceSidebarIndex(lists: lists, trees: try listTrees(for: lists.map(\.id), store: store))
+      if nestedLists != index.nestedLists { nestedLists = index.nestedLists }
+      if archivedNestedLists != index.archivedNestedLists { archivedNestedLists = index.archivedNestedLists }
+      if listTaskCounts != index.taskCounts { listTaskCounts = index.taskCounts }
+    } catch {
+      errorMessage = error.localizedDescription
     }
-    if listTaskCounts != counts { listTaskCounts = counts }
   }
 
   func selectNestedList(_ task: WorkspaceTask) {
@@ -166,9 +162,11 @@ extension WorkspaceViewModel {
     taskEditor.flush()
     leaveFullPaneScreens()
     selectedFolderID = nil
-    enterTask(task)
-    selectedListID = task.listId
-    selectedTaskID = nil
+    batchingRefreshes {
+      enterTask(task)
+      selectedListID = task.listId
+      selectedTaskID = nil
+    }
     reportKeyboardFocus(.sidebar)
   }
 
