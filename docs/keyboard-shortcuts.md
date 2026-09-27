@@ -9,12 +9,66 @@ single place a workspace key is written down.
 This file used to carry a table of its own. It is gone deliberately. There were
 four copies of these facts — this table, the README's, a seventy-row literal in
 the help sheet, and the `switch` in the key router that actually decided —
-and nothing kept them equal. The settings pane's copy of the same problem is
-[documented in `ShortcutReference`](../Sources/PriorityCore/ShortcutReference.swift):
-it told people `u` was undo for months after undo moved to `Cmd+Z`. A reference
+and nothing kept them equal. The old settings pane had the same problem: it
+told people `u` was undo for months after undo moved to `Cmd+Z`. A reference
 that can be wrong is worse than no reference, because it is believed.
 
-What remains here is the behaviour a table could not express.
+What remains here is the behaviour a table could not express, and the format
+of the file you rebind keys in.
+
+## Your own keys: `keymap.json`
+
+The window's keys can be rebound in
+`~/Library/Application Support/Priority/keymap.json`. **Open the keymap
+file** in the command palette creates it (as `[]`, an empty keymap) and opens
+it in your editor. It is re-read when you save it and whenever Priority comes
+to the front; **Reload the keymap** forces it. The palette, the reference, the
+tooltips and the menu bar all show the keys in force, so a rebound key's key
+cap moves with it.
+
+The shape is Zed's: an array of blocks, each with an optional `context` and a
+`bindings` object from key to command id. `null` unbinds.
+
+```json
+[
+  { "bindings": { "cmd+shift+k": "taskComplete", "gg": null } },
+  { "context": "board", "bindings": { "x": "taskDelete", "delete": null } }
+]
+```
+
+- **Command ids** are the cases of `WorkspaceCommandID`
+  (`Sources/PriorityCore/WorkspaceCommandID.swift`) — `taskComplete`,
+  `goBoard`, `listRename` and so on.
+- **Keys** are written the way the catalogue writes them: modifiers `cmd`,
+  `ctrl`, `option`, `shift` joined to the key with `+` (Zed's `-` works too,
+  and so do `command`, `alt`, `return`, `esc` and `backspace`). Named keys are
+  `enter`, `escape`, `tab`, `space`, `delete`, `up`/`down`/`left`/`right`,
+  `home`, `end`, `pageup`, `pagedown`, `f2` and `comma`. Two plain letters,
+  such as `gt`, make a two-letter sequence. Shift on a lone character is
+  already in the character: write `?`, not `shift+/`.
+- **Without a `context`** a binding applies wherever the command does. The key
+  is added to the command's own keys — the defaults stay — and taken from any
+  other command that had it on the same surface. A `null` there removes the
+  key from every command.
+- **With a `context`** it applies on that surface only: `today`, `board`,
+  `outline`, `matrix`, `sidebar`, `inspector`, `focus`, `focusRunning`,
+  `timeline` or `done`. A `null` there stops the key meaning anything on that
+  surface unless the same file gives it a new job there. A command that
+  belongs to one surface — the focus ladder's, the timeline's — can only be
+  bound in its own context.
+- Within a block the `null`s apply first, so unbinding a key and binding it
+  again can be written in either order. Blocks apply top to bottom.
+
+Mistakes are reported, never fatal. An unknown command id, a key no key press
+can produce, an unknown context, or one key bound twice on the same surface is
+a line in **Diagnostics → Recent problems** and a message on the window; the
+rest of the file still applies, and a file that is not JSON at all leaves the
+defaults in force. The few commands that act on *which* key ran them — the
+priority digits, the direction keys, `⌥1`–`⌥4` on the matrix — cannot be
+bound to another key, though their keys can be unbound.
+
+The three global hotkeys (show the window, the focus panel, quick add) work
+outside the window and are set in **Preferences → Keybindings** instead.
 
 ## Two-letter sequences
 

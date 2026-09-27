@@ -7,17 +7,18 @@ import Foundation
 /// top to bottom.
 public enum WorkspaceCommandCatalog {
 
-  public static let all: [WorkspaceCommand] =
+  /// The shipped keys. What is in force — these with any user keymap laid
+  /// over them — is `all`; see `WorkspaceKeyBindings`.
+  public static let defaults: [WorkspaceCommand] =
     go + task + plan + lists + window + focus + timeline + done + motions
 
-  public static let byID: [WorkspaceCommandID: WorkspaceCommand] = Dictionary(
-    uniqueKeysWithValues: all.map { ($0.id, $0) })
+  public static var byID: [WorkspaceCommandID: WorkspaceCommand] { bindings.byID }
 
   public static subscript(id: WorkspaceCommandID) -> WorkspaceCommand {
     // Force-unwrapped deliberately: `everyCommandHasAnEntry` fails the build
     // before this can, and a catalogue with a hole in it is not a thing the
-    // app should try to carry on with.
-    byID[id]!
+    // app should try to carry on with. A keymap changes keys, never rows.
+    bindings.byID[id]!
   }
 
   // MARK: - Go
@@ -197,6 +198,12 @@ public enum WorkspaceCommandCatalog {
       id: .windowToggleDoneRail, title: "Show or hide what you have finished", group: "Window",
       keys: ["cmd+ctrl+d"],
       note: "Opens it and takes the keyboard; again from inside it closes it"),
+    .init(
+      id: .windowOpenKeymap, title: "Open the keymap file", group: "Window", keys: [],
+      note: "keymap.json — your own keys over these. Created empty if it is missing"),
+    .init(
+      id: .windowReloadKeymap, title: "Reload the keymap", group: "Window", keys: [],
+      note: "It reloads by itself when saved; this is for when it did not"),
   ]
 
   // MARK: - Focus

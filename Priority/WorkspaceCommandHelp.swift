@@ -30,6 +30,15 @@ enum WorkspaceCommandHelpText {
     WorkspaceCommandCatalog.byID[id]?.displayKeys.first ?? ""
   }
 
+  /// The menu key for a command with the keymap in force. Reads the keymap
+  /// store's revision so a view asking — the menu bar — redraws when the
+  /// keymap is reloaded; the catalogue itself is not observable.
+  @MainActor
+  static func menuShortcut(for id: WorkspaceCommandID) -> KeyboardShortcut? {
+    _ = WorkspaceKeymapStore.shared.revision
+    return WorkspaceCommandCatalog[id].menuShortcut
+  }
+
   static func text(for id: WorkspaceCommandID, note: String? = nil) -> String {
     guard let command = WorkspaceCommandCatalog.byID[id] else { return note ?? "" }
     let subject = note ?? command.title
@@ -76,7 +85,7 @@ extension View {
   /// The menu key for a command, taken from the catalogue rather than restated.
   @ViewBuilder
   func commandShortcut(_ id: WorkspaceCommandID) -> some View {
-    if let shortcut = WorkspaceCommandCatalog[id].menuShortcut {
+    if let shortcut = WorkspaceCommandHelpText.menuShortcut(for: id) {
       keyboardShortcut(shortcut)
     } else {
       self

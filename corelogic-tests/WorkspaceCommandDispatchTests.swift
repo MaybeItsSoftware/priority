@@ -23,6 +23,15 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
           "\(key) on \(command.surface) does not run \(command.id)")
       }
     }
+    for command in WorkspaceCommandCatalog.all {
+      for (surface, keys) in command.surfaceKeys {
+        for key in keys {
+          XCTAssertEqual(
+            WorkspaceCommandCatalog.command(forKey: key, on: surface)?.id, command.id,
+            "\(key) on \(surface) does not run \(command.id)")
+        }
+      }
+    }
   }
 
   /// An `.anywhere` row is written from a planning pane's point of view, so
@@ -115,7 +124,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
         "dr", "hc", "gh", "sd", "oo", "pc", "xx", "gg",
       ])
     let written = Set(
-      WorkspaceCommandCatalog.all.flatMap(\.keys).filter(WorkspaceCommandCatalog.isSequence))
+      WorkspaceCommandCatalog.all.flatMap(\.allKeys).filter(WorkspaceCommandCatalog.isSequence))
     XCTAssertEqual(WorkspaceCommandCatalog.sequences(on: .outline), written)
   }
 
@@ -187,7 +196,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   func testEveryCatalogueKeyIsOneAKeyPressCanProduce() {
     let order = ["cmd", "ctrl", "option", "shift"]
     for command in WorkspaceCommandCatalog.all {
-      for token in command.keys {
+      for token in command.allKeys {
         let parts = token.split(separator: "+").map(String.init)
         let modifiers = Array(parts.dropLast())
         XCTAssertEqual(

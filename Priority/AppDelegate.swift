@@ -126,6 +126,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.onGoogleCalendarEventCreated = { [weak checkvistManager] taskID, eventID in
       checkvistManager?.googleCalendarCompletions.watch(eventID: eventID, forTask: taskID)
     }
+    // Before the window takes a key, so the first press already means what
+    // the user's keymap says. A problem in the file is a line in Diagnostics
+    // and a message on the window, never a refusal to start.
+    WorkspaceKeymapStore.shared.onIssues = { [weak self] issues in
+      guard let self else { return }
+      guard let first = issues.first else {
+        if self.workspace?.errorMessage?.hasPrefix("keymap.json:") == true {
+          self.workspace?.errorMessage = nil
+        }
+        return
+      }
+      for issue in issues {
+        self.checkvistManager.diagnosticsLog.record(
+          category: "Keymap", message: issue.message, isFailure: true)
+      }
+      let more = issues.count > 1 ? " — and \(issues.count - 1) more in Diagnostics" : ""
+      self.workspace?.errorMessage = "keymap.json: \(first.message)\(more)"
+    }
+    WorkspaceKeymapStore.shared.start()
     checkvistManager.googleTasksMirror.startPolling()
     checkvistManager.googleCalendarCompletions.startPolling()
     // One pass at launch, so anything ticked off on a phone while the app was

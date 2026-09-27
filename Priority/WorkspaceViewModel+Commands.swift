@@ -153,6 +153,8 @@ extension WorkspaceViewModel {
     case .windowRedo: redoLastUndoneChange()
     case .windowToggleSidebar: toggleSidebar()
     case .windowToggleInspectorPane: toggleInspector()
+    case .windowOpenKeymap: WorkspaceKeymapStore.shared.openFile()
+    case .windowReloadKeymap: WorkspaceKeymapStore.shared.reload(force: true)
 
     // MARK: Focus
     case .focusLadderUp: moveFocusLadder(by: 1)

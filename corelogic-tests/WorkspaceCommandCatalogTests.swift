@@ -27,9 +27,12 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
   /// take the keyboard before the workspace's own keys are consulted.
   func testNoKeyIsClaimedTwiceOnOneSurface() {
     var owners: [String: [String]] = [:]
-    for command in WorkspaceCommandCatalog.all {
+    for command in WorkspaceCommandCatalog.defaults {
       for key in command.keys {
         owners["\(command.surface.rawValue)/\(key)", default: []].append(command.title)
+      }
+      for (surface, keys) in command.surfaceKeys {
+        for key in keys { owners["\(surface.rawValue)/\(key)", default: []].append(command.title) }
       }
     }
     let shared = owners.filter { $0.value.count > 1 }
@@ -41,17 +44,19 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
       XCTAssertFalse(command.title.isEmpty, "\(command.id.rawValue) has no title")
       XCTAssertFalse(command.group.isEmpty, "\(command.id.rawValue) has no group")
       XCTAssertEqual(
-        command.displayKeys.count, command.keys.count,
-        "\(command.id.rawValue) has a key that renders to nothing: \(command.keys)")
+        command.displayKeys.count, command.allKeys.count,
+        "\(command.id.rawValue) has a key that renders to nothing: \(command.allKeys)")
     }
   }
 
-  /// Only one row is allowed to have no shortcut: the second press on a staged
-  /// focus task, which is a state rather than a key. Anything else with an
-  /// empty binding is a row nobody can reach from the keyboard.
-  func testOnlyTheStagedSecondPressLacksAKey() {
-    let keyless = WorkspaceCommandCatalog.all.filter(\.keys.isEmpty).map(\.id)
-    XCTAssertEqual(keyless, [.focusBegin])
+  /// Few rows are allowed to have no shortcut: the second press on a staged
+  /// focus task, which is a state rather than a key, and the handful of
+  /// things done rarely enough that the palette is the right way to reach
+  /// them. Anything else with an empty binding is a row nobody can reach from
+  /// the keyboard.
+  func testOnlyTheStagedSecondPressAndPaletteOnlyRowsLackAKey() {
+    let keyless = WorkspaceCommandCatalog.defaults.filter(\.allKeys.isEmpty).map(\.id)
+    XCTAssertEqual(keyless, [.windowOpenKeymap, .windowReloadKeymap, .focusBegin])
   }
 
   func testNamedKeysRenderAsSymbols() {
@@ -176,7 +181,7 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
   /// running. The scoring in `WorkspaceCommandQuery` is what makes that work,
   /// and a test that forbade it would forbid the design.
   func testNoTwoCommandsOnTheSameSurfaceShareAKey() {
-    let all = WorkspaceCommandCatalog.all
+    let all = WorkspaceCommandCatalog.defaults
     for (index, command) in all.enumerated() {
       for other in all[(index + 1)...] where command.surface == other.surface {
         let shared = Set(command.keys).intersection(other.keys)
@@ -193,10 +198,16 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
   /// question to ask is whether that was the intention.
   func testTheSurfaceOverridesAreTheOnesWeMeant() {
     var overrides: Set<String> = []
-    for command in WorkspaceCommandCatalog.all where command.surface != .anywhere {
-      for other in WorkspaceCommandCatalog.all where other.surface == .anywhere {
-        for key in Set(command.keys).intersection(other.keys) {
-          overrides.insert("\(command.surface.rawValue):\(key)")
+    let catalogue = WorkspaceCommandCatalog.defaults
+    for command in catalogue {
+      var own: [(WorkspaceCommandSurface, String)] = command.surfaceKeys.flatMap { surface, keys in
+        keys.map { (surface, $0) }
+      }
+      if command.surface != .anywhere { own += command.keys.map { (command.surface, $0) } }
+      for (surface, key) in own {
+        for other in catalogue
+        where other.surface == .anywhere && other.id != command.id && other.keys.contains(key) {
+          overrides.insert("\(surface.rawValue):\(key)")
         }
       }
     }

@@ -47,6 +47,11 @@ public struct WorkspaceCommand: Identifiable, Sendable, Equatable {
   /// Stored raw so the catalogue holds one spelling of a key and every reader
   /// — palette, reference sheet, hint bar — prints it the same way.
   public let keys: [String]
+  /// Keys the row answers to on one surface only, as though it were one of
+  /// that surface's own rows. How `⌘R` renames the list from a task pane while
+  /// `F2` renames it only from the sidebar, where on a task pane it renames
+  /// the task; and how a keymap block with a `context` binds a key.
+  public let surfaceKeys: [WorkspaceCommandSurface: [String]]
   public let surface: WorkspaceCommandSurface
   public let kind: WorkspaceCommandKind
   public let note: String?
@@ -56,6 +61,7 @@ public struct WorkspaceCommand: Identifiable, Sendable, Equatable {
     title: String,
     group: String,
     keys: [String],
+    surfaceKeys: [WorkspaceCommandSurface: [String]] = [:],
     surface: WorkspaceCommandSurface = .anywhere,
     kind: WorkspaceCommandKind = .action,
     note: String? = nil
@@ -64,14 +70,33 @@ public struct WorkspaceCommand: Identifiable, Sendable, Equatable {
     self.title = title
     self.group = group
     self.keys = keys
+    self.surfaceKeys = surfaceKeys
     self.surface = surface
     self.kind = kind
     self.note = note
   }
 
+  /// Every key the row answers to somewhere: `keys`, then each surface's
+  /// `surfaceKeys` in the order surfaces are declared, without repeats.
+  public var allKeys: [String] {
+    var seen: Set<String> = []
+    let surfaceOnly = WorkspaceCommandSurface.allCases.flatMap { surfaceKeys[$0] ?? [] }
+    return (keys + surfaceOnly).filter { seen.insert($0).inserted }
+  }
+
   /// Display-ready alternatives — `["⌘K", "⇧⇧"]` — in the order listed.
   public var displayKeys: [String] {
-    keys.map(ShortcutReference.display(token:)).filter { !$0.isEmpty }
+    allKeys.map(ShortcutReference.display(token:)).filter { !$0.isEmpty }
+  }
+
+  /// A copy with different keys — what a keymap makes of a row.
+  public func rebound(
+    keys: [String],
+    surfaceKeys: [WorkspaceCommandSurface: [String]]
+  ) -> WorkspaceCommand {
+    WorkspaceCommand(
+      id: id, title: title, group: group, keys: keys, surfaceKeys: surfaceKeys,
+      surface: surface, kind: kind, note: note)
   }
 
   /// Everything a query is matched against, so "quadrant" finds the matrix row

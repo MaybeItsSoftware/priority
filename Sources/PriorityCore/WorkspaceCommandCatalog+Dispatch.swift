@@ -69,13 +69,16 @@ extension WorkspaceCommandCatalog {
   /// - The inspector is the same minus the sequences, because its controls
   ///   are where your typing goes.
   /// - Focus and the timeline take only `reachableFromFullPaneScreens`.
+  ///
+  /// A row's `surfaceKeys` count as that surface's own, and a keymap can take
+  /// a key away from one surface without taking it from the rest — see
+  /// `WorkspaceKeyBindings`. Everything here reads the bindings in force, so
+  /// a user keymap changes what a key does and what every reader prints.
   public static func command(
     forKey key: String,
     on surface: WorkspaceCommandSurface
   ) -> WorkspaceCommand? {
-    let claimants = byKey[key] ?? []
-    if let own = claimants.first(where: { $0.surface == surface }) { return own }
-    return claimants.first { $0.surface == .anywhere && inherits($0, key: key, on: surface) }
+    bindings.command(forKey: key, on: surface)
   }
 
   /// Whether the key should stop at the window even though nothing on the
@@ -87,23 +90,18 @@ extension WorkspaceCommandCatalog {
   /// passed on, because the main menu carries many of them and would run the
   /// command on the hidden workspace anyway.
   public static func swallowsUnhandledKey(_ key: String, on surface: WorkspaceCommandSurface) -> Bool {
-    guard surface.ownsKeyboard else { return false }
-    return !isChord(key) || byKey[key] != nil
+    bindings.swallowsUnhandledKey(key, on: surface)
   }
 
   /// Whether a chord is one of the handful that work from inside a text field.
   public static func reachesIntoTextField(_ key: String, on surface: WorkspaceCommandSurface) -> Bool {
-    guard isChord(key), let command = command(forKey: key, on: surface) else { return false }
-    return reachableFromTextField.contains(command.id)
+    bindings.reachesIntoTextField(key, on: surface)
   }
 
   /// The two-letter sequences live on a surface — derived from the catalogue,
   /// so a sequence exists on a surface exactly when a row there prints it.
   public static func sequences(on surface: WorkspaceCommandSurface) -> Set<String> {
-    Set(
-      byKey.keys.filter { key in
-        isSequence(key) && command(forKey: key, on: surface) != nil
-      })
+    bindings.sequences(on: surface)
   }
 
   // MARK: - Key shapes
@@ -120,10 +118,11 @@ extension WorkspaceCommandCatalog {
     key.count == 2 && key.allSatisfy { $0.isLetter && $0.isLowercase } && !keyNames.contains(key)
   }
 
-  private static let keyNames = Set(ShortcutKeyToken.nameByKeyCode.values)
+  /// Every key the spelling names rather than taking from its character.
+  static let keyNames = Set(ShortcutKeyToken.nameByKeyCode.values)
     .union(extraNameByKeyCode.values)
 
-  private static func inherits(
+  static func inherits(
     _ command: WorkspaceCommand,
     key: String,
     on surface: WorkspaceCommandSurface
@@ -139,15 +138,6 @@ extension WorkspaceCommandCatalog {
       return isChord(key) || regionBareKeys.contains(key)
     }
   }
-
-  /// Every claimant of a key, in catalogue order.
-  private static let byKey: [String: [WorkspaceCommand]] = {
-    var index: [String: [WorkspaceCommand]] = [:]
-    for command in all {
-      for key in command.keys { index[key, default: []].append(command) }
-    }
-    return index
-  }()
 
   // MARK: - Spelling a key press
 
