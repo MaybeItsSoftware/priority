@@ -566,7 +566,7 @@ enum WorkspaceSidebarItem: Identifiable {
 
     guard lists.contains(where: { $0.id == id }) else { return }
     taskEditor.flush()
-    dismissFocusScreen()
+    leaveFullPaneScreens()
     isEverythingSelected = false
     UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
     selectedListID = id
@@ -590,7 +590,7 @@ enum WorkspaceSidebarItem: Identifiable {
     sidebarCursorID = nil
 
     taskEditor.flush()
-    dismissFocusScreen()
+    leaveFullPaneScreens()
     if let selectedListID { newTaskListID = selectedListID }
     isEverythingSelected = true
     UserDefaults.standard.set(true, forKey: Self.everythingScopeKey)

@@ -57,7 +57,7 @@ extension WorkspaceViewModel {
   /// show it is left alone.
   func enterFolderScope(_ folder: ListFolder) {
     taskEditor.flush()
-    dismissFocusScreen()
+    leaveFullPaneScreens()
     selectedFolderID = folder.id
     isEverythingSelected = false
     UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)

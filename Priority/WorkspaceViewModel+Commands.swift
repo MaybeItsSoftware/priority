@@ -177,8 +177,7 @@ extension WorkspaceViewModel {
   /// Asking for a mode is also asking to leave whatever full-pane surface is
   /// up — the same reasoning as ⌘1 on the timeline meaning "show me today".
   private func goToMode(_ mode: WorkspaceViewMode) {
-    dismissFocusScreen()
-    dismissTimelineScreen()
+    leaveFullPaneScreens()
     selectViewMode(mode)
     requestKeyboardFocus(.tasks)
   }

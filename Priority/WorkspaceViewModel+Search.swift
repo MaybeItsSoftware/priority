@@ -7,7 +7,7 @@ import PriorityWorkspace
 @MainActor
 extension WorkspaceViewModel {
   func presentSearch() {
-    dismissFocusScreen()
+    leaveFullPaneScreens()
     searchQuery = ""
     searchResults = []
     selectedSearchResultID = nil

@@ -780,7 +780,7 @@ extension DayView {
       model.reveal(result)
     } else if let id = selectedID, let task = model.task(withID: id) {
       model.selectTask(task)
-      model.dismissFocusScreen()
+      model.leaveFullPaneScreens()
     }
   }
 

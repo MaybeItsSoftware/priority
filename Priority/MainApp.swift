@@ -63,8 +63,7 @@ struct MainApp: App {
         // standing in the one that replaced it.
         ForEach(WorkspaceViewMode.planningModes) { mode in
           let item = Button(mode.title) {
-            AppDelegate.shared.workspace.dismissFocusScreen()
-            AppDelegate.shared.workspace.dismissTimelineScreen()
+            AppDelegate.shared.workspace.leaveFullPaneScreens()
             AppDelegate.shared.workspace.selectViewMode(mode)
             AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
           }

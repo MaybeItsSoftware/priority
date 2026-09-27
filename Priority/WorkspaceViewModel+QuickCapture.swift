@@ -16,7 +16,7 @@ extension WorkspaceViewModel {
   func beginQuickCapture() {
     // Explicitly, rather than relying on `selectList` to do it: the focus
     // screen can be up while the inbox is already the selected list.
-    dismissFocusScreen()
+    leaveFullPaneScreens()
     if let inbox = inboxList, selectedListID != inbox.id || isEverythingSelected {
       selectList(inbox.id)
     }

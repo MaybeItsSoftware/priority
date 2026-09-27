@@ -164,7 +164,7 @@ extension WorkspaceViewModel {
     sidebarCursorID = nil
 
     taskEditor.flush()
-    dismissFocusScreen()
+    leaveFullPaneScreens()
     selectedFolderID = nil
     enterTask(task)
     selectedListID = task.listId

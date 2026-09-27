@@ -93,6 +93,19 @@ extension WorkspaceViewModel {
     showsTimelineScreen = false
   }
 
+  /// Leaves whichever full-pane screen is up.
+  ///
+  /// Focus and the timeline both take the whole main pane, so anything that
+  /// *navigates* — choosing a list, entering a folder, revealing a search hit —
+  /// has to leave both, or the destination is drawn underneath a screen that is
+  /// still covering it. Three call sites were already dismissing the pair by
+  /// hand while the sidebar dismissed only focus, which is why clicking
+  /// Timeline and then a list looked like the list had refused to open.
+  func leaveFullPaneScreens() {
+    dismissFocusScreen()
+    dismissTimelineScreen()
+  }
+
   /// Steps the day the timeline is showing. Never past today: the future holds
   /// no logged work, so a day ahead is an empty screen with nothing to say.
   /// Reloading is left to the screen's `onChange`, which the date picker needs

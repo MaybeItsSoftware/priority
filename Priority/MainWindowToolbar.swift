@@ -167,8 +167,7 @@ struct WorkspaceModeStrip: View {
       ForEach(WorkspaceViewMode.planningModes) { mode in
         let isCurrent = model.viewMode == mode && !model.showsFocusScreen && !model.showsTimelineScreen
         Button {
-          model.dismissFocusScreen()
-          model.dismissTimelineScreen()
+          model.leaveFullPaneScreens()
           model.selectViewMode(mode)
           model.requestKeyboardFocus(.tasks)
         } label: {
