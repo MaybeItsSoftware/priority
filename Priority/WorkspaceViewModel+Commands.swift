@@ -35,7 +35,33 @@ extension WorkspaceViewModel {
   /// The rows the palette shows for what is typed, ordered for the surface
   /// currently on screen.
   func commandMatches(for query: String) -> [WorkspaceCommandQuery.Match] {
-    WorkspaceCommandQuery.matches(query: query, surface: commandSurface)
+    WorkspaceCommandQuery.matches(
+      query: query, surface: commandSurface, recents: recentCommandIDs)
+  }
+
+  // MARK: - Recently run
+
+  private static let recentCommandsKey = "workspaceRecentCommandIDsV1"
+
+  /// Commands run by name — from the palette, a menu or a button — most
+  /// recent first. The palette ranks them higher. Read from `UserDefaults`
+  /// each time rather than mirrored, because the palette asks once per
+  /// keystroke and nothing else does.
+  var recentCommandIDs: [WorkspaceCommandID] {
+    (UserDefaults.standard.stringArray(forKey: Self.recentCommandsKey) ?? [])
+      .compactMap(WorkspaceCommandID.init(rawValue:))
+  }
+
+  /// A key press is not recorded: the key is already how you reach that
+  /// command, and `j` would push everything else out. Opening the palette
+  /// is not either, since it is how you get to the list at all.
+  private func rememberRun(_ id: WorkspaceCommandID, key: String?) {
+    guard key == nil, id != .goCommandPalette, canRun(id) else { return }
+    let recents = recentCommandIDs
+    guard recents.first != id else { return }
+    UserDefaults.standard.set(
+      WorkspaceCommandQuery.recording(id, in: recents).map(\.rawValue),
+      forKey: Self.recentCommandsKey)
   }
 
   /// Motions are listed but cannot be run — see `WorkspaceCommandKind`.
@@ -54,6 +80,7 @@ extension WorkspaceViewModel {
   //
   // swiftlint:disable:next cyclomatic_complexity
   func run(_ id: WorkspaceCommandID, key: String? = nil) {
+    rememberRun(id, key: key)
     switch id {
     // MARK: Go
     case .goToday: goToMode(.today)

@@ -134,6 +134,81 @@ final class WorkspaceCommandQueryTests: XCTestCase {
     XCTAssertTrue(WorkspaceCommandQuery.matches(query: "zzqx", surface: .anywhere).isEmpty)
   }
 
+  // MARK: - Fuzzy scoring
+
+  func testAWordStartBeatsTheSameLettersMidWord() {
+    let atWord = WorkspaceCommandQuery.fuzzyScore("col", in: "Add a board column")!
+    let midWord = WorkspaceCommandQuery.fuzzyScore("col", in: "Recollect things")!
+    XCTAssertGreaterThan(atWord, midWord)
+  }
+
+  func testContiguousLettersBeatScatteredOnes() {
+    let together = WorkspaceCommandQuery.fuzzyScore("due", in: "Edit the due date")!
+    let scattered = WorkspaceCommandQuery.fuzzyScore("due", in: "Drop your own order of the ladder")
+    XCTAssertNotNil(scattered)
+    XCTAssertGreaterThan(together, scattered!)
+  }
+
+  /// A greedy reading of "ta" in "xat ta" takes the first `t`, mid-word, and
+  /// then an `a` two letters on. The best reading is the word "ta" itself.
+  func testTheBestAlignmentIsChosenNotTheFirst() {
+    let chosen = WorkspaceCommandQuery.fuzzyScore("ta", in: "xat ta")!
+    let wordOnly = WorkspaceCommandQuery.fuzzyScore("ta", in: "xyz ta")!
+    XCTAssertEqual(chosen, wordOnly)
+  }
+
+  func testAGapCostsMoreTheWiderItIs() {
+    let near = WorkspaceCommandQuery.fuzzyScore("ab", in: "a-b")!
+    let far = WorkspaceCommandQuery.fuzzyScore("ab", in: "a------b")!
+    XCTAssertGreaterThan(near, far)
+  }
+
+  func testSpacesInTheQueryAreIgnored() {
+    XCTAssertEqual(
+      WorkspaceCommandQuery.fuzzyScore("due tom", in: "Due tomorrow"),
+      WorkspaceCommandQuery.fuzzyScore("duetom", in: "Due tomorrow"))
+  }
+
+  func testWordInitialsRankTheirCommandFirst() {
+    let matches = WorkspaceCommandQuery.matches(query: "dtom", surface: .outline)
+    XCTAssertEqual(matches.first?.id, .taskDueTomorrow)
+  }
+
+  // MARK: - Recently run
+
+  func testARecentCommandRisesAboveAnEqualMatch() {
+    let plain = WorkspaceCommandQuery.matches(query: "add", surface: .outline)
+    XCTAssertEqual(plain.first?.id, .taskNew)
+    let recent = WorkspaceCommandQuery.matches(
+      query: "add", surface: .outline, recents: [.taskNewChild])
+    XCTAssertEqual(recent.first?.id, .taskNewChild)
+  }
+
+  func testRecentsLeadAnEmptyQueryMostRecentFirst() {
+    let matches = WorkspaceCommandQuery.matches(
+      query: "", surface: .outline, recents: [.listArchive, .goTimeline])
+    XCTAssertEqual(matches.prefix(2).map(\.id), [.listArchive, .goTimeline])
+  }
+
+  func testRecencyDoesNotLiftAPoorMatchOverAGoodOne() {
+    // "Open the keymap file" is a scattered match for "rename"; the rename
+    // commands match it outright.
+    let matches = WorkspaceCommandQuery.matches(
+      query: "rename", surface: .outline, recents: [.windowOpenKeymap])
+    XCTAssertTrue([.taskRename, .listRename].contains(matches.first?.id))
+  }
+
+  func testRecordingMovesToTheFrontAndCaps() {
+    var recents: [WorkspaceCommandID] = []
+    for id in WorkspaceCommandID.allCases.prefix(25) {
+      recents = WorkspaceCommandQuery.recording(id, in: recents)
+    }
+    XCTAssertEqual(recents.count, WorkspaceCommandQuery.recentLimit)
+    recents = WorkspaceCommandQuery.recording(recents[5], in: recents)
+    XCTAssertEqual(recents.count, WorkspaceCommandQuery.recentLimit)
+    XCTAssertEqual(Set(recents).count, recents.count)
+  }
+
   func testSubsequenceIsNotSubstring() {
     XCTAssertTrue(WorkspaceCommandQuery.isSubsequence("adt", of: "add a task"))
     XCTAssertFalse(WorkspaceCommandQuery.isSubsequence("tda", of: "add a task"))
