@@ -85,6 +85,9 @@ on 2026-09-27. Phases are ordered so each one lands green on its own.
 - There is a Task menu, so every task action is reachable and its key is
   visible without the palette. Two-letter sequences get chord alternatives
   where one is free.
+- `⌘R` (rename the current list) and `⌘⌥↑/↓` (move folder) became sidebar-only
+  when phase 1 made dispatch follow the catalogue strictly. Restore `⌘R` on the
+  task panes.
 - Return and Shift-Return mean the same thing on every task surface.
 - README, `docs/keyboard-shortcuts.md` and the roadmap are corrected to match,
   including the onboarding boxes that never display and the palette rows that
