@@ -44,17 +44,28 @@ extension WorkspaceViewModel {
   }
 
   // The switch is exhaustive on purpose: adding a case to `WorkspaceCommandID`
-  // should not compile until someone has said what it does.
+  // should not compile until someone has said what it does. That covers the
+  // keyboard as well as the palette — the router has no switch of its own, so
+  // a catalogue row with a key is a row whose command runs here.
   //
-  // swiftlint:disable:next cyclomatic_complexity function_body_length
-  func run(_ id: WorkspaceCommandID) {
+  // `key` is the key that asked, when one did. Motions need it to know which
+  // way to move; a few actions whose keys differ in detail (Return on the
+  // board, `[`) read it too. The palette passes none.
+  //
+  // swiftlint:disable:next cyclomatic_complexity
+  func run(_ id: WorkspaceCommandID, key: String? = nil) {
     switch id {
     // MARK: Go
     case .goToday: goToMode(.today)
     case .goBoard: goToMode(.board)
     case .goOutline: goToMode(.outline)
     case .goMatrix: goToMode(.matrix)
-    case .goEverything: selectEverything(); requestKeyboardFocus(.tasks)
+    case .goEverything:
+      // A place to be, like ⌘1–⌘4, so it leaves a full-pane screen the same
+      // way rather than changing the list behind one.
+      leaveFullPaneScreens()
+      selectEverything()
+      requestKeyboardFocus(.tasks)
     case .goFocus: presentFocusScreen()
     case .goTimeline:
       if showsTimelineScreen { dismissTimelineScreen() } else { presentTimelineScreen() }
@@ -69,7 +80,7 @@ extension WorkspaceViewModel {
       requestKeyboardFocus(selectedTask == nil ? .tasks : .inspector)
 
     // MARK: Task
-    case .taskNew: requestTaskComposerFocus()
+    case .taskNew: if key == "enter" { addTaskFromReturn() } else { requestTaskComposerFocus() }
     case .taskNewAbove: requestRelativeTaskComposerFocus(above: true)
     case .taskNewChild: requestRelativeTaskComposerFocus(child: true)
     case .taskComplete: toggleSelectedTask()
@@ -105,7 +116,10 @@ extension WorkspaceViewModel {
 
     // MARK: Plan
     case .planEnterTask: enterSelectedTask()
-    case .planLeaveTask: leaveSelectedTaskScope()
+    case .planLeaveTask:
+      // `[` only ever leaves a task. `h` and ← hand the keyboard back to the
+      // sidebar once there is nothing left to leave; the bracket never did.
+      if key != "[" || scopeTaskID != nil { leaveSelectedTaskScope() }
     case .planHideCompleted: toggleHiddenCompletedTasks()
     case .planBoardNewColumn: newKanbanColumnRequest = true
     case .planBoardMoveCardLeft: moveSelectedTaskToAdjacentColumn(by: -1)
@@ -143,7 +157,8 @@ extension WorkspaceViewModel {
     // MARK: Focus
     case .focusLadderUp: moveFocusLadder(by: 1)
     case .focusLadderDown: moveFocusLadder(by: -1)
-    case .focusStage: stageFocusLadderSelection()
+    // One key stages and then begins, so the row stands for both.
+    case .focusStage: if stagedTaskID == nil { stageFocusLadderSelection() } else { beginStagedFocus() }
     case .focusBegin: beginStagedFocus()
     case .focusTickOff: focusCompletionRequest += 1
     case .focusDefer: deferFocusLadderSelection()
@@ -153,6 +168,7 @@ extension WorkspaceViewModel {
     case .focusFinish: requestFocusCompletion()
     case .focusResetOrder: clearManualFocusOrder()
     case .focusLeave: dismissFocusScreen()
+    case .focusUnstage: if stagedTaskID != nil { unstageFocusTask() } else { dismissFocusScreen() }
 
     // MARK: Timeline
     case .timelinePreviousDay: moveTimelineDay(by: -1)
@@ -170,13 +186,30 @@ extension WorkspaceViewModel {
     //
     // Listed in the palette so the reference is complete, but not runnable
     // from it: each one means "move from where the cursor is", and opening the
-    // palette is precisely the act of taking the cursor somewhere else.
-    case .goCycleRegion, .planMatrixPlace, .listNewTaskDestination,
-      .focusReorder, .motionSelectNext, .motionSelectPrevious, .motionSelectEnds,
-      .motionSelectPage, .motionSidebarSelect, .motionSidebarExpand,
-      .motionSidebarCollapse, .motionBoardColumn, .motionDismiss, .motionSetPriority,
-      .motionDoneSelect:
-      break
+    // palette is precisely the act of taking the cursor somewhere else. From
+    // the keyboard they arrive with the key, which says which way to go.
+    case .goCycleRegion:
+      if let key { cycleKeyboardFocus(by: key.contains("shift") ? -1 : 1) }
+    case .planMatrixPlace: if let key { placeSelectionInQuadrant(key) }
+    case .listNewTaskDestination:
+      if let key, isEverythingSelected { cycleNewTaskDestination(by: key.hasSuffix("[") ? -1 : 1) }
+    // Same sign as the cursor keys, so the task travels the way the arrow
+    // points: up the screen is up the ladder, which is *less* important.
+    case .focusReorder: if let key { reorderFocusLadder(by: key.hasSuffix("up") ? 1 : -1) }
+    case .motionSelectNext: if key != nil { moveTaskSelection(by: 1) }
+    case .motionSelectPrevious: if key != nil { moveTaskSelection(by: -1) }
+    case .motionSelectEnds: if let key { selectTaskAtEnd(first: key == "home") }
+    case .motionSelectPage: if let key { moveTaskSelection(by: key == "pageup" ? -8 : 8) }
+    case .motionSidebarSelect: if let key { moveSidebarCursor(key) }
+    case .motionSidebarExpand: if let key { activateSidebarCursor(expandOnly: key == "right") }
+    case .motionSidebarCollapse: if key != nil { collapseSidebarCursor() }
+    case .motionBoardColumn: if let key { focusAdjacentBoardColumn(by: key == "right" ? 1 : -1) }
+    case .motionDismiss: if key != nil { dismissFromKeyboard() }
+    case .motionSetPriority:
+      if let key, let digit = Int(key) { editTaskValues { $0.priority = digit } }
+    case .motionDoneSelect: if let key { moveDoneCursor(key) }
+    case .motionTodayEnterDay: if key != nil { dayFieldFocusRequest += 1 }
+    case .motionTodayLeave: if key != nil { returnToCurrentListInSidebar() }
     }
   }
 

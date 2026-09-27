@@ -244,6 +244,9 @@ public enum WorkspaceCommandCatalog {
       id: .focusResetOrder, title: "Drop your own order of the ladder", group: "Focus",
       keys: ["o"], surface: .focus,
       note: "Back to the computed order, which is what the ladder is for"),
+    .init(
+      id: .focusUnstage, title: "Unstage the task, or leave the ladder", group: "Focus",
+      keys: ["escape"], surface: .focus, note: "Unstages first when a task is staged"),
   ]
 
   // MARK: - Timeline
@@ -266,7 +269,8 @@ public enum WorkspaceCommandCatalog {
   private static let done: [WorkspaceCommand] = [
     .init(
       id: .motionDoneSelect, title: "Move through what you finished", group: "Done",
-      keys: ["down", "up", "j", "k"], surface: .done, kind: .motion),
+      keys: ["down", "up", "j", "k", "home", "end", "pageup", "pagedown"], surface: .done,
+      kind: .motion),
     .init(
       id: .doneReveal, title: "Open it where it lives", group: "Done", keys: ["enter"],
       surface: .done, note: "Leaves the rail and selects the task in its own list"),
@@ -274,7 +278,8 @@ public enum WorkspaceCommandCatalog {
       id: .doneReopen, title: "Put it back on the list", group: "Done", keys: ["r"],
       surface: .done),
     .init(
-      id: .doneClose, title: "Leave the rail", group: "Done", keys: ["escape"], surface: .done),
+      id: .doneClose, title: "Leave the rail", group: "Done", keys: ["escape", "left"],
+      surface: .done, note: "Left, like leaving any pane on the right: back towards the work"),
   ]
 
   // MARK: - Motions
@@ -294,7 +299,8 @@ public enum WorkspaceCommandCatalog {
       keys: ["pageup", "pagedown"], kind: .motion),
     .init(
       id: .motionSidebarSelect, title: "Move through the sidebar", group: "Moving around",
-      keys: ["down", "up", "j", "k"], surface: .sidebar, kind: .motion,
+      keys: ["down", "up", "j", "k", "home", "end", "pageup", "pagedown"], surface: .sidebar,
+      kind: .motion,
       note: "Every row, including Focus and the timeline; Home and End are the two ends"),
     .init(
       id: .motionSidebarExpand, title: "Open the row you are on",
@@ -314,22 +320,14 @@ public enum WorkspaceCommandCatalog {
       id: .motionSetPriority, title: "Set the task's priority", group: "Moving around",
       keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], kind: .motion,
       note: "Type the digit; 0 clears it"),
+    // Today keeps its own selection in its own list, so the outline keys have
+    // nothing visible to move there. These hand the caret back to the day.
+    .init(
+      id: .motionTodayEnterDay, title: "Move into the day's list", group: "Moving around",
+      keys: ["down", "up", "right", "enter", "space"], surface: .today, kind: .motion,
+      note: "When the day's list has lost the caret"),
+    .init(
+      id: .motionTodayLeave, title: "Back to the sidebar", group: "Moving around",
+      keys: ["left"], surface: .today, kind: .motion),
   ]
-}
-
-extension WorkspaceCommandCatalog {
-  /// The command a key means, on the surface currently on screen.
-  ///
-  /// Surface-specific rows win over `anywhere` ones, which is the rule the
-  /// router already followed by checking the focus screen and the timeline
-  /// before the workspace's own keys — stated once here instead of being
-  /// implied by the order of a `switch`.
-  public static func command(
-    forKey key: String,
-    on surface: WorkspaceCommandSurface
-  ) -> WorkspaceCommand? {
-    let claimants = all.filter { $0.keys.contains(key) }
-    return claimants.first { $0.surface == surface }
-      ?? claimants.first { $0.surface == .anywhere }
-  }
 }

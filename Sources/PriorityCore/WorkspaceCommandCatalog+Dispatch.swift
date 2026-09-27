@@ -1,0 +1,192 @@
+import Foundation
+
+/// Resolving a key press to a catalogue entry, which is the whole of what the
+/// desktop window's key router does.
+///
+/// The router used to be a 400-line `switch` over key codes beside the
+/// catalogue it was meant to agree with, plus a second hand-written copy of the
+/// two-letter sequences. Nothing held the three equal, so the catalogue
+/// advertised keys the switch never ran — `⌘⌃C` to remove a board column, `o`
+/// to reset the focus ladder — and the switch ran keys the catalogue never
+/// mentioned. The rules for which key means what on which surface live here
+/// instead, where they can be tested, and the router only asks.
+extension WorkspaceCommandSurface {
+  /// Focus and the timeline replace the workspace in the main pane, so they
+  /// take the keyboard outright: a key they do not answer to must not reach
+  /// the task surface hidden behind them, where `⌫` would delete a task
+  /// nobody can see.
+  public var ownsKeyboard: Bool {
+    self == .focus || self == .focusRunning || self == .timeline
+  }
+}
+
+extension WorkspaceCommandCatalog {
+
+  // MARK: - Which keys reach which surface
+
+  /// The only `.anywhere` commands that stay live on a screen that owns the
+  /// keyboard. Each either leaves the screen (the view keys), puts something
+  /// in front of it (the palette, the reference, search), or belongs to the
+  /// window rather than to the pane.
+  ///
+  /// `goListNavigator` is deliberately absent. Its key is `ll`, and admitting
+  /// it would make `l` a sequence starter on the ladder and the running block,
+  /// where `l` means something on its own — so it would wait out the timeout.
+  public static let reachableFromFullPaneScreens: Set<WorkspaceCommandID> = [
+    .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline,
+    .goSearch, .goCommandPalette, .goKeyboardReference,
+    .windowUndo, .windowRedo, .windowToggleSidebar, .windowToggleInspectorPane,
+    .windowToggleDoneRail,
+  ]
+
+  /// Commands whose chord still works with the caret in a text field, because
+  /// each is how you leave the field to do something else. Undo is not one of
+  /// them: inside a field `⌘Z` belongs to the text being typed.
+  public static let reachableFromTextField: Set<WorkspaceCommandID> = [
+    .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline,
+    .goSidebarRegion, .goTaskRegion, .goInspectorRegion, .goCycleRegion,
+    .taskNew, .listNew, .folderNew, .listNewTaskDestination,
+    .goKeyboardReference, .goCommandPalette, .goSearch,
+  ]
+
+  /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.
+  /// None of them acts on a task row: they open something, or leave.
+  static let regionBareKeys: Set<String> = ["/", "?", "i", "escape"]
+
+  /// The command a key means on the surface on screen, or `nil` when it means
+  /// nothing there.
+  ///
+  /// A surface's own rows win over `.anywhere` ones. What a surface takes from
+  /// `.anywhere` at all depends on what it is:
+  ///
+  /// - The four planning panes take everything: `.anywhere` is written from
+  ///   their point of view.
+  /// - The sidebar and the done rail hold a cursor of their own, so a bare key
+  ///   that acts on "the selected task" — Space, `x`, `⌫`, a digit — would act
+  ///   on a row in a pane that does not have the keyboard. They take chords
+  ///   (anything with `⌘` or `⌃`), the two-letter sequences, and
+  ///   `regionBareKeys`.
+  /// - The inspector is the same minus the sequences, because its controls
+  ///   are where your typing goes.
+  /// - Focus and the timeline take only `reachableFromFullPaneScreens`.
+  public static func command(
+    forKey key: String,
+    on surface: WorkspaceCommandSurface
+  ) -> WorkspaceCommand? {
+    let claimants = byKey[key] ?? []
+    if let own = claimants.first(where: { $0.surface == surface }) { return own }
+    return claimants.first { $0.surface == .anywhere && inherits($0, key: key, on: surface) }
+  }
+
+  /// Whether the key should stop at the window even though nothing on the
+  /// surface answers to it.
+  ///
+  /// On a screen that owns the keyboard, everything does except a chord the
+  /// catalogue has never heard of — `⌘Q`, `⌘W`, `⌘,` belong to the app, not
+  /// to the pane. A chord the catalogue *does* know is swallowed rather than
+  /// passed on, because the main menu carries many of them and would run the
+  /// command on the hidden workspace anyway.
+  public static func swallowsUnhandledKey(_ key: String, on surface: WorkspaceCommandSurface) -> Bool {
+    guard surface.ownsKeyboard else { return false }
+    return !isChord(key) || byKey[key] != nil
+  }
+
+  /// Whether a chord is one of the handful that work from inside a text field.
+  public static func reachesIntoTextField(_ key: String, on surface: WorkspaceCommandSurface) -> Bool {
+    guard isChord(key), let command = command(forKey: key, on: surface) else { return false }
+    return reachableFromTextField.contains(command.id)
+  }
+
+  /// The two-letter sequences live on a surface — derived from the catalogue,
+  /// so a sequence exists on a surface exactly when a row there prints it.
+  public static func sequences(on surface: WorkspaceCommandSurface) -> Set<String> {
+    Set(
+      byKey.keys.filter { key in
+        isSequence(key) && command(forKey: key, on: surface) != nil
+      })
+  }
+
+  // MARK: - Key shapes
+
+  /// Carries `⌘` or `⌃`, and so cannot be typed into a field by accident.
+  /// `⌥` and `⇧` alone do not count: `⌥↩` and `⇧↩` are task-pane gestures.
+  public static func isChord(_ key: String) -> Bool {
+    key.hasPrefix("cmd+") || key.hasPrefix("ctrl+")
+  }
+
+  /// `ee`, `gh` — two bare letters, Checkvist's spelling. Not `up`, which is
+  /// two bare letters too but names a key.
+  public static func isSequence(_ key: String) -> Bool {
+    key.count == 2 && key.allSatisfy { $0.isLetter && $0.isLowercase } && !keyNames.contains(key)
+  }
+
+  private static let keyNames = Set(ShortcutKeyToken.nameByKeyCode.values)
+    .union(extraNameByKeyCode.values)
+
+  private static func inherits(
+    _ command: WorkspaceCommand,
+    key: String,
+    on surface: WorkspaceCommandSurface
+  ) -> Bool {
+    switch surface {
+    case .anywhere, .today, .board, .outline, .matrix:
+      return true
+    case .focus, .focusRunning, .timeline:
+      return reachableFromFullPaneScreens.contains(command.id)
+    case .sidebar, .done:
+      return isChord(key) || isSequence(key) || regionBareKeys.contains(key)
+    case .inspector:
+      return isChord(key) || regionBareKeys.contains(key)
+    }
+  }
+
+  /// Every claimant of a key, in catalogue order.
+  private static let byKey: [String: [WorkspaceCommand]] = {
+    var index: [String: [WorkspaceCommand]] = [:]
+    for command in all {
+      for key in command.keys { index[key, default: []].append(command) }
+    }
+    return index
+  }()
+
+  // MARK: - Spelling a key press
+
+  /// Keys the catalogue names but `ShortcutKeyToken` does not, because the
+  /// menu bar's bindings never needed them.
+  private static let extraNameByKeyCode: [UInt16: String] = [
+    76: "enter",  // keypad Enter, the same key as far as the workspace cares
+    115: "home", 119: "end", 116: "pageup", 121: "pagedown",
+  ]
+
+  /// A key press spelled the way the catalogue spells its keys: modifiers in
+  /// the order `cmd`, `ctrl`, `option`, `shift`, then the key.
+  ///
+  /// Shift is dropped from a printable character when no other modifier is
+  /// held, because it is already in the character — `?` is Shift-/, and the
+  /// catalogue writes `?`. That also makes `⇧X` plain `x`, run at once rather
+  /// than held for a sequence, which is the way to skip the wait.
+  ///
+  /// `nil` for a key with nothing to name, such as a bare modifier.
+  public static func key(
+    keyCode: UInt16,
+    charactersIgnoringModifiers rawCharacters: String,
+    shift: Bool,
+    ctrl: Bool,
+    cmd: Bool,
+    option: Bool
+  ) -> String? {
+    let characters = rawCharacters.trimmingCharacters(in: .whitespacesAndNewlines)
+    let named = extraNameByKeyCode[keyCode] ?? ShortcutKeyToken.nameByKeyCode[keyCode]
+    guard let base = named ?? (characters.isEmpty ? nil : characters.lowercased()) else {
+      return nil
+    }
+    let keepsShift = shift && (named != nil || cmd || ctrl || option)
+    var parts: [String] = []
+    if cmd { parts.append("cmd") }
+    if ctrl { parts.append("ctrl") }
+    if option { parts.append("option") }
+    if keepsShift { parts.append("shift") }
+    parts.append(base)
+    return parts.joined(separator: "+")
+  }
+}

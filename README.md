@@ -97,6 +97,12 @@ The desktop workspace supports Checkvist-style two-letter commands, including
 Edit menu. Board arrows navigate every column, including empty ones; the
 sidebar outlines the list you are navigating.
 
+A letter that begins a sequence and also means something on its own — `x`
+(complete, or `xx`), `l` (open subtasks, or `ll`), `h` (leave them, or `hc`) —
+waits up to 1.2 seconds for a second letter, then does its own job. Any other
+key ends the wait at once, and holding Shift (`⇧X`) skips it. A letter that
+begins no sequence where you are never waits.
+
 The one-letter root tabs that used to collide with those sequences are gone
 with the menu bar panel they belonged to, so a sequence no longer has to
 compete with a tab for its starter letter.
@@ -166,6 +172,7 @@ clock, and the four things you can do to it.
 | --- | --- |
 | `↑` / `↓` | Climb the ladder. `k` / `j` do the same |
 | `⌥↑` / `⌥↓` | Reorder within the same urgency, rather than moving the cursor |
+| `O` | Drop your own order and go back to the computed one |
 | `Return` | Stage the task, then start it. `Space` does the same |
 | `X` | Tick it off without starting a block |
 | `L` | Put it off — the menu beside it chooses when |

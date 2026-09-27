@@ -205,7 +205,7 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // "new task" and "complete": there is no task list under the ladder for
       // those to act on.
       "focus:up", "focus:down", "focus:k", "focus:j", "focus:enter", "focus:space",
-      "focus:x", "focus:l",
+      "focus:x", "focus:l", "focus:escape",
       // A running block has exactly one task, so the list keys have nothing to
       // mean and the block's own controls take them.
       "focusRunning:enter", "focusRunning:escape", "focusRunning:l", "focusRunning:f",
@@ -216,12 +216,17 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // row, and ⌘↑/⌘↓ reorder the row rather than a task.
       "sidebar:up", "sidebar:down", "sidebar:left", "sidebar:right", "sidebar:enter",
       "sidebar:k", "sidebar:j", "sidebar:f2", "sidebar:cmd+up", "sidebar:cmd+down",
+      "sidebar:home", "sidebar:end", "sidebar:pageup", "sidebar:pagedown",
       // On the board ←/→ change column instead of entering and leaving a task.
       "board:left", "board:right",
       // The done rail is a list of its own, so the list keys walk it, ⏎ opens
       // the finished task where it lives, and escape gives the keyboard back to
       // the work rather than clearing a selection the rail does not hold.
       "done:up", "done:down", "done:k", "done:j", "done:enter", "done:escape",
+      "done:home", "done:end", "done:pageup", "done:pagedown", "done:left",
+      // Today keeps its own selection in its own list, so the keys that move
+      // the outline's hand the caret back to the day instead.
+      "today:up", "today:down", "today:right", "today:left", "today:enter", "today:space",
     ]
     XCTAssertEqual(
       overrides, expected,

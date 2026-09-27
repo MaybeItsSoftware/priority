@@ -20,22 +20,42 @@ What remains here is the behaviour a table could not express.
 
 The desktop uses [Checkvist's shortcuts](https://checkvist.com/help) for
 matching actions: type two letters in succession while navigating tasks or the
-sidebar. A prefix expires after 1.2 seconds, and clears when focus moves or
-text editing begins. Text fields retain their normal macOS editing shortcuts,
-so a sequence never fires while you are typing into one.
+sidebar. Text fields retain their normal macOS editing shortcuts, so a sequence
+never fires while you are typing into one.
 
-`Cmd+K`, `Cmd+F`, `Cmd+/` and the creation chords are the exceptions: they work
-from inside a text field, because each of them is how you leave that field to
-do something else. `Cmd+Z` deliberately is not — inside a field it belongs to
-the text you are typing, not to the workspace behind it.
+Which sequences exist is read from the catalogue per surface — there is no
+second list. A letter is held only where some sequence on the current surface
+begins with it, and a held letter is never lost: if the next key does not
+complete a sequence, the held letter runs its own binding first and the new
+key is then handled as usual (it may start a sequence of its own); if no key
+follows within 1.2 seconds, the held letter runs then. So `x`, `l` and `h`
+still complete, enter and leave — after the wait, or at once with Shift held,
+which is the way to skip it. A hold is dropped without running when focus
+moves or text editing begins, because the key no longer means what it did.
+
+The chords that are how you leave a text field — the view and region keys,
+the creation chords, `Cmd+K`, `Cmd+F`, `Cmd+/` — work from inside one; the set
+is `reachableFromTextField` in the catalogue. `Cmd+Z` deliberately is not —
+inside a field it belongs to the text you are typing, not to the workspace
+behind it.
 
 ## Surfaces own the keyboard
 
 Focus mode and the timeline take the main pane, and while either is up it owns
-the keyboard outright — the workspace's own single-letter keys are not live
-behind them, so `Cmd+4` cannot quietly switch a board nobody can see. The
-palette knows this: it labels each command with the surface it belongs to and
-sorts the ones that apply where you are to the top.
+the keyboard outright. A key the screen does not answer to does not fall
+through to the task surface behind it — `Delete`, a digit or `i` there used to
+act on a task nobody could see. The only workspace keys that stay live are the
+window's own (`reachableFromFullPaneScreens` in the catalogue): the view keys,
+which leave the screen for the place you asked for, the palette, the
+reference, search, undo and redo, and the sidebar, inspector and done-rail
+toggles. Chords the catalogue does not know, such as `Cmd+Q` and `Cmd+W`, still
+reach the app. The palette knows this: it labels each command with the surface
+it belongs to and sorts the ones that apply where you are to the top.
+
+The sidebar, the done rail and the inspector hold a cursor or controls of their
+own, so the bare task keys — `Space`, `x`, `Delete`, the digits, `Tab` — do not
+reach through them to the selected task. They keep the chords, `/`, `?`, `i`
+and `Esc`, and the sidebar and done rail keep the two-letter sequences.
 
 The board keeps Left/Right for column navigation, including empty columns.
 Enter opens a selected task's nested board, or focuses the add-task field in an
