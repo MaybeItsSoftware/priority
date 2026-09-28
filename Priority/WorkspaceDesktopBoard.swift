@@ -27,12 +27,23 @@ enum WorkspaceBoardMetrics {
   /// rather than scanned, and five default columns stop fitting on a laptop.
   static let maxColumnWidth: CGFloat = 340
 
+  /// A column's own inset around its cards. Tight: the cards are bordered
+  /// rows filling the column, not tiles floating in it.
+  static func columnPadding(_ theme: Theme) -> CGFloat {
+    theme.space.sm
+  }
+
   /// The inset before the first column and after the last. The pane gutter
   /// less a column's own padding, so the first column's label lines up with
   /// the pane title above it.
   static func edgeInset(_ theme: Theme) -> CGFloat {
-    max(FocusSurfaceMetrics.gutter - theme.space.md, 0)
+    max(FocusSurfaceMetrics.gutter - columnPadding(theme), 0)
   }
+
+  /// Most rows of a card's subtask tree drawn on the card. Past this the tree
+  /// stops with a count, and opening the card shows the rest — one deep
+  /// project should not push the whole column off screen.
+  static let visibleSubtaskRows = 12
 
   /// Five default columns should be visible together at useful desktop
   /// widths. Fewer or custom columns expand instead of leaving an oversized
@@ -200,7 +211,7 @@ struct WorkspaceKanbanColumnView: View {
           .font(theme.bodyFont())
           .padding(theme.space.xs)
           .overlay(
-            RoundedRectangle(cornerRadius: theme.controlRadius)
+            Rectangle()
               .strokeBorder(theme.focusRing, lineWidth: theme.hairline))
           .focused($topComposerFocused)
           .onSubmit {
@@ -219,7 +230,10 @@ struct WorkspaceKanbanColumnView: View {
 
       ScrollViewReader { cardProxy in
         ScrollView(.vertical) {
-          LazyVStack(alignment: .leading, spacing: theme.space.xs) {
+          // Cards overlap by a hairline, so two neighbours share one rule the
+          // way rows of a table do, rather than drawing a double line with a
+          // gap between.
+          LazyVStack(alignment: .leading, spacing: -theme.hairline) {
             ForEach(tasks) { task in
               WorkspaceKanbanCard(
                 task: task, column: column,
@@ -240,7 +254,7 @@ struct WorkspaceKanbanColumnView: View {
               .frame(maxWidth: .infinity)
               .padding(.vertical, theme.space.lg)
               .overlay(
-                RoundedRectangle(cornerRadius: theme.controlRadius)
+                Rectangle()
                   .stroke(
                     isDropTargeted ? theme.primary : theme.border,
                     style: StrokeStyle(lineWidth: theme.hairline, dash: [5]))
@@ -270,7 +284,7 @@ struct WorkspaceKanbanColumnView: View {
         }
       }
     }
-    .padding(theme.space.md)
+    .padding(WorkspaceBoardMetrics.columnPadding(theme))
     .frame(width: width, alignment: .topLeading)
     .frame(height: height, alignment: .topLeading)
     // On the page, not in a well: a column is a region of the board, and the
@@ -310,7 +324,9 @@ struct WorkspaceKanbanCard: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   @FocusState private var isCardFocused: Bool
-  @State private var isExpanded = false
+  @FocusState private var subtaskComposerFocused: Bool
+  @State private var isTreeCollapsed = false
+  @State private var isAddingSubtask = false
   @State private var isDropTargeted = false
   @State private var isHovered = false
   @State private var newSubtaskTitle = ""
@@ -368,29 +384,28 @@ struct WorkspaceKanbanCard: View {
       } else {
         WorkspaceTaskPlanningBadges(task: task)
       }
-      if isExpanded { inlineSubtasks }
+      subtaskTree
     }
-    .padding(theme.space.sm)
+    .padding(theme.space.xs)
     .frame(maxWidth: .infinity, alignment: .leading)
     // A bordered row on the page, not a raised card: the column is already the
-    // surface, and a second tone inside it was a card on a well. Hover is the
+    // surface, and a second tone inside it was a card on a well. Square, like
+    // a table's rows, since the cards now meet edge to edge. Hover is the
     // theme's hover fill; selection draws on top of it, never instead of the
     // border's shape.
     .background {
-      let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
       ZStack {
-        shape.fill(isHovered ? theme.hover : theme.paper)
-        WorkspaceSelectionBackground(
-          isSelected: isSelected, hasKeyboard: hasKeyboard, radius: theme.controlRadius)
+        Rectangle().fill(isHovered ? theme.hover : theme.paper)
+        WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: hasKeyboard, radius: 0)
       }
     }
     .onHover { isHovered = $0 }
     .overlay {
-      let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
-      // Nothing when the selection is already drawing an edge, so the card
-      // never carries two borders of different colours at once.
-      shape.strokeBorder(
-        isDropTargeted ? theme.primary : (isSelected ? .clear : theme.border),
+      // Nothing when the selection is already drawing an edge — which it
+      // does only while it has the keyboard — so the card never carries two
+      // borders of different colours at once.
+      Rectangle().strokeBorder(
+        isDropTargeted ? theme.primary : (isSelected && hasKeyboard ? .clear : theme.border),
         lineWidth: isDropTargeted ? theme.emphasisBorder : theme.hairline)
     }
     .contentShape(Rectangle())
@@ -486,103 +501,156 @@ struct WorkspaceKanbanCard: View {
         note: model.activeFocusSession == nil ? "Start focus" : "Add to focus queue")
       }
       Button {
-        isExpanded.toggle()
+        isAddingSubtask = true
+        isTreeCollapsed = false
+        subtaskComposerFocused = true
       } label: {
-        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+        Image(systemName: "plus")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
       }
       .buttonStyle(.plain)
       .focusable()
-      .accessibilityLabel(isExpanded ? "Collapse subtasks" : "Expand subtasks")
-      .help(isExpanded ? "Collapse subtasks" : "Show subtasks and add a subtask")
-    }
-  }
-
-  private var inlineSubtasks: some View {
-    VStack(alignment: .leading, spacing: theme.space.xs) {
-      FocusRule()
-      let items = model.descendants(of: task)
-      if items.isEmpty {
-        Text("No subtasks yet")
-          .font(theme.captionFont)
-          .foregroundStyle(theme.dim)
-      } else {
-        ScrollView(.vertical) {
-          LazyVStack(alignment: .leading, spacing: theme.space.xs) {
-            ForEach(items) { item in
-              inlineSubtaskRow(item)
-            }
-          }
+      .accessibilityLabel("Add subtask under \(task.title)")
+      .help("Add a subtask")
+      if !model.descendants(of: task).isEmpty {
+        Button {
+          isTreeCollapsed.toggle()
+        } label: {
+          Image(systemName: isTreeCollapsed ? "chevron.down" : "chevron.up")
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
         }
-        .frame(height: min(CGFloat(items.count) * Self.subtaskRowPitch(theme), Self.subtaskListMaxHeight(theme)))
+        .buttonStyle(.plain)
+        .focusable()
+        .accessibilityLabel(isTreeCollapsed ? "Show subtasks" : "Hide subtasks")
+        .help(isTreeCollapsed ? "Show subtasks" : "Hide subtasks")
       }
-      HStack(spacing: theme.space.xs) {
-        Image(systemName: "plus")
-          .foregroundStyle(theme.muted)
-        TextField("Add subtask", text: $newSubtaskTitle)
-          .textFieldStyle(.plain)
-          .onSubmit { submitSubtask() }
-          .accessibilityLabel("Add subtask under \(task.title)")
-      }
-      .font(theme.captionFont)
     }
   }
 
-  /// One inline subtask row and the gap after it: a caption line, room for
-  /// its column menu, and the stack's spacing.
-  private static func subtaskRowPitch(_ theme: Theme) -> CGFloat {
-    theme.space.xl + theme.space.xs
+  /// Where the tree starts: past the heading's drag handle and its gap, so a
+  /// direct child's check sits under the card's own.
+  private static func treeInset(_ theme: Theme) -> CGFloat {
+    theme.space.md + theme.space.xs
   }
 
-  /// Six rows, then the list scrolls inside the card rather than pushing the
-  /// rest of the column off screen.
-  private static func subtaskListMaxHeight(_ theme: Theme) -> CGFloat {
-    subtaskRowPitch(theme) * 6
+  /// One level of the tree: the width of a subtask's check, so each indent
+  /// guide runs straight down beneath the check of the task it belongs to.
+  private static func indentStep(_ theme: Theme) -> CGFloat {
+    theme.space.lg
   }
 
-  /// Room for a short column name in the subtask's column menu; a longer one
-  /// truncates rather than squeezing the subtask's title.
-  private static let subtaskColumnMenuWidth: CGFloat = 50
+  /// The card's whole subtree, every level, drawn the way an editor's project
+  /// panel draws one: a compact row per task, indented a check's width per
+  /// level, with a hairline guide down each level it is nested in. Shown by
+  /// default — the cards used to hide their subtasks behind a disclosure, and
+  /// then only in a six-row scroller inside the card.
+  ///
+  /// Read from `boardDescendants`, which the board's load fills for every
+  /// card and every task inside one, so drawing it is a dictionary lookup.
+  @ViewBuilder private var subtaskTree: some View {
+    let items = isTreeCollapsed ? [] : model.descendants(of: task)
+    if !items.isEmpty || isAddingSubtask {
+      let limit = WorkspaceBoardMetrics.visibleSubtaskRows
+      VStack(alignment: .leading, spacing: 0) {
+        ForEach(Array(items.prefix(limit))) { item in
+          subtaskRow(item)
+        }
+        if items.count > limit {
+          Button {
+            if task.isList { model.openItemList(task) } else { model.enterTask(task) }
+          } label: {
+            Text("+\(items.count - limit) more")
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .padding(.leading, Self.indentStep(theme))
+          .padding(.vertical, theme.space.xxs)
+          .help("Open \(task.title) to see all \(items.count) subtasks")
+        }
+        if isAddingSubtask { subtaskComposer }
+      }
+      .padding(.leading, Self.treeInset(theme))
+    }
+  }
 
-  private func inlineSubtaskRow(_ item: TaskOutlineItem) -> some View {
-    HStack(spacing: theme.space.xs) {
+  private var subtaskComposer: some View {
+    HStack(spacing: 0) {
+      Image(systemName: "plus")
+        .foregroundStyle(theme.muted)
+        .frame(width: Self.indentStep(theme))
+      TextField("Add subtask", text: $newSubtaskTitle)
+        .textFieldStyle(.plain)
+        .focused($subtaskComposerFocused)
+        .onSubmit { submitSubtask() }
+        .onExitCommand {
+          newSubtaskTitle = ""
+          isAddingSubtask = false
+        }
+        .accessibilityLabel("Add subtask under \(task.title)")
+    }
+    .font(theme.captionFont)
+    .padding(.vertical, theme.space.xxs)
+  }
+
+  private func subtaskRow(_ item: TaskOutlineItem) -> some View {
+    let isOpen = item.task.status == .open
+    let step = Self.indentStep(theme)
+    return HStack(spacing: 0) {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
         Image(systemName: model.itemSymbol(for: item.task))
-          .foregroundStyle(theme.muted)
+          .foregroundStyle(isOpen ? theme.muted : theme.success)
+          .frame(width: step)
+          .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
-      .focusable()
+      .accessibilityLabel(
+        item.task.isList ? "Open \(item.task.title)" : (isOpen ? "Complete \(item.task.title)" : "Reopen \(item.task.title)"))
       Button(item.task.title) {
         model.selectTask(item.task)
         model.reportKeyboardFocus(.tasks)
       }
       .buttonStyle(.plain)
-      .focusable()
+      .foregroundStyle(isOpen ? theme.ink : theme.muted)
+      .strikethrough(!isOpen)
       .lineLimit(1)
       .truncationMode(.tail)
       .frame(maxWidth: .infinity, alignment: .leading)
       .help(item.task.title)
-      Menu {
+    }
+    .font(theme.captionFont)
+    .padding(.vertical, theme.space.xxs)
+    .padding(.leading, CGFloat(item.depth) * step)
+    // Behind the padded row, so each guide runs its full height and meets
+    // the next row's without a gap.
+    .background(alignment: .leading) {
+      HStack(spacing: 0) {
+        ForEach(0..<item.depth, id: \.self) { _ in
+          Rectangle()
+            .fill(theme.border)
+            .frame(width: theme.hairline)
+            .frame(width: step)
+        }
+      }
+    }
+    .contentShape(Rectangle())
+    .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
+    .contextMenu {
+      WorkspaceItemActions(task: item.task)
+      // The row used to carry this as an always-visible menu of its own; in
+      // the context menu it costs the tree no width.
+      Menu("Move to Column") {
         ForEach(model.boardColumns) { destination in
           Button(destination.title) { model.moveTask(item.task, toKanbanColumn: destination) }
         }
-      } label: {
-        Text(model.column(for: item.task)?.title ?? "Backlog")
-          .lineLimit(1)
-          .font(theme.microLabelFont)
-          .frame(maxWidth: Self.subtaskColumnMenuWidth)
       }
-      .menuStyle(.borderlessButton)
-      .focusable()
-      .commandHelp(.taskMove, note: "Move \(item.task.title) to a column")
     }
-    .font(theme.captionFont)
-    .padding(.leading, CGFloat(item.depth) * theme.space.md)
-    .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
-    .contextMenu { WorkspaceItemActions(task: item.task) }
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: nil) { providers in
       guard item.task.isList else { return false }
       return WorkspaceTaskDrag.readItemID(from: providers) { payload in
