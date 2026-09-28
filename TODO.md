@@ -60,9 +60,12 @@ These cannot be verified from a build; they need someone to click.
 - **Cancelled tasks appear in the rail**, drawn apart from completed ones. Say if
   they should not be there at all: they leave the open list the same way, which
   is the argument for listing them, but they are not progress.
-- **The flattened sidebar.** It is `theme.altRow` rather than `.bar` now, so it
-  no longer picks up what is behind the window. Check the selection wash reads,
-  and that the sidebar still separates from the pane beside it.
+- **One flat surface.** Sidebar, main pane and status bar are all
+  `theme.paper` now, told apart only by the hairline in each resize handle and
+  the rule over the status bar — the Zed arrangement. Check the sidebar still
+  reads as its own pane without the `altRow` tint, and that the selection wash
+  reads on paper. The right dock and done rail still paint `altRow`
+  (`WorkspaceRightDock.swift`, `WorkspaceDoneRail.swift`) and should follow.
 - **Timeline then a list.** Click Timeline, then click any list. The list should
   open. This was silently broken.
 
@@ -107,9 +110,12 @@ These cannot be verified from a build; they need someone to click.
   `o` on the focus ladder drops your own order, and both now print their key in
   their tooltip. `⌘⌃C` is deliberately not `⇧⌘⌫`, which still deletes the list.
 - **The one header band, in all five modes.** `⌘1`→`⌘2`→`⌘3`→`⌘4`→`⌘8`→`⌘9`
-  in sequence: nothing should move but the content. The title size is 17pt for
-  all of them, which is smaller than the 20 and 22 it replaces — if the scope
-  name now reads too quiet, it is one figure (`WorkspacePaneHeader.titleSize`).
+  in sequence: nothing should move but the content. The band is now one line
+  (subtitle on the title's baseline, not under it) with a fixed minimum
+  height, so a mode with a subtitle no longer sits taller than one without.
+  The title is the theme's `title` role — 15pt semibold on Chalk, down from a
+  17pt literal — so if the scope name reads too quiet, that is one figure in
+  the theme's type scale, not in the view.
 - **The inspector's new order.** Title, then Start focus, then Notes, Plan,
   When, Filing, Links, Structure, Save. Worth checking the order matches how
   you actually work through a task, because it was guessed from what the
@@ -142,12 +148,14 @@ What renders through it now: the shared primitives (`MicroLabel`, `KeyCap`,
 `KeyHint`, `FocusRule`, `WorkspacePaneHeader`, `SheetTitle`,
 `InspectorSection`), the toolbar, the board card and column, the one selection
 treatment everywhere it is drawn, the timeline including its per-task hues, the
-focus screens, the matrix, the inspector, the sidebar and the task composer.
+focus screens, the matrix, the inspector, the sidebar and its drop targets,
+the task composer and quick capture, every overlay (palette, search, move,
+quick edit, list finder), Settings and the plugin settings pages.
 
-What does not: the move sheet, the quick-edit sheet, the sidebar drop targets,
-the focus quality prompt, most of the day tray (`DayView`), and all of Settings
-bar the theme page. Around 20 `Color.accentColor` uses remain, concentrated in
-`DayView` and `WorkspaceTaskQuickEditSheet`.
+What does not: the focus quality prompt and most of the day tray (`DayView`),
+where the remaining `Color.accentColor` uses are concentrated. The Settings
+theme page still drives the older accent/token mechanism below, so it keeps
+its `themeColor(_:)` helper until that mechanism goes.
 
 ### Two theme mechanisms are still live
 
