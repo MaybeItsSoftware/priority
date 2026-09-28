@@ -1,3 +1,4 @@
+import PriorityCore
 import SwiftUI
 
 @MainActor
@@ -16,6 +17,7 @@ extension NativeCheckvistSyncPlugin: PluginSettingsPageProviding {
 private let checkvistAPIKeyURL = URL(string: "https://checkvist.com/auth/profile")!
 
 private struct CheckvistSyncPluginSettingsView: View {
+  @Environment(\.theme) private var theme
   var manager: AppCoordinator
   @State private var isLoadingLists = false
   @State private var didAutoloadLists = false
@@ -42,7 +44,7 @@ private struct CheckvistSyncPluginSettingsView: View {
   var body: some View {
     @Bindable var manager = manager
     Group {
-      Section(header: Text("Checkvist Sync")) {
+      Section(header: MicroLabel("Checkvist Sync")) {
         Toggle(
           "Enable Checkvist sync",
           isOn: Binding(
@@ -54,20 +56,20 @@ private struct CheckvistSyncPluginSettingsView: View {
         Text(
           "When disabled, Priority runs offline and your Checkvist credentials and list selection are preserved for when you re-enable it."
         )
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
       }
 
       if manager.repository.checkvistIntegrationEnabled {
-      Section(header: Text("Connection")) {
-        VStack(alignment: .leading, spacing: 14) {
+      Section(header: MicroLabel("Connection")) {
+        VStack(alignment: .leading, spacing: theme.space.md) {
           connectionStatusBanner
 
           stepHeader(number: 1, title: "Enter your Checkvist credentials")
-          VStack(alignment: .leading, spacing: 8) {
+          VStack(alignment: .leading, spacing: theme.space.sm) {
             Text("Email")
-              .font(.caption)
-              .foregroundColor(.secondary)
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
             TextField(
               "",
               text: Binding(
@@ -80,13 +82,13 @@ private struct CheckvistSyncPluginSettingsView: View {
               .labelsHidden()
               .autocorrectionDisabled()
 
-            HStack(spacing: 6) {
+            HStack(spacing: theme.space.xs) {
               Text("OpenAPI key")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(theme.captionFont)
+                .foregroundStyle(theme.muted)
               Spacer(minLength: 0)
               Link("Where do I find this?", destination: checkvistAPIKeyURL)
-                .font(.caption)
+                .font(theme.captionFont)
             }
             SecureField(
               "",
@@ -108,7 +110,7 @@ private struct CheckvistSyncPluginSettingsView: View {
           }
 
           stepHeader(number: 2, title: "Connect")
-          HStack(spacing: 8) {
+          HStack(spacing: theme.space.sm) {
             Button(connectButtonLabel) {
               Task { await loadLists(assignFirstIfMissing: false) }
             }
@@ -123,7 +125,7 @@ private struct CheckvistSyncPluginSettingsView: View {
 
           if case .connected(let listCount) = connectionState {
             stepHeader(number: 3, title: "Choose a workspace")
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: theme.space.xs) {
               Picker("", selection: activeWorkspaceBinding) {
                 Text("Offline workspace").tag("")
                 if !manager.repository.listId.isEmpty && !isCurrentListInAvailableLists {
@@ -137,8 +139,8 @@ private struct CheckvistSyncPluginSettingsView: View {
               .pickerStyle(.menu)
 
               Text(workspaceCaption(listCount: listCount))
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(theme.captionFont)
+                .foregroundStyle(theme.muted)
             }
           }
 
@@ -148,7 +150,7 @@ private struct CheckvistSyncPluginSettingsView: View {
             }
           }
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
       }
 
       if case .connected = connectionState {
@@ -177,68 +179,60 @@ private struct CheckvistSyncPluginSettingsView: View {
   @ViewBuilder
   private var connectionStatusBanner: some View {
     let style = statusStyle(for: connectionState)
-    HStack(alignment: .top, spacing: 10) {
+    HStack(alignment: .top, spacing: theme.space.sm) {
       Image(systemName: style.iconName)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundColor(style.tint)
-        .frame(width: 18)
-      VStack(alignment: .leading, spacing: 2) {
+        .font(theme.titleFont)
+        .foregroundStyle(style.tint)
+        .frame(width: WorkspaceSidebarMetrics.iconWidth)
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text(style.title)
-          .font(.system(size: 12, weight: .semibold))
+          .font(theme.bodyFont(weight: .semibold))
         Text(style.message)
-          .font(.caption)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
           .fixedSize(horizontal: false, vertical: true)
       }
       Spacer(minLength: 0)
     }
-    .padding(10)
-    .background(style.tint.opacity(0.08))
-    .overlay(
-      RoundedRectangle(cornerRadius: 8)
-        .stroke(style.tint.opacity(0.3), lineWidth: 1)
-    )
-    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .settingsStatusSurface(theme, tint: style.tint)
   }
 
   private func errorBanner(message: String, dismiss: @escaping () -> Void) -> some View {
-    HStack(alignment: .top, spacing: 10) {
+    HStack(alignment: .top, spacing: theme.space.sm) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .foregroundColor(.red)
-        .frame(width: 18)
+        .foregroundStyle(theme.danger)
+        .frame(width: WorkspaceSidebarMetrics.iconWidth)
       Text(message)
-        .font(.caption)
-        .foregroundColor(.primary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.ink)
         .fixedSize(horizontal: false, vertical: true)
       Spacer(minLength: 0)
       Button {
         dismiss()
       } label: {
         Image(systemName: "xmark")
-          .font(.system(size: 9, weight: .bold))
-          .frame(width: 16, height: 16)
+          .font(theme.microLabelFont)
+          .frame(width: theme.space.lg, height: theme.space.lg)
       }
       .buttonStyle(.plain)
-      .foregroundColor(.secondary)
+      .foregroundStyle(theme.muted)
     }
-    .padding(10)
-    .background(Color.red.opacity(0.08))
-    .overlay(
-      RoundedRectangle(cornerRadius: 8)
-        .stroke(Color.red.opacity(0.3), lineWidth: 1)
-    )
-    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .settingsStatusSurface(theme, tint: theme.danger)
   }
 
   private func stepHeader(number: Int, title: String) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: theme.space.sm) {
       Text("\(number)")
-        .font(.system(size: 10, weight: .bold, design: .rounded))
-        .foregroundColor(.white)
-        .frame(width: 18, height: 18)
-        .background(Circle().fill(Color.accentColor))
+        // A step number is a status-less label, so it takes the tinted
+        // treatment in the primary hue rather than a solid accent disc.
+        .font(theme.numeralFont(theme.type.microLabel.size, weight: .bold))
+        .foregroundStyle(theme.primary)
+        .frame(width: WorkspaceSidebarMetrics.iconWidth, height: WorkspaceSidebarMetrics.iconWidth)
+        .themedSurface(
+          theme, fill: theme.color(.primary, opacity: Theme.statusFillOpacity),
+          radius: theme.controlRadius, stroke: theme.color(.primary, opacity: Theme.statusBorderOpacity))
       Text(title)
-        .font(.system(size: 12, weight: .semibold))
+        .font(theme.bodyFont(weight: .semibold))
     }
   }
 
@@ -254,21 +248,21 @@ private struct CheckvistSyncPluginSettingsView: View {
     case .disconnected:
       return StatusStyle(
         iconName: "circle.dashed",
-        tint: .secondary,
+        tint: theme.muted,
         title: "Not connected",
         message: "Enter your Checkvist email and OpenAPI key below to sync. You can keep working offline without connecting."
       )
     case .connecting:
       return StatusStyle(
         iconName: "arrow.triangle.2.circlepath",
-        tint: .accentColor,
+        tint: theme.primary,
         title: "Connecting…",
         message: "Signing in and loading your lists."
       )
     case .awaitingConnect:
       return StatusStyle(
         iconName: "bolt.horizontal.circle",
-        tint: .orange,
+        tint: theme.warning,
         title: "Credentials entered",
         message: "Click Connect to sign in and load your lists."
       )
@@ -277,7 +271,7 @@ private struct CheckvistSyncPluginSettingsView: View {
       let listWord = listCount == 1 ? "list" : "lists"
       return StatusStyle(
         iconName: "checkmark.circle.fill",
-        tint: .green,
+        tint: theme.success,
         title: "Connected as \(email)",
         message: "\(listCount) \(listWord) available. Pick one below."
       )
@@ -308,16 +302,16 @@ private struct CheckvistSyncPluginSettingsView: View {
   }
 
   private var offlineSyncAndConflictResolutionSection: some View {
-    Section(header: Text("Offline Sync & Conflict Resolution")) {
-      VStack(alignment: .leading, spacing: 10) {
+    Section(header: MicroLabel("Offline Sync & Conflict Resolution")) {
+      VStack(alignment: .leading, spacing: theme.space.sm) {
         Text("Your offline workspace currently has \(manager.repository.offlineOpenTaskCount) tasks.")
-          .font(.caption)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
 
         Text("Select a strategy to synchronize your local offline tasks with the remote Checkvist list:")
-          .font(.caption)
-          .foregroundColor(.secondary)
-          .padding(.bottom, 4)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+          .padding(.bottom, theme.space.xs)
 
         if !manager.repository.availableLists.isEmpty {
           Picker("Checkvist List", selection: $uploadDestinationListId) {
@@ -328,9 +322,9 @@ private struct CheckvistSyncPluginSettingsView: View {
           .pickerStyle(.menu)
         }
 
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: theme.space.md) {
           // Option 1: Merge
-          VStack(alignment: .leading, spacing: 4) {
+          VStack(alignment: .leading, spacing: theme.space.xs) {
             Button("Merge Local Tasks with Remote") {
               Task {
                 _ = await manager.syncService.uploadOfflineTasksToCheckvist(
@@ -342,12 +336,12 @@ private struct CheckvistSyncPluginSettingsView: View {
             .disabled(isBusy || manager.repository.offlineOpenTaskCount == 0 || uploadDestinationListId.isEmpty)
 
             Text("Uploads all local offline tasks to the selected remote list without deleting anything.")
-              .font(.caption2)
-              .foregroundColor(.secondary)
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
           }
 
           // Option 2: Overwrite Local (Use Remote)
-          VStack(alignment: .leading, spacing: 4) {
+          VStack(alignment: .leading, spacing: theme.space.xs) {
             Button("Keep Remote (Overwrite Local)") {
               showingOverwriteLocalAlert = true
             }
@@ -355,12 +349,12 @@ private struct CheckvistSyncPluginSettingsView: View {
             .disabled(isBusy || manager.repository.listId.isEmpty)
 
             Text("Replaces all local offline tasks with the tasks from the selected remote Checkvist list.")
-              .font(.caption2)
-              .foregroundColor(.secondary)
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
           }
 
           // Option 3: Overwrite Remote (Use Local)
-          VStack(alignment: .leading, spacing: 4) {
+          VStack(alignment: .leading, spacing: theme.space.xs) {
             Button("Keep Local (Overwrite Remote)", role: .destructive) {
               showingOverwriteRemoteAlert = true
             }
@@ -368,12 +362,12 @@ private struct CheckvistSyncPluginSettingsView: View {
             .disabled(isBusy || uploadDestinationListId.isEmpty)
 
             Text("Deletes all tasks currently on the remote Checkvist list and uploads your local offline tasks.")
-              .font(.caption2)
-              .foregroundColor(.secondary)
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
           }
         }
       }
-      .padding(.top, 4)
+      .padding(.top, theme.space.xs)
       .alert("Overwrite Local Tasks?", isPresented: $showingOverwriteLocalAlert) {
         Button("Cancel", role: .cancel) { }
         Button("Overwrite", role: .destructive) {

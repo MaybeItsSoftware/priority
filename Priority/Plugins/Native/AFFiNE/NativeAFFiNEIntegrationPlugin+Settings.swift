@@ -1,3 +1,4 @@
+import PriorityCore
 import SwiftUI
 
 @MainActor
@@ -14,6 +15,7 @@ extension NativeAFFiNEIntegrationPlugin: PluginSettingsPageProviding {
 }
 
 private struct AFFiNEIntegrationPluginSettingsView: View {
+  @Environment(\.theme) private var theme
   var manager: AppCoordinator
   let plugin: NativeAFFiNEIntegrationPlugin
 
@@ -27,28 +29,28 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: Text("AFFiNE Plugin")) {
+    Section(header: MicroLabel("AFFiNE Plugin")) {
       Toggle("Enable AFFiNE integration", isOn: $manager.integrations.affineIntegrationEnabled)
         .toggleStyle(.switch)
 
       if manager.integrations.affineIntegrationEnabled {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: theme.space.md) {
           helperSection
           workspaceSection
           filingSection
 
           if let statusMessage {
             Text(statusMessage)
-              .font(.caption)
-              .foregroundColor(statusIsError ? .red : .secondary)
+              .font(theme.captionFont)
+              .foregroundStyle(statusIsError ? theme.danger : theme.muted)
               .textSelection(.enabled)
           }
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
       } else {
         Text("AFFiNE integration is disabled.")
-          .foregroundColor(.secondary)
-          .font(.caption)
+          .foregroundStyle(theme.muted)
+          .font(theme.captionFont)
       }
     }
     .onAppear {
@@ -61,19 +63,19 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
   // MARK: - Sections
 
   private var helperSection: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       Text("Server")
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
 
       if let resolved = plugin.resolvedServerCommandPath {
         Text(resolved)
-          .font(.caption)
+          .font(theme.captionFont)
           .textSelection(.enabled)
       } else {
         Text("`affine-mcp` not found — install it with `npm install -g affine-mcp-server`.")
-          .font(.caption)
-          .foregroundColor(.red)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.danger)
       }
 
       TextField("Path to affine-mcp (optional)", text: $serverCommandPath)
@@ -84,16 +86,16 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
       // credentials, and saying so is the only way the user knows where to put
       // them.
       Text("Sign in once with `affine-mcp login`. Priority reuses that session.")
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
     }
   }
 
   private var workspaceSection: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       Text("Workspace")
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
 
       if workspaces.isEmpty {
         Text(
@@ -101,7 +103,7 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
             ? "Using the workspace affine-mcp is configured for."
             : plugin.workspaceId
         )
-        .font(.caption)
+        .font(theme.captionFont)
         .textSelection(.enabled)
       } else {
         Picker("Workspace", selection: $selectedWorkspaceId) {
@@ -134,18 +136,18 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
   }
 
   private var filingSection: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       Text("Parent Document")
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
 
       TextField("Document id (optional)", text: $parentDocId)
         .textFieldStyle(.roundedBorder)
         .onSubmit { plugin.parentDocId = parentDocId }
 
       Text("A new checklist document is linked under this one, so it shows in the sidebar.")
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
     }
   }
 

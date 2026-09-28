@@ -148,6 +148,9 @@ struct SettingsView: View {
 
   @Environment(AppCoordinator.self) var checkvistManager
   @Environment(SettingsNavState.self) var navState
+  // Internal rather than private: the panes are extensions in files of their
+  // own, and every one of them draws from it.
+  @Environment(\.theme) var theme
   @State var selectedPluginCardID: String?
   @State var themeJSONDraft: String = ""
   @State var themeJSONStatusMessage: String = ""
@@ -178,7 +181,13 @@ struct SettingsView: View {
     paneContent {
       selectedPaneContent
     }
-    .tint(preferences.themeAccentColor)
+    // The theme's primary and body face, like every other window. The settings
+    // window was the one surface still tinted by the older accent preference
+    // and set in the system face.
+    .tint(theme.primary)
+    .font(theme.bodyFont())
+    .foregroundStyle(theme.ink)
+    .background(theme.paper)
     .task {
       syncSelectedPluginCardIfNeeded()
       if themeJSONDraft.isEmpty {
@@ -275,20 +284,25 @@ struct SettingsView: View {
     HStack(spacing: 0) {
       // Sidebar
       List(selection: $selectedPluginCardID) {
-        Section("Built-in") {
+        Section {
           ForEach(pluginCards) { card in
             pluginListRow(for: card).tag(card.id as String?)
           }
+        } header: {
+          MicroLabel("Built-in")
         }
         if !userPluginCards.isEmpty {
-          Section("User Plugins") {
+          Section {
             ForEach(userPluginCards) { card in
               pluginListRow(for: card).tag(card.id as String?)
             }
+          } header: {
+            MicroLabel("User plugins")
           }
         }
       }
       .listStyle(.sidebar)
+      .scrollContentBackground(.hidden)
       // A safe-area inset rather than a third element in a VStack: the bar is
       // then laid out *inside* the list's own bounds and the list insets its
       // scroll content to clear it. Stacked, the sidebar's height became the
@@ -297,8 +311,8 @@ struct SettingsView: View {
       // centres the pane, the overflow clipped the bar off the bottom.
       .safeAreaInset(edge: .bottom, spacing: 0) {
         VStack(spacing: 0) {
-          Divider()
-          HStack(spacing: 6) {
+          FocusRule()
+          HStack(spacing: theme.space.xs) {
             Button {
               checkvistManager.userPluginManager.installPluginPackageInteractively()
             } label: {
@@ -314,15 +328,15 @@ struct SettingsView: View {
           }
           .buttonStyle(.borderless)
           .labelStyle(.iconOnly)
-          .padding(.horizontal, 10)
-          .padding(.vertical, 6)
+          .padding(.horizontal, theme.space.sm)
+          .padding(.vertical, theme.space.xs)
           .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(.bar)
+        .background(theme.paper)
       }
       .frame(minWidth: 180, idealWidth: 200, maxWidth: 240, maxHeight: .infinity)
 
-      Divider()
+      Rectangle().fill(theme.border).frame(width: theme.hairline)
 
       // Detail
       Group {
@@ -332,6 +346,7 @@ struct SettingsView: View {
             case .builtIn:
               Form { pluginSettingsView(for: selectedPluginCard) }
                 .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
             case .user(let plugin):
               userPluginDetailView(for: plugin)
             }
@@ -349,22 +364,22 @@ struct SettingsView: View {
   }
 
   private func pluginListRow(for card: PluginCardDescriptor) -> some View {
-    HStack(alignment: .top, spacing: 10) {
+    HStack(alignment: .top, spacing: theme.space.sm) {
       Image(systemName: card.settingsIconSystemName)
-        .frame(width: 18, alignment: .center)
-        .foregroundStyle(.secondary)
-      VStack(alignment: .leading, spacing: 3) {
-        HStack(spacing: 6) {
+        .frame(width: WorkspaceSidebarMetrics.iconWidth, alignment: .center)
+        .foregroundStyle(theme.muted)
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
+        HStack(spacing: theme.space.xs) {
           Text(card.title)
             .lineLimit(1)
-          Spacer(minLength: 6)
+          Spacer(minLength: theme.space.xs)
           Text(card.subtitle)
-            .font(.caption2)
-            .foregroundStyle(.secondary)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
         }
         Text(card.description)
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
           .lineLimit(2)
       }
     }
@@ -374,10 +389,10 @@ struct SettingsView: View {
   {
     let manager = checkvistManager.userPluginManager
     return Form {
-      Section(header: Text(plugin.manifest.name)) {
+      Section(header: MicroLabel(plugin.manifest.name)) {
         if let summary = plugin.manifest.summary, !summary.isEmpty {
           Text(summary)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(theme.muted)
         }
         LabeledContent("Version", value: plugin.manifest.version ?? "—")
         LabeledContent("ID", value: plugin.manifest.id)
@@ -400,6 +415,7 @@ struct SettingsView: View {
       }
     }
     .formStyle(.grouped)
+    .scrollContentBackground(.hidden)
     .id(plugin.id)
   }
 
@@ -407,7 +423,7 @@ struct SettingsView: View {
   private func paneContent<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
     if navState.selectedPane == .plugins {
       content()
-        .padding(.top, 8)
+        .padding(.top, theme.space.sm)
         // Top-aligned, not the default centre: if the pane ever does exceed the
         // window, the overflow should run off one edge where a scroll view can
         // take it, rather than being trimmed off both.
@@ -417,6 +433,8 @@ struct SettingsView: View {
         content()
       }
       .formStyle(.grouped)
+      // The page, not the grouped form's own grey: one flat surface.
+      .scrollContentBackground(.hidden)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
   }
@@ -425,15 +443,15 @@ struct SettingsView: View {
   private func pluginSettingsView(for card: PluginCardDescriptor) -> some View {
     switch card.source {
     case .builtIn(let page):
-      Section(header: Text(card.title)) {
-        VStack(alignment: .leading, spacing: 6) {
+      Section(header: MicroLabel(card.title)) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
           Text(page.pluginDescription)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(theme.muted)
           Text("Status: \(card.subtitle)")
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
         }
-        .padding(.top, 2)
+        .padding(.top, theme.space.xxs)
       }
       page.plugin.makeSettingsView(manager: checkvistManager)
     case .user:
@@ -481,5 +499,20 @@ struct NamedTimePickerRow: View {
       .pickerStyle(.menu)
       .frame(width: 100)
     }
+  }
+}
+
+extension View {
+  /// A status notice in the house convention: a tint of the status hue behind
+  /// it, a border of the same hue, on the control radius. Settings drew these
+  /// as ad-hoc 8% fills with a 30% stroke at radius 8 or 10, one per page.
+  func settingsStatusSurface(_ theme: Theme, tint: Color) -> some View {
+    padding(theme.space.sm)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .themedSurface(
+        theme,
+        fill: tint.opacity(Theme.statusFillOpacity),
+        radius: theme.controlRadius,
+        stroke: tint.opacity(Theme.statusBorderOpacity))
   }
 }

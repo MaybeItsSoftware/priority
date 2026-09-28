@@ -15,6 +15,7 @@ extension NativeDailyLogPlugin: PluginSettingsPageProviding {
 }
 
 private struct DailyLogPluginSettingsView: View {
+  @Environment(\.theme) private var theme
   var manager: AppCoordinator
 
   @State private var fileNameFormat: String = ""
@@ -36,13 +37,13 @@ private struct DailyLogPluginSettingsView: View {
   var body: some View {
     let dailyLog = manager.dailyLog
 
-    Section(header: Text("Daily Log Plugin")) {
+    Section(header: MicroLabel("Daily Log Plugin")) {
       Text(
         "Completions, focus sessions and the day's plan are always recorded locally — "
           + "that's what the Daily view reads. This section controls the Obsidian half."
       )
-      .font(.caption)
-      .foregroundColor(.secondary)
+      .font(theme.captionFont)
+      .foregroundStyle(theme.muted)
 
       dailiesEditor
 
@@ -55,21 +56,21 @@ private struct DailyLogPluginSettingsView: View {
         "Work finished before this hour counts towards the previous day. "
           + "Midnight is rarely the right answer."
       )
-      .font(.caption)
-      .foregroundColor(.secondary)
+      .font(theme.captionFont)
+      .foregroundStyle(theme.muted)
 
       // Configuration comes before the switch that acts on it. Hiding the folder
       // picker behind the enable toggle would mean turning writing on before
       // there is anywhere to write to.
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: theme.space.sm) {
         Text("Dailies Folder")
         if dailyLog.dailiesFolderPath.isEmpty {
           Text("No folder selected")
-            .foregroundColor(.secondary)
-            .font(.caption)
+            .foregroundStyle(theme.muted)
+            .font(theme.captionFont)
         } else {
           Text(dailyLog.dailiesFolderPath)
-            .font(.caption)
+            .font(theme.captionFont)
             .textSelection(.enabled)
         }
 
@@ -81,9 +82,9 @@ private struct DailyLogPluginSettingsView: View {
           Spacer()
         }
       }
-      .padding(.top, 4)
+      .padding(.top, theme.space.xs)
 
-      VStack(alignment: .leading, spacing: 8) {
+      VStack(alignment: .leading, spacing: theme.space.sm) {
         Text("Note Naming")
         // Saved as you type rather than on submit: clicking away from a
         // settings field without pressing Return is normal, and silently
@@ -93,17 +94,17 @@ private struct DailyLogPluginSettingsView: View {
         TextField("Subfolder format (optional)", text: $folderFormat)
           .onChange(of: folderFormat) { _, _ in saveFormat() }
         Text("Today's note would be: \(previewPath)")
-          .font(.caption)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
           .textSelection(.enabled)
         Text(
           "Date patterns, e.g. yyyy-MM-dd for the file and yyyy/MM to nest by year and month. "
             + "Leave the subfolder empty for a flat folder."
         )
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
       }
-      .padding(.top, 4)
+      .padding(.top, theme.space.xs)
 
       Toggle("Create missing notes", isOn: createsMissingNotesBinding)
         .toggleStyle(.switch)
@@ -114,8 +115,8 @@ private struct DailyLogPluginSettingsView: View {
           : "Priority only writes into notes that already exist, so it can never beat your "
             + "daily-note template to the file."
       )
-      .font(.caption)
-      .foregroundColor(.secondary)
+      .font(theme.captionFont)
+      .foregroundStyle(theme.muted)
 
       // The master switch, last: it acts on everything above it. Unreachable
       // until a folder exists, so it can never be on with nowhere to write.
@@ -125,12 +126,12 @@ private struct DailyLogPluginSettingsView: View {
 
       if dailyLog.dailiesFolderPath.isEmpty {
         Text("Choose a dailies folder above to turn this on.")
-          .font(.caption)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
       } else if !dailyLog.dailyLogEnabled {
         Text("Days are still recorded locally; nothing is written to your vault.")
-          .font(.caption)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
       }
 
       if dailyLog.dailyLogEnabled {
@@ -163,18 +164,18 @@ private struct DailyLogPluginSettingsView: View {
     // view expression and fails to compile. swiftlint:disable:next redundant_discardable_let
     let _ = dailyLog.revision
 
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       Text("Dailies")
       Text(
         "Recurring things you intend to do. They reset every rollover — miss one "
           + "and it is simply a gap in the history, never an overdue task."
       )
-      .font(.caption)
-      .foregroundColor(.secondary)
+      .font(theme.captionFont)
+      .foregroundStyle(theme.muted)
 
       ForEach(dailyLog.allDailies) { daily in
-        VStack(alignment: .leading, spacing: 6) {
-          HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
+          HStack(spacing: theme.space.sm) {
             TextField(
               "Title",
               text: Binding(
@@ -220,18 +221,18 @@ private struct DailyLogPluginSettingsView: View {
             intervalStepper(for: daily, interval: interval)
           }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, theme.space.xxs)
       }
 
       if dailyLog.allDailies.isEmpty {
         Text("None yet — add them from the Daily view (u, then Return).")
-          .font(.caption)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
       }
 
       archivedDailiesEditor
     }
-    .padding(.top, 4)
+    .padding(.top, theme.space.xs)
   }
 
   /// Where a deleted daily goes, and how it comes back.
@@ -245,18 +246,18 @@ private struct DailyLogPluginSettingsView: View {
     let archived = manager.dailyLog.archivedDailies
     if !archived.isEmpty {
       Divider()
-        .padding(.vertical, 4)
+        .padding(.vertical, theme.space.xs)
       Text("Deleted")
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
       ForEach(archived) { daily in
-        HStack(spacing: 8) {
+        HStack(spacing: theme.space.sm) {
           Text(daily.title)
-            .foregroundColor(.secondary)
+            .foregroundStyle(theme.muted)
           Spacer(minLength: 0)
           Button("Restore") { manager.dailyLog.restoreDaily(daily) }
             .buttonStyle(.link)
-            .font(.caption)
+            .font(theme.captionFont)
         }
       }
     }
@@ -301,7 +302,7 @@ private struct DailyLogPluginSettingsView: View {
     let accessibleNames = ["", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
                            "Saturday"]
 
-    HStack(spacing: 4) {
+    HStack(spacing: theme.space.xs) {
       ForEach(1...7, id: \.self) { weekday in
         let isOn = days.contains(weekday)
         Button {
@@ -317,13 +318,14 @@ private struct DailyLogPluginSettingsView: View {
           manager.dailyLog.setDailySchedule(daily, to: .weekdays(updated))
         } label: {
           Text(names[weekday])
-            .font(.system(size: 11, weight: .medium))
-            .frame(width: 20, height: 20)
-            .background(
-              RoundedRectangle(cornerRadius: 4)
-                .fill(isOn ? Color.accentColor.opacity(0.85) : Color.secondary.opacity(0.15))
-            )
-            .foregroundColor(isOn ? .white : .secondary)
+            .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
+            .frame(width: theme.space.xl, height: theme.space.xl)
+            // On is the tinted selection, off is a bare hairline: the chip's
+            // state is a border and fill change, never a solid accent block.
+            .themedSurface(
+              theme, fill: isOn ? theme.selectionFill : theme.paper, radius: theme.controlRadius,
+              stroke: isOn ? theme.color(.primary, opacity: Theme.statusBorderOpacity) : theme.border)
+            .foregroundStyle(isOn ? theme.primary : theme.muted)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibleNames[weekday])
@@ -334,19 +336,19 @@ private struct DailyLogPluginSettingsView: View {
         manager.dailyLog.setDailySchedule(daily, to: .weekdays(Daily.allWeekdays))
       }
       .buttonStyle(.link)
-      .font(.caption)
+      .font(theme.captionFont)
       Button("Weekdays") {
         manager.dailyLog.setDailySchedule(daily, to: .weekdays(Daily.mondayToFriday))
       }
       .buttonStyle(.link)
-      .font(.caption)
+      .font(theme.captionFont)
       Spacer(minLength: 0)
     }
   }
 
   @ViewBuilder
   private func intervalStepper(for daily: Daily, interval: Int) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: theme.space.sm) {
       Stepper(
         value: Binding(
           get: { interval },
@@ -358,12 +360,12 @@ private struct DailyLogPluginSettingsView: View {
         in: Daily.intervalRange
       ) {
         Text(daily.scheduleLabel)
-          .font(.caption)
+          .font(theme.captionFont)
       }
       .fixedSize()
       Text("Counted from the day the cycle was set, so it keeps its phase.")
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
       Spacer(minLength: 0)
     }
   }

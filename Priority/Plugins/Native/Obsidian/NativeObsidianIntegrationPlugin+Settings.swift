@@ -1,3 +1,4 @@
+import PriorityCore
 import SwiftUI
 
 @MainActor
@@ -14,24 +15,25 @@ extension NativeObsidianIntegrationPlugin: PluginSettingsPageProviding {
 }
 
 private struct ObsidianIntegrationPluginSettingsView: View {
+  @Environment(\.theme) private var theme
   var manager: AppCoordinator
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: Text("Obsidian Plugin")) {
+    Section(header: MicroLabel("Obsidian Plugin")) {
       Toggle("Enable Obsidian integration", isOn: $manager.integrations.obsidianIntegrationEnabled)
         .toggleStyle(.switch)
 
       if manager.integrations.obsidianIntegrationEnabled {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
           Text("Obsidian Inbox")
           if manager.integrations.obsidianInboxPath.isEmpty {
             Text("No folder selected")
-              .foregroundColor(.secondary)
-              .font(.caption)
+              .foregroundStyle(theme.muted)
+              .font(theme.captionFont)
           } else {
             Text(manager.integrations.obsidianInboxPath)
-              .font(.caption)
+              .font(theme.captionFont)
               .textSelection(.enabled)
           }
 
@@ -47,16 +49,16 @@ private struct ObsidianIntegrationPluginSettingsView: View {
             Spacer()
             if manager.integrations.hasPendingObsidianSync {
               Text(manager.integrations.pendingSyncMenuBarPrefix)
-                .font(.caption)
-                .foregroundColor(.orange)
+                .font(theme.captionFont)
+                .foregroundStyle(theme.warning)
             }
           }
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
       } else {
         Text("Obsidian integration is disabled.")
-          .foregroundColor(.secondary)
-          .font(.caption)
+          .foregroundStyle(theme.muted)
+          .font(theme.captionFont)
       }
     }
   }

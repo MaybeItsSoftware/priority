@@ -13,10 +13,10 @@ import SwiftUI
 extension SettingsView {
   var keybindingsPane: some View {
     Group {
-      Section(header: Text("Configurable Hotkeys")) {
+      Section(header: MicroLabel("Configurable Hotkeys")) {
         Text("These shortcuts work globally, even when Priority is not focused.")
-          .font(.caption)
-          .foregroundColor(themeColor(.textSecondary))
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
 
         hotkeyCard(
           title: "Global hotkey",
@@ -45,22 +45,15 @@ extension SettingsView {
 
         if let conflict = hotkeyConflict {
           Label(conflict, systemImage: "exclamationmark.triangle.fill")
-          .font(.caption)
-          .foregroundColor(themeColor(.danger))
-          .padding(10)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .background(themeColor(.danger).opacity(0.08))
-          .overlay(
-            RoundedRectangle(cornerRadius: 8)
-              .stroke(themeColor(.danger).opacity(0.3), lineWidth: 1)
-          )
-          .clipShape(RoundedRectangle(cornerRadius: 8))
+          .font(theme.captionFont)
+          .foregroundStyle(theme.danger)
+          .settingsStatusSurface(theme, tint: theme.danger)
         }
 
         HStack {
           Text("Record a modifier plus a key. Press Escape while recording to cancel.")
-            .font(.caption)
-            .foregroundColor(themeColor(.textSecondary))
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
           Spacer(minLength: 0)
           Button("Reset hotkeys to defaults") {
             preferences.globalHotkeyKeyCode = 49  // Space
@@ -73,25 +66,25 @@ extension SettingsView {
         }
       }
 
-      Section(header: Text("Window Keys")) {
+      Section(header: MicroLabel("Window Keys")) {
         let keymap = WorkspaceKeymapStore.shared
         Text(
           "Every key in the window can be rebound in keymap.json. The format is in docs/keyboard-shortcuts.md."
         )
-        .font(.caption)
-        .foregroundColor(themeColor(.textSecondary))
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
         HStack {
           Text(keymap.issues.isEmpty ? "No problems" : "\(keymap.issues.count) problem(s) — see Diagnostics")
-            .font(.caption)
-            .foregroundColor(themeColor(keymap.issues.isEmpty ? .textSecondary : .danger))
+            .font(theme.captionFont)
+            .foregroundStyle(keymap.issues.isEmpty ? theme.muted : theme.danger)
           Spacer(minLength: 0)
           Button("Reload") { keymap.reload(force: true) }
           Button("Open keymap.json") { keymap.openFile() }
         }
       }
 
-      Section(header: Text("Quick Add Target")) {
-        VStack(alignment: .leading, spacing: 6) {
+      Section(header: MicroLabel("Quick Add Target")) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
           Text("Quick Add location")
           Picker("", selection: preferenceBinding(\.quickAddLocationMode)) {
             Text("Default (List root)").tag(QuickAddLocationMode.defaultRoot)
@@ -111,8 +104,8 @@ extension SettingsView {
               .disabled(checkvistManager.taskListViewModel.currentTask == nil)
             }
             Text("Quick Add creates new tasks as children of this task ID.")
-              .font(.caption)
-              .foregroundColor(themeColor(.textSecondary))
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
           }
         }
       }
@@ -150,40 +143,38 @@ extension SettingsView {
     keyCode: Binding<Int>,
     modifiers: Binding<Int>
   ) -> some View {
-    HStack(alignment: .top, spacing: 12) {
-      VStack(alignment: .leading, spacing: 6) {
+    HStack(alignment: .top, spacing: theme.space.md) {
+      VStack(alignment: .leading, spacing: theme.space.xs) {
         Toggle(isOn: enabled) {
           Text(title)
-            .font(.system(size: 13, weight: .semibold))
+            .font(theme.bodyFont(weight: .semibold))
         }
           .toggleStyle(.switch)
         Text(description)
-          .font(.caption)
-          .foregroundColor(themeColor(.textSecondary))
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
         Text("Default: \(defaultDisplay)")
-          .font(.system(size: 11, weight: .medium, design: .monospaced))
-          .foregroundColor(themeColor(.textSecondary))
+          .font(theme.monoFont(size: theme.scale.caption, weight: .medium))
+          .foregroundStyle(theme.muted)
       }
       Spacer()
       if enabled.wrappedValue {
         HotkeyRecorderField(keyCode: keyCode, modifiers: modifiers)
-          .frame(width: 150, height: 22)
+          .frame(width: Self.hotkeyRecorderWidth)
       } else {
         Text("Off")
-          .font(.system(size: 11, weight: .medium, design: .monospaced))
-          .foregroundColor(themeColor(.textSecondary))
-          .padding(.horizontal, 10)
-          .padding(.vertical, 4)
-          .background(themeColor(.panelSurfaceElevated))
-          .clipShape(Capsule())
+          .font(theme.monoFont(size: theme.scale.caption, weight: .medium))
+          .foregroundStyle(theme.muted)
+          .padding(.horizontal, theme.space.sm)
+          .padding(.vertical, theme.space.xs)
+          .themedSurface(theme, fill: theme.well, radius: theme.controlRadius)
       }
     }
-    .padding(12)
-    .background(themeColor(.panelSurface))
-    .overlay(
-      RoundedRectangle(cornerRadius: 10)
-        .stroke(themeColor(.panelDivider), lineWidth: 1)
-    )
-    .clipShape(RoundedRectangle(cornerRadius: 10))
+    .padding(theme.space.sm)
+    .themedSurface(theme, fill: theme.paper, radius: theme.panelRadius)
   }
+
+  /// Room for the longest shortcut the recorder prints, four modifier glyphs
+  /// and a named key, without truncating it.
+  fileprivate static var hotkeyRecorderWidth: CGFloat { 150 }
 }

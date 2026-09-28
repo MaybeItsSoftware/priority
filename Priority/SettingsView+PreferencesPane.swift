@@ -1,3 +1,4 @@
+import PriorityCore
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -12,15 +13,15 @@ import UniformTypeIdentifiers
 extension SettingsView {
   var preferencesPane: some View {
     Group {
-      Section(header: Text("Tools")) {
-        VStack(alignment: .leading, spacing: 10) {
+      Section(header: MicroLabel("Tools")) {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
           Text("Export Tasks")
-            .font(.headline)
+            .font(theme.bodyFont(weight: .semibold))
           Text("Save your current task list to a file for backup or use in other apps.")
-            .font(.caption)
-            .foregroundColor(themeColor(.textSecondary))
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
 
-          HStack(spacing: 8) {
+          HStack(spacing: theme.space.sm) {
             Button("Export to Markdown...") {
               exportTasks(format: .markdown)
             }
@@ -32,22 +33,22 @@ extension SettingsView {
           
           if checkvistManager.repository.tasks.isEmpty {
             Text("No tasks available to export.")
-              .font(.caption)
-              .foregroundColor(themeColor(.textSecondary))
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
           }
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
 
         if checkvistManager.repository.checkvistIntegrationEnabled {
-          VStack(alignment: .leading, spacing: 10) {
+          VStack(alignment: .leading, spacing: theme.space.sm) {
             Divider()
-              .padding(.vertical, 8)
+              .padding(.vertical, theme.space.sm)
             
             Text("Merge Lists")
-              .font(.headline)
+              .font(theme.bodyFont(weight: .semibold))
             Text("Copy open tasks from one Checkvist list into another.")
-              .font(.caption)
-              .foregroundColor(themeColor(.textSecondary))
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
 
             if checkvistManager.repository.availableLists.count >= 2 {
               Picker("From", selection: $mergeSourceListId) {
@@ -87,34 +88,34 @@ extension SettingsView {
               }
             } else if checkvistManager.repository.canAttemptLogin {
               Text("Connect and load at least two Checkvist lists to enable merging.")
-                .font(.caption)
-                .foregroundColor(themeColor(.textSecondary))
+                .font(theme.captionFont)
+                .foregroundStyle(theme.muted)
             } else {
               Text("Add your Checkvist account in Plugins settings, then load lists to enable merging.")
-                .font(.caption)
-                .foregroundColor(themeColor(.textSecondary))
+                .font(theme.captionFont)
+                .foregroundStyle(theme.muted)
             }
           }
-          .padding(.top, 4)
+          .padding(.top, theme.space.xs)
         }
       }
 
-      Section(header: Text("Preferences")) {
+      Section(header: MicroLabel("Preferences")) {
         Toggle("Confirm before deleting tasks", isOn: preferenceBinding(\.confirmBeforeDelete))
           .toggleStyle(.switch)
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: theme.space.xxs) {
           Toggle("Open on the focus screen", isOn: preferenceBinding(\.opensOnFocusScreen))
             .toggleStyle(.switch)
           Text("The window comes up on Today. Turn this on to land on the focus ladder instead, with its conditions and available time. A running session is shown either way.")
-            .font(.caption)
-            .foregroundColor(themeColor(.textSecondary))
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
         }
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: theme.space.xxs) {
           Toggle("Ask how each focus block went", isOn: preferenceBinding(\.scoresEachFocusBlock))
             .toggleStyle(.switch)
           Text("Finishing a block asks for a quality multiplier, which is what turns minutes into points. Turn this off to log every block at ×1 and keep moving.")
-            .font(.caption)
-            .foregroundColor(themeColor(.textSecondary))
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
         }
         if #available(macOS 13.0, *) {
           Toggle("Launch at login", isOn: preferenceBinding(\.launchAtLogin))
@@ -125,9 +126,9 @@ extension SettingsView {
           Text("Max Menu Bar Width: \(Int(preferences.maxTitleWidth))px")
           Slider(value: preferenceBinding(\.maxTitleWidth), in: 50...800, step: 10)
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
 
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
           Text("Timer position in menu bar")
           Picker(
             "",
@@ -143,9 +144,9 @@ extension SettingsView {
           .pickerStyle(.segmented)
           .disabled(checkvistManager.timer.timerMode != .visible)
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
 
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
           Text("Timer mode")
           Picker(
             "",
@@ -161,14 +162,14 @@ extension SettingsView {
           .labelsHidden()
           .pickerStyle(.segmented)
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
       }
       
-      Section(header: Text("Named Times")) {
-        VStack(alignment: .leading, spacing: 10) {
+      Section(header: MicroLabel("Named Times")) {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
           Text("Customize what hour named times resolve to when scheduling tasks.")
-            .font(.caption)
-            .foregroundColor(themeColor(.textSecondary))
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
 
           NamedTimePickerRow(
             label: "Morning",
@@ -187,7 +188,7 @@ extension SettingsView {
             hour: preferenceBinding(\.namedTimeEodHour)
           )
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
       }
     }
   }

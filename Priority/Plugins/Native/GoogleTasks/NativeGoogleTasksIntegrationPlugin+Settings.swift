@@ -1,3 +1,4 @@
+import PriorityCore
 import SwiftUI
 
 @MainActor
@@ -14,12 +15,13 @@ extension NativeGoogleTasksIntegrationPlugin: PluginSettingsPageProviding {
 }
 
 private struct GoogleTasksIntegrationPluginSettingsView: View {
+  @Environment(\.theme) private var theme
   var manager: AppCoordinator
   var plugin: NativeGoogleTasksIntegrationPlugin
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: Text("Google Tasks Plugin")) {
+    Section(header: MicroLabel("Google Tasks Plugin")) {
       Toggle(
         "Mirror my lists to Google Tasks",
         isOn: $manager.integrations.googleTasksIntegrationEnabled
@@ -27,7 +29,7 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
       .toggleStyle(.switch)
 
       if manager.integrations.googleTasksIntegrationEnabled {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: theme.space.md) {
           GoogleAccountSettingsSection(
             account: plugin.account,
             serviceName: "Google Tasks",
@@ -50,14 +52,14 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
             into the matching list.
             """
           )
-          .font(.caption2)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
       } else {
         Text("Google Tasks mirroring is off. Nothing leaves this machine.")
-          .foregroundColor(.secondary)
-          .font(.caption)
+          .foregroundStyle(theme.muted)
+          .font(theme.captionFont)
       }
     }
   }
@@ -66,32 +68,32 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
 
   @ViewBuilder
   private var mirrorStatus: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: theme.space.sm) {
       Button("Sync now") { mirror.syncNow() }
         .disabled(!plugin.isAuthenticated || mirror.state == .syncing)
       if mirror.state == .syncing { ProgressView().scaleEffect(0.8) }
       Spacer()
       Text("\(mirror.mirroredTaskCount) mirrored")
-        .font(.caption.monospacedDigit())
-        .foregroundColor(.secondary)
+        .font(theme.monoFont(size: theme.scale.caption))
+        .foregroundStyle(theme.muted)
     }
 
     switch mirror.state {
     case .failed(let message):
       Text(message)
-        .font(.caption)
-        .foregroundColor(.red)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.danger)
     case .syncing:
-      Text("Syncing…").font(.caption).foregroundColor(.secondary)
+      Text("Syncing…").font(theme.captionFont).foregroundStyle(theme.muted)
     case .idle:
       if let lastSyncedAt = mirror.lastSyncedAt {
         Text("Last synced \(lastSyncedAt.formatted(date: .omitted, time: .shortened))")
-          .font(.caption)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
       } else {
         Text("Syncs a few seconds after a change, and every five minutes.")
-          .font(.caption)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
       }
     }
   }
@@ -100,19 +102,17 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
   private var conflicts: some View {
     // The authority rule occasionally discards something a person typed on
     // their phone. This is the page that admits it.
-    Text("CONFLICTS RESOLVED IN PRIORITY'S FAVOUR")
-      .font(.caption2.weight(.bold))
-      .foregroundColor(.secondary)
+    MicroLabel("Conflicts resolved in Priority's favour")
     ForEach(mirror.recentConflicts.prefix(8)) { record in
-      VStack(alignment: .leading, spacing: 1) {
-        Text(record.summary).font(.caption)
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
+        Text(record.summary).font(theme.captionFont)
         Text(record.resolvedAt.formatted(date: .abbreviated, time: .shortened))
-          .font(.caption2)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
       }
     }
     Text("The full log is in google-tasks-conflicts.jsonl, in Priority's Application Support folder.")
-      .font(.caption2)
-      .foregroundColor(.secondary)
+      .font(theme.captionFont)
+      .foregroundStyle(theme.muted)
   }
 }

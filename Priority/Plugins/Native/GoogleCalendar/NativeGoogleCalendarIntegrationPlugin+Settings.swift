@@ -1,3 +1,4 @@
+import PriorityCore
 import SwiftUI
 
 @MainActor
@@ -19,13 +20,14 @@ extension NativeGoogleCalendarIntegrationPlugin: PluginSettingsPageProviding {
 }
 
 private struct GoogleCalendarIntegrationPluginSettingsView: View {
+  @Environment(\.theme) private var theme
   var manager: AppCoordinator
   var plugin: NativeGoogleCalendarIntegrationPlugin
 
   var body: some View {
     @Bindable var manager = manager
     @Bindable var plugin = plugin
-    Section(header: Text("Google Calendar Plugin")) {
+    Section(header: MicroLabel("Google Calendar Plugin")) {
       Toggle(
         "Enable Google Calendar integration",
         isOn: $manager.integrations.googleCalendarIntegrationEnabled
@@ -33,7 +35,7 @@ private struct GoogleCalendarIntegrationPluginSettingsView: View {
         .toggleStyle(.switch)
 
       if manager.integrations.googleCalendarIntegrationEnabled {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
           GoogleAccountSettingsSection(
             account: plugin.account,
             serviceName: "Google Calendar",
@@ -58,14 +60,14 @@ private struct GoogleCalendarIntegrationPluginSettingsView: View {
           Text(
             "This integration creates Google Calendar events from tasks. OAuth setup and sign-in are required."
           )
-          .font(.caption2)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
       } else {
         Text("Google Calendar integration is disabled.")
-          .foregroundColor(.secondary)
-          .font(.caption)
+          .foregroundStyle(theme.muted)
+          .font(theme.captionFont)
       }
     }
   }

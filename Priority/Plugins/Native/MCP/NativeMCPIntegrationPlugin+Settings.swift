@@ -15,6 +15,7 @@ extension NativeMCPIntegrationPlugin: PluginSettingsPageProviding {
 }
 
 private struct MCPIntegrationPluginSettingsView: View {
+  @Environment(\.theme) private var theme
   var manager: AppCoordinator
   @State private var showsRawConfiguration = false
 
@@ -22,24 +23,24 @@ private struct MCPIntegrationPluginSettingsView: View {
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: Text("MCP Plugin")) {
+    Section(header: MicroLabel("MCP Plugin")) {
       Toggle("Enable MCP integration", isOn: $manager.integrations.mcpIntegrationEnabled)
         .toggleStyle(.switch)
 
       if manager.integrations.mcpIntegrationEnabled {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: theme.space.md) {
           credentialsStep
           serverCommandStep
           clientStep
           statusMessage
           rawConfiguration
         }
-        .padding(.top, 4)
+        .padding(.top, theme.space.xs)
         .onAppear { integrations.refreshDetectedMCPClients() }
       } else {
         Text("MCP integration is disabled.")
-          .foregroundColor(.secondary)
-          .font(.caption)
+          .foregroundStyle(theme.muted)
+          .font(theme.captionFont)
       }
     }
   }
@@ -73,7 +74,7 @@ private struct MCPIntegrationPluginSettingsView: View {
 
   @ViewBuilder
   private var serverCommandStep: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       if integrations.hasResolvedMCPServerCommand {
         stepRow(
           ok: true,
@@ -91,7 +92,7 @@ private struct MCPIntegrationPluginSettingsView: View {
 
       Button("Refresh") { integrations.refreshMCPServerCommandPath() }
         .controlSize(.small)
-        .padding(.leading, 20)
+        .padding(.leading, theme.space.lg)
     }
   }
 
@@ -99,16 +100,16 @@ private struct MCPIntegrationPluginSettingsView: View {
 
   @ViewBuilder
   private var clientStep: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       Text("Add to an AI client")
-        .font(.system(size: 12, weight: .semibold))
+        .font(theme.bodyFont(weight: .semibold))
 
       if integrations.detectedMCPClients.isEmpty {
         Text(
           "No MCP clients detected. Copy the config below and paste it into your client's settings."
         )
-        .font(.caption)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
       } else {
         // Re-running this on a client that is already set up rewrites its
         // entry, which is how a configuration written before the MCP server
@@ -116,16 +117,16 @@ private struct MCPIntegrationPluginSettingsView: View {
         // working either way — `Priority --mcp-server` hands over to the same
         // binary — so this is an offer rather than a repair.
         Text("Already set up? Adding again updates the entry to the current command.")
-          .font(.caption2)
-          .foregroundColor(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
 
         ForEach(integrations.detectedMCPClients) { client in
-          HStack(alignment: .firstTextBaseline, spacing: 8) {
-            VStack(alignment: .leading, spacing: 1) {
+          HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
+            VStack(alignment: .leading, spacing: theme.space.xxs) {
               Text(client.displayName)
               Text(hint(for: client))
-                .font(.caption2)
-                .foregroundColor(.secondary)
+                .font(theme.captionFont)
+                .foregroundStyle(theme.muted)
             }
             Spacer(minLength: 8)
             Button(actionTitle(for: client)) { integrations.setUpMCPClient(client) }
@@ -162,15 +163,15 @@ private struct MCPIntegrationPluginSettingsView: View {
   private var statusMessage: some View {
     if !integrations.mcpSetupStatusMessage.isEmpty {
       Text(integrations.mcpSetupStatusMessage)
-        .font(.caption)
-        .foregroundColor(integrations.mcpSetupStatusIsError ? .red : .secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(integrations.mcpSetupStatusIsError ? theme.danger : theme.muted)
         .fixedSize(horizontal: false, vertical: true)
     }
   }
 
   @ViewBuilder
   private var rawConfiguration: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack {
         Button("Copy Client Config") { integrations.copyMCPClientConfigurationToClipboard() }
         Button("Open Guide") { integrations.openMCPServerGuide() }
@@ -181,7 +182,7 @@ private struct MCPIntegrationPluginSettingsView: View {
       DisclosureGroup("Show config JSON", isExpanded: $showsRawConfiguration) {
         ScrollView {
           Text(integrations.mcpClientConfigurationPreview(listId: manager.repository.listId))
-            .font(.system(.caption, design: .monospaced))
+            .font(theme.monoFont(size: theme.scale.caption))
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -194,10 +195,10 @@ private struct MCPIntegrationPluginSettingsView: View {
             + "the server reads those from the priority CLI's own config, which Priority writes "
             + "when you set up a client. Rotate your remote key in Priority and set up again."
         )
-        .foregroundColor(.secondary)
-        .font(.caption)
+        .foregroundStyle(theme.muted)
+        .font(theme.captionFont)
       }
-      .font(.caption)
+      .font(theme.captionFont)
     }
   }
 
@@ -209,11 +210,11 @@ private struct MCPIntegrationPluginSettingsView: View {
     detail: String,
     detailIsSelectable: Bool = false
   ) -> some View {
-    HStack(alignment: .firstTextBaseline, spacing: 6) {
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
       Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-        .foregroundStyle(ok ? Color.green : Color.orange)
-        .font(.caption)
-      VStack(alignment: .leading, spacing: 1) {
+        .foregroundStyle(ok ? theme.success : theme.warning)
+        .font(theme.captionFont)
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text(title)
         Group {
           if detailIsSelectable {
@@ -222,8 +223,8 @@ private struct MCPIntegrationPluginSettingsView: View {
             Text(detail)
           }
         }
-        .font(.caption2)
-        .foregroundColor(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
         .fixedSize(horizontal: false, vertical: true)
       }
       Spacer(minLength: 0)
