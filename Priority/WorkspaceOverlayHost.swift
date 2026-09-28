@@ -147,7 +147,7 @@ struct WorkspaceOverlayField: View {
           .truncationMode(.middle)
       }
     }
-    .padding(.horizontal, theme.space.md)
+    .padding(.horizontal, theme.listGutter)
     .padding(.vertical, theme.space.sm)
     // A frame late: on the pass that inserts the field it has no window to
     // become first responder in.
@@ -171,7 +171,7 @@ struct WorkspaceOverlayFooter: View {
       }
       .font(theme.monoFont(size: theme.type.microLabel.size))
       .foregroundStyle(theme.dim)
-      .padding(.horizontal, theme.space.md)
+      .padding(.horizontal, theme.listGutter)
       .padding(.vertical, theme.space.xs)
     }
   }
@@ -204,11 +204,11 @@ private struct WorkspaceOverlayRowStyle: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .padding(.horizontal, theme.space.md)
-      .padding(.vertical, theme.space.xs)
+      .padding(.horizontal, theme.listGutter)
+      .padding(.vertical, theme.rowVerticalPadding)
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(Rectangle())
-      .workspaceSelection(isSelected: isSelected, hasKeyboard: isSelected, radius: 0)
+      .workspaceSelection(isSelected: isSelected, hasKeyboard: isSelected)
   }
 }
 

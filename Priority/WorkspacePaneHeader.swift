@@ -94,7 +94,7 @@ struct WorkspaceHeaderBand<Content: View>: View {
     HStack(spacing: theme.space.sm) {
       content
     }
-    .padding(.horizontal, inset ?? theme.space.xl)
+    .padding(.horizontal, inset ?? theme.paneGutter)
     .frame(maxWidth: .infinity, alignment: .leading)
     .frame(height: theme.paneHeaderHeight)
     .overlay(alignment: .bottom) { FocusRule() }

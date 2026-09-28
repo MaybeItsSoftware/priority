@@ -38,6 +38,9 @@ struct WorkspaceOutlinePane: View {
                 let items = model.outlineByList[list.id] ?? []
                 if items.isEmpty {
                   Text("No tasks").font(theme.bodyFont()).foregroundStyle(theme.dim)
+                    .padding(.horizontal, theme.paneGutter)
+                    .padding(.vertical, theme.rowVerticalPadding)
+                    .outlineRowChrome()
                 } else {
                   ForEach(items) { item in
                     row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard)
@@ -51,6 +54,11 @@ struct WorkspaceOutlinePane: View {
                   .lineLimit(1)
                   .truncationMode(.middle)
                   .help(list.name)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .padding(.horizontal, theme.paneGutter)
+                  .padding(.top, theme.space.sm)
+                  .padding(.bottom, theme.rowVerticalPadding)
+                  .outlineRowChrome()
               }
             }
           } else {
@@ -59,8 +67,17 @@ struct WorkspaceOutlinePane: View {
             }
           }
         }
-        .listStyle(.inset)
-        // The inset style paints the system's own grey behind the rows, which
+        // Plain rather than inset: the inset style pulls every row in from the
+        // pane's edges and rounds the ends of its selection, so a chosen task
+        // was a lozenge in a narrower column than its header. Plain, with the
+        // row insets zeroed below, lets a row — and its selection — run the
+        // full width, with the gutter laid inside it.
+        .listStyle(.plain)
+        // No floor under a row's height: the table's own minimum is taller
+        // than a one-line row, and the difference would open a gap between
+        // rows that broke the selection band and the indent guides.
+        .environment(\.defaultMinListRowHeight, theme.hairline)
+        // The table paints the system's own background behind the rows, which
         // left the outline the one pane not on the theme's paper.
         .scrollContentBackground(.hidden)
         .background(theme.paper)
@@ -74,6 +91,18 @@ struct WorkspaceOutlinePane: View {
   private func row(_ item: TaskOutlineItem, selectedID: String?, tasksHaveKeyboard: Bool) -> some View {
     let isSelected = item.id == selectedID
     return WorkspaceOutlineRow(item: item, isSelected: isSelected, hasKeyboard: isSelected && tasksHaveKeyboard)
+      .outlineRowChrome()
+  }
+}
+
+extension View {
+  /// What every row of the outline's table needs to be edge to edge: no
+  /// insets, no separator, no background of the table's own. The row draws
+  /// its gutter and its selection itself.
+  fileprivate func outlineRowChrome() -> some View {
+    listRowInsets(EdgeInsets())
+      .listRowSeparator(.hidden)
+      .listRowBackground(Color.clear)
   }
 }
 
@@ -93,6 +122,9 @@ struct WorkspaceOutlineRow: View {
       } label: {
         Image(systemName: model.itemSymbol(for: item.task))
           .foregroundStyle(item.task.status == .open ? theme.muted : theme.success)
+          // A fixed column, so titles line up whichever glyph precedes them
+          // and each depth's guide hangs from the middle of its parent's.
+          .frame(width: WorkspaceRowMetrics.iconWidth)
       }
       .buttonStyle(.plain)
       .focusable()
@@ -114,7 +146,16 @@ struct WorkspaceOutlineRow: View {
     // On the row itself: a List row takes its face from the table style, not
     // from the window, so without this every title was in the system sans.
     .font(theme.bodyFont())
-    .padding(.leading, CGFloat(item.depth) * theme.space.lg)
+    // Depth, gutter and guides all inside the row, so the selection behind it
+    // runs the full width of the pane at any depth and the title column starts
+    // under the header's title.
+    .padding(.leading, CGFloat(item.depth) * WorkspaceRowMetrics.indent(theme))
+    .padding(.vertical, theme.rowVerticalPadding)
+    .padding(.horizontal, theme.paneGutter)
+    .workspaceIndentGuides(
+      depth: item.depth,
+      origin: theme.paneGutter + WorkspaceRowMetrics.iconWidth / 2,
+      step: WorkspaceRowMetrics.indent(theme))
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
     .workspaceSelection(isSelected: isSelected, hasKeyboard: hasKeyboard)
@@ -129,8 +170,8 @@ struct WorkspaceOutlineRow: View {
         model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)
       }
     }
-    .overlay(RoundedRectangle(cornerRadius: theme.controlRadius)
-      .stroke(
+    .overlay(RoundedRectangle(cornerRadius: theme.rowRadius)
+      .strokeBorder(
         model.dragDestinationListID == item.task.id && item.task.isList ? theme.primary : .clear,
         lineWidth: theme.borders.emphasis))
   }

@@ -544,6 +544,16 @@ struct DayView: View {
     .onTapGesture { isFieldFocused = true }
   }
 
+  /// The side padding inside a row. In the window, the pane's gutter, so a
+  /// task's title starts under the header's "Today" the way the outline's
+  /// start under its list name; the panel keeps its own narrower figure,
+  /// being a small floating surface rather than a pane.
+  private var rowGutter: CGFloat { surface.isPanel ? theme.space.lg : theme.paneGutter }
+
+  /// Above and below a row's content. The window uses the rows' shared
+  /// figure, so a two-line day row is as dense as two outline rows.
+  private var rowPadding: CGFloat { surface.isPanel ? theme.space.sm : theme.rowVerticalPadding }
+
   /// One row shape for every row, so a row that gains controls is visibly the
   /// same row rather than a different kind of thing.
   ///
@@ -573,8 +583,8 @@ struct DayView: View {
       : isActive ? theme.primary.opacity(Theme.statusFillOpacity)
       : isHovered ? theme.hover : Color.clear
     return content()
-      .padding(.horizontal, theme.space.lg)
-      .padding(.vertical, theme.space.sm)
+      .padding(.horizontal, rowGutter)
+      .padding(.vertical, rowPadding)
       .frame(maxWidth: .infinity, alignment: .leading)
       .scaleEffect(treatment.rowScale(for: phase))
       .background(fill)

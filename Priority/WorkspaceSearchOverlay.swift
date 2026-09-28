@@ -38,7 +38,7 @@ struct WorkspaceSearchOverlay: View {
           .foregroundStyle(theme.muted)
         Spacer()
       }
-      .padding(.horizontal, theme.space.md)
+      .padding(.horizontal, theme.listGutter)
       .padding(.vertical, theme.space.xxs)
       WorkspaceOverlayFooter(
         hints: "↑↓ choose · ↩ open · ⌘. include done · esc close",

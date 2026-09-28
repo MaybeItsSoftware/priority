@@ -166,14 +166,13 @@ private struct WorkspaceDoneRow: View {
       Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.vertical, theme.space.xs)
-    // The gutter is split round the highlight rather than laid inside it, so
-    // the selection stops short of the rail's edges the way an outline or
-    // sidebar row's does, while the text stays on the day headings' gutter.
-    .padding(.horizontal, theme.space.xl - theme.space.sm)
+    .padding(.vertical, theme.rowVerticalPadding)
+    // The whole gutter inside the highlight, so the selection runs edge to
+    // edge of the rail like every other list's, while the text stays on the
+    // day headings' gutter.
+    .padding(.horizontal, theme.paneGutter)
     .contentShape(Rectangle())
     .workspaceSelection(isSelected: isCursor, hasKeyboard: hasKeyboard)
-    .padding(.horizontal, theme.space.sm)
     .onTapGesture {
       model.doneCursorID = task.id
       model.reportKeyboardFocus(.done)

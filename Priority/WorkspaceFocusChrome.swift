@@ -120,7 +120,7 @@ private struct FocusSurfacePadding: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .padding(.horizontal, theme.space.xl)
+      .padding(.horizontal, theme.paneGutter)
       .padding(.vertical, includesBand ? theme.space.md : 0)
   }
 }

@@ -14,6 +14,9 @@ struct WorkspaceSelectableListRow: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let list: TaskList
+  /// How far into the tree the row sits — laid inside the row, so its
+  /// selection still spans the column.
+  var depth = 0
 
   var body: some View {
     if model.isRenaming(.list(list)) {
@@ -41,7 +44,7 @@ struct WorkspaceSelectableListRow: View {
       }
       Spacer(minLength: 0)
     }
-    .sidebarRowPadding(theme)
+    .sidebarRowPadding(theme, depth: depth)
   }
 }
 
