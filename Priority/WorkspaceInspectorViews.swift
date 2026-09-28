@@ -56,29 +56,36 @@ struct LocalTaskInspector: View {
   @ViewBuilder
   private func title(_ draft: TaskEditorDraft) -> some View {
     TextField("Task title", text: binding(\.title, fallback: draft.values.title))
-      .font(.headline)
+      .font(theme.titleFont)
+      .foregroundStyle(theme.ink)
       .textFieldStyle(.plain)
       .focused($titleIsFocused)
       .onSubmit { model.saveTaskEditor(task) }
     if draft.isDirty {
-      Text("Unsaved changes").font(theme.bodyFont(size: 11)).foregroundStyle(theme.muted)
+      Text("Unsaved changes").font(theme.captionFont).foregroundStyle(theme.muted)
     }
     if let error = model.taskEditor.errors[task.id] {
-      Text(error).font(theme.bodyFont(size: 11)).foregroundStyle(theme.danger)
+      Text(error).font(theme.captionFont).foregroundStyle(theme.danger)
     }
     if let error = model.taskEditor.persistenceError {
-      Text(error).font(theme.bodyFont(size: 11)).foregroundStyle(theme.danger)
+      Text(error).font(theme.captionFont).foregroundStyle(theme.danger)
     }
     ForEach(TaskEditorField.allCases.filter { draft.conflicts.contains($0) }, id: \.self) { field in
-      VStack(alignment: .leading, spacing: 4) {
-        Text("\(field.label) changed in the saved task").font(.caption.weight(.semibold))
-        Text("Saved: \(display(field, in: draft.baseline.values))").font(.caption).lineLimit(3)
-        Text("Your edit: \(display(field, in: draft.values))").font(.caption).lineLimit(3)
-        HStack {
+      VStack(alignment: .leading, spacing: theme.space.xs) {
+        Text("\(field.label) changed in the saved task")
+          .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
+          .foregroundStyle(theme.ink)
+        Group {
+          Text("Saved: \(display(field, in: draft.baseline.values))").lineLimit(3)
+          Text("Your edit: \(display(field, in: draft.values))").lineLimit(3)
+        }
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
+        HStack(spacing: theme.space.xs) {
           Button("Use saved") { model.taskEditor.resolve(task.id, field: field, useSaved: true) }
           Button("Keep my edit") { model.taskEditor.resolve(task.id, field: field, useSaved: false) }
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(FocusActionButtonStyle())
       }
       .padding(theme.space.sm)
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -101,16 +108,20 @@ struct LocalTaskInspector: View {
           Button { model.addToFocusQueue(task) } label: {
             Label("Add to queue", systemImage: "plus.circle")
           }
-          .buttonStyle(.borderedProminent)
+          .buttonStyle(FocusActionButtonStyle(prominent: true))
           .focusable()
-          Button("Open focus") { model.run(.goFocus) }.buttonStyle(.link).focusable()
+          Button("Open focus") { model.run(.goFocus) }
+            .buttonStyle(.plain)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.primary)
+            .focusable()
         }
       } else {
         Button { model.startFocus(on: task) } label: {
           Label("Start focus", systemImage: "bolt.fill")
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(FocusActionButtonStyle(prominent: true))
         .focusable()
         .commandHelp(.taskStartFocus, note: "Start a block on this task")
       }
@@ -121,7 +132,10 @@ struct LocalTaskInspector: View {
   private func notes(_ draft: TaskEditorDraft) -> some View {
     InspectorSection("Notes") {
       TextEditor(text: binding(\.notes, fallback: draft.values.notes))
-        .font(.callout)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.ink)
+        .scrollContentBackground(.hidden)
+        .padding(theme.space.xs)
         .frame(minHeight: 120)
         .overlay(
           RoundedRectangle(cornerRadius: theme.controlRadius)
@@ -151,10 +165,10 @@ struct LocalTaskInspector: View {
               "; approximately \(FocusPoints.formatted(Double(max(0, $0 - seconds)) / 60)) minutes remain"
             } ?? "")
         )
-        .font(theme.bodyFont(size: 11)).foregroundStyle(theme.muted)
+        .font(theme.captionFont).monospacedDigit().foregroundStyle(theme.muted)
         if let estimate = task.estimateSeconds, seconds >= estimate {
           Text("Estimate exhausted. Revise it or choose a session duration to keep making progress.")
-            .font(theme.bodyFont(size: 11)).foregroundStyle(theme.warning)
+            .font(theme.captionFont).foregroundStyle(theme.warning)
         }
       }
     }
@@ -254,14 +268,17 @@ struct LocalTaskInspector: View {
         Button { model.addTaskToGoogleCalendar(task) } label: {
           Label("Add to Google Calendar", systemImage: "calendar.badge.plus")
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(FocusActionButtonStyle())
         .focusable()
         .help("Create a linked event using the task's due date or start time")
       }
     }
     InspectorSection("Links") {
       TextEditor(text: binding(\.links, fallback: draft.values.links))
-        .font(.callout)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.ink)
+        .scrollContentBackground(.hidden)
+        .padding(theme.space.xs)
         .frame(minHeight: 52, maxHeight: 90)
         .overlay(
           RoundedRectangle(cornerRadius: theme.controlRadius)
@@ -302,14 +319,15 @@ struct LocalTaskInspector: View {
   @ViewBuilder
   private func saveControls(_ draft: TaskEditorDraft) -> some View {
     FocusRule()
-    HStack {
+    HStack(spacing: theme.space.xs) {
       Button("Save") { model.saveTaskEditor(task) }
-        .buttonStyle(.bordered)
+        .buttonStyle(FocusActionButtonStyle(prominent: draft.isDirty))
         .keyboardShortcut("s", modifiers: .command)
         .disabled(
           !draft.isDirty || draft.isUnavailable || !draft.conflicts.isEmpty
             || draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       Button("Revert") { model.revertTaskEditor(task) }
+        .buttonStyle(FocusActionButtonStyle())
         .disabled(!draft.isDirty)
       Spacer(minLength: 0)
     }
@@ -360,6 +378,7 @@ struct WorkspaceSidebarEditorSheet: View {
 
 private struct ListSettingsEditor: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let list: TaskList
   let dismiss: DismissAction
   @State private var name: String
@@ -382,7 +401,7 @@ private struct ListSettingsEditor: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: theme.space.lg) {
       SheetTitle("List settings")
       Form {
         TextField("Name", text: $name)
@@ -418,15 +437,15 @@ private struct ListSettingsEditor: View {
             }
           }
           Text("Choose an imported project's children as the list's visible work. Tasks keep their titles and placement.")
-            .font(.caption).foregroundStyle(.secondary)
+            .font(theme.captionFont).foregroundStyle(theme.muted)
           let preview = model.visibleRootPreview(for: list, rootID: visibleRootTaskID)
           Text("Preview: \(preview.prefix(3).map(\.title).joined(separator: ", "))\(preview.count > 3 ? "…" : "")")
-            .font(.caption).foregroundStyle(.secondary)
+            .font(theme.captionFont).foregroundStyle(theme.muted)
         }
         LabeledContent("Tasks", value: "\(model.taskCount(for: list))")
       }
-      if let saveError { Text(saveError).font(.caption).foregroundStyle(model.themeColor(.danger)) }
-      HStack {
+      if let saveError { Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger) }
+      HStack(spacing: theme.space.xs) {
         Button("Delete list", role: .destructive) {
           model.requestDeletion(of: .list(list))
           dismiss()
@@ -442,14 +461,16 @@ private struct ListSettingsEditor: View {
           .focusable()
           .keyboardShortcut(.cancelAction)
         Button("Save") { save() }
-          .buttonStyle(.borderedProminent)
+          .buttonStyle(FocusActionButtonStyle(prominent: true))
           .focusable()
           .keyboardShortcut(.defaultAction)
           .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       }
+      .buttonStyle(FocusActionButtonStyle())
     }
-    .padding(24)
+    .padding(theme.space.xl)
     .frame(width: 380)
+    .background(theme.raised)
     .onAppear {
       iconSymbol = model.icon(for: list)
       nameIsFocused = true
@@ -468,6 +489,7 @@ private struct ListSettingsEditor: View {
 
 private struct FolderSettingsEditor: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let folder: ListFolder
   let dismiss: DismissAction
   @State private var name: String
@@ -483,7 +505,7 @@ private struct FolderSettingsEditor: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: theme.space.lg) {
       SheetTitle("Folder settings")
       Form {
         TextField("Name", text: $name)
@@ -497,8 +519,8 @@ private struct FolderSettingsEditor: View {
         }
         .focusable()
       }
-      if let saveError { Text(saveError).font(.caption).foregroundStyle(model.themeColor(.danger)) }
-      HStack {
+      if let saveError { Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger) }
+      HStack(spacing: theme.space.xs) {
         Button("Delete folder", role: .destructive) {
           model.requestDeletion(of: .folder(folder))
           dismiss()
@@ -513,14 +535,16 @@ private struct FolderSettingsEditor: View {
           .focusable()
           .keyboardShortcut(.cancelAction)
         Button("Save") { save() }
-          .buttonStyle(.borderedProminent)
+          .buttonStyle(FocusActionButtonStyle(prominent: true))
           .focusable()
           .keyboardShortcut(.defaultAction)
           .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       }
+      .buttonStyle(FocusActionButtonStyle())
     }
-    .padding(24)
+    .padding(theme.space.xl)
     .frame(width: 380)
+    .background(theme.raised)
     .onAppear { nameIsFocused = true }
   }
 

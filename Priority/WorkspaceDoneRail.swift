@@ -33,7 +33,9 @@ struct WorkspaceDoneRail: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .background(theme.altRow)
+    // The page, like every other pane: the dock is set apart by the hairline
+    // beside it, not by a tint of its own.
+    .background(theme.paper)
     .overlay(alignment: .leading) {
       // Only while the keyboard is here. The resize handle beside it is already
       // a hairline, and two rules a point apart is a seam, not an edge.
@@ -46,12 +48,12 @@ struct WorkspaceDoneRail: View {
   }
 
   private var empty: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       Text("Nothing finished yet")
-        .font(theme.bodyFont(size: 12))
+        .font(theme.bodyFont())
         .foregroundStyle(theme.muted)
       Text("Tasks you tick off appear here, newest first.")
-        .font(theme.bodyFont(size: 11))
+        .font(theme.captionFont)
         .foregroundStyle(theme.dim)
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -93,7 +95,7 @@ private struct WorkspaceDoneSummary: View {
   var body: some View {
     let progress = model.workProgress
     let today = progress.today.completed
-    HStack(spacing: 5) {
+    HStack(spacing: theme.space.xs) {
       MicroLabel(
         today == 1 ? "1 today" : "\(today) today",
         tint: today > 0 ? theme.success : nil)
@@ -113,12 +115,13 @@ private struct WorkspaceDoneDayHeader: View {
   var body: some View {
     HStack(spacing: theme.space.xs) {
       MicroLabel(Self.label(for: group))
-      Spacer(minLength: 6)
+      Spacer(minLength: theme.space.xs)
       MicroLabel("\(group.items.count)")
     }
     .focusSurfaceGutter()
-    .padding(.vertical, 5)
-    .background(theme.altRow)
+    .padding(.vertical, theme.space.xs)
+    // Opaque because it is pinned: rows scroll under it.
+    .background(theme.paper)
     .overlay(alignment: .bottom) { FocusRule() }
   }
 
@@ -149,33 +152,34 @@ private struct WorkspaceDoneRow: View {
   private var wasCancelled: Bool { task.status == .cancelled }
 
   var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 7) {
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
       Image(systemName: wasCancelled ? "xmark" : "checkmark")
-        .font(.system(size: 9, weight: .semibold))
+        .font(theme.bodyFont(size: theme.type.microLabel.size, weight: .semibold))
         .foregroundStyle(wasCancelled ? theme.dim : theme.success)
         .frame(width: 11)
-      VStack(alignment: .leading, spacing: 1) {
+      VStack(alignment: .leading, spacing: 0) {
         Text(task.title)
-          .font(theme.bodyFont(size: 12))
+          .font(theme.bodyFont())
           .foregroundStyle(wasCancelled ? theme.muted : theme.ink)
           .strikethrough(wasCancelled)
           .lineLimit(2)
           .fixedSize(horizontal: false, vertical: true)
-        HStack(spacing: 5) {
+        HStack(spacing: theme.space.xs) {
           if let name = model.lists.first(where: { $0.id == task.listId })?.name {
             Text(name).lineLimit(1).truncationMode(.middle)
           }
           if let at = task.completedAt {
             Text(at.formatted(date: .omitted, time: .shortened))
+              .monospacedDigit()
           }
         }
-        .font(theme.bodyFont(size: 10))
+        .font(theme.captionFont)
         .foregroundStyle(theme.dim)
       }
       Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.vertical, 4)
+    .padding(.vertical, theme.space.xs)
     .focusSurfaceGutter()
     .contentShape(Rectangle())
     .workspaceSelection(isSelected: isCursor, hasKeyboard: hasKeyboard)

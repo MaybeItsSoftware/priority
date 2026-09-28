@@ -43,7 +43,6 @@ struct WorkspaceRightDock: View {
       Spacer(minLength: 0)
     }
     .padding(.horizontal, theme.space.xs)
-    .background(theme.altRow)
   }
 }
 
