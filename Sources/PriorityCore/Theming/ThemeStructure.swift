@@ -125,6 +125,44 @@ public struct ThemeMicroLabel: Equatable, Sendable {
   public var trackingPoints: Double { size * tracking }
 }
 
+/// The handful of sizes the interface is allowed to use, by role.
+///
+/// Hierarchy is carried by surface and position, the micro-label and weight —
+/// not by a ladder of sizes — so the scale is short on purpose. Views ask for
+/// a role; a theme that wants a denser or roomier app changes it here.
+public struct ThemeTypeScale: Equatable, Sendable {
+  /// Secondary row text: metadata, counts, notes under a title.
+  public let caption: Double
+  /// Task titles, fields, most of the interface.
+  public let body: Double
+  /// A pane's heading.
+  public let title: Double
+  /// Large numerals that are the point of their screen — a running timer's
+  /// seconds, a day's points total.
+  public let display: Double
+  /// The one number on a screen that is read from across the room: the focus
+  /// timer.
+  public let hero: Double
+
+  public init(caption: Double, body: Double, title: Double, display: Double, hero: Double) {
+    self.caption = caption
+    self.body = body
+    self.title = title
+    self.display = display
+    self.hero = hero
+  }
+
+  /// A scale proportioned from a body size, for themes that name only that.
+  public static func proportioned(fromBody body: Double) -> ThemeTypeScale {
+    ThemeTypeScale(
+      caption: (body * 0.85).rounded(),
+      body: body,
+      title: (body * 1.25).rounded(),
+      display: (body * 2.2).rounded(),
+      hero: (body * 5).rounded())
+  }
+}
+
 public struct ThemeTypography: Equatable, Sendable {
   /// Brand and display.
   public let display: ThemeFontFace
@@ -133,6 +171,7 @@ public struct ThemeTypography: Equatable, Sendable {
   /// Code, tickers, control-bar labels.
   public let mono: ThemeFontFace
   public let bodySize: Double
+  public let scale: ThemeTypeScale
   public let microLabel: ThemeMicroLabel
 
   public init(
@@ -140,12 +179,14 @@ public struct ThemeTypography: Equatable, Sendable {
     body: ThemeFontFace,
     mono: ThemeFontFace,
     bodySize: Double,
+    scale: ThemeTypeScale? = nil,
     microLabel: ThemeMicroLabel
   ) {
     self.display = display
     self.body = body
     self.mono = mono
     self.bodySize = bodySize
+    self.scale = scale ?? .proportioned(fromBody: bodySize)
     self.microLabel = microLabel
   }
 }

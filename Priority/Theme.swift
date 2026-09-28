@@ -86,6 +86,16 @@ struct Theme: Equatable {
     font(type.body, size: size ?? type.bodySize, weight: weight)
   }
 
+  var scale: ThemeTypeScale { type.scale }
+
+  /// Fonts by role. Prefer these to a size: a literal point size is a place a
+  /// theme can't reach.
+  var captionFont: Font { bodyFont(size: scale.caption) }
+  var titleFont: Font { displayFont(size: scale.title, weight: .semibold) }
+  func numeralFont(_ size: CGFloat, weight: ThemeFontWeight = .medium) -> Font {
+    monoFont(size: size, weight: weight)
+  }
+
   func displayFont(size: CGFloat, weight: ThemeFontWeight = .bold) -> Font {
     font(type.display, size: size, weight: weight)
   }

@@ -88,6 +88,7 @@ public enum BuiltInThemeSpecifications {
         body: ThemeFontFace(families: ["Arvo"], design: .serif),
         mono: ThemeFontFace(families: ["Geist Mono", "SF Mono"], design: .monospaced),
         bodySize: 13,
+        scale: ThemeTypeScale(caption: 11, body: 13, title: 15, display: 28, hero: 64),
         microLabel: ThemeMicroLabel(
           size: 10, weight: .bold, tracking: 0.15, isUppercased: true, role: .mutedText)
       )
