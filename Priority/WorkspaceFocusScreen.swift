@@ -37,7 +37,6 @@ struct WorkspaceFocusScreen: View {
   var body: some View {
     VStack(spacing: 0) {
       header
-      FocusRule()
       staleNotice
       // One screen, two states: choosing what to do, and then doing it. They
       // were a pane and a sheet before, which made returning to a running
@@ -122,19 +121,19 @@ struct WorkspaceFocusScreen: View {
         .foregroundStyle(theme.dim)
         .monospacedDigit()
         .help("Minutes focused, multiplied by how well each block went")
-      Button { model.presentTimelineScreen() } label: {
-        Image(systemName: "chart.bar.doc.horizontal")
+      // The footer's one control, moved up beside the others: the only strip
+      // along the bottom of the window is the status bar's.
+      if !isRunning && model.hasManualFocusOrder {
+        WorkspacePaneIconButton(
+          "arrow.uturn.backward", title: "Reset the order", command: .focusResetOrder
+        ) { model.run(.focusResetOrder) }
       }
-      .buttonStyle(.plain)
-      .foregroundStyle(theme.muted)
-      .focusable()
-      .commandHelp(.goTimeline)
-      Button("Leave") { model.dismissFocusScreen() }
-        .buttonStyle(.plain)
-        .font(theme.captionFont)
-        .foregroundStyle(theme.muted)
-        .focusable()
-      KeyCap("esc")
+      WorkspacePaneIconButton("chart.bar.doc.horizontal", title: "The day's timeline", command: .goTimeline) {
+        model.presentTimelineScreen()
+      }
+      WorkspacePaneIconButton("xmark", title: "Leave focus", command: .focusLeave) {
+        model.dismissFocusScreen()
+      }
     }
   }
 
@@ -153,8 +152,8 @@ struct WorkspaceFocusScreen: View {
       if !model.blockedFocusTasks.isEmpty {
         blocked
       }
-      FocusRule()
-      footer
+      // No footer: its key hints are in the reference (⌘/), and its one
+      // button is in the header.
     }
   }
 
@@ -193,24 +192,6 @@ struct WorkspaceFocusScreen: View {
     .foregroundStyle(theme.muted)
     .focusSurfaceGutter()
     .padding(.bottom, theme.space.sm)
-  }
-
-  private var footer: some View {
-    HStack(spacing: theme.space.md) {
-      Spacer()
-      KeyHint("↑ ↓", "Move through")
-      KeyHint("⌥ ↑ ↓", "Reorder within urgency")
-      if model.hasManualFocusOrder {
-        Button("Reset order") { model.run(.focusResetOrder) }
-          .buttonStyle(.plain)
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
-          .focusable()
-          .commandHelp(.focusResetOrder)
-      }
-      Spacer()
-    }
-    .focusSurfaceBand()
   }
 
   /// Drawn rather than `ContentUnavailableView`, whose large grey symbol and

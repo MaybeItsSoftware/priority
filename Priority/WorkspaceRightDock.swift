@@ -14,8 +14,7 @@ struct WorkspaceRightDock: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      tabStrip
-      FocusRule()
+      tabBar
       switch model.rightDockTab {
       case .inspector:
         WorkspaceInspectorPane(focusedArea: focusedArea)
@@ -33,20 +32,34 @@ struct WorkspaceRightDock: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
   }
 
-  private var tabStrip: some View {
-    HStack(spacing: 0) {
-      ForEach(WorkspaceDockTab.allCases) { tab in
-        WorkspaceDockTabButton(tab: tab, isCurrent: model.rightDockTab == tab) {
-          model.showRightDock(tab)
+  /// An editor's tab bar: the tabs as plain titles on the left, the showing one
+  /// in ink with a rule under it, and the dock's own actions as glyphs on the
+  /// right. On the shared header band, so its rule meets the sidebar's and the
+  /// main pane's in one line.
+  private var tabBar: some View {
+    WorkspaceHeaderBand(inset: 0) {
+      HStack(spacing: 0) {
+        ForEach(WorkspaceDockTab.allCases) { tab in
+          WorkspaceDockTabButton(tab: tab, isCurrent: model.rightDockTab == tab) {
+            model.showRightDock(tab)
+          }
         }
       }
-      Spacer(minLength: 0)
+      Spacer(minLength: theme.space.xs)
+      if model.rightDockTab == .done {
+        WorkspaceDoneSummary()
+      }
+      WorkspacePaneIconButton("xmark", title: "Close the dock", command: model.rightDockTab.command) {
+        model.hideRightDock()
+      }
+      .padding(.trailing, theme.space.xs)
     }
-    .padding(.horizontal, theme.space.xs)
   }
 }
 
-/// One tab: a micro-label with a rule under it when it is the one showing.
+/// One tab: its title in plain text, ink with a rule along the band's foot
+/// while it is the one showing, muted otherwise. The rule is the band's own
+/// height, so it sits on the header hairline rather than above it.
 private struct WorkspaceDockTabButton: View {
   @Environment(\.theme) private var theme
   let tab: WorkspaceDockTab
@@ -55,17 +68,21 @@ private struct WorkspaceDockTabButton: View {
 
   var body: some View {
     Button(action: select) {
-      MicroLabel(tab.title, tint: isCurrent ? theme.ink : nil)
-        .padding(.horizontal, theme.space.sm)
-        .padding(.vertical, theme.space.xs)
+      Text(tab.title)
+        .font(theme.captionFont)
+        .foregroundStyle(isCurrent ? theme.ink : theme.muted)
+        .lineLimit(1)
+        .padding(.horizontal, theme.space.md)
+        .frame(maxHeight: .infinity)
         .overlay(alignment: .bottom) {
           Rectangle()
-            .fill(isCurrent ? theme.primary : Color.clear)
-            .frame(height: theme.emphasisBorder)
+            .fill(isCurrent ? theme.ink : Color.clear)
+            .frame(height: theme.hairline)
         }
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .focusable(false)
     .commandHelp(tab.command, note: tab.title)
     .accessibilityLabel(tab.title)
     .accessibilityAddTraits(isCurrent ? [.isSelected] : [])
@@ -84,10 +101,10 @@ struct WorkspaceInspectorPane: View {
     let selected = model.selectedTask
     VStack(alignment: .leading, spacing: 0) {
       if let task = selected {
-        // The pane names the task rather than itself, and only the task: the
-        // list it is in is what the main pane's header already says.
-        WorkspacePaneHeader(title: task.title)
-        FocusRule()
+        // No band of its own under the dock's tab bar: the editor opens on the
+        // task's title field, and a header saying the same title above it was
+        // a second rule and a second copy of one line.
+        //
         // The editor is about twenty-five controls tall; on anything short of
         // a full-height window the last of them would be off the bottom.
         ScrollView {
@@ -105,15 +122,12 @@ struct WorkspaceInspectorPane: View {
       } else {
         // Said rather than vanished. The pane going away when nothing was
         // selected is how it used to close itself behind your back.
-        VStack(spacing: theme.space.xs) {
-          MicroLabel("No task selected")
-          Text("Select a task to edit its notes, plan and schedule here.")
-            .font(theme.bodyFont(size: theme.type.microLabel.size))
-            .foregroundStyle(theme.dim)
-            .multilineTextAlignment(.center)
-        }
-        .padding(theme.space.lg)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Text("Select a task to edit its notes, plan and schedule here.")
+          .font(theme.bodyFont())
+          .foregroundStyle(theme.muted)
+          .multilineTextAlignment(.center)
+          .padding(theme.space.xl)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

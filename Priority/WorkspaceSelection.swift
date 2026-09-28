@@ -27,9 +27,6 @@ enum WorkspaceSelection {
   /// cursor can stand on a row that selects nothing, as it can in the sidebar
   /// on Focus and the timeline.
   static let cursorFill = 0.12
-  /// The edge of a resting selection: present but quiet, because the focus
-  /// ring is reserved for the keyboard.
-  static let restingBorder = 0.55
 }
 
 /// The house selection treatment.
@@ -50,17 +47,19 @@ struct WorkspaceSelectionBackground: View {
     return hasKeyboard ? WorkspaceSelection.cursorFill : 0
   }
 
-  private var border: Color {
-    if hasKeyboard { return theme.focusRing }
-    return isSelected ? theme.color(.primary, opacity: WorkspaceSelection.restingBorder) : .clear
-  }
+  /// A hairline in the focus colour while the keyboard is on the row, and
+  /// nothing otherwise — the way an editor's project panel marks its cursor.
+  /// A resting selection used to carry a primary edge too and the keyboard a
+  /// two-point ring, which drew every selected row as a box inside the pane;
+  /// the fill is what says "selected", the line only "and the keys land here".
+  private var border: Color { hasKeyboard ? theme.focusRing : .clear }
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: radius ?? theme.controlRadius, style: .continuous)
     shape
       .fill(theme.color(.primary, opacity: fill))
       .overlay(
-        shape.strokeBorder(border, lineWidth: hasKeyboard ? theme.focusRingWidth : theme.hairline)
+        shape.strokeBorder(border, lineWidth: theme.hairline)
       )
   }
 }

@@ -51,7 +51,7 @@ struct WorkspaceKanbanBoard: View {
 
   var body: some View {
     if model.selectedList == nil && !model.isMultiListScope {
-      ContentUnavailableView("No list selected", systemImage: "rectangle.split.3x1")
+      WorkspaceEmptyPane(title: "Board", message: "Choose a list in the sidebar to see its board.")
     } else {
       GeometryReader { geometry in
         let columnWidth = WorkspaceBoardMetrics.columnWidth(
@@ -66,7 +66,6 @@ struct WorkspaceKanbanBoard: View {
           } trailing: {
             WorkspacePaneCount(count: model.boardColumns.reduce(0) { $0 + model.tasks(in: $1).count })
           }
-          FocusRule()
           WorkspaceKanbanColumnStrip(columnWidth: columnWidth)
         }
       }

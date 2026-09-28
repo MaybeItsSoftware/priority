@@ -27,10 +27,10 @@ struct WorkspaceTimelineScreen: View {
   var body: some View {
     VStack(spacing: 0) {
       header
-      FocusRule()
+      // No footer. It was a second strip along the bottom, above the status
+      // bar: two key hints the reference and the palette already carry, and a
+      // note about pauses that is now the subtitle's tooltip.
       day
-      FocusRule()
-      footer
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(theme.paper)
@@ -71,16 +71,14 @@ struct WorkspaceTimelineScreen: View {
     // picker in the middle of the row.
     WorkspacePaneHeader(title: model.timelineShowsToday ? "Today" : dayTitle) {
       Text("Where the focused time went")
-        .font(theme.captionFont)
-        .foregroundStyle(theme.muted)
+        // What the footer used to say along the bottom, kept where it is asked
+        // about: pauses are not drawn, so a paused block reads as one span.
+        .help("Active work time; pauses are not drawn, so a block paused mid-way reads as one span.")
     } trailing: {
       dayControls
-      Button("Leave") { model.dismissTimelineScreen() }
-        .buttonStyle(.plain)
-        .font(theme.captionFont)
-        .foregroundStyle(theme.muted)
-        .focusable()
-      KeyCap("esc")
+      WorkspacePaneIconButton("xmark", title: "Leave the timeline", command: .timelineClose) {
+        model.dismissTimelineScreen()
+      }
     }
   }
 
@@ -89,39 +87,23 @@ struct WorkspaceTimelineScreen: View {
   }
 
   private var dayControls: some View {
-    HStack(spacing: theme.space.xs) {
-      Button { model.moveTimelineDay(by: -1) } label: { Image(systemName: "chevron.left") }
-        .buttonStyle(.plain)
-        .foregroundStyle(theme.muted)
-        .accessibilityLabel("Previous day")
+    HStack(spacing: theme.space.xxs) {
+      WorkspacePaneIconButton("chevron.left", title: "Previous day", command: .timelinePreviousDay) {
+        model.moveTimelineDay(by: -1)
+      }
       DatePicker("Day", selection: Bindable(model).focusHistoryDate, in: ...Date.now, displayedComponents: .date)
         .labelsHidden()
         .datePickerStyle(.field)
         .font(theme.captionFont)
-      Button { model.moveTimelineDay(by: 1) } label: { Image(systemName: "chevron.right") }
-        .buttonStyle(.plain)
-        .foregroundStyle(model.timelineShowsToday ? theme.dim : theme.muted)
-        .accessibilityLabel("Next day")
-        .disabled(model.timelineShowsToday)
-      Button("Today") { model.showTimelineToday() }
-        .buttonStyle(.plain)
-        .font(theme.captionFont)
-        .foregroundStyle(model.timelineShowsToday ? theme.dim : theme.muted)
-        .disabled(model.timelineShowsToday)
+      WorkspacePaneIconButton("chevron.right", title: "Next day", command: .timelineNextDay) {
+        model.moveTimelineDay(by: 1)
+      }
+      .disabled(model.timelineShowsToday)
+      WorkspacePaneIconButton("calendar", title: "Back to today", command: .timelineToday) {
+        model.showTimelineToday()
+      }
+      .disabled(model.timelineShowsToday)
     }
-  }
-
-  private var footer: some View {
-    HStack(spacing: theme.space.md) {
-      Spacer()
-      KeyHint("← →", "Change day")
-      KeyHint("t", "Today")
-      Text("Active work time; pauses are not drawn, so a block paused mid-way reads as one span.")
-        .font(theme.captionFont)
-        .foregroundStyle(theme.dim)
-      Spacer()
-    }
-    .focusSurfaceBand()
   }
 
   // MARK: - The day

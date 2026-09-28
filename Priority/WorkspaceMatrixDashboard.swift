@@ -45,7 +45,6 @@ struct WorkspaceMatrixDashboard: View {
       } trailing: {
         WorkspacePaneCount(count: unplaced.count, noun: "unplaced")
       }
-      FocusRule()
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           if !unplaced.isEmpty {

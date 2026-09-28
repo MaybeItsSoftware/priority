@@ -98,7 +98,7 @@ struct WorkspaceModeStrip: View {
     HStack(spacing: theme.space.xxs) {
       ForEach(WorkspaceViewMode.planningModes) { mode in
         segment(
-          title: mode.title, symbol: mode.symbolName, command: mode.command,
+          title: mode.title, command: mode.command,
           isCurrent: onScreen && model.viewMode == mode
         ) {
           model.leaveFullPaneScreens()
@@ -112,11 +112,11 @@ struct WorkspaceModeStrip: View {
         .fill(theme.border)
         .frame(width: theme.hairline, height: theme.space.lg)
         .padding(.horizontal, theme.space.xs)
-      segment(title: "Focus", symbol: "timer", command: .goFocus, isCurrent: model.showsFocusScreen) {
+      segment(title: "Focus", command: .goFocus, isCurrent: model.showsFocusScreen) {
         if model.showsFocusScreen { model.dismissFocusScreen() } else { model.presentFocusScreen() }
       }
       segment(
-        title: "Timeline", symbol: "chart.bar.doc.horizontal", command: .goTimeline,
+        title: "Timeline", command: .goTimeline,
         isCurrent: model.showsTimelineScreen
       ) {
         if model.showsTimelineScreen { model.dismissTimelineScreen() } else { model.presentTimelineScreen() }
@@ -125,23 +125,26 @@ struct WorkspaceModeStrip: View {
   }
 
   private func segment(
-    title: String, symbol: String, command: WorkspaceCommandID?, isCurrent: Bool,
+    title: String, command: WorkspaceCommandID?, isCurrent: Bool,
     action: @escaping () -> Void
   ) -> some View {
     Button(action: action) {
-      HStack(spacing: theme.space.xs) {
-        Image(systemName: symbol)
-        Text(title)
-      }
-      .font(theme.bodyFont())
-      .foregroundStyle(isCurrent ? theme.primary : theme.muted)
-      .padding(.horizontal, theme.space.sm)
-      .padding(.vertical, theme.space.xxs)
-      // The same selection every other row in the app draws.
-      .workspaceSelection(isSelected: isCurrent, hasKeyboard: false)
-      .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
+      // Words only, the way an editor's title bar names things. With a glyph
+      // beside every word and the current one boxed in the selection's border,
+      // the strip was the loudest thing in the window; it should be the
+      // quietest thing that still says where you are.
+      Text(title)
+        .font(theme.bodyFont())
+        .foregroundStyle(isCurrent ? theme.ink : theme.muted)
+        .padding(.horizontal, theme.space.sm)
+        .padding(.vertical, theme.space.xxs)
+        .background(
+          isCurrent ? theme.hover : Color.clear,
+          in: RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
     }
     .buttonStyle(.plain)
+    .focusable(false)
     .help(command.map { WorkspaceCommandHelpText.text(for: $0, note: title) } ?? title)
     .accessibilityLabel(title)
     .accessibilityAddTraits(isCurrent ? [.isSelected] : [])

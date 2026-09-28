@@ -28,7 +28,6 @@ struct WorkspaceOutlinePane: View {
         } trailing: {
           WorkspacePaneCount(count: model.outlineOpenCount)
         }
-        FocusRule()
 
         List {
           if model.isMultiListScope {
@@ -68,7 +67,7 @@ struct WorkspaceOutlinePane: View {
         .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.tasks) })
       }
     } else {
-      ContentUnavailableView("No list selected", systemImage: "list.bullet")
+      WorkspaceEmptyPane(title: "Outline", message: "Choose a list in the sidebar to see its tasks.")
     }
   }
 

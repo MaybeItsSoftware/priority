@@ -1,7 +1,9 @@
 import PriorityCore
 import SwiftUI
 
-/// The band across the top of the main pane, whichever mode is in it.
+/// The band across the top of the main pane, whichever mode is in it: where
+/// you are on the left, a count or a few icon buttons on the right. Drawn on
+/// `WorkspaceHeaderBand`, the band the sidebar and the dock share.
 ///
 /// There were four of these and two absences. Today set its own title at 20pt
 /// semibold on an 18pt gutter; the outline used `.title2` on 20; Focus and the
@@ -32,33 +34,158 @@ struct WorkspacePaneHeader<Subtitle: View, Trailing: View>: View {
   }
 
   var body: some View {
-    // The subtitle sits on the title's baseline rather than under it. Stacked,
-    // it made the band a line taller in the modes that carry one (Today, the
-    // matrix, Focus, the timeline) than in those that do not (the board and the
-    // outline until a task is opened as a list), so ⌘1→⌘2 still moved the
-    // content down.
-    HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
-      // The theme's title role, deliberately only a step above body: the house
-      // style puts hierarchy in surface and position, and a scope name at
-      // 17–22pt was arguing with a screen of tasks.
-      Text(title)
-        .font(theme.titleFont)
-        .foregroundStyle(theme.ink)
-        .lineLimit(1)
-        .truncationMode(.middle)
-        .layoutPriority(1)
-      subtitle
-        .font(theme.captionFont)
-        .foregroundStyle(theme.muted)
-        .lineLimit(1)
+    WorkspaceHeaderBand {
+      // The subtitle sits on the title's baseline rather than under it. Stacked,
+      // it made the band a line taller in the modes that carry one (Today, the
+      // matrix, Focus, the timeline) than in those that do not (the board and the
+      // outline until a task is opened as a list), so ⌘1→⌘2 still moved the
+      // content down.
+      HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
+        // The theme's title role, deliberately only a step above body: the
+        // house style puts hierarchy in surface and position, and a scope name
+        // at 17–22pt was arguing with a screen of tasks.
+        Text(title)
+          .font(theme.titleFont)
+          .foregroundStyle(theme.ink)
+          .lineLimit(1)
+          .truncationMode(.middle)
+          .layoutPriority(1)
+        subtitle
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+          .lineLimit(1)
+      }
       Spacer(minLength: theme.space.sm)
-      trailing
+      // Held to its own size: a trailing control that grew with the pane
+      // would push the band past its one fixed height.
+      HStack(spacing: theme.space.xs) {
+        trailing
+      }
+      .lineLimit(1)
+      .fixedSize()
     }
-    // Tall enough for the tallest trailing control, so the band is one height
-    // whichever mode is in it rather than growing to fit what a mode carries.
-    .frame(minHeight: theme.space.xl)
-    .padding(.horizontal, FocusSurfaceMetrics.gutter)
-    .padding(.vertical, theme.space.sm)
+  }
+}
+
+/// The band every column's header is drawn on — the main pane's, the
+/// sidebar's, and the right dock's tab bar.
+///
+/// Its height is `theme.paneHeaderHeight` and its hairline is drawn *inside*
+/// that height, so a band is the same number of points whatever it holds. That
+/// is what lets the rule under the sidebar, the pane and the dock run straight
+/// across the window as one line, the way an editor's panel headers meet its
+/// tab bar. They were three bands of three heights, each padded to fit what it
+/// happened to carry, and the rule stepped at every resize handle.
+///
+/// `inset` is the side padding: the main pane's content gutter by default, so
+/// a title sits over the text beneath it; the sidebar and the dock pass their
+/// own row insets for the same reason.
+struct WorkspaceHeaderBand<Content: View>: View {
+  @Environment(\.theme) private var theme
+  var inset: CGFloat?
+  @ViewBuilder var content: Content
+
+  init(inset: CGFloat? = nil, @ViewBuilder content: () -> Content) {
+    self.inset = inset
+    self.content = content()
+  }
+
+  var body: some View {
+    HStack(spacing: theme.space.sm) {
+      content
+    }
+    .padding(.horizontal, inset ?? theme.space.xl)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .frame(height: theme.paneHeaderHeight)
+    .overlay(alignment: .bottom) { FocusRule() }
+  }
+}
+
+/// A header's or the status bar's action: a glyph, no label, no bezel.
+///
+/// The name and the key are in the tooltip, from the catalogue, so a glyph
+/// never has to be learnt by clicking it. Lit — ink, on a quiet fill — while
+/// what it toggles is showing, muted otherwise, with the same fill under the
+/// pointer. One square everywhere, so a row of these in a header and a row of
+/// them in the status bar are visibly the same kind of control.
+struct WorkspacePaneIconButton: View {
+  let symbol: String
+  let title: String
+  var command: WorkspaceCommandID?
+  var isOn = false
+  /// What the tooltip says in place of the title, when there is more to say
+  /// than the accessibility label should carry.
+  var note: String?
+  let action: () -> Void
+
+  init(
+    _ symbol: String, title: String, command: WorkspaceCommandID? = nil, isOn: Bool = false,
+    note: String? = nil, action: @escaping () -> Void
+  ) {
+    self.symbol = symbol
+    self.title = title
+    self.note = note
+    self.command = command
+    self.isOn = isOn
+    self.action = action
+  }
+
+  var body: some View {
+    Button(action: action) {
+      WorkspacePaneIconGlyph(symbol: symbol, isOn: isOn)
+    }
+    .buttonStyle(WorkspacePaneIconButtonStyle(isOn: isOn))
+    // The keyboard reaches every one of these by its command; a tab stop on
+    // each would only put more stops between the panes.
+    .focusable(false)
+    .help(command.map { WorkspaceCommandHelpText.text(for: $0, note: note ?? title) } ?? note ?? title)
+    .accessibilityLabel(title)
+    .accessibilityAddTraits(isOn ? [.isSelected] : [])
+  }
+}
+
+/// The glyph on its own, for a `Menu` whose label has to match the icon
+/// buttons beside it.
+struct WorkspacePaneIconGlyph: View {
+  @Environment(\.theme) private var theme
+  let symbol: String
+  var isOn = false
+
+  var body: some View {
+    Image(systemName: symbol)
+      .font(theme.captionFont)
+      .foregroundStyle(isOn ? theme.ink : theme.muted)
+      .frame(width: theme.paneIconButtonSize, height: theme.paneIconButtonSize)
+      .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
+  }
+}
+
+/// Flat: the hover tone under the pointer, while pressed, and while lit. No
+/// border and no ring.
+struct WorkspacePaneIconButtonStyle: ButtonStyle {
+  var isOn = false
+
+  func makeBody(configuration: Configuration) -> some View {
+    WorkspacePaneIconButtonBody(configuration: configuration, isOn: isOn)
+  }
+}
+
+/// A view rather than the style's own body, so the hover state has somewhere
+/// to live.
+private struct WorkspacePaneIconButtonBody: View {
+  @Environment(\.theme) private var theme
+  @Environment(\.isEnabled) private var isEnabled
+  let configuration: ButtonStyleConfiguration
+  let isOn: Bool
+  @State private var isHovering = false
+
+  var body: some View {
+    configuration.label
+      .background(
+        isOn || isHovering || configuration.isPressed ? theme.hover : Color.clear,
+        in: RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous))
+      .opacity(isEnabled ? 1 : 0.4)
+      .onHover { isHovering = $0 }
   }
 }
 
@@ -71,6 +198,31 @@ extension WorkspacePaneHeader where Subtitle == EmptyView {
 extension WorkspacePaneHeader where Subtitle == EmptyView, Trailing == EmptyView {
   init(title: String) {
     self.init(title: title, subtitle: { EmptyView() }, trailing: { EmptyView() })
+  }
+}
+
+/// A pane with nothing to show: its header, so the rule still runs across the
+/// window, and one line of muted text in the middle of the surface.
+///
+/// It was `ContentUnavailableView` — a large grey symbol and the system's own
+/// title face, with no header over it, so the one pane without a list in it was
+/// also the one place the rule under the headers broke.
+struct WorkspaceEmptyPane: View {
+  @Environment(\.theme) private var theme
+  let title: String
+  let message: String
+
+  var body: some View {
+    VStack(spacing: 0) {
+      WorkspacePaneHeader(title: title)
+      Text(message)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.muted)
+        .multilineTextAlignment(.center)
+        .padding(theme.space.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    .background(theme.paper)
   }
 }
 

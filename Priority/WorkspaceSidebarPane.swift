@@ -18,9 +18,7 @@ struct WorkspaceSidebarPane: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       sidebarHeader
-      FocusRule()
       sidebarRows
-      sidebarFooter
     }
     // The page, like the panes beside it. Not `.bar`: a vibrant material
     // re-tints whatever is behind the window, so the selection wash was being
@@ -31,31 +29,68 @@ struct WorkspaceSidebarPane: View {
   }
 
   private var sidebarHeader: some View {
-    // The same band as the pane header beside it — the same height and the
-    // same rule under it — so the two read as one strip across the window.
-    HStack(spacing: theme.space.sm) {
+    // The shared header band — the same height and the same rule as the main
+    // pane's and the dock's — so the three read as one strip across the
+    // window. The pane's actions sit on its right as glyphs, the way an
+    // editor's project panel carries its own: there is no footer any more,
+    // because the only strip along the foot of the window is the status bar.
+    WorkspaceHeaderBand(inset: theme.space.md) {
       // The app's own name, which the window title, the Dock icon and the
       // menu bar were already saying. A pane's eyebrow should name the pane.
       MicroLabel("Workspace")
-      Spacer()
-      Menu {
-        Button(model.undoLabel.map { "Undo \($0)" } ?? "Undo") { model.run(.windowUndo) }
-          .disabled(model.undoLabel == nil)
-          .commandShortcut(.windowUndo)
-        Button(model.redoLabel.map { "Redo \($0)" } ?? "Redo") { model.run(.windowRedo) }
-          .disabled(model.redoLabel == nil)
-          .commandShortcut(.windowRedo)
-      } label: {
-        Image(systemName: "arrow.uturn.backward")
+      Spacer(minLength: theme.space.xs)
+      HStack(spacing: theme.space.xxs) {
+        WorkspacePaneIconButton("plus", title: "New list", command: .listNew) {
+          model.requestCreation(.list)
+        }
+        WorkspacePaneIconButton("folder.badge.plus", title: "New folder", command: .folderNew) {
+          model.requestCreation(.folder)
+        }
+        if !model.archivedLists.isEmpty || !model.archivedNestedLists.isEmpty {
+          archiveMenu
+        }
+        historyMenu
       }
-      .menuStyle(.borderlessButton)
-      .fixedSize()
-      .commandHelp(.windowUndo, note: "Undo or redo workspace changes")
-      .accessibilityLabel("Workspace history")
     }
-    .frame(minHeight: theme.space.xl)
-    .padding(.horizontal, theme.space.md)
-    .padding(.vertical, theme.space.sm)
+  }
+
+  /// Archived lists, one item each, to put back. Only there while there is
+  /// something archived: a menu that opens on nothing is a control that lies.
+  private var archiveMenu: some View {
+    Menu {
+      ForEach(model.archivedLists) { list in
+        Button("Restore \(list.name)") { model.restoreList(list) }
+      }
+      ForEach(model.archivedNestedLists) { task in
+        Button("Restore \(task.title)") { model.archiveNestedList(task, archived: false) }
+      }
+    } label: {
+      WorkspacePaneIconGlyph(symbol: "archivebox")
+    }
+    .menuStyle(.borderlessButton)
+    .menuIndicator(.hidden)
+    .fixedSize()
+    .commandHelp(.listRestore, note: "Restore archived lists")
+    .accessibilityLabel("Archived lists")
+  }
+
+  /// Undo and redo, each named for what it would undo.
+  private var historyMenu: some View {
+    Menu {
+      Button(model.undoLabel.map { "Undo \($0)" } ?? "Undo") { model.run(.windowUndo) }
+        .disabled(model.undoLabel == nil)
+        .commandShortcut(.windowUndo)
+      Button(model.redoLabel.map { "Redo \($0)" } ?? "Redo") { model.run(.windowRedo) }
+        .disabled(model.redoLabel == nil)
+        .commandShortcut(.windowRedo)
+    } label: {
+      WorkspacePaneIconGlyph(symbol: "arrow.uturn.backward")
+    }
+    .menuStyle(.borderlessButton)
+    .menuIndicator(.hidden)
+    .fixedSize()
+    .commandHelp(.windowUndo, note: "Undo or redo workspace changes")
+    .accessibilityLabel("Workspace history")
   }
 
   private var sidebarRows: some View {
@@ -159,39 +194,6 @@ struct WorkspaceSidebarPane: View {
         guard let id = model.sidebarCursorScrollID else { return }
         withAnimation(.easeInOut(duration: 0.12)) { sidebarProxy.scrollTo(id) }
       }
-    }
-  }
-
-  private var sidebarFooter: some View {
-    VStack(spacing: 0) {
-      FocusRule()
-      HStack(spacing: theme.space.xs) {
-        // Named, not just drawn: two bare glyphs in a bottom bar gave no clue
-        // which was which, and neither said it had a key.
-        AddWorkspaceItemButton(
-          title: "New list", systemImage: "plus", command: .listNew, kind: .list, showsTitle: true)
-        AddWorkspaceItemButton(
-          title: "New folder", systemImage: "folder.badge.plus", command: .folderNew, kind: .folder)
-        Spacer(minLength: 0)
-        if !model.archivedLists.isEmpty || !model.archivedNestedLists.isEmpty {
-          Menu {
-            ForEach(model.archivedLists) { list in
-              Button("Restore \(list.name)") { model.restoreList(list) }
-            }
-            ForEach(model.archivedNestedLists) { task in
-              Button("Restore \(task.title)") { model.archiveNestedList(task, archived: false) }
-            }
-          } label: {
-            Image(systemName: "archivebox")
-          }
-          .menuStyle(.borderlessButton)
-          .fixedSize()
-          .focusable()
-          .commandHelp(.listRestore, note: "Restore archived lists")
-        }
-      }
-      .padding(.horizontal, theme.space.sm)
-      .padding(.vertical, theme.space.xs)
     }
   }
 
@@ -505,41 +507,5 @@ private struct WorkspaceFolderTree: View {
           Divider()
           Button("Delete folder", role: .destructive) { model.requestDeletion(of: .folder(folder)) }
         }
-  }
-}
-
-/// A footer button that asks for a new list or folder. The name is taken in
-/// the overlay, the same place ⌘⇧N and the list finder take it, rather than
-/// in a popover of its own that only the mouse could open.
-private struct AddWorkspaceItemButton: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
-  let title: String
-  let systemImage: String
-  let command: WorkspaceCommandID
-  let kind: WorkspaceCreationKind
-  var showsTitle = false
-
-  var body: some View {
-    Button {
-      model.requestCreation(kind)
-    } label: {
-      HStack(spacing: theme.space.xs) {
-        Image(systemName: systemImage)
-        if showsTitle {
-          Text(title)
-        }
-      }
-      .font(theme.captionFont)
-      .foregroundStyle(theme.muted)
-      .padding(.horizontal, theme.space.xs)
-      .padding(.vertical, theme.space.xxs)
-      .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
-    }
-    // Plain rather than a bezelled push button: chrome is quiet, and these
-    // are the only two raised controls the sidebar had.
-    .buttonStyle(.plain)
-    .focusable()
-    .commandHelp(command, note: title)
   }
 }

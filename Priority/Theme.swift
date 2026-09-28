@@ -77,6 +77,18 @@ struct Theme: Equatable {
   var emphasisBorder: CGFloat { specification.structure.border.emphasis }
   var focusRingWidth: CGFloat { specification.structure.border.focusRing }
 
+  /// The height of every column's header band — the sidebar's, the main
+  /// pane's and the right dock's tab bar — hairline included. One figure so
+  /// the rule under the three of them is one line across the window rather
+  /// than three that miss each other, the way an editor's panel headers line
+  /// up with its tab bar. From the spacing scale, so a denser theme tightens
+  /// the band with everything else.
+  var paneHeaderHeight: CGFloat { CGFloat(space.xl + space.sm) }
+
+  /// The square a header's or the status bar's icon button occupies: room for
+  /// a caption-sized glyph and a hover fill round it, and no more.
+  var paneIconButtonSize: CGFloat { CGFloat(space.lg + space.xs) }
+
   // MARK: - Type
 
   func font(_ face: ThemeFontFace, size: CGFloat, weight: ThemeFontWeight = .regular) -> Font {

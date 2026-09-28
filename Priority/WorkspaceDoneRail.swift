@@ -13,19 +13,10 @@ struct WorkspaceDoneRail: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
 
-  private var hasKeyboard: Bool { model.keyboardFocusArea == .done }
-
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      // No close button: the dock's tab strip and the status bar already hold
-      // the one control that puts it away.
-      HStack {
-        WorkspaceDoneSummary()
-        Spacer(minLength: 0)
-      }
-      .padding(.horizontal, theme.space.md)
-      .padding(.vertical, theme.space.xs)
-      FocusRule()
+      // The tally that used to sit in a strip of its own here is on the end of
+      // the dock's tab bar, so the list starts right under the one rule.
       if model.completedTasks.isEmpty {
         empty
       } else {
@@ -36,29 +27,21 @@ struct WorkspaceDoneRail: View {
     // The page, like every other pane: the dock is set apart by the hairline
     // beside it, not by a tint of its own.
     .background(theme.paper)
-    .overlay(alignment: .leading) {
-      // Only while the keyboard is here. The resize handle beside it is already
-      // a hairline, and two rules a point apart is a seam, not an edge.
-      Rectangle()
-        .fill(hasKeyboard ? theme.focusRing : Color.clear)
-        .frame(width: theme.focusRingWidth)
-    }
+    // No focus bar down the leading edge any more: the cursor row's hairline
+    // already says the keyboard is here, and a second, thicker line beside the
+    // resize handle boxed the whole rail in.
     .contentShape(Rectangle())
     .onTapGesture { model.reportKeyboardFocus(.done) }
   }
 
+  /// Centred muted text on the empty surface, like every other empty pane.
   private var empty: some View {
-    VStack(alignment: .leading, spacing: theme.space.xs) {
-      Text("Nothing finished yet")
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.muted)
-      Text("Tasks you tick off appear here, newest first.")
-        .font(theme.captionFont)
-        .foregroundStyle(theme.dim)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-    .focusSurfaceGutter()
-    .padding(.top, theme.space.md)
+    Text("Nothing finished yet. Tasks you tick off appear here, newest first.")
+      .font(theme.bodyFont())
+      .foregroundStyle(theme.muted)
+      .multilineTextAlignment(.center)
+      .padding(theme.space.xl)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
   private var rows: some View {
@@ -88,7 +71,7 @@ struct WorkspaceDoneRail: View {
 
 /// Today against the week it belongs to — the same pair the day view reads,
 /// because two numbers with no denominator say nothing about a day.
-private struct WorkspaceDoneSummary: View {
+struct WorkspaceDoneSummary: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
 
@@ -96,14 +79,18 @@ private struct WorkspaceDoneSummary: View {
     let progress = model.workProgress
     let today = progress.today.completed
     HStack(spacing: theme.space.xs) {
-      MicroLabel(
-        today == 1 ? "1 today" : "\(today) today",
-        tint: today > 0 ? theme.success : nil)
+      Text("\(today) today")
+        .foregroundStyle(today > 0 ? theme.success : theme.dim)
       if progress.week.completed > today {
-        MicroLabel("·")
-        MicroLabel("\(progress.week.completed) this week")
+        Text("· \(progress.week.completed) this week")
+          .foregroundStyle(theme.dim)
       }
     }
+    // The pane counts' face, since it now sits where they do: on the end of a
+    // header band.
+    .font(theme.monoFont(size: theme.type.microLabel.size))
+    .monospacedDigit()
+    .help("Tasks finished today, and this week")
   }
 }
 
