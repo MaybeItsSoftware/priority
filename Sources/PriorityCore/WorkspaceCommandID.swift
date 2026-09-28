@@ -42,7 +42,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   // Window
   case windowUndo, windowRedo, windowToggleSidebar, windowToggleInspectorPane
   case windowToggleDoneRail, windowOpenKeymap, windowReloadKeymap
-  case windowShowDiagnostics
+  case windowShowDiagnostics, windowOpenThemesFolder, windowReloadThemes, windowExportTheme
 
   // Focus surface
   case focusLadderUp, focusLadderDown, focusStage, focusBegin, focusTickOff

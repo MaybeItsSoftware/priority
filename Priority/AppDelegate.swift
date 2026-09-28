@@ -148,6 +148,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       self.workspace?.errorMessage = "keymap.json: \(first.message)\(more)"
     }
     WorkspaceKeymapStore.shared.start()
+    reportThemeFileIssues()
     checkvistManager.googleTasksMirror.startPolling()
     checkvistManager.googleCalendarCompletions.startPolling()
     // One pass at launch, so anything ticked off on a phone while the app was
@@ -463,6 +464,32 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         self?.applyAppTheme()
         self?.observeForAppThemeChanges()
       }
+    }
+  }
+}
+
+extension AppDelegate {
+  /// Theme files report the way `keymap.json` does: a line per problem in
+  /// Diagnostics, and errors on the window. A broken theme is Chalk on screen
+  /// and a message, never a failed launch; the audit's notes stay in the
+  /// theme settings page, where they read as advice rather than alarms.
+  func reportThemeFileIssues() {
+    UserThemeLibrary.shared.onIssues = { [weak self] issues in
+      guard let self else { return }
+      let reportable = issues.filter { $0.severity != .note }
+      for issue in reportable {
+        self.checkvistManager.diagnosticsLog.record(
+          category: "Themes", message: issue.description, isFailure: issue.severity == .error)
+      }
+      let errors = reportable.filter { $0.severity == .error }
+      guard let first = errors.first else {
+        if self.workspace?.errorMessage?.hasPrefix("themes/") == true {
+          self.workspace?.errorMessage = nil
+        }
+        return
+      }
+      let more = errors.count > 1 ? " — and \(errors.count - 1) more in Diagnostics" : ""
+      self.workspace?.errorMessage = "themes/\(first.description)\(more)"
     }
   }
 }

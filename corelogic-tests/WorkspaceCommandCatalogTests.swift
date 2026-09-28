@@ -56,7 +56,12 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
   /// the keyboard.
   func testOnlyTheStagedSecondPressAndPaletteOnlyRowsLackAKey() {
     let keyless = WorkspaceCommandCatalog.defaults.filter(\.allKeys.isEmpty).map(\.id)
-    XCTAssertEqual(keyless, [.windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics, .focusBegin])
+    XCTAssertEqual(
+      keyless,
+      [
+        .windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics, .windowOpenThemesFolder,
+        .windowReloadThemes, .windowExportTheme, .focusBegin,
+      ])
   }
 
   func testTheTaskMenuCarriesEveryTaskAction() {

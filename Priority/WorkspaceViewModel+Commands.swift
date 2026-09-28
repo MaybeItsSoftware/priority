@@ -189,6 +189,9 @@ extension WorkspaceViewModel {
     case .windowOpenKeymap: WorkspaceKeymapStore.shared.openFile()
     case .windowReloadKeymap: WorkspaceKeymapStore.shared.reload(force: true)
     case .windowShowDiagnostics: onShowDiagnostics?()
+    case .windowOpenThemesFolder: UserThemeLibrary.shared.openFolder()
+    case .windowReloadThemes: UserThemeLibrary.shared.reload(force: true)
+    case .windowExportTheme: UserThemeLibrary.shared.exportCurrentTheme()
 
     // MARK: Focus
     case .focusLadderUp: moveFocusLadder(by: 1)

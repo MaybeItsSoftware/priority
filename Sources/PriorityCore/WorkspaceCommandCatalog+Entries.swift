@@ -232,6 +232,15 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .windowShowDiagnostics, title: "Show diagnostics", group: "Window", keys: [],
       note: "Connection, integration health, and this session's problems"),
+    .init(
+      id: .windowOpenThemesFolder, title: "Open the themes folder", group: "Window", keys: [],
+      note: "Each .json there is a theme in the picker. Created if it is missing"),
+    .init(
+      id: .windowReloadThemes, title: "Reload themes", group: "Window", keys: [],
+      note: "They reload by themselves when saved; this is for when they did not"),
+    .init(
+      id: .windowExportTheme, title: "Export the current theme as JSON", group: "Window",
+      keys: [], note: "A complete, editable copy in the themes folder, put in force"),
   ]
 
   // MARK: - Focus

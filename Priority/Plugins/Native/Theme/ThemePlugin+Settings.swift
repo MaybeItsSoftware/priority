@@ -27,6 +27,7 @@ extension ThemePlugin where Self: PluginSettingsPageProviding {
 
 extension ChalkThemePlugin: PluginSettingsPageProviding {}
 extension ChalkDarkThemePlugin: PluginSettingsPageProviding {}
+extension UserThemePlugin: PluginSettingsPageProviding {}
 
 struct ThemeSettingsPage: View {
   let manager: AppCoordinator
@@ -49,6 +50,14 @@ struct ThemeSettingsPage: View {
           .font(.caption)
           .foregroundStyle(.secondary)
 
+        if themeManager.isFallingBack {
+          Text(
+            "Your theme \"\(themeManager.activeThemeIdentifier)\" did not load, so Chalk is standing in until its file is fixed. Why is under Your themes."
+          )
+          .font(.caption)
+          .foregroundStyle(theme.warning)
+        }
+
         if let locked = themeManager.specification.lockedAppearance {
           Text(
             "Always \(locked.rawValue), whatever your desktop is set to — that is what picking this one means. Choose Chalk to follow your Light/Dark/System setting instead."
@@ -57,6 +66,8 @@ struct ThemeSettingsPage: View {
           .foregroundStyle(.secondary)
         }
       }
+
+      userThemesSection
 
       Section("Palette") {
         ForEach(ThemeAppearance.allCases, id: \.self) { appearance in
@@ -106,6 +117,56 @@ struct ThemeSettingsPage: View {
       }
     }
     .formStyle(.grouped)
+  }
+
+  /// The themes folder: where it is, the ways in, and what the files got
+  /// wrong. The format is in `docs/themes.md`.
+  @ViewBuilder private var userThemesSection: some View {
+    let library = themeManager.userThemes
+    Section("Your themes") {
+      Text(
+        "Any .json file in the themes folder is a theme. It can extend Chalk and change only a few colours or sizes, and it reloads as you save it. The format is in docs/themes.md."
+      )
+      .font(.caption)
+      .foregroundStyle(.secondary)
+
+      LabeledContent("Folder") {
+        Text(library.folderURL.path(percentEncoded: false))
+          .font(.caption)
+          .monospaced()
+          .textSelection(.enabled)
+          .lineLimit(1)
+          .truncationMode(.middle)
+      }
+
+      HStack {
+        Button("Open themes folder") { library.openFolder() }
+        Button("Export current theme") { library.exportCurrentTheme() }
+        Button("Reload") { library.reload(force: true) }
+      }
+
+      ForEach(library.skipped, id: \.source) { skipped in
+        Label {
+          Text("\(skipped.source) not loaded: \(skipped.reason)").font(.caption)
+        } icon: {
+          Image(systemName: icon(for: .error)).foregroundStyle(color(for: .error))
+        }
+      }
+
+      // Errors and warnings across every file. Notes are left to the Audit
+      // section, which gives them for the theme in force; skips are above.
+      let fileIssues = library.issues.filter {
+        $0.severity != .note && !$0.message.hasPrefix("not loaded:")
+      }
+      ForEach(Array(fileIssues.enumerated()), id: \.offset) { _, issue in
+        Label {
+          Text(issue.description).font(.caption)
+        } icon: {
+          Image(systemName: icon(for: issue.severity))
+            .foregroundStyle(color(for: issue.severity))
+        }
+      }
+    }
   }
 
   private var themeBinding: Binding<String> {
