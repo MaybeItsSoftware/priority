@@ -109,6 +109,10 @@ struct MainApp: App {
           AppDelegate.shared.workspace.toggleBottomDock()
         }
         .commandShortcut(.windowToggleProgressDock)
+        Button("Close All Docks") {
+          AppDelegate.shared.workspace.closeAllDocks()
+        }
+        .commandShortcut(.windowCloseAllDocks)
         Divider()
         // Deliberately a fixed title rather than Hide/Show: every other item
         // here touches `AppDelegate.shared` only inside its action, which runs

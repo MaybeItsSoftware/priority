@@ -88,11 +88,20 @@ something you already have to know.
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
+| `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock / close all docks (Zed's) |
 | `Cmd+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
 | `Cmd+Shift+P` / `Cmd+K` | The command palette — everything the workspace can do, and its key |
 | `Cmd+/` | The same commands, grouped as a reference |
 | `Esc` | Cancel what you are typing, or leave the surface you are in |
+
+In the sidebar the keys are Zed's project panel's, lists standing in for files
+and folders for directories: `Cmd+N` new list and `Cmd+Alt+N` new folder beside
+the row you are on, `F2` rename, `Delete` delete (it asks), `Cmd+←` / `Cmd+→`
+collapse / expand every folder, `Space` opens the row. Its vim panel's netrw
+keys work too: `d` new folder, `%` new list, `Shift+D` delete, `Shift+R`
+rename, `h` / `l` / `-` collapse, expand and go up, `gg` / `Shift+G` the ends,
+`{` / `}` the previous / next folder and `:` the palette.
 
 The palette, search, the list finder, the move picker, quick edits (`t`, `dd`,
 `ee`…), the reference and the new list / folder / column prompts all open in

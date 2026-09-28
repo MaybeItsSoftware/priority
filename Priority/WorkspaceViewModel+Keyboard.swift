@@ -201,7 +201,8 @@ extension WorkspaceViewModel {
 }
 
 /// Where a list-walking key moves a cursor. Shared by the sidebar and the
-/// done rail, whose catalogue rows list the same eight keys.
+/// done rail, whose catalogue rows list the same keys — the sidebar adds
+/// `gg` and `⇧G`, the ends in Zed's vim project panel.
 private enum CursorStep {
   case by(Int), first, last
 
@@ -211,8 +212,8 @@ private enum CursorStep {
     case "up", "k": self = .by(-1)
     case "pagedown": self = .by(8)
     case "pageup": self = .by(-8)
-    case "home", "cmd+up": self = .first
-    case "end", "cmd+down": self = .last
+    case "home", "cmd+up", "gg": self = .first
+    case "end", "cmd+down", "shift+g": self = .last
     default: return nil
     }
   }

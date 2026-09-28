@@ -292,7 +292,7 @@ public struct WorkspaceKeymap: Sendable, Equatable {
     if isSequence && !modifiers.isEmpty {
       return reject("puts a modifier on a two-letter sequence, which is typed as two plain letters")
     }
-    if isCharacter && !isNamed && modifiers == ["shift"] {
+    if isCharacter && !isNamed && modifiers == ["shift"] && base.first?.isLetter != true {
       return reject("holds Shift on a character, which is already in the character — write the character itself, such as \"?\"")
     }
 

@@ -38,11 +38,13 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case listNew, listRename, listSettings, listArchive, listRestore, listComplete
   case listDelete, folderNew, folderMoveUp, folderMoveDown, folderSelectPrevious
   case folderSelectNext, listMoveUp, listMoveDown, listNewTaskDestination
+  case folderCollapseAll, folderExpandAll
 
   // Window
   case windowUndo, windowRedo, windowToggleSidebar, windowToggleInspectorPane
   case windowToggleDoneRail, windowToggleAgentPanel, windowToggleProgressDock, windowOpenKeymap, windowReloadKeymap
   case windowShowDiagnostics, windowOpenThemesFolder, windowReloadThemes, windowExportTheme
+  case windowCloseAllDocks
 
   // Focus surface
   case focusLadderUp, focusLadderDown, focusStage, focusBegin, focusTickOff

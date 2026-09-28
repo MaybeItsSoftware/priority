@@ -54,12 +54,40 @@ extension WorkspaceViewModel {
     if keyboardFocusArea == .tasks, !isEverythingSelected, selectedListID != nil {
       requestNestedListCreation(under: scopeTask)
     } else {
-      requestCreation(.list, in: selectedFolderID)
+      requestCreation(.list, in: creationFolderIDForSelection)
     }
   }
 
   func requestFolderCreationForSelection() {
-    requestCreation(.folder, in: selectedFolderID)
+    requestCreation(.folder, in: creationFolderIDForSelection)
+  }
+
+  /// Where a new list or folder goes: into the folder you are on, or — from a
+  /// list in the sidebar — beside it, in its folder, the way Zed's project
+  /// panel makes a new file next to the one selected.
+  private var creationFolderIDForSelection: String? {
+    if let selectedFolderID { return selectedFolderID }
+    guard keyboardFocusArea == .sidebar, !isEverythingSelected else { return nil }
+    return selectedList?.folderId
+  }
+
+  /// ⌘← and ⌘→ in the sidebar, Zed's collapse and expand all. Collapsing
+  /// under the cursor moves it to the top-level folder it was inside, so it
+  /// is never left on a row that is no longer drawn.
+  func setAllFoldersExpanded(_ expanded: Bool) {
+    if expanded {
+      expandedFolderIDs = Set(folders.map(\.id))
+      return
+    }
+    var topFolderID = selectedFolderID ?? selectedList?.folderId
+    while let id = topFolderID, let parent = folders.first(where: { $0.id == id })?.parentFolderId {
+      topFolderID = parent
+    }
+    expandedFolderIDs = []
+    if let topFolderID, let folder = folders.first(where: { $0.id == topFolderID }),
+      sidebarCursorRow?.kind != .folder(topFolderID) {
+      selectFolder(folder)
+    }
   }
 
   func createList(named name: String, in folderId: String? = nil) {

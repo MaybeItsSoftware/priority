@@ -62,7 +62,8 @@ public enum WorkspaceCommandCatalog {
       note: "Titles and notes. ⇧⌘F is Zed's find in project"),
     .init(
       id: .goCommandPalette, title: "Show the command palette", group: "Go",
-      keys: ["cmd+shift+p", "cmd+k"], note: "⇧⌘P as in Zed; ⌘K as it always was"),
+      keys: ["cmd+shift+p", "cmd+k"], surfaceKeys: [.sidebar: [":"]],
+      note: "⇧⌘P as in Zed; ⌘K as it always was. : in the sidebar, as in Zed's vim project panel"),
     .init(
       id: .goKeyboardReference, title: "Show the keyboard reference", group: "Go",
       keys: ["cmd+/", "?"], note: "The same list this palette shows"),
@@ -174,12 +175,18 @@ public enum WorkspaceCommandCatalog {
   // MARK: - Lists and folders
 
   private static let lists: [WorkspaceCommand] = [
-    .init(id: .listNew, title: "Create a list", group: "Lists", keys: ["cmd+shift+n"]),
+    // The sidebar is Zed's project panel: a list is a file there and a folder
+    // a directory, so ⌘N, ⌥⌘N, ⌫ and F2 act on the row, and so do the vim
+    // panel's netrw keys — % new file, d new directory, ⇧D delete, ⇧R rename.
+    .init(
+      id: .listNew, title: "Create a list", group: "Lists", keys: ["cmd+shift+n"],
+      surfaceKeys: [.sidebar: ["cmd+n", "shift+5"]],
+      note: "Beside the sidebar row you are on. ⌘N and % (⇧5) in the sidebar, as Zed's new file"),
     // ⌘R from anywhere; F2 only in the sidebar, because on a task pane F2
     // renames the task.
     .init(
       id: .listRename, title: "Rename the list or folder", group: "Lists", keys: ["cmd+r"],
-      surfaceKeys: [.sidebar: ["f2"]], note: "From a task pane, the list you are in"),
+      surfaceKeys: [.sidebar: ["f2", "shift+r"]], note: "From a task pane, the list you are in"),
     .init(id: .listSettings, title: "Open list settings", group: "Lists", keys: ["cmd+i", "oo"]),
     .init(id: .listArchive, title: "Archive the current list", group: "Lists", keys: ["cmd+option+a"]),
     .init(
@@ -190,8 +197,17 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+shift+x"]),
     .init(
       id: .listDelete, title: "Delete the list or folder", group: "Lists",
-      keys: ["cmd+shift+delete"]),
-    .init(id: .folderNew, title: "Create a folder", group: "Lists", keys: ["cmd+option+n"]),
+      keys: ["cmd+shift+delete"], surfaceKeys: [.sidebar: ["delete", "cmd+delete", "shift+d"]],
+      note: "Asks first. ⌫ and ⇧D on the sidebar row, as in Zed's project panel"),
+    .init(
+      id: .folderNew, title: "Create a folder", group: "Lists", keys: ["cmd+option+n"],
+      surfaceKeys: [.sidebar: ["d"]], note: "d in the sidebar, as in Zed's vim project panel"),
+    .init(
+      id: .folderCollapseAll, title: "Collapse every folder", group: "Lists",
+      keys: ["cmd+left"], surface: .sidebar),
+    .init(
+      id: .folderExpandAll, title: "Expand every folder", group: "Lists",
+      keys: ["cmd+right"], surface: .sidebar),
     .init(
       id: .folderMoveUp, title: "Move the folder up", group: "Lists",
       keys: ["cmd+option+up"], surface: .sidebar),
@@ -200,10 +216,10 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+option+down"], surface: .sidebar),
     .init(
       id: .folderSelectPrevious, title: "Select the previous folder", group: "Lists",
-      keys: ["ctrl+option+up"]),
+      keys: ["ctrl+option+up"], surfaceKeys: [.sidebar: ["{"]]),
     .init(
       id: .folderSelectNext, title: "Select the next folder", group: "Lists",
-      keys: ["ctrl+option+down"]),
+      keys: ["ctrl+option+down"], surfaceKeys: [.sidebar: ["}"]]),
     .init(
       id: .listMoveUp, title: "Move the sidebar row up", group: "Lists", keys: ["option+up"],
       surface: .sidebar, note: "Whatever you are on — a list, a folder, or a nested list"),
@@ -226,7 +242,8 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+b", "cmd+ctrl+s"], note: "⌘B toggles the left dock, as in Zed"),
     .init(
       id: .windowToggleInspectorPane, title: "Show or hide the inspector", group: "Window",
-      keys: ["cmd+ctrl+i"], note: "Same pane as ⌘I on a task, without selecting one"),
+      keys: ["cmd+ctrl+i", "cmd+option+b"],
+      note: "Same pane as ⌘I on a task, without selecting one. ⌥⌘B is Zed's toggle right dock"),
     .init(
       id: .windowToggleDoneRail, title: "Show or hide what you have finished", group: "Window",
       keys: ["cmd+ctrl+d"],
@@ -239,6 +256,9 @@ public enum WorkspaceCommandCatalog {
       id: .windowToggleProgressDock, title: "Show or hide the progress graph", group: "Window",
       keys: ["cmd+j"],
       note: "The bottom dock: tasks done and added a day at a time. ⌘J toggles the bottom dock, as in Zed"),
+    .init(
+      id: .windowCloseAllDocks, title: "Close all docks", group: "Window",
+      keys: ["cmd+option+y"], note: "The sidebar, the right dock and the progress graph, as in Zed"),
     .init(
       id: .windowOpenKeymap, title: "Open the keymap file", group: "Window", keys: [],
       note: "keymap.json — your own keys over these. Created empty if it is missing"),
@@ -360,18 +380,22 @@ public enum WorkspaceCommandCatalog {
       keys: ["pageup", "pagedown"], kind: .motion),
     .init(
       id: .motionSidebarSelect, title: "Move through the sidebar", group: "Moving around",
-      keys: ["down", "up", "j", "k", "home", "end", "cmd+up", "cmd+down", "pageup", "pagedown"],
+      keys: [
+        "down", "up", "j", "k", "home", "end", "cmd+up", "cmd+down", "gg", "shift+g", "pageup",
+        "pagedown",
+      ],
       surface: .sidebar,
       kind: .motion,
-      note: "Every row, including Focus and the timeline; Home and End are the two ends"),
+      note: "Every row, including Focus and the timeline; Home and End, or gg and ⇧G, are the two ends"),
     .init(
       id: .motionSidebarExpand, title: "Open the row you are on",
-      group: "Moving around", keys: ["right", "enter"], surface: .sidebar, kind: .motion,
+      group: "Moving around", keys: ["right", "enter", "space", "l"], surface: .sidebar,
+      kind: .motion,
       note: "Focus and the timeline open their screens, a folder expands, a list takes the keyboard"),
     .init(
       id: .motionSidebarCollapse, title: "Collapse the folder, or go up a level",
-      group: "Moving around", keys: ["left"], surface: .sidebar, kind: .motion,
-      note: "Nothing to leave on Focus or the timeline, so it stays put"),
+      group: "Moving around", keys: ["left", "h", "-"], surface: .sidebar, kind: .motion,
+      note: "Nothing to leave on Focus or the timeline, so it stays put. - is Zed's select parent"),
     .init(
       id: .motionBoardColumn, title: "Focus the next or previous column",
       group: "Moving around", keys: ["left", "right"], surface: .board, kind: .motion),

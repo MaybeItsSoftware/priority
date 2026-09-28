@@ -37,6 +37,7 @@ extension WorkspaceCommandCatalog {
     .goSearch, .goCommandPalette, .goKeyboardReference,
     .windowUndo, .windowRedo, .windowToggleSidebar, .windowToggleInspectorPane,
     .windowToggleDoneRail, .windowToggleAgentPanel, .windowToggleProgressDock,
+    .windowCloseAllDocks,
   ]
 
   /// Commands whose chord still works with the caret in a text field, because
@@ -49,8 +50,9 @@ extension WorkspaceCommandCatalog {
     .goKeyboardReference, .goCommandPalette, .goSearch, .goListNavigator,
     // The agent's own field is a text field, and this is how you leave it.
     .windowToggleAgentPanel,
-    // ⌘B and ⌘J, as in Zed, where they work from inside the editor.
-    .windowToggleSidebar, .windowToggleProgressDock,
+    // ⌘B, ⌘J, ⌥⌘B and ⌥⌘Y, as in Zed, where they work from inside the editor.
+    .windowToggleSidebar, .windowToggleProgressDock, .windowToggleInspectorPane,
+    .windowCloseAllDocks,
   ]
 
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.
@@ -157,8 +159,11 @@ extension WorkspaceCommandCatalog {
   ///
   /// Shift is dropped from a printable character when no other modifier is
   /// held, because it is already in the character — `?` is Shift-/, and the
-  /// catalogue writes `?`. That also makes `⇧X` plain `x`, run at once rather
-  /// than held for a sequence, which is the way to skip the wait.
+  /// catalogue writes `?`. A letter is the exception: `⇧D` is `shift+d`,
+  /// because Zed's project panel gives `d` and `⇧D` different jobs (a new
+  /// folder, and delete). A `shift+` letter nothing binds falls back to the
+  /// letter, so `⇧X` is still `x` run at once rather than held for a
+  /// sequence, which is the way to skip the wait.
   ///
   /// `nil` for a key with nothing to name, such as a bare modifier.
   public static func key(
@@ -174,7 +179,8 @@ extension WorkspaceCommandCatalog {
     guard let base = named ?? (characters.isEmpty ? nil : characters.lowercased()) else {
       return nil
     }
-    let keepsShift = shift && (named != nil || cmd || ctrl || option)
+    let isLetter = named == nil && base.count == 1 && base.first?.isLetter == true
+    let keepsShift = shift && (named != nil || cmd || ctrl || option || isLetter)
     var parts: [String] = []
     if cmd { parts.append("cmd") }
     if ctrl { parts.append("ctrl") }

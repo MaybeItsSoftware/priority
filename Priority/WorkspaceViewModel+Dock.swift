@@ -115,6 +115,14 @@ extension WorkspaceViewModel {
   /// never takes the keyboard: the key shows it and hides it.
   func toggleBottomDock() { isBottomDockVisible.toggle() }
 
+  /// ⌥⌘Y, Zed's close all docks: the left, the right and the bottom, with the
+  /// keyboard handed back to the tasks from whichever of them had it.
+  func closeAllDocks() {
+    if isRightDockVisible { hideRightDock() }
+    if isSidebarVisible { hideLeftDock() }
+    isBottomDockVisible = false
+  }
+
   /// The progress graph for the period, read from the store. Empty without
   /// one, and on a read that fails — a graph is not worth an error message.
   func loadProgressSeries() -> TaskProgressSeries {

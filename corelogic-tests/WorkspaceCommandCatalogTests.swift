@@ -336,6 +336,10 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "sidebar:k", "sidebar:j", "sidebar:f2", "sidebar:cmd+up", "sidebar:cmd+down",
       "sidebar:option+up", "sidebar:option+down",
       "sidebar:home", "sidebar:end", "sidebar:pageup", "sidebar:pagedown",
+      // The sidebar is Zed's project panel: ⌘N, ⌫ and Space act on the row,
+      // and so do the vim panel's h, l and gg, never on a task behind it.
+      "sidebar:cmd+n", "sidebar:delete", "sidebar:space", "sidebar:h", "sidebar:l",
+      "sidebar:gg",
       // On the board ←/→ change column instead of entering and leaving a task.
       "board:left", "board:right",
       // The done rail is a list of its own, so the list keys walk it, ⏎ opens

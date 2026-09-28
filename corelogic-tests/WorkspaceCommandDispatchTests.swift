@@ -110,17 +110,51 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   /// does not have the keyboard.
   func testRegionsDoNotTakeBareTaskKeys() {
     for surface: WorkspaceCommandSurface in [.sidebar, .done, .inspector] {
-      for key in ["space", "x", "delete", "1", "0", "tab", "f", "shift+enter", "option+enter"] {
+      for key in ["x", "1", "0", "tab", "f", "shift+enter", "option+enter"] {
         XCTAssertNil(
           WorkspaceCommandCatalog.command(forKey: key, on: surface),
           "\(key) acts on the selected task from \(surface)")
       }
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "?", on: surface)?.id, .goKeyboardReference)
+    }
+    for surface: WorkspaceCommandSurface in [.done, .inspector] {
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+n", on: surface)?.id, .taskNew)
     }
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "escape", on: .sidebar)?.id, .motionDismiss)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "escape", on: .inspector)?.id, .motionDismiss)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "escape", on: .done)?.id, .doneClose)
+  }
+
+  /// The sidebar is Zed's project panel, with its vim panel's netrw keys:
+  /// the keys act on the sidebar row, never on a task behind it.
+  func testTheSidebarAnswersToZedsProjectPanelKeys() {
+    let expected: [String: WorkspaceCommandID] = [
+      "d": .folderNew, "shift+d": .listDelete, "delete": .listDelete, "cmd+delete": .listDelete,
+      "shift+5": .listNew, "cmd+n": .listNew, "cmd+option+n": .folderNew,
+      "shift+r": .listRename, "f2": .listRename,
+      "h": .motionSidebarCollapse, "-": .motionSidebarCollapse,
+      "l": .motionSidebarExpand, "space": .motionSidebarExpand,
+      "gg": .motionSidebarSelect, "shift+g": .motionSidebarSelect,
+      "{": .folderSelectPrevious, "}": .folderSelectNext, ":": .goCommandPalette,
+      "cmd+left": .folderCollapseAll, "cmd+right": .folderExpandAll,
+    ]
+    for (key, id) in expected {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: .sidebar)?.id, id, key)
+    }
+    // Only on the sidebar: on a task pane these still mean the task.
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "delete", on: .outline)?.id, .taskDelete)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+n", on: .outline)?.id, .taskNew)
+  }
+
+  /// `d` makes a folder at once rather than waiting to see whether it was the
+  /// start of `dd`, and `⇧X`, which nothing binds, is still `x`.
+  func testASurfacesOwnLetterIsNotHeldForAnInheritedSequence() {
+    let sidebar = WorkspaceCommandCatalog.sequences(on: .sidebar)
+    XCTAssertFalse(sidebar.contains("dd"))
+    XCTAssertFalse(sidebar.contains("dr"))
+    XCTAssertTrue(sidebar.contains("gh"))
+    XCTAssertTrue(WorkspaceCommandCatalog.sequences(on: .outline).contains("dd"))
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "shift+x", on: .outline)?.id, .taskComplete)
   }
 
   // MARK: - Sequences
@@ -189,7 +223,9 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertEqual(key(8, "c", ctrl: true, cmd: true), "cmd+ctrl+c")
     XCTAssertEqual(key(8, "C", shift: true, cmd: true), "cmd+shift+c")
     XCTAssertEqual(key(44, "?", shift: true), "?")
-    XCTAssertEqual(key(7, "X", shift: true), "x")
+    XCTAssertEqual(key(7, "X", shift: true), "shift+x")
+    XCTAssertEqual(key(23, "%", shift: true), "shift+5")
+    XCTAssertEqual(key(27, "-"), "-")
     XCTAssertEqual(key(36, "\r", shift: true), "shift+enter")
     XCTAssertEqual(key(76, "\u{3}"), "enter")
     XCTAssertEqual(key(115, "\u{F729}"), "home")
@@ -203,7 +239,8 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
 
   /// A catalogue key no key press can be spelled as is a dead key by
   /// construction. The spelling puts modifiers in one order and never writes
-  /// Shift on a bare character, so the catalogue must not either.
+  /// Shift on a bare character but a letter or a named key, so the catalogue
+  /// must not either.
   func testEveryCatalogueKeyIsOneAKeyPressCanProduce() {
     let order = ["cmd", "ctrl", "option", "shift"]
     for command in WorkspaceCommandCatalog.all {
@@ -213,7 +250,8 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
         XCTAssertEqual(
           modifiers, order.filter(modifiers.contains),
           "\(command.id) binds \(token), whose modifiers are out of order")
-        if modifiers == ["shift"], let base = parts.last, base.count == 1 {
+        if modifiers == ["shift"], let base = parts.last, base.count == 1,
+          base.first?.isLetter != true, !WorkspaceCommandCatalog.keyNames.contains(base) {
           XCTFail("\(command.id) binds \(token); Shift on a character is already in the character")
         }
       }

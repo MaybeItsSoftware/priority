@@ -53,11 +53,27 @@ public struct WorkspaceKeyBindings: Sendable {
   /// The command a key means on a surface, or `nil` when it means nothing
   /// there. See `WorkspaceCommandCatalog.command(forKey:on:)` for the rules.
   public func command(forKey key: String, on surface: WorkspaceCommandSurface) -> WorkspaceCommand? {
+    if let bound = boundCommand(forKey: key, on: surface) { return bound }
+    // `⇧X` that nothing binds is `x`, run at once — see `key(keyCode:…)`.
+    if key.hasPrefix("shift+"), key.count == 7 {
+      return boundCommand(forKey: String(key.dropFirst(6)), on: surface)
+    }
+    return nil
+  }
+
+  private func boundCommand(forKey key: String, on surface: WorkspaceCommandSurface) -> WorkspaceCommand? {
     if let own = ownByKey[surface]?[key] { return own }
     guard surface != .anywhere, unbound[surface]?.contains(key) != true,
       let fallback = ownByKey[.anywhere]?[key],
       WorkspaceCommandCatalog.inherits(fallback, key: key, on: surface)
     else { return nil }
+    // A letter the surface binds on its own is not held for an inherited
+    // sequence that begins with it: the sidebar's `d` makes a folder now,
+    // rather than waiting out the hold in case it was the task's `dd`.
+    if WorkspaceCommandCatalog.isSequence(key), let first = key.first,
+      ownByKey[surface]?[String(first)] != nil {
+      return nil
+    }
     return fallback
   }
 

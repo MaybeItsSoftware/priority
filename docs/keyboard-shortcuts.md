@@ -31,6 +31,8 @@ a task as Zed treats a line:
 | Focus project panel | `Cmd+Shift+E` | Focus the sidebar |
 | Toggle agent panel | `Cmd+Shift+A` | The left dock's Agent tab |
 | Toggle bottom dock | `Cmd+J` | The progress graph |
+| Toggle right dock | `Cmd+Alt+B` | The right dock (`Cmd+Ctrl+I` still works) |
+| Close all docks | `Cmd+Alt+Y` | Put the sidebar, right dock and graph away |
 | Move line up / down | `Alt+↑` / `Alt+↓` | Move the task, or the sidebar row |
 | Document start / end | `Cmd+↑` / `Cmd+↓` | First / last task, or sidebar row |
 | Delete line | `Cmd+Shift+K` | Delete the task |
@@ -38,6 +40,29 @@ a task as Zed treats a line:
 | Rename | `F2` | Rename the task, or the sidebar row |
 | Undo / redo | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
 | Settings | `Cmd+,` | Preferences |
+
+The sidebar is Zed's project panel, with a list as a file and a folder as a
+directory. Its keys act on the sidebar row, never on a task behind it:
+
+| Zed project panel | Key | In Priority's sidebar |
+| --- | --- | --- |
+| New file | `Cmd+N`, `%` (vim) | New list, beside the row you are on |
+| New directory | `Cmd+Alt+N`, `d` (vim) | New folder, beside the row you are on |
+| Rename | `F2`, `Shift+R` (vim) | Rename the list or folder |
+| Trash / delete | `Delete`, `Cmd+Delete`, `Shift+D` (vim) | Delete the list or folder (it asks) |
+| Collapse / expand all | `Cmd+←` / `Cmd+→` | Every folder |
+| Collapse / expand | `←` `h` / `→` `l` | The folder; ← and `h` go up a level from a list |
+| Select parent | `-` (vim) | Up a level |
+| Open | `Space`, `Return` | Open the row |
+| First / last | `gg` / `Shift+G` (vim) | The sidebar's ends |
+| Previous / next directory | `{` / `}` (vim) | The previous / next folder |
+| Command palette | `:` (vim) | The palette |
+
+Because the sidebar has its own `d`, `h` and `l`, it does not hold them for
+the task sequences that begin with them (`dd`, `hc`, `ll`): a letter a surface
+binds on its own runs at once there. And Shift on a letter is a key of its
+own — `Shift+D` is not `d` — though a `Shift` letter nothing binds still runs
+the plain letter, so `Shift+X` remains the way to skip a sequence's wait.
 
 Taking those keys moved what Priority had on them: archiving a list is
 `Cmd+Alt+A` (was `Cmd+Shift+A`), promoting a nested list `Cmd+Alt+P` (was
@@ -78,7 +103,8 @@ The shape is Zed's: an array of blocks, each with an optional `context` and a
   `enter`, `escape`, `tab`, `space`, `delete`, `up`/`down`/`left`/`right`,
   `home`, `end`, `pageup`, `pagedown`, `f2` and `comma`. Two plain letters,
   such as `gt`, make a two-letter sequence. Shift on a lone character is
-  already in the character: write `?`, not `shift+/`.
+  already in the character: write `?`, not `shift+/`. A letter is the
+  exception — `shift+d` is a key of its own, as in Zed.
 - **Without a `context`** a binding applies wherever the command does. The key
   is added to the command's own keys — the defaults stay — and taken from any
   other command that had it on the same surface. A `null` there removes the

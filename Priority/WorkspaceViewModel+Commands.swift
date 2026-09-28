@@ -180,6 +180,8 @@ extension WorkspaceViewModel {
     case .folderSelectNext: moveFolderSelection(by: 1)
     case .listMoveUp: reorderSidebarCursor(by: -1)
     case .listMoveDown: reorderSidebarCursor(by: 1)
+    case .folderCollapseAll: setAllFoldersExpanded(false)
+    case .folderExpandAll: setAllFoldersExpanded(true)
 
     // MARK: Window
     case .windowUndo: undoLastChange()
@@ -188,6 +190,7 @@ extension WorkspaceViewModel {
     case .windowToggleAgentPanel: toggleAgentPanel()
     case .windowToggleProgressDock: toggleBottomDock()
     case .windowToggleInspectorPane: toggleInspector()
+    case .windowCloseAllDocks: closeAllDocks()
     case .windowOpenKeymap: WorkspaceKeymapStore.shared.openFile()
     case .windowReloadKeymap: WorkspaceKeymapStore.shared.reload(force: true)
     case .windowShowDiagnostics: onShowDiagnostics?()
@@ -242,7 +245,8 @@ extension WorkspaceViewModel {
     case .motionSelectEnds: if let key { selectTaskAtEnd(first: key == "home" || key == "cmd+up") }
     case .motionSelectPage: if let key { moveTaskSelection(by: key == "pageup" ? -8 : 8) }
     case .motionSidebarSelect: if let key { moveSidebarCursor(key) }
-    case .motionSidebarExpand: if let key { activateSidebarCursor(expandOnly: key == "right") }
+    case .motionSidebarExpand:
+      if let key { activateSidebarCursor(expandOnly: key == "right" || key == "l") }
     case .motionSidebarCollapse: if key != nil { collapseSidebarCursor() }
     case .motionBoardColumn: if let key { focusAdjacentBoardColumn(by: key == "right" ? 1 : -1) }
     case .motionDismiss: if key != nil { dismissFromKeyboard() }
