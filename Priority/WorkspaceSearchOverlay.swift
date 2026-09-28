@@ -34,7 +34,7 @@ struct WorkspaceSearchOverlay: View {
       HStack(spacing: theme.space.md) {
         Toggle("Include completed", isOn: $model.searchIncludesCompleted)
           .toggleStyle(.checkbox)
-          .font(theme.bodyFont(size: theme.type.microLabel.size))
+          .font(theme.captionFont)
           .foregroundStyle(theme.muted)
         Spacer()
       }
@@ -95,7 +95,7 @@ struct WorkspaceSearchOverlay: View {
       }
       if let snippet = result.notesSnippet {
         Text(snippet)
-          .font(theme.bodyFont(size: theme.type.microLabel.size))
+          .font(theme.captionFont)
           .foregroundStyle(theme.muted)
           .lineLimit(1)
       }

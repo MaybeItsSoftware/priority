@@ -50,7 +50,7 @@ struct WorkspaceTaskQuickEditOverlay: View {
       VStack(alignment: .leading, spacing: theme.space.sm) {
         editor
         if let error {
-          Text(error).font(theme.bodyFont(size: theme.type.microLabel.size)).foregroundStyle(theme.danger)
+          Text(error).font(theme.captionFont).foregroundStyle(theme.danger)
         }
       }
       .padding(theme.space.md)
@@ -109,7 +109,7 @@ struct WorkspaceTaskQuickEditOverlay: View {
       HStack(spacing: theme.space.xs) {
         MicroLabel("Time")
         timePart(.hour, field: .hour)
-        Text(":").foregroundStyle(theme.muted)
+        Text(":").font(theme.numeralFont(theme.scale.body)).foregroundStyle(theme.muted)
         timePart(.minute, field: .minute)
       }
     } else if request.kind == .notes {
@@ -150,23 +150,30 @@ struct WorkspaceTaskQuickEditOverlay: View {
     VStack(spacing: theme.space.sm) {
       HStack {
         Button { move(.month, -1) } label: { Image(systemName: "chevron.left") }
+          .buttonStyle(.plain)
+          .foregroundStyle(theme.muted)
           .focusable()
           .accessibilityLabel("Previous month")
         Spacer()
         Text(date, format: .dateTime.month(.wide).year())
+          .font(theme.bodyFont(weight: .semibold))
+          .foregroundStyle(theme.ink)
         Spacer()
         Button { move(.month, 1) } label: { Image(systemName: "chevron.right") }
+          .buttonStyle(.plain)
+          .foregroundStyle(theme.muted)
           .focusable()
           .accessibilityLabel("Next month")
       }
       LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7)) {
         ForEach(0..<7, id: \.self) { index in
           Text(calendar.veryShortWeekdaySymbols[(calendar.firstWeekday - 1 + index) % 7])
-            .foregroundStyle(theme.muted)
+            .microLabel(theme)
         }
         ForEach(0..<42, id: \.self) { index in
           let day = gridDay(index)
           Text(day, format: .dateTime.day())
+            .font(theme.numeralFont(theme.scale.body, weight: .regular))
             .frame(maxWidth: .infinity).padding(.vertical, theme.space.xs)
             .foregroundStyle(calendar.isDate(day, equalTo: date, toGranularity: .month) ? theme.ink : theme.dim)
             .workspaceSelection(isSelected: calendar.isDate(day, inSameDayAs: date), hasKeyboard: false)
@@ -188,6 +195,8 @@ struct WorkspaceTaskQuickEditOverlay: View {
 
   private func timePart(_ component: Calendar.Component, field: Field) -> some View {
     Text(String(format: "%02d", calendar.component(component, from: date)))
+      .font(theme.numeralFont(theme.scale.body))
+      .foregroundStyle(theme.ink)
       .monospacedDigit().padding(theme.space.xs)
       .workspaceSelection(isSelected: focus == field, hasKeyboard: focus == field)
       .focusable().focused($focus, equals: field)

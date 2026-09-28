@@ -5,18 +5,19 @@ import SwiftUI
 /// run together — `E E` and `F2` are two ways to rename, not one four-key
 /// incantation, and the old help sheet's `EE / F2` made that a guess.
 struct KeyCapRow: View {
+  @Environment(\.theme) private var theme
   let keys: [String]
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: theme.space.xs) {
       if keys.isEmpty {
         // Blank would read as "we forgot to print it". One command really has
         // no key of its own, and saying so is the honest answer.
-        Text("no key").font(.system(size: 9)).foregroundStyle(.quaternary)
+        Text("no key").font(theme.monoFont(size: theme.type.microLabel.size)).foregroundStyle(theme.dim)
       }
       ForEach(Array(keys.enumerated()), id: \.offset) { index, key in
         if index > 0 {
-          Text("or").font(.system(size: 9)).foregroundStyle(.quaternary)
+          Text("or").font(theme.monoFont(size: theme.type.microLabel.size)).foregroundStyle(theme.dim)
         }
         KeyCap(key)
       }
@@ -111,7 +112,7 @@ struct WorkspaceCommandPalette: View {
           .foregroundStyle(isMotion ? theme.muted : theme.ink)
         if let note = command.note {
           Text(note)
-            .font(theme.bodyFont(size: theme.type.microLabel.size))
+            .font(theme.captionFont)
             .foregroundStyle(theme.dim)
         }
       }

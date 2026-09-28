@@ -39,7 +39,7 @@ struct WorkspaceMatrixDashboard: View {
           model.isMultiListScope
             ? "Urgency across every list in scope"
             : "Urgency within this project")
-          .font(theme.bodyFont(size: 11))
+          .font(theme.captionFont)
           .foregroundStyle(theme.muted)
           .lineLimit(1)
       } trailing: {

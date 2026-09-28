@@ -485,7 +485,7 @@ struct WorkspaceKeyboardReference: View {
           .font(theme.bodyFont())
           .foregroundStyle(theme.ink)
         if let note = command.note {
-          Text(note).font(theme.bodyFont(size: theme.type.microLabel.size)).foregroundStyle(theme.dim)
+          Text(note).font(theme.captionFont).foregroundStyle(theme.dim)
         }
       }
       Spacer(minLength: theme.space.md)

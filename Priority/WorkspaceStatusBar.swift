@@ -82,7 +82,7 @@ private struct WorkspaceStatusToggle: View {
   var body: some View {
     Button(action: toggle) {
       Image(systemName: symbol)
-        .font(theme.bodyFont(size: theme.type.microLabel.size))
+        .font(theme.captionFont)
         .foregroundStyle(isOn ? theme.primary : theme.muted)
         .padding(.horizontal, theme.space.xs)
         .padding(.vertical, theme.space.xxs)
@@ -130,7 +130,7 @@ private struct WorkspaceStatusMessage: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Dismiss")
       }
-      .font(theme.bodyFont(size: theme.type.microLabel.size))
+      .font(theme.captionFont)
       .foregroundStyle(theme.danger)
     } else if let message = manager.statusMessage {
       Text(message)
