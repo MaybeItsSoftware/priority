@@ -147,17 +147,17 @@ struct LocalTaskInspector: View {
   private func planning(_ draft: TaskEditorDraft) -> some View {
     InspectorSection("Plan") {
       WorkspaceTaskPlanningEditor(task: task, values: draft.values)
-      Picker("Priority", selection: binding(\.priority, fallback: draft.values.priority)) {
-        Text("None").tag(0)
-        Text("Low").tag(1)
-        Text("Medium").tag(2)
-        Text("High").tag(3)
-        Text("Urgent").tag(4)
-      }.focusable()
-      TextField(
-        "Estimate (minutes)", text: binding(\.estimateMinutes, fallback: draft.values.estimateMinutes)
-      )
-      .textFieldStyle(.roundedBorder)
+      ThemedPicker(
+        "Priority", selection: binding(\.priority, fallback: draft.values.priority),
+        options: Self.priorityNames.enumerated().map { ThemedPickerOption($0.element, value: $0.offset) }
+      ).focusable()
+      ThemedControlRow("Estimate") {
+        TextField(
+          "Estimate (minutes)", text: binding(\.estimateMinutes, fallback: draft.values.estimateMinutes),
+          prompt: Text("Minutes")
+        )
+        .themedTextField()
+      }
       if let seconds = model.taskLoggedSeconds[task.id], seconds > 0 {
         Text(
           "Worked \(FocusPoints.formatted(Double(seconds) / 60)) minutes"
@@ -198,7 +198,7 @@ struct LocalTaskInspector: View {
           }
         )
       )
-      .toggleStyle(.switch).focusable()
+      .toggleStyle(.themedCheckbox).focusable()
       if draft.values.dueAt != nil || draft.values.dueDate != nil {
         Toggle(
           "Exact deadline time",
@@ -216,9 +216,10 @@ struct LocalTaskInspector: View {
               }
             })
         )
-        .toggleStyle(.switch)
+        .toggleStyle(.themedCheckbox)
       }
       if let day = draft.values.dueDate {
+        ThemedControlRow("Due") {
         DatePicker(
           "Due",
           selection: Binding(
@@ -233,21 +234,30 @@ struct LocalTaskInspector: View {
               }
             }
           ), displayedComponents: [.date])
+          .labelsHidden()
+        }
       }
       if let dueAt = draft.values.dueAt {
-        DatePicker(
-          "Due",
-          selection: Binding(
-            get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
-            set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }
-          ), displayedComponents: [.date, .hourAndMinute]
-        ).focusable()
+        ThemedControlRow("Due") {
+          DatePicker(
+            "Due",
+            selection: Binding(
+              get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
+              set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }
+            ), displayedComponents: [.date, .hourAndMinute]
+          )
+          .labelsHidden()
+          .focusable()
+        }
       }
-      TextField(
-        "Repeat", text: binding(\.recurrenceRule, fallback: draft.values.recurrenceRule),
-        prompt: Text("Every Monday"))
+      ThemedControlRow("Repeat") {
+        TextField(
+          "Repeat", text: binding(\.recurrenceRule, fallback: draft.values.recurrenceRule),
+          prompt: Text("Every Monday"))
+        .themedTextField()
+      }
       Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
-        .toggleStyle(.switch)
+        .toggleStyle(.themedCheckbox)
         .focusable()
         .help("Show this ongoing task in Dailies without completing the task itself")
     }
@@ -256,8 +266,11 @@ struct LocalTaskInspector: View {
   @ViewBuilder
   private func filing(_ draft: TaskEditorDraft) -> some View {
     InspectorSection("Filing") {
-      TextField("Tags", text: binding(\.tags, fallback: draft.values.tags), prompt: Text("Work, launch"))
-      Menu("Move to list") {
+      ThemedControlRow("Tags") {
+        TextField("Tags", text: binding(\.tags, fallback: draft.values.tags), prompt: Text("Work, launch"))
+          .themedTextField()
+      }
+      ThemedMenu("Move to list", systemImage: "arrow.right", expands: true) {
         ForEach(model.lists.filter { $0.id != task.listId }) { list in
           Button(list.name) { model.moveTask(task, toListId: list.id) }
         }
@@ -292,26 +305,27 @@ struct LocalTaskInspector: View {
   private var structure: some View {
     InspectorSection("Structure") {
       Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
+        .buttonStyle(FocusActionButtonStyle())
         .focusable()
         .commandHelp(task.isList ? .taskPromoteList : .taskConvertToList)
       if task.isList {
-        Picker(
+        ThemedPicker(
           "Icon",
           selection: Binding(
             get: { model.itemSymbol(for: task) },
             set: { model.setNestedListIcon($0, for: task) }
-          )
-        ) {
-          ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
-            Label(icon.label, systemImage: icon.symbol).tag(icon.symbol)
-          }
-        }.focusable()
-        Button(task.isPromoted == true ? "Unpin from sidebar" : "Pin to sidebar") {
-          model.toggleListPromotion(task)
-        }.focusable()
-        Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
-          .focusable()
-        Button("Archive list") { model.archiveNestedList(task) }.focusable()
+          ),
+          options: Self.iconOptions
+        ).focusable()
+        HStack(spacing: theme.space.xs) {
+          Button(task.isPromoted == true ? "Unpin from sidebar" : "Pin to sidebar") {
+            model.toggleListPromotion(task)
+          }.focusable()
+          Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
+            .focusable()
+          Button("Archive list") { model.archiveNestedList(task) }.focusable()
+        }
+        .buttonStyle(FocusActionButtonStyle())
       }
     }
   }
@@ -333,6 +347,12 @@ struct LocalTaskInspector: View {
     }
   }
 
+  static let iconOptions = WorkspaceViewModel.availableListIcons.map {
+    ThemedPickerOption($0.label, value: $0.symbol, systemImage: $0.symbol)
+  }
+
+  static let priorityNames = ["None", "Low", "Medium", "High", "Urgent"]
+
   private func binding<Value>(_ keyPath: WritableKeyPath<TaskEditorValues, Value>, fallback: Value) -> Binding<Value> {
     Binding(
       get: { model.taskEditor.draft(for: task.id)?.values[keyPath: keyPath] ?? fallback },
@@ -345,7 +365,7 @@ struct LocalTaskInspector: View {
     case .notes: values.notes
     case .dueAt: values.dueAt?.formatted() ?? "None"
     case .estimateMinutes: values.estimateMinutes.isEmpty ? "None" : "\(values.estimateMinutes) minutes"
-    case .priority: ["None", "Low", "Medium", "High", "Urgent"][min(max(values.priority, 0), 4)]
+    case .priority: Self.priorityNames[min(max(values.priority, 0), Self.priorityNames.count - 1)]
     case .tags: values.tags
     case .recurrenceRule: values.recurrenceRule
     case .links: values.links
@@ -403,46 +423,44 @@ private struct ListSettingsEditor: View {
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.lg) {
       SheetTitle("List settings")
-      Form {
-        TextField("Name", text: $name)
-          .focused($nameIsFocused)
-          .onSubmit { save() }
-        TextField("Color (hex)", text: $colorHex, prompt: Text("#4F86C6"))
-        Picker("Icon", selection: $iconSymbol) {
-          ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
-            Label(icon.label, systemImage: icon.symbol).tag(icon.symbol)
-          }
+      VStack(alignment: .leading, spacing: theme.space.sm) {
+        ThemedControlRow("Name") {
+          TextField("Name", text: $name)
+            .themedTextField()
+            .focused($nameIsFocused)
+            .onSubmit { save() }
         }
-        .focusable()
-        Picker("Folder", selection: $folderID) {
-          Text("Ungrouped").tag(nil as String?)
-          ForEach(model.folders) { folder in
-            Text(folder.name).tag(Optional(folder.id))
-          }
+        ThemedControlRow("Color (hex)") {
+          TextField("Color (hex)", text: $colorHex, prompt: Text("#4F86C6"))
+            .themedTextField()
         }
+        ThemedPicker("Icon", selection: $iconSymbol, options: LocalTaskInspector.iconOptions)
+          .focusable()
+        ThemedPicker(
+          "Folder", selection: $folderID,
+          options: [ThemedPickerOption("Ungrouped", value: nil as String?)]
+            + model.folders.map { ThemedPickerOption($0.name, value: Optional($0.id)) }
+        )
         .focusable()
         Toggle("Archived", isOn: $isArchived)
-          .toggleStyle(.switch)
+          .toggleStyle(.themedCheckbox)
           .focusable()
           .disabled(list.isSystemList)
         if !model.visibleRootCandidates(for: list).isEmpty || visibleRootTaskID != nil {
-          Picker("Show at list root", selection: $visibleRootTaskID) {
-            Text("Top-level tasks").tag(nil as String?)
-            ForEach(model.visibleRootCandidates(for: list)) { root in
-              Text("Children of \(root.title)").tag(Optional(root.id))
-            }
-            if let rootID = visibleRootTaskID,
-              !model.visibleRootCandidates(for: list).contains(where: { $0.id == rootID }) {
-              Text("Current imported root (unavailable)").tag(Optional(rootID))
-            }
-          }
+          ThemedPicker(
+            "Show at list root", selection: $visibleRootTaskID, options: visibleRootOptions)
           Text("Choose an imported project's children as the list's visible work. Tasks keep their titles and placement.")
             .font(theme.captionFont).foregroundStyle(theme.muted)
           let preview = model.visibleRootPreview(for: list, rootID: visibleRootTaskID)
           Text("Preview: \(preview.prefix(3).map(\.title).joined(separator: ", "))\(preview.count > 3 ? "…" : "")")
             .font(theme.captionFont).foregroundStyle(theme.muted)
         }
-        LabeledContent("Tasks", value: "\(model.taskCount(for: list))")
+        ThemedControlRow("Tasks") {
+          Text("\(model.taskCount(for: list))")
+            .font(theme.bodyFont())
+            .monospacedDigit()
+            .foregroundStyle(theme.muted)
+        }
       }
       if let saveError { Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger) }
       HStack(spacing: theme.space.xs) {
@@ -477,6 +495,16 @@ private struct ListSettingsEditor: View {
     }
   }
 
+  private var visibleRootOptions: [ThemedPickerOption<String?>] {
+    let candidates = model.visibleRootCandidates(for: list)
+    var options = [ThemedPickerOption("Top-level tasks", value: nil as String?)]
+    options += candidates.map { ThemedPickerOption("Children of \($0.title)", value: Optional($0.id)) }
+    if let rootID = visibleRootTaskID, !candidates.contains(where: { $0.id == rootID }) {
+      options.append(ThemedPickerOption("Current imported root (unavailable)", value: Optional(rootID)))
+    }
+    return options
+  }
+
   private func save() {
     do {
       try model.saveListSettings(list, name: name, colorHex: colorHex, folderID: folderID,
@@ -507,16 +535,18 @@ private struct FolderSettingsEditor: View {
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.lg) {
       SheetTitle("Folder settings")
-      Form {
-        TextField("Name", text: $name)
-          .focused($nameIsFocused)
-          .onSubmit { save() }
-        Picker("Parent folder", selection: $parentFolderID) {
-          Text("At sidebar root").tag(nil as String?)
-          ForEach(model.validParentFolders(for: folder)) { candidate in
-            Text(candidate.name).tag(Optional(candidate.id))
-          }
+      VStack(alignment: .leading, spacing: theme.space.sm) {
+        ThemedControlRow("Name") {
+          TextField("Name", text: $name)
+            .themedTextField()
+            .focused($nameIsFocused)
+            .onSubmit { save() }
         }
+        ThemedPicker(
+          "Parent folder", selection: $parentFolderID,
+          options: [ThemedPickerOption("At sidebar root", value: nil as String?)]
+            + model.validParentFolders(for: folder).map { ThemedPickerOption($0.name, value: Optional($0.id)) }
+        )
         .focusable()
       }
       if let saveError { Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger) }

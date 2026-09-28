@@ -43,7 +43,7 @@ struct WorkspaceFocusContextControls: View {
         .font(theme.captionFont)
       }
       HStack(spacing: theme.space.sm) {
-        Menu(model.availableUntil.map { "Until \($0.formatted(date: .omitted, time: .shortened))" } ?? "Available time") {
+        ThemedMenu(model.availableUntil.map { "Until \($0.formatted(date: .omitted, time: .shortened))" } ?? "Available time") {
           Button("No time limit") { model.availableUntil = nil; model.focusContextChanged() }
           ForEach([15, 30, 60, 90], id: \.self) { minutes in
             Button("\(minutes) minutes") { model.availableUntil = Date.now.addingTimeInterval(Double(minutes * 60)); model.focusContextChanged() }
@@ -54,15 +54,18 @@ struct WorkspaceFocusContextControls: View {
           DatePicker("Until", selection: Binding(get: { model.availableUntil ?? end }, set: { model.availableUntil = $0; model.focusContextChanged() }),
                      displayedComponents: [.date, .hourAndMinute]).labelsHidden()
         }
-        Picker("Goal", selection: Binding(get: { model.focusContext.mode }, set: { model.focusContext.mode = $0; model.focusContextChanged() })) {
-          Text("Make progress").tag(FocusTimeMode.progress)
-          Text("Finish something").tag(FocusTimeMode.finish)
-        }.fixedSize()
+        ThemedSegmentedPicker(
+          selection: Binding(get: { model.focusContext.mode }, set: { model.focusContext.mode = $0; model.focusContextChanged() }),
+          options: [
+            ThemedPickerOption("Make progress", value: FocusTimeMode.progress),
+            ThemedPickerOption("Finish something", value: FocusTimeMode.finish),
+          ])
+        .accessibilityLabel("Goal")
       }
       HStack(spacing: theme.space.sm) {
         Toggle("Context expires", isOn: Binding(get: { model.contextExpiresAt != nil }, set: {
           model.contextExpiresAt = $0 ? Date.now.addingTimeInterval(3600) : nil; model.focusContextChanged()
-        })).toggleStyle(.switch).tint(theme.primary)
+        })).toggleStyle(.themedCheckbox).fixedSize()
         if let end = model.contextExpiresAt {
           DatePicker("Context until", selection: Binding(get: { model.contextExpiresAt ?? end }, set: { model.contextExpiresAt = $0; model.focusContextChanged() }),
                      displayedComponents: [.date, .hourAndMinute]).labelsHidden()
@@ -96,8 +99,10 @@ private struct WorkspaceConditionsEditor: View {
       }
       HStack(spacing: theme.space.sm) {
         TextField("New condition", text: $newName)
+          .themedTextField()
         Toggle("Location", isOn: $newIsLocation)
-          .toggleStyle(.switch)
+          .toggleStyle(.themedCheckbox)
+          .fixedSize()
         Button("Add") {
           model.createCondition(name: newName, isLocation: newIsLocation)
           if model.errorMessage == nil { newName = "" }
@@ -138,10 +143,13 @@ private struct WorkspaceConditionEditorRow: View {
   var body: some View {
     HStack {
       TextField("Name", text: $name)
+        .themedTextField()
       Toggle("Location", isOn: $location)
-        .toggleStyle(.switch)
+        .toggleStyle(.themedCheckbox)
+        .fixedSize()
       Toggle("Archived", isOn: $archived)
-        .toggleStyle(.switch)
+        .toggleStyle(.themedCheckbox)
+        .fixedSize()
       Button("Save") { model.saveCondition(condition, name: name, isLocation: location, isArchived: archived) }
         .buttonStyle(FocusActionButtonStyle())
         .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -160,10 +168,13 @@ struct WorkspaceTaskPlanningEditor: View {
       Toggle("Start time", isOn: Binding(get: { current.startAt != nil }, set: { enabled in
         edit { $0.startAt = enabled ? ($0.startAt ?? .now) : nil }
       }))
-        .toggleStyle(.switch)
+        .toggleStyle(.themedCheckbox)
       if let start = values.startAt {
-        DatePicker("Start", selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
-                   displayedComponents: [.date, .hourAndMinute])
+        ThemedControlRow("Start") {
+          DatePicker("Start", selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
+                     displayedComponents: [.date, .hourAndMinute])
+            .labelsHidden()
+        }
       }
       MicroLabel("Conditions")
       if (values.requirementGroups ?? []).isEmpty {
@@ -182,14 +193,14 @@ struct WorkspaceTaskPlanningEditor: View {
                 .buttonStyle(.plain).foregroundStyle(theme.muted).help("Remove requirement")
             }.font(theme.captionFont)
           }
-          Menu("Or…") {
+          ThemedMenu("Or…") {
             ForEach(model.focusConditions.filter { !$0.isArchived && !group.contains($0.id) }) { condition in
               Button(condition.name) { edit { $0.requirementGroups?[index].append(condition.id) } }
             }
           }.font(theme.captionFont)
         }
       }
-      Menu("Add required condition") {
+      ThemedMenu("Add required condition", systemImage: "plus", expands: true) {
         ForEach(model.focusConditions.filter { condition in
           !condition.isArchived && !(values.requirementGroups ?? []).contains([condition.id])
         }) { condition in
@@ -199,10 +210,13 @@ struct WorkspaceTaskPlanningEditor: View {
       Toggle("Must finish in one sitting", isOn: Binding(get: { current.requiresSingleSitting == true }, set: { enabled in
         edit { $0.requiresSingleSitting = enabled ? true : nil }
       }))
-        .toggleStyle(.switch)
-      TextField("Minimum useful block (minutes)", text: Binding(get: { current.minimumBlockMinutes ?? "" }, set: { raw in
-        edit { $0.minimumBlockMinutes = raw.isEmpty ? nil : raw }
-      })).textFieldStyle(.roundedBorder)
+        .toggleStyle(.themedCheckbox)
+      ThemedControlRow("Minimum block") {
+        TextField("Minimum useful block (minutes)", text: Binding(get: { current.minimumBlockMinutes ?? "" }, set: { raw in
+          edit { $0.minimumBlockMinutes = raw.isEmpty ? nil : raw }
+        }), prompt: Text("Minutes"))
+        .themedTextField()
+      }
       if let unavailable = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
         Text(unavailable.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
           .font(theme.captionFont).foregroundStyle(theme.warning)
