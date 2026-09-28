@@ -109,6 +109,35 @@ extension WorkspaceViewModel {
     return result
   }
 
+  /// Return on Today: start the task under the cursor. Pressing it on a row
+  /// is the answer to the question the focus screen asks — is this available
+  /// — so it starts unconditionally, and on the running row it means done.
+  func startSelectedDayTask() {
+    guard let task = selectedTask else { return }
+    if task.id == activeFocusTask?.id {
+      requestFocusCompletion()
+    } else if activeFocusSession != nil {
+      addToFocusQueue(task)
+    } else {
+      startFocus(on: task, override: true)
+    }
+  }
+
+  /// Ticking off on Today. A task that owes the day a contribution gets the
+  /// contribution rather than being closed — the distinction the daily model
+  /// rests on — and the running task is finished through its block, so the
+  /// minutes on the clock are kept.
+  func tickOffSelectedDayTask() {
+    guard let task = selectedTask else { return }
+    if task.id == activeFocusTask?.id {
+      requestFocusCompletion()
+    } else if isDailyProgressTask(task) {
+      if !isDailyProgressComplete(task) { toggleDailyProgress(task) }
+    } else {
+      toggleTask(task)
+    }
+  }
+
   func enterSelectedTask() {
     guard let task = selectedTask else { return }
     enterTask(task)
@@ -116,15 +145,6 @@ extension WorkspaceViewModel {
   }
 
   func enterTaskSurfaceFromSidebar() {
-    // Today keeps its own selection and its own caret, so entering it means
-    // handing the search field back rather than picking a row in an outline
-    // that is not on screen. Without this, right-arrow out of the sidebar
-    // landed on a pane where none of the day's keys worked.
-    if viewMode == .today {
-      requestKeyboardFocus(.tasks)
-      dayFieldFocusRequest += 1
-      return
-    }
     if viewMode == .board {
       let backlog = boardColumns.first { $0.id == "backlog" } ?? boardColumns.first
       focusedBoardColumnID = backlog?.id

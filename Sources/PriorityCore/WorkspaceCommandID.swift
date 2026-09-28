@@ -59,5 +59,5 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case motionSelectNext, motionSelectPrevious, motionSelectEnds, motionSelectPage
   case motionSidebarSelect, motionSidebarExpand, motionSidebarCollapse
   case motionBoardColumn, motionDismiss, motionSetPriority
-  case motionTodayEnterDay, motionTodayLeave
+  case todayStart, motionTodayLeave
 }

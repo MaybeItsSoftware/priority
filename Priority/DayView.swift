@@ -50,7 +50,7 @@ struct DayView: View {
         // Scoring a block is one question with one answer, so it gets the
         // panel to itself rather than sitting under a list it cannot act on.
         ScrollView { WorkspaceFocusQualityPrompt(pending: pending, fixedWidth: nil) }
-      } else {
+      } else if surface.isPanel {
         header
         summary
         field
@@ -58,6 +58,15 @@ struct DayView: View {
         content
         FocusRule()
         hints
+      } else {
+        // The window's mount is the header band and the list, and nothing
+        // else. The field, the two rows of tallies, the "add task" row, the
+        // logged list and the key hints are the panel's: summoned over another
+        // app it has no title bar to add from, no status bar to read the day's
+        // numbers in and no reference to look keys up in. In the window each
+        // of those already has a home, and here they were a second copy of it.
+        header
+        content
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -73,12 +82,6 @@ struct DayView: View {
     }
     .onAppear { reset() }
     .onChange(of: resetToken) { _, _ in reset() }
-    // The window's key router asks for the caret back when a key the day owns
-    // arrives without it. The panel is never in that position — nothing else
-    // in it can take focus — so it ignores the request.
-    .onChange(of: model.dayFieldFocusRequest) { _, _ in
-      if !surface.isPanel { isFieldFocused = true }
-    }
     .onChange(of: query) { _, new in
       let trimmed = new.trimmingCharacters(in: .whitespaces)
       results = trimmed.isEmpty ? [] : model.searchResults(matching: trimmed)
@@ -99,11 +102,15 @@ struct DayView: View {
         .foregroundStyle(theme.muted)
         .lineLimit(1)
     } trailing: {
-      Text("\(FocusPoints.formatted(model.focusPoints.today)) pts")
-        .font(theme.numeralFont(theme.scale.caption))
-        .foregroundStyle(theme.dim)
-        .monospacedDigit()
-        .help("Minutes focused today, multiplied by how well each block went")
+      if surface.isPanel {
+        Text("\(FocusPoints.formatted(model.focusPoints.today)) pts")
+          .font(theme.numeralFont(theme.scale.caption))
+          .foregroundStyle(theme.dim)
+          .monospacedDigit()
+          .help("Minutes focused today, multiplied by how well each block went")
+      } else {
+        dayTally
+      }
       if surface.isPanel {
         Button { openInWindow() } label: {
           Image(systemName: "macwindow")
@@ -123,6 +130,25 @@ struct DayView: View {
         .accessibilityLabel("Hide the focus panel")
       }
     }
+  }
+
+  /// The window's one figure for the day: what it has cost against what it
+  /// was meant to. The panel's bar and its week line said this in two rows of
+  /// capitals above the list; the week and the points are the status bar's
+  /// now, and this is the part only the day pane can say.
+  private var dayTally: some View {
+    let estimated = dayTasks.reduce(0) { $0 + ($1.estimateSeconds ?? 0) }
+    let logged = loggedToday
+    return Text(
+      estimated > 0
+        ? "\(duration(logged)) of \(duration(estimated))"
+        : "\(duration(logged)) logged")
+      .font(theme.monoFont(size: theme.type.microLabel.size))
+      .foregroundStyle(logged > 0 ? theme.muted : theme.dim)
+      .monospacedDigit()
+      .help(estimated > 0
+        ? "Time focused today, against the day's estimates"
+        : "Time focused today. Nothing on the day has an estimate yet.")
   }
 
   /// What the day is supposed to cost against what it has cost so far. A bar
@@ -255,12 +281,14 @@ struct DayView: View {
               view(for: row)
                 .id(row.id)
             }
-            if query.isEmpty { addHint }
-            if !loggedBlocks.isEmpty { logged }
+            if surface.isPanel {
+              if query.isEmpty { addHint }
+              if !loggedBlocks.isEmpty { logged }
+            }
           }
           .padding(.bottom, theme.space.sm)
         }
-        .onChange(of: selectedID) { _, id in
+        .onChange(of: cursorID) { _, id in
           guard let id else { return }
           withAnimation(.easeOut(duration: 0.12)) { proxy.scrollTo(id, anchor: .center) }
         }
@@ -268,22 +296,36 @@ struct DayView: View {
     }
   }
 
+  @ViewBuilder
   private var empty: some View {
-    VStack(spacing: theme.space.xs) {
-      Spacer()
-      Text(query.isEmpty ? "Nothing planned for today" : "No matches")
+    if surface.isPanel {
+      VStack(spacing: theme.space.xs) {
+        Spacer()
+        Text(query.isEmpty ? "Nothing planned for today" : "No matches")
+          .font(theme.bodyFont())
+          .foregroundStyle(theme.muted)
+        Text(query.isEmpty
+          ? "Type a title and press Return to add the first one."
+          : "Return adds “\(query.trimmingCharacters(in: .whitespaces))” to today.")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.dim)
+          .multilineTextAlignment(.center)
+        Spacer()
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.horizontal, theme.space.xl)
+    } else {
+      // One line of muted text in the middle of the pane, like every other
+      // empty surface in the window.
+      Text(
+        "Nothing planned for today. Add a task from the title bar "
+          + "(\(WorkspaceCommandHelpText.firstKey(for: .taskNew))) and it lands here.")
         .font(theme.bodyFont())
         .foregroundStyle(theme.muted)
-      Text(query.isEmpty
-        ? "Type a title and press Return to add the first one."
-        : "Return adds “\(query.trimmingCharacters(in: .whitespaces))” to today.")
-        .font(theme.captionFont)
-        .foregroundStyle(theme.dim)
         .multilineTextAlignment(.center)
-      Spacer()
+        .padding(theme.space.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    .frame(maxWidth: .infinity)
-    .padding(.horizontal, theme.space.xl)
   }
 
   @ViewBuilder
@@ -513,7 +555,11 @@ struct DayView: View {
     id: String, isActive: Bool = false, @ViewBuilder content: () -> Content,
     action: @escaping () -> Void
   ) -> some View {
-    let isSelected = id == selectedID
+    let isSelected = id == cursorID
+    // In the window the cursor row carries the same hairline in the focus
+    // colour as every other pane's while the keyboard is on the tasks. The
+    // panel has one region, so its fill says it all.
+    let hasKeyboard = isSelected && !surface.isPanel && model.keyboardFocusArea == .tasks
     // The card being finished takes whatever the active celebration preset
     // does to a row, so the tick, the tint and the collapse are the same
     // gesture here as on the focus ladder.
@@ -542,13 +588,18 @@ struct DayView: View {
         }
       }
       .overlay(alignment: .bottom) { FocusRule() }
+      .overlay {
+        if hasKeyboard {
+          Rectangle().strokeBorder(theme.focusRing, lineWidth: theme.hairline)
+        }
+      }
       .overlay { rowAccent(forTaskID: id) }
       .opacity(treatment.fades && phase == .celebrating ? 0 : 1)
       .contentShape(Rectangle())
       .onHover { inside in
         if inside { hoveredID = id } else if hoveredID == id { hoveredID = nil }
       }
-      .onTapGesture { selectedID = id; action() }
+      .onTapGesture { setCursor(id); action() }
   }
 
   /// `.idle` for every card but the one actually being finished. A daily is
@@ -625,6 +676,21 @@ struct DayView: View {
 
   private var activeTaskID: String? { model.activeFocusTask?.id }
 
+  /// The row under the cursor. The panel keeps its own, because its list can
+  /// be a page of search results; the window's is the workspace selection, so
+  /// the ordinary keys walk it, the inspector follows it and the title bar's
+  /// `a` knows which task it is below.
+  private var cursorID: String? { surface.isPanel ? selectedID : model.selectedTaskID }
+
+  private func setCursor(_ id: String?) {
+    if surface.isPanel {
+      selectedID = id
+    } else {
+      model.selectedTaskID = id
+      model.reportKeyboardFocus(.tasks)
+    }
+  }
+
   /// The day, in the order it is read: the running block, the Today column as
   /// it was arranged by hand, then everything the dates put there — overdue,
   /// due today, starting today. Shared with the menu bar so the two cannot
@@ -683,22 +749,27 @@ extension DayView {
   private func reset() {
     query = ""
     results = []
-    // Both surfaces take the caret. The pane used to withhold it, on the
-    // grounds that ⌘1 should not be a typing surprise — but Today is the
-    // screen the app launches on now, and every key the day advertises hangs
-    // off this field, so withholding it meant the hints below promised ↑ ↓ ↵
-    // to a pane where none of them did anything until you clicked. Switching
-    // away still works: `MainWindowController` lets ⌘-digit, ⌘F, ⌘N and ⌘/
-    // through the text-editing filter precisely so a focused field is not a
-    // trap.
+    guard surface.isPanel else {
+      // The window has no field to take the caret: the list is the tasks
+      // region, and the catalogue's ordinary keys walk it. A selection left
+      // over from another mode that is not on the day gives way to the
+      // running task, or the top of the day.
+      if let id = model.selectedTaskID, rows.contains(where: { $0.id == id }) { return }
+      model.selectedTaskID = activeTaskID ?? rows.first?.id
+      return
+    }
+    // The panel takes the caret: every key it advertises hangs off its field.
     isFieldFocused = true
     selectedID = activeTaskID ?? rows.first?.id
   }
 
   private func selectDefault() {
     let ids = rows.map(\.id)
-    if let selectedID, ids.contains(selectedID) { return }
-    selectedID = ids.first
+    if let cursorID, ids.contains(cursorID) { return }
+    // In the window only while the pane has the keyboard: a task selected in
+    // the sidebar's list, or left by another mode, is not the day's to take.
+    if !surface.isPanel && model.keyboardFocusArea != .tasks { return }
+    if surface.isPanel { selectedID = ids.first } else { model.selectedTaskID = ids.first }
   }
 
   private func move(by offset: Int) {

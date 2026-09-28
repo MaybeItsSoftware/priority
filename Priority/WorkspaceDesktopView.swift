@@ -171,6 +171,12 @@ struct WorkspaceDesktopView: View {
       DayView(surface: .window, resetToken: model.dayPresentationCount)
         .environment(model)
         .background(theme.paper)
+        // The tasks region, claimed the way the matrix claims it. The day
+        // used to hold the keyboard in a search field of its own; without one
+        // the list is what the catalogue's keys act on.
+        .focusable()
+        .focused($focusedArea, equals: .tasks)
+        .focusEffectDisabled()
     case .board:
       WorkspaceKanbanBoard()
         .environment(model)

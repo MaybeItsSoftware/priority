@@ -668,10 +668,6 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Bumped whenever Today is asked for afresh, so the pane resets its search
   /// field the way a fresh summon resets the panel's.
   var dayPresentationCount = 0
-  /// Bumped when a key the day pane owns arrives while its field does not have
-  /// the caret — after clicking a row, say. The pane keeps its own selection,
-  /// so moving the outline's instead looks exactly like nothing happening.
-  var dayFieldFocusRequest = 0
 
   func reloadFocus() {
     guard let store else { return }

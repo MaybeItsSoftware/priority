@@ -364,12 +364,15 @@ public enum WorkspaceCommandCatalog {
       id: .motionSetPriority, title: "Set the task's priority", group: "Moving around",
       keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], kind: .motion,
       note: "Type the digit; 0 clears it"),
-    // Today keeps its own selection in its own list, so the outline keys have
-    // nothing visible to move there. These hand the caret back to the day.
+    // Today's list is walked with the ordinary selection keys, the way every
+    // other pane's is — it used to keep a selection of its own behind a search
+    // field, and these keys only handed that field the caret back. What is
+    // left of its own is Return, which starts the task rather than opening
+    // it, and ←, which has no hierarchy to leave and so goes to the sidebar.
     .init(
-      id: .motionTodayEnterDay, title: "Move into the day's list", group: "Moving around",
-      keys: ["down", "up", "right", "enter", "space"], surface: .today, kind: .motion,
-      note: "When the day's list has lost the caret"),
+      id: .todayStart, title: "Start the task, or finish the running one", group: "Today",
+      keys: ["enter"], surface: .today,
+      note: "Or add it to the queue behind a running block"),
     .init(
       id: .motionTodayLeave, title: "Back to the sidebar", group: "Moving around",
       keys: ["left"], surface: .today, kind: .motion),

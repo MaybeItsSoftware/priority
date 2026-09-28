@@ -110,7 +110,7 @@ extension WorkspaceViewModel {
     case .taskNew: addTaskBelowSelection()
     case .taskNewAbove: requestRelativeTaskComposerFocus(above: true)
     case .taskNewChild: requestRelativeTaskComposerFocus(child: true)
-    case .taskComplete: toggleSelectedTask()
+    case .taskComplete: if viewMode == .today { tickOffSelectedDayTask() } else { toggleSelectedTask() }
     case .taskInvalidate: if let task = selectedTask { invalidateTask(task) }
     case .taskDelete: deleteSelectedTask()
     case .taskRename: editSelectedTaskTitle()
@@ -247,7 +247,7 @@ extension WorkspaceViewModel {
     case .motionSetPriority:
       if let key, let digit = Int(key) { editTaskValues { $0.priority = digit } }
     case .motionDoneSelect: if let key { moveDoneCursor(key) }
-    case .motionTodayEnterDay: if key != nil { dayFieldFocusRequest += 1 }
+    case .todayStart: startSelectedDayTask()
     case .motionTodayLeave: if key != nil { returnToCurrentListInSidebar() }
     }
   }

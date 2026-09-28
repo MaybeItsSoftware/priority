@@ -339,9 +339,10 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // the work rather than clearing a selection the rail does not hold.
       "done:up", "done:down", "done:k", "done:j", "done:enter", "done:escape",
       "done:home", "done:end", "done:pageup", "done:pagedown", "done:left",
-      // Today keeps its own selection in its own list, so the keys that move
-      // the outline's hand the caret back to the day instead.
-      "today:up", "today:down", "today:right", "today:left", "today:enter", "today:space",
+      // Today is walked with the ordinary keys, but Return starts the task
+      // rather than opening it, and ← has no task to leave so goes to the
+      // sidebar.
+      "today:left", "today:enter",
     ]
     XCTAssertEqual(
       overrides, expected,

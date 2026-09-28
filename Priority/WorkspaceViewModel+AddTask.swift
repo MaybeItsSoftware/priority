@@ -17,12 +17,20 @@ import PriorityWorkspace
 ///   folder, the folder's chosen list;
 /// - otherwise the inbox. Everything is not a list, so a task typed there is
 ///   a thought to file later, which is what the inbox is for.
+///
+/// On Today, the last two also put the task in the Today column, the way the
+/// day's own field did before the title bar took its job.
 @MainActor
 extension WorkspaceViewModel {
   func submitAddField(named title: String) {
     guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
     if isQuickCaptureActive && taskInsertionReference == nil {
       submitQuickCapture(named: title)
+    } else if taskInsertionReference == nil && addsToScopedList && viewMode == .today {
+      // Today's own field put what you typed on today, in the list on
+      // screen. The title bar does the same while Today is up, so losing that
+      // field lost nothing: a task added here is on the day you are reading.
+      createBoardTask(named: title, in: todayColumn)
     } else if taskInsertionReference != nil || addsToScopedList {
       if viewMode == .board { createBoardTask(named: title) } else { createTask(named: title) }
     } else {
@@ -41,6 +49,16 @@ extension WorkspaceViewModel {
   /// What the field names as its destination, in the few words it has room
   /// for.
   var addFieldDestinationTitle: String {
+    // On Today the task lands on today as well as in a list, and the field
+    // says both, so Return on Today is no more of a guess than anywhere else.
+    if viewMode == .today && taskInsertionReference == nil && !isQuickCaptureActive {
+      return "Today · \(addFieldListTitle)"
+    }
+    return addFieldListTitle
+  }
+
+  /// The list half of the destination: where the task will be filed.
+  private var addFieldListTitle: String {
     if let reference = taskInsertionReference {
       let placement = taskInsertionIsChild ? "Inside" : taskInsertionAbove ? "Above" : "Below"
       return "\(placement) \(reference.title)"
@@ -63,6 +81,10 @@ extension WorkspaceViewModel {
     return !isEverythingSelected && selectedList != nil
   }
 
+  /// The board column that puts a task on today — the one Today's own field
+  /// used to file into.
+  private var todayColumn: WorkspaceKanbanColumn? { boardColumns.first { $0.id == "today" } }
+
   /// The inbox, or the first list when there is somehow no inbox, so the
   /// field never refuses a task it could have filed somewhere.
   private var addFieldInbox: TaskList? { inboxList ?? lists.first }
@@ -70,8 +92,13 @@ extension WorkspaceViewModel {
   private func createInboxTask(named title: String) {
     guard let store, let inbox = addFieldInbox else { return }
     // On the board, into the column you are on, the way the board's own
-    // composer did — Everything's board includes the inbox's tasks.
-    let column = viewMode == .board ? boardColumns.first { $0.id == activeBoardColumnID } : nil
+    // composer did — Everything's board includes the inbox's tasks. On Today,
+    // into the Today column, so it is on the day you added it from.
+    let column: WorkspaceKanbanColumn? = switch viewMode {
+    case .board: boardColumns.first { $0.id == activeBoardColumnID }
+    case .today: todayColumn
+    case .outline, .matrix: nil
+    }
     perform {
       let parentID = try visibleRootParentTaskID(for: inbox, store: store)
       let task = try store.createTask(
