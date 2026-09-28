@@ -14,6 +14,7 @@ import SwiftUI
 
 struct WorkspaceOutlinePane: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
 
   var body: some View {
     if model.isMultiListScope || model.selectedList != nil {
@@ -59,11 +60,16 @@ struct WorkspaceOutlinePane: View {
           }
         }
         .listStyle(.inset)
+        // The inset style paints the system's own grey behind the rows, which
+        // left the outline the one pane not on the theme's paper.
+        .scrollContentBackground(.hidden)
+        .background(theme.paper)
         .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.tasks) })
 
         WorkspaceScopedTaskComposer(board: false)
           .environment(model)
-          .padding(14)
+          .padding(.horizontal, FocusSurfaceMetrics.gutter)
+          .padding(.vertical, theme.space.sm)
       }
     } else {
       ContentUnavailableView("No list selected", systemImage: "list.bullet")
@@ -86,7 +92,7 @@ struct WorkspaceOutlineRow: View {
   let hasKeyboard: Bool
 
   var body: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: theme.space.sm) {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
@@ -107,10 +113,10 @@ struct WorkspaceOutlineRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .help(item.task.title)
         .strikethrough(item.task.status != .open)
-        .foregroundStyle(item.task.status == .open ? .primary : .secondary)
+        .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       WorkspaceTaskPlanningBadges(task: item.task).frame(maxWidth: 170, alignment: .leading)
     }
-    .padding(.leading, CGFloat(item.depth) * 16)
+    .padding(.leading, CGFloat(item.depth) * theme.space.lg)
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
     .workspaceSelection(isSelected: isSelected, hasKeyboard: hasKeyboard)
@@ -125,7 +131,9 @@ struct WorkspaceOutlineRow: View {
         model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)
       }
     }
-    .overlay(RoundedRectangle(cornerRadius: 6)
-      .stroke(model.dragDestinationListID == item.task.id && item.task.isList ? Color.accentColor : .clear, lineWidth: 2))
+    .overlay(RoundedRectangle(cornerRadius: theme.controlRadius)
+      .stroke(
+        model.dragDestinationListID == item.task.id && item.task.isList ? theme.primary : .clear,
+        lineWidth: theme.borders.emphasis))
   }
 }
