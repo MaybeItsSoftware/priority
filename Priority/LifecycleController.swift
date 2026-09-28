@@ -47,29 +47,20 @@ final class LifecycleController {
     repository.onUsernameChanged = { [weak coordinator] in
       guard let coordinator else { return }
       coordinator.repository.checkvistSyncPlugin.clearAuthentication()
-      coordinator.onboardingService.refreshOnboardingDialogState()
     }
     repository.onRemoteKeyChanged = { [weak coordinator] newKey in
       guard let coordinator else { return }
-      if coordinator.isLoadingStoredRemoteKey {
-        coordinator.onboardingService.refreshOnboardingDialogState()
-        return
-      }
+      if coordinator.isLoadingStoredRemoteKey { return }
       coordinator.repository.checkvistSyncPlugin.clearAuthentication()
       if let failure = coordinator.repository.checkvistSyncPlugin.persistRemoteKey(
         newKey, useKeychainStorage: coordinator.usesKeychainStorage)
       {
         coordinator.repository.errorMessage = failure
       }
-      coordinator.onboardingService.refreshOnboardingDialogState()
     }
     repository.onListIdChanged = { [weak coordinator] listId in
       guard let coordinator else { return }
       coordinator.integrations.loadPendingObsidianSyncQueue(for: listId)
-      coordinator.onboardingService.refreshOnboardingDialogState()
-    }
-    repository.onCheckvistIntegrationEnabledChanged = { [weak coordinator] in
-      coordinator?.onboardingService.refreshOnboardingDialogState()
     }
     repository.onErrorMessageSet = { [weak coordinator] message in
       coordinator?.diagnosticsLog.record(

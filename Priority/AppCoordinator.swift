@@ -360,9 +360,6 @@ import SwiftUI
     )
     self.integrationDataSourceAdapter = integrationDataSourceAdapter
     integrations.dataSource = integrationDataSourceAdapter
-    integrations.onIntegrationStateChanged = { [weak self] in
-      self?.onboardingService.refreshOnboardingDialogState()
-    }
     let dailyLogDataSourceAdapter = DailyLogDataSourceAdapter(
       repository: repository,
       taskListViewModel: taskListViewModel,
@@ -396,7 +393,6 @@ import SwiftUI
       self.dailyLog.recordFocusSession(taskId: taskId, title: title, seconds: seconds)
     }
     Task { @MainActor [weak self] in
-      self?.onboardingService.presentOnboardingDialogIfNeeded()
       // Deferred rather than run inline: the data source is only wired a few
       // lines above, and this must not be the thing that snapshots an empty
       // plan before the task list has loaded. Covers launching without ever
@@ -577,10 +573,7 @@ extension AppCoordinator {
       preferencesStore.remove(.checkvistListId)
       preferencesStore.remove(.onboardingCompleted)
       preferencesStore.remove(.pluginSelectionOnboardingCompleted)
-      onboardingService.dismissedOnboardingDialogs = []
-      onboardingService.activeOnboardingDialog = nil
       preferencesStore.remove(.dismissedOnboardingDialogs)
-      onboardingService.presentOnboardingDialogIfNeeded()
     #endif
   }
 

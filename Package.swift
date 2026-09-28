@@ -184,7 +184,6 @@ let appLogicTargetExcludes = [
   "Priority/Models/AppThemeModels.swift",
   "Priority/Models/CommandSuggestion.swift",
   "Priority/Models/DailyChartRange.swift",
-  "Priority/Models/OnboardingDialog.swift",
   "Priority/Models/QuickAddLocationMode.swift",
   "Priority/Models/QuickEntryMode.swift",
 

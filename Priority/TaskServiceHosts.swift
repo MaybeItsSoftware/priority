@@ -79,9 +79,6 @@ protocol TaskMutationHost: TaskServiceHost {
   var pendingObsidianSyncTaskIds: [Int] { get }
   func savePendingObsidianSyncQueue(_ taskIds: [Int], listId: String)
 
-  /// Nudges the user toward list setup when a mutation fails for want of one.
-  func presentOnboardingDialogIfNeeded()
-
   // Quick Add. The service decides *whether* entry can start; the host owns the
   // focus/mode/text fields that make it happen.
   var quickAddPrefersSpecificLocation: Bool { get }

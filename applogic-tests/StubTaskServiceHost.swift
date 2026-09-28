@@ -20,7 +20,6 @@ final class StubTaskServiceHost: TaskMutationHost, SyncHost {
 
   private(set) var fetchTopTaskCallCount = 0
   private(set) var clampSelectionCallCount = 0
-  private(set) var onboardingDialogPresentCount = 0
   private(set) var beginQuickAddCalls: [Bool] = []
   private(set) var finishQuickAddCallCount = 0
   private(set) var quickAddParentAssignments: [Int] = []
@@ -120,10 +119,6 @@ final class StubTaskServiceHost: TaskMutationHost, SyncHost {
 
   func recordDayLogTaskAction(taskId: Int, title: String, action: CheckvistTaskAction) {
     dayLogTaskActions.append((taskId, title, action))
-  }
-
-  func presentOnboardingDialogIfNeeded() {
-    onboardingDialogPresentCount += 1
   }
 
   var quickAddPrefersSpecificLocation = false

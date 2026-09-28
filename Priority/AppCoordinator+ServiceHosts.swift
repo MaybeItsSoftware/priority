@@ -71,10 +71,6 @@ extension AppCoordinator: TaskMutationHost {
     integrations.savePendingObsidianSyncQueue(taskIds, listId: listId)
   }
 
-  func presentOnboardingDialogIfNeeded() {
-    onboardingService.presentOnboardingDialogIfNeeded()
-  }
-
   // MARK: Quick Add
 
   var quickAddPrefersSpecificLocation: Bool {

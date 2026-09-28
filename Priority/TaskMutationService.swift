@@ -260,7 +260,6 @@ final class TaskMutationService {
 
     guard !repository.listId.isEmpty else {
       repository.errorMessage = "Choose a Checkvist list in Preferences to add tasks."
-      host.presentOnboardingDialogIfNeeded()
       return
     }
 
@@ -379,7 +378,6 @@ final class TaskMutationService {
 
     guard !repository.listId.isEmpty else {
       repository.errorMessage = "Choose a Checkvist list in Preferences to add tasks."
-      host.presentOnboardingDialogIfNeeded()
       return
     }
     let optimisticTask = insertOptimisticChildTask(content: trimmedContent, parentId: parentId)
@@ -541,7 +539,6 @@ final class TaskMutationService {
 
     guard !repository.listId.isEmpty else {
       repository.errorMessage = "Choose a Checkvist list in Preferences to add tasks."
-      host.presentOnboardingDialogIfNeeded()
       return
     }
 

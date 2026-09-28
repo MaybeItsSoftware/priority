@@ -1,6 +1,11 @@
 import Foundation
 import Observation
 
+/// Whether first-run setup has been satisfied.
+///
+/// It also used to queue setup dialogs — plugin selection, Checkvist,
+/// Obsidian — into `activeOnboardingDialog`, which no view ever presented.
+/// That queue is gone; the flag is what the rest of the app reads.
 @MainActor
 @Observable class OnboardingService {
   @ObservationIgnored private let preferencesStore: PreferencesStore
@@ -13,9 +18,6 @@ import Observation
     }
   }
   
-  var activeOnboardingDialog: OnboardingDialog?
-  var dismissedOnboardingDialogs: Set<OnboardingDialog>
-
   init(
     preferencesStore: PreferencesStore,
     repository: TaskRepository,
@@ -34,12 +36,6 @@ import Observation
     } else {
       self.onboardingCompleted = !storedUsername.isEmpty && !storedListId.isEmpty
     }
-
-    let persistedDismissedDialogs = preferencesStore.stringArray(.dismissedOnboardingDialogs)
-    self.dismissedOnboardingDialogs = Set(
-      persistedDismissedDialogs.compactMap(OnboardingDialog.init(rawValue:))
-    )
-    self.activeOnboardingDialog = nil
   }
 
   func markOnboardingCompleted() {
@@ -48,59 +44,5 @@ import Observation
 
   func markOnboardingRequired() {
     onboardingCompleted = false
-  }
-
-  func completePluginSelectionOnboarding() {
-    preferencesStore.set(true, for: .pluginSelectionOnboardingCompleted)
-    if activeOnboardingDialog == .pluginSelection {
-      activeOnboardingDialog = nil
-    }
-    presentOnboardingDialogIfNeeded()
-  }
-
-  func presentOnboardingDialogIfNeeded() {
-    guard activeOnboardingDialog == nil else { return }
-    for dialog in OnboardingDialog.allCases where shouldPresentOnboardingDialog(dialog) {
-      activeOnboardingDialog = dialog
-      return
-    }
-  }
-
-  func dismissActiveOnboardingDialog(permanently: Bool) {
-    guard let dialog = activeOnboardingDialog else { return }
-    if permanently {
-      dismissedOnboardingDialogs.insert(dialog)
-      persistDismissedOnboardingDialogs()
-    }
-    activeOnboardingDialog = nil
-    presentOnboardingDialogIfNeeded()
-  }
-
-  private func shouldPresentOnboardingDialog(_ dialog: OnboardingDialog) -> Bool {
-    guard !dismissedOnboardingDialogs.contains(dialog) else { return false }
-    switch dialog {
-    case .pluginSelection:
-      return !preferencesStore.bool(.pluginSelectionOnboardingCompleted, default: false)
-    case .checkvist:
-      return repository.checkvistIntegrationEnabled && !repository.hasCredentials
-    case .obsidian:
-      return integrations.obsidianIntegrationEnabled && integrations.obsidianInboxPath.isEmpty
-    case .googleCalendar:
-      return false
-    case .mcp:
-      return false
-    }
-  }
-
-  private func persistDismissedOnboardingDialogs() {
-    let rawValues = dismissedOnboardingDialogs.map(\.rawValue).sorted()
-    preferencesStore.set(rawValues, for: .dismissedOnboardingDialogs)
-  }
-
-  func refreshOnboardingDialogState() {
-    if let activeOnboardingDialog, !shouldPresentOnboardingDialog(activeOnboardingDialog) {
-      self.activeOnboardingDialog = nil
-    }
-    presentOnboardingDialogIfNeeded()
   }
 }

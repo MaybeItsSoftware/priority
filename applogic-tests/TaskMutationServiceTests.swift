@@ -163,7 +163,7 @@ final class TaskMutationServiceTests: XCTestCase {
 
     await service.addTask(content: "new thing")
 
-    XCTAssertEqual(host.onboardingDialogPresentCount, 1)
+    XCTAssertEqual(repository.errorMessage, "Choose a Checkvist list in Preferences to add tasks.")
     XCTAssertTrue(plugin.createTaskCalls.isEmpty)
   }
 
