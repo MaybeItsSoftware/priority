@@ -95,30 +95,30 @@ struct DayView: View {
     // gets its own two controls on the end of it.
     WorkspacePaneHeader(title: "Today") {
       Text(scopeName)
-        .font(theme.bodyFont(size: 11))
+        .font(theme.captionFont)
         .foregroundStyle(theme.muted)
         .lineLimit(1)
     } trailing: {
       Text("\(FocusPoints.formatted(model.focusPoints.today)) pts")
-        .font(theme.monoFont(size: 10))
+        .font(theme.numeralFont(theme.scale.caption))
         .foregroundStyle(theme.dim)
         .monospacedDigit()
         .help("Minutes focused today, multiplied by how well each block went")
       if surface.isPanel {
         Button { openInWindow() } label: {
           Image(systemName: "macwindow")
-            .font(.system(size: 12, weight: .medium))
+            .font(theme.bodyFont(weight: .medium))
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.tertiary)
+        .foregroundStyle(theme.dim)
         .help("Open the main window (⌘↵)")
         .accessibilityLabel("Open the main window")
         Button { onClose?(.back) } label: {
           Image(systemName: "xmark")
-            .font(.system(size: 11, weight: .semibold))
+            .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.tertiary)
+        .foregroundStyle(theme.dim)
         .help("Hide the panel (esc)")
         .accessibilityLabel("Hide the focus panel")
       }
@@ -132,25 +132,27 @@ struct DayView: View {
     let estimated = dayTasks.reduce(0) { $0 + ($1.estimateSeconds ?? 0) }
     let logged = loggedToday
     let fraction = estimated > 0 ? min(1, Double(logged) / Double(estimated)) : 0
-    return VStack(alignment: .leading, spacing: 6) {
+    return VStack(alignment: .leading, spacing: theme.space.xs) {
       HStack(spacing: 0) {
         MicroLabel(estimated > 0 ? "Est \(duration(estimated))" : "No estimates yet")
-        Spacer(minLength: 8)
+        Spacer(minLength: theme.space.sm)
         MicroLabel(logged > 0 ? "\(duration(logged)) logged" : "Nothing logged yet")
       }
+      // Square-ended: a bar is a length, and a rounded end makes the last
+      // few percent read as decoration rather than progress.
       GeometryReader { proxy in
         ZStack(alignment: .leading) {
-          Capsule().fill(Color.primary.opacity(0.08))
-          Capsule()
-            .fill(Color.accentColor)
-            .frame(width: max(fraction > 0 ? 3 : 0, proxy.size.width * fraction))
+          Rectangle().fill(theme.well)
+          Rectangle()
+            .fill(theme.primary)
+            .frame(width: max(fraction > 0 ? theme.emphasisBorder : 0, proxy.size.width * fraction))
         }
       }
-      .frame(height: 4)
+      .frame(height: theme.space.xs)
       weekLine
     }
-    .padding(.horizontal, 18)
-    .padding(.bottom, 12)
+    .padding(.horizontal, theme.space.lg)
+    .padding(.bottom, theme.space.md)
   }
 
   /// Today's finished work set against the week so far.
@@ -167,22 +169,23 @@ struct DayView: View {
         MicroLabel(
           progress.today.completed == 1
             ? "1 done today" : "\(progress.today.completed) done today")
-        Spacer(minLength: 8)
+        Spacer(minLength: theme.space.sm)
         MicroLabel(
           "\(duration(progress.week.seconds)) this week · \(duration(progress.averageSecondsPerDay))/day")
       }
-      .padding(.top, 2)
+      .padding(.top, theme.space.xxs)
     }
   }
 
   private var field: some View {
-    HStack(spacing: 9) {
+    HStack(spacing: theme.space.sm) {
       Image(systemName: "magnifyingglass")
-        .font(.system(size: 12))
-        .foregroundStyle(.tertiary)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.dim)
       TextField("Search, or type to add a task…", text: $query)
         .textFieldStyle(.plain)
-        .font(.system(size: 14))
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.ink)
         .focused($isFieldFocused)
         .onKeyPress(.upArrow) { move(by: -1); return .handled }
         .onKeyPress(.downArrow) { move(by: 1); return .handled }
@@ -199,18 +202,18 @@ struct DayView: View {
           return .handled
         }
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
-    .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+    .padding(.horizontal, theme.space.md)
+    .padding(.vertical, theme.space.sm)
+    // An input is a hairline on the page, not a well sunk into it.
     .overlay(
-      RoundedRectangle(cornerRadius: 6)
-        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
-    .padding(.horizontal, 18)
-    .padding(.bottom, 12)
+      RoundedRectangle(cornerRadius: theme.controlRadius)
+        .strokeBorder(isFieldFocused ? theme.focusRing : theme.inputBorder, lineWidth: theme.hairline))
+    .padding(.horizontal, theme.space.lg)
+    .padding(.bottom, theme.space.md)
   }
 
   private var hints: some View {
-    HStack(spacing: 14) {
+    HStack(spacing: theme.space.md) {
       KeyHint("↑ ↓", "Choose")
       KeyHint("↵", returnHint)
       // Only while it does something: with a query in the field the caret
@@ -225,8 +228,8 @@ struct DayView: View {
         KeyHint("esc", "Clear")
       }
     }
-    .padding(.horizontal, 18)
-    .padding(.vertical, 9)
+    .padding(.horizontal, theme.space.lg)
+    .padding(.vertical, theme.space.sm)
   }
 
   private var returnHint: String {
@@ -244,7 +247,10 @@ struct DayView: View {
     } else {
       ScrollViewReader { proxy in
         ScrollView {
-          LazyVStack(spacing: 6) {
+          // Rows on the one surface, ruled apart, rather than cards stacked
+          // on a well: the day is a list to be read down, and a gap between
+          // boxes is a second separator doing the hairline's job.
+          LazyVStack(spacing: 0) {
             ForEach(rows) { row in
               view(for: row)
                 .id(row.id)
@@ -252,8 +258,7 @@ struct DayView: View {
             if query.isEmpty { addHint }
             if !loggedBlocks.isEmpty { logged }
           }
-          .padding(.horizontal, 14)
-          .padding(.vertical, 10)
+          .padding(.bottom, theme.space.sm)
         }
         .onChange(of: selectedID) { _, id in
           guard let id else { return }
@@ -264,21 +269,21 @@ struct DayView: View {
   }
 
   private var empty: some View {
-    VStack(spacing: 6) {
+    VStack(spacing: theme.space.xs) {
       Spacer()
       Text(query.isEmpty ? "Nothing planned for today" : "No matches")
-        .font(.callout)
-        .foregroundStyle(.secondary)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.muted)
       Text(query.isEmpty
         ? "Type a title and press Return to add the first one."
         : "Return adds “\(query.trimmingCharacters(in: .whitespaces))” to today.")
-        .font(.caption)
-        .foregroundStyle(.tertiary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.dim)
         .multilineTextAlignment(.center)
       Spacer()
     }
     .frame(maxWidth: .infinity)
-    .padding(.horizontal, 24)
+    .padding(.horizontal, theme.space.xl)
   }
 
   @ViewBuilder
@@ -298,33 +303,36 @@ struct DayView: View {
   /// An ordinary row: what it is, what it should cost, what it has cost.
   private func taskCard(task: WorkspaceTask, index: Int?, listName: String?, detail: String?) -> some View {
     card(id: task.id) {
-      VStack(alignment: .leading, spacing: 5) {
-        HStack(spacing: 8) {
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
+        HStack(spacing: theme.space.sm) {
           marker(for: task, index: index)
           Text(task.title)
-            .font(.system(size: 14, weight: .medium))
+            .font(theme.bodyFont(weight: .medium))
+            .foregroundStyle(theme.ink)
             .lineLimit(1)
             .truncationMode(.tail)
           if model.isDailyProgressTask(task) {
             DailyBadge(task: task, isDoneToday: model.isDailyProgressComplete(task))
           }
-          Spacer(minLength: 8)
+          Spacer(minLength: theme.space.sm)
           if let listName { MicroLabel(listName).lineLimit(1) }
         }
-        HStack(spacing: 8) {
+        HStack(spacing: theme.space.sm) {
           Text(task.estimateSeconds.map { duration($0) } ?? "No estimate")
-            .font(.system(size: 11))
-            .foregroundStyle(.tertiary)
+            .font(theme.captionFont)
+            .monospacedDigit()
+            .foregroundStyle(theme.dim)
           if let detail {
             Text(detail)
-              .font(.system(size: 11))
-              .foregroundStyle(.tertiary)
+              .font(theme.captionFont)
+              .foregroundStyle(theme.dim)
               .lineLimit(1)
           }
-          Spacer(minLength: 8)
+          Spacer(minLength: theme.space.sm)
           Text(clock(model.taskLoggedSeconds[task.id] ?? 0))
-            .font(.system(size: 11, design: .monospaced))
-            .foregroundStyle(.tertiary)
+            .font(theme.numeralFont(theme.scale.caption, weight: .regular))
+            .monospacedDigit()
+            .foregroundStyle(theme.dim)
         }
       }
     } action: {
@@ -347,16 +355,17 @@ struct DayView: View {
       Group {
         if isHovering {
           Image(systemName: "checkmark.circle")
-            .font(.system(size: 12, weight: .semibold))
+            .font(theme.bodyFont(weight: .semibold))
             .foregroundStyle(theme.success)
         } else if let index {
           Text("\(index)")
-            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-            .foregroundStyle(.tertiary)
+            .font(theme.numeralFont(theme.scale.caption, weight: .semibold))
+            .monospacedDigit()
+            .foregroundStyle(theme.dim)
         } else {
           Image(systemName: "circle")
-            .font(.system(size: 10))
-            .foregroundStyle(.tertiary)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.dim)
         }
       }
       .frame(width: 14, alignment: .trailing)
@@ -392,27 +401,29 @@ struct DayView: View {
   /// only ever apply to the task actually running.
   private func activeCard(task: WorkspaceTask, index: Int?, session: FocusSession) -> some View {
     card(id: task.id, isActive: true) {
-      VStack(alignment: .leading, spacing: 9) {
-        HStack(spacing: 8) {
+      VStack(alignment: .leading, spacing: theme.space.sm) {
+        HStack(spacing: theme.space.sm) {
           if let index {
             Text("\(index)")
-              .font(.system(size: 11, weight: .semibold, design: .monospaced))
-              .foregroundStyle(Color.accentColor)
+              .font(theme.numeralFont(theme.scale.caption, weight: .semibold))
+              .monospacedDigit()
+              .foregroundStyle(theme.primary)
               .frame(minWidth: 12, alignment: .trailing)
           }
           Text(task.title)
-            .font(.system(size: 15, weight: .semibold))
+            .font(theme.titleFont)
+            .foregroundStyle(theme.ink)
             .lineLimit(2)
-          Spacer(minLength: 8)
+          Spacer(minLength: theme.space.sm)
           if let list = model.list(for: task) { MicroLabel(list.name).lineLimit(1) }
         }
-        HStack(spacing: 10) {
+        HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
           TimelineView(.periodic(from: .now, by: 1)) { context in
             let reading = FocusTimerDisplay.reading(
               elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
               planned: TimeInterval(session.workDurationSeconds))
             Text(reading.text)
-              .font(.system(size: 26, weight: .semibold, design: .monospaced))
+              .font(theme.numeralFont(theme.scale.display, weight: .semibold))
               .monospacedDigit()
               .foregroundStyle(session.pausedAt == nil
                 ? (reading.isOverrun ? theme.warning : theme.primary) : theme.muted)
@@ -433,7 +444,7 @@ struct DayView: View {
   /// Blitzit's strip, in Priority's vocabulary: pause, skip to the next queued
   /// task, log the time without closing anything, and tick it off.
   private func controlStrip(session: FocusSession) -> some View {
-    HStack(spacing: 4) {
+    HStack(spacing: theme.space.xs) {
       control(session.pausedAt == nil ? "pause.fill" : "play.fill",
         session.pausedAt == nil ? "Pause" : "Resume") { model.toggleFocusPause() }
       control("forward.end.fill", "Skip to the next task in the queue") { skip() }
@@ -442,10 +453,8 @@ struct DayView: View {
       Spacer(minLength: 0)
       Button { finish() } label: {
         Label("Done", systemImage: "checkmark")
-          .font(.system(size: 12, weight: .medium))
       }
-      .buttonStyle(.borderedProminent)
-      .controlSize(.small)
+      .buttonStyle(FocusActionButtonStyle(prominent: true))
       .focusable(false)
     }
   }
@@ -453,12 +462,8 @@ struct DayView: View {
   private func control(_ symbol: String, _ help: String, action: @escaping () -> Void) -> some View {
     Button(action: action) {
       Image(systemName: symbol)
-        .font(.system(size: 12))
-        .frame(width: 26, height: 22)
-        .contentShape(Rectangle())
     }
-    .buttonStyle(.bordered)
-    .controlSize(.small)
+    .buttonStyle(FocusActionButtonStyle())
     .focusable(false)
     .help(help)
     .accessibilityLabel(help)
@@ -466,12 +471,13 @@ struct DayView: View {
 
   private func createRow(_ row: DayRow) -> some View {
     card(id: row.id) {
-      HStack(spacing: 8) {
+      HStack(spacing: theme.space.sm) {
         Image(systemName: "plus")
-          .font(.system(size: 12, weight: .semibold))
-          .foregroundStyle(Color.accentColor)
+          .font(theme.bodyFont(weight: .semibold))
+          .foregroundStyle(theme.primary)
         Text("Add “\(row.title)” to today")
-          .font(.system(size: 13, weight: .medium))
+          .font(theme.bodyFont(weight: .medium))
+          .foregroundStyle(theme.ink)
           .lineLimit(1)
         Spacer(minLength: 0)
       }
@@ -481,23 +487,28 @@ struct DayView: View {
   }
 
   private var addHint: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: theme.space.sm) {
       Image(systemName: "plus")
-        .font(.system(size: 11, weight: .semibold))
+        .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
       MicroLabel("Add task")
       Spacer(minLength: 0)
       Text("type a title, then ↵")
-        .font(.system(size: 11))
+        .font(theme.captionFont)
     }
-    .foregroundStyle(.tertiary)
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
+    .foregroundStyle(theme.dim)
+    .padding(.horizontal, theme.space.lg)
+    .padding(.vertical, theme.space.sm)
     .contentShape(Rectangle())
     .onTapGesture { isFieldFocused = true }
   }
 
-  /// One card shape for every row, so a row that gains controls is visibly the
+  /// One row shape for every row, so a row that gains controls is visibly the
   /// same row rather than a different kind of thing.
+  ///
+  /// Flat on the page with a hairline under it. What a row *is* reads from a
+  /// tint of the matching hue: the running one in primary, the one under the
+  /// cursor in the selection fill, the one being finished in success — never
+  /// a raised card or a stock accent.
   private func card<Content: View>(
     id: String, isActive: Bool = false, @ViewBuilder content: () -> Content,
     action: @escaping () -> Void
@@ -509,27 +520,31 @@ struct DayView: View {
     let phase = celebrationPhase(forTaskID: id)
     let treatment = manager.celebration.rowTreatment
     let celebrating = phase != .idle
-    let success = theme.success
+    let isHovered = hoveredID == id
+    let fill: Color =
+      celebrating ? theme.success.opacity(treatment.tintOpacity)
+      : isSelected ? theme.selectionFill
+      : isActive ? theme.primary.opacity(Theme.statusFillOpacity)
+      : isHovered ? theme.hover : Color.clear
     return content()
-      .padding(.horizontal, 12)
-      .padding(.vertical, 10)
+      .padding(.horizontal, theme.space.lg)
+      .padding(.vertical, theme.space.sm)
       .frame(maxWidth: .infinity, alignment: .leading)
       .scaleEffect(treatment.rowScale(for: phase))
-      .background(
-        celebrating
-          ? success.opacity(treatment.tintOpacity)
-          : (isActive ? Color.accentColor.opacity(0.10) : Color.primary.opacity(isSelected ? 0.07 : 0.035)),
-        in: RoundedRectangle(cornerRadius: 8))
-      .overlay(
-        RoundedRectangle(cornerRadius: 8)
-          .strokeBorder(
-            celebrating ? success.opacity(0.55)
-              : (isActive ? Color.accentColor.opacity(0.55)
-                : Color.primary.opacity(isSelected ? 0.22 : 0.08)),
-            lineWidth: 1))
+      .background(fill)
+      // The running row keeps a primary edge even under the cursor, so the
+      // selection never hides which task is the one on the clock.
+      .overlay(alignment: .leading) {
+        if isActive || celebrating {
+          Rectangle()
+            .fill(celebrating ? theme.success : theme.primary)
+            .frame(width: theme.emphasisBorder)
+        }
+      }
+      .overlay(alignment: .bottom) { FocusRule() }
       .overlay { rowAccent(forTaskID: id) }
       .opacity(treatment.fades && phase == .celebrating ? 0 : 1)
-      .contentShape(RoundedRectangle(cornerRadius: 8))
+      .contentShape(Rectangle())
       .onHover { inside in
         if inside { hoveredID = id } else if hoveredID == id { hoveredID = nil }
       }
@@ -559,32 +574,33 @@ struct DayView: View {
   // MARK: - Today's logged work
 
   private var logged: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       HStack(spacing: 0) {
         MicroLabel("\(loggedBlocks.count) logged today")
-        Spacer(minLength: 8)
+        Spacer(minLength: theme.space.sm)
         MicroLabel(duration(loggedToday))
       }
-      .padding(.top, 8)
+      .padding(.top, theme.space.sm)
       ForEach(loggedBlocks, id: \.title) { entry in
-        HStack(spacing: 8) {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 11))
-            .foregroundStyle(.tertiary)
+        HStack(spacing: theme.space.sm) {
+          Image(systemName: "checkmark")
+            .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
+            .foregroundStyle(theme.success)
           Text(entry.title)
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
             .lineLimit(1)
             .truncationMode(.tail)
-          Spacer(minLength: 8)
+          Spacer(minLength: theme.space.sm)
           Text(duration(entry.seconds))
-            .font(.system(size: 11, design: .monospaced))
-            .foregroundStyle(.tertiary)
+            .font(theme.numeralFont(theme.scale.caption, weight: .regular))
+            .monospacedDigit()
+            .foregroundStyle(theme.dim)
         }
       }
     }
-    .padding(.horizontal, 12)
-    .padding(.top, 4)
+    .padding(.horizontal, theme.space.lg)
+    .padding(.top, theme.space.xs)
   }
 
   /// Today's blocks, one line per task rather than one per sitting: three
@@ -821,7 +837,7 @@ struct DailyBadge: View {
       model.toggleDailyProgress(task)
     } label: {
       Image(systemName: isDoneToday ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
-        .font(.system(size: 10, weight: .semibold))
+        .font(theme.bodyFont(size: theme.type.microLabel.size, weight: .semibold))
         .foregroundStyle(isDoneToday ? theme.success : theme.muted)
         .frame(width: 16, height: 16)
         .contentShape(Rectangle())
