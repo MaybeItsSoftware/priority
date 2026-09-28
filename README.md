@@ -87,6 +87,7 @@ something you already have to know.
 | `Cmd+P` | Go to a list — every list and nested list, filtered as you type |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
+| `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
 | `Cmd+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
 | `Cmd+Shift+P` / `Cmd+K` | The command palette — everything the workspace can do, and its key |
@@ -115,8 +116,10 @@ file** in the palette).
 
 The desktop workspace supports Checkvist-style two-letter commands, including
 `uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll` and `hc`, plus native undo/redo in the
-Edit menu. Board arrows navigate every column, including empty ones; the
-sidebar outlines the list you are navigating.
+Edit menu. Board arrows navigate every column, including empty ones, and
+`Up`/`Down` step through the subtask rows drawn on each card as well as the
+cards (folded cards are skipped over); `Space` and `Return` act on the row you
+are on. The sidebar outlines the list you are navigating.
 
 A letter that begins a sequence and also means something on its own — `x`
 (complete, or `xx`), `l` (open subtasks, or `ll`), `h` (leave them, or `hc`) —
@@ -473,8 +476,13 @@ the bottom.
   the done rail's tally and a close glyph at its right. Its visibility, width
   and tab are remembered, and it does not close itself when you navigate; with
   nothing selected the inspector says so.
+- **Bottom dock** (`Cmd+J`) — under the main pane, the progress graph: a bar
+  per day for the tasks closed and a line for the tasks added, over 7, 30 or
+  90 days, with the totals and the net in its header (hover a day for its own
+  figures). Its visibility, height and period are remembered.
 - **Status bar** — a thin strip along the foot, glyphs at its ends like an
-  editor's. On the left, the left dock's Lists and Agent toggles (the Lists
+  editor's. On the left, the left dock's Lists and Agent toggles and the
+  bottom dock's Progress toggle (the Lists
   tooltip says which region has the keyboard); in the middle, a half-typed key sequence (`d…`), an error,
   or a passing message; on the right, the running block and its clock (click to
   return to it), today's time logged, points and tasks done (the week's in the

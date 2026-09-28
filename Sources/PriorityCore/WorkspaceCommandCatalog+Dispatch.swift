@@ -36,7 +36,7 @@ extension WorkspaceCommandCatalog {
     .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline,
     .goSearch, .goCommandPalette, .goKeyboardReference,
     .windowUndo, .windowRedo, .windowToggleSidebar, .windowToggleInspectorPane,
-    .windowToggleDoneRail, .windowToggleAgentPanel,
+    .windowToggleDoneRail, .windowToggleAgentPanel, .windowToggleProgressDock,
   ]
 
   /// Commands whose chord still works with the caret in a text field, because
@@ -49,8 +49,8 @@ extension WorkspaceCommandCatalog {
     .goKeyboardReference, .goCommandPalette, .goSearch, .goListNavigator,
     // The agent's own field is a text field, and this is how you leave it.
     .windowToggleAgentPanel,
-    // ⌘B, as in Zed, where it works from inside the editor.
-    .windowToggleSidebar,
+    // ⌘B and ⌘J, as in Zed, where they work from inside the editor.
+    .windowToggleSidebar, .windowToggleProgressDock,
   ]
 
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.

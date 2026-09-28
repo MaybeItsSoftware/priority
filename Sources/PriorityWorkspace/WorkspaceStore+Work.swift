@@ -41,6 +41,19 @@ extension WorkspaceStore {
     }
   }
 
+  /// When each task in the interval was added, lists left out as they are
+  /// from `taskCompletions(in:)`, so the two can be read against each other.
+  public func taskCreations(in interval: DateInterval) throws -> [Date] {
+    try database.read { db in
+      try Date.fetchAll(db, sql: """
+        SELECT createdAt FROM tasks
+        WHERE createdAt >= ? AND createdAt < ?
+          AND COALESCE(itemKind, 'task') <> 'list'
+        ORDER BY createdAt
+        """, arguments: [interval.start, interval.end])
+    }
+  }
+
   /// The tasks closed since `since`, newest first.
   ///
   /// Lists are left out for the reason `taskCompletions(in:)` leaves them out:

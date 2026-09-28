@@ -362,6 +362,31 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Set by `reloadNestedListsNow()`.
   var sidebarLayoutKey = 0
   var focusedBoardColumnID: String?
+  /// The bottom dock, which holds the progress graph. Persisted like the
+  /// other docks, so it is only ever put away on purpose.
+  var isBottomDockVisible = UserDefaults.standard.bool(forKey: WorkspaceViewModel.bottomDockVisibleKey) {
+    didSet { UserDefaults.standard.set(isBottomDockVisible, forKey: Self.bottomDockVisibleKey) }
+  }
+  var bottomDockHeight: CGFloat = {
+    let stored = UserDefaults.standard.double(forKey: WorkspaceViewModel.bottomDockHeightKey)
+    return stored > 0
+      ? min(max(CGFloat(stored), WorkspaceViewModel.minBottomDockHeight), WorkspaceViewModel.maxBottomDockHeight)
+      : 180
+  }() {
+    didSet {
+      guard bottomDockHeight != oldValue else { return }
+      UserDefaults.standard.set(Double(bottomDockHeight), forKey: Self.bottomDockHeightKey)
+    }
+  }
+  var progressPeriod = TaskProgressPeriod(
+    rawValue: UserDefaults.standard.string(forKey: WorkspaceViewModel.progressPeriodKey) ?? "") ?? .month {
+    didSet { UserDefaults.standard.set(progressPeriod.rawValue, forKey: Self.progressPeriodKey) }
+  }
+  static let minBottomDockHeight: CGFloat = 120
+  static let maxBottomDockHeight: CGFloat = 420
+  private static let bottomDockVisibleKey = "localWorkspaceBottomDockVisibleV1"
+  private static let bottomDockHeightKey = "localWorkspaceBottomDockHeightV1"
+  private static let progressPeriodKey = "localWorkspaceProgressPeriodV1"
   /// Cards whose subtask tree is folded away. On the model rather than the
   /// card, because the arrow keys walk the tree rows a card is showing and
   /// have to know which ones it is not.

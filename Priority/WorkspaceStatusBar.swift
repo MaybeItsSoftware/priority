@@ -25,6 +25,12 @@ struct WorkspaceStatusBar: View {
   var body: some View {
     HStack(spacing: theme.space.sm) {
       leftDockToggles
+      // The bottom dock's toggle beside the left dock's, where Zed keeps its
+      // terminal's.
+      WorkspacePaneIconButton(
+        "chart.bar.xaxis", title: "Progress", command: .windowToggleProgressDock,
+        isOn: model.isBottomDockVisible
+      ) { model.toggleBottomDock() }
       Spacer(minLength: theme.space.sm)
       WorkspaceStatusMessage()
       Spacer(minLength: theme.space.sm)

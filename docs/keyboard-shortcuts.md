@@ -30,6 +30,7 @@ a task as Zed treats a line:
 | Toggle left dock | `Cmd+B` | Show or hide the sidebar |
 | Focus project panel | `Cmd+Shift+E` | Focus the sidebar |
 | Toggle agent panel | `Cmd+Shift+A` | The left dock's Agent tab |
+| Toggle bottom dock | `Cmd+J` | The progress graph |
 | Move line up / down | `Alt+↑` / `Alt+↓` | Move the task, or the sidebar row |
 | Document start / end | `Cmd+↑` / `Cmd+↓` | First / last task, or sidebar row |
 | Delete line | `Cmd+Shift+K` | Delete the task |
@@ -168,6 +169,10 @@ exactly what a keyboard-first app cannot afford, and Today's meaning is the one
 a Blitzit-style day is built on.
 
 The board keeps Left/Right for column navigation, including empty columns.
+Up/Down walk a column row by row, and a card's subtask rows are rows: the
+keys step onto each subtask the card is showing before the next card, and
+over a folded card's tree without stopping. Left/Right from a subtask leave
+from the column its card is in.
 Escape cancels task entry and returns to navigation.
 
 ## Undo

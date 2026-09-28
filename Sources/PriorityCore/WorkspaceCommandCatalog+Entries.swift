@@ -236,6 +236,10 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+shift+a", "cmd+ctrl+a"],
       note: "Claude Code in the left dock: reads freely, asks before every change"),
     .init(
+      id: .windowToggleProgressDock, title: "Show or hide the progress graph", group: "Window",
+      keys: ["cmd+j"],
+      note: "The bottom dock: tasks done and added a day at a time. ⌘J toggles the bottom dock, as in Zed"),
+    .init(
       id: .windowOpenKeymap, title: "Open the keymap file", group: "Window", keys: [],
       note: "keymap.json — your own keys over these. Created empty if it is missing"),
     .init(

@@ -50,7 +50,18 @@ struct WorkspaceDesktopView: View {
           width: Bindable(model).sidebarWidth, grows: .trailing,
           range: WorkspaceViewModel.minSidebarWidth...WorkspaceViewModel.maxSidebarWidth)
       }
-      mainPane
+      // The bottom dock spans the main pane only, as Zed's does by default:
+      // the side docks run the window's full height beside it.
+      VStack(spacing: 0) {
+        mainPane
+        if model.isBottomDockVisible && !model.showsFocusScreen && !model.showsTimelineScreen {
+          WorkspaceHeightHandle(
+            height: Bindable(model).bottomDockHeight,
+            range: WorkspaceViewModel.minBottomDockHeight...WorkspaceViewModel.maxBottomDockHeight)
+          WorkspaceProgressDock()
+            .frame(height: model.bottomDockHeight)
+        }
+      }
       // Gone while a full-pane screen is up, without forgetting that it was
       // open: focus is the one place the app should not be showing you a
       // tally, and the timeline is already a reading of the same day.

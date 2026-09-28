@@ -186,6 +186,7 @@ extension WorkspaceViewModel {
     case .windowRedo: redoLastUndoneChange()
     case .windowToggleSidebar: toggleSidebar()
     case .windowToggleAgentPanel: toggleAgentPanel()
+    case .windowToggleProgressDock: toggleBottomDock()
     case .windowToggleInspectorPane: toggleInspector()
     case .windowOpenKeymap: WorkspaceKeymapStore.shared.openFile()
     case .windowReloadKeymap: WorkspaceKeymapStore.shared.reload(force: true)

@@ -105,6 +105,10 @@ struct MainApp: App {
           AppDelegate.shared.workspace.toggleAgentPanel()
         }
         .commandShortcut(.windowToggleAgentPanel)
+        Button("Progress") {
+          AppDelegate.shared.workspace.toggleBottomDock()
+        }
+        .commandShortcut(.windowToggleProgressDock)
         Divider()
         // Deliberately a fixed title rather than Hide/Show: every other item
         // here touches `AppDelegate.shared` only inside its action, which runs

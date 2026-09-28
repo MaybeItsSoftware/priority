@@ -110,6 +110,21 @@ extension WorkspaceViewModel {
   }
 
   func toggleInspector() { toggleDockTab(.inspector) }
+
+  /// The bottom dock has one thing in it and nothing to type into, so it
+  /// never takes the keyboard: the key shows it and hides it.
+  func toggleBottomDock() { isBottomDockVisible.toggle() }
+
+  /// The progress graph for the period, read from the store. Empty without
+  /// one, and on a read that fails — a graph is not worth an error message.
+  func loadProgressSeries() -> TaskProgressSeries {
+    let interval = TaskProgressSeries.interval(for: progressPeriod)
+    guard let store,
+      let completions = try? store.taskCompletions(in: interval),
+      let creations = try? store.taskCreations(in: interval)
+    else { return TaskProgressSeries.build(period: progressPeriod, completions: [], creations: []) }
+    return TaskProgressSeries.build(period: progressPeriod, completions: completions, creations: creations)
+  }
   func toggleDoneRail() { toggleDockTab(.done) }
 }
 
