@@ -83,9 +83,11 @@ public enum BuiltInThemeSpecifications {
       spacing: ThemeSpacingScale(xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24),
       typography: ThemeTypography(
         // No font files ship with the app, so these are requests: Arvo and
-        // Geist Mono are used if installed, and the design is the fallback.
-        display: ThemeFontFace(families: ["Arvo"], design: .serif),
-        body: ThemeFontFace(families: ["Arvo"], design: .serif),
+        // Geist Mono are used if installed. Rockwell comes with macOS and is
+        // a slab too, so the house style's character survives without Arvo;
+        // the generic serif design is only the last resort.
+        display: ThemeFontFace(families: ["Arvo", "Rockwell"], design: .serif),
+        body: ThemeFontFace(families: ["Arvo", "Rockwell"], design: .serif),
         mono: ThemeFontFace(families: ["Geist Mono", "SF Mono"], design: .monospaced),
         bodySize: 13,
         scale: ThemeTypeScale(caption: 11, body: 13, title: 15, display: 28, hero: 64),

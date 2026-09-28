@@ -119,8 +119,8 @@ is stated, so it is also a reference for what can be set.
     "border": { "hairline": 1, "emphasis": 2, "focusRing": 2 },
     "spacing": { "xxs": 2, "xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24 },
     "typography": {
-      "display": { "families": ["Arvo"], "design": "serif" },
-      "body": { "families": ["Arvo"], "design": "serif" },
+      "display": { "families": ["Arvo", "Rockwell"], "design": "serif" },
+      "body": { "families": ["Arvo", "Rockwell"], "design": "serif" },
       "mono": { "families": ["Geist Mono", "SF Mono"], "design": "monospaced" },
       "bodySize": 13,
       "scale": { "caption": 11, "body": 13, "title": 15, "display": 28, "hero": 64 },

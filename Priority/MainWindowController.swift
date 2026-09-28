@@ -71,7 +71,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 
     let rootView = WorkspaceDesktopView()
       .focusEffectDisabled()
-      .font(Typography.interfaceFont)
+      .themedBodyFont()
       .environment(workspace)
       .environment(manager)
       .environment(manager.navigationState)

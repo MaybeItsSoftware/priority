@@ -169,9 +169,8 @@ local `themeColor(_:)` helper is gone. See `docs/plugins.md`.
 ### The theme asks for fonts that are not bundled
 
 Chalk requests `Arvo` (slab serif, brand and body) and `Geist Mono`, falling
-back to the system serif and `SF Mono` when they are absent — which they are,
-so the slab serif that is much of the house character is not currently on
-screen. To ship them: add the `.ttf`s as a resource, list them under
+back to Rockwell — the slab serif macOS ships — and `SF Mono` when they are
+absent, which they are. So a slab is on screen, but not the house's own. To ship them: add the `.ttf`s as a resource, list them under
 `ATSApplicationFontsPath` in the Info.plist, and check the licences. Nothing in
 the theme contract changes.
 

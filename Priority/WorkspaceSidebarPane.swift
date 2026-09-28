@@ -309,9 +309,13 @@ enum WorkspaceSidebarMetrics {
 }
 
 extension View {
-  /// The padding every sidebar row carries inside its selection background.
+  /// The padding every sidebar row carries inside its selection background,
+  /// and its face. The font is set here, on the row, rather than trusted to
+  /// the `.font` on the List: the `.sidebar` style hands each row its own
+  /// system font, which beats one inherited from outside the table.
   func sidebarRowPadding(_ theme: Theme) -> some View {
-    frame(maxWidth: .infinity, alignment: .leading)
+    font(theme.bodyFont())
+      .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.vertical, theme.space.xxs)
       .padding(.horizontal, theme.space.xs)
       .contentShape(Rectangle())

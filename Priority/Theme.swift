@@ -200,12 +200,30 @@ private struct ThemedModifier: ViewModifier {
   }
 }
 
+private struct ThemedBodyFontModifier: ViewModifier {
+  @Environment(\.theme) private var theme
+
+  func body(content: Content) -> some View {
+    content.font(theme.bodyFont())
+  }
+}
+
 extension View {
   /// Apply at every root that hosts app content — the window, the menu-bar
   /// popover, the settings window. A surface below one of these reads
   /// `@Environment(\.theme)` and gets both halves for free.
   func themed(_ manager: ThemeManager) -> some View {
     modifier(ThemedModifier(manager: manager))
+  }
+
+  /// The theme's body face as the default for everything below. Apply
+  /// *inside* `.themed(_:)`, which is what supplies the theme it reads.
+  ///
+  /// The roots used to set `Typography.interfaceFont` — the system sans — so
+  /// any text without a font of its own (an outline title, a sidebar name, a
+  /// settings row) came out in the one face the theme never names.
+  func themedBodyFont() -> some View {
+    modifier(ThemedBodyFontModifier())
   }
 
   /// The signature device: 10pt, bold, uppercase, 0.15em tracking, muted.

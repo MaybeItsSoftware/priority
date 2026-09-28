@@ -304,7 +304,8 @@ draws the system separator and does not flip.
 
 **Fonts are requests, not files.** Priority ships no font files, so a
 `ThemeFontFace` names families in preference order and falls back to its
-`design`. Chalk asks for Arvo and gets a system serif until Arvo is installed.
+`design`. Chalk asks for Arvo and gets Rockwell, the slab macOS ships, until Arvo is
+installed.
 Shipping the real faces means adding the `.ttf`s to `Priority/Assets` (or a
 `Fonts/` resource folder), listing them under `ATSApplicationFontsPath` in the
 Info.plist, and honouring each face's licence — nothing in the contract changes.

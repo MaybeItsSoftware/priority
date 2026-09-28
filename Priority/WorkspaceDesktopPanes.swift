@@ -38,7 +38,7 @@ struct WorkspaceOutlinePane: View {
               Section {
                 let items = model.outlineByList[list.id] ?? []
                 if items.isEmpty {
-                  Text("No tasks").foregroundStyle(.tertiary)
+                  Text("No tasks").font(theme.bodyFont()).foregroundStyle(theme.dim)
                 } else {
                   ForEach(items) { item in
                     row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard)
@@ -47,6 +47,7 @@ struct WorkspaceOutlinePane: View {
               } header: {
                 Button(list.name) { model.selectList(list.id) }
                   .buttonStyle(.plain)
+                  .font(theme.bodyFont(weight: .semibold))
                   .focusable()
                   .lineLimit(1)
                   .truncationMode(.middle)
@@ -116,6 +117,9 @@ struct WorkspaceOutlineRow: View {
         .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       WorkspaceTaskPlanningBadges(task: item.task).frame(maxWidth: 170, alignment: .leading)
     }
+    // On the row itself: a List row takes its face from the table style, not
+    // from the window, so without this every title was in the system sans.
+    .font(theme.bodyFont())
     .padding(.leading, CGFloat(item.depth) * theme.space.lg)
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }

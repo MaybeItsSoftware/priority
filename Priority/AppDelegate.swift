@@ -263,7 +263,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     let rootView = SettingsView()
       .focusEffectDisabled()
-      .font(Typography.interfaceFont)
+      .themedBodyFont()
       .environment(checkvistManager)
       .environment(navState)
       .themed(checkvistManager.theme)
