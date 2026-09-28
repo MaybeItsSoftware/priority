@@ -18,19 +18,22 @@ struct WorkspaceSidebarPane: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       sidebarHeader
+      FocusRule()
       sidebarRows
       sidebarFooter
     }
-    // Not `.bar`. A vibrant material re-tints whatever is behind the window,
-    // so the selection wash — 13% of the accent, the same figure that reads
-    // clearly on every other surface — was being averaged into the desktop and
-    // arriving as nothing. Row weight was covering for that. On a flat surface
-    // the wash composites the way it was tuned to.
-    .background(theme.altRow)
+    // The page, like the panes beside it. Not `.bar`: a vibrant material
+    // re-tints whatever is behind the window, so the selection wash was being
+    // averaged into the desktop and arriving as nothing. And not `altRow`
+    // either, which made the sidebar a second surface — the resize handle's
+    // hairline is what separates it, the way a dock is separated in an editor.
+    .background(theme.paper)
   }
 
   private var sidebarHeader: some View {
-    HStack {
+    // The same band as the pane header beside it — the same height and the
+    // same rule under it — so the two read as one strip across the window.
+    HStack(spacing: theme.space.sm) {
       // The app's own name, which the window title, the Dock icon and the
       // menu bar were already saying. A pane's eyebrow should name the pane.
       MicroLabel("Workspace")
@@ -50,9 +53,9 @@ struct WorkspaceSidebarPane: View {
       .commandHelp(.windowUndo, note: "Undo or redo workspace changes")
       .accessibilityLabel("Workspace history")
     }
+    .frame(minHeight: theme.space.xl)
     .padding(.horizontal, theme.space.md)
-    .padding(.top, theme.space.lg)
-    .padding(.bottom, theme.space.sm)
+    .padding(.vertical, theme.space.sm)
   }
 
   private var sidebarRows: some View {
@@ -62,14 +65,16 @@ struct WorkspaceSidebarPane: View {
           model.selectEverything()
           model.reportKeyboardFocus(.sidebar)
         } label: {
-          Label("Everything", systemImage: "square.stack.3d.up")
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 3)
-            .contentShape(Rectangle())
+          HStack(spacing: theme.space.sm) {
+            Image(systemName: "square.stack.3d.up")
+              .foregroundStyle(theme.muted)
+              .frame(width: WorkspaceSidebarMetrics.iconWidth)
+            Text("Everything")
+          }
+          .sidebarRowPadding(theme)
         }
         .buttonStyle(.plain)
         .id(everythingSidebarID)
-        .padding(.horizontal, 4)
         .background(
           WorkspaceSidebarSelectionBackground(
             isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
@@ -103,15 +108,16 @@ struct WorkspaceSidebarPane: View {
             // a control as far as anyone can tell, and it is not one.
             if isTopLevelDropTargeted {
               Image(systemName: "arrow.up.left")
-                .font(.system(size: 9, weight: .semibold))
+                .font(theme.microLabelFont)
                 .foregroundStyle(theme.primary)
             }
           }
-          .padding(.vertical, 6)
+          .padding(.vertical, theme.space.xs)
+          .padding(.horizontal, theme.space.xs)
           .frame(maxWidth: .infinity, alignment: .leading)
           .contentShape(Rectangle())
           .background(
-            theme.color(.primary, opacity: isTopLevelDropTargeted ? 0.16 : 0),
+            isTopLevelDropTargeted ? theme.selectionFill : .clear,
             in: RoundedRectangle(cornerRadius: theme.controlRadius))
           .help("Drop a list here to make it a top level list")
           .accessibilityLabel("Lists, drop here to move to top level")
@@ -126,10 +132,15 @@ struct WorkspaceSidebarPane: View {
       // `.sidebar` is kept for its row metrics and disclosure behaviour, but
       // its own vibrancy is not wanted over the flat surface above.
       .scrollContentBackground(.hidden)
+      // Every row in the theme's body face, rather than the system font the
+      // `.sidebar` style supplies — the sidebar was the one list in the window
+      // whose names did not match the task titles beside it.
+      .font(theme.bodyFont())
+      .foregroundStyle(theme.ink)
       // A sidebar row is otherwise given the height AppKit reserves for a
       // two-line source-list item, which on a list of one-line names reads as
       // double spacing.
-      .environment(\.defaultMinListRowHeight, 22)
+      .environment(\.defaultMinListRowHeight, WorkspaceSidebarMetrics.rowHeight(theme))
       // One number standing for where every list, folder and nested list
       // sits, worked out when they are reloaded rather than as three arrays of
       // strings on every render.
@@ -189,7 +200,6 @@ struct WorkspaceSidebarPane: View {
       .tag(Optional(list.id))
       .id(list.id)
       .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
-      .padding(.horizontal, 4)
       .background(
         WorkspaceSidebarSelectionBackground(
           isCurrent: model.isCurrentSidebarRow(list.id),
@@ -276,37 +286,73 @@ struct WorkspaceSidebarSelectionBackground: View {
   }
 }
 
+/// The sidebar's row geometry, named once so that every kind of row —
+/// Everything, a list, a nested list, a folder — is the same height and starts
+/// its name at the same x. They were 2, 3 and 6pt of padding, a 14pt and an
+/// 18pt icon column, and indents of 12 and 14, one per row kind.
+enum WorkspaceSidebarMetrics {
+  /// The icon column. Wide enough for the widest symbol the rows draw at body
+  /// size, so names line up whichever glyph precedes them.
+  static let iconWidth: CGFloat = 18
+
+  /// One indent step for anything nested — a list in a folder, a list inside
+  /// a list. The icon column plus the gap after it, so a child's glyph sits
+  /// under its parent's name.
+  static func indent(_ theme: Theme) -> CGFloat { iconWidth + theme.space.sm }
+
+  /// A single line of body text plus the row's own padding. Without a floor a
+  /// `.sidebar` List gives each row the height AppKit reserves for a two-line
+  /// source-list item.
+  static func rowHeight(_ theme: Theme) -> CGFloat {
+    theme.type.scale.body + 2 * (theme.space.xs + theme.space.xxs)
+  }
+}
+
+extension View {
+  /// The padding every sidebar row carries inside its selection background.
+  func sidebarRowPadding(_ theme: Theme) -> some View {
+    frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.vertical, theme.space.xxs)
+      .padding(.horizontal, theme.space.xs)
+      .contentShape(Rectangle())
+  }
+}
+
 private struct WorkspaceNestedListRows: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let list: TaskList
 
   var body: some View {
     ForEach(model.nestedLists.filter { $0.task.listId == list.id }) { item in
       WorkspaceNestedListRow(task: item.task)
-        .padding(.leading, CGFloat(item.depth + 1) * 12)
+        .padding(.leading, CGFloat(item.depth + 1) * WorkspaceSidebarMetrics.indent(theme))
     }
   }
 }
 
 private struct WorkspaceNestedListRow: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let task: WorkspaceTask
   var promotedShortcut = false
   @State private var isDropTargeted = false
 
   var body: some View {
-    HStack(spacing: 7) {
-      Image(systemName: model.itemSymbol(for: task)).frame(width: 18)
+    HStack(spacing: theme.space.sm) {
+      Image(systemName: model.itemSymbol(for: task))
+        .foregroundStyle(theme.muted)
+        .frame(width: WorkspaceSidebarMetrics.iconWidth)
       Text(task.title)
         .lineLimit(1)
         .truncationMode(.middle)
         .strikethrough(task.status != .open)
       Spacer(minLength: 0)
-      if promotedShortcut { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary) }
+      if promotedShortcut {
+        Image(systemName: "pin.fill").font(theme.microLabelFont).foregroundStyle(theme.dim)
+      }
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.vertical, 3)
-    .contentShape(Rectangle())
+    .sidebarRowPadding(theme)
     .onTapGesture { model.selectNestedList(task) }
     .accessibilityElement(children: .combine)
     .accessibilityLabel(task.title)
@@ -314,14 +360,15 @@ private struct WorkspaceNestedListRow: View {
     .accessibilityAction { model.selectNestedList(task) }
     .focusable().focusEffectDisabled()
     .id(promotedShortcut ? "promoted:\(task.id)" : task.id)
-    .padding(.horizontal, 4)
     .background(WorkspaceSidebarSelectionBackground(
       isCurrent: model.isCurrentSidebarRow(task.id),
       rowID: promotedShortcut ? "pinned:\(task.id)" : "nested:\(task.listId):\(task.id)"))
     .listRowBackground(Color.clear)
     .contextMenu { WorkspaceItemActions(task: task) }
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
-    .background(isDropTargeted ? Color.accentColor.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 6))
+    .background(
+      isDropTargeted ? theme.selectionFill : .clear,
+      in: RoundedRectangle(cornerRadius: theme.controlRadius))
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
       WorkspaceTaskDrag.readItemID(from: providers) { payload in
         model.moveDroppedItem(payload, toListID: task.listId, parentTaskID: task.id)
@@ -332,6 +379,7 @@ private struct WorkspaceNestedListRow: View {
 
 private struct WorkspaceFolderTree: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let folder: ListFolder
   /// Whether this is the last folder among its siblings, and so the one whose
   /// bottom edge means "at the end of the folders".
@@ -347,7 +395,6 @@ private struct WorkspaceFolderTree: View {
           .tag(Optional(list.id))
           .id(list.id)
           .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
-          .padding(.horizontal, 4)
           .background(
             WorkspaceSidebarSelectionBackground(
               isCurrent: model.isCurrentSidebarRow(list.id),
@@ -378,12 +425,12 @@ private struct WorkspaceFolderTree: View {
           }
         WorkspaceNestedListRows(list: list)
       }
-      .padding(.leading, 14)
+      .padding(.leading, WorkspaceSidebarMetrics.indent(theme))
       let childFolders = model.folders.filter { $0.parentFolderId == folder.id }
       ForEach(childFolders) { child in
         WorkspaceFolderTree(folder: child, isLastInGroup: child.id == childFolders.last?.id)
       }
-      .padding(.leading, 14)
+      .padding(.leading, WorkspaceSidebarMetrics.indent(theme))
       }
     }
   }
@@ -391,24 +438,30 @@ private struct WorkspaceFolderTree: View {
   private var isCurrent: Bool { model.selectedFolderID == folder.id }
 
   private var folderHeader: some View {
-      HStack(spacing: 6) {
+      // The disclosure chevron takes the icon column, and the folder's own
+      // glyph and name follow it at the list rows' spacing, so a folder's name
+      // starts one indent in from a list's — which is where its lists start.
+      HStack(spacing: theme.space.sm) {
         Button {
           withAnimation(.easeInOut(duration: 0.18)) {
             model.setFolderExpanded(folder, expanded: !model.isFolderExpanded(folder))
           }
         } label: {
           Image(systemName: model.isFolderExpanded(folder) ? "chevron.down" : "chevron.right")
-            .font(.caption)
-            .frame(width: 14, height: 20)
+            .font(theme.captionFont)
+            .frame(width: WorkspaceSidebarMetrics.iconWidth)
+            .contentShape(Rectangle())
         }
         .accessibilityLabel(model.isFolderExpanded(folder) ? "Collapse folder" : "Expand folder")
+        Image(systemName: "folder")
+          .frame(width: WorkspaceSidebarMetrics.iconWidth)
         if model.isRenaming(.folder(folder)) {
           WorkspaceRenameField(
             initialName: folder.name,
             onCommit: { model.renameFolder(folder, to: $0) },
             onCancel: { model.cancelRenaming(itemID: folder.id) })
         } else {
-          Label(folder.name, systemImage: "folder")
+          Text(folder.name)
             .lineLimit(1)
             .truncationMode(.middle)
             .help(folder.name)
@@ -422,10 +475,8 @@ private struct WorkspaceFolderTree: View {
         .buttonStyle(.plain)
         .focusable()
         .focusEffectDisabled()
-        .foregroundStyle(.secondary)
-        .padding(.vertical, 2)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
+        .foregroundStyle(theme.muted)
+        .sidebarRowPadding(theme)
         // The same component as every other sidebar row, rather than the same
         // two opacities written out again: a folder that disagreed with a list
         // about what "you are here" looks like is the bug this replaces.
@@ -472,10 +523,18 @@ private struct AddWorkspaceItemButton: View {
       HStack(spacing: theme.space.xs) {
         Image(systemName: systemImage)
         if showsTitle {
-          Text(title).font(theme.bodyFont(size: theme.type.microLabel.size))
+          Text(title)
         }
       }
+      .font(theme.captionFont)
+      .foregroundStyle(theme.muted)
+      .padding(.horizontal, theme.space.xs)
+      .padding(.vertical, theme.space.xxs)
+      .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
     }
+    // Plain rather than a bezelled push button: chrome is quiet, and these
+    // are the only two raised controls the sidebar had.
+    .buttonStyle(.plain)
     .focusable()
     .commandHelp(command, note: title)
   }

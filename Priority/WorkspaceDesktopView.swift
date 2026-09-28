@@ -64,6 +64,10 @@ struct WorkspaceDesktopView: View {
       }
     }
     .frame(minWidth: 760, minHeight: 520)
+    // One flat surface under every column. The panes are told apart by the
+    // hairline in each resize handle, not by a tint of their own — a tinted
+    // sidebar was a second surface the selection wash had to be tuned against.
+    .background(theme.paper)
     .onAppear {
       if model.requestedFocusArea != .tasks || (model.viewMode != .board && model.viewMode != .outline) {
         focusedArea = model.requestedFocusArea
@@ -166,7 +170,7 @@ struct WorkspaceDesktopView: View {
       // mounts: the day cannot read differently depending on where you open it.
       DayView(surface: .window, resetToken: model.dayPresentationCount)
         .environment(model)
-        .background(Color(nsColor: .textBackgroundColor))
+        .background(theme.paper)
     case .board:
       WorkspaceKanbanBoard()
         .environment(model)
@@ -421,14 +425,14 @@ struct WorkspaceScopedTaskComposer: View {
   }
 }
 
-/// A list's colour, or the accent colour when it has none. Internal rather
-/// than file-private because sidebar rows moved out into their own file.
+/// A list's colour, or `fallback` when it has none. Internal rather than
+/// file-private because sidebar rows moved out into their own file.
 extension Color {
-  init(priorityHex rawValue: String?) {
+  init(priorityHex rawValue: String?, fallback: Color = .accentColor) {
     let value = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines)
       .trimmingCharacters(in: CharacterSet(charactersIn: "#")) ?? ""
     guard value.count == 6, let hex = UInt64(value, radix: 16) else {
-      self = .accentColor
+      self = fallback
       return
     }
     self.init(

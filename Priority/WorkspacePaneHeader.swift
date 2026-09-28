@@ -32,25 +32,34 @@ struct WorkspacePaneHeader<Subtitle: View, Trailing: View>: View {
   }
 
   var body: some View {
+    // The subtitle sits on the title's baseline rather than under it. Stacked,
+    // it made the band a line taller in the modes that carry one (Today, the
+    // matrix, Focus, the timeline) than in those that do not (the board and the
+    // outline until a task is opened as a list), so ⌘1→⌘2 still moved the
+    // content down.
     HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
-      VStack(alignment: .leading, spacing: 3) {
-        Text(title)
-          .font(theme.displayFont(size: Self.titleSize, weight: .semibold))
-          .lineLimit(1)
-          .truncationMode(.middle)
-        subtitle
-      }
+      // The theme's title role, deliberately only a step above body: the house
+      // style puts hierarchy in surface and position, and a scope name at
+      // 17–22pt was arguing with a screen of tasks.
+      Text(title)
+        .font(theme.titleFont)
+        .foregroundStyle(theme.ink)
+        .lineLimit(1)
+        .truncationMode(.middle)
+        .layoutPriority(1)
+      subtitle
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
+        .lineLimit(1)
       Spacer(minLength: theme.space.sm)
       trailing
     }
-    .focusSurfaceBand()
+    // Tall enough for the tallest trailing control, so the band is one height
+    // whichever mode is in it rather than growing to fit what a mode carries.
+    .frame(minHeight: theme.space.xl)
+    .padding(.horizontal, FocusSurfaceMetrics.gutter)
+    .padding(.vertical, theme.space.sm)
   }
-
-  /// The one figure. Big enough to read as the pane's name, small enough that
-  /// the band does not become the loudest thing on a screen of tasks — the
-  /// house style puts hierarchy in surface and position rather than in type
-  /// size, and 22pt of scope name was arguing with that.
-  static var titleSize: CGFloat { 17 }
 }
 
 extension WorkspacePaneHeader where Subtitle == EmptyView {
@@ -74,7 +83,7 @@ struct WorkspacePaneCount: View {
 
   var body: some View {
     Text("\(count) \(noun)")
-      .font(theme.monoFont(size: 10))
+      .font(theme.monoFont(size: theme.type.microLabel.size))
       .foregroundStyle(theme.dim)
       .monospacedDigit()
   }
@@ -89,11 +98,11 @@ struct WorkspacePaneScopeExit: View {
 
   var body: some View {
     Button(action: leave) {
-      HStack(spacing: 3) {
-        Image(systemName: "chevron.left").font(.system(size: 9, weight: .semibold))
+      HStack(spacing: theme.space.xxs) {
+        Image(systemName: "chevron.left")
         Text(title).lineLimit(1).truncationMode(.middle)
       }
-      .font(theme.bodyFont(size: 11))
+      .font(theme.captionFont)
       .foregroundStyle(theme.muted)
       .contentShape(Rectangle())
     }
@@ -145,12 +154,13 @@ struct SheetTitle: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 3) {
+    VStack(alignment: .leading, spacing: theme.space.xxs) {
       Text(title)
-        .font(theme.displayFont(size: 15, weight: .semibold))
+        .font(theme.titleFont)
+        .foregroundStyle(theme.ink)
       if let subject {
         Text(subject)
-          .font(theme.bodyFont(size: 11))
+          .font(theme.captionFont)
           .foregroundStyle(theme.muted)
           .lineLimit(2)
           .truncationMode(.tail)

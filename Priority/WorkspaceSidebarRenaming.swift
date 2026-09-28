@@ -1,3 +1,4 @@
+import PriorityCore
 import PriorityWorkspace
 import SwiftUI
 
@@ -11,6 +12,7 @@ import SwiftUI
 /// distance threshold, which is the behaviour both need.
 struct WorkspaceSelectableListRow: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let list: TaskList
 
   var body: some View {
@@ -32,16 +34,14 @@ struct WorkspaceSelectableListRow: View {
   }
 
   private var rowLabel: some View {
-    HStack {
+    HStack(spacing: theme.space.xs) {
       WorkspaceListRowLabel(list: list)
       if list.name.caseInsensitiveCompare("Everything") == .orderedSame {
-        Text("(list)").font(.caption).foregroundStyle(.secondary)
+        Text("(list)").font(theme.captionFont).foregroundStyle(theme.muted)
       }
       Spacer(minLength: 0)
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.vertical, 3)
-    .contentShape(Rectangle())
+    .sidebarRowPadding(theme)
   }
 }
 
@@ -51,13 +51,17 @@ struct WorkspaceSelectableListRow: View {
 /// truncation — so starting a rename does not make the sidebar jump.
 struct WorkspaceListRowLabel: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let list: TaskList
 
   var body: some View {
-    HStack(spacing: 7) {
+    HStack(spacing: theme.space.sm) {
+      // A list's own colour is categorical identity. With none set the glyph
+      // is muted like every other in the sidebar, rather than the system
+      // accent, which does not follow a theme.
       Image(systemName: model.icon(for: list))
-        .foregroundStyle(Color(priorityHex: list.colorHex))
-        .frame(width: 18)
+        .foregroundStyle(Color(priorityHex: list.colorHex, fallback: theme.muted))
+        .frame(width: WorkspaceSidebarMetrics.iconWidth)
       if model.isRenaming(.list(list)) {
         WorkspaceRenameField(
           initialName: list.name,
@@ -84,6 +88,7 @@ struct WorkspaceListRowLabel: View {
 /// abandons on escape, and commits on losing focus rather than discarding —
 /// clicking away from a rename you have typed should keep it.
 struct WorkspaceRenameField: View {
+  @Environment(\.theme) private var theme
   let initialName: String
   let onCommit: (String) -> Void
   let onCancel: () -> Void
@@ -102,7 +107,7 @@ struct WorkspaceRenameField: View {
   var body: some View {
     TextField("Name", text: $name)
       .textFieldStyle(.roundedBorder)
-      .font(.body)
+      .font(theme.bodyFont())
       .focused($isFocused)
       .onSubmit { commit() }
       .onExitCommand { cancel() }

@@ -28,7 +28,8 @@ struct WorkspaceStatusBar: View {
     .padding(.horizontal, theme.space.sm)
     .frame(height: Self.height)
     .frame(maxWidth: .infinity)
-    .background(theme.altRow)
+    // The page, like everything above it; the rule is what says "status bar".
+    .background(theme.paper)
     .overlay(alignment: .top) { FocusRule() }
   }
 

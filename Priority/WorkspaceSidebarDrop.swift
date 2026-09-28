@@ -30,6 +30,7 @@ extension View {
 }
 
 private struct WorkspaceSidebarDropRow: ViewModifier {
+  @Environment(\.theme) private var theme
   let isLastInGroup: Bool
   let onDrop: @MainActor (String, WorkspaceSidebarDropPlacement) -> Void
 
@@ -40,8 +41,8 @@ private struct WorkspaceSidebarDropRow: ViewModifier {
     content
       .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
       .background(
-        placement == .into ? Color.accentColor.opacity(0.16) : .clear,
-        in: RoundedRectangle(cornerRadius: 6))
+        placement == .into ? theme.selectionFill : .clear,
+        in: RoundedRectangle(cornerRadius: theme.controlRadius))
       .overlay(alignment: .top) { edge(.before) }
       .overlay(alignment: .bottom) { edge(.after) }
       .onDrop(
@@ -57,8 +58,8 @@ private struct WorkspaceSidebarDropRow: ViewModifier {
   /// never hit-tested, so it cannot take a click meant for the row under it.
   private func edge(_ target: WorkspaceSidebarDropPlacement) -> some View {
     Rectangle()
-      .fill(placement == target ? Color.accentColor : .clear)
-      .frame(height: 2)
+      .fill(placement == target ? theme.primary : .clear)
+      .frame(height: theme.emphasisBorder)
       .allowsHitTesting(false)
   }
 }
