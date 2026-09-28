@@ -156,7 +156,7 @@ struct WorkspaceTaskQuickEditOverlay: View {
           .accessibilityLabel("Previous month")
         Spacer()
         Text(date, format: .dateTime.month(.wide).year())
-          .font(theme.bodyFont(weight: .semibold))
+          .font(theme.bodyFont(weight: .medium))
           .foregroundStyle(theme.ink)
         Spacer()
         Button { move(.month, 1) } label: { Image(systemName: "chevron.right") }

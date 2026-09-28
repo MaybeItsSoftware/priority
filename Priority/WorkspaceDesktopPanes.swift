@@ -47,7 +47,7 @@ struct WorkspaceOutlinePane: View {
               } header: {
                 Button(list.name) { model.selectList(list.id) }
                   .buttonStyle(.plain)
-                  .font(theme.bodyFont(weight: .semibold))
+                  .font(theme.bodyFont(weight: .medium))
                   .focusable()
                   .lineLimit(1)
                   .truncationMode(.middle)

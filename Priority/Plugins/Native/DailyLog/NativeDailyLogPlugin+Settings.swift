@@ -37,7 +37,7 @@ private struct DailyLogPluginSettingsView: View {
   var body: some View {
     let dailyLog = manager.dailyLog
 
-    Section(header: MicroLabel("Daily Log Plugin")) {
+    Section(header: MicroLabel("Daily log plugin")) {
       Text(
         "Completions, focus sessions and the day's plan are always recorded locally — "
           + "that's what the Daily view reads. This section controls the Obsidian half."
@@ -318,7 +318,7 @@ private struct DailyLogPluginSettingsView: View {
           manager.dailyLog.setDailySchedule(daily, to: .weekdays(updated))
         } label: {
           Text(names[weekday])
-            .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
+            .font(theme.bodyFont(size: theme.scale.caption))
             .frame(width: theme.space.xl, height: theme.space.xl)
             // On is the tinted selection, off is a bare hairline: the chip's
             // state is a border and fill change, never a solid accent block.

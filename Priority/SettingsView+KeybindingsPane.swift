@@ -13,7 +13,7 @@ import SwiftUI
 extension SettingsView {
   var keybindingsPane: some View {
     Group {
-      Section(header: MicroLabel("Configurable Hotkeys")) {
+      Section(header: MicroLabel("Configurable hotkeys")) {
         Text("These shortcuts work globally, even when Priority is not focused.")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
@@ -66,7 +66,7 @@ extension SettingsView {
         }
       }
 
-      Section(header: MicroLabel("Window Keys")) {
+      Section(header: MicroLabel("Window keys")) {
         let keymap = WorkspaceKeymapStore.shared
         Text(
           "Every key in the window can be rebound in keymap.json. The format is in docs/keyboard-shortcuts.md."
@@ -83,7 +83,7 @@ extension SettingsView {
         }
       }
 
-      Section(header: MicroLabel("Quick Add Target")) {
+      Section(header: MicroLabel("Quick add target")) {
         VStack(alignment: .leading, spacing: theme.space.xs) {
           Text("Quick Add location")
           Picker("", selection: preferenceBinding(\.quickAddLocationMode)) {
@@ -147,14 +147,14 @@ extension SettingsView {
       VStack(alignment: .leading, spacing: theme.space.xs) {
         Toggle(isOn: enabled) {
           Text(title)
-            .font(theme.bodyFont(weight: .semibold))
+            .font(theme.bodyFont())
         }
           .toggleStyle(.switch)
         Text(description)
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
         Text("Default: \(defaultDisplay)")
-          .font(theme.monoFont(size: theme.scale.caption, weight: .medium))
+          .font(theme.monoFont(size: theme.scale.caption))
           .foregroundStyle(theme.muted)
       }
       Spacer()
@@ -163,7 +163,7 @@ extension SettingsView {
           .frame(width: Self.hotkeyRecorderWidth)
       } else {
         Text("Off")
-          .font(theme.monoFont(size: theme.scale.caption, weight: .medium))
+          .font(theme.monoFont(size: theme.scale.caption))
           .foregroundStyle(theme.muted)
           .padding(.horizontal, theme.space.sm)
           .padding(.vertical, theme.space.xs)

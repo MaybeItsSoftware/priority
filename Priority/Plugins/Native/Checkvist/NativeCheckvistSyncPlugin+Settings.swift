@@ -44,7 +44,7 @@ private struct CheckvistSyncPluginSettingsView: View {
   var body: some View {
     @Bindable var manager = manager
     Group {
-      Section(header: MicroLabel("Checkvist Sync")) {
+      Section(header: MicroLabel("Checkvist sync")) {
         Toggle(
           "Enable Checkvist sync",
           isOn: Binding(
@@ -186,7 +186,7 @@ private struct CheckvistSyncPluginSettingsView: View {
         .frame(width: WorkspaceSidebarMetrics.iconWidth)
       VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text(style.title)
-          .font(theme.bodyFont(weight: .semibold))
+          .font(theme.bodyFont(weight: .medium))
         Text(style.message)
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
@@ -225,14 +225,14 @@ private struct CheckvistSyncPluginSettingsView: View {
       Text("\(number)")
         // A step number is a status-less label, so it takes the tinted
         // treatment in the primary hue rather than a solid accent disc.
-        .font(theme.numeralFont(theme.type.microLabel.size, weight: .bold))
+        .font(theme.numeralFont(theme.type.microLabel.size, weight: .medium))
         .foregroundStyle(theme.primary)
         .frame(width: WorkspaceSidebarMetrics.iconWidth, height: WorkspaceSidebarMetrics.iconWidth)
         .themedSurface(
           theme, fill: theme.color(.primary, opacity: Theme.statusFillOpacity),
           radius: theme.controlRadius, stroke: theme.color(.primary, opacity: Theme.statusBorderOpacity))
       Text(title)
-        .font(theme.bodyFont(weight: .semibold))
+        .font(theme.bodyFont(weight: .medium))
     }
   }
 
@@ -302,7 +302,7 @@ private struct CheckvistSyncPluginSettingsView: View {
   }
 
   private var offlineSyncAndConflictResolutionSection: some View {
-    Section(header: MicroLabel("Offline Sync & Conflict Resolution")) {
+    Section(header: MicroLabel("Offline sync and conflict resolution")) {
       VStack(alignment: .leading, spacing: theme.space.sm) {
         Text("Your offline workspace currently has \(manager.repository.offlineOpenTaskCount) tasks.")
           .font(theme.captionFont)

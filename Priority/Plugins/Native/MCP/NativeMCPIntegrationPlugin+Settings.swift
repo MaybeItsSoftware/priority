@@ -102,7 +102,7 @@ private struct MCPIntegrationPluginSettingsView: View {
   private var clientStep: some View {
     VStack(alignment: .leading, spacing: theme.space.sm) {
       Text("Add to an AI client")
-        .font(theme.bodyFont(weight: .semibold))
+        .font(theme.bodyFont(weight: .medium))
 
       if integrations.detectedMCPClients.isEmpty {
         Text(

@@ -73,7 +73,7 @@ struct LocalTaskInspector: View {
     ForEach(TaskEditorField.allCases.filter { draft.conflicts.contains($0) }, id: \.self) { field in
       VStack(alignment: .leading, spacing: theme.space.xs) {
         Text("\(field.label) changed in the saved task")
-          .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
+          .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
           .foregroundStyle(theme.ink)
         Group {
           Text("Saved: \(display(field, in: draft.baseline.values))").lineLimit(3)

@@ -211,7 +211,7 @@ private struct ThemedCheckbox: View {
           .overlay {
             if isOn {
               Image(systemName: "checkmark")
-                .font(theme.bodyFont(size: theme.type.microLabel.size, weight: .bold))
+                .font(theme.bodyFont(size: side * 0.6, weight: .semibold))
                 .foregroundStyle(theme.primary)
             }
           }

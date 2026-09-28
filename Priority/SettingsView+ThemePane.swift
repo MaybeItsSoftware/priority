@@ -23,7 +23,7 @@ extension SettingsView {
       .padding(.top, 4)
 
       Text("Applies immediately to the app and preferences window.")
-        .font(.caption)
+        .font(theme.captionFont)
         .foregroundColor(themeColor(.textSecondary))
 
       VStack(alignment: .leading, spacing: 6) {
@@ -103,7 +103,7 @@ extension SettingsView {
             .font(theme.monoFont(size: theme.scale.caption))
         } else {
           Text("Using \(preferences.themeAccentPreset.title) accent")
-            .font(.caption)
+            .font(theme.captionFont)
             .foregroundColor(themeColor(.textSecondary))
         }
       }
@@ -114,7 +114,7 @@ extension SettingsView {
       VStack(alignment: .leading, spacing: 8) {
         Text("Semantic colors")
         Text("These tokens drive popover, focus, selection, text, and status colors.")
-          .font(.caption)
+          .font(theme.captionFont)
           .foregroundColor(themeColor(.textSecondary))
 
         ForEach(preferences.configurableThemeColorTokens) { token in
@@ -122,7 +122,7 @@ extension SettingsView {
             Text(token.title)
               .frame(maxWidth: .infinity, alignment: .leading)
             Text(preferences.themeColorHex(for: token))
-              .font(theme.monoFont(size: theme.scale.caption, weight: .medium))
+              .font(theme.monoFont(size: theme.scale.caption))
               .foregroundColor(themeColor(.textSecondary))
               .frame(width: 88, alignment: .trailing)
             ColorPicker(
@@ -159,7 +159,7 @@ extension SettingsView {
         Text(
           "Import/export full theme state (appearance, accent, and semantic color overrides)."
         )
-        .font(.caption)
+        .font(theme.captionFont)
         .foregroundColor(themeColor(.textSecondary))
 
         TextEditor(text: $themeJSONDraft)
@@ -201,7 +201,7 @@ extension SettingsView {
 
         if !themeJSONStatusMessage.isEmpty {
           Text(themeJSONStatusMessage)
-            .font(.caption)
+            .font(theme.captionFont)
             .foregroundColor(themeJSONStatusIsError ? themeColor(.danger) : themeColor(.success))
         }
       }
@@ -238,7 +238,7 @@ extension SettingsView {
         celebration.activeCelebration.pluginDescription
           + " Haptics are separate and always on."
       )
-      .font(.caption)
+      .font(theme.captionFont)
       .foregroundColor(themeColor(.textSecondary))
 
       Toggle(
@@ -256,7 +256,7 @@ extension SettingsView {
       Text(
         "Haptics only reach a Force Touch trackpad, and only while you are touching it. On a keyboard and mouse, a sound is the only feedback you can feel."
       )
-      .font(.caption)
+      .font(theme.captionFont)
       .foregroundColor(themeColor(.textSecondary))
     }
   }

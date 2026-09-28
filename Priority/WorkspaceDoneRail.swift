@@ -154,7 +154,7 @@ private struct WorkspaceDoneRow: View {
   var body: some View {
     HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
       Image(systemName: wasCancelled ? "xmark" : "checkmark")
-        .font(theme.bodyFont(size: theme.type.microLabel.size, weight: .semibold))
+        .font(theme.bodyFont(size: theme.type.microLabel.size))
         .foregroundStyle(wasCancelled ? theme.dim : theme.success)
         .frame(width: 11)
       VStack(alignment: .leading, spacing: 0) {

@@ -45,7 +45,7 @@ struct WorkspaceFocusRunning: View {
         MicroLabel(list.name)
       }
       Text(task.title)
-        .font(theme.displayFont(size: theme.scale.display, weight: .semibold))
+        .font(theme.displayFont(size: theme.scale.display, weight: .regular))
         .foregroundStyle(theme.ink)
         .multilineTextAlignment(.center)
         .lineLimit(3)
@@ -60,7 +60,7 @@ struct WorkspaceFocusRunning: View {
       let reading = reading(now: context.date)
       VStack(spacing: theme.space.xs) {
         Text(reading.text)
-          .font(theme.numeralFont(theme.scale.hero, weight: .semibold))
+          .font(theme.numeralFont(theme.scale.hero, weight: .medium))
           .monospacedDigit()
           .foregroundStyle(clockTint(overrun: reading.isOverrun))
           .contentTransition(.numericText())

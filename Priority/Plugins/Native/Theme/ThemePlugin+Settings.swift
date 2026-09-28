@@ -47,14 +47,14 @@ struct ThemeSettingsPage: View {
         .pickerStyle(.inline)
 
         Text(themeManager.activeThemePlugin.pluginDescription)
-          .font(.caption)
+          .font(theme.captionFont)
           .foregroundStyle(.secondary)
 
         if themeManager.isFallingBack {
           Text(
             "Your theme \"\(themeManager.activeThemeIdentifier)\" did not load, so Chalk is standing in until its file is fixed. Why is under Your themes."
           )
-          .font(.caption)
+          .font(theme.captionFont)
           .foregroundStyle(theme.warning)
         }
 
@@ -62,7 +62,7 @@ struct ThemeSettingsPage: View {
           Text(
             "Always \(locked.rawValue), whatever your desktop is set to — that is what picking this one means. Choose Chalk to follow your Light/Dark/System setting instead."
           )
-          .font(.caption)
+          .font(theme.captionFont)
           .foregroundStyle(.secondary)
         }
       }
@@ -82,32 +82,32 @@ struct ThemeSettingsPage: View {
 
       Section("Structure") {
         LabeledContent("Radii") {
-          Text(radiusSummary).font(.caption).monospaced()
+          Text(radiusSummary).font(theme.monoFont(size: theme.scale.caption))
         }
         LabeledContent("Borders") {
-          Text(borderSummary).font(.caption).monospaced()
+          Text(borderSummary).font(theme.monoFont(size: theme.scale.caption))
         }
         LabeledContent("Spacing") {
-          Text(spacingSummary).font(.caption).monospaced()
+          Text(spacingSummary).font(theme.monoFont(size: theme.scale.caption))
         }
         LabeledContent("Faces") {
-          Text(faceSummary).font(.caption)
+          Text(faceSummary).font(theme.captionFont)
         }
         Text(
           "Font families are requests, not bundled files: the named face is used if it is installed on this Mac, and the fallback design is what you see otherwise."
         )
-        .font(.caption)
+        .font(theme.captionFont)
         .foregroundStyle(.secondary)
       }
 
       Section("Audit") {
         let issues = themeManager.activeThemeIssues
         if issues.isEmpty {
-          Text("No findings.").font(.caption).foregroundStyle(.secondary)
+          Text("No findings.").font(theme.captionFont).foregroundStyle(.secondary)
         } else {
           ForEach(Array(issues.enumerated()), id: \.offset) { _, issue in
             Label {
-              Text(issue.message).font(.caption)
+              Text(issue.message).font(theme.captionFont)
             } icon: {
               Image(systemName: icon(for: issue.severity))
                 .foregroundStyle(color(for: issue.severity))
@@ -127,12 +127,12 @@ struct ThemeSettingsPage: View {
       Text(
         "Any .json file in the themes folder is a theme. It can extend Chalk and change only a few colours or sizes, and it reloads as you save it. The format is in docs/themes.md."
       )
-      .font(.caption)
+      .font(theme.captionFont)
       .foregroundStyle(.secondary)
 
       LabeledContent("Folder") {
         Text(library.folderURL.path(percentEncoded: false))
-          .font(.caption)
+          .font(theme.captionFont)
           .monospaced()
           .textSelection(.enabled)
           .lineLimit(1)
@@ -147,7 +147,7 @@ struct ThemeSettingsPage: View {
 
       ForEach(library.skipped, id: \.source) { skipped in
         Label {
-          Text("\(skipped.source) not loaded: \(skipped.reason)").font(.caption)
+          Text("\(skipped.source) not loaded: \(skipped.reason)").font(theme.captionFont)
         } icon: {
           Image(systemName: icon(for: .error)).foregroundStyle(color(for: .error))
         }
@@ -160,7 +160,7 @@ struct ThemeSettingsPage: View {
       }
       ForEach(Array(fileIssues.enumerated()), id: \.offset) { _, issue in
         Label {
-          Text(issue.description).font(.caption)
+          Text(issue.description).font(theme.captionFont)
         } icon: {
           Image(systemName: icon(for: issue.severity))
             .foregroundStyle(color(for: issue.severity))

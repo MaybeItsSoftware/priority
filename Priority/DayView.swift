@@ -107,7 +107,7 @@ struct DayView: View {
       if surface.isPanel {
         Button { openInWindow() } label: {
           Image(systemName: "macwindow")
-            .font(theme.bodyFont(weight: .medium))
+            .font(theme.bodyFont())
         }
         .buttonStyle(.plain)
         .foregroundStyle(theme.dim)
@@ -115,7 +115,7 @@ struct DayView: View {
         .accessibilityLabel("Open the main window")
         Button { onClose?(.back) } label: {
           Image(systemName: "xmark")
-            .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
+            .font(theme.bodyFont(size: theme.scale.caption))
         }
         .buttonStyle(.plain)
         .foregroundStyle(theme.dim)
@@ -307,7 +307,7 @@ struct DayView: View {
         HStack(spacing: theme.space.sm) {
           marker(for: task, index: index)
           Text(task.title)
-            .font(theme.bodyFont(weight: .medium))
+            .font(theme.bodyFont())
             .foregroundStyle(theme.ink)
             .lineLimit(1)
             .truncationMode(.tail)
@@ -355,11 +355,11 @@ struct DayView: View {
       Group {
         if isHovering {
           Image(systemName: "checkmark.circle")
-            .font(theme.bodyFont(weight: .semibold))
+            .font(theme.bodyFont())
             .foregroundStyle(theme.success)
         } else if let index {
           Text("\(index)")
-            .font(theme.numeralFont(theme.scale.caption, weight: .semibold))
+            .font(theme.numeralFont(theme.scale.caption))
             .monospacedDigit()
             .foregroundStyle(theme.dim)
         } else {
@@ -405,7 +405,7 @@ struct DayView: View {
         HStack(spacing: theme.space.sm) {
           if let index {
             Text("\(index)")
-              .font(theme.numeralFont(theme.scale.caption, weight: .semibold))
+              .font(theme.numeralFont(theme.scale.caption))
               .monospacedDigit()
               .foregroundStyle(theme.primary)
               .frame(minWidth: 12, alignment: .trailing)
@@ -423,7 +423,7 @@ struct DayView: View {
               elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
               planned: TimeInterval(session.workDurationSeconds))
             Text(reading.text)
-              .font(theme.numeralFont(theme.scale.display, weight: .semibold))
+              .font(theme.numeralFont(theme.scale.display, weight: .medium))
               .monospacedDigit()
               .foregroundStyle(session.pausedAt == nil
                 ? (reading.isOverrun ? theme.warning : theme.primary) : theme.muted)
@@ -473,10 +473,10 @@ struct DayView: View {
     card(id: row.id) {
       HStack(spacing: theme.space.sm) {
         Image(systemName: "plus")
-          .font(theme.bodyFont(weight: .semibold))
+          .font(theme.bodyFont())
           .foregroundStyle(theme.primary)
         Text("Add “\(row.title)” to today")
-          .font(theme.bodyFont(weight: .medium))
+          .font(theme.bodyFont())
           .foregroundStyle(theme.ink)
           .lineLimit(1)
         Spacer(minLength: 0)
@@ -489,7 +489,7 @@ struct DayView: View {
   private var addHint: some View {
     HStack(spacing: theme.space.sm) {
       Image(systemName: "plus")
-        .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
+        .font(theme.bodyFont(size: theme.scale.caption))
       MicroLabel("Add task")
       Spacer(minLength: 0)
       Text("type a title, then ↵")
@@ -584,7 +584,7 @@ struct DayView: View {
       ForEach(loggedBlocks, id: \.title) { entry in
         HStack(spacing: theme.space.sm) {
           Image(systemName: "checkmark")
-            .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
+            .font(theme.bodyFont(size: theme.scale.caption))
             .foregroundStyle(theme.success)
           Text(entry.title)
             .font(theme.captionFont)
@@ -837,7 +837,7 @@ struct DailyBadge: View {
       model.toggleDailyProgress(task)
     } label: {
       Image(systemName: isDoneToday ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
-        .font(theme.bodyFont(size: theme.type.microLabel.size, weight: .semibold))
+        .font(theme.bodyFont(size: theme.type.microLabel.size))
         .foregroundStyle(isDoneToday ? theme.success : theme.muted)
         .frame(width: 16, height: 16)
         .contentShape(Rectangle())

@@ -21,7 +21,7 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: MicroLabel("Google Tasks Plugin")) {
+    Section(header: MicroLabel("Google Tasks plugin")) {
       Toggle(
         "Mirror my lists to Google Tasks",
         isOn: $manager.integrations.googleTasksIntegrationEnabled

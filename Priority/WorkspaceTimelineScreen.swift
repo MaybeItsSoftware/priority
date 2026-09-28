@@ -167,7 +167,7 @@ struct WorkspaceTimelineScreen: View {
   private func figure(_ value: String, _ caption: String) -> some View {
     VStack(alignment: .leading, spacing: theme.space.xxs) {
       Text(value)
-        .font(theme.numeralFont(theme.scale.display, weight: .semibold))
+        .font(theme.numeralFont(theme.scale.display))
         .monospacedDigit()
         .foregroundStyle(theme.ink)
       MicroLabel(caption)
@@ -277,7 +277,7 @@ struct WorkspaceTimelineScreen: View {
     let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
     return VStack(alignment: .leading, spacing: 0) {
       Text(placement.block.title)
-        .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
+        .font(theme.bodyFont(size: theme.scale.caption))
         .foregroundStyle(theme.ink)
         .lineLimit(minutes >= 25 ? 3 : 1)
       if minutes >= 12 {

@@ -75,7 +75,7 @@ struct WorkspaceFocusQualityPrompt: View {
             KeyCap("\(index + 1)")
             VStack(alignment: .leading, spacing: 0) {
               Text(option.title)
-                .font(theme.bodyFont(weight: .medium))
+                .font(theme.bodyFont())
                 .foregroundStyle(theme.ink)
               Text(option.detail)
                 .font(theme.captionFont)
@@ -133,7 +133,7 @@ struct WorkspaceFocusQualityPrompt: View {
       VStack(alignment: .leading, spacing: theme.space.xxs) {
         MicroLabel("This block")
         Text("\(FocusPoints.formatted(points)) pts")
-          .font(theme.numeralFont(theme.scale.display, weight: .semibold))
+          .font(theme.numeralFont(theme.scale.display))
           .monospacedDigit()
           .foregroundStyle(theme.primary)
           .contentTransition(.numericText())

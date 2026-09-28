@@ -13,6 +13,7 @@ import UniformTypeIdentifiers
 /// Release, which is exactly when someone needs to be asked what they are seeing.
 struct DiagnosticsView: View {
   @Environment(AppCoordinator.self) private var manager
+  @Environment(\.theme) private var theme
 
   @State private var copyConfirmation: String?
 
@@ -51,9 +52,9 @@ struct DiagnosticsView: View {
   private var header: some View {
     HStack {
       VStack(alignment: .leading, spacing: 2) {
-        Text("Diagnostics").font(.headline)
+        Text("Diagnostics").font(theme.titleFont)
         Text("\(Self.appVersion) (\(Self.buildNumber)) · \(Self.bundleIdentifier)")
-          .font(.caption)
+          .font(theme.captionFont)
           .foregroundColor(themeColor(.textSecondary))
           .textSelection(.enabled)
       }
@@ -70,7 +71,7 @@ struct DiagnosticsView: View {
       Button("Export Report…") { exportReport() }
       if let copyConfirmation {
         Text(copyConfirmation)
-          .font(.caption)
+          .font(theme.captionFont)
           .foregroundColor(themeColor(.textSecondary))
       }
       Spacer(minLength: 0)
@@ -113,7 +114,7 @@ struct DiagnosticsView: View {
         // Distinct from "no data": nothing has failed, which is worth saying
         // plainly rather than showing an empty box that reads as broken.
         Text("Nothing has failed since the app started.")
-          .font(.caption)
+          .font(theme.captionFont)
           .foregroundColor(themeColor(.textSecondary))
       } else {
         ForEach(Array(entries), id: \.id) { entry in
@@ -123,13 +124,13 @@ struct DiagnosticsView: View {
                 ? "exclamationmark.triangle.fill" : "info.circle.fill"
             )
             .foregroundStyle(entry.isFailure ? Color.orange : Color.secondary)
-            .font(.caption)
+            .font(theme.captionFont)
             VStack(alignment: .leading, spacing: 1) {
               Text(entry.message)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
               Text("\(entry.category) · \(Self.timeFormatter.string(from: entry.date))")
-                .font(.caption2)
+                .font(theme.captionFont)
                 .foregroundColor(themeColor(.textSecondary))
             }
             Spacer(minLength: 0)
@@ -147,7 +148,7 @@ struct DiagnosticsView: View {
           VStack(alignment: .leading, spacing: 1) {
             Text(entry.label)
             Text(entry.url.path)
-              .font(.caption2)
+              .font(theme.captionFont)
               .foregroundColor(themeColor(.textSecondary))
               .textSelection(.enabled)
               .fixedSize(horizontal: false, vertical: true)
@@ -169,12 +170,12 @@ struct DiagnosticsView: View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
       Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
         .foregroundStyle(ok ? Color.green : Color.orange)
-        .font(.caption)
+        .font(theme.captionFont)
       VStack(alignment: .leading, spacing: 1) {
         Text(title)
         if !detail.isEmpty {
           Text(detail)
-            .font(.caption2)
+            .font(theme.captionFont)
             .foregroundColor(themeColor(.textSecondary))
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)

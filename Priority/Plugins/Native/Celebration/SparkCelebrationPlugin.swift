@@ -108,8 +108,9 @@ private struct SparkBurst: View {
         }
       }
       if let caption {
-        Text(caption.uppercased())
-          .font(theme.monoFont(size: theme.type.microLabel.size, weight: .bold))
+        Text(caption)
+          .font(theme.monoFont(size: theme.type.microLabel.size, weight: theme.type.microLabel.weight))
+          .textCase(theme.microLabelIsUppercased ? .uppercase : nil)
           .tracking(theme.microLabelTracking)
           .foregroundColor(tint)
           .opacity(progress < 0.15 ? 0 : 1 - progress * 0.5)

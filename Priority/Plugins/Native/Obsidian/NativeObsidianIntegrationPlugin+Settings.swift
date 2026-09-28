@@ -20,7 +20,7 @@ private struct ObsidianIntegrationPluginSettingsView: View {
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: MicroLabel("Obsidian Plugin")) {
+    Section(header: MicroLabel("Obsidian plugin")) {
       Toggle("Enable Obsidian integration", isOn: $manager.integrations.obsidianIntegrationEnabled)
         .toggleStyle(.switch)
 

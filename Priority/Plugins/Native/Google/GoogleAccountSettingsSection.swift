@@ -1,3 +1,4 @@
+import PriorityCore
 import SwiftUI
 
 /// The sign-in controls, shown identically by every Google integration's
@@ -7,6 +8,7 @@ import SwiftUI
 /// whichever page you sign in from, the other one is signed in too, and a
 /// second set of controls that looked independent would say otherwise.
 struct GoogleAccountSettingsSection: View {
+  @Environment(\.theme) private var theme
   var account: GoogleAccount
   /// The integration asking — named in the "sign in again" message, since a
   /// grant made before this integration existed is the one failure the user
@@ -20,7 +22,7 @@ struct GoogleAccountSettingsSection: View {
     @Bindable var account = account
     VStack(alignment: .leading, spacing: 10) {
       Text("Google account")
-        .font(.caption.weight(.semibold))
+        .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
 
       Text("OAuth Client ID (Desktop app)")
       TextField(
@@ -49,17 +51,17 @@ struct GoogleAccountSettingsSection: View {
       }
 
       Text(statusLine)
-        .font(.caption)
+        .font(theme.captionFont)
         .foregroundColor(account.hasGrantedScopes(requiredScopes) ? .green : .secondary)
 
       if let signInError, !signInError.isEmpty {
         Text(signInError)
-          .font(.caption)
+          .font(theme.captionFont)
           .foregroundColor(.red)
       }
 
       Text("One sign-in covers every Google integration. Enabling another one later needs a fresh sign-in so Google can grant the extra access.")
-        .font(.caption2)
+        .font(theme.captionFont)
         .foregroundColor(.secondary)
     }
     // Here rather than in the body: reading the keychain publishes observable

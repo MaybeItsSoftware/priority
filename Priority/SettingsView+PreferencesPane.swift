@@ -15,8 +15,8 @@ extension SettingsView {
     Group {
       Section(header: MicroLabel("Tools")) {
         VStack(alignment: .leading, spacing: theme.space.sm) {
-          Text("Export Tasks")
-            .font(theme.bodyFont(weight: .semibold))
+          Text("Export tasks")
+            .font(theme.bodyFont(weight: .medium))
           Text("Save your current task list to a file for backup or use in other apps.")
             .font(theme.captionFont)
             .foregroundStyle(theme.muted)
@@ -44,8 +44,8 @@ extension SettingsView {
             Divider()
               .padding(.vertical, theme.space.sm)
             
-            Text("Merge Lists")
-              .font(theme.bodyFont(weight: .semibold))
+            Text("Merge lists")
+              .font(theme.bodyFont(weight: .medium))
             Text("Copy open tasks from one Checkvist list into another.")
               .font(theme.captionFont)
               .foregroundStyle(theme.muted)
@@ -165,7 +165,7 @@ extension SettingsView {
         .padding(.top, theme.space.xs)
       }
       
-      Section(header: MicroLabel("Named Times")) {
+      Section(header: MicroLabel("Named times")) {
         VStack(alignment: .leading, spacing: theme.space.sm) {
           Text("Customize what hour named times resolve to when scheduling tasks.")
             .font(theme.captionFont)

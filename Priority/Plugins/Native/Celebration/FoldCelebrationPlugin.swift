@@ -64,8 +64,9 @@ private struct FoldFlourish: View {
       if let caption = milestone.caption {
         VStack {
           Spacer(minLength: 0)
-          Text(caption.uppercased())
-            .font(theme.monoFont(size: theme.type.microLabel.size, weight: .bold))
+          Text(caption)
+            .font(theme.monoFont(size: theme.type.microLabel.size, weight: theme.type.microLabel.weight))
+            .textCase(theme.microLabelIsUppercased ? .uppercase : nil)
             .tracking(theme.microLabelTracking)
             .foregroundColor(tint)
           Spacer(minLength: 0)

@@ -89,7 +89,7 @@ struct WorkspaceFocusScreen: View {
     if model.staleFocusResolution != .keep {
       HStack(spacing: theme.space.sm) {
         Image(systemName: "clock.arrow.circlepath")
-          .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
+          .font(theme.bodyFont(size: theme.scale.caption))
         Text(
           model.staleFocusResolution == .close
             ? "A block left paused on an earlier day was closed out. Its time is on the timeline for that day."
@@ -172,7 +172,7 @@ struct WorkspaceFocusScreen: View {
             } label: {
               VStack(alignment: .leading, spacing: theme.space.xxs) {
                 Text(blocked.candidate.title)
-                  .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
+                  .font(theme.bodyFont(size: theme.scale.caption))
                   .foregroundStyle(theme.ink)
                 let urgency = NextUpSelector.score(blocked.candidate)
                 if [.overdue, .dueToday, .deadlineRisk].contains(urgency.reason) {
@@ -218,7 +218,7 @@ struct WorkspaceFocusScreen: View {
   private var emptyState: some View {
     VStack(spacing: theme.space.xs) {
       Image(systemName: "checkmark")
-        .font(theme.bodyFont(size: theme.scale.title, weight: .semibold))
+        .font(theme.bodyFont(size: theme.scale.title))
         .foregroundStyle(theme.success)
       Text("Nothing waiting")
         .font(theme.titleFont)
@@ -298,7 +298,7 @@ struct WorkspaceFocusScreen: View {
           .foregroundStyle(celebrating ? tint : (isCurrent ? self.tint(for: scored.reason) : theme.muted))
           .scaleEffect(treatment.iconScale(for: phase))
         Text(scored.candidate.title)
-          .font(theme.displayFont(size: theme.scale.display, weight: .semibold))
+          .font(theme.displayFont(size: theme.scale.display, weight: .regular))
           .multilineTextAlignment(.center)
           .lineLimit(isCurrent ? 3 : 1)
           .truncationMode(.tail)
@@ -365,7 +365,7 @@ struct WorkspaceFocusScreen: View {
   private func reasonLine(_ scored: ScoredNextUp, task: WorkspaceTask?) -> some View {
     HStack(spacing: theme.space.xs) {
       Text(model.focusExplanation(scored).localizedCapitalized)
-        .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
+        .font(theme.bodyFont(size: theme.scale.caption))
       if let task, let list = model.list(for: task) {
         Text("·").foregroundStyle(theme.dim)
         Text(list.name).font(theme.captionFont).foregroundStyle(theme.muted)

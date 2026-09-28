@@ -133,7 +133,7 @@ struct WorkspaceModeStrip: View {
         Image(systemName: symbol)
         Text(title)
       }
-      .font(theme.bodyFont(weight: .medium))
+      .font(theme.bodyFont())
       .foregroundStyle(isCurrent ? theme.primary : theme.muted)
       .padding(.horizontal, theme.space.sm)
       .padding(.vertical, theme.space.xxs)

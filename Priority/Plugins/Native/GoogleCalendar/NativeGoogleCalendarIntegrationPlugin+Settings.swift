@@ -27,7 +27,7 @@ private struct GoogleCalendarIntegrationPluginSettingsView: View {
   var body: some View {
     @Bindable var manager = manager
     @Bindable var plugin = plugin
-    Section(header: MicroLabel("Google Calendar Plugin")) {
+    Section(header: MicroLabel("Google Calendar plugin")) {
       Toggle(
         "Enable Google Calendar integration",
         isOn: $manager.integrations.googleCalendarIntegrationEnabled
