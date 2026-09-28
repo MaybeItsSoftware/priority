@@ -276,6 +276,16 @@ SPM target. Everything worth testing is therefore in `PriorityCore`:
 `ThemeColorValue` (hex parsing, WCAG luminance and contrast), `ThemePalette`
 (role resolution and the flip), and `ThemeSpecification.validate()`.
 
+**User themes.** Themes can also come from JSON files in
+`~/Library/Application Support/Priority/themes/` — the format is in
+[`themes.md`](themes.md). They are not registered with `PluginRegistry`,
+because they come and go while the app runs: `UserThemeLibrary` (in
+`Native/Theme/`) watches the folder, decodes and merges each file through
+`ThemeFileLoader` in `PriorityCore`, and vends a `UserThemePlugin` per file.
+`ThemeManager` lists those after the built-ins and keeps the user's pick even
+while its file is missing, rendering Chalk until it returns. Load problems go
+to Diagnostics and the window's error line, the way `keymap.json`'s do.
+
 **`validate()` is the guard rail.** A role missing from both tables is an
 error; unreadable body text, an accent under 3:1 where it has to carry a focus
 ring, a card you cannot tell from the page, a declared shadow, a gradient on

@@ -20,7 +20,7 @@ It works offline. It works from the terminal. And it exposes the whole surface t
 
 - [Install](#install) · [First run](#first-run)
 - [Keyboard flow](#keyboard-flow) · [Focus](#focus) · [Command palette](#command-palette)
-- [Views](#views) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Diagnostics](#diagnostics)
+- [Views](#views) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Themes](#themes) · [Diagnostics](#diagnostics)
 - [Daily log](#daily-log) · [Obsidian daily notes](#obsidian-daily-notes) · [AFFiNE](#affine)
 - [Command line](#command-line) · [MCP server](#mcp-server) · [Plugins](#plugins)
 - [Build from source](#build-from-source) · [Where your data lives](#where-your-data-lives)
@@ -441,6 +441,20 @@ the quick-add field.
 The **global focus panel** is the one surface that is not the window: it is
 the same day list, summoned over whatever app you are in, and it keeps working
 with every window closed.
+
+## Themes
+
+Pick a look in **Settings → Theme**: **Chalk**, the house style, which follows
+your Light/Dark setting, or **Chalk Dark**. Your own themes are JSON files in
+`~/Library/Application Support/Priority/themes/`, and they appear in the same
+picker. A file can extend a built-in and change only a few colours or sizes,
+and the app reloads it as you save, so the easiest start is **Export the
+current theme as JSON** in the command palette — it writes a complete copy,
+opens it and switches to it. **Open the themes folder** and **Reload themes**
+are there too. A broken file is reported on the status line and in
+Diagnostics, never fatal.
+
+**Format and a full example: [docs/themes.md](docs/themes.md)**
 
 ## Diagnostics
 
