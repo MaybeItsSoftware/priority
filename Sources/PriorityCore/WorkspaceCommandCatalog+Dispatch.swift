@@ -49,6 +49,8 @@ extension WorkspaceCommandCatalog {
     .goKeyboardReference, .goCommandPalette, .goSearch, .goListNavigator,
     // The agent's own field is a text field, and this is how you leave it.
     .windowToggleAgentPanel,
+    // ⌘B, as in Zed, where it works from inside the editor.
+    .windowToggleSidebar,
   ]
 
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.

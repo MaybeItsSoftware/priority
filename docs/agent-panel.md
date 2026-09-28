@@ -1,6 +1,6 @@
 # The agent panel
 
-The left dock's **Agent** tab (`Cmd+Ctrl+A`, or the sparkles glyph at the left
+The left dock's **Agent** tab (`Cmd+Shift+A` as in Zed, or `Cmd+Ctrl+A`, or the sparkles glyph at the left
 of the status bar) is a conversation with an assistant about your tasks, laid
 out like Zed's agent panel. The assistant is the user's own **Claude Code**,
 run headless, the way Zed runs its external agents: no API key, no account of

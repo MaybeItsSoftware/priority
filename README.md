@@ -74,18 +74,22 @@ something you already have to know.
 | `Cmd+8` / `Cmd+9` | Focus / Timeline — both take the main pane |
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
+| `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
 | `j` / `k` / `↑` / `↓` | Move the selection |
+| `Cmd+↑` / `Cmd+↓` | First / last task |
+| `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) |
+| `Cmd+Shift+K` | Delete the task (Zed's delete line) |
 | `Return` | Open the task you are on — on Today, start its card (or finish the one running); elsewhere, open its subtasks. With nothing selected, add a task |
 | `Shift+Return` / `Space` | Tick the task off without running a block |
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
 | `Alt+Return` / `Alt+Shift+Return` | New task above the selection / new subtask |
-| `Cmd+F` | Search |
+| `Cmd+F` / `Cmd+Shift+F` | Search |
 | `Cmd+P` | Go to a list — every list and nested list, filtered as you type |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
-| `Cmd+Ctrl+A` | The left dock's Agent tab — Claude Code, asking before every change |
+| `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
-| `Cmd+K` | The command palette — everything the workspace can do, and its key |
+| `Cmd+Shift+P` / `Cmd+K` | The command palette — everything the workspace can do, and its key |
 | `Cmd+/` | The same commands, grouped as a reference |
 | `Esc` | Cancel what you are typing, or leave the surface you are in |
 
@@ -171,6 +175,7 @@ of it is reachable only by a key you have to already know.
 | `Cmd+9` | The day's timeline |
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
+| `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
 | `Up` / `Down` | Move between cards |
 | `Return` | Start the card you are on, or finish the one running |
 | `Shift+Return` / `Space` / `x` | Tick the card off without running a block |
@@ -441,7 +446,7 @@ the bottom.
     (`Cmd+Alt+N`), archived lists to restore (only while there are any), and
     undo/redo — rather than a bar along its foot; hover one for its name and
     key.
-  - **Agent** (`Cmd+Ctrl+A`) is an assistant panel in the manner of Zed's: your
+  - **Agent** (`Cmd+Shift+A`) is an assistant panel in the manner of Zed's: your
     own Claude Code, run headless, with Priority's MCP server as its only
     tools — no shell, no files, no web, and no API key (it uses your Claude
     Code login). It **reads freely** — the lists, tasks, dailies, the day log

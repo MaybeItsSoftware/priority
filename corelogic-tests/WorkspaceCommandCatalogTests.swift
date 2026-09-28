@@ -90,9 +90,9 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
 
   func testNamedKeysRenderAsSymbols() {
     XCTAssertEqual(WorkspaceCommandCatalog[.goToday].displayKeys, ["⌘1"])
-    XCTAssertEqual(WorkspaceCommandCatalog[.taskRename].displayKeys, ["E E", "F2", "⌘⇧E"])
-    XCTAssertEqual(WorkspaceCommandCatalog[.motionSelectEnds].displayKeys, ["Home", "End"])
-    XCTAssertEqual(WorkspaceCommandCatalog[.taskDelete].displayKeys, ["⌫"])
+    XCTAssertEqual(WorkspaceCommandCatalog[.taskRename].displayKeys, ["E E", "F2", "⌘⌃E"])
+    XCTAssertEqual(WorkspaceCommandCatalog[.motionSelectEnds].displayKeys, ["Home", "End", "⌘↑", "⌘↓"])
+    XCTAssertEqual(WorkspaceCommandCatalog[.taskDelete].displayKeys, ["⌫", "⌘⇧K"])
   }
 }
 
@@ -321,6 +321,8 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // those to act on.
       "focus:up", "focus:down", "focus:k", "focus:j", "focus:enter", "focus:space",
       "focus:x", "focus:l", "focus:escape",
+      // ⌥↑/⌥↓ move a task, and on the ladder the task they move is a rung.
+      "focus:option+up", "focus:option+down",
       // A running block has exactly one task, so the list keys have nothing to
       // mean and the block's own controls take them.
       "focusRunning:enter", "focusRunning:escape", "focusRunning:l", "focusRunning:f",
@@ -328,9 +330,11 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // entering and leaving a task.
       "timeline:left", "timeline:right", "timeline:h", "timeline:l", "timeline:escape",
       // In the sidebar the arrows walk rows and open folders, rename acts on the
-      // row, and ⌘↑/⌘↓ reorder the row rather than a task.
+      // row, ⌥↑/⌥↓ reorder the row rather than a task, and ⌘↑/⌘↓ go to the
+      // sidebar's own ends.
       "sidebar:up", "sidebar:down", "sidebar:left", "sidebar:right", "sidebar:enter",
       "sidebar:k", "sidebar:j", "sidebar:f2", "sidebar:cmd+up", "sidebar:cmd+down",
+      "sidebar:option+up", "sidebar:option+down",
       "sidebar:home", "sidebar:end", "sidebar:pageup", "sidebar:pagedown",
       // On the board ←/→ change column instead of entering and leaving a task.
       "board:left", "board:right",
@@ -338,7 +342,8 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // the finished task where it lives, and escape gives the keyboard back to
       // the work rather than clearing a selection the rail does not hold.
       "done:up", "done:down", "done:k", "done:j", "done:enter", "done:escape",
-      "done:home", "done:end", "done:pageup", "done:pagedown", "done:left",
+      "done:home", "done:end", "done:cmd+up", "done:cmd+down", "done:pageup", "done:pagedown",
+      "done:left",
       // Today is walked with the ordinary keys, but Return starts the task
       // rather than opening it, and ← has no task to leave so goes to the
       // sidebar.

@@ -1,6 +1,6 @@
 # Desktop keyboard shortcuts
 
-**The list of keys lives in the app, not here.** Press `Cmd+K` for the command
+**The list of keys lives in the app, not here.** Press `Cmd+Shift+P` (or `Cmd+K`) for the command
 palette, which shows every command the workspace has and the key that runs it,
 or `Cmd+/` for the same information grouped as a reference sheet. Both are
 rendered from `WorkspaceCommandCatalog` (`Sources/PriorityCore/`), which is the
@@ -15,6 +15,38 @@ that can be wrong is worse than no reference, because it is believed.
 
 What remains here is the behaviour a table could not express, and the format
 of the file you rebind keys in.
+
+## Zed's keys
+
+Where Zed has a key for something Priority does, Priority uses Zed's key, so
+the two apps share muscle memory. A list is treated as Zed treats a file, and
+a task as Zed treats a line:
+
+| Zed | Key | In Priority |
+| --- | --- | --- |
+| Command palette | `Cmd+Shift+P` | The command palette (`Cmd+K` still works) |
+| File finder | `Cmd+P` | Find or create a list |
+| Find in project | `Cmd+Shift+F` | Search every task (`Cmd+F` too) |
+| Toggle left dock | `Cmd+B` | Show or hide the sidebar |
+| Focus project panel | `Cmd+Shift+E` | Focus the sidebar |
+| Toggle agent panel | `Cmd+Shift+A` | The left dock's Agent tab |
+| Move line up / down | `Alt+↑` / `Alt+↓` | Move the task, or the sidebar row |
+| Document start / end | `Cmd+↑` / `Cmd+↓` | First / last task, or sidebar row |
+| Delete line | `Cmd+Shift+K` | Delete the task |
+| New file / new directory | `Cmd+N` / `Cmd+Alt+N` | New task / new folder |
+| Rename | `F2` | Rename the task, or the sidebar row |
+| Undo / redo | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
+| Settings | `Cmd+,` | Preferences |
+
+Taking those keys moved what Priority had on them: archiving a list is
+`Cmd+Alt+A` (was `Cmd+Shift+A`), promoting a nested list `Cmd+Alt+P` (was
+`Cmd+Shift+P`), renaming a task by chord `Cmd+Ctrl+E` (was `Cmd+Shift+E`), and
+moving a task or sidebar row `Alt+↑`/`Alt+↓` (was `Cmd+↑`/`Cmd+↓`).
+
+Zed's two-chord sequences, such as `Cmd+K Cmd+S` for the keymap, are not
+supported: `Cmd+K` is the palette here. **Open the keymap file** is in the
+palette instead. Zed keys with nothing to act on in a task app — go to line,
+multi-cursor, toggle comment, the terminal — are left unbound.
 
 ## Your own keys: `keymap.json`
 
@@ -88,7 +120,7 @@ which is the way to skip it. A hold is dropped without running when focus
 moves or text editing begins, because the key no longer means what it did.
 
 The chords that are how you leave a text field — the view and region keys,
-the creation chords, `Cmd+K`, `Cmd+F`, `Cmd+/`, and `Cmd+Ctrl+A` for the agent
+the creation chords, the palette, search, `Cmd+/`, and the agent panel's toggle for the agent
 panel — work from inside one; the set is `reachableFromTextField` in the
 catalogue. `Cmd+Z` deliberately is not — inside a field it belongs to the text
 you are typing, not to the workspace behind it.

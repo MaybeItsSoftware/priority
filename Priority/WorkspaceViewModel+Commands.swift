@@ -238,7 +238,7 @@ extension WorkspaceViewModel {
     case .focusReorder: if let key { reorderFocusLadder(by: key.hasSuffix("up") ? 1 : -1) }
     case .motionSelectNext: if key != nil { moveTaskSelection(by: 1) }
     case .motionSelectPrevious: if key != nil { moveTaskSelection(by: -1) }
-    case .motionSelectEnds: if let key { selectTaskAtEnd(first: key == "home") }
+    case .motionSelectEnds: if let key { selectTaskAtEnd(first: key == "home" || key == "cmd+up") }
     case .motionSelectPage: if let key { moveTaskSelection(by: key == "pageup" ? -8 : 8) }
     case .motionSidebarSelect: if let key { moveSidebarCursor(key) }
     case .motionSidebarExpand: if let key { activateSidebarCursor(expandOnly: key == "right") }

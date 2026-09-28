@@ -37,14 +37,14 @@ final class WorkspaceKeymapTests: XCTestCase {
   // MARK: - Binding
 
   func testABindingWithoutAContextAddsTheKeyWhereverTheCommandRuns() {
-    let (bindings, issues) = resolve(#"[{"bindings": {"cmd+shift+k": "taskComplete"}}]"#)
+    let (bindings, issues) = resolve(#"[{"bindings": {"cmd+shift+u": "taskComplete"}}]"#)
     XCTAssertTrue(issues.isEmpty, "\(issues)")
     for surface: WorkspaceCommandSurface in [.today, .board, .outline, .matrix, .sidebar] {
-      XCTAssertEqual(bindings.command(forKey: "cmd+shift+k", on: surface)?.id, .taskComplete)
+      XCTAssertEqual(bindings.command(forKey: "cmd+shift+u", on: surface)?.id, .taskComplete)
     }
     // The defaults stay: a binding adds a key, it does not replace the others.
     XCTAssertEqual(bindings.command(forKey: "x", on: .outline)?.id, .taskComplete)
-    XCTAssertEqual(bindings.byID[.taskComplete]?.displayKeys, ["Space", "X", "⇧↩", "⌘⇧K"])
+    XCTAssertEqual(bindings.byID[.taskComplete]?.displayKeys, ["Space", "X", "⇧↩", "⌘⇧U"])
   }
 
   func testABindingTakesTheKeyFromWhoeverHadItOnTheSameSurface() {
@@ -57,11 +57,11 @@ final class WorkspaceKeymapTests: XCTestCase {
   }
 
   func testAContextBindsOnThatSurfaceOnly() {
-    let (bindings, issues) = resolve(#"[{"context": "board", "bindings": {"cmd+shift+k": "taskComplete"}}]"#)
+    let (bindings, issues) = resolve(#"[{"context": "board", "bindings": {"cmd+shift+u": "taskComplete"}}]"#)
     XCTAssertTrue(issues.isEmpty, "\(issues)")
-    XCTAssertEqual(bindings.command(forKey: "cmd+shift+k", on: .board)?.id, .taskComplete)
-    XCTAssertNil(bindings.command(forKey: "cmd+shift+k", on: .outline))
-    XCTAssertEqual(bindings.byID[.taskComplete]?.surfaceKeys[.board], ["cmd+shift+k"])
+    XCTAssertEqual(bindings.command(forKey: "cmd+shift+u", on: .board)?.id, .taskComplete)
+    XCTAssertNil(bindings.command(forKey: "cmd+shift+u", on: .outline))
+    XCTAssertEqual(bindings.byID[.taskComplete]?.surfaceKeys[.board], ["cmd+shift+u"])
   }
 
   func testAContextBindingBeatsTheSurfacesOwnRow() {
@@ -110,7 +110,7 @@ final class WorkspaceKeymapTests: XCTestCase {
 
   func testAnUnknownCommandIsReportedAndTheRestStillApplies() {
     let (bindings, issues) = resolve(
-      #"[{"bindings": {"cmd+shift+k": "noSuchCommand", "cmd+shift+j": "taskComplete"}}]"#)
+      #"[{"bindings": {"cmd+shift+u": "noSuchCommand", "cmd+shift+j": "taskComplete"}}]"#)
     XCTAssertEqual(issues.map(\.kind), [.unknownCommand])
     XCTAssertTrue(issues[0].message.contains("noSuchCommand"))
     XCTAssertEqual(bindings.command(forKey: "cmd+shift+j", on: .outline)?.id, .taskComplete)
@@ -152,14 +152,14 @@ final class WorkspaceKeymapTests: XCTestCase {
   /// contradiction worth saying out loud; the later one wins, as in Zed.
   func testAConflictWithinASurfaceIsReportedAndTheLaterWins() {
     let (bindings, issues) = resolve(
-      #"[{"bindings": {"cmd+shift+k": "taskComplete"}}, {"bindings": {"cmd-shift-k": "taskDelete"}}]"#)
+      #"[{"bindings": {"cmd+shift+u": "taskComplete"}}, {"bindings": {"cmd-shift-u": "taskDelete"}}]"#)
     XCTAssertEqual(issues.map(\.kind), [.conflict])
-    XCTAssertEqual(bindings.command(forKey: "cmd+shift+k", on: .outline)?.id, .taskDelete)
+    XCTAssertEqual(bindings.command(forKey: "cmd+shift+u", on: .outline)?.id, .taskDelete)
   }
 
   func testBindingsOnDifferentSurfacesDoNotConflict() {
     let (_, issues) = resolve(
-      #"[{"context": "board", "bindings": {"cmd+shift+k": "taskComplete"}}, {"context": "outline", "bindings": {"cmd+shift+k": "taskDelete"}}]"#)
+      #"[{"context": "board", "bindings": {"cmd+shift+u": "taskComplete"}}, {"context": "outline", "bindings": {"cmd+shift+u": "taskDelete"}}]"#)
     XCTAssertTrue(issues.isEmpty, "\(issues)")
   }
 
@@ -167,8 +167,8 @@ final class WorkspaceKeymapTests: XCTestCase {
 
   func testKeysAreNormalisedToTheCataloguesSpelling() {
     let cases: [String: String] = [
-      "Shift+Cmd+K": "cmd+shift+k",
-      "cmd-shift-k": "cmd+shift+k",
+      "Shift+Cmd+U": "cmd+shift+u",
+      "cmd-shift-u": "cmd+shift+u",
       "alt+return": "option+enter",
       "ctrl+option+Up": "ctrl+option+up",
       "command+,": "cmd+comma",
@@ -202,10 +202,10 @@ final class WorkspaceKeymapTests: XCTestCase {
   // MARK: - Installing
 
   func testTheCatalogueReadsWhateverIsInstalled() {
-    let (bindings, _) = resolve(#"[{"bindings": {"cmd+shift+k": "taskComplete"}}]"#)
+    let (bindings, _) = resolve(#"[{"bindings": {"cmd+shift+u": "taskComplete"}}]"#)
     WorkspaceCommandCatalog.install(bindings)
     defer { WorkspaceCommandCatalog.install(WorkspaceCommandCatalog.defaultBindings) }
-    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+shift+k", on: .outline)?.id, .taskComplete)
-    XCTAssertTrue(WorkspaceCommandCatalog[.taskComplete].displayKeys.contains("⌘⇧K"))
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+shift+u", on: .outline)?.id, .taskComplete)
+    XCTAssertTrue(WorkspaceCommandCatalog[.taskComplete].displayKeys.contains("⌘⇧U"))
   }
 }

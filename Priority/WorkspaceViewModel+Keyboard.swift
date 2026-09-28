@@ -213,8 +213,8 @@ private enum CursorStep {
     case "up", "k": self = .by(-1)
     case "pagedown": self = .by(8)
     case "pageup": self = .by(-8)
-    case "home": self = .first
-    case "end": self = .last
+    case "home", "cmd+up": self = .first
+    case "end", "cmd+down": self = .last
     default: return nil
     }
   }

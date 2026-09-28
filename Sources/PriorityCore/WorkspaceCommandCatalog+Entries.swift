@@ -54,15 +54,21 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .goTimeline, title: "Show the day's timeline", group: "Go", keys: ["cmd+9"],
       note: "Press again to close it"),
-    .init(id: .goListNavigator, title: "Find or create a list", group: "Go", keys: ["cmd+p", "ll"]),
     .init(
-      id: .goSearch, title: "Search every task", group: "Go", keys: ["cmd+f", "/"],
-      note: "Titles and notes"),
-    .init(id: .goCommandPalette, title: "Show the command palette", group: "Go", keys: ["cmd+k"]),
+      id: .goListNavigator, title: "Find or create a list", group: "Go", keys: ["cmd+p", "ll"],
+      note: "Zed's file finder, for lists"),
+    .init(
+      id: .goSearch, title: "Search every task", group: "Go", keys: ["cmd+f", "cmd+shift+f", "/"],
+      note: "Titles and notes. ⇧⌘F is Zed's find in project"),
+    .init(
+      id: .goCommandPalette, title: "Show the command palette", group: "Go",
+      keys: ["cmd+shift+p", "cmd+k"], note: "⇧⌘P as in Zed; ⌘K as it always was"),
     .init(
       id: .goKeyboardReference, title: "Show the keyboard reference", group: "Go",
       keys: ["cmd+/", "?"], note: "The same list this palette shows"),
-    .init(id: .goSidebarRegion, title: "Focus the sidebar", group: "Go", keys: ["ctrl+1"]),
+    .init(
+      id: .goSidebarRegion, title: "Focus the sidebar", group: "Go", keys: ["ctrl+1", "cmd+shift+e"],
+      note: "⇧⌘E is Zed's focus the project panel"),
     .init(id: .goTaskRegion, title: "Focus the task surface", group: "Go", keys: ["ctrl+2"]),
     .init(id: .goInspectorRegion, title: "Focus the inspector", group: "Go", keys: ["ctrl+3"]),
     .init(
@@ -86,9 +92,9 @@ public enum WorkspaceCommandCatalog {
       id: .taskInvalidate, title: "Cancel or reinstate the task", group: "Task",
       keys: ["shift+space"], note: "Cancelled, rather than done — it stopped mattering"),
     .init(
-      id: .taskDelete, title: "Delete the task", group: "Task", keys: ["delete"],
-      note: "Takes its subtasks with it"),
-    .init(id: .taskRename, title: "Rename the task", group: "Task", keys: ["ee", "f2", "cmd+shift+e"]),
+      id: .taskDelete, title: "Delete the task", group: "Task", keys: ["delete", "cmd+shift+k"],
+      note: "Takes its subtasks with it. ⇧⌘K is Zed's delete line"),
+    .init(id: .taskRename, title: "Rename the task", group: "Task", keys: ["ee", "f2", "cmd+ctrl+e"]),
     .init(id: .taskEditDue, title: "Edit the due date", group: "Task", keys: ["dd", "cmd+d"]),
     .init(id: .taskEditNotes, title: "Edit the notes", group: "Task", keys: ["nn", "cmd+ctrl+n"]),
     .init(id: .taskEditTags, title: "Edit the tags", group: "Task", keys: ["tt", "cmd+ctrl+t"]),
@@ -117,7 +123,7 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+shift+l"]),
     .init(
       id: .taskPromoteList, title: "Promote or unpin a nested list", group: "Task",
-      keys: ["cmd+shift+p"]),
+      keys: ["cmd+option+p"]),
     .init(id: .taskExtractBranch, title: "Extract the branch as a list", group: "Task", keys: ["xx"]),
     .init(id: .taskOpenLink, title: "Open the task's first link", group: "Task", keys: ["gg", "cmd+o"]),
     .init(id: .taskShowProgress, title: "Show the task's progress", group: "Task", keys: ["pc"]),
@@ -128,8 +134,10 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .taskOutdent, title: "Outdent the task", group: "Task",
       keys: ["shift+tab", "cmd+option+left"]),
-    .init(id: .taskMoveUp, title: "Move the task up", group: "Task", keys: ["cmd+up"]),
-    .init(id: .taskMoveDown, title: "Move the task down", group: "Task", keys: ["cmd+down"]),
+    // ⌥↑ and ⌥↓ are Zed's move line; ⌘↑ and ⌘↓ go to the ends, as they do
+    // in an editor.
+    .init(id: .taskMoveUp, title: "Move the task up", group: "Task", keys: ["option+up"]),
+    .init(id: .taskMoveDown, title: "Move the task down", group: "Task", keys: ["option+down"]),
   ]
 
   // MARK: - Plan
@@ -173,7 +181,7 @@ public enum WorkspaceCommandCatalog {
       id: .listRename, title: "Rename the list or folder", group: "Lists", keys: ["cmd+r"],
       surfaceKeys: [.sidebar: ["f2"]], note: "From a task pane, the list you are in"),
     .init(id: .listSettings, title: "Open list settings", group: "Lists", keys: ["cmd+i", "oo"]),
-    .init(id: .listArchive, title: "Archive the current list", group: "Lists", keys: ["cmd+shift+a"]),
+    .init(id: .listArchive, title: "Archive the current list", group: "Lists", keys: ["cmd+option+a"]),
     .init(
       id: .listRestore, title: "Restore the last archived list", group: "Lists",
       keys: ["cmd+shift+r"]),
@@ -197,10 +205,10 @@ public enum WorkspaceCommandCatalog {
       id: .folderSelectNext, title: "Select the next folder", group: "Lists",
       keys: ["ctrl+option+down"]),
     .init(
-      id: .listMoveUp, title: "Move the sidebar row up", group: "Lists", keys: ["cmd+up"],
+      id: .listMoveUp, title: "Move the sidebar row up", group: "Lists", keys: ["option+up"],
       surface: .sidebar, note: "Whatever you are on — a list, a folder, or a nested list"),
     .init(
-      id: .listMoveDown, title: "Move the sidebar row down", group: "Lists", keys: ["cmd+down"],
+      id: .listMoveDown, title: "Move the sidebar row down", group: "Lists", keys: ["option+down"],
       surface: .sidebar, note: "Whatever you are on — a list, a folder, or a nested list"),
     .init(
       id: .listNewTaskDestination, title: "Choose where new tasks go", group: "Lists",
@@ -215,7 +223,7 @@ public enum WorkspaceCommandCatalog {
     .init(id: .windowRedo, title: "Redo", group: "Window", keys: ["cmd+shift+z", "ctrl+shift+z"]),
     .init(
       id: .windowToggleSidebar, title: "Show or hide the sidebar", group: "Window",
-      keys: ["cmd+ctrl+s"]),
+      keys: ["cmd+b", "cmd+ctrl+s"], note: "⌘B toggles the left dock, as in Zed"),
     .init(
       id: .windowToggleInspectorPane, title: "Show or hide the inspector", group: "Window",
       keys: ["cmd+ctrl+i"], note: "Same pane as ⌘I on a task, without selecting one"),
@@ -225,7 +233,7 @@ public enum WorkspaceCommandCatalog {
       note: "Opens it and takes the keyboard; again from inside it closes it"),
     .init(
       id: .windowToggleAgentPanel, title: "Show or hide the agent panel", group: "Window",
-      keys: ["cmd+ctrl+a"],
+      keys: ["cmd+shift+a", "cmd+ctrl+a"],
       note: "Claude Code in the left dock: reads freely, asks before every change"),
     .init(
       id: .windowOpenKeymap, title: "Open the keymap file", group: "Window", keys: [],
@@ -317,7 +325,8 @@ public enum WorkspaceCommandCatalog {
   private static let done: [WorkspaceCommand] = [
     .init(
       id: .motionDoneSelect, title: "Move through what you finished", group: "Done",
-      keys: ["down", "up", "j", "k", "home", "end", "pageup", "pagedown"], surface: .done,
+      keys: ["down", "up", "j", "k", "home", "end", "cmd+up", "cmd+down", "pageup", "pagedown"],
+      surface: .done,
       kind: .motion),
     .init(
       id: .doneReveal, title: "Open it where it lives", group: "Done", keys: ["enter"],
@@ -341,13 +350,14 @@ public enum WorkspaceCommandCatalog {
       keys: ["up", "k"], kind: .motion),
     .init(
       id: .motionSelectEnds, title: "Jump to the first or last task", group: "Moving around",
-      keys: ["home", "end"], kind: .motion),
+      keys: ["home", "end", "cmd+up", "cmd+down"], kind: .motion),
     .init(
       id: .motionSelectPage, title: "Move eight tasks at a time", group: "Moving around",
       keys: ["pageup", "pagedown"], kind: .motion),
     .init(
       id: .motionSidebarSelect, title: "Move through the sidebar", group: "Moving around",
-      keys: ["down", "up", "j", "k", "home", "end", "pageup", "pagedown"], surface: .sidebar,
+      keys: ["down", "up", "j", "k", "home", "end", "cmd+up", "cmd+down", "pageup", "pagedown"],
+      surface: .sidebar,
       kind: .motion,
       note: "Every row, including Focus and the timeline; Home and End are the two ends"),
     .init(
