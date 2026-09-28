@@ -13,7 +13,12 @@ struct WorkspaceDesktopView: View {
   @FocusState private var focusedArea: WorkspaceFocusArea?
 
   var body: some View {
-    workspace
+    VStack(spacing: 0) {
+      workspace
+      // Across the whole window, under every column: the one strip that says
+      // where the keyboard is and what is running.
+      WorkspaceStatusBar()
+    }
       // Over the whole window content, so it sits above every pane and a
       // click anywhere outside the panel lands on its catcher.
       .overlay(alignment: .top) { WorkspaceOverlayHost() }
@@ -104,14 +109,6 @@ struct WorkspaceDesktopView: View {
       Button("Start anyway") { model.startFocus(on: request.task, plannedSeconds: request.plannedSeconds, override: true); model.focusStartOverride = nil }
       Button("Cancel", role: .cancel) { model.focusStartOverride = nil }
     } message: { request in Text(request.explanation) }
-    .alert("Priority needs attention", isPresented: Binding(
-      get: { model.errorMessage != nil },
-      set: { if !$0 { model.errorMessage = nil } }
-    )) {
-      Button("OK", role: .cancel) {}
-    } message: {
-      Text(model.errorMessage ?? "")
-    }
     // A sheet rather than an overlay on purpose. A finished block's clock is
     // held open until it is scored, and an overlay goes away on any click
     // outside it — which here would throw a block's judgement away by accident.

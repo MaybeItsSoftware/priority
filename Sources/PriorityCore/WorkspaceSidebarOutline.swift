@@ -2,14 +2,10 @@ import Foundation
 
 /// What a sidebar row is.
 ///
-/// `focus` and `timeline` are rows like any other here, which is the point.
-/// On screen they are a card and a button sitting above the list rather than
-/// inside it, and because the keyboard walked the list alone they were the two
-/// things in the sidebar the arrows could not reach — visible, clickable, and
-/// unreachable without the mouse or a shortcut you had to already know.
+/// Every row is a place to be. Focus and the timeline used to be rows here
+/// too, duplicating the mode strip; they are reached from there, the palette
+/// and ⌘8/⌘9, and the sidebar is only lists again.
 public enum WorkspaceSidebarRowKind: Equatable, Hashable, Sendable {
-  case focus
-  case timeline
   case everything
   case list(String)
   /// A list nested inside a task, addressed by the task's id.
@@ -39,17 +35,8 @@ public struct WorkspaceSidebarRow: Identifiable, Equatable, Hashable, Sendable {
   /// The thing this row points at, which two rows can share.
   public var subjectID: String? {
     switch kind {
-    case .focus, .timeline, .everything: nil
+    case .everything: nil
     case .list(let id), .nestedList(let id), .folder(let id): id
-    }
-  }
-
-  /// Whether landing here changes which list is on screen. The focus and
-  /// timeline rows do not — they are things to open, not places to be.
-  public var selectsAList: Bool {
-    switch kind {
-    case .focus, .timeline: false
-    case .everything, .list, .nestedList, .folder: true
     }
   }
 }
@@ -106,8 +93,6 @@ public enum WorkspaceSidebarOutline {
     expandedFolderIDs: Set<String>
   ) -> [WorkspaceSidebarRow] {
     var result: [WorkspaceSidebarRow] = [
-      WorkspaceSidebarRow(id: "row:focus", kind: .focus, depth: 0),
-      WorkspaceSidebarRow(id: "row:timeline", kind: .timeline, depth: 0),
       WorkspaceSidebarRow(id: "row:everything", kind: .everything, depth: 0),
     ]
     var visitedFolders = Set<String>()

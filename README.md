@@ -80,11 +80,20 @@ something you already have to know.
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
 | `Alt+Return` / `Alt+Shift+Return` | New task above the selection / new subtask |
 | `Cmd+F` | Search |
+| `Cmd+P` | Go to a list — every list and nested list, filtered as you type |
+| `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
 | `Cmd+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
 | `Cmd+K` | The command palette — everything the workspace can do, and its key |
 | `Cmd+/` | The same commands, grouped as a reference |
 | `Esc` | Cancel what you are typing, or leave the surface you are in |
+
+The palette, search, the list finder, the move picker, quick edits (`t`, `dd`,
+`ee`…), the reference and the new list / folder / column prompts all open in
+one **overlay** at the top of the window rather than as sheets. One is up at a
+time and asking for another replaces it (`Cmd+K` from search opens the
+palette); `Esc` or a click outside closes it, and `Return` confirms — in a
+notes edit too, where `Shift+Return` is the new line.
 
 The table above is the short version. The complete one is in the app: `Cmd+K`,
 or a **double-tap of Shift**, opens the palette, and `Cmd+/` shows the same
@@ -339,14 +348,15 @@ migrating, reachable by nothing.
 
 ## Views
 
-Four planning modes, one focus screen, one timeline. The mode strip in the
-toolbar names the one you are in and every key that reaches the others.
+Four planning modes, one focus screen, one timeline. The mode strip — the only
+thing in the title bar — names the one you are in and every key that reaches
+the others; Focus and Timeline sit at its end, set apart by a rule.
 
 | Mode | Key | What it shows |
 | --- | --- | --- |
 | **Today** | `Cmd+1` | The day as a numbered list of cards — see [Today](#today) |
 | **Board** | `Cmd+2` | Columns of cards, dragged between and within |
-| **Outline** | `Cmd+3` | The list as a tree, indented, with the inspector beside it |
+| **Outline** | `Cmd+3` | The list as a tree, indented |
 | **Matrix** | `Cmd+4` | Eisenhower quadrants by importance and urgency |
 | **Focus** | `Cmd+8` | What to do next, or the block that is running |
 | **Timeline** | `Cmd+9` | The day as elapsed time rather than as a list |
@@ -396,9 +406,22 @@ item's own menu.
 ## The window
 
 The window is the app. It opens on Today, carries the mode strip in its
-toolbar, and everything you can do you can do here: the sidebar of lists and
-folders, the four planning modes, the focus screen, the timeline, the
-inspector.
+title bar, and everything you can do you can do here. It is laid out the way an
+editor is:
+
+- **Left dock** — the sidebar of lists and folders. Lists only: Focus and the
+  timeline are in the mode strip, not repeated as sidebar rows.
+- **Right dock** — the inspector and the done rail, as two tabs of one
+  resizable column. Its visibility, width and tab are remembered, and it does
+  not close itself when you navigate; with nothing selected the inspector says
+  so.
+- **Status bar** — a thin strip along the foot. On the left, the dock toggles
+  and which region has the keyboard; in the middle, a half-typed key sequence
+  (`d…`), an error, or a passing message; on the right, the running block and
+  its clock (click to return to it), today's points and tasks done, and Google
+  Tasks sync.
+
+Preferences is `Cmd+,` and the app menu; there is no gear in the window.
 
 It used to be the second-class half of a pair. The first-class half was a
 400pt menu bar panel that dismissed on any outside click — right for a glance,

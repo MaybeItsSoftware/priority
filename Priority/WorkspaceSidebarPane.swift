@@ -3,7 +3,7 @@ import PriorityCore
 import PriorityWorkspace
 import SwiftUI
 
-/// The left-hand column: lists, folders and the focus launcher.
+/// The left-hand column: lists and folders.
 ///
 /// Its own view rather than a computed property of the window, so moving the
 /// sidebar's cursor redraws the sidebar and nothing else, and a keystroke in
@@ -18,10 +18,6 @@ struct WorkspaceSidebarPane: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       sidebarHeader
-      WorkspaceFocusLauncher()
-        .environment(model)
-        .padding(.horizontal, theme.space.xs)
-        .padding(.bottom, theme.space.sm)
       sidebarRows
       sidebarFooter
     }

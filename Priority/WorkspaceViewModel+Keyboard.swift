@@ -118,12 +118,7 @@ extension WorkspaceViewModel {
   }
 
   func collapseSidebarCursor() {
-    // Focus and the timeline are not in anything, so there is nothing for
-    // left to leave. Doing nothing beats selecting Everything, which would
-    // change the pane behind a key that was asked to go outwards.
-    if sidebarCursorRow?.selectsAList == false {
-      return
-    } else if let folder = selectedFolder, expandedFolderIDs.contains(folder.id) {
+    if let folder = selectedFolder, expandedFolderIDs.contains(folder.id) {
       setFolderExpanded(folder, expanded: false)
     } else if let scope = scopeTask, scope.isList {
       leaveTaskScope()

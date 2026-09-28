@@ -24,7 +24,6 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   /// Refreshes the menu bar title. Shared state means the window moving the
   /// cursor has to move the status item's label too, exactly as the panel does.
   var onUpdateMenuBarTitle: (() -> Void)?
-  var onShowSettings: (() -> Void)?
   /// Told when the window opens and closes, so the activation policy — a
   /// process-wide setting, not a per-window one — is decided in one place.
   var onVisibilityChanged: ((Bool) -> Void)?
@@ -106,10 +105,11 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     // were reachable only by a command-digit, and nothing on screen said which
     // one you were looking at.
     let toolbarController = MainWindowToolbarController(workspace: workspace, theme: manager.theme)
-    toolbarController.onShowSettings = { [weak self] in self?.onShowSettings?() }
     self.toolbarController = toolbarController
     window.toolbar = toolbarController.makeToolbar()
-    window.toolbarStyle = .unified
+    // Compact: the bar holds one strip, and a full-height unified bar spent
+    // twenty points on nothing above every pane.
+    window.toolbarStyle = .unifiedCompact
 
     window.setFrameAutosaveName("PriorityMainWindowV1")
     WindowContentSizing.enforce(

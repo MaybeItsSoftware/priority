@@ -61,12 +61,9 @@ extension WorkspaceViewModel {
 
   /// The `.id` the cursor's row is drawn under, so the list can scroll to it.
   ///
-  /// `nil` for Focus and the timeline, which sit above the scroll view and
-  /// are always on screen — there is nothing to scroll them into.
   var sidebarCursorScrollID: String? {
     guard let row = sidebarCursorRow else { return nil }
     switch row.kind {
-    case .focus, .timeline: return nil
     case .everything: return "priority:everything"
     case .list(let id), .folder(let id): return id
     case .nestedList(let id): return row.id.hasPrefix("pinned:") ? "promoted:\(id)" : id
@@ -81,24 +78,17 @@ extension WorkspaceViewModel {
     applySidebarCursor(next)
   }
 
-  /// Puts the cursor on the first row — Focus, unless the sidebar is somehow
-  /// empty. `Home` in the sidebar used to mean "select Everything", which was
-  /// the top row at the time and no longer is.
+  /// Puts the cursor on the first or last row.
   func moveSidebarSelectionToEnd(first: Bool) {
     let rows = sidebarRows
     guard let row = first ? rows.first : rows.last else { return }
     applySidebarCursor(row)
   }
 
-  /// Moves the cursor and makes the row's selection true.
-  ///
-  /// Focus and the timeline select nothing: they are buttons that happen to
-  /// live in the sidebar, and arrowing onto one must not close the list you
-  /// were reading. Everything else selects as a click on it would.
+  /// Moves the cursor and makes the row's selection true, as a click on it
+  /// would.
   func applySidebarCursor(_ row: WorkspaceSidebarRow) {
     switch row.kind {
-    case .focus, .timeline:
-      break
     case .everything:
       selectedFolderID = nil
       selectEverything()
@@ -118,16 +108,11 @@ extension WorkspaceViewModel {
 
   /// What Return and → do on the row you are standing on.
   ///
-  /// Every row answers now. Focus and the timeline open their screens, a
-  /// folder toggles or expands, and everything else hands the keyboard to the
-  /// task surface — which is what a list row has always done.
+  /// A folder toggles or expands, and everything else hands the keyboard to
+  /// the task surface — which is what a list row has always done.
   func activateSidebarCursor(expandOnly: Bool) {
     guard let row = sidebarCursorRow else { return enterTaskSurfaceFromSidebar() }
     switch row.kind {
-    case .focus:
-      run(.goFocus)
-    case .timeline:
-      run(.goTimeline)
     case .folder(let id):
       guard let folder = folders.first(where: { $0.id == id }) else { return }
       if expandOnly { setFolderExpanded(folder, expanded: true) } else { toggleFolderExpansion(folder) }
@@ -145,14 +130,11 @@ extension WorkspaceViewModel {
   /// nothing on a nested list, which is the row type you are most likely to
   /// have a lot of. A nested list is a task, so it reorders the way a task
   /// does; the key does not need to know that, and now does not.
-  ///
-  /// Focus and the timeline are fixed rows and say so by refusing, rather
-  /// than by appearing to work.
   @discardableResult
   func reorderSidebarCursor(by offset: Int) -> Bool {
     guard let row = sidebarCursorRow else { return false }
     switch row.kind {
-    case .focus, .timeline, .everything:
+    case .everything:
       return false
     case .folder(let id):
       guard let folder = folders.first(where: { $0.id == id }) else { return false }

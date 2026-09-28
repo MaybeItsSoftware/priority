@@ -17,21 +17,12 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
       nestedLists: nested, expandedFolderIDs: expanded)
   }
 
-  /// The two rows the arrows could not reach before, and the reason this exists.
-  func testFocusAndTimelineAreRowsAndComeFirst() {
+  /// Focus and the timeline live in the mode strip, not here: the sidebar
+  /// opens on Everything.
+  func testEverythingComesFirst() {
     let rows = outline()
-    XCTAssertEqual(rows[0].kind, .focus)
-    XCTAssertEqual(rows[1].kind, .timeline)
-    XCTAssertEqual(rows[2].kind, .everything)
-  }
-
-  /// Neither of them is a place to be, so arriving on one must not change
-  /// which list is on screen behind the sidebar.
-  func testTheFocusAndTimelineRowsSelectNoList() {
-    let rows = outline()
-    XCTAssertFalse(rows[0].selectsAList)
-    XCTAssertFalse(rows[1].selectsAList)
-    XCTAssertTrue(rows[2].selectsAList)
+    XCTAssertEqual(rows.first?.kind, .everything)
+    XCTAssertFalse(rows.contains { $0.id == "row:focus" || $0.id == "row:timeline" })
   }
 
   func testTheOrderIsInboxThenPinnedThenFoldersThenLooseLists() {
@@ -46,7 +37,7 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
     XCTAssertEqual(
       rows.map(\.kind),
       [
-        .focus, .timeline, .everything,
+        .everything,
         .list("inbox"), .nestedList("pin"),
         .nestedList("pin"),
         .folder("work"), .list("filed"),
@@ -116,7 +107,7 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
         SidebarFolderDescriptor(id: "b", parentFolderID: "a"),
       ],
       expanded: ["a", "b"])
-    XCTAssertEqual(rows.map(\.kind), [.focus, .timeline, .everything])
+    XCTAssertEqual(rows.map(\.kind), [.everything])
   }
 
   func testTheCursorStopsAtEitherEndRatherThanWrapping() {

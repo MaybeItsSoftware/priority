@@ -161,9 +161,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     mainWindowController.onUpdateMenuBarTitle = { [weak self] in
       self?.menuBarController.updateTitle()
     }
-    mainWindowController.onShowSettings = { [weak self] in
-      self?.menuSettings()
-    }
     mainWindowController.onVisibilityChanged = { [weak self] isVisible in
       self?.applyActivationPolicy(hasOrdinaryWindow: isVisible)
     }

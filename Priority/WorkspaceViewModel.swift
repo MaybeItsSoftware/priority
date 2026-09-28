@@ -434,7 +434,17 @@ enum WorkspaceSidebarItem: Identifiable {
   var isQuickCaptureActive = false
   var quickCaptureDestinationID: String?
   var quickCaptureStartDayOffset: Int?
-  var desktopShortcutSequence = DesktopShortcutSequence()
+  /// Not observed: it moves on every key, and nothing should redraw for that.
+  /// What the status bar shows is `pendingKeyPrefix`, which moves only when
+  /// the half-typed sequence does.
+  @ObservationIgnored var desktopShortcutSequence = DesktopShortcutSequence() {
+    didSet {
+      let prefix = desktopShortcutSequence.prefix
+      if pendingKeyPrefix != prefix { pendingKeyPrefix = prefix }
+    }
+  }
+  /// The first key of a two-letter sequence, held while the second is awaited.
+  private(set) var pendingKeyPrefix = ""
   var hidesCompletedTasks = false
   var taskInsertionReference: WorkspaceTask?
   var taskInsertionAbove = false

@@ -2,44 +2,30 @@ import AppKit
 import PriorityCore
 import SwiftUI
 
-/// The main window's toolbar: where you are, and the two surfaces that take the
-/// pane away from you.
+/// The main window's toolbar: where you are, and nothing else.
 ///
 /// It exists because the modes were reachable only by a command-digit nobody
 /// had been told about — no strip, no menu item, nothing on screen naming the
-/// one you were in. A keyboard-first app still has to say what its keys do
-/// somewhere other than a reference sheet.
+/// one you were in. It used to carry the Focus, Timeline and Done toggles and a
+/// Preferences gear beside the strip as well. Focus and the timeline are
+/// places, so they joined the strip; Done is a dock, so it moved to the status
+/// bar with the other dock toggles; Preferences is ⌘, and the app menu. Each
+/// control has one home.
 ///
-/// It also used to carry a Checkvist list switcher, a Checkvist refresh and a
-/// diagnostics button, which described the app this one grew out of rather than
-/// this one. The list you are in is the sidebar's business; switching the
-/// *Checkvist* list lives in Preferences, beside the account it belongs to.
-///
-/// Items are SwiftUI hosted in `NSHostingView` rather than `NSToolbarItem`
-/// targets, so `@Observable` drives them directly. The alternative — hand-
-/// syncing AppKit control state through `withObservationTracking` — is the
-/// pattern `MenuBarController` needs for the status item title and is worth
-/// avoiding anywhere it isn't forced.
+/// The strip is SwiftUI hosted in an `NSHostingView` rather than
+/// `NSToolbarItem` targets, so `@Observable` drives it directly.
 @MainActor
 final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
 
   private enum ItemID {
     static let modes = NSToolbarItem.Identifier("PriorityModes")
-    static let focus = NSToolbarItem.Identifier("PriorityFocus")
-    static let timeline = NSToolbarItem.Identifier("PriorityTimeline")
-    static let done = NSToolbarItem.Identifier("PriorityDone")
-    static let settings = NSToolbarItem.Identifier("PrioritySettings")
   }
 
   private let workspace: WorkspaceViewModel
-  /// Each toolbar item is its own `NSHostingView`, hung off the window's
-  /// titlebar rather than off the content view, so none of them sits below the
-  /// `.themed(_:)` at the window root. Without this they read the environment's
-  /// default — the house style in light — and the toolbar stayed light while the
-  /// window went dark.
+  /// Toolbar items are hung off the window's titlebar rather than off the
+  /// content view, so none of them sits below the `.themed(_:)` at the window
+  /// root. Without this they read the environment's default theme.
   private let theme: ThemeManager
-
-  var onShowSettings: (() -> Void)?
 
   init(workspace: WorkspaceViewModel, theme: ThemeManager) {
     self.workspace = workspace
@@ -58,14 +44,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
   // MARK: - NSToolbarDelegate
 
   func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    [
-      ItemID.modes,
-      .flexibleSpace,
-      ItemID.focus,
-      ItemID.timeline,
-      ItemID.done,
-      ItemID.settings,
-    ]
+    [.flexibleSpace, ItemID.modes, .flexibleSpace]
   }
 
   func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -77,92 +56,19 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
     itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
     willBeInsertedIntoToolbar flag: Bool
   ) -> NSToolbarItem? {
-    switch itemIdentifier {
-    case ItemID.modes:
-      return hostedItem(identifier: itemIdentifier, label: "View", minWidth: 220, maxWidth: 340) {
-        AnyView(WorkspaceModeStrip().environment(self.workspace))
-      }
-
-    case ItemID.focus:
-      return hostedItem(identifier: itemIdentifier, label: "Focus", minWidth: 30, maxWidth: 30) {
-        AnyView(
-          WorkspacePaneToggle(
-            symbol: "timer", title: "Focus", command: .goFocus,
-            isOn: { self.workspace.showsFocusScreen },
-            toggle: {
-              if self.workspace.showsFocusScreen {
-                self.workspace.dismissFocusScreen()
-              } else {
-                self.workspace.presentFocusScreen()
-              }
-            })
-            .environment(self.workspace))
-      }
-
-    case ItemID.timeline:
-      return hostedItem(identifier: itemIdentifier, label: "Timeline", minWidth: 30, maxWidth: 30) {
-        AnyView(
-          WorkspacePaneToggle(
-            symbol: "chart.bar.doc.horizontal", title: "Timeline", command: .goTimeline,
-            isOn: { self.workspace.showsTimelineScreen },
-            toggle: {
-              if self.workspace.showsTimelineScreen {
-                self.workspace.dismissTimelineScreen()
-              } else {
-                self.workspace.presentTimelineScreen()
-              }
-            })
-            .environment(self.workspace))
-      }
-
-    case ItemID.done:
-      return hostedItem(identifier: itemIdentifier, label: "Done", minWidth: 30, maxWidth: 30) {
-        AnyView(
-          WorkspacePaneToggle(
-            symbol: "checkmark.circle", title: "Done", command: .windowToggleDoneRail,
-            isOn: { self.workspace.isDoneRailVisible },
-            toggle: { self.workspace.toggleDoneRail() })
-            .environment(self.workspace))
-      }
-
-    case ItemID.settings:
-      let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-      item.label = "Preferences"
-      item.paletteLabel = "Preferences"
-      item.toolTip = "Preferences (⌘,)"
-      item.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Preferences")
-      item.target = self
-      item.action = #selector(settingsClicked)
-      item.isBordered = true
-      return item
-
-    default:
-      return nil
-    }
-  }
-
-  // MARK: - Item construction
-
-  private func hostedItem(
-    identifier: NSToolbarItem.Identifier,
-    label: String,
-    minWidth: CGFloat,
-    maxWidth: CGFloat,
-    content: () -> AnyView
-  ) -> NSToolbarItem {
-    let item = NSToolbarItem(itemIdentifier: identifier)
-    item.label = label
-    item.paletteLabel = label
+    guard itemIdentifier == ItemID.modes else { return nil }
+    let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+    item.label = "View"
+    item.paletteLabel = "View"
     let hostingView = NSHostingView(
-      rootView: content().focusEffectDisabled().themed(theme))
+      rootView: WorkspaceModeStrip()
+        .environment(workspace)
+        .focusEffectDisabled()
+        .themed(theme))
     hostingView.sizingOptions = [.intrinsicContentSize]
     item.view = hostingView
-    item.minSize = NSSize(width: minWidth, height: 24)
-    item.maxSize = NSSize(width: maxWidth, height: 24)
     return item
   }
-
-  @objc private func settingsClicked() { onShowSettings?() }
 }
 
 /// Where you are, and the other places you could be.
@@ -175,67 +81,56 @@ struct WorkspaceModeStrip: View {
   @Environment(\.theme) private var theme
 
   var body: some View {
-    HStack(spacing: 2) {
+    let onScreen = !model.showsFocusScreen && !model.showsTimelineScreen
+    HStack(spacing: theme.space.xxs) {
       ForEach(WorkspaceViewMode.planningModes) { mode in
-        let isCurrent = model.viewMode == mode && !model.showsFocusScreen && !model.showsTimelineScreen
-        Button {
+        segment(
+          title: mode.title, symbol: mode.symbolName, command: mode.command,
+          isCurrent: onScreen && model.viewMode == mode
+        ) {
           model.leaveFullPaneScreens()
           model.selectViewMode(mode)
           model.requestKeyboardFocus(.tasks)
-        } label: {
-          HStack(spacing: 5) {
-            Image(systemName: mode.symbolName)
-              .font(.system(size: 11, weight: .semibold))
-            Text(mode.title)
-              .font(.system(size: 11, weight: .medium))
-          }
-          .foregroundStyle(isCurrent ? theme.primary : theme.muted)
-          .padding(.horizontal, theme.space.sm)
-          .padding(.vertical, 4)
-          // The same selection every other row in the app draws. The strip had
-          // its own fill at 0.14 and its own edge at 0.35, which made "where I
-          // am" look like a different kind of fact in the toolbar than in the
-          // sidebar — and it was the accent colour, so it never went dark.
-          .workspaceSelection(isSelected: isCurrent, hasKeyboard: false)
-          .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
         }
-        .buttonStyle(.plain)
-        .help(
-          mode.command.map { WorkspaceCommandHelpText.text(for: $0, note: mode.title) }
-            ?? mode.title)
-        .accessibilityLabel(mode.title)
-        .accessibilityAddTraits(isCurrent ? [.isSelected] : [])
+      }
+      // The two full-pane screens, set apart by a rule: they take the pane
+      // over rather than projecting the tasks another way.
+      Rectangle()
+        .fill(theme.border)
+        .frame(width: theme.hairline, height: theme.space.lg)
+        .padding(.horizontal, theme.space.xs)
+      segment(title: "Focus", symbol: "timer", command: .goFocus, isCurrent: model.showsFocusScreen) {
+        if model.showsFocusScreen { model.dismissFocusScreen() } else { model.presentFocusScreen() }
+      }
+      segment(
+        title: "Timeline", symbol: "chart.bar.doc.horizontal", command: .goTimeline,
+        isCurrent: model.showsTimelineScreen
+      ) {
+        if model.showsTimelineScreen { model.dismissTimelineScreen() } else { model.presentTimelineScreen() }
       }
     }
   }
-}
 
-/// A full-pane surface that takes the main view over: on or off, and saying
-/// which on its face.
-struct WorkspacePaneToggle: View {
-  let symbol: String
-  let title: String
-  /// The catalogue entry, so the tooltip's key comes from the same table the
-  /// keyboard reads rather than from a literal beside it.
-  let command: WorkspaceCommandID
-  let isOn: () -> Bool
-  let toggle: () -> Void
-
-  @Environment(\.theme) private var theme
-
-  var body: some View {
-    let on = isOn()
-    Button(action: toggle) {
-      Image(systemName: symbol)
-        .font(.system(size: 13, weight: .medium))
-        .foregroundStyle(on ? theme.primary : theme.muted)
-        .frame(width: 26, height: 22)
-        .workspaceSelection(isSelected: on, hasKeyboard: false)
-        .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
+  private func segment(
+    title: String, symbol: String, command: WorkspaceCommandID?, isCurrent: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      HStack(spacing: theme.space.xs) {
+        Image(systemName: symbol)
+        Text(title)
+      }
+      .font(theme.bodyFont(weight: .medium))
+      .foregroundStyle(isCurrent ? theme.primary : theme.muted)
+      .padding(.horizontal, theme.space.sm)
+      .padding(.vertical, theme.space.xxs)
+      // The same selection every other row in the app draws.
+      .workspaceSelection(isSelected: isCurrent, hasKeyboard: false)
+      .contentShape(RoundedRectangle(cornerRadius: theme.controlRadius))
     }
     .buttonStyle(.plain)
-    .commandHelp(command, note: title)
+    .help(command.map { WorkspaceCommandHelpText.text(for: $0, note: title) } ?? title)
     .accessibilityLabel(title)
-    .accessibilityAddTraits(on ? [.isSelected] : [])
+    .accessibilityAddTraits(isCurrent ? [.isSelected] : [])
   }
 }
