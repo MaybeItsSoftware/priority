@@ -7,10 +7,15 @@ import PriorityWorkspace
 extension WorkspaceViewModel {
   /// Collapsing while the sidebar holds the keyboard hands focus to the tasks,
   /// rather than leaving it on a pane that is no longer on screen.
+  ///
+  /// The left dock has an agent tab too; this is the Lists tab's toggle, so
+  /// with the agent showing it turns the dock to the lists rather than
+  /// putting it away.
   func toggleSidebar() {
-    isSidebarVisible.toggle()
-    if !isSidebarVisible, keyboardFocusArea == .sidebar {
-      requestKeyboardFocus(.tasks)
+    if isListsPaneVisible {
+      hideLeftDock()
+    } else {
+      showLeftDock(.lists)
     }
   }
 
@@ -39,7 +44,12 @@ extension WorkspaceViewModel {
     if area == .tasks && selectedTaskID == nil && !(viewMode == .board && focusedBoardColumnID != nil) {
       selectedTaskID = visibleNavigationTasks.first?.id
     }
-    if area == .sidebar { taskInsertionReference = nil }
+    if area == .sidebar {
+      taskInsertionReference = nil
+      // The sidebar is the left dock's Lists tab; with the agent showing
+      // there is no sidebar on screen to take the keyboard.
+      if leftDockTab != .lists { leftDockTab = .lists }
+    }
     if let tab = WorkspaceDockTab(area: area) { showRightDock(tab) }
     requestedFocusArea = area
     keyboardFocusArea = area
@@ -53,7 +63,7 @@ extension WorkspaceViewModel {
   }
 
   func cycleKeyboardFocus(by offset: Int) {
-    var areas: [WorkspaceFocusArea] = isSidebarVisible ? [.sidebar, .tasks] : [.tasks]
+    var areas: [WorkspaceFocusArea] = isListsPaneVisible ? [.sidebar, .tasks] : [.tasks]
     // The dock's tab is a stop when it has something to hold the keyboard:
     // the inspector needs a task, the rail does not.
     if isRightDockVisible, rightDockTab == .done || selectedTask != nil {

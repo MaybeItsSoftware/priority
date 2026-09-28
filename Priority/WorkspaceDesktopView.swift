@@ -43,7 +43,7 @@ struct WorkspaceDesktopView: View {
       // looking at which list something came from, and losing your place in the
       // workspace to do that is its own distraction.
       if model.isSidebarVisible {
-        WorkspaceSidebarPane(focusedArea: $focusedArea)
+        WorkspaceLeftDock(focusedArea: $focusedArea)
           .focusSection()
           .frame(width: model.sidebarWidth)
         WorkspaceResizeHandle(

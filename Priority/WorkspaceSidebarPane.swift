@@ -16,8 +16,9 @@ struct WorkspaceSidebarPane: View {
   @State private var isTopLevelDropTargeted = false
 
   var body: some View {
+    // No header of its own: the left dock's tab bar is drawn over it, and
+    // carries the pane's actions (`WorkspaceSidebarActions`) on its right.
     VStack(alignment: .leading, spacing: 0) {
-      sidebarHeader
       sidebarRows
     }
     // The page, like the panes beside it. Not `.bar`: a vibrant material
@@ -26,71 +27,6 @@ struct WorkspaceSidebarPane: View {
     // either, which made the sidebar a second surface — the resize handle's
     // hairline is what separates it, the way a dock is separated in an editor.
     .background(theme.paper)
-  }
-
-  private var sidebarHeader: some View {
-    // The shared header band — the same height and the same rule as the main
-    // pane's and the dock's — so the three read as one strip across the
-    // window. The pane's actions sit on its right as glyphs, the way an
-    // editor's project panel carries its own: there is no footer any more,
-    // because the only strip along the foot of the window is the status bar.
-    WorkspaceHeaderBand(inset: theme.listGutter) {
-      // The app's own name, which the window title, the Dock icon and the
-      // menu bar were already saying. A pane's eyebrow should name the pane.
-      MicroLabel("Workspace")
-      Spacer(minLength: theme.space.xs)
-      HStack(spacing: theme.space.xxs) {
-        WorkspacePaneIconButton("plus", title: "New list", command: .listNew) {
-          model.requestCreation(.list)
-        }
-        WorkspacePaneIconButton("folder.badge.plus", title: "New folder", command: .folderNew) {
-          model.requestCreation(.folder)
-        }
-        if !model.archivedLists.isEmpty || !model.archivedNestedLists.isEmpty {
-          archiveMenu
-        }
-        historyMenu
-      }
-    }
-  }
-
-  /// Archived lists, one item each, to put back. Only there while there is
-  /// something archived: a menu that opens on nothing is a control that lies.
-  private var archiveMenu: some View {
-    Menu {
-      ForEach(model.archivedLists) { list in
-        Button("Restore \(list.name)") { model.restoreList(list) }
-      }
-      ForEach(model.archivedNestedLists) { task in
-        Button("Restore \(task.title)") { model.archiveNestedList(task, archived: false) }
-      }
-    } label: {
-      WorkspacePaneIconGlyph(symbol: "archivebox")
-    }
-    .menuStyle(.borderlessButton)
-    .menuIndicator(.hidden)
-    .fixedSize()
-    .commandHelp(.listRestore, note: "Restore archived lists")
-    .accessibilityLabel("Archived lists")
-  }
-
-  /// Undo and redo, each named for what it would undo.
-  private var historyMenu: some View {
-    Menu {
-      Button(model.undoLabel.map { "Undo \($0)" } ?? "Undo") { model.run(.windowUndo) }
-        .disabled(model.undoLabel == nil)
-        .commandShortcut(.windowUndo)
-      Button(model.redoLabel.map { "Redo \($0)" } ?? "Redo") { model.run(.windowRedo) }
-        .disabled(model.redoLabel == nil)
-        .commandShortcut(.windowRedo)
-    } label: {
-      WorkspacePaneIconGlyph(symbol: "arrow.uturn.backward")
-    }
-    .menuStyle(.borderlessButton)
-    .menuIndicator(.hidden)
-    .fixedSize()
-    .commandHelp(.windowUndo, note: "Undo or redo workspace changes")
-    .accessibilityLabel("Workspace history")
   }
 
   private var sidebarRows: some View {

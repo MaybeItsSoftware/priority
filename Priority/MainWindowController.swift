@@ -171,7 +171,11 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         // it: it goes to the overlay's own field, or nowhere.
         return self.workspace.handleOverlayKey(event) ? nil : event
       }
-      if self.isEditingText(in: window) {
+      // The agent panel is treated as a field as a whole, not only its text
+      // view: an approval card holding the keyboard answers Return itself,
+      // and a Return that fell through to the workspace would open whatever
+      // task was selected behind it instead.
+      if self.isEditingText(in: window) || self.workspace.agentHoldsKeyboard {
         self.workspace.desktopShortcutSequence.reset()
         // Only the chords that are how you leave a field to do something else
         // — the views, the regions, creating, search, the palette, the

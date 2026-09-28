@@ -101,6 +101,10 @@ struct MainApp: App {
           AppDelegate.shared.workspace.toggleDoneRail()
         }
         .commandShortcut(.windowToggleDoneRail)
+        Button("Agent") {
+          AppDelegate.shared.workspace.toggleAgentPanel()
+        }
+        .commandShortcut(.windowToggleAgentPanel)
         Divider()
         // Deliberately a fixed title rather than Hide/Show: every other item
         // here touches `AppDelegate.shared` only inside its action, which runs
@@ -115,7 +119,7 @@ struct MainApp: App {
           let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
           // Focusing a collapsed sidebar has to open it first, or the
           // shortcut moves focus somewhere you cannot see.
-          if !workspace.isSidebarVisible { workspace.toggleSidebar() }
+          if !workspace.isListsPaneVisible { workspace.showLeftDock(.lists) }
           workspace.requestKeyboardFocus(.sidebar)
         }
         .commandShortcut(.goSidebarRegion)

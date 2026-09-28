@@ -40,7 +40,7 @@ struct WorkspaceRightDock: View {
     WorkspaceHeaderBand(inset: 0) {
       HStack(spacing: 0) {
         ForEach(WorkspaceDockTab.allCases) { tab in
-          WorkspaceDockTabButton(tab: tab, isCurrent: model.rightDockTab == tab) {
+          WorkspaceDockTabButton(title: tab.title, command: tab.command, isCurrent: model.rightDockTab == tab) {
             model.showRightDock(tab)
           }
         }
@@ -59,16 +59,18 @@ struct WorkspaceRightDock: View {
 
 /// One tab: its title in plain text, ink with a rule along the band's foot
 /// while it is the one showing, muted otherwise. The rule is the band's own
-/// height, so it sits on the header hairline rather than above it.
-private struct WorkspaceDockTabButton: View {
+/// height, so it sits on the header hairline rather than above it. Shared by
+/// both docks' tab bars.
+struct WorkspaceDockTabButton: View {
   @Environment(\.theme) private var theme
-  let tab: WorkspaceDockTab
+  let title: String
+  let command: WorkspaceCommandID
   let isCurrent: Bool
   let select: () -> Void
 
   var body: some View {
     Button(action: select) {
-      Text(tab.title)
+      Text(title)
         .font(theme.captionFont)
         .foregroundStyle(isCurrent ? theme.ink : theme.muted)
         .lineLimit(1)
@@ -83,8 +85,8 @@ private struct WorkspaceDockTabButton: View {
     }
     .buttonStyle(.plain)
     .focusable(false)
-    .commandHelp(tab.command, note: tab.title)
-    .accessibilityLabel(tab.title)
+    .commandHelp(command, note: title)
+    .accessibilityLabel(title)
     .accessibilityAddTraits(isCurrent ? [.isSelected] : [])
   }
 }

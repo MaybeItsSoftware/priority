@@ -112,3 +112,116 @@ extension WorkspaceViewModel {
   func toggleInspector() { toggleDockTab(.inspector) }
   func toggleDoneRail() { toggleDockTab(.done) }
 }
+
+/// The tabs of the left dock: the lists, and the agent panel beside them.
+enum WorkspaceLeftDockTab: String, CaseIterable, Identifiable {
+  case lists
+  case agent
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .lists: "Lists"
+    case .agent: "Agent"
+    }
+  }
+
+  var symbolName: String {
+    switch self {
+    case .lists: "sidebar.leading"
+    case .agent: "sparkles"
+    }
+  }
+
+  /// The catalogue entry that toggles the dock onto this tab.
+  var command: WorkspaceCommandID {
+    switch self {
+    case .lists: .windowToggleSidebar
+    case .agent: .windowToggleAgentPanel
+    }
+  }
+}
+
+/// The left dock: the sidebar and the agent panel as two tabs of one column,
+/// the way the right dock holds the inspector and the done rail.
+///
+/// Its visibility is still `isSidebarVisible` — the setting people already
+/// have — and its width the sidebar's. The sidebar's keyboard region only
+/// exists while the Lists tab is showing, so anything that asks for it turns
+/// the dock to that tab first.
+@MainActor
+extension WorkspaceViewModel {
+  var isAgentPanelVisible: Bool { isSidebarVisible && leftDockTab == .agent }
+  var isListsPaneVisible: Bool { isSidebarVisible && leftDockTab == .lists }
+
+  func showLeftDock(_ tab: WorkspaceLeftDockTab) {
+    if leftDockTab != tab {
+      if tab == .agent && keyboardFocusArea == .sidebar { requestKeyboardFocus(.tasks) }
+      leftDockTab = tab
+    }
+    if !isSidebarVisible { isSidebarVisible = true }
+  }
+
+  /// Puts the dock away, handing the keyboard back to the tasks if the dock
+  /// had it. A pending approval stays pending: hiding the panel answers
+  /// nothing, and the change it asks about does not run until someone clicks.
+  func hideLeftDock() {
+    isSidebarVisible = false
+    if keyboardFocusArea == .sidebar || agentHoldsKeyboard {
+      agentHoldsKeyboard = false
+      requestKeyboardFocus(.tasks)
+    }
+  }
+
+  /// One key, three states, like the done rail's: hidden (or on the lists)
+  /// opens the agent and puts the caret in its field, open-but-elsewhere
+  /// brings the caret over, and open with the caret in it puts it away.
+  func toggleAgentPanel() {
+    if isAgentPanelVisible && agentHoldsKeyboard {
+      hideLeftDock()
+      return
+    }
+    showLeftDock(.agent)
+    focusAgentInput()
+  }
+
+  func focusAgentInput() {
+    desktopShortcutSequence.reset()
+    agentInputFocusRequest += 1
+  }
+
+  /// The agent's message, with a line saying what is on screen so "this
+  /// list" and "this task" mean something.
+  func sendAgentMessage(_ text: String) {
+    let task = selectedTask
+    let list = selectedList ?? task.flatMap { task in lists.first { $0.id == task.listId } }
+    agent.send(
+      text,
+      context: AgentSystemPrompt.context(
+        listName: isEverythingSelected ? nil : list?.name,
+        listID: isEverythingSelected ? nil : list?.id,
+        taskTitle: task?.title,
+        taskID: task?.id))
+  }
+
+  /// A workspace id as the approval card should say it: a list's or a
+  /// folder's name, or a task's title. Nil for an id this workspace does not
+  /// know — a Checkvist id, or something the assistant made up — which the
+  /// card then shows as it is.
+  func agentDisplayName(for id: String) -> String? {
+    if let list = lists.first(where: { $0.id == id }) ?? archivedLists.first(where: { $0.id == id }) {
+      return list.name
+    }
+    if let folder = folders.first(where: { $0.id == id }) { return folder.name }
+    if let task = taskCache[id] { return task.title }
+    return (try? store?.task(id: id))??.title
+  }
+
+  /// After a turn, look for its writes now rather than on the next poll.
+  /// The poll would find them within a second anyway; this only saves the
+  /// wait between the assistant saying "done" and the row appearing.
+  func agentTurnFinished() {
+    checkForExternalWrites()
+  }
+}

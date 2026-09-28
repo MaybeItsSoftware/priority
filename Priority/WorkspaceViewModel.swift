@@ -309,6 +309,25 @@ enum WorkspaceSidebarItem: Identifiable {
   static let defaultSidebarWidth: CGFloat = 185
   private static let sidebarVisibleKey = "localWorkspaceSidebarVisibleV1"
   private static let sidebarWidthKey = "localWorkspaceSidebarWidthV1"
+  private static let leftDockTabKey = "localWorkspaceLeftDockTabV1"
+
+  /// Which of the left dock's tabs is showing: the lists, or the agent.
+  /// Persisted with the dock, for the right dock's reason. Whether the dock
+  /// is open at all is still `isSidebarVisible`, a name kept from when the
+  /// sidebar was all it held, so that setting carries over.
+  var leftDockTab = WorkspaceLeftDockTab(
+    rawValue: UserDefaults.standard.string(forKey: WorkspaceViewModel.leftDockTabKey) ?? "") ?? .lists {
+    didSet { UserDefaults.standard.set(leftDockTab.rawValue, forKey: Self.leftDockTabKey) }
+  }
+
+  /// The agent panel's thread. See `WorkspaceAgentSession`.
+  let agent = WorkspaceAgentSession()
+  /// Asks the agent panel's message field for the keyboard.
+  var agentInputFocusRequest = 0
+  /// The agent panel's field or one of its approval cards has the keyboard.
+  /// The window's key monitor reads it to leave keys to the panel — Return on
+  /// a card approves it, and must not open a task behind it instead.
+  @ObservationIgnored var agentHoldsKeyboard = false
 
   var dailyProgressRevision = 0
   var selectedListID: String?

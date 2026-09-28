@@ -166,7 +166,7 @@ extension WorkspaceViewModel {
     case .listNew: requestListCreationForSelection()
     case .listRename:
       // The rename happens in the sidebar row, so it has to be on screen.
-      if !isSidebarVisible { toggleSidebar() }
+      if !isListsPaneVisible { showLeftDock(.lists) }
       beginRenamingSelection()
     case .listSettings: showSelectedListSettings()
     case .listArchive: archiveSelectedList()
@@ -185,6 +185,7 @@ extension WorkspaceViewModel {
     case .windowUndo: undoLastChange()
     case .windowRedo: redoLastUndoneChange()
     case .windowToggleSidebar: toggleSidebar()
+    case .windowToggleAgentPanel: toggleAgentPanel()
     case .windowToggleInspectorPane: toggleInspector()
     case .windowOpenKeymap: WorkspaceKeymapStore.shared.openFile()
     case .windowReloadKeymap: WorkspaceKeymapStore.shared.reload(force: true)

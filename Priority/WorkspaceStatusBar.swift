@@ -4,7 +4,7 @@ import SwiftUI
 
 /// The strip along the foot of the window.
 ///
-/// Left: the left dock's toggle, a glyph and nothing else. Middle: what is
+/// Left: the left dock's Lists and Agent toggles, glyphs and nothing else. Middle: what is
 /// happening right now — a half-typed key sequence, a message, an error.
 /// Right: the running block, the day's tally, sync, and last, against the
 /// right edge, the right dock's toggles — each toggle on the side of the window
@@ -24,7 +24,7 @@ struct WorkspaceStatusBar: View {
 
   var body: some View {
     HStack(spacing: theme.space.sm) {
-      sidebarToggle
+      leftDockToggles
       Spacer(minLength: theme.space.sm)
       WorkspaceStatusMessage()
       Spacer(minLength: theme.space.sm)
@@ -41,14 +41,24 @@ struct WorkspaceStatusBar: View {
     .overlay(alignment: .top) { FocusRule() }
   }
 
-  /// The left dock's toggle, alone. The strip used to spell out which region
-  /// had the keyboard beside it in capitals; the focused row's hairline says
-  /// that where you are looking, so the name moved into the tooltip.
-  private var sidebarToggle: some View {
-    WorkspacePaneIconButton(
-      "sidebar.leading", title: "Sidebar", command: .windowToggleSidebar, isOn: model.isSidebarVisible,
-      note: "Sidebar (the keyboard is in \(Self.regionTitle(model.keyboardFocusArea)); ⌃Tab moves it on)"
-    ) { model.toggleSidebar() }
+  /// The left dock's toggles, one per tab, mirroring the right dock's at the
+  /// other end. The strip used to spell out which region had the keyboard
+  /// beside it in capitals; the focused row's hairline says that where you
+  /// are looking, so the name moved into the Lists tooltip.
+  private var leftDockToggles: some View {
+    HStack(spacing: theme.space.xxs) {
+      ForEach(WorkspaceLeftDockTab.allCases) { tab in
+        let isOn = model.isSidebarVisible && model.leftDockTab == tab
+        WorkspacePaneIconButton(
+          tab.symbolName, title: tab.title, command: tab.command, isOn: isOn,
+          note: tab == .lists
+            ? "Lists (the keyboard is in \(Self.regionTitle(model.keyboardFocusArea)); ⌃Tab moves it on)"
+            : "Agent — asks before every change"
+        ) {
+          if isOn { model.hideLeftDock() } else { model.showLeftDock(tab) }
+        }
+      }
+    }
   }
 
   private var rightDockToggles: some View {

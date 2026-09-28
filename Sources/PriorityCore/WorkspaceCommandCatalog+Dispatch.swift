@@ -36,7 +36,7 @@ extension WorkspaceCommandCatalog {
     .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline,
     .goSearch, .goCommandPalette, .goKeyboardReference,
     .windowUndo, .windowRedo, .windowToggleSidebar, .windowToggleInspectorPane,
-    .windowToggleDoneRail,
+    .windowToggleDoneRail, .windowToggleAgentPanel,
   ]
 
   /// Commands whose chord still works with the caret in a text field, because
@@ -47,6 +47,8 @@ extension WorkspaceCommandCatalog {
     .goSidebarRegion, .goTaskRegion, .goInspectorRegion, .goCycleRegion,
     .taskNew, .listNew, .folderNew, .listNewTaskDestination,
     .goKeyboardReference, .goCommandPalette, .goSearch, .goListNavigator,
+    // The agent's own field is a text field, and this is how you leave it.
+    .windowToggleAgentPanel,
   ]
 
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.

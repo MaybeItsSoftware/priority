@@ -224,6 +224,10 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+ctrl+d"],
       note: "Opens it and takes the keyboard; again from inside it closes it"),
     .init(
+      id: .windowToggleAgentPanel, title: "Show or hide the agent panel", group: "Window",
+      keys: ["cmd+ctrl+a"],
+      note: "Claude Code in the left dock: reads freely, asks before every change"),
+    .init(
       id: .windowOpenKeymap, title: "Open the keymap file", group: "Window", keys: [],
       note: "keymap.json — your own keys over these. Created empty if it is missing"),
     .init(
