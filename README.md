@@ -82,6 +82,7 @@ something you already have to know.
 | `Cmd+F` | Search |
 | `Cmd+P` | Go to a list — every list and nested list, filtered as you type |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
+| `Cmd+Ctrl+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
 | `Cmd+K` | The command palette — everything the workspace can do, and its key |
@@ -432,11 +433,32 @@ the bottom.
   Pressed on a task, `a` / `Alt+Return` / `Alt+Shift+Return` place it below,
   above or inside that task instead.
 
-- **Left dock** — the sidebar of lists and folders. Lists only: Focus and the
-  timeline are in the mode strip, not repeated as sidebar rows. Its header
-  carries its actions as small glyphs — new list (`Cmd+Shift+N`), new folder
-  (`Cmd+Alt+N`), archived lists to restore (only while there are any), and
-  undo/redo — rather than a bar along its foot; hover one for its name and key.
+- **Left dock** — two tabs, **Lists** and **Agent**, in a tab bar like the
+  right dock's; its tab, visibility and width are remembered.
+  - **Lists** is the sidebar of lists and folders. Lists only: Focus and the
+    timeline are in the mode strip, not repeated as sidebar rows. The tab bar
+    carries its actions as small glyphs — new list (`Cmd+Shift+N`), new folder
+    (`Cmd+Alt+N`), archived lists to restore (only while there are any), and
+    undo/redo — rather than a bar along its foot; hover one for its name and
+    key.
+  - **Agent** (`Cmd+Ctrl+A`) is an assistant panel in the manner of Zed's: your
+    own Claude Code, run headless, with Priority's MCP server as its only
+    tools — no shell, no files, no web, and no API key (it uses your Claude
+    Code login). It **reads freely** — the lists, tasks, dailies, the day log
+    and the focus timer — and each read shows as one muted line in the
+    transcript. **Every change** — adding, editing, completing, moving or
+    deleting anything — stops as a card saying what it will do (the tool, the
+    title, the list by name) with **Approve** and **Deny**; nothing runs until
+    you click Approve, or press Return with the card holding the keyboard
+    (Tab from the field reaches it; Esc denies). Stopping the thread, starting
+    a new one, or the process dying withdraws an unanswered card, and the
+    change never happens. Return sends, Shift+Return is a new line, Esc hands
+    the keyboard back to the tasks; the glyphs on the tab bar start a new
+    thread and stop the current one. Approved changes are ordinary "MCP: …"
+    steps in the Undo menu. If Claude Code is not installed where Priority
+    looks (`~/.local/bin`, `~/.claude/local`, Homebrew, `/usr/local/bin`), the
+    panel says so and takes a path. See
+    [`docs/agent-panel.md`](docs/agent-panel.md).
 - **Main pane** — a header band with where you are on the left (the scope, and
   the way back out of an opened task) and a count or a few glyph buttons on the
   right, then the mode's content. Panes carry no footers of their own: their
@@ -447,8 +469,8 @@ the bottom.
   and tab are remembered, and it does not close itself when you navigate; with
   nothing selected the inspector says so.
 - **Status bar** — a thin strip along the foot, glyphs at its ends like an
-  editor's. On the left, the sidebar's toggle (its tooltip says which region
-  has the keyboard); in the middle, a half-typed key sequence (`d…`), an error,
+  editor's. On the left, the left dock's Lists and Agent toggles (the Lists
+  tooltip says which region has the keyboard); in the middle, a half-typed key sequence (`d…`), an error,
   or a passing message; on the right, the running block and its clock (click to
   return to it), today's time logged, points and tasks done (the week's in the
   tooltip; click for the timeline), Google Tasks sync, and at the right edge

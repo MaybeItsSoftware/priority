@@ -88,10 +88,15 @@ which is the way to skip it. A hold is dropped without running when focus
 moves or text editing begins, because the key no longer means what it did.
 
 The chords that are how you leave a text field — the view and region keys,
-the creation chords, `Cmd+K`, `Cmd+F`, `Cmd+/` — work from inside one; the set
-is `reachableFromTextField` in the catalogue. `Cmd+Z` deliberately is not —
-inside a field it belongs to the text you are typing, not to the workspace
-behind it.
+the creation chords, `Cmd+K`, `Cmd+F`, `Cmd+/`, and `Cmd+Ctrl+A` for the agent
+panel — work from inside one; the set is `reachableFromTextField` in the
+catalogue. `Cmd+Z` deliberately is not — inside a field it belongs to the text
+you are typing, not to the workspace behind it.
+
+The agent panel counts as a field as a whole while it holds the keyboard, its
+approval cards included: Return on a focused card approves that card, and must
+not fall through to open the task selected behind it. See
+[`agent-panel.md`](agent-panel.md).
 
 ## Surfaces own the keyboard
 
@@ -101,8 +106,8 @@ through to the task surface behind it — `Delete`, a digit or `i` there used to
 act on a task nobody could see. The only workspace keys that stay live are the
 window's own (`reachableFromFullPaneScreens` in the catalogue): the view keys,
 which leave the screen for the place you asked for, the palette, the
-reference, search, undo and redo, and the sidebar, inspector and done-rail
-toggles. Chords the catalogue does not know, such as `Cmd+Q` and `Cmd+W`, still
+reference, search, undo and redo, and the sidebar, agent, inspector and
+done-rail toggles. Chords the catalogue does not know, such as `Cmd+Q` and `Cmd+W`, still
 reach the app. The palette knows this: it labels each command with the surface
 it belongs to and sorts the ones that apply where you are to the top.
 
