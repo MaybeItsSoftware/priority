@@ -195,10 +195,8 @@ extension WorkspaceViewModel {
   }
 
   func selectTaskAtEnd(first: Bool) {
-    let candidates = viewMode == .board
-      ? boardColumns.first(where: { $0.id == activeBoardColumnID }).map { tasks(in: $0) } ?? []
-      : visibleNavigationTasks
-    selectedTaskID = first ? candidates.first?.id : candidates.last?.id
+    let rows = navigationRowIDs()
+    selectedTaskID = first ? rows.first : rows.last
   }
 }
 

@@ -11,17 +11,24 @@ import PriorityWorkspace
 /// method could be found in it.
 extension WorkspaceViewModel {
   func moveTaskSelection(by offset: Int) {
-    let visibleTasks = viewMode == .board
-      ? boardColumns.first(where: { $0.id == activeBoardColumnID }).map { tasks(in: $0) } ?? []
-      : visibleNavigationTasks
-    guard !visibleTasks.isEmpty else { return }
-    guard let currentTaskID = selectedTaskID,
-      let index = visibleTasks.firstIndex(where: { $0.id == currentTaskID })
-    else {
-      selectedTaskID = offset < 0 ? visibleTasks.last?.id : visibleTasks.first?.id
+    let rows = navigationRowIDs()
+    guard !rows.isEmpty else { return }
+    guard let currentTaskID = selectedTaskID, let index = rows.firstIndex(of: currentTaskID) else {
+      selectedTaskID = offset < 0 ? rows.last : rows.first
       return
     }
-    selectedTaskID = visibleTasks[min(max(0, index + offset), visibleTasks.count - 1)].id
+    selectedTaskID = rows[min(max(0, index + offset), rows.count - 1)]
+  }
+
+  /// What up and down walk. On the board that is the active column's cards
+  /// with the subtask rows drawn on them, and the column is pinned while the
+  /// keys walk it, so stepping onto a subtask that is also a card elsewhere
+  /// does not jump the keyboard to that other column.
+  func navigationRowIDs() -> [String] {
+    guard viewMode == .board else { return visibleNavigationTasks.map(\.id) }
+    guard let column = boardColumns.first(where: { $0.id == activeBoardColumnID }) else { return [] }
+    focusedBoardColumnID = column.id
+    return boardRowIDs(in: column)
   }
 
   func selectAdjacentTask(by offset: Int) {
@@ -29,7 +36,7 @@ extension WorkspaceViewModel {
   }
 
   func selectTaskInAdjacentColumn(from task: WorkspaceTask, by offset: Int) {
-    focusAdjacentBoardColumn(from: column(for: task)?.id, by: offset)
+    focusAdjacentBoardColumn(from: activeBoardColumnID, by: offset)
   }
 
   func focusAdjacentBoardColumn(from columnID: String? = nil, by offset: Int) {

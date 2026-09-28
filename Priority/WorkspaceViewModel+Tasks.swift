@@ -107,6 +107,41 @@ extension WorkspaceViewModel {
     boardTasksByColumn[column.id, default: []]
   }
 
+  /// The subtask rows a card is drawing: none while it is folded, and at
+  /// most the tree's row limit — the rows past it are behind "+N more".
+  func boardTreeRows(of card: WorkspaceTask) -> [TaskOutlineItem] {
+    guard !boardCollapsedCardIDs.contains(card.id) else { return [] }
+    return Array(descendants(of: card).prefix(WorkspaceBoardMetrics.visibleSubtaskRows))
+  }
+
+  /// Every row the arrow keys stop on in a column, top to bottom: each card,
+  /// then the subtask rows drawn on it.
+  func boardRowIDs(in column: WorkspaceKanbanColumn) -> [String] {
+    tasks(in: column).flatMap { card in [card.id] + boardTreeRows(of: card).map(\.task.id) }
+  }
+
+  /// The card a row is drawn on: the row itself when it is a card, else the
+  /// nearest ancestor that is one.
+  func boardCardID(owning rowID: String) -> String? {
+    var id = rowID
+    while !boardVisibleTaskIDs.contains(id) {
+      guard let parent = boardTaskParents[id] else { return nil }
+      id = parent.id
+    }
+    return id
+  }
+
+  func toggleBoardTree(of card: WorkspaceTask) {
+    if boardCollapsedCardIDs.remove(card.id) == nil {
+      boardCollapsedCardIDs.insert(card.id)
+      // Folding away the row the selection was on leaves it on the card.
+      if let selectedTaskID, selectedTaskID != card.id,
+        descendants(of: card).contains(where: { $0.task.id == selectedTaskID }) {
+        self.selectedTaskID = card.id
+      }
+    }
+  }
+
   var todayTasks: [WorkspaceTask] {
     guard let today = boardColumns.first(where: { $0.id == "today" }) else { return [] }
     return tasks(in: today).filter { $0.status == .open }

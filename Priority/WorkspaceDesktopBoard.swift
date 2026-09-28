@@ -27,17 +27,18 @@ enum WorkspaceBoardMetrics {
   /// rather than scanned, and five default columns stop fitting on a laptop.
   static let maxColumnWidth: CGFloat = 340
 
-  /// A column's own inset around its cards. Tight: the cards are bordered
-  /// rows filling the column, not tiles floating in it.
+  /// The inset of a column's header and composers. The cards themselves
+  /// have none: they run the column's full width, rows of a table rather
+  /// than tiles in a well.
   static func columnPadding(_ theme: Theme) -> CGFloat {
     theme.space.sm
   }
 
-  /// The inset before the first column and after the last. The pane gutter
-  /// less a column's own padding, so the first column's label lines up with
-  /// the pane title above it.
+  /// The inset before the first column and after the last: none. The board
+  /// runs to the pane's edges the way Zed's panes do, and the hairlines
+  /// between columns are all the division it needs.
   static func edgeInset(_ theme: Theme) -> CGFloat {
-    max(FocusSurfaceMetrics.gutter - columnPadding(theme), 0)
+    0
   }
 
   /// Most rows of a card's subtask tree drawn on the card. Past this the tree
@@ -98,7 +99,9 @@ private struct WorkspaceKanbanColumnStrip: View {
     let activeColumnID = model.activeBoardColumnID
     let tasksHaveKeyboard = model.keyboardFocusArea == .tasks
     let selectedID = model.selectedTaskID
-    let selectedColumnID = selectedID.flatMap { model.boardColumnID(forTaskID: $0) }
+    // The column the selection is drawn in — for a subtask row, the column
+    // of the card it is drawn on.
+    let selectedColumnID = selectedID == nil ? nil : activeColumnID
     ScrollViewReader { scrollProxy in
       GeometryReader { viewport in
         ScrollView(.horizontal) {
@@ -112,7 +115,7 @@ private struct WorkspaceKanbanColumnStrip: View {
                 height: viewport.size.height,
                 hasKeyboard: tasksHaveKeyboard && activeColumnID == column.id,
                 tasksHaveKeyboard: tasksHaveKeyboard,
-                selectedCardID: column.id == selectedColumnID ? selectedID : nil)
+                selectedRowID: column.id == selectedColumnID ? selectedID : nil)
                 .environment(model)
                 .id(column.id)
               if column.id != model.boardColumns.last?.id {
@@ -148,9 +151,10 @@ struct WorkspaceKanbanColumnView: View {
   let hasKeyboard: Bool
   /// Whether the task pane holds the keyboard at all.
   let tasksHaveKeyboard: Bool
-  /// The selected card, when it is one of this column's; nil otherwise, so a
-  /// selection moving between two other columns does not redraw this one.
-  let selectedCardID: String?
+  /// The selected card or subtask row, when it is drawn in this column; nil
+  /// otherwise, so a selection moving between two other columns does not
+  /// redraw this one.
+  let selectedRowID: String?
   @State private var isDropTargeted = false
   @State private var isAddingAtTop = false
   @State private var topTaskTitle = ""
@@ -167,7 +171,11 @@ struct WorkspaceKanbanColumnView: View {
 
   var body: some View {
     let tasks = model.tasks(in: column)
+    let selectedCardID = selectedRowID.flatMap { id in
+      tasks.first { $0.id == id || model.boardTreeRows(of: $0).contains { $0.task.id == id } }?.id
+    }
     VStack(alignment: .leading, spacing: theme.space.sm) {
+      VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(spacing: theme.space.xs) {
         // The micro-label exists for exactly this and was being hand-rolled
         // one point smaller with no tracking, so column titles read narrower
@@ -227,6 +235,8 @@ struct WorkspaceKanbanColumnView: View {
           }
           .accessibilityLabel("New task at top of \(column.title)")
       }
+      }
+      .padding([.horizontal, .top], WorkspaceBoardMetrics.columnPadding(theme))
 
       ScrollViewReader { cardProxy in
         ScrollView(.vertical) {
@@ -237,7 +247,7 @@ struct WorkspaceKanbanColumnView: View {
             ForEach(tasks) { task in
               WorkspaceKanbanCard(
                 task: task, column: column,
-                isSelected: task.id == selectedCardID,
+                selectedRowID: task.id == selectedCardID ? selectedRowID : nil,
                 hasKeyboard: tasksHaveKeyboard && task.id == selectedCardID)
                 .environment(model)
                 .id(task.id)
@@ -259,12 +269,14 @@ struct WorkspaceKanbanColumnView: View {
                     isDropTargeted ? theme.primary : theme.border,
                     style: StrokeStyle(lineWidth: theme.hairline, dash: [5]))
               )
+              .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
             }
 
             TaskComposer(focusRequest: 0) { title in
               model.createBoardTask(named: title, in: column)
             }
             .accessibilityLabel("Add task to \(column.title)")
+            .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
           }
           .scrollTargetLayout()
           .padding(.bottom, theme.space.xxs)
@@ -284,7 +296,6 @@ struct WorkspaceKanbanColumnView: View {
         }
       }
     }
-    .padding(WorkspaceBoardMetrics.columnPadding(theme))
     .frame(width: width, alignment: .topLeading)
     .frame(height: height, alignment: .topLeading)
     // On the page, not in a well: a column is a region of the board, and the
@@ -325,17 +336,21 @@ struct WorkspaceKanbanCard: View {
   @Environment(\.theme) private var theme
   @FocusState private var isCardFocused: Bool
   @FocusState private var subtaskComposerFocused: Bool
-  @State private var isTreeCollapsed = false
   @State private var isAddingSubtask = false
   @State private var isDropTargeted = false
   @State private var isHovered = false
   @State private var newSubtaskTitle = ""
   let task: WorkspaceTask
   let column: WorkspaceKanbanColumn
-  /// Handed in rather than read from the model, so moving the selection
-  /// redraws the two cards it moved between and no others.
-  let isSelected: Bool
+  /// The selected row when it is this card or one of the subtask rows drawn
+  /// on it; nil otherwise. Handed in rather than read from the model, so
+  /// moving the selection redraws the cards it moved between and no others.
+  let selectedRowID: String?
+  /// Whether the keyboard is on this card or a row of its tree.
   let hasKeyboard: Bool
+
+  private var isSelected: Bool { selectedRowID == task.id }
+  private var isTreeCollapsed: Bool { model.boardCollapsedCardIDs.contains(task.id) }
 
   var body: some View {
     cardSurface
@@ -344,23 +359,25 @@ struct WorkspaceKanbanCard: View {
       .focused($isCardFocused)
       .focusEffectDisabled()
       .onAppear {
-        if model.keyboardFocusArea == .tasks && model.selectedTaskID == task.id {
+        if model.keyboardFocusArea == .tasks && selectedRowID != nil {
           isCardFocused = true
         }
       }
       .onChange(of: model.focusRequest) { _, _ in
-        if model.requestedFocusArea == .tasks && model.selectedTaskID == task.id {
+        if model.requestedFocusArea == .tasks && selectedRowID != nil {
           isCardFocused = true
         }
       }
       .onChange(of: isCardFocused) { _, focused in
         if focused {
-          model.selectTask(task)
+          // A subtask row already selected keeps the selection: the card
+          // holds the keyboard for the rows drawn on it.
+          if selectedRowID == nil { model.selectTask(task) }
           model.reportKeyboardFocus(.tasks)
         }
       }
-      .onChange(of: isSelected) { _, selected in
-        if selected && !isCardFocused { isCardFocused = true }
+      .onChange(of: selectedRowID) { _, selected in
+        if selected != nil && !isCardFocused { isCardFocused = true }
       }
       .onKeyPress(keys: [.space, .return, .upArrow, .downArrow, .leftArrow, .rightArrow, "i"]) { press in
         handleCardKey(press)
@@ -386,7 +403,8 @@ struct WorkspaceKanbanCard: View {
       }
       subtaskTree
     }
-    .padding(theme.space.xs)
+    .padding(.vertical, theme.space.xs)
+    .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
     .frame(maxWidth: .infinity, alignment: .leading)
     // A bordered row on the page, not a raised card: the column is already the
     // surface, and a second tone inside it was a card on a well. Square, like
@@ -396,17 +414,25 @@ struct WorkspaceKanbanCard: View {
     .background {
       ZStack {
         Rectangle().fill(isHovered ? theme.hover : theme.paper)
-        WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: hasKeyboard, radius: 0)
+        WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: hasKeyboard && isSelected, radius: 0)
       }
     }
     .onHover { isHovered = $0 }
     .overlay {
-      // Nothing when the selection is already drawing an edge — which it
-      // does only while it has the keyboard — so the card never carries two
-      // borders of different colours at once.
-      Rectangle().strokeBorder(
-        isDropTargeted ? theme.primary : (isSelected && hasKeyboard ? .clear : theme.border),
-        lineWidth: isDropTargeted ? theme.emphasisBorder : theme.hairline)
+      // Rules above and below only: the card runs the column's full width, so
+      // side edges would double the hairlines between columns. Nothing when
+      // the selection is already drawing an edge — which it does only while
+      // it has the keyboard — so the card never carries two borders at once.
+      if isDropTargeted {
+        Rectangle().strokeBorder(theme.primary, lineWidth: theme.emphasisBorder)
+      } else if !(isSelected && hasKeyboard) {
+        VStack(spacing: 0) {
+          Rectangle().fill(theme.border).frame(height: theme.hairline)
+          Spacer(minLength: 0)
+          Rectangle().fill(theme.border).frame(height: theme.hairline)
+        }
+        .allowsHitTesting(false)
+      }
     }
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
@@ -425,13 +451,15 @@ struct WorkspaceKanbanCard: View {
 
   private func handleCardKey(_ press: KeyPress) -> KeyPress.Result {
     guard isCardFocused else { return .ignored }
+    // The keys act on the row the selection is on, which may be a subtask.
+    let target = selectedRowID.flatMap { model.task(withID: $0) } ?? task
     if press.modifiers.contains(.option) {
       if press.key == .leftArrow { model.moveTaskToAdjacentColumn(task, by: -1) } else if press.key == .rightArrow { model.moveTaskToAdjacentColumn(task, by: 1) } else { return .ignored }
 
     } else if press.key == .space {
-      model.toggleTask(task)
+      model.toggleTask(target)
     } else if press.key == .return {
-      model.enterTask(task)
+      if target.isList { model.openItemList(target) } else { model.enterTask(target) }
     } else if press.key == .upArrow {
       model.selectAdjacentTask(by: -1)
     } else if press.key == .downArrow {
@@ -502,7 +530,7 @@ struct WorkspaceKanbanCard: View {
       }
       Button {
         isAddingSubtask = true
-        isTreeCollapsed = false
+        if isTreeCollapsed { model.toggleBoardTree(of: task) }
         subtaskComposerFocused = true
       } label: {
         Image(systemName: "plus")
@@ -515,7 +543,7 @@ struct WorkspaceKanbanCard: View {
       .help("Add a subtask")
       if !model.descendants(of: task).isEmpty {
         Button {
-          isTreeCollapsed.toggle()
+          model.toggleBoardTree(of: task)
         } label: {
           Image(systemName: isTreeCollapsed ? "chevron.down" : "chevron.up")
             .font(theme.captionFont)
@@ -554,7 +582,7 @@ struct WorkspaceKanbanCard: View {
     if !items.isEmpty || isAddingSubtask {
       let limit = WorkspaceBoardMetrics.visibleSubtaskRows
       VStack(alignment: .leading, spacing: 0) {
-        ForEach(Array(items.prefix(limit))) { item in
+        ForEach(model.boardTreeRows(of: task)) { item in
           subtaskRow(item)
         }
         if items.count > limit {
@@ -627,6 +655,13 @@ struct WorkspaceKanbanCard: View {
     .font(theme.captionFont)
     .padding(.vertical, theme.space.xxs)
     .padding(.leading, CGFloat(item.depth) * step)
+    // The same band as a card's selection, across the tree's width, so the
+    // arrow keys can be seen stepping through a card's subtasks.
+    .background {
+      WorkspaceSelectionBackground(
+        isSelected: selectedRowID == item.task.id,
+        hasKeyboard: hasKeyboard && selectedRowID == item.task.id, radius: 0)
+    }
     // Behind the padded row, so each guide runs its full height and meets
     // the next row's without a gap.
     .background(alignment: .leading) {

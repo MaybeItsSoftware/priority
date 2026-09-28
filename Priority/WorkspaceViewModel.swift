@@ -362,11 +362,25 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Set by `reloadNestedListsNow()`.
   var sidebarLayoutKey = 0
   var focusedBoardColumnID: String?
+  /// Cards whose subtask tree is folded away. On the model rather than the
+  /// card, because the arrow keys walk the tree rows a card is showing and
+  /// have to know which ones it is not.
+  var boardCollapsedCardIDs: Set<String> = []
 
+  /// The column the arrow keys are in. A subtask row counts as being in the
+  /// column of the card it is drawn on, not the column its own card would
+  /// sit in; and the column the keys were last walking wins, since a subtask
+  /// can be both a row on its parent's card and a card elsewhere.
   var activeBoardColumnID: String? {
-    if let task = selectedTask, let column = column(for: task) { return column.id }
-    return boardColumns.first(where: { $0.id == focusedBoardColumnID })?.id
-      ?? boardColumns.first?.id
+    let focused = boardColumns.first(where: { $0.id == focusedBoardColumnID })
+    if let selectedTaskID {
+      if let focused, boardRowIDs(in: focused).contains(selectedTaskID) { return focused.id }
+      if let columnID = boardColumnID(forTaskID: selectedTaskID) { return columnID }
+      if let owner = boardCardID(owning: selectedTaskID), let columnID = boardColumnID(forTaskID: owner) {
+        return columnID
+      }
+    }
+    return focused?.id ?? boardColumns.first?.id
   }
   var dragDestinationListID: String?
   /// Asks the app shell for the always-on-top companion. A counter rather than
