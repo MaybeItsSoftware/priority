@@ -78,8 +78,11 @@ extension WorkspaceViewModel {
   }
 
   func cycleNewTaskDestination(by offset: Int) {
-    guard isEverythingSelected, !lists.isEmpty else { return }
-    let current = lists.firstIndex { $0.id == newTaskListID } ?? 0
+    // A folder's lists: Everything's new tasks go to the inbox, so a folder
+    // is the one scope left with a choice to make.
+    let lists = scopeLists
+    guard selectedFolderID != nil, !lists.isEmpty else { return }
+    let current = lists.firstIndex { $0.id == folderScopeDestinationID } ?? 0
     newTaskListID = lists[min(max(0, current + offset), lists.count - 1)].id
   }
 

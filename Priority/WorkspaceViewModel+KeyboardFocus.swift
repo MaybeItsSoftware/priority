@@ -20,7 +20,9 @@ extension WorkspaceViewModel {
       quickCaptureStartDayOffset = nil
     }
     taskInsertionReference = nil
-    requestKeyboardFocus(.tasks)
+    // Not `requestKeyboardFocus(.tasks)`: the field is in the title bar now,
+    // and asking SwiftUI to focus the task pane would race it for the key.
+    desktopShortcutSequence.reset()
     taskComposerFocusRequest += 1
   }
 

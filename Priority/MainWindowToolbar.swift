@@ -2,7 +2,7 @@ import AppKit
 import PriorityCore
 import SwiftUI
 
-/// The main window's toolbar: where you are, and nothing else.
+/// The main window's toolbar: where you are, and the field to add a task.
 ///
 /// It exists because the modes were reachable only by a command-digit nobody
 /// had been told about — no strip, no menu item, nothing on screen naming the
@@ -12,6 +12,9 @@ import SwiftUI
 /// bar with the other dock toggles; Preferences is ⌘, and the app menu. Each
 /// control has one home.
 ///
+/// The add field joined it from the foot of the panes, where it sat on top of
+/// the status bar and existed only in the outline and the board.
+///
 /// The strip is SwiftUI hosted in an `NSHostingView` rather than
 /// `NSToolbarItem` targets, so `@Observable` drives it directly.
 @MainActor
@@ -19,6 +22,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
 
   private enum ItemID {
     static let modes = NSToolbarItem.Identifier("PriorityModes")
+    static let add = NSToolbarItem.Identifier("PriorityAddTask")
   }
 
   private let workspace: WorkspaceViewModel
@@ -44,7 +48,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
   // MARK: - NSToolbarDelegate
 
   func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    [.flexibleSpace, ItemID.modes, .flexibleSpace]
+    [.flexibleSpace, ItemID.modes, .flexibleSpace, ItemID.add]
   }
 
   func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -56,12 +60,21 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
     itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
     willBeInsertedIntoToolbar flag: Bool
   ) -> NSToolbarItem? {
-    guard itemIdentifier == ItemID.modes else { return nil }
-    let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-    item.label = "View"
-    item.paletteLabel = "View"
+    switch itemIdentifier {
+    case ItemID.modes: return item(itemIdentifier, label: "View", WorkspaceModeStrip())
+    case ItemID.add: return item(itemIdentifier, label: "Add Task", WorkspaceTitleBarAddField())
+    default: return nil
+    }
+  }
+
+  private func item(
+    _ identifier: NSToolbarItem.Identifier, label: String, _ content: some View
+  ) -> NSToolbarItem {
+    let item = NSToolbarItem(itemIdentifier: identifier)
+    item.label = label
+    item.paletteLabel = label
     let hostingView = NSHostingView(
-      rootView: WorkspaceModeStrip()
+      rootView: content
         .environment(workspace)
         .focusEffectDisabled()
         .themed(theme))

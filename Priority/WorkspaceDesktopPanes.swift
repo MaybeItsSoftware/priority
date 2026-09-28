@@ -66,11 +66,6 @@ struct WorkspaceOutlinePane: View {
         .scrollContentBackground(.hidden)
         .background(theme.paper)
         .simultaneousGesture(TapGesture().onEnded { model.reportKeyboardFocus(.tasks) })
-
-        WorkspaceScopedTaskComposer(board: false)
-          .environment(model)
-          .padding(.horizontal, FocusSurfaceMetrics.gutter)
-          .padding(.vertical, theme.space.sm)
       }
     } else {
       ContentUnavailableView("No list selected", systemImage: "list.bullet")

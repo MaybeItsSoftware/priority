@@ -405,9 +405,16 @@ item's own menu.
 
 ## The window
 
-The window is the app. It opens on Today, carries the mode strip in its
-title bar, and everything you can do you can do here. It is laid out the way an
-editor is:
+The window is the app. It opens on Today, carries the mode strip and the add
+field in its title bar, and everything you can do you can do here. It is laid
+out the way an editor is:
+
+- **Title bar** — the mode strip, and **Add a task** on the right (`a` or
+  `Cmd+N` to reach it). It names where the task will land: the list on screen
+  (inside the task you have opened, if any), the folder's chosen list
+  (`Cmd+Alt+[` / `]` to change it), or the **inbox** when no one list is on
+  screen — Everything included. Pressed on a task, `a` / `Alt+Return` /
+  `Alt+Shift+Return` place it below, above or inside that task instead.
 
 - **Left dock** — the sidebar of lists and folders. Lists only: Focus and the
   timeline are in the mode strip, not repeated as sidebar rows.
@@ -415,11 +422,12 @@ editor is:
   resizable column. Its visibility, width and tab are remembered, and it does
   not close itself when you navigate; with nothing selected the inspector says
   so.
-- **Status bar** — a thin strip along the foot. On the left, the dock toggles
-  and which region has the keyboard; in the middle, a half-typed key sequence
-  (`d…`), an error, or a passing message; on the right, the running block and
-  its clock (click to return to it), today's points and tasks done, and Google
-  Tasks sync.
+- **Status bar** — a thin strip along the foot. On the left, the sidebar's
+  toggle and which region has the keyboard; in the middle, a half-typed key
+  sequence (`d…`), an error, or a passing message; on the right, the running
+  block and its clock (click to return to it), today's points and tasks done,
+  Google Tasks sync, and at the right edge the right dock's Inspector and Done
+  toggles — each toggle on the side its pane opens on.
 
 Preferences is `Cmd+,` and the app menu; there is no gear in the window.
 

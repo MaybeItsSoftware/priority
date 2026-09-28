@@ -205,7 +205,7 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .listNewTaskDestination, title: "Choose where new tasks go", group: "Lists",
       keys: ["cmd+option+[", "cmd+option+]"], kind: .motion,
-      note: "In Everything, which sub-list a new task lands in"),
+      note: "In a folder, which of its lists a new task lands in"),
   ]
 
   // MARK: - Window

@@ -231,7 +231,7 @@ extension WorkspaceViewModel {
       if let key { cycleKeyboardFocus(by: key.contains("shift") ? -1 : 1) }
     case .planMatrixPlace: if let key { placeSelectionInQuadrant(key) }
     case .listNewTaskDestination:
-      if let key, isEverythingSelected { cycleNewTaskDestination(by: key.hasSuffix("[") ? -1 : 1) }
+      if let key { cycleNewTaskDestination(by: key.hasSuffix("[") ? -1 : 1) }
     // Same sign as the cursor keys, so the task travels the way the arrow
     // points: up the screen is up the ladder, which is *less* important.
     case .focusReorder: if let key { reorderFocusLadder(by: key.hasSuffix("up") ? 1 : -1) }

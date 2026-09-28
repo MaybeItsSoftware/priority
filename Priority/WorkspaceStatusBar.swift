@@ -4,9 +4,11 @@ import SwiftUI
 
 /// The strip along the foot of the window.
 ///
-/// Left: the docks and where the keyboard is. Middle: what is happening right
-/// now — a half-typed key sequence, a message, an error. Right: the running
-/// block, the day's points, and sync. It is the Zed status bar's layout, and
+/// Left: the left dock's toggle and where the keyboard is. Middle: what is
+/// happening right now — a half-typed key sequence, a message, an error.
+/// Right: the running block, the day's points, sync, and last, against the
+/// right edge, the right dock's tabs — each toggle on the side of the window
+/// its pane opens on. It is the Zed status bar's layout, and
 /// it takes over three jobs that had no home: the toolbar's dock toggles, the
 /// modal "Priority needs attention" alert, and the sequence prefix, which was
 /// held silently so a pressed `d` looked like a key that did nothing.
@@ -24,6 +26,7 @@ struct WorkspaceStatusBar: View {
       WorkspaceStatusMessage()
       Spacer(minLength: theme.space.sm)
       WorkspaceStatusTrailing()
+      rightDockToggles
     }
     .padding(.horizontal, theme.space.sm)
     .frame(height: Self.height)
@@ -39,6 +42,17 @@ struct WorkspaceStatusBar: View {
         symbol: "sidebar.leading", title: "Sidebar", command: .windowToggleSidebar,
         isOn: model.isSidebarVisible
       ) { model.toggleSidebar() }
+      Rectangle()
+        .fill(theme.border)
+        .frame(width: theme.hairline, height: theme.space.md)
+        .padding(.horizontal, theme.space.xs)
+      MicroLabel(Self.regionTitle(model.keyboardFocusArea))
+        .help("Where the keyboard is. ⌃Tab moves it on.")
+    }
+  }
+
+  private var rightDockToggles: some View {
+    HStack(spacing: theme.space.xxs) {
       ForEach(WorkspaceDockTab.allCases) { tab in
         WorkspaceStatusToggle(
           symbol: tab.symbolName, title: tab.title, command: tab.command,
@@ -51,12 +65,6 @@ struct WorkspaceStatusBar: View {
           }
         }
       }
-      Rectangle()
-        .fill(theme.border)
-        .frame(width: theme.hairline, height: theme.space.md)
-        .padding(.horizontal, theme.space.xs)
-      MicroLabel(Self.regionTitle(model.keyboardFocusArea))
-        .help("Where the keyboard is. ⌃Tab moves it on.")
     }
   }
 

@@ -68,11 +68,6 @@ struct WorkspaceKanbanBoard: View {
           }
           FocusRule()
           WorkspaceKanbanColumnStrip(columnWidth: columnWidth)
-          FocusRule()
-          WorkspaceScopedTaskComposer(board: true)
-            .environment(model)
-            .padding(.horizontal, FocusSurfaceMetrics.gutter)
-            .padding(.vertical, theme.space.sm)
         }
       }
       .background(theme.paper)
