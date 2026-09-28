@@ -12,20 +12,50 @@ import UniformTypeIdentifiers
 /// internal rather than file-private now only because they are read from the
 /// shell's file; nothing outside the app should reach for them.
 
+/// The board's column geometry.
+///
+/// Columns sit edge to edge with a hairline between them rather than as
+/// separate filled wells with gaps, so the only figures left are the clamp on a
+/// column's width. They are layout decisions, not theme tokens: a theme owns
+/// spacing and type, not how many cards fit across a window.
+enum WorkspaceBoardMetrics {
+  /// The narrowest a column gets before the board scrolls sideways instead:
+  /// room for a card's handle, check, two or three words of title, and its
+  /// focus and disclosure controls.
+  static let minColumnWidth: CGFloat = 172
+  /// The widest. Past this a card's title runs to a line length that is read
+  /// rather than scanned, and five default columns stop fitting on a laptop.
+  static let maxColumnWidth: CGFloat = 340
+
+  /// The inset before the first column and after the last. The pane gutter
+  /// less a column's own padding, so the first column's label lines up with
+  /// the pane title above it.
+  static func edgeInset(_ theme: Theme) -> CGFloat {
+    max(FocusSurfaceMetrics.gutter - theme.space.md, 0)
+  }
+
+  /// Five default columns should be visible together at useful desktop
+  /// widths. Fewer or custom columns expand instead of leaving an oversized
+  /// empty canvas; very narrow windows still scroll.
+  static func columnWidth(available width: CGFloat, columns: Int, theme: Theme) -> CGFloat {
+    let count = CGFloat(max(columns, 1))
+    let rules = theme.hairline * (count - 1)
+    let usable = width - 2 * edgeInset(theme) - rules
+    return max(minColumnWidth, min(maxColumnWidth, usable / count))
+  }
+}
+
 struct WorkspaceKanbanBoard: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
 
   var body: some View {
     if model.selectedList == nil && !model.isMultiListScope {
       ContentUnavailableView("No list selected", systemImage: "rectangle.split.3x1")
     } else {
       GeometryReader { geometry in
-        let columnCount = CGFloat(max(model.boardColumns.count, 1))
-        // Five default columns should be visible together at useful desktop
-        // widths. Fewer/custom columns expand naturally instead of leaving an
-        // oversized empty canvas; very narrow windows still scroll.
-        let available = geometry.size.width - 36 - 14 * (columnCount - 1)
-        let columnWidth = max(172, min(340, available / columnCount))
+        let columnWidth = WorkspaceBoardMetrics.columnWidth(
+          available: geometry.size.width, columns: model.boardColumns.count, theme: theme)
         VStack(spacing: 0) {
           // The board said nowhere on its face which list it was showing, so
           // ⌘2 from the outline took the scope name off the screen.
@@ -38,12 +68,14 @@ struct WorkspaceKanbanBoard: View {
           }
           FocusRule()
           WorkspaceKanbanColumnStrip(columnWidth: columnWidth)
+          FocusRule()
           WorkspaceScopedTaskComposer(board: true)
             .environment(model)
-          .padding(14)
+            .padding(.horizontal, FocusSurfaceMetrics.gutter)
+            .padding(.vertical, theme.space.sm)
         }
       }
-      .background(.background)
+      .background(theme.paper)
     }
   }
 }
@@ -53,6 +85,7 @@ struct WorkspaceKanbanBoard: View {
 /// changed, not the board's header, composer and geometry.
 private struct WorkspaceKanbanColumnStrip: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let columnWidth: CGFloat
   @State private var visibleColumnIDs: Set<String> = []
 
@@ -64,21 +97,28 @@ private struct WorkspaceKanbanColumnStrip: View {
     ScrollViewReader { scrollProxy in
       GeometryReader { viewport in
         ScrollView(.horizontal) {
-          LazyHStack(alignment: .top, spacing: 14) {
+          // Edge to edge, a hairline between each pair: columns are regions
+          // of one surface, not cards laid on it.
+          LazyHStack(alignment: .top, spacing: 0) {
             ForEach(model.boardColumns) { column in
               WorkspaceKanbanColumnView(
                 column: column,
                 width: columnWidth,
-                height: max(100, viewport.size.height - 36),
+                height: viewport.size.height,
                 hasKeyboard: tasksHaveKeyboard && activeColumnID == column.id,
                 tasksHaveKeyboard: tasksHaveKeyboard,
                 selectedCardID: column.id == selectedColumnID ? selectedID : nil)
                 .environment(model)
                 .id(column.id)
+              if column.id != model.boardColumns.last?.id {
+                Rectangle()
+                  .fill(theme.border)
+                  .frame(width: theme.hairline, height: viewport.size.height)
+              }
             }
           }
           .scrollTargetLayout()
-          .padding(FocusSurfaceMetrics.gutter)
+          .padding(.horizontal, WorkspaceBoardMetrics.edgeInset(theme))
           .background(WorkspaceHorizontalOverscrollDisabler())
         }
         .onScrollTargetVisibilityChange(idType: String.self, threshold: 0.9) { ids in
@@ -112,14 +152,17 @@ struct WorkspaceKanbanColumnView: View {
   @State private var visibleCardIDs: Set<String> = []
   @FocusState private var topComposerFocused: Bool
 
+  /// Nothing at rest — the hairline between columns is the strip's, not the
+  /// column's. An edge appears only to say something: the keyboard is here, or
+  /// a card is about to land here.
   private var columnBorder: Color {
     if isDropTargeted { return theme.primary }
-    return hasKeyboard ? theme.focusRing : theme.border
+    return hasKeyboard ? theme.focusRing : .clear
   }
 
   var body: some View {
     let tasks = model.tasks(in: column)
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(spacing: theme.space.xs) {
         // The micro-label exists for exactly this and was being hand-rolled
         // one point smaller with no tracking, so column titles read narrower
@@ -129,7 +172,7 @@ struct WorkspaceKanbanColumnView: View {
           .truncationMode(.tail)
           .help(column.title)
         Text("\(tasks.count)")
-          .font(theme.monoFont(size: 10))
+          .font(theme.monoFont(size: theme.type.microLabel.size))
           .foregroundStyle(theme.dim)
           .monospacedDigit()
         Spacer()
@@ -140,6 +183,7 @@ struct WorkspaceKanbanColumnView: View {
           Image(systemName: "plus")
         }
         .buttonStyle(.plain)
+        .foregroundStyle(theme.muted)
         .focusable()
         .accessibilityLabel("Add task at top of \(column.title)")
         .commandHelp(.taskNew, note: "Add highest-priority task in \(column.title)")
@@ -158,7 +202,12 @@ struct WorkspaceKanbanColumnView: View {
 
       if isAddingAtTop {
         TextField("Add at top", text: $topTaskTitle)
-          .textFieldStyle(.roundedBorder)
+          .textFieldStyle(.plain)
+          .font(theme.bodyFont())
+          .padding(theme.space.xs)
+          .overlay(
+            RoundedRectangle(cornerRadius: theme.controlRadius)
+              .strokeBorder(theme.focusRing, lineWidth: theme.hairline))
           .focused($topComposerFocused)
           .onSubmit {
             let title = topTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -176,7 +225,7 @@ struct WorkspaceKanbanColumnView: View {
 
       ScrollViewReader { cardProxy in
         ScrollView(.vertical) {
-          LazyVStack(alignment: .leading, spacing: 10) {
+          LazyVStack(alignment: .leading, spacing: theme.space.xs) {
             ForEach(tasks) { task in
               WorkspaceKanbanCard(
                 task: task, column: column,
@@ -187,11 +236,11 @@ struct WorkspaceKanbanColumnView: View {
             }
 
             if tasks.isEmpty {
-              VStack(spacing: 6) {
+              VStack(spacing: theme.space.xs) {
                 Image(systemName: "arrow.down.doc")
-                  .font(.title3)
+                  .font(theme.titleFont)
                 Text(isDropTargeted ? "Drop card here" : "Drop cards here")
-                  .font(.caption.weight(.medium))
+                  .font(theme.captionFont)
               }
               .foregroundStyle(isDropTargeted ? theme.primary : theme.dim)
               .frame(maxWidth: .infinity)
@@ -210,7 +259,7 @@ struct WorkspaceKanbanColumnView: View {
             .accessibilityLabel("Add task to \(column.title)")
           }
           .scrollTargetLayout()
-          .padding(.bottom, 2)
+          .padding(.bottom, theme.space.xxs)
           .background(WorkspaceHorizontalOverscrollDisabler())
         }
         .onScrollTargetVisibilityChange(idType: String.self) { ids in
@@ -230,17 +279,20 @@ struct WorkspaceKanbanColumnView: View {
     .padding(theme.space.md)
     .frame(width: width, alignment: .topLeading)
     .frame(height: height, alignment: .topLeading)
-    .background(
-      isDropTargeted ? theme.color(.primary, opacity: 0.12) : theme.well,
-      in: RoundedRectangle(cornerRadius: theme.panelRadius))
-    // A column is a surface, so it gets a hairline like every other surface. It
-    // had none, and borrowed the drop target's 2pt accent ring to show that the
-    // keyboard was in it — so "a card is about to land here" and "the arrow keys
-    // are in this column" looked identical.
+    // On the page, not in a well: a column is a region of the board, and the
+    // hairlines between columns are what divide it.
+    .background(isDropTargeted ? theme.color(.primary, opacity: Theme.statusFillOpacity) : .clear)
+    // "A card is about to land here" is the primary hue at the emphasis
+    // weight; "the arrow keys are in this column" is the focus ring at a
+    // hairline. They used to be the same 2pt accent ring.
     .overlay(
-      RoundedRectangle(cornerRadius: theme.panelRadius)
+      Rectangle()
         .strokeBorder(columnBorder, lineWidth: isDropTargeted ? theme.emphasisBorder : theme.hairline)
+        .allowsHitTesting(false)
     )
+    // The fill used to make the whole column hit-testable; with none, the
+    // shape has to say so, or a click on an empty column falls through.
+    .contentShape(Rectangle())
     .simultaneousGesture(TapGesture().onEnded {
       if tasks.isEmpty {
         model.focusedBoardColumnID = column.id
@@ -266,6 +318,7 @@ struct WorkspaceKanbanCard: View {
   @FocusState private var isCardFocused: Bool
   @State private var isExpanded = false
   @State private var isDropTargeted = false
+  @State private var isHovered = false
   @State private var newSubtaskTitle = ""
   let task: WorkspaceTask
   let column: WorkspaceKanbanColumn
@@ -307,37 +360,39 @@ struct WorkspaceKanbanCard: View {
   }
 
   private var cardSurface: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       cardHeading
       if !task.isList, let dueAt = task.dueAt {
-        HStack(spacing: 4) {
+        HStack(spacing: theme.space.xs) {
           Image(systemName: "calendar")
           Text(dueAt, format: .dateTime.month().day())
-        }.font(.caption).foregroundStyle(.secondary)
+        }.font(theme.captionFont).foregroundStyle(theme.muted)
       }
       if task.isList {
         Text("List · \(model.descendants(of: task).filter { !$0.task.isList }.count) tasks")
-          .font(.caption).foregroundStyle(.secondary)
+          .font(theme.captionFont).foregroundStyle(theme.muted)
       } else {
         WorkspaceTaskPlanningBadges(task: task)
       }
       if isExpanded { inlineSubtasks }
     }
-    .padding(10)
+    .padding(theme.space.sm)
     .frame(maxWidth: .infinity, alignment: .leading)
-    // A card is a raised surface with a hairline, and *then* a selection on
-    // top of it — the two were one expression at radius 9, which is not on the
-    // scale and left the selected card no ring to show for holding the keyboard.
+    // A bordered row on the page, not a raised card: the column is already the
+    // surface, and a second tone inside it was a card on a well. Hover is the
+    // theme's hover fill; selection draws on top of it, never instead of the
+    // border's shape.
     .background {
-      let shape = RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous)
+      let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
       ZStack {
-        shape.fill(theme.raised)
+        shape.fill(isHovered ? theme.hover : theme.paper)
         WorkspaceSelectionBackground(
-          isSelected: isSelected, hasKeyboard: hasKeyboard, radius: theme.panelRadius)
+          isSelected: isSelected, hasKeyboard: hasKeyboard, radius: theme.controlRadius)
       }
     }
+    .onHover { isHovered = $0 }
     .overlay {
-      let shape = RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous)
+      let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
       // Nothing when the selection is already drawing an edge, so the card
       // never carries two borders of different colours at once.
       shape.strokeBorder(
@@ -383,11 +438,11 @@ struct WorkspaceKanbanCard: View {
   }
 
   private var cardHeading: some View {
-    HStack(spacing: 7) {
+    HStack(spacing: theme.space.xs) {
       Image(systemName: "line.3.horizontal")
-        .font(.caption2)
-        .foregroundStyle(.tertiary)
-        .frame(width: 13, height: 24)
+        .font(theme.microLabelFont)
+        .foregroundStyle(theme.dim)
+        .frame(width: theme.space.md, height: theme.space.xl)
         .contentShape(Rectangle())
         .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
         .accessibilityLabel("Drag \(task.title)")
@@ -396,7 +451,7 @@ struct WorkspaceKanbanCard: View {
         if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
       } label: {
         Image(systemName: model.itemSymbol(for: task))
-          .foregroundStyle(task.status == .open ? Color.secondary : model.themeColor(.success))
+          .foregroundStyle(task.status == .open ? theme.muted : theme.success)
       }
       .buttonStyle(.plain)
       .focusable()
@@ -405,6 +460,8 @@ struct WorkspaceKanbanCard: View {
         model.reportKeyboardFocus(.tasks)
       }
       .buttonStyle(.plain)
+      .font(theme.bodyFont())
+      .foregroundStyle(task.status == .open ? theme.ink : theme.muted)
       .focusable()
       .multilineTextAlignment(.leading)
       .lineLimit(2)
@@ -424,7 +481,8 @@ struct WorkspaceKanbanCard: View {
       } label: {
         Image(systemName: model.activeFocusSession?.activeTaskId == task.id ? "bolt.fill" :
           model.activeFocusSession == nil ? "bolt" : "plus")
-          .font(.caption)
+          .font(theme.captionFont)
+          .foregroundStyle(model.activeFocusSession?.activeTaskId == task.id ? theme.primary : theme.muted)
       }
       .buttonStyle(.plain)
       .focusable()
@@ -437,7 +495,8 @@ struct WorkspaceKanbanCard: View {
         isExpanded.toggle()
       } label: {
         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-          .font(.caption.weight(.semibold))
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
       }
       .buttonStyle(.plain)
       .focusable()
@@ -447,43 +506,58 @@ struct WorkspaceKanbanCard: View {
   }
 
   private var inlineSubtasks: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Divider()
+    VStack(alignment: .leading, spacing: theme.space.xs) {
+      FocusRule()
       let items = model.descendants(of: task)
       if items.isEmpty {
         Text("No subtasks yet")
-          .font(.caption)
-          .foregroundStyle(.tertiary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.dim)
       } else {
         ScrollView(.vertical) {
-          LazyVStack(alignment: .leading, spacing: 5) {
+          LazyVStack(alignment: .leading, spacing: theme.space.xs) {
             ForEach(items) { item in
               inlineSubtaskRow(item)
             }
           }
         }
-        .frame(height: min(CGFloat(items.count) * 30, 180))
+        .frame(height: min(CGFloat(items.count) * Self.subtaskRowPitch(theme), Self.subtaskListMaxHeight(theme)))
       }
-      HStack(spacing: 5) {
+      HStack(spacing: theme.space.xs) {
         Image(systemName: "plus")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(theme.muted)
         TextField("Add subtask", text: $newSubtaskTitle)
           .textFieldStyle(.plain)
           .onSubmit { submitSubtask() }
           .accessibilityLabel("Add subtask under \(task.title)")
       }
-      .font(.caption)
+      .font(theme.captionFont)
     }
   }
 
+  /// One inline subtask row and the gap after it: a caption line, room for
+  /// its column menu, and the stack's spacing.
+  private static func subtaskRowPitch(_ theme: Theme) -> CGFloat {
+    theme.space.xl + theme.space.xs
+  }
+
+  /// Six rows, then the list scrolls inside the card rather than pushing the
+  /// rest of the column off screen.
+  private static func subtaskListMaxHeight(_ theme: Theme) -> CGFloat {
+    subtaskRowPitch(theme) * 6
+  }
+
+  /// Room for a short column name in the subtask's column menu; a longer one
+  /// truncates rather than squeezing the subtask's title.
+  private static let subtaskColumnMenuWidth: CGFloat = 50
+
   private func inlineSubtaskRow(_ item: TaskOutlineItem) -> some View {
-    HStack(spacing: 5) {
+    HStack(spacing: theme.space.xs) {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
         Image(systemName: model.itemSymbol(for: item.task))
-          .font(.caption)
+          .foregroundStyle(theme.muted)
       }
       .buttonStyle(.plain)
       .focusable()
@@ -504,15 +578,15 @@ struct WorkspaceKanbanCard: View {
       } label: {
         Text(model.column(for: item.task)?.title ?? "Backlog")
           .lineLimit(1)
-          .font(.caption2)
-          .frame(maxWidth: 50)
+          .font(theme.microLabelFont)
+          .frame(maxWidth: Self.subtaskColumnMenuWidth)
       }
       .menuStyle(.borderlessButton)
       .focusable()
       .commandHelp(.taskMove, note: "Move \(item.task.title) to a column")
     }
-    .font(.caption)
-    .padding(.leading, CGFloat(item.depth) * 10)
+    .font(theme.captionFont)
+    .padding(.leading, CGFloat(item.depth) * theme.space.md)
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
     .contextMenu { WorkspaceItemActions(task: item.task) }
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: nil) { providers in

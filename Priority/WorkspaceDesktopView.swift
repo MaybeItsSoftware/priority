@@ -226,11 +226,13 @@ struct TaskComposer: View {
   }
 
   var body: some View {
-    HStack {
+    HStack(spacing: theme.space.sm) {
       Image(systemName: "plus")
         .foregroundStyle(theme.muted)
       TextField("Add a task", text: $title)
         .textFieldStyle(.plain)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.ink)
         .focused($isFocused)
         .onSubmit { submit() }
         .onExitCommand { title = ""; isFocused = false; onCancel() }
@@ -240,8 +242,10 @@ struct TaskComposer: View {
         KeyCap(WorkspaceCommandHelpText.firstKey(for: .taskNew))
       }
     }
-    .padding(theme.space.sm)
-    .background(theme.well, in: RoundedRectangle(cornerRadius: theme.controlRadius))
+    .padding(.horizontal, theme.space.sm)
+    .padding(.vertical, theme.space.xs)
+    // An input on the page: a hairline, no fill. It was a filled well, which
+    // on a board of columns read as one more card rather than a place to type.
     .overlay(
       RoundedRectangle(cornerRadius: theme.controlRadius)
         .strokeBorder(isFocused ? theme.focusRing : theme.inputBorder,
@@ -282,6 +286,8 @@ private final class QuickCaptureNSTextField: NSTextField {
 private struct QuickCaptureTextField: NSViewRepresentable {
   @Binding var text: String
   let focusRequest: Int
+  let font: NSFont
+  let textColor: NSColor
   let onSubmit: () -> Void
   let onCancel: () -> Void
   let onMoveDestination: (Int) -> Void
@@ -295,13 +301,14 @@ private struct QuickCaptureTextField: NSViewRepresentable {
     field.isBordered = false
     field.drawsBackground = false
     field.focusRingType = .none
-    field.font = .systemFont(ofSize: 14, weight: .medium)
     field.placeholderString = "What needs doing?"
     return field
   }
 
   func updateNSView(_ field: QuickCaptureNSTextField, context: Context) {
     context.coordinator.parent = self
+    if field.font != font { field.font = font }
+    if field.textColor != textColor { field.textColor = textColor }
     if field.stringValue != text { field.stringValue = text }
     field.onSubmit = onSubmit
     field.onCancel = onCancel
@@ -326,56 +333,84 @@ private struct QuickCaptureTextField: NSViewRepresentable {
 
 private struct GlobalQuickCaptureComposer: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   @State private var title = ""
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 9) {
-      HStack(spacing: 9) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
+      HStack(spacing: theme.space.sm) {
         Image(systemName: "tray.and.arrow.down.fill")
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundStyle(.tint)
+          .foregroundStyle(theme.primary)
         QuickCaptureTextField(
           text: $title,
           focusRequest: model.taskComposerFocusRequest,
+          font: Self.fieldFont(theme),
+          textColor: NSColor(theme.ink),
           onSubmit: submit,
           onCancel: cancel,
           onMoveDestination: model.moveQuickCaptureDestination,
           onMoveStartDay: model.moveQuickCaptureStartDay)
-          .frame(height: 22)
+          .frame(height: theme.space.xl)
       }
 
-      HStack(spacing: 8) {
-        capturePill(
+      HStack(spacing: theme.space.sm) {
+        captureChip(
           icon: "arrow.up.arrow.down",
           text: model.quickCaptureDestination?.path ?? "Inbox",
           accessibility: "Destination list")
-        capturePill(
+        captureChip(
           icon: "arrow.left.arrow.right",
           text: model.quickCaptureStartLabel,
           accessibility: "Start day")
-        Spacer(minLength: 6)
+        Spacer(minLength: theme.space.xs)
         Text("↩ Add  ·  Esc Cancel")
-          .font(.caption2)
-          .foregroundStyle(.tertiary)
+          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .foregroundStyle(theme.dim)
       }
     }
-    .padding(12)
-    .background(
-      LinearGradient(
-        colors: [Color.accentColor.opacity(0.13), Color.accentColor.opacity(0.035)],
-        startPoint: .topLeading, endPoint: .bottomTrailing),
-      in: RoundedRectangle(cornerRadius: 10))
-    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor.opacity(0.3)))
+    .padding(theme.space.md)
+    // The info status treatment — a tint, a border and an icon of one hue —
+    // because capture is a mode you are in, not a card. It was a diagonal
+    // accent gradient at radius 10, off both the palette and the scale.
+    .themedSurface(
+      theme,
+      fill: theme.color(.primary, opacity: Theme.statusFillOpacity),
+      radius: theme.panelRadius,
+      stroke: theme.color(.primary, opacity: Theme.statusBorderOpacity))
   }
 
-  private func capturePill(icon: String, text: String, accessibility: String) -> some View {
+  /// A squarish chip, bordered not filled: where the thought will be filed
+  /// and when it starts. They were capsules on a translucent fill.
+  private func captureChip(icon: String, text: String, accessibility: String) -> some View {
     Label(text, systemImage: icon)
-      .font(.caption.weight(.medium))
+      .font(theme.captionFont)
+      .foregroundStyle(theme.ink)
       .lineLimit(1)
-      .padding(.horizontal, 8)
-      .padding(.vertical, 4)
-      .background(.background.opacity(0.65), in: Capsule())
+      .padding(.horizontal, theme.space.sm)
+      .padding(.vertical, theme.space.xxs)
+      .themedSurface(theme, fill: theme.paper, radius: theme.controlRadius)
       .accessibilityLabel("\(accessibility): \(text)")
+  }
+
+  /// The theme's body face as AppKit needs it, for the one field here that
+  /// has to be an `NSTextField`. Resolved the way `Theme.font` resolves it:
+  /// the named families if one is installed, the design otherwise.
+  static func fieldFont(_ theme: Theme) -> NSFont {
+    let size = theme.scale.body
+    let face = theme.type.body
+    if let name = face.families.first(where: { NSFont(name: $0, size: size) != nil }),
+      let font = NSFont(name: name, size: size) {
+      return font
+    }
+    let system = NSFont.systemFont(ofSize: size)
+    let design: NSFontDescriptor.SystemDesign
+    switch face.design {
+    case .serif: design = .serif
+    case .monospaced: design = .monospaced
+    case .rounded: design = .rounded
+    case .sans: design = .default
+    }
+    return system.fontDescriptor.withDesign(design).flatMap { NSFont(descriptor: $0, size: size) } ?? system
   }
 
   private func submit() {
@@ -393,14 +428,20 @@ private struct GlobalQuickCaptureComposer: View {
 
 struct WorkspaceScopedTaskComposer: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let board: Bool
+
+  /// The destination picker's width: the narrowest board column, so the
+  /// picker never claims more of the strip than one column does, and a long
+  /// list name truncates inside it rather than squeezing the field.
+  static let destinationPickerWidth = WorkspaceBoardMetrics.minColumnWidth
 
   var body: some View {
     Group {
       if model.isQuickCaptureActive {
         GlobalQuickCaptureComposer()
       } else {
-        HStack(spacing: 10) {
+        HStack(spacing: theme.space.sm) {
           if model.isMultiListScope {
             Picker("In list", selection: Bindable(model).newTaskListID) {
               ForEach(model.scopeLists) { list in
@@ -408,8 +449,9 @@ struct WorkspaceScopedTaskComposer: View {
               }
             }
             .pickerStyle(.menu)
+            .font(theme.captionFont)
             .focusable()
-            .frame(width: 170)
+            .frame(width: Self.destinationPickerWidth)
             .commandHelp(.listNewTaskDestination, note: "Choose the sub-list for new tasks")
           }
           TaskComposer(focusRequest: model.taskComposerFocusRequest, onCancel: {
