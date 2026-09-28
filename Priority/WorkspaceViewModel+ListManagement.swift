@@ -1,0 +1,100 @@
+import Foundation
+import PriorityCore
+import PriorityWorkspace
+
+/// Creating, moving and presenting lists and folders: the creation and move
+/// overlays, folder expansion and list icons. Split from
+/// `WorkspaceViewModel.swift` for size — it is the same type.
+extension WorkspaceViewModel {
+  static let availableListIcons: [(symbol: String, label: String)] = [
+    ("list.bullet", "List"), ("tray", "Inbox"), ("briefcase", "Work"),
+    ("graduationcap", "Study"), ("hammer", "Projects"), ("house", "Home"),
+    ("heart", "Health"), ("figure.run", "Fitness"), ("book", "Reading"),
+    ("music.note", "Music"), ("sailboat", "Sailing"), ("star", "Goals"),
+    ("person.2", "People"), ("calendar", "Plans"), ("lightbulb", "Ideas"),
+    ("leaf", "Habits"), ("airplane", "Travel"), ("gamecontroller", "Fun")
+  ]
+
+  func icon(for list: TaskList) -> String {
+    listIcons[list.id] ?? (list.systemRole == .inbox ? "tray" : "list.bullet")
+  }
+
+  func setIcon(_ symbol: String, for list: TaskList) {
+    listIcons[list.id] = symbol
+    UserDefaults.standard.set(listIcons, forKey: "workspaceListIconsV1")
+  }
+
+  func requestMoveSelectedTask() {
+    if keyboardFocusArea == .sidebar {
+      if let scope = scopeTask, scope.isList {
+        requestMove(scope)
+      } else if let list = selectedList, !list.isSystemList {
+        presentOverlay(.move(WorkspaceItemMoveRequest(payload: WorkspaceTaskDrag.listPrefix + list.id,
+          title: list.name, sourceListID: list.id, taskID: nil)))
+      }
+      return
+    }
+    if selectedTask == nil { selectedTaskID = visibleNavigationTasks.first?.id }
+    guard let task = selectedTask else { return }
+    requestMove(task)
+  }
+
+  func requestMove(_ task: WorkspaceTask) {
+    presentOverlay(.move(WorkspaceItemMoveRequest(payload: task.id, title: task.title,
+      sourceListID: task.listId, taskID: task.id)))
+  }
+
+  func requestCreation(_ kind: WorkspaceCreationKind, in parentFolderID: String? = nil) {
+    creationIsNested = false
+    creationParentFolderID = parentFolderID
+    presentOverlay(.create(kind))
+  }
+
+  func requestListCreationForSelection() {
+    if keyboardFocusArea == .tasks, !isEverythingSelected, selectedListID != nil {
+      requestNestedListCreation(under: scopeTask)
+    } else {
+      requestCreation(.list, in: selectedFolderID)
+    }
+  }
+
+  func requestFolderCreationForSelection() {
+    requestCreation(.folder, in: selectedFolderID)
+  }
+
+  func createList(named name: String, in folderId: String? = nil) {
+    guard let store, let workspace else { return }
+    do {
+      let list = try store.createList(workspaceId: workspace.id, name: name, folderId: folderId)
+      try load()
+      selectList(list.id)
+      errorMessage = nil
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  func createFolder(named name: String, in parentFolderId: String? = nil) {
+    guard let store, let workspace else { return }
+    perform {
+      _ = try store.createFolder(workspaceId: workspace.id, name: name, parentFolderId: parentFolderId)
+      try load()
+    }
+  }
+
+  func isFolderExpanded(_ folder: ListFolder) -> Bool {
+    expandedFolderIDs.contains(folder.id)
+  }
+
+  func setFolderExpanded(_ folder: ListFolder, expanded: Bool) {
+    if expanded {
+      expandedFolderIDs.insert(folder.id)
+    } else {
+      expandedFolderIDs.remove(folder.id)
+    }
+  }
+
+  func toggleFolderExpansion(_ folder: ListFolder) {
+    setFolderExpanded(folder, expanded: !isFolderExpanded(folder))
+  }
+}

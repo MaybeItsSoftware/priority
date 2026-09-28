@@ -464,6 +464,10 @@ follow. Recorded here rather than silently left stale:
   extension pattern the rest of the app uses (`+Sidebar`, `+Focus`, `+Search`,
   `+History`) is the obvious remedy and has not been applied to the two views.
 - `WorkspaceStore` is now split as `+Dailies`, `+Import`, `+Search`, `+Undo`.
+- 2026-09-28: `WorkspaceViewModel.swift` is split the same way (`+Import`,
+  `+Loading`, `+Selection`, `+KeyboardFocus`, `+ListManagement`,
+  `+TaskMutations`), leaving ~690 lines of stored state, init and `load()`.
+  Its `file_length` and `type_body_length` warnings are gone: 24 → **22**.
 
 ## Out of Scope
 

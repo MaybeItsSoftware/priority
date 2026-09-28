@@ -139,13 +139,6 @@ enum WorkspaceSidebarItem: Identifiable {
 /// its Checkvist compatibility panel deliberately do not read this state.
 @MainActor
 @Observable final class WorkspaceViewModel {
-  private static let legacyMigrationKey = "localWorkspaceMigratedOfflineTasksV1"
-  private static let checkvistMigrationKeysKey = "localWorkspaceMigratedCheckvistListIDsV1"
-  private static let checkvistWorkspaceListIDsKey = "localWorkspaceCheckvistListIDsV1"
-  private static let kanbanColumnsKey = "localWorkspaceKanbanColumnsV1"
-  /// Read once by `migrateLegacyDailiesIfNeeded`, never written again.
-  private static let dailyProgressTaskIDsKey = "localWorkspaceDailyProgressTaskIDsV1"
-  private static let dailyMigrationKey = "localWorkspaceMigratedDailiesV1"
   static let everythingScopeKey = "localWorkspaceEverythingScopeV1"
   /// Names the service a task was imported from, and so which identifiers its
   /// `sourceId` values belong to. Stored on the task, hence not free to change.
@@ -155,7 +148,7 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Internal rather than private so `WorkspaceViewModel+Dailies.swift` —
   /// the same type, split only for size — can reach it.
   @ObservationIgnored var store: WorkspaceStore?
-  @ObservationIgnored private let legacyStore: LocalTaskStore
+  @ObservationIgnored let legacyStore: LocalTaskStore
   /// Title, task id, list name, due date, all-day → the created event's id,
   /// which is what lets Priority notice later that it was cleared.
   @ObservationIgnored var googleCalendarEventCreator:
@@ -179,7 +172,10 @@ enum WorkspaceSidebarItem: Identifiable {
   private(set) var folders: [ListFolder] = []
   private(set) var lists: [TaskList] = []
   private(set) var archivedLists: [TaskList] = []
-  private(set) var outline: [TaskOutlineItem] = [] {
+  /// The outline and board state below is written only by
+  /// `WorkspaceViewModel+Loading.swift`; internal rather than `private(set)`
+  /// so that file can.
+  var outline: [TaskOutlineItem] = [] {
     didSet {
       outlineByList = Dictionary(grouping: outline) { $0.task.listId }
       outlineOpenCount = outline.reduce(0) { $0 + ($1.task.status == .open ? 1 : 0) }
@@ -189,7 +185,7 @@ enum WorkspaceSidebarItem: Identifiable {
   /// rather than on every render of the combined outline.
   private(set) var outlineByList: [String: [TaskOutlineItem]] = [:]
   private(set) var outlineOpenCount = 0
-  private(set) var boardTasks: [WorkspaceTask] = []
+  var boardTasks: [WorkspaceTask] = []
   /// Bumped whenever `taskCache` is rebuilt, so a view that resolved a task
   /// by id re-resolves it. Written by `rebuildTaskCache()`.
   var taskContentRevision = 0
@@ -222,20 +218,20 @@ enum WorkspaceSidebarItem: Identifiable {
   var undoLabel: String?
   var redoLabel: String?
   var listTaskCounts: [String: Int] = [:]
-  private(set) var boardCrossColumnTasks: [WorkspaceTask] = []
-  private(set) var boardDescendants: [String: [TaskOutlineItem]] = [:]
-  private(set) var boardTaskParents: [String: WorkspaceTask] = [:]
+  var boardCrossColumnTasks: [WorkspaceTask] = []
+  var boardDescendants: [String: [TaskOutlineItem]] = [:]
+  var boardTaskParents: [String: WorkspaceTask] = [:]
   /// The actual parent whose children are visible on the board. A Checkvist
   /// import can contain one root project whose title is identical to its list;
   /// that project is a transport wrapper, not useful work to show as the
   /// board's only card.
-  private(set) var boardParentTaskID: String?
-  private(set) var boardColumns: [WorkspaceKanbanColumn] = WorkspaceKanbanColumn.blitzitDefaults
-  private(set) var boardTaskColumns: [String: String] = [:]
+  var boardParentTaskID: String?
+  var boardColumns: [WorkspaceKanbanColumn] = WorkspaceKanbanColumn.blitzitDefaults
+  var boardTaskColumns: [String: String] = [:]
   var boardTasksByColumn: [String: [WorkspaceTask]] = [:]
   var boardColumnsByID: [String: WorkspaceKanbanColumn] = [:]
   var boardVisibleTaskIDs: Set<String> = []
-  private(set) var matrixPositions: [String: TaskMatrixPosition] = [:]
+  var matrixPositions: [String: TaskMatrixPosition] = [:]
   var viewMode: WorkspaceViewMode = .today
   /// Virtual parent of every active list. The tasks remain stored in their
   /// own lists; this flag only changes which roots the views present.
@@ -314,32 +310,6 @@ enum WorkspaceSidebarItem: Identifiable {
   private static let sidebarVisibleKey = "localWorkspaceSidebarVisibleV1"
   private static let sidebarWidthKey = "localWorkspaceSidebarWidthV1"
 
-  /// Collapsing while the sidebar holds the keyboard hands focus to the tasks,
-  /// rather than leaving it on a pane that is no longer on screen.
-  func toggleSidebar() {
-    isSidebarVisible.toggle()
-    if !isSidebarVisible, keyboardFocusArea == .sidebar {
-      requestKeyboardFocus(.tasks)
-    }
-  }
-
-  static let availableListIcons: [(symbol: String, label: String)] = [
-    ("list.bullet", "List"), ("tray", "Inbox"), ("briefcase", "Work"),
-    ("graduationcap", "Study"), ("hammer", "Projects"), ("house", "Home"),
-    ("heart", "Health"), ("figure.run", "Fitness"), ("book", "Reading"),
-    ("music.note", "Music"), ("sailboat", "Sailing"), ("star", "Goals"),
-    ("person.2", "People"), ("calendar", "Plans"), ("lightbulb", "Ideas"),
-    ("leaf", "Habits"), ("airplane", "Travel"), ("gamecontroller", "Fun")
-  ]
-
-  func icon(for list: TaskList) -> String {
-    listIcons[list.id] ?? (list.systemRole == .inbox ? "tray" : "list.bullet")
-  }
-
-  func setIcon(_ symbol: String, for list: TaskList) {
-    listIcons[list.id] = symbol
-    UserDefaults.standard.set(listIcons, forKey: "workspaceListIconsV1")
-  }
   var dailyProgressRevision = 0
   var selectedListID: String?
   var selectedFolderID: String?
@@ -449,11 +419,13 @@ enum WorkspaceSidebarItem: Identifiable {
   var taskInsertionReference: WorkspaceTask?
   var taskInsertionAbove = false
   var taskInsertionIsChild = false
-  private(set) var keyboardFocusArea: WorkspaceFocusArea = .tasks
-  private(set) var requestedFocusArea: WorkspaceFocusArea = .tasks
+  /// Written only by `WorkspaceViewModel+KeyboardFocus.swift`; internal rather
+  /// than `private(set)` so those methods can live there.
+  var keyboardFocusArea: WorkspaceFocusArea = .tasks
+  var requestedFocusArea: WorkspaceFocusArea = .tasks
   /// Plain navigation keys only belong to the focused list/board surface.
   /// Buttons, menus, and other controls keep their native keyboard behavior.
-  private(set) var keyboardNavigationSurfaceActive = false
+  var keyboardNavigationSurfaceActive = false
   /// Incremented for every request, including a request for the already active
   /// region. SwiftUI observes this to make the native control first responder.
   var focusRequest = 0
@@ -634,259 +606,6 @@ enum WorkspaceSidebarItem: Identifiable {
     refresh([.outline, .sidebar, .dailies, .nextUp])
   }
 
-  /// Brings both kinds of pre-existing daily into the new model, once.
-  ///
-  /// Plugin-era dailies stood alone; they become tasks in a Habits list with a
-  /// daily attached. Tasks flagged under the old UserDefaults scheme keep their
-  /// task and simply gain one. The old tick history is not carried over — it
-  /// recorded that a day was ticked, not what was done, and the new schema's
-  /// per-day rows would be inventing the second half.
-  private func migrateLegacyDailiesIfNeeded(store: WorkspaceStore) throws {
-    let defaults = UserDefaults.standard
-    guard !defaults.bool(forKey: Self.dailyMigrationKey) else { return }
-    let seeds = legacyDailyDefinitions().map { daily in
-      LegacyDailySeed(
-        id: daily.id,
-        title: daily.title,
-        activeWeekdays: daily.activeWeekdays,
-        intervalDays: daily.intervalDays,
-        intervalAnchor: daily.intervalAnchor,
-        archivedAt: daily.archivedAt,
-        createdAt: daily.createdAt)
-    }
-    let progressIDs = defaults.stringArray(forKey: Self.dailyProgressTaskIDsKey) ?? []
-    try store.importLegacyDailies(seeds, progressTaskIDs: progressIDs)
-    defaults.set(true, forKey: Self.dailyMigrationKey)
-  }
-
-  /// Reads the plugin's own file through the plugin's own path, rather than
-  /// rebuilding it here — `DailyLogService` documents that resolving it twice
-  /// is two chances to disagree about where the history lives.
-  private func legacyDailyDefinitions() -> [Daily] {
-    DailyDefinitionsStore(directoryURL: DailyLogService.defaultStoreDirectoryURL()).load().dailies
-  }
-
-  func selectList(_ id: String) {
-    // Any other way of choosing a row moves the keyboard cursor there too,
-    // by letting it fall back to whatever is now selected.
-    sidebarCursorID = nil
-
-    guard lists.contains(where: { $0.id == id }) else { return }
-    taskEditor.flush()
-    leaveFullPaneScreens()
-    isEverythingSelected = false
-    UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
-    selectedListID = id
-    newTaskListID = id
-    selectedFolderID = nil
-    scopeTaskID = nil
-    focusedBoardColumnID = nil
-    taskInsertionReference = nil
-    desktopShortcutSequence.reset()
-    selectedTaskID = nil
-    // The inbox is a queue to empty, not a board to plan, so it opens as a
-    // flat outline whatever the last list was shown as.
-    viewMode = lists.first(where: { $0.id == id })?.systemRole == .inbox ? .outline : .board
-    reloadOutline(refreshSidebar: false)
-  }
-
-  func selectEverything() {
-    // Any other way of choosing a row moves the keyboard cursor there too,
-    // by letting it fall back to whatever is now selected.
-    sidebarCursorID = nil
-
-    taskEditor.flush()
-    leaveFullPaneScreens()
-    if let selectedListID { newTaskListID = selectedListID }
-    isEverythingSelected = true
-    UserDefaults.standard.set(true, forKey: Self.everythingScopeKey)
-    selectedListID = nil
-    selectedFolderID = nil
-    scopeTaskID = nil
-    focusedBoardColumnID = nil
-    taskInsertionReference = nil
-    desktopShortcutSequence.reset()
-    selectedTaskID = nil
-    viewMode = .board
-    reloadOutline(refreshSidebar: false)
-  }
-
-  func selectFolder(_ folder: ListFolder) {
-    // Any other way of choosing a row moves the keyboard cursor there too,
-    // by letting it fall back to whatever is now selected.
-    sidebarCursorID = nil
-    enterFolderScope(folder)
-  }
-
-  func enterTask(_ task: WorkspaceTask) {
-    taskEditor.flush()
-    if isEverythingSelected {
-      isEverythingSelected = false
-      UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
-      selectedListID = task.listId
-      newTaskListID = task.listId
-    }
-    // Going into a task means going into the list that holds it, so a folder
-    // scope ends here the same way Everything does.
-    if selectedFolderID != nil {
-      selectedFolderID = nil
-      selectedListID = task.listId
-      newTaskListID = task.listId
-    }
-    selectedListID = task.listId
-    newTaskListID = task.listId
-    selectedFolderID = nil
-    scopeTaskID = task.id
-    focusedBoardColumnID = nil
-    viewMode = .board
-    reloadOutline(refreshSidebar: false)
-  }
-
-  func selectTask(_ task: WorkspaceTask) {
-    guard selectedTaskID != task.id else { return }
-    taskEditor.flush()
-    selectedTaskID = task.id
-  }
-
-  func selectViewMode(_ mode: WorkspaceViewMode) {
-    if mode == .today { dayPresentationCount += 1 }
-    let changed = viewMode != mode
-    viewMode = mode
-    // Everything's outline is only gathered while the outline is showing, so
-    // a change of mode may need it. Asking for the mode already on screen —
-    // as launch does — cannot, and re-reading every list for it was waste.
-    if isEverythingSelected && changed { reloadOutline(refreshSidebar: false) }
-  }
-
-  func leaveTaskScope() {
-    guard let task = scopeTask else { return }
-    scopeTaskID = task.parentTaskId
-    selectedTaskID = task.id
-    reloadOutline(refreshSidebar: false)
-  }
-
-  func requestTaskComposerFocus() {
-    if !isQuickCaptureActive {
-      quickCaptureDestinationID = nil
-      quickCaptureStartDayOffset = nil
-    }
-    taskInsertionReference = nil
-    requestKeyboardFocus(.tasks)
-    taskComposerFocusRequest += 1
-  }
-
-  func requestRelativeTaskComposerFocus(above: Bool = false, child: Bool = false) {
-    let reference = selectedTask
-    requestTaskComposerFocus()
-    taskInsertionReference = reference
-    taskInsertionAbove = above
-    taskInsertionIsChild = child
-  }
-
-  func requestKeyboardFocus(_ area: WorkspaceFocusArea) {
-    desktopShortcutSequence.reset()
-    if area == .tasks && selectedTaskID == nil && !(viewMode == .board && focusedBoardColumnID != nil) {
-      selectedTaskID = visibleNavigationTasks.first?.id
-    }
-    if area == .sidebar { taskInsertionReference = nil }
-    if let tab = WorkspaceDockTab(area: area) { showRightDock(tab) }
-    requestedFocusArea = area
-    keyboardFocusArea = area
-    focusRequest += 1
-  }
-
-  func reportKeyboardFocus(_ area: WorkspaceFocusArea?) {
-    if area != keyboardFocusArea { desktopShortcutSequence.reset() }
-    keyboardNavigationSurfaceActive = area != nil
-    if let area { keyboardFocusArea = area }
-  }
-
-  func requestMoveSelectedTask() {
-    if keyboardFocusArea == .sidebar {
-      if let scope = scopeTask, scope.isList {
-        requestMove(scope)
-      } else if let list = selectedList, !list.isSystemList {
-        presentOverlay(.move(WorkspaceItemMoveRequest(payload: WorkspaceTaskDrag.listPrefix + list.id,
-          title: list.name, sourceListID: list.id, taskID: nil)))
-      }
-      return
-    }
-    if selectedTask == nil { selectedTaskID = visibleNavigationTasks.first?.id }
-    guard let task = selectedTask else { return }
-    requestMove(task)
-  }
-
-  func requestMove(_ task: WorkspaceTask) {
-    presentOverlay(.move(WorkspaceItemMoveRequest(payload: task.id, title: task.title,
-      sourceListID: task.listId, taskID: task.id)))
-  }
-
-  func cycleKeyboardFocus(by offset: Int) {
-    var areas: [WorkspaceFocusArea] = isSidebarVisible ? [.sidebar, .tasks] : [.tasks]
-    // The dock's tab is a stop when it has something to hold the keyboard:
-    // the inspector needs a task, the rail does not.
-    if isRightDockVisible, rightDockTab == .done || selectedTask != nil {
-      areas.append(rightDockTab.area)
-    }
-    let current = areas.firstIndex(of: keyboardFocusArea) ?? 0
-    let destination = (current + offset + areas.count) % areas.count
-    requestKeyboardFocus(areas[destination])
-  }
-
-  func requestCreation(_ kind: WorkspaceCreationKind, in parentFolderID: String? = nil) {
-    creationIsNested = false
-    creationParentFolderID = parentFolderID
-    presentOverlay(.create(kind))
-  }
-
-  func requestListCreationForSelection() {
-    if keyboardFocusArea == .tasks, !isEverythingSelected, selectedListID != nil {
-      requestNestedListCreation(under: scopeTask)
-    } else {
-      requestCreation(.list, in: selectedFolderID)
-    }
-  }
-
-  func requestFolderCreationForSelection() {
-    requestCreation(.folder, in: selectedFolderID)
-  }
-
-  func createList(named name: String, in folderId: String? = nil) {
-    guard let store, let workspace else { return }
-    do {
-      let list = try store.createList(workspaceId: workspace.id, name: name, folderId: folderId)
-      try load()
-      selectList(list.id)
-      errorMessage = nil
-    } catch {
-      errorMessage = error.localizedDescription
-    }
-  }
-
-  func createFolder(named name: String, in parentFolderId: String? = nil) {
-    guard let store, let workspace else { return }
-    perform {
-      _ = try store.createFolder(workspaceId: workspace.id, name: name, parentFolderId: parentFolderId)
-      try load()
-    }
-  }
-
-  func isFolderExpanded(_ folder: ListFolder) -> Bool {
-    expandedFolderIDs.contains(folder.id)
-  }
-
-  func setFolderExpanded(_ folder: ListFolder, expanded: Bool) {
-    if expanded {
-      expandedFolderIDs.insert(folder.id)
-    } else {
-      expandedFolderIDs.remove(folder.id)
-    }
-  }
-
-  func toggleFolderExpansion(_ folder: ListFolder) {
-    setFolderExpanded(folder, expanded: !isFolderExpanded(folder))
-  }
-
   /// Today's dailies, joined to their tasks and contributions. Reloaded rather
   /// than computed, because every row needs a database round trip and the list
   /// is read on every render of the dailies surface.
@@ -950,382 +669,6 @@ enum WorkspaceSidebarItem: Identifiable {
   /// so moving the outline's instead looks exactly like nothing happening.
   var dayFieldFocusRequest = 0
 
-  var visibleNavigationTasks: [WorkspaceTask] {
-    // Mid-`perform`, a scope change has only been marked. Whoever asks what is
-    // on screen wants the answer after it, not before.
-    if !pendingRefresh.isEmpty { flushPendingRefresh() }
-    return switch viewMode {
-    case .today: dayItems.map(\.task)
-    case .outline: outline.map(\.task)
-    case .board: boardColumns.flatMap { tasks(in: $0) }
-    case .matrix: boardTasks
-    }
-  }
-
-  func toggleTask(_ task: WorkspaceTask) {
-    guard let store else { return }
-    perform {
-      try store.setStatus(task.status == .open ? .completed : .open, for: task.id)
-      if task.status == .open { celebrateCompletion(of: task) }
-      // An ordinary task's status is not something the sidebar shows: its
-      // counts include finished tasks, and only lists are drawn there.
-      reloadOutline(refreshSidebar: task.isList)
-      reloadNextUp()
-    }
-  }
-
-  func moveTask(_ task: WorkspaceTask, toListId listId: String) {
-    guard let store else { return }
-    perform {
-      try store.moveTask(id: task.id, toListId: listId, toVisibleRoot: true)
-      if let scopeTaskID, let scope = try store.task(id: scopeTaskID), scope.listId != selectedListID {
-        self.scopeTaskID = nil
-      }
-      if isEverythingSelected || task.listId == selectedListID || listId == selectedListID {
-        reloadOutline()
-      }
-      selectedTaskID = isEverythingSelected || listId == selectedListID ? task.id : nil
-    }
-  }
-
-  func moveTaskWithinSiblings(_ task: WorkspaceTask, by offset: Int) {
-    guard let store else { return }
-    perform {
-      try store.moveTaskWithinSiblings(id: task.id, by: offset)
-      reloadOutline(refreshSidebar: task.isList)
-    }
-  }
-
-  func indentTask(_ task: WorkspaceTask) {
-    guard let store else { return }
-    perform {
-      try store.indentTask(id: task.id)
-      reloadOutline(refreshSidebar: task.isList)
-    }
-  }
-
-  func outdentTask(_ task: WorkspaceTask) {
-    guard let store else { return }
-    perform {
-      try store.outdentTask(id: task.id)
-      reloadOutline(refreshSidebar: task.isList)
-    }
-  }
-
-  func deleteSelectedTask() {
-    guard let store, let task = selectedTask else { return }
-    perform {
-      try store.deleteTask(id: task.id)
-      selectedTaskID = nil
-      if scopeTaskID == task.id { scopeTaskID = task.parentTaskId }
-      reloadOutline()
-      reloadFocus()
-    }
-  }
-
-  /// Imports a loaded legacy Checkvist list once. This is deliberately a copy:
-  /// once migration completes, the workspace is fully local and never needs
-  /// Checkvist in order to open or edit these tasks.
-  func importLegacyCheckvistTasks(_ tasks: [CheckvistTask], sourceListID: String) {
-    guard let store, let workspace else { return }
-    let listID = sourceListID.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !listID.isEmpty, !tasks.isEmpty else { return }
-
-    let defaults = UserDefaults.standard
-    var migratedListIDs = Set(defaults.stringArray(forKey: Self.checkvistMigrationKeysKey) ?? [])
-    guard !migratedListIDs.contains(listID) else { return }
-
-    let uniqueTasks = Dictionary(tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    let sourcePrefix = "checkvist:\(listID):"
-    let seeds = uniqueTasks.values.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map { task in
-      ImportedTaskSeed(
-        sourceId: "\(sourcePrefix)\(task.id)",
-        parentSourceId: task.parentId.map { "\(sourcePrefix)\($0)" },
-        title: task.content,
-        notes: task.notes?.map(\.content).joined(separator: "\n\n") ?? "",
-        status: task.status == 0 ? .open : (task.status == 1 ? .completed : .cancelled),
-        sortOrder: task.position ?? 0)
-    }
-
-    do {
-      let outcome = try store.importTasks(
-        workspaceId: workspace.id,
-        listName: "Imported from Checkvist — \(listID)",
-        sourceSystem: Self.checkvistSourceSystem,
-        seeds: seeds)
-      migratedListIDs.insert(listID)
-      defaults.set(Array(migratedListIDs).sorted(), forKey: Self.checkvistMigrationKeysKey)
-      try load()
-      if let outcome {
-        selectList(outcome.list.id)
-      }
-      errorMessage = nil
-    } catch {
-      errorMessage = error.localizedDescription
-    }
-  }
-
-  /// Mirrors newly discovered Checkvist lists into the desktop sidebar once.
-  ///
-  /// The desktop workspace deliberately remains local-first: this creates a
-  /// local copy of each remote list and its currently open task tree, rather
-  /// than making sidebar edits unexpectedly mutate Checkvist. The persisted
-  /// mapping prevents every app launch from adding another copy.
-  func importCheckvistLists(_ snapshots: [(list: CheckvistList, tasks: [CheckvistTask])]) {
-    guard let store, let workspace, !snapshots.isEmpty else { return }
-
-    let defaults = UserDefaults.standard
-    var localIDs = defaults.dictionary(forKey: Self.checkvistWorkspaceListIDsKey) as? [String: String] ?? [:]
-    var changed = false
-
-    do {
-      for snapshot in snapshots {
-        let remoteID = String(snapshot.list.id)
-        if let localID = localIDs[remoteID], lists.contains(where: { $0.id == localID }) {
-          continue
-        }
-
-        let sourcePrefix = "checkvist:\(remoteID):"
-        let uniqueTasks = Dictionary(
-          snapshot.tasks.map { ($0.id, $0) },
-          uniquingKeysWith: { first, _ in first })
-        let seeds = uniqueTasks.values.sorted { lhs, rhs in
-          let lhsParent = lhs.parentId ?? 0
-          let rhsParent = rhs.parentId ?? 0
-          if lhsParent != rhsParent { return lhsParent < rhsParent }
-          return (lhs.position ?? 0) < (rhs.position ?? 0)
-        }.map { task in
-          ImportedTaskSeed(
-            sourceId: "\(sourcePrefix)\(task.id)",
-            parentSourceId: task.parentId.map { "\(sourcePrefix)\($0)" },
-            title: task.content,
-            notes: task.notes?.map(\.content).joined(separator: "\n\n") ?? "",
-            status: task.status == 0 ? .open : (task.status == 1 ? .completed : .cancelled),
-            sortOrder: task.position ?? 0)
-        }
-
-        let localList: TaskList
-        if seeds.isEmpty {
-          localList = try store.createList(workspaceId: workspace.id, name: snapshot.list.name)
-        } else if let outcome = try store.importTasks(
-          workspaceId: workspace.id, listName: snapshot.list.name,
-          sourceSystem: Self.checkvistSourceSystem, seeds: seeds)
-        {
-          localList = outcome.list
-        } else {
-          continue
-        }
-        localIDs[remoteID] = localList.id
-        changed = true
-      }
-
-      guard changed else { return }
-      defaults.set(localIDs, forKey: Self.checkvistWorkspaceListIDsKey)
-      try load()
-      errorMessage = nil
-    } catch {
-      errorMessage = error.localizedDescription
-    }
-  }
-
-  /// Marks the main pane stale; see `refresh(_:)`. Pass `refreshSidebar:
-  /// false` when the change cannot have touched a list or a count.
-  func reloadOutline(refreshSidebar: Bool = true) {
-    refresh(refreshSidebar ? [.outline, .sidebar] : .outline)
-  }
-
-  func reloadBoard() {
-    refresh(.board)
-  }
-
-  func reloadOutlineNow() {
-    guard let store else {
-      outline = []
-      boardTasks = []
-      boardTaskColumns = [:]
-      matrixPositions = [:]
-      return
-    }
-    do {
-      var items: [TaskOutlineItem]
-      if isEverythingSelected || folderScopeListIDs != nil {
-        items = viewMode == .outline
-          ? try actionableScopeTasks(store: store).map { TaskOutlineItem(task: $0, depth: 0) } : []
-      } else if let selectedListID {
-        let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
-        let parentID = scopeTaskID ?? selectedList.flatMap {
-          tree?.visibleRootParentTaskID(registeredRootId: $0.visibleRootTaskId)
-        }
-        items = tree?.visibleOutline(under: parentID) ?? []
-      } else {
-        items = []
-      }
-      if hidesCompletedTasks { items.removeAll { $0.task.status != .open } }
-      if outline != items { outline = items }
-      reloadBoardNow()
-      // The rail is a view of the same writes. Hooked in here rather than at
-      // every mutation because this is the one funnel they all pass through,
-      // and it costs nothing while the rail is closed.
-      reloadCompleted()
-    } catch {
-      errorMessage = error.localizedDescription
-    }
-  }
-
-  /// Every open, doable task in a combined scope, in sidebar order: the same
-  /// answer as `WorkspaceStore.actionableTasks`, shaped from this refresh's
-  /// shared reads.
-  private func actionableScopeTasks(store: WorkspaceStore) throws -> [WorkspaceTask] {
-    let open = lists.filter { $0.completedAt == nil }
-    let scoped: [TaskList]
-    if let ids = folderScopeListIDs {
-      let byID = Dictionary(open.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-      scoped = ids.compactMap { byID[$0] }
-    } else {
-      scoped = open
-    }
-    let trees = try listTrees(for: scoped.map(\.id), store: store)
-    return scoped.flatMap { trees[$0.id]?.actionableTasks(visibleRootTaskId: $0.visibleRootTaskId) ?? [] }
-  }
-
-  var boardConfigurationKey: String {
-    if isEverythingSelected { return "everything/root" }
-    if let selectedFolderID { return "folder:\(selectedFolderID)/root" }
-    return "\(selectedListID ?? "none")/\(scopeTaskID ?? "root")"
-  }
-
-  func reloadBoardNow() {
-    defer { rebuildBoardIndex() }
-    guard let store else {
-      boardTasks = []
-      boardCrossColumnTasks = []
-      boardDescendants = [:]
-      boardTaskParents = [:]
-      boardParentTaskID = nil
-      boardTreeTasks = []
-      return
-    }
-    do {
-      var tasks: [WorkspaceTask]
-      let parentTaskID: String?
-      if isEverythingSelected || folderScopeListIDs != nil {
-        parentTaskID = nil
-        tasks = try actionableScopeTasks(store: store)
-      } else if let selectedListID {
-        let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
-        parentTaskID = scopeTaskID ?? selectedList.flatMap {
-          tree?.visibleRootParentTaskID(registeredRootId: $0.visibleRootTaskId)
-        }
-        tasks = tree?.children(of: parentTaskID) ?? []
-      } else {
-        parentTaskID = nil
-        tasks = []
-      }
-      if boardParentTaskID != parentTaskID { boardParentTaskID = parentTaskID }
-      tasks.removeAll { ($0.isList && $0.archivedAt != nil) || (hidesCompletedTasks && $0.status != .open) }
-      let boardIDs = Set(tasks.map(\.id))
-      var descendants: [String: [TaskOutlineItem]] = Dictionary(
-        uniqueKeysWithValues: tasks.map { ($0.id, []) })
-      var parents: [String: WorkspaceTask] = [:]
-      let listIDs = Array(Set(tasks.map(\.listId)))
-      let trees = try listTrees(for: listIDs, store: store)
-      for listID in listIDs {
-        var ancestors: [TaskOutlineItem] = []
-        for item in trees[listID]?.visibleOutline() ?? [] {
-          while let last = ancestors.last, last.depth >= item.depth {
-            ancestors.removeLast()
-          }
-          if let parent = ancestors.last?.task { parents[item.task.id] = parent }
-          for ancestor in ancestors where boardIDs.contains(ancestor.id) {
-            descendants[ancestor.id, default: []].append(
-              TaskOutlineItem(task: item.task, depth: item.depth - ancestor.depth - 1))
-          }
-          ancestors.append(item)
-        }
-      }
-      var treeIDs = Set<String>()
-      let treeTasks = (tasks + tasks.flatMap { root in
-        descendants[root.id, default: []].map(\.task)
-      }).filter { treeIDs.insert($0.id).inserted }
-      let metadata = try store.boardMetadata(for: treeTasks.map(\.id))
-      let columnsByTask = metadata.columns
-      let crossColumn = treeTasks.filter { task in
-        if hidesCompletedTasks && task.status != .open { return false }
-        guard !task.isList else { return false }
-        guard !boardIDs.contains(task.id), let parent = parents[task.id] else { return false }
-        let taskColumn = columnsByTask[task.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-        let parentColumn = columnsByTask[parent.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-        return taskColumn != parentColumn
-      }
-      let columns = try resolvedBoardColumns(usedColumnIDs: Set(columnsByTask.values), store: store)
-      // Assigned only when they differ, so a refresh that changed nothing on
-      // the board does not redraw every card.
-      boardTreeTasks = treeTasks
-      if boardTasks != tasks { boardTasks = tasks }
-      if boardDescendants != descendants { boardDescendants = descendants }
-      if boardTaskParents != parents { boardTaskParents = parents }
-      if boardTaskColumns != columnsByTask { boardTaskColumns = columnsByTask }
-      if boardCrossColumnTasks != crossColumn { boardCrossColumnTasks = crossColumn }
-      if boardColumns != columns { boardColumns = columns }
-      if matrixPositions != metadata.positions { matrixPositions = metadata.positions }
-    } catch {
-      errorMessage = error.localizedDescription
-    }
-  }
-
-  /// The current scope's columns, plus any column a card on it is filed under
-  /// that the scope's own layout does not list.
-  private func resolvedBoardColumns(usedColumnIDs: Set<String>, store: WorkspaceStore) throws -> [WorkspaceKanbanColumn] {
-    let key = boardConfigurationKey
-    // The store call also seeds a layout for a scope that has none, so it is
-    // made again for a scope this cache has not seen.
-    if boardColumnConfigurations?[key] == nil {
-      let legacy = UserDefaults.standard.dictionary(forKey: Self.kanbanColumnsKey) as? [String: Data] ?? [:]
-      boardColumnConfigurations = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: key)
-    }
-    let configurations = boardColumnConfigurations ?? [:]
-    func decode(_ key: String) -> [WorkspaceKanbanColumn]? {
-      configurations[key].flatMap { try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: $0) }
-    }
-    var columns: [WorkspaceKanbanColumn]
-    if let decoded = decode(key), !decoded.isEmpty {
-      columns = decoded
-    } else {
-      columns = WorkspaceKanbanColumn.blitzitDefaults
-    }
-    if isEverythingSelected {
-      for list in lists {
-        guard let listColumns = decode("\(list.id)/root") else { continue }
-        for column in listColumns where usedColumnIDs.contains(column.id)
-          && !columns.contains(where: { $0.id == column.id }) {
-          columns.append(column)
-        }
-      }
-    } else {
-      let globalColumns = decode("everything/root") ?? []
-      for column in globalColumns + WorkspaceKanbanColumn.blitzitDefaults
-        where usedColumnIDs.contains(column.id)
-          && !columns.contains(where: { $0.id == column.id }) {
-        columns.append(column)
-      }
-    }
-    return columns
-  }
-
-  /// Some Checkvist imports have a single transport root repeating the list
-  /// name. Its children are the visible list roots in both single-list and
-  /// Everything scopes, while their actual parent IDs remain unchanged.
-  func visibleRootParentTaskID(for list: TaskList, store: WorkspaceStore) throws -> String? {
-    try store.visibleRootParentTaskID(for: list)
-  }
-
-  func uniqueColumnID(base: String, in columns: [WorkspaceKanbanColumn]) -> String {
-    guard columns.contains(where: { $0.id == base }) else { return base }
-    var counter = 2
-    while columns.contains(where: { $0.id == "\(base)-\(counter)" }) { counter += 1 }
-    return "\(base)-\(counter)"
-  }
-
   func reloadFocus() {
     guard let store else { return }
     do {
@@ -1347,34 +690,5 @@ enum WorkspaceSidebarItem: Identifiable {
     } catch {
       errorMessage = error.localizedDescription
     }
-  }
-
-  @discardableResult
-  private func migrateLegacyTasksIfNeeded(into workspace: Workspace, store: WorkspaceStore) throws -> TaskList? {
-    let defaults = UserDefaults.standard
-    guard !defaults.bool(forKey: Self.legacyMigrationKey) else { return nil }
-    let payload = legacyStore.load()
-    let legacyTasks = payload.openTasks + payload.archivedTasks
-    guard !legacyTasks.isEmpty else {
-      defaults.set(true, forKey: Self.legacyMigrationKey)
-      return nil
-    }
-
-    let uniqueTasks = Dictionary(legacyTasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    let seeds = uniqueTasks.values.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map { task in
-      ImportedTaskSeed(
-        sourceId: String(task.id),
-        parentSourceId: task.parentId.map(String.init),
-        title: task.content,
-        notes: task.notes?.map(\.content).joined(separator: "\n\n") ?? "",
-        status: task.status == 0 ? .open : (task.status == 1 ? .completed : .cancelled),
-        sortOrder: task.position ?? 0)
-    }
-    let date = ISO8601DateFormatter().string(from: .now).prefix(10)
-    let outcome = try store.importTasks(
-      workspaceId: workspace.id, listName: "Imported from old Priority — \(date)",
-      sourceSystem: Self.legacyOfflineSourceSystem, seeds: seeds)
-    defaults.set(true, forKey: Self.legacyMigrationKey)
-    return outcome?.list
   }
 }
