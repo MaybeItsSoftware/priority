@@ -18,6 +18,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   private let workspace: WorkspaceViewModel
   private var window: NSWindow?
   private var workspaceKeyMonitor: Any?
+  private var overlayMouseMonitor: Any?
   private var shortcutShiftTap = DoubleTapModifier()
   private var toolbarController: MainWindowToolbarController?
 
@@ -36,6 +37,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 
   deinit {
     if let workspaceKeyMonitor { NSEvent.removeMonitor(workspaceKeyMonitor) }
+    if let overlayMouseMonitor { NSEvent.removeMonitor(overlayMouseMonitor) }
   }
 
   // MARK: - Presentation
@@ -43,6 +45,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   func show() {
     let window = makeWindowIfNeeded()
     installWorkspaceKeyMonitorIfNeeded()
+    installOverlayMouseMonitorIfNeeded()
     window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
     onVisibilityChanged?(true)
@@ -182,6 +185,41 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         }
       }
       return self.workspace.handleDesktopKey(event) ? nil : event
+    }
+  }
+
+  // MARK: - Overlay dismissal
+
+  /// Closes the overlay on a mouse-down anywhere in the window but its card.
+  ///
+  /// A monitor rather than a SwiftUI tap-catcher behind the card, because the
+  /// sidebar and the outline are AppKit tables: AppKit gives a click to the
+  /// deepest `NSView` under it, so a catcher layered over them never heard
+  /// it. The monitor sees the event before any view does.
+  ///
+  /// A click over the content is consumed, so dismissing the palette does not
+  /// also select whatever row was underneath. A click in the title bar or the
+  /// toolbar closes the overlay and still goes through, so the traffic lights,
+  /// the mode strip and dragging the window all work first time.
+  private func installOverlayMouseMonitorIfNeeded() {
+    guard overlayMouseMonitor == nil else { return }
+    overlayMouseMonitor = NSEvent.addLocalMonitorForEvents(
+      matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+    ) { [weak self] event in
+      guard let self, let window = self.window, event.window === window,
+        window.attachedSheet == nil, self.workspace.activeOverlay != nil,
+        let content = window.contentView else {
+        return event
+      }
+      var point = content.convert(event.locationInWindow, from: nil)
+      // SwiftUI's global space runs top-down from the content's top-left.
+      if !content.isFlipped { point.y = content.bounds.height - point.y }
+      if let panel = self.workspace.overlayPanelFrame, panel.contains(point) {
+        return event
+      }
+      self.workspace.dismissOverlay()
+      return content.bounds.contains(content.convert(event.locationInWindow, from: nil))
+        ? nil : event
     }
   }
 

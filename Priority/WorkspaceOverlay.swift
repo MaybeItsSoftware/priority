@@ -74,6 +74,7 @@ extension WorkspaceViewModel {
     guard activeOverlay != nil else { return }
     activeOverlay = nil
     overlayKeyHandler = nil
+    overlayPanelFrame = nil
     if restoringFocus { requestKeyboardFocus(keyboardFocusArea) }
   }
 

@@ -10,22 +10,29 @@ import SwiftUI
 /// so a command palette that could not be reached from search was the normal
 /// state of affairs. Here, whatever `activeOverlay` names is what is up, and
 /// clicking anywhere outside it puts it away.
+///
+/// That click is caught by the window's mouse monitor, not by a SwiftUI layer
+/// here. A transparent tap-catcher behind the card never saw clicks over the
+/// sidebar or the outline: those are AppKit tables inside the hosting view,
+/// and AppKit hands a mouse-down to the deepest `NSView` under it before
+/// SwiftUI's gestures get a look. So the card reports its frame, and
+/// `MainWindowController` compares each mouse-down against it.
 struct WorkspaceOverlayHost: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
+    // No scrim: the overlay is a tool held over the work, not a modal that
+    // asks you to stop looking at it.
     ZStack(alignment: .top) {
       if let overlay = model.activeOverlay {
-        // Clear rather than a dimming scrim: the overlay is a tool held over
-        // the work, not a modal that asks you to stop looking at it.
-        Color.clear
-          .contentShape(Rectangle())
-          .onTapGesture { model.dismissOverlay() }
         panel(for: overlay)
           .frame(width: WorkspaceOverlayMetrics.width)
           .themedSurface(theme, fill: theme.raised, radius: theme.panelRadius)
+          .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+            model.overlayPanelFrame = frame
+          }
           .padding(.top, theme.space.xl)
           .id(overlay.id)
           .transition(.opacity)

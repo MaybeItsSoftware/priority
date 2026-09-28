@@ -19,8 +19,8 @@ struct WorkspaceDesktopView: View {
       // where the keyboard is and what is running.
       WorkspaceStatusBar()
     }
-      // Over the whole window content, so it sits above every pane and a
-      // click anywhere outside the panel lands on its catcher.
+      // Over the whole window content, so it sits above every pane. A click
+      // outside the panel is caught by the window's mouse monitor.
       .overlay(alignment: .top) { WorkspaceOverlayHost() }
       .task { await model.monitorFocus() }
       .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in model.reloadNextUp() }

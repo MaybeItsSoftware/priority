@@ -385,6 +385,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// sheets. One at a time, by construction — see `WorkspaceOverlay.swift`.
   var activeOverlay: WorkspaceOverlay?
   @ObservationIgnored var overlayKeyHandler: WorkspaceOverlayKeyHandler?
+  /// Where the overlay's card is, in the window content's top-left space.
+  /// The window's mouse monitor reads it to tell a click on the card from a
+  /// click beside it; see `MainWindowController`.
+  @ObservationIgnored var overlayPanelFrame: CGRect?
   var searchQuery = "" { didSet { refreshSearchResults() } }
   var searchIncludesCompleted = false { didSet { refreshSearchResults() } }
   /// Written only by `refreshSearchResults()`; internal rather than
