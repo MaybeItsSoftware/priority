@@ -130,11 +130,19 @@ the hotkey summons over other apps. One component, two mounts — a day that rea
 differently depending on where you opened it would be two days.
 
 Each card carries what the task is, what it should cost, and what it has cost so
-far, under a bar of estimated against logged and a line setting today against
-the week it belongs to. `Return` on a card starts it; the card you are on grows
-a live clock and a strip of pause, skip, log and done, so a whole block runs
-without the list ever going away. Typing searches every task's title and notes,
-and offers to add what you typed to today.
+far. `Return` on a card starts it; the card you are on grows a live clock and a
+strip of pause, skip, log and done, so a whole block runs without the list ever
+going away.
+
+The two mounts differ in their chrome only. In the window the pane is its header
+— the scope, and time logged against the day's estimates — and the list, walked
+with the ordinary selection keys like any other pane. The day's other numbers
+are in the status bar (click them for the timeline), a task is added from the
+title bar's field — which, while Today is up, puts it on today — and a search is
+`Cmd+F`. The summoned panel has no title bar or status bar to lean on, so it
+keeps its own: a bar of estimated against logged, a line setting today against
+the week, a list of the day's logged blocks, and a field that searches every
+task's title and notes and offers to add what you typed to today.
 
 Anything already done is ticked off from here rather than somewhere else: each
 card's number becomes a tick when the pointer is over it, and `Shift+Return`
@@ -162,9 +170,11 @@ of it is reachable only by a key you have to already know.
 | `Cmd+9` | The day's timeline |
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
+| `Up` / `Down` | Move between cards |
 | `Return` | Start the card you are on, or finish the one running |
-| `Shift+Return` | Tick the card off without running a block |
-| `Cmd+Return` | Open the card in the main window |
+| `Shift+Return` / `Space` / `x` | Tick the card off without running a block |
+| `Left` | Back to the list in the sidebar (the window) |
+| `Cmd+Return` | Open the card in the main window (the panel) |
 
 The digit row used to move the caret between the window's three panes. Changing
 what you are looking at is the bigger thing, so it took the row and pane focus
@@ -348,9 +358,10 @@ migrating, reachable by nothing.
 
 ## Views
 
-Four planning modes, one focus screen, one timeline. The mode strip — the only
-thing in the title bar — names the one you are in and every key that reaches
-the others; Focus and Timeline sit at its end, set apart by a rule.
+Four planning modes, one focus screen, one timeline. The mode strip in the title
+bar names the one you are in — in ink, on a quiet fill, the others muted — and
+its tooltips give every key that reaches the others; Focus and Timeline sit at
+its end, set apart by a rule.
 
 | Mode | Key | What it shows |
 | --- | --- | --- |
@@ -407,27 +418,47 @@ item's own menu.
 
 The window is the app. It opens on Today, carries the mode strip and the add
 field in its title bar, and everything you can do you can do here. It is laid
-out the way an editor is:
+out the way an editor is — Zed's layout, specifically: flat surfaces split by
+hairlines, every column topped by a header band of one height so a single rule
+runs straight across the window under all three, and exactly one strip along
+the bottom.
 
-- **Title bar** — the mode strip, and **Add a task** on the right (`a` or
-  `Cmd+N` to reach it). It names where the task will land: the list on screen
-  (inside the task you have opened, if any), the folder's chosen list
-  (`Cmd+Alt+[` / `]` to change it), or the **inbox** when no one list is on
-  screen — Everything included. Pressed on a task, `a` / `Alt+Return` /
-  `Alt+Shift+Return` place it below, above or inside that task instead.
+- **Title bar** — the window's title after the traffic lights, the mode strip
+  (words only), and **Add a task** on the right (`a` or `Cmd+N` to reach it).
+  It names where the task will land: the list on screen (inside the task you
+  have opened, if any), the folder's chosen list (`Cmd+Alt+[` / `]` to change
+  it), or the **inbox** when no one list is on screen — Everything included.
+  On Today it also puts the task on today, and says so (`Today · Inbox`).
+  Pressed on a task, `a` / `Alt+Return` / `Alt+Shift+Return` place it below,
+  above or inside that task instead.
 
 - **Left dock** — the sidebar of lists and folders. Lists only: Focus and the
-  timeline are in the mode strip, not repeated as sidebar rows.
+  timeline are in the mode strip, not repeated as sidebar rows. Its header
+  carries its actions as small glyphs — new list (`Cmd+Shift+N`), new folder
+  (`Cmd+Alt+N`), archived lists to restore (only while there are any), and
+  undo/redo — rather than a bar along its foot; hover one for its name and key.
+- **Main pane** — a header band with where you are on the left (the scope, and
+  the way back out of an opened task) and a count or a few glyph buttons on the
+  right, then the mode's content. Panes carry no footers of their own: their
+  key hints are in the reference (`Cmd+/`) and the palette (`Cmd+K`).
 - **Right dock** — the inspector and the done rail, as two tabs of one
-  resizable column. Its visibility, width and tab are remembered, and it does
-  not close itself when you navigate; with nothing selected the inspector says
-  so.
-- **Status bar** — a thin strip along the foot. On the left, the sidebar's
-  toggle and which region has the keyboard; in the middle, a half-typed key
-  sequence (`d…`), an error, or a passing message; on the right, the running
-  block and its clock (click to return to it), today's points and tasks done,
-  Google Tasks sync, and at the right edge the right dock's Inspector and Done
-  toggles — each toggle on the side its pane opens on.
+  resizable column, in a tab bar: the showing tab in ink with a rule under it,
+  the done rail's tally and a close glyph at its right. Its visibility, width
+  and tab are remembered, and it does not close itself when you navigate; with
+  nothing selected the inspector says so.
+- **Status bar** — a thin strip along the foot, glyphs at its ends like an
+  editor's. On the left, the sidebar's toggle (its tooltip says which region
+  has the keyboard); in the middle, a half-typed key sequence (`d…`), an error,
+  or a passing message; on the right, the running block and its clock (click to
+  return to it), today's time logged, points and tasks done (the week's in the
+  tooltip; click for the timeline), Google Tasks sync, and at the right edge
+  the right dock's Inspector and Done toggles — each toggle on the side its
+  pane opens on.
+
+A selected row is a quiet fill; the row the keyboard is on adds a one-point
+line in the focus colour, so which pane will answer the arrow keys is always
+visible without a thick ring. Empty panes say so in one line of muted text in
+the middle.
 
 Preferences is `Cmd+,` and the app menu; there is no gear in the window.
 
