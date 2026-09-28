@@ -41,14 +41,14 @@ struct KeyCap: View {
   init(_ key: String) { self.key = key }
 
   // A control-radius chip in the monospaced face, bordered rather than
-  // filled — rule 1, and the one radius scale rather than the 4 this used.
+  // filled — rule 1, and the one radius scale. Set at the micro-label's size
+  // so a key reads as belonging to the label beside it.
   var body: some View {
     Text(key)
-      .font(theme.monoFont(size: 10, weight: .medium))
+      .font(theme.monoFont(size: theme.type.microLabel.size, weight: .medium))
       .foregroundStyle(theme.muted)
-      .padding(.horizontal, 5)
-      .padding(.vertical, 2)
-      .background(theme.well, in: RoundedRectangle(cornerRadius: theme.controlRadius))
+      .padding(.horizontal, theme.space.xs)
+      .padding(.vertical, theme.space.xxs)
       .overlay(
         RoundedRectangle(cornerRadius: theme.controlRadius)
           .strokeBorder(theme.border, lineWidth: theme.hairline))
@@ -67,10 +67,10 @@ struct KeyHint: View {
   }
 
   var body: some View {
-    HStack(spacing: 5) {
+    HStack(spacing: theme.space.xs) {
       KeyCap(key)
       Text(label)
-        .font(theme.bodyFont(size: 11))
+        .font(theme.captionFont)
         .foregroundStyle(theme.dim)
     }
   }
@@ -97,8 +97,10 @@ struct FocusRule: View {
 /// them with ⌘8 and ⌘9 shifted every edge on screen and made the two read as
 /// unrelated screens rather than two views of the same day.
 ///
-/// Numbers rather than a container view, because the bands differ in what they
-/// hold and only agree on where their edges are.
+/// The modifiers below read these from the theme's spacing scale — the gutter
+/// is `space.xl`, a band `space.md` — so a denser theme tightens every
+/// full-pane surface at once. The constants remain for the few places that
+/// need a number outside a view modifier, and match the house theme.
 enum FocusSurfaceMetrics {
   /// The side gutter, shared by the bands and the content between them.
   static let gutter: CGFloat = 24
@@ -107,18 +109,120 @@ enum FocusSurfaceMetrics {
   static let band: CGFloat = 12
   /// The gutter for a notice strip inset inside a band — narrower on purpose,
   /// so it reads as sitting within the surface rather than as another band.
-  static let noticeGutter: CGFloat = 14
+  static let noticeGutter: CGFloat = 12
+}
+
+private struct FocusSurfacePadding: ViewModifier {
+  @Environment(\.theme) private var theme
+  let includesBand: Bool
+
+  func body(content: Content) -> some View {
+    content
+      .padding(.horizontal, theme.space.xl)
+      .padding(.vertical, includesBand ? theme.space.md : 0)
+  }
 }
 
 extension View {
   /// A band across the top or bottom of a full-pane surface.
   func focusSurfaceBand() -> some View {
-    padding(.horizontal, FocusSurfaceMetrics.gutter)
-      .padding(.vertical, FocusSurfaceMetrics.band)
+    modifier(FocusSurfacePadding(includesBand: true))
   }
 
   /// The side gutter on its own, for the content between the bands.
   func focusSurfaceGutter() -> some View {
-    padding(.horizontal, FocusSurfaceMetrics.gutter)
+    modifier(FocusSurfacePadding(includesBand: false))
+  }
+}
+
+/// The one button a focus surface draws, in two weights.
+///
+/// Flat and bordered, at the control radius: the system's bordered styles
+/// paint in the accent colour and a bezel of their own, neither of which a
+/// theme can reach. The prominent weight is the status convention in primary —
+/// a tinted fill, a border and text of the same hue — so the one action a
+/// screen wants you to take is marked by colour and not by elevation.
+struct FocusActionButtonStyle: ButtonStyle {
+  var prominent = false
+  /// Larger padding for the few actions that are the point of their screen.
+  var large = false
+
+  func makeBody(configuration: Configuration) -> some View {
+    FocusActionButtonBody(configuration: configuration, prominent: prominent, large: large)
+  }
+}
+
+/// A view rather than the style's own body, so the hover state has somewhere
+/// to live.
+private struct FocusActionButtonBody: View {
+  @Environment(\.theme) private var theme
+  @Environment(\.isEnabled) private var isEnabled
+  let configuration: ButtonStyleConfiguration
+  let prominent: Bool
+  let large: Bool
+  @State private var isHovering = false
+
+  var body: some View {
+    let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
+    let pressed = configuration.isPressed
+    return configuration.label
+      .font(theme.bodyFont(weight: prominent ? .semibold : .medium))
+      .foregroundStyle(
+        configuration.role == .destructive ? theme.danger : (prominent ? theme.primary : theme.ink))
+      .padding(.horizontal, large ? theme.space.md : theme.space.sm)
+      .padding(.vertical, large ? theme.space.sm : theme.space.xs)
+      .background(shape.fill(fill(pressed: pressed)))
+      .overlay(
+        shape.strokeBorder(
+          prominent ? theme.primary.opacity(Theme.statusBorderOpacity) : theme.border,
+          lineWidth: theme.hairline))
+      .opacity(isEnabled ? 1 : 0.45)
+      .contentShape(shape)
+      .onHover { isHovering = $0 }
+  }
+
+  private func fill(pressed: Bool) -> Color {
+    if prominent {
+      return theme.primary.opacity(pressed ? 0.24 : (isHovering ? 0.16 : Theme.statusFillOpacity))
+    }
+    if pressed { return theme.well }
+    return isHovering ? theme.hover : Color.clear
+  }
+}
+
+/// A chip that is either on or off: a condition that holds, an estimate that
+/// is chosen. Bordered and squarish, never a capsule; on is the primary status
+/// tint, off is a hairline and muted text.
+struct FocusChipButtonStyle: ButtonStyle {
+  let isOn: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    FocusChipButtonBody(configuration: configuration, isOn: isOn)
+  }
+}
+
+private struct FocusChipButtonBody: View {
+  @Environment(\.theme) private var theme
+  let configuration: ButtonStyleConfiguration
+  let isOn: Bool
+
+  var body: some View {
+    let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
+    return configuration.label
+      .font(theme.captionFont)
+      .monospacedDigit()
+      .foregroundStyle(isOn ? theme.primary : theme.muted)
+      .padding(.horizontal, theme.space.sm)
+      .padding(.vertical, theme.space.xxs)
+      .background(
+        shape.fill(
+          isOn
+            ? theme.primary.opacity(Theme.statusFillOpacity)
+            : (configuration.isPressed ? theme.well : Color.clear)))
+      .overlay(
+        shape.strokeBorder(
+          isOn ? theme.primary.opacity(Theme.statusBorderOpacity) : theme.border,
+          lineWidth: theme.hairline))
+      .contentShape(shape)
   }
 }
