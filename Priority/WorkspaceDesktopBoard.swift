@@ -60,8 +60,8 @@ struct WorkspaceKanbanBoard: View {
           // The board said nowhere on its face which list it was showing, so
           // ⌘2 from the outline took the scope name off the screen.
           WorkspacePaneHeader(title: model.currentBoardScopeTitle) {
-            if let scope = model.scopeTask {
-              WorkspacePaneScopeExit(title: scope.title) { model.leaveTaskScope() }
+            if let exit = model.scopeExitTitle {
+              WorkspacePaneScopeExit(title: exit) { model.leaveTaskScope() }
             }
           } trailing: {
             WorkspacePaneCount(count: model.boardColumns.reduce(0) { $0 + model.tasks(in: $1).count })

@@ -92,6 +92,15 @@ extension WorkspaceViewModel {
     return scopeTask?.title ?? selectedList?.name ?? "Board"
   }
 
+  /// Where leaving the opened task goes: its parent task, or the list it sits
+  /// in. The breadcrumb used to print the opened task's own title, which is
+  /// already the pane's title beside it.
+  var scopeExitTitle: String? {
+    guard let scope = scopeTask else { return nil }
+    if let parentID = scope.parentTaskId, let parent = task(withID: parentID) { return parent.title }
+    return list(for: scope)?.name ?? selectedList?.name
+  }
+
   func tasks(in column: WorkspaceKanbanColumn) -> [WorkspaceTask] {
     boardTasksByColumn[column.id, default: []]
   }
