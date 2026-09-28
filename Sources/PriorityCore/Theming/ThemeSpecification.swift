@@ -130,7 +130,7 @@ public enum ThemeIssue: Equatable, Sendable {
     case .gradientsOnChrome:
       return "the theme declares gradients on chrome"
     case .radiusScaleOutOfOrder:
-      return "the radius scale is not panel ≥ control, or the pill is not a pill"
+      return "the radius scale is not panel ≥ control (or a square panel), or the pill is not a pill"
     case .shellRadiusOffScale(let value):
       return "shell radius \(Self.format(value)) is outside the 18–22 reserved for the app shell"
     case .hairlineTooHeavy(let value):
@@ -217,7 +217,11 @@ public enum ThemeStructureAudit {
   public static func findings(for structure: ThemeStructure) -> [ThemeIssue] {
     var issues: [ThemeIssue] = []
     let radius = structure.radius
-    if radius.panel < radius.control || radius.pill < 999 {
+    // A square panel is the one exception to "panel ≥ control": a button in a
+    // square pane may keep a small corner, but a panel rounder than zero and
+    // tighter than its own buttons is a scale out of order.
+    let panelOutOfOrder = radius.panel != 0 && radius.panel < radius.control
+    if panelOutOfOrder || radius.pill < 999 {
       issues.append(.radiusScaleOutOfOrder)
     }
     if radius.shell != 0, !shellRadiusRange.contains(radius.shell) {

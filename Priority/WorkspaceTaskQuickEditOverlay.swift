@@ -176,7 +176,8 @@ struct WorkspaceTaskQuickEditOverlay: View {
             .font(theme.numeralFont(theme.scale.body, weight: .regular))
             .frame(maxWidth: .infinity).padding(.vertical, theme.space.xs)
             .foregroundStyle(calendar.isDate(day, equalTo: date, toGranularity: .month) ? theme.ink : theme.dim)
-            .workspaceSelection(isSelected: calendar.isDate(day, inSameDayAs: date), hasKeyboard: false)
+            .workspaceSelection(
+              isSelected: calendar.isDate(day, inSameDayAs: date), hasKeyboard: false, radius: theme.controlRadius)
             .onTapGesture { selectDay(day) }
         }
       }
@@ -198,7 +199,7 @@ struct WorkspaceTaskQuickEditOverlay: View {
       .font(theme.numeralFont(theme.scale.body))
       .foregroundStyle(theme.ink)
       .monospacedDigit().padding(theme.space.xs)
-      .workspaceSelection(isSelected: focus == field, hasKeyboard: focus == field)
+      .workspaceSelection(isSelected: focus == field, hasKeyboard: focus == field, radius: theme.controlRadius)
       .focusable().focused($focus, equals: field)
       .accessibilityLabel(component == .hour ? "Hour" : "Minute")
       .onTapGesture { focus = field }

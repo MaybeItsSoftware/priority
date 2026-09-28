@@ -78,7 +78,10 @@ public enum BuiltInThemeSpecifications {
       ]
     ),
     structure: ThemeStructure(
-      radius: ThemeRadiusScale(panel: 8, control: 6, pill: 9999, shell: 20),
+      // Zed's "maximum utility": panels, overlays, cards and row selections
+      // are square, and only the things you press keep a corner, small
+      // enough to say "button" without saying "capsule".
+      radius: ThemeRadiusScale(panel: 0, row: 0, control: 4, pill: 9999, shell: 20),
       border: ThemeBorderScale(hairline: 1, emphasis: 2, focusRing: 2),
       spacing: ThemeSpacingScale(xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24),
       typography: ThemeTypography(

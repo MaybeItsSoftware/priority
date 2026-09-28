@@ -70,6 +70,7 @@ struct Theme: Equatable {
   var type: ThemeTypography { specification.structure.typography }
 
   var panelRadius: CGFloat { specification.structure.radius.panel }
+  var rowRadius: CGFloat { specification.structure.radius.row }
   var controlRadius: CGFloat { specification.structure.radius.control }
   var pillRadius: CGFloat { specification.structure.radius.pill }
   var shellRadius: CGFloat { specification.structure.radius.shell }
@@ -88,6 +89,28 @@ struct Theme: Equatable {
   /// The square a header's or the status bar's icon button occupies: room for
   /// a caption-sized glyph and a hover fill round it, and no more.
   var paneIconButtonSize: CGFloat { CGFloat(space.lg + space.xs) }
+
+  // MARK: - Rows
+  //
+  // Every list in the window — the sidebar, the outline, Today, the done rail,
+  // the overlays' results — runs its rows edge to edge of its pane, the way an
+  // editor's project panel does: the selection is a band the full width of the
+  // column, and the gutter is laid *inside* the row, so the text still starts
+  // where the header's title does. These are those gutters and that height.
+
+  /// The main pane's side gutter: its header's title, and the text of every
+  /// row beneath it — the outline, Today, the done rail's day headings. The
+  /// full-pane surfaces (Focus, the timeline) are laid out on it too.
+  var paneGutter: CGFloat { CGFloat(space.xl) }
+
+  /// The narrower gutter of the sidebar and the overlays' result lists, where
+  /// a column is a third the width and a pane's gutter would eat the names.
+  var listGutter: CGFloat { CGFloat(space.md) }
+
+  /// Above and below a single line of row text. With body text this makes a
+  /// row about 25pt — one line and a little air, Zed's density rather than a
+  /// source list's.
+  var rowVerticalPadding: CGFloat { CGFloat(space.xs) }
 
   // MARK: - Type
 

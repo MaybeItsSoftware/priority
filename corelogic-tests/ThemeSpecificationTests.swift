@@ -234,7 +234,7 @@ final class ThemeSpecificationTests: XCTestCase {
   func testAPillThatIsNotAPillBreaksTheRadiusScale() {
     let chalk = BuiltInThemeSpecifications.chalk.structure
     let broken = ThemeStructure(
-      radius: ThemeRadiusScale(panel: 8, control: 6, pill: 12, shell: 20),
+      radius: ThemeRadiusScale(panel: 8, row: 0, control: 6, pill: 12, shell: 20),
       border: chalk.border,
       spacing: chalk.spacing,
       typography: chalk.typography
@@ -246,7 +246,7 @@ final class ThemeSpecificationTests: XCTestCase {
     let chalk = BuiltInThemeSpecifications.chalk.structure
     func structure(shell: Double) -> ThemeStructure {
       ThemeStructure(
-        radius: ThemeRadiusScale(panel: 8, control: 6, pill: 9999, shell: shell),
+        radius: ThemeRadiusScale(panel: 8, row: 0, control: 6, pill: 9999, shell: shell),
         border: chalk.border,
         spacing: chalk.spacing,
         typography: chalk.typography

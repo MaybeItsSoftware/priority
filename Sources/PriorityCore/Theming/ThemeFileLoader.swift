@@ -382,6 +382,7 @@ enum ThemeFileMerger {
     let radius = overrides.radius.map { file in
       ThemeRadiusScale(
         panel: length(file.panel, base.radius.panel, "radius.panel"),
+        row: length(file.row, base.radius.row, "radius.row"),
         control: length(file.control, base.radius.control, "radius.control"),
         pill: length(file.pill, base.radius.pill, "radius.pill"),
         shell: length(file.shell, base.radius.shell, "radius.shell"))
@@ -516,7 +517,7 @@ enum ThemeFileSchema {
       // Role names are checked by the merger, which can say which role.
       "palette": .object(["light": .any, "dark": .any]),
       "structure": .object([
-        "radius": .object(["panel": .any, "control": .any, "pill": .any, "shell": .any]),
+        "radius": .object(["panel": .any, "row": .any, "control": .any, "pill": .any, "shell": .any]),
         "border": .object(["hairline": .any, "emphasis": .any, "focusRing": .any]),
         "spacing": .object([
           "xxs": .any, "xs": .any, "sm": .any, "md": .any, "lg": .any, "xl": .any,

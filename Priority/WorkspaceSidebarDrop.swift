@@ -42,7 +42,7 @@ private struct WorkspaceSidebarDropRow: ViewModifier {
       .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
       .background(
         placement == .into ? theme.selectionFill : .clear,
-        in: RoundedRectangle(cornerRadius: theme.controlRadius))
+        in: RoundedRectangle(cornerRadius: theme.rowRadius))
       .overlay(alignment: .top) { edge(.before) }
       .overlay(alignment: .bottom) { edge(.after) }
       .onDrop(

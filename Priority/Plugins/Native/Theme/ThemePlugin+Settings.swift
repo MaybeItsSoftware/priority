@@ -201,7 +201,7 @@ struct ThemeSettingsPage: View {
   private var radiusSummary: String {
     let radius = themeManager.specification.structure.radius
     return
-      "panel \(number(radius.panel)) · control \(number(radius.control)) · pill \(number(radius.pill)) · shell \(number(radius.shell))"
+      "panel \(number(radius.panel)) · row \(number(radius.row)) · control \(number(radius.control)) · pill \(number(radius.pill)) · shell \(number(radius.shell))"
   }
 
   private var borderSummary: String {

@@ -45,14 +45,15 @@ Every field is optional. Anything a file leaves out comes from the theme it
 }
 ```
 
-So is this, which is Chalk Dark with bigger type and squarer corners:
+So is this, which is Chalk Dark with bigger type and the softer, rounded
+look the app had before it went square:
 
 ```json
 {
   "name": "Big Dark",
   "extends": "native.theme.chalk.dark",
   "structure": {
-    "radius": { "panel": 4, "control": 3 },
+    "radius": { "panel": 8, "row": 6, "control": 6 },
     "typography": { "bodySize": 15 }
   }
 }
@@ -115,7 +116,7 @@ is stated, so it is also a reference for what can be set.
     }
   },
   "structure": {
-    "radius": { "panel": 8, "control": 6, "pill": 9999, "shell": 20 },
+    "radius": { "panel": 0, "row": 0, "control": 4, "pill": 9999, "shell": 20 },
     "border": { "hairline": 1, "emphasis": 2, "focusRing": 2 },
     "spacing": { "xxs": 2, "xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24 },
     "typography": {
@@ -185,8 +186,9 @@ All sizes are in points. Each group can be given in part.
 
 | Key | Meaning |
 | --- | --- |
-| `radius.panel` | Cards, panels, popovers. |
-| `radius.control` | Buttons, inputs, chips, tooltips. Should not exceed `panel`. |
+| `radius.panel` | Cards, panels, popovers and overlays. The built-ins set 0, the way Zed draws them. |
+| `radius.row` | A list row's selection and hover — sidebar, outline, Today, result lists. Rows run edge to edge of their pane, so the built-ins set 0 and a selection is a full-width band; raise it for inset, rounded selections. |
+| `radius.control` | Buttons, inputs, chips, tooltips. Should not exceed `panel`, unless `panel` is 0 — square panels with slightly rounded buttons is the built-in look. |
 | `radius.pill` | Genuinely round things: avatars, dots, toggle knobs. Keep it large (999 or more). |
 | `radius.shell` | The outermost window shell only. 18–22, or 0 for none. |
 | `border.hairline` | The default rule. Above 2 is reported: that is a border, not a hairline. |

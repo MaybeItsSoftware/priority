@@ -1,13 +1,23 @@
 import Foundation
 
-/// The one radius scale, as a closed set of four.
+/// The one radius scale, as a closed set of five.
 ///
 /// Rule 3 of the house style — "nothing between" — only holds if there is
 /// nowhere to put an in-between value. A component asks for `.panel`, never
 /// for `10`.
+///
+/// Zero is a legitimate value for `panel` and `row`, and the built-ins use
+/// it: the window reads the way an editor's does, with overlays, cards and
+/// selections as square as the panes they sit in. A theme that wants the
+/// softer look back raises them.
 public struct ThemeRadiusScale: Equatable, Sendable {
   /// Cards, panels, popovers.
   public let panel: Double
+  /// A list row's selection and hover — the sidebar, the outline, every
+  /// result list. Its own step because a row runs edge to edge of its pane,
+  /// so whatever the pane's corners are, a rounded selection inside it reads
+  /// as a box floating in the list rather than the line being chosen.
+  public let row: Double
   /// Buttons, inputs, chips, tooltips.
   public let control: Double
   /// Pills, badges, avatars.
@@ -15,8 +25,9 @@ public struct ThemeRadiusScale: Equatable, Sendable {
   /// The outermost app shell, and nothing else.
   public let shell: Double
 
-  public init(panel: Double, control: Double, pill: Double, shell: Double) {
+  public init(panel: Double, row: Double, control: Double, pill: Double, shell: Double) {
     self.panel = panel
+    self.row = row
     self.control = control
     self.pill = pill
     self.shell = shell

@@ -78,12 +78,17 @@ public struct ThemeFile: Codable, Equatable, Sendable {
 
   public struct Radius: Codable, Equatable, Sendable {
     public var panel: Double?
+    public var row: Double?
     public var control: Double?
     public var pill: Double?
     public var shell: Double?
 
-    public init(panel: Double? = nil, control: Double? = nil, pill: Double? = nil, shell: Double? = nil) {
+    public init(
+      panel: Double? = nil, row: Double? = nil, control: Double? = nil,
+      pill: Double? = nil, shell: Double? = nil
+    ) {
       self.panel = panel
+      self.row = row
       self.control = control
       self.pill = pill
       self.shell = shell
@@ -296,7 +301,8 @@ extension ThemeFile {
         light: table(specification.palette.light), dark: table(specification.palette.dark)),
       structure: Structure(
         radius: Radius(
-          panel: structure.radius.panel, control: structure.radius.control,
+          panel: structure.radius.panel, row: structure.radius.row,
+          control: structure.radius.control,
           pill: structure.radius.pill, shell: structure.radius.shell),
         border: Border(
           hairline: structure.border.hairline, emphasis: structure.border.emphasis,
