@@ -71,8 +71,10 @@ extension WorkspaceViewModel {
   }
 
   func descendants(of task: WorkspaceTask) -> [TaskOutlineItem] {
-    // A board card's descendants are observed directly; only the fallback
-    // below needs to hear that the rows it read have been replaced.
+    // A board card's descendants are observed directly — a subtask surfaced
+    // as a card of its own included, see `WorkspaceBoardTrees` — so the board
+    // never reaches the store from a view body. Only the fallback below, for
+    // a task off the board, needs to hear that the rows it read were replaced.
     if let cached = boardDescendants[task.id] { return cached }
     _ = taskContentRevision
     if let cached = descendantCache[task.id] { return cached }

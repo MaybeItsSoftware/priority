@@ -119,6 +119,46 @@ public struct WorkspaceSidebarIndex: Sendable, Equatable {
   }
 }
 
+/// What a board draws beneath its cards: each card's whole subtree, and every
+/// task's parent, from one walk of the lists' trees already in memory.
+///
+/// A subtree is keyed for every task *inside* a card's tree as well as for the
+/// card itself. A subtask filed under a different column from its parent is
+/// surfaced as a card of its own, and it used to find no entry here — so its
+/// tree was read from the store once per card, inside the view body, instead
+/// of coming out of the same pass as everyone else's.
+public struct WorkspaceBoardTrees: Sendable, Equatable {
+  /// Depth-first beneath each task, depths counted from the task's own
+  /// children (0), archived nested lists and their contents left out.
+  public var descendants: [String: [TaskOutlineItem]]
+  public var parents: [String: WorkspaceTask]
+
+  public init(cardIDs: Set<String>, trees: [WorkspaceListTree]) {
+    var descendants: [String: [TaskOutlineItem]] = Dictionary(uniqueKeysWithValues: cardIDs.map { ($0, []) })
+    var parents: [String: WorkspaceTask] = [:]
+    for tree in trees {
+      var ancestors: [TaskOutlineItem] = []
+      for item in tree.visibleOutline() {
+        while let last = ancestors.last, last.depth >= item.depth { ancestors.removeLast() }
+        if let parent = ancestors.last { parents[item.id] = parent.task }
+        // Keyed ancestors are closed downwards, so only the nearest one
+        // decides whether this task sits inside a card's tree.
+        let insideCard = ancestors.last.map { descendants[$0.id] != nil } ?? false
+        if insideCard {
+          for ancestor in ancestors where descendants[ancestor.id] != nil {
+            descendants[ancestor.id, default: []].append(
+              TaskOutlineItem(task: item.task, depth: item.depth - ancestor.depth - 1))
+          }
+        }
+        if insideCard && descendants[item.id] == nil { descendants[item.id] = [] }
+        ancestors.append(item)
+      }
+    }
+    self.descendants = descendants
+    self.parents = parents
+  }
+}
+
 extension WorkspaceStore {
   /// One list's rows, read once.
   public func listTree(in listId: String) throws -> WorkspaceListTree {

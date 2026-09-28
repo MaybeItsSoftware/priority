@@ -104,25 +104,13 @@ extension WorkspaceViewModel {
       if boardParentTaskID != parentTaskID { boardParentTaskID = parentTaskID }
       tasks.removeAll { ($0.isList && $0.archivedAt != nil) || (hidesCompletedTasks && $0.status != .open) }
       let boardIDs = Set(tasks.map(\.id))
-      var descendants: [String: [TaskOutlineItem]] = Dictionary(
-        uniqueKeysWithValues: tasks.map { ($0.id, []) })
-      var parents: [String: WorkspaceTask] = [:]
       let listIDs = Array(Set(tasks.map(\.listId)))
       let trees = try listTrees(for: listIDs, store: store)
-      for listID in listIDs {
-        var ancestors: [TaskOutlineItem] = []
-        for item in trees[listID]?.visibleOutline() ?? [] {
-          while let last = ancestors.last, last.depth >= item.depth {
-            ancestors.removeLast()
-          }
-          if let parent = ancestors.last?.task { parents[item.task.id] = parent }
-          for ancestor in ancestors where boardIDs.contains(ancestor.id) {
-            descendants[ancestor.id, default: []].append(
-              TaskOutlineItem(task: item.task, depth: item.depth - ancestor.depth - 1))
-          }
-          ancestors.append(item)
-        }
-      }
+      // Every level beneath every card, the nested cards' own trees included,
+      // in one walk of rows already read — never a query per card.
+      let board = WorkspaceBoardTrees(cardIDs: boardIDs, trees: listIDs.compactMap { trees[$0] })
+      let descendants = board.descendants
+      let parents = board.parents
       var treeIDs = Set<String>()
       let treeTasks = (tasks + tasks.flatMap { root in
         descendants[root.id, default: []].map(\.task)

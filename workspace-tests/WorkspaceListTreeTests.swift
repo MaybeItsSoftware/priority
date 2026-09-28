@@ -92,6 +92,44 @@ final class WorkspaceListTreeTests: XCTestCase {
     XCTAssertEqual(index.archivedNestedLists.map(\.id), [seeded.archived.id])
   }
 
+  /// A card's tree runs to every level, depths counted from the card, and a
+  /// task inside it has a tree of its own — the case of a subtask surfaced as
+  /// a card in another column, or a card on a board scoped into a parent.
+  func testBoardTreesReachEveryLevelBeneathEveryCardAndInsideIt() throws {
+    let project = try store.createTask(listId: list.id, title: "Project")
+    let step = try store.createTask(listId: list.id, title: "Step", parentTaskId: project.id)
+    let part = try store.createTask(listId: list.id, title: "Part", parentTaskId: step.id)
+    let detail = try store.createTask(listId: list.id, title: "Detail", parentTaskId: part.id)
+    try store.setStatus(.completed, for: detail.id)
+    let sibling = try store.createTask(listId: list.id, title: "Sibling", parentTaskId: project.id)
+    let archived = try store.createTask(listId: list.id, title: "Old", parentTaskId: project.id, kind: .list)
+    _ = try store.createTask(listId: list.id, title: "Hidden", parentTaskId: archived.id)
+    try store.setNestedListArchived(true, id: archived.id)
+    let elsewhere = try store.createTask(listId: list.id, title: "Elsewhere")
+    let tree = try store.listTree(in: list.id)
+
+    let board = WorkspaceBoardTrees(cardIDs: [project.id], trees: [tree])
+    let beneath = try XCTUnwrap(board.descendants[project.id])
+    XCTAssertEqual(beneath.map(\.task.title), ["Step", "Part", "Detail", "Sibling"])
+    XCTAssertEqual(beneath.map(\.depth), [0, 1, 2, 0])
+    // Finished work stays in the tree, drawn ticked rather than dropped.
+    XCTAssertEqual(beneath[2].task.status, .completed)
+    XCTAssertEqual(board.descendants[step.id]?.map(\.task.title), ["Part", "Detail"])
+    XCTAssertEqual(board.descendants[step.id]?.map(\.depth), [0, 1])
+    XCTAssertEqual(board.descendants[detail.id], [])
+    XCTAssertEqual(board.descendants[sibling.id], [])
+    XCTAssertNil(board.descendants[elsewhere.id])
+    XCTAssertEqual(board.parents[detail.id]?.id, part.id)
+    XCTAssertNil(board.parents[project.id])
+
+    // A board scoped into Project has Step as a card: its tree is complete,
+    // and nothing above it is keyed.
+    let scoped = WorkspaceBoardTrees(cardIDs: [step.id, sibling.id], trees: [tree])
+    XCTAssertEqual(scoped.descendants[step.id]?.map(\.depth), [0, 1])
+    XCTAssertNil(scoped.descendants[project.id])
+    XCTAssertEqual(Set(scoped.descendants.keys), [step.id, part.id, detail.id, sibling.id])
+  }
+
   func testTasksByIDReadsOnlyWhatExists() throws {
     let task = try store.createTask(listId: list.id, title: "One")
     let found = try store.tasks(ids: [task.id, "missing", task.id])
