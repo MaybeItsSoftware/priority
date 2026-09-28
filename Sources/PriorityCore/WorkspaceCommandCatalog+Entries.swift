@@ -229,6 +229,9 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .windowReloadKeymap, title: "Reload the keymap", group: "Window", keys: [],
       note: "It reloads by itself when saved; this is for when it did not"),
+    .init(
+      id: .windowShowDiagnostics, title: "Show diagnostics", group: "Window", keys: [],
+      note: "Connection, integration health, and this session's problems"),
   ]
 
   // MARK: - Focus

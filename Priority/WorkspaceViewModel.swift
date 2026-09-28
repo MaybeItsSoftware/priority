@@ -162,6 +162,9 @@ enum WorkspaceSidebarItem: Identifiable {
     ((String, String, String, Date?, Bool) async throws -> String?)?
   /// Called with a task id and the calendar event now standing for it.
   @ObservationIgnored var onGoogleCalendarEventCreated: ((String, String) -> Void)?
+  /// Opens the Diagnostics sheet, which the coordinator owns rather than the
+  /// workspace.
+  @ObservationIgnored var onShowDiagnostics: (() -> Void)?
   /// Called after any local write, so the Google Tasks mirror can push it.
   /// Coalesced on the far side — this fires far more often than it syncs.
   @ObservationIgnored var onLocalWrite: (() -> Void)?

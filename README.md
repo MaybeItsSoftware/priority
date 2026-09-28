@@ -55,13 +55,18 @@ Open Preferences with `Cmd+,`:
 | 8 | MCP integration *(optional)* |
 | 9 | Launch at login |
 
-Onboarding boxes guide the Checkvist, Obsidian and Google Calendar setup. Each one is dismissable, and the app stays usable offline-first without any of them.
+None of it is required: the workspace is local-first and works with every row
+left blank. Checkvist, Obsidian and Google Calendar are set up from their own
+pages under **Preferences → Plugins**, when you want them.
 
 ## Keyboard flow
 
 The window is keyboard-first: every mode, every surface and every task action
-has a key, and the mode strip and the View and Workspace menus name them, so
-none of it is reachable only by something you already have to know.
+has a key. The mode strip names the modes, and the View, Task and Workspace
+menus list what you can do with the key beside each item — every task action
+is in the Task menu, and the ones whose key is a two-letter sequence have a
+chord as well so the menu can show one. So none of it is reachable only by
+something you already have to know.
 
 | Key | Action |
 | --- | --- |
@@ -88,7 +93,9 @@ commands as a grouped reference. Both are rendered from a single catalogue in
 key router dispatches through — so a key, a palette row and a reference row
 cannot disagree about what happens. [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md)
 covers the behaviour a table cannot: sequence timing, which keys survive a text
-field, and which surfaces take the keyboard outright.
+field, which surfaces take the keyboard outright, and how to rebind any of it
+in `~/Library/Application Support/Priority/keymap.json` (**Open the keymap
+file** in the palette).
 
 ### Coming from Checkvist
 
@@ -399,8 +406,8 @@ wrong for half an hour of reorganising — and the window existed so the same
 views had somewhere to live that survived being clicked away. That panel is
 gone; what is left of the menu bar is a standing reminder and a way in.
 
-Open it from **the status item's menu → Open Main Window**, from the command
-palette (`window`), or with the global hotkey. It is resizable, remembers its
+Open it from **the status item's menu → Open Main Window**, from **Window →
+Priority** in the menu bar, or with the global hotkey. It is resizable, remembers its
 frame, and `Esc` leaves it alone.
 
 **A Dock icon appears while the window is open** and goes again when you close
@@ -414,7 +421,7 @@ with every window closed.
 
 ## Diagnostics
 
-`diagnostics` in the command palette, or **Workspace → Diagnostics**. It opens as
+**Show diagnostics** in the command palette, or **Workspace → Diagnostics**. It opens as
 a sheet on the main window and answers "why does this look wrong?":
 
 - **Status** — connection, current list, network, sync age, open task count, and whether anything is queued offline.

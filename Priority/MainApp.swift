@@ -201,7 +201,7 @@ struct MainApp: App {
         .commandShortcut(.goKeyboardReference)
         Button("Diagnostics") {
           AppDelegate.shared.showMainWindow()
-          AppDelegate.shared.checkvistManager.popoverChrome.showsDiagnostics = true
+          AppDelegate.shared.workspace.run(.windowShowDiagnostics)
         }
       }
     }

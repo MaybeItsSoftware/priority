@@ -126,6 +126,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.onGoogleCalendarEventCreated = { [weak checkvistManager] taskID, eventID in
       checkvistManager?.googleCalendarCompletions.watch(eventID: eventID, forTask: taskID)
     }
+    workspace.onShowDiagnostics = { [weak checkvistManager] in
+      checkvistManager?.popoverChrome.showsDiagnostics = true
+    }
     // Before the window takes a key, so the first press already means what
     // the user's keymap says. A problem in the file is a line in Diagnostics
     // and a message on the window, never a refusal to start.

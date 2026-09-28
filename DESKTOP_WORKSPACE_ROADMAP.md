@@ -228,14 +228,19 @@ Only begin after Phases 1–3 have replacements and migration/export are proven.
 2. Replace remaining legacy settings with workspace/integration settings.
 3. ~~Remove the old popover controller, popover views, popover layout, old task keyboard router, and their build references.~~ **Done.** The panel had already stopped being reachable — the status item shows a menu of today and the global hotkey toggles the window — so this removed a surface rather than changing behaviour. Gone with it: the kanban, matrix, daily-checklist, legacy focus-session and shortcut-reference views, the shared celebration row treatment, and `ShellMode`. `DiagnosticsView` was kept and mounted on the main window.
 4. Remove legacy-only managers after proving no plugin or CLI depends on them.
-5. Rewrite README/onboarding/help around the desktop local-first workflow. *(README, `CLAUDE.md`, `docs/cli.md`, `docs/mcp-server.md` and `docs/state-ownership.md` have been brought in line with step 3; onboarding and the in-app help have not.)*
+5. Rewrite README/onboarding/help around the desktop local-first workflow. *(README, `CLAUDE.md`, `docs/cli.md`, `docs/mcp-server.md` and `docs/state-ownership.md` have been brought in line with step 3. The onboarding dialog queue, which nothing ever displayed, is deleted; the in-app help is the command palette and keyboard reference, both drawn from the catalogue.)*
 6. Run a clean install/migration/export/restore test before deleting compatibility code.
 
-Step 3 left two Preferences panes configuring state that no longer has a surface:
-**Keybindings** (which bound the deleted router) and the **Kanban columns**
-editor (which configures `KanbanManager`, not the workspace board). Both are
-step 2's business. The same is true of the command palette's `kanban`, `matrix`
-and `tab` families, which still run and still write, against nothing you can see.
+Step 3 left two Preferences panes configuring state that no longer had a
+surface. Both are settled: the **Kanban columns** editor is gone, and
+**Keybindings** holds only what is live — the three global hotkeys
+`GlobalShortcutManager` registers, and a way into the window's own keymap
+(`keymap.json`, laid over `WorkspaceCommandCatalog`; see
+`docs/keyboard-shortcuts.md`). The per-action remapping stack it used to edit
+(`ConfigurableShortcutAction`, `ShortcutResolver`, `ShortcutGate`,
+`ShortcutSequenceBuffer`) was deleted with it. The legacy command engine's
+`kanban`, `matrix` and `tab` families are still step 2's business: they run and
+still write, against nothing you can see.
 
 Do not delete the legacy local payload automatically; keep it until one successful export/backup after migration, then offer the user an explicit cleanup action.
 

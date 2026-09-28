@@ -73,6 +73,23 @@ extension SettingsView {
         }
       }
 
+      Section(header: Text("Window Keys")) {
+        let keymap = WorkspaceKeymapStore.shared
+        Text(
+          "Every key in the window can be rebound in keymap.json. The format is in docs/keyboard-shortcuts.md."
+        )
+        .font(.caption)
+        .foregroundColor(themeColor(.textSecondary))
+        HStack {
+          Text(keymap.issues.isEmpty ? "No problems" : "\(keymap.issues.count) problem(s) — see Diagnostics")
+            .font(.caption)
+            .foregroundColor(themeColor(keymap.issues.isEmpty ? .textSecondary : .danger))
+          Spacer(minLength: 0)
+          Button("Reload") { keymap.reload(force: true) }
+          Button("Open keymap.json") { keymap.openFile() }
+        }
+      }
+
       Section(header: Text("Quick Add Target")) {
         VStack(alignment: .leading, spacing: 6) {
           Text("Quick Add location")
