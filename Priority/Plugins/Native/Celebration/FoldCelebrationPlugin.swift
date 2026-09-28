@@ -46,6 +46,7 @@ final class FoldCelebrationPlugin: CompletionCelebrationPlugin {
 private struct FoldFlourish: View {
   let milestone: CompletionMilestone
   @Environment(AppCoordinator.self) private var manager
+  @Environment(\.theme) private var theme
   @State private var settled = false
 
   var body: some View {
@@ -64,8 +65,8 @@ private struct FoldFlourish: View {
         VStack {
           Spacer(minLength: 0)
           Text(caption.uppercased())
-            .font(.system(size: 10, weight: .bold, design: .monospaced))
-            .tracking(1.5)
+            .font(theme.monoFont(size: theme.type.microLabel.size, weight: .bold))
+            .tracking(theme.microLabelTracking)
             .foregroundColor(tint)
           Spacer(minLength: 0)
         }

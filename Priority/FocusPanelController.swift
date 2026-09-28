@@ -115,12 +115,15 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
     let hosting = NSHostingController(
       rootView: FocusPanelView(summons: summons, onClose: { [weak self] in self?.dismiss($0) })
         .focusEffectDisabled()
-        .font(Typography.interfaceFont)
+        .themedBodyFont()
         .environment(model)
         // The panel finishes tasks, so it needs whatever stages the flourish
         // for finishing one. Without this the reward would depend on which
         // surface you happened to press Done on.
-        .environment(AppDelegate.shared.checkvistManager))
+        .environment(AppDelegate.shared.checkvistManager)
+        // Its own root, so it needs its own `.themed`: without it the panel
+        // drew the built-in light theme whatever the user had chosen.
+        .themed(AppDelegate.shared.checkvistManager.theme))
     // Without this the hosting controller sizes the *window* from the view's
     // ideal size, and this view has none — it is all `maxWidth: .infinity` —
     // so the panel collapsed to its minimum on every launch. The window owns

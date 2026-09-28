@@ -11,15 +11,15 @@ import SwiftUI
 /// differently depending on where you opened it would be two days.
 struct FocusPanelView: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let summons: FocusPanelSummons
   let onClose: (FocusPanelDismissal) -> Void
 
   var body: some View {
     DayView(surface: .panel, resetToken: summons.count, onClose: onClose)
       .environment(model)
-      .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
-      .overlay(
-        RoundedRectangle(cornerRadius: 18)
-          .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+      // The outermost shell of its own window, so the shell radius; paper
+      // and a hairline rather than a material, like every other surface.
+      .themedSurface(theme, fill: theme.paper, radius: theme.shellRadius)
   }
 }

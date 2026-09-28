@@ -1,4 +1,5 @@
 import AppKit
+import PriorityCore
 import SwiftUI
 
 /// Theme pane for `SettingsView`. Pulled out of the main file as part of the
@@ -64,7 +65,7 @@ extension SettingsView {
               preferences.themeAccentPreset = preset
             } label: {
               Circle()
-                .fill(AppThemeColorCodec.color(from: preset.hex) ?? .accentColor)
+                .fill(AppThemeColorCodec.color(from: preset.hex) ?? theme.primary)
                 .frame(width: 18, height: 18)
                 .overlay(
                   Circle().stroke(
@@ -99,7 +100,7 @@ extension SettingsView {
         if preferences.themeAccentPreset == .custom {
           TextField("#RRGGBB", text: preferenceBinding(\.themeCustomAccentHex))
             .textFieldStyle(.roundedBorder)
-            .font(.system(size: 12, design: .monospaced))
+            .font(theme.monoFont(size: theme.scale.caption))
         } else {
           Text("Using \(preferences.themeAccentPreset.title) accent")
             .font(.caption)
@@ -121,7 +122,7 @@ extension SettingsView {
             Text(token.title)
               .frame(maxWidth: .infinity, alignment: .leading)
             Text(preferences.themeColorHex(for: token))
-              .font(.system(size: 11, weight: .medium, design: .monospaced))
+              .font(theme.monoFont(size: theme.scale.caption, weight: .medium))
               .foregroundColor(themeColor(.textSecondary))
               .frame(width: 88, alignment: .trailing)
             ColorPicker(
@@ -162,7 +163,7 @@ extension SettingsView {
         .foregroundColor(themeColor(.textSecondary))
 
         TextEditor(text: $themeJSONDraft)
-          .font(.system(size: 12, design: .monospaced))
+          .font(theme.monoFont(size: theme.scale.caption))
           .frame(minHeight: 140, maxHeight: 180)
           .overlay(
             RoundedRectangle(cornerRadius: 6)

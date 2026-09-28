@@ -75,6 +75,7 @@ private struct SparkBurst: View {
   var caption: String?
 
   @Environment(AppCoordinator.self) private var manager
+  @Environment(\.theme) private var theme
   @State private var progress: Double = 0
 
   var body: some View {
@@ -108,8 +109,8 @@ private struct SparkBurst: View {
       }
       if let caption {
         Text(caption.uppercased())
-          .font(.system(size: 10, weight: .bold, design: .monospaced))
-          .tracking(1.5)
+          .font(theme.monoFont(size: theme.type.microLabel.size, weight: .bold))
+          .tracking(theme.microLabelTracking)
           .foregroundColor(tint)
           .opacity(progress < 0.15 ? 0 : 1 - progress * 0.5)
       }

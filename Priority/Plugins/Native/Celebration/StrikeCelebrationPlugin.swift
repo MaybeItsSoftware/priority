@@ -71,6 +71,7 @@ final class StrikeCelebrationPlugin: CompletionCelebrationPlugin {
 private struct StrikeFlourish: View {
   let milestone: CompletionMilestone
   @Environment(AppCoordinator.self) private var manager
+  @Environment(\.theme) private var theme
   @State private var progress: Double = 0
 
   private var tint: Color {
@@ -99,8 +100,8 @@ private struct StrikeFlourish: View {
           .opacity(1 - progress * 0.6)
         if let caption = milestone.caption {
           Text(caption.uppercased())
-            .font(.system(size: 10, weight: .bold, design: .monospaced))
-            .tracking(1.5)
+            .font(theme.monoFont(size: theme.type.microLabel.size, weight: .bold))
+            .tracking(theme.microLabelTracking)
             .foregroundColor(tint)
             .opacity(progress < 0.15 ? 0 : 1 - progress * 0.5)
         }

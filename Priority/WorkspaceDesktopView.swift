@@ -470,7 +470,7 @@ struct WorkspaceScopedTaskComposer: View {
 /// A list's colour, or `fallback` when it has none. Internal rather than
 /// file-private because sidebar rows moved out into their own file.
 extension Color {
-  init(priorityHex rawValue: String?, fallback: Color = .accentColor) {
+  init(priorityHex rawValue: String?, fallback: Color) {
     let value = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines)
       .trimmingCharacters(in: CharacterSet(charactersIn: "#")) ?? ""
     guard value.count == 6, let hex = UInt64(value, radix: 16) else {
