@@ -13,6 +13,7 @@ struct WorkspaceFocusScreen: View {
   @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(AppCoordinator.self) private var manager
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   /// How much history stays on screen. Enough to feel the run you are on,
   /// few enough that it never becomes something to read.
@@ -24,6 +25,14 @@ struct WorkspaceFocusScreen: View {
   private static let passedScale = 0.62
   /// The height a shrunken rung occupies, so the scale does not leave a hole.
   private static let passedRowHeight: CGFloat = 26
+
+  /// The one curve the column moves on. Short and well damped: stepping
+  /// through the ladder is a keyboard gesture that repeats, and a spring you
+  /// can out-type is a spring that turns every press into a queue. Reduced
+  /// motion collapses the duration rather than removing the movement.
+  private var ladderMotion: Animation {
+    .spring(response: reduceMotion ? 0.06 : 0.18, dampingFraction: 0.9)
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -40,7 +49,7 @@ struct WorkspaceFocusScreen: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Color(nsColor: .textBackgroundColor))
+    .background(theme.paper)
     // Over the whole screen rather than the rung: the rung it belongs to is
     // gone by the time this plays, and a cleared ladder is exactly when the
     // flourish has the most to say.
@@ -78,22 +87,23 @@ struct WorkspaceFocusScreen: View {
   /// small mystery, and this is the screen you would come looking for it on.
   @ViewBuilder private var staleNotice: some View {
     if model.staleFocusResolution != .keep {
-      HStack(spacing: 8) {
+      HStack(spacing: theme.space.sm) {
         Image(systemName: "clock.arrow.circlepath")
-          .font(.system(size: 11, weight: .semibold))
+          .font(theme.bodyFont(size: theme.scale.caption, weight: .semibold))
         Text(
           model.staleFocusResolution == .close
             ? "A block left paused on an earlier day was closed out. Its time is on the timeline for that day."
             : "A block left paused on an earlier day was ended. It had no time on it to keep.")
-          .font(.caption)
+          .font(theme.captionFont)
         Spacer(minLength: 0)
         Button("Dismiss") { model.staleFocusResolution = .keep }
           .buttonStyle(.plain)
-          .font(.caption)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.ink)
       }
-      .foregroundStyle(.secondary)
-      .padding(.horizontal, FocusSurfaceMetrics.noticeGutter)
-      .padding(.vertical, 8)
+      .foregroundStyle(theme.muted)
+      .padding(.horizontal, theme.space.md)
+      .padding(.vertical, theme.space.sm)
       FocusRule()
     }
   }
@@ -103,12 +113,12 @@ struct WorkspaceFocusScreen: View {
   private var header: some View {
     WorkspacePaneHeader(title: isRunning ? "In session" : "Focus") {
       Text(isRunning ? "The block you are running" : "What to pick up next")
-        .font(theme.bodyFont(size: 11))
+        .font(theme.captionFont)
         .foregroundStyle(isRunning ? theme.primary : theme.muted)
         .lineLimit(1)
     } trailing: {
       Text("\(FocusPoints.formatted(model.focusPoints.today)) pts today")
-        .font(theme.monoFont(size: 10))
+        .font(theme.numeralFont(theme.scale.caption))
         .foregroundStyle(theme.dim)
         .monospacedDigit()
         .help("Minutes focused, multiplied by how well each block went")
@@ -116,13 +126,13 @@ struct WorkspaceFocusScreen: View {
         Image(systemName: "chart.bar.doc.horizontal")
       }
       .buttonStyle(.plain)
-      .foregroundStyle(.secondary)
+      .foregroundStyle(theme.muted)
       .focusable()
       .commandHelp(.goTimeline)
       Button("Leave") { model.dismissFocusScreen() }
         .buttonStyle(.plain)
-        .font(.caption)
-        .foregroundStyle(.secondary)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
         .focusable()
       KeyCap("esc")
     }
@@ -134,7 +144,7 @@ struct WorkspaceFocusScreen: View {
     VStack(spacing: 0) {
       WorkspaceFocusContextControls()
         .focusSurfaceGutter()
-        .padding(.top, 12)
+        .padding(.top, theme.space.md)
       if model.focusLadder.isEmpty {
         emptyState
       } else {
@@ -151,7 +161,7 @@ struct WorkspaceFocusScreen: View {
   private var blocked: some View {
     DisclosureGroup("\(model.blockedFocusTasks.count) tasks unavailable") {
       ScrollView {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
           ForEach(model.blockedFocusTasks) { blocked in
             Button {
               if let task = model.task(withID: blocked.id) {
@@ -160,14 +170,16 @@ struct WorkspaceFocusScreen: View {
                 model.showRightDock(.inspector)
               }
             } label: {
-              VStack(alignment: .leading, spacing: 2) {
-                Text(blocked.candidate.title).font(.caption.weight(.medium))
+              VStack(alignment: .leading, spacing: theme.space.xxs) {
+                Text(blocked.candidate.title)
+                  .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
+                  .foregroundStyle(theme.ink)
                 let urgency = NextUpSelector.score(blocked.candidate)
                 if [.overdue, .dueToday, .deadlineRisk].contains(urgency.reason) {
-                  Text(urgency.explanation).font(.caption2).foregroundStyle(model.themeColor(.warning))
+                  Text(urgency.explanation).font(theme.captionFont).foregroundStyle(theme.warning)
                 }
                 Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-                  .font(.caption2).foregroundStyle(.secondary)
+                  .font(theme.captionFont).foregroundStyle(theme.muted)
               }
             }
             .buttonStyle(.plain)
@@ -177,21 +189,22 @@ struct WorkspaceFocusScreen: View {
       }
       .frame(maxHeight: 100)
     }
-    .font(.caption)
+    .font(theme.captionFont)
+    .foregroundStyle(theme.muted)
     .focusSurfaceGutter()
-    .padding(.bottom, 8)
+    .padding(.bottom, theme.space.sm)
   }
 
   private var footer: some View {
-    HStack(spacing: 14) {
+    HStack(spacing: theme.space.md) {
       Spacer()
       KeyHint("↑ ↓", "Move through")
       KeyHint("⌥ ↑ ↓", "Reorder within urgency")
       if model.hasManualFocusOrder {
         Button("Reset order") { model.run(.focusResetOrder) }
           .buttonStyle(.plain)
-          .font(.caption2)
-          .foregroundStyle(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
           .focusable()
           .commandHelp(.focusResetOrder)
       }
@@ -200,12 +213,23 @@ struct WorkspaceFocusScreen: View {
     .focusSurfaceBand()
   }
 
+  /// Drawn rather than `ContentUnavailableView`, whose large grey symbol and
+  /// system title face are a style the theme cannot reach.
   private var emptyState: some View {
-    ContentUnavailableView(
-      "Nothing waiting",
-      systemImage: "checkmark.circle",
-      description: Text("No task matches the current conditions, start times and available time."))
-      .frame(maxHeight: .infinity)
+    VStack(spacing: theme.space.xs) {
+      Image(systemName: "checkmark")
+        .font(theme.bodyFont(size: theme.scale.title, weight: .semibold))
+        .foregroundStyle(theme.success)
+      Text("Nothing waiting")
+        .font(theme.titleFont)
+        .foregroundStyle(theme.ink)
+      Text("No task matches the current conditions, start times and available time.")
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
+        .multilineTextAlignment(.center)
+    }
+    .focusSurfaceGutter()
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
   // MARK: - The column
@@ -218,7 +242,7 @@ struct WorkspaceFocusScreen: View {
       .compactMap { model.focusLadder[safe: $0] }
 
     return VStack(spacing: 0) {
-      Spacer(minLength: 12)
+      Spacer(minLength: theme.space.md)
       // One view type for every rung, keyed by the task rather than by its
       // position. That is what lets a rung you climb past *travel* to where it
       // ends up: keyed by position, each row keeps its identity and swaps its
@@ -227,14 +251,14 @@ struct WorkspaceFocusScreen: View {
         rung(scored)
           .transition(.opacity)
       }
-      Spacer(minLength: 12)
+      Spacer(minLength: theme.space.md)
     }
     .frame(maxWidth: .infinity)
     // One spring for the whole column, so history slides up as a body rather
     // than each row animating on its own account.
-    .animation(.spring(response: 0.42, dampingFraction: 0.82), value: model.focusLadderIndex)
-    .animation(.spring(response: 0.42, dampingFraction: 0.82), value: model.stagedTaskID)
-    .animation(.spring(response: 0.42, dampingFraction: 0.82), value: model.focusLadder.count)
+    .animation(ladderMotion, value: model.focusLadderIndex)
+    .animation(ladderMotion, value: model.stagedTaskID)
+    .animation(ladderMotion, value: model.focusLadder.count)
   }
 
   /// Every rung is the same view; how far it sits from the cursor decides how
@@ -256,24 +280,25 @@ struct WorkspaceFocusScreen: View {
     let phase = celebrationPhase(for: scored)
     let treatment = manager.celebration.rowTreatment
     let scale = (isCurrent ? 1 : Self.passedScale) * treatment.rowScale(for: phase)
-    let tint = manager.preferences.themeColor(for: .success)
+    let tint = theme.success
     let celebrating = phase != .idle
 
-    return VStack(spacing: 10) {
+    return VStack(spacing: theme.space.sm) {
       // The reason line rises out of the title rather than appearing above it.
       if isCurrent {
         reasonLine(scored, task: task)
           .transition(.opacity.combined(with: .offset(y: 8)))
       }
 
-      HStack(spacing: 10) {
+      HStack(spacing: theme.space.sm) {
         // The icon becomes the tick it is about to earn, and pops as it does.
+        // Sized off the display step it sits beside, so the pair scale together.
         Image(systemName: celebrating ? "checkmark.circle.fill" : icon(for: scored.reason))
-          .font(.system(size: 20))
-          .foregroundStyle(celebrating ? tint : (isCurrent ? self.tint(for: scored.reason) : Color.secondary))
+          .font(theme.bodyFont(size: theme.scale.display * 0.7))
+          .foregroundStyle(celebrating ? tint : (isCurrent ? self.tint(for: scored.reason) : theme.muted))
           .scaleEffect(treatment.iconScale(for: phase))
         Text(scored.candidate.title)
-          .font(.system(size: 28, weight: .semibold))
+          .font(theme.displayFont(size: theme.scale.display, weight: .semibold))
           .multilineTextAlignment(.center)
           .lineLimit(isCurrent ? 3 : 1)
           .truncationMode(.tail)
@@ -290,10 +315,10 @@ struct WorkspaceFocusScreen: View {
           .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
       }
     }
-    .foregroundStyle(isCurrent ? .primary : .secondary)
+    .foregroundStyle(isCurrent ? theme.ink : theme.muted)
     .background {
       if celebrating {
-        RoundedRectangle(cornerRadius: 12)
+        RoundedRectangle(cornerRadius: theme.panelRadius)
           .fill(tint.opacity(treatment.tintOpacity))
       }
     }
@@ -302,7 +327,7 @@ struct WorkspaceFocusScreen: View {
     // closes over the gap instead of leaving one.
     .frame(maxWidth: 620)
     .frame(height: treatment.collapses && phase == .celebrating ? 0 : nil)
-    .padding(.vertical, isCurrent ? 20 : 3)
+    .padding(.vertical, isCurrent ? theme.space.xl : theme.space.xxs)
     .overlay { rowAccent(for: scored) }
     .contentShape(Rectangle())
     .onTapGesture { model.moveFocusLadder(by: distance) }
@@ -338,12 +363,12 @@ struct WorkspaceFocusScreen: View {
   }
 
   private func reasonLine(_ scored: ScoredNextUp, task: WorkspaceTask?) -> some View {
-    HStack(spacing: 7) {
+    HStack(spacing: theme.space.xs) {
       Text(model.focusExplanation(scored).localizedCapitalized)
-        .font(.caption.weight(.medium))
+        .font(theme.bodyFont(size: theme.scale.caption, weight: .medium))
       if let task, let list = model.list(for: task) {
-        Text("·").foregroundStyle(.tertiary)
-        Text(list.name).font(.caption).foregroundStyle(.secondary)
+        Text("·").foregroundStyle(theme.dim)
+        Text(list.name).font(theme.captionFont).foregroundStyle(theme.muted)
       }
     }
     .foregroundStyle(tint(for: scored.reason))
@@ -352,11 +377,12 @@ struct WorkspaceFocusScreen: View {
   @ViewBuilder
   private func details(_ scored: ScoredNextUp, task: WorkspaceTask?) -> some View {
     let isStaged = model.stagedTask?.id == scored.candidate.id
-    VStack(spacing: 12) {
+    VStack(spacing: theme.space.md) {
       if let meta = metaLine(for: scored, task: task) {
         Text(meta)
-          .font(.callout)
-          .foregroundStyle(.secondary)
+          .font(theme.bodyFont())
+          .monospacedDigit()
+          .foregroundStyle(theme.muted)
       }
       if isStaged {
         estimatePicker
@@ -394,7 +420,7 @@ struct WorkspaceFocusScreen: View {
   /// used once the screen is familiar — and a shortcut you have to go and look
   /// up is a shortcut nobody learns.
   private var unstagedActions: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: theme.space.sm) {
       actionButton("Stage this", systemImage: "target", key: "↵", prominent: true) {
         model.stageFocusLadderSelection()
       }
@@ -413,14 +439,14 @@ struct WorkspaceFocusScreen: View {
           EmptyView()
         }
         .menuStyle(.borderlessButton)
-        .frame(width: 14)
+        .frame(width: theme.space.lg)
         .help("Choose when")
       }
     }
   }
 
   private var stagedActions: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: theme.space.sm) {
       actionButton("Begin", systemImage: "play.fill", key: "↵", prominent: true) {
         model.beginStagedFocus()
       }
@@ -430,45 +456,41 @@ struct WorkspaceFocusScreen: View {
     }
   }
 
-  @ViewBuilder
   private func actionButton(
     _ title: String, systemImage: String, key: String, prominent: Bool = false, action: @escaping () -> Void
   ) -> some View {
-    let label = HStack(spacing: 6) {
-      Image(systemName: systemImage)
-      Text(title)
-      Text(key)
-        .font(.system(size: 10, design: .monospaced))
-        .opacity(0.65)
+    Button(action: action) {
+      HStack(spacing: theme.space.xs) {
+        Image(systemName: systemImage)
+        Text(title)
+        Text(key)
+          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .foregroundStyle(theme.dim)
+      }
     }
-    if prominent {
-      Button(action: action) { label }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .focusable()
-    } else {
-      Button(action: action) { label }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .focusable()
-    }
+    .buttonStyle(FocusActionButtonStyle(prominent: prominent, large: true))
+    .focusable()
   }
 
   private var estimatePicker: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: theme.space.sm) {
       MicroLabel("How long?")
-      HStack(spacing: 6) {
+      HStack(spacing: theme.space.xs) {
         ForEach([5, 10, 15, 25, 45, 60, 90], id: \.self) { minutes in
           Button("\(minutes)m") { model.focusEstimateMinutes = Double(minutes) }
-            .buttonStyle(.bordered)
-            .tint(model.focusEstimateMinutes == Double(minutes) ? theme.primary : theme.muted)
+            .buttonStyle(FocusChipButtonStyle(isOn: model.focusEstimateMinutes == Double(minutes)))
             .focusable()
         }
       }
       Stepper(
-        "\(FocusPoints.formatted(model.focusEstimateMinutes)) minutes",
-        value: Bindable(model).focusEstimateMinutes, in: 1...480, step: 5)
-        .fixedSize()
+        value: Bindable(model).focusEstimateMinutes, in: 1...480, step: 5
+      ) {
+        Text("\(FocusPoints.formatted(model.focusEstimateMinutes)) minutes")
+          .font(theme.numeralFont(theme.scale.body))
+          .monospacedDigit()
+          .foregroundStyle(theme.ink)
+      }
+      .fixedSize()
     }
   }
 
@@ -493,15 +515,15 @@ struct WorkspaceFocusScreen: View {
   private func tint(for reason: NextUpReason) -> Color {
     switch reason {
     // Status reads from the theme's four-way convention, so a retheme moves
-    // these with everything else. Purple stays a literal: it is categorical
-    // colour — "this one matters" — and has no status token to belong to.
-    case .daily: return model.themeColor(.success)
-    case .overdue: return model.themeColor(.danger)
-    case .dueToday, .dueSoon, .deadlineRisk: return model.themeColor(.warning)
+    // these with everything else. Purple is categorical colour — "this one
+    // matters" — so it takes the theme's categorical purple, not a status.
+    case .daily: return theme.success
+    case .overdue: return theme.danger
+    case .dueToday, .dueSoon, .deadlineRisk: return theme.warning
     case .condition, .started: return theme.primary
     case .today: return theme.primary
-    case .importance, .priority: return .purple
-    case .order: return .secondary
+    case .importance, .priority: return theme.categoricalPurple
+    case .order: return theme.muted
     }
   }
 }

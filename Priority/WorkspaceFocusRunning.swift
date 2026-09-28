@@ -20,14 +20,14 @@ struct WorkspaceFocusRunning: View {
   var body: some View {
     VStack(spacing: 0) {
       Spacer(minLength: 0)
-      VStack(spacing: 22) {
+      VStack(spacing: theme.space.xl) {
         taskLine
         clock
         progress
         actions
       }
       .frame(maxWidth: 560)
-      .padding(.horizontal, 32)
+      .focusSurfaceGutter()
       Spacer(minLength: 0)
       if !queue.isEmpty {
         FocusRule()
@@ -40,12 +40,13 @@ struct WorkspaceFocusRunning: View {
   // MARK: - The task and the clock
 
   private var taskLine: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: theme.space.sm) {
       if let list = model.list(for: task) {
         MicroLabel(list.name)
       }
       Text(task.title)
-        .font(.system(size: 30, weight: .semibold))
+        .font(theme.displayFont(size: theme.scale.display, weight: .semibold))
+        .foregroundStyle(theme.ink)
         .multilineTextAlignment(.center)
         .lineLimit(3)
         .fixedSize(horizontal: false, vertical: true)
@@ -57,9 +58,9 @@ struct WorkspaceFocusRunning: View {
   private var clock: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
       let reading = reading(now: context.date)
-      VStack(spacing: 6) {
+      VStack(spacing: theme.space.xs) {
         Text(reading.text)
-          .font(.system(size: 76, weight: .semibold, design: .monospaced))
+          .font(theme.numeralFont(theme.scale.hero, weight: .semibold))
           .monospacedDigit()
           .foregroundStyle(clockTint(overrun: reading.isOverrun))
           .contentTransition(.numericText())
@@ -67,7 +68,7 @@ struct WorkspaceFocusRunning: View {
           session.pausedAt == nil
             ? (reading.isOverrun ? "over the block" : "of \(plannedMinutes)m")
             : "paused",
-          tint: session.pausedAt == nil ? nil : model.themeColor(.warning))
+          tint: session.pausedAt == nil ? nil : theme.warning)
       }
     }
   }
@@ -79,15 +80,15 @@ struct WorkspaceFocusRunning: View {
       let fraction = fraction(now: context.date)
       GeometryReader { proxy in
         ZStack(alignment: .leading) {
-          Capsule().fill(Color.primary.opacity(0.08))
-          Capsule()
+          Rectangle().fill(theme.border)
+          Rectangle()
             .fill(clockTint(overrun: fraction >= 1))
-            .frame(width: max(2, proxy.size.width * min(1, fraction)))
+            .frame(width: max(theme.emphasisBorder, proxy.size.width * min(1, fraction)))
         }
       }
-      .frame(height: 3)
+      .frame(height: theme.emphasisBorder)
     }
-    .frame(height: 3)
+    .frame(height: theme.emphasisBorder)
   }
 
   // MARK: - Actions
@@ -95,8 +96,8 @@ struct WorkspaceFocusRunning: View {
   /// Done first and prominent. Everything else on this screen is a way of not
   /// finishing, so it gets the weight and the Return key.
   private var actions: some View {
-    VStack(spacing: 12) {
-      HStack(spacing: 8) {
+    VStack(spacing: theme.space.md) {
+      HStack(spacing: theme.space.sm) {
         action("Done", systemImage: "checkmark", key: "↵", prominent: true) {
           model.requestFocusCompletion()
         }
@@ -111,46 +112,38 @@ struct WorkspaceFocusRunning: View {
         }
         action("Float", systemImage: "pip", key: "F") { model.requestFocusFloat() }
       }
-      HStack(spacing: 14) {
+      HStack(spacing: theme.space.md) {
         Text(
           session.pausedAt == nil
             ? "Log progress keeps the task open. Only active time is recorded."
             : "Paused. Only active work time is recorded.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
         Spacer(minLength: 0)
         Button("End session") { model.finishFocus() }
           .buttonStyle(.plain)
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
           .focusable()
       }
     }
   }
 
-  @ViewBuilder
   private func action(
     _ title: String, systemImage: String, key: String, prominent: Bool = false,
     action: @escaping () -> Void
   ) -> some View {
-    let label = HStack(spacing: 6) {
-      Image(systemName: systemImage)
-      Text(title)
-      Text(key)
-        .font(.system(size: 10, design: .monospaced))
-        .opacity(0.65)
+    Button(action: action) {
+      HStack(spacing: theme.space.xs) {
+        Image(systemName: systemImage)
+        Text(title)
+        Text(key)
+          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .foregroundStyle(theme.dim)
+      }
     }
-    if prominent {
-      Button(action: action) { label }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .focusable()
-    } else {
-      Button(action: action) { label }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .focusable()
-    }
+    .buttonStyle(FocusActionButtonStyle(prominent: prominent, large: true))
+    .focusable()
   }
 
   // MARK: - What follows this
@@ -160,28 +153,29 @@ struct WorkspaceFocusRunning: View {
   }
 
   private var upNext: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       MicroLabel("Up next")
       ScrollView(.vertical) {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
           ForEach(queue) { queued in
-            HStack(spacing: 8) {
+            HStack(spacing: theme.space.sm) {
               Image(systemName: "circle")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .font(theme.bodyFont(size: theme.type.microLabel.size))
+                .foregroundStyle(theme.dim)
               Text(queued.task.title)
+                .foregroundStyle(theme.ink)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .help(queued.task.title)
               if let blocked = model.blockedFocusTasks.first(where: { $0.id == queued.task.id }) {
                 Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-                  .font(.caption2)
-                  .foregroundStyle(model.themeColor(.warning))
+                  .font(theme.captionFont)
+                  .foregroundStyle(theme.warning)
                   .lineLimit(1)
               }
               Spacer(minLength: 0)
             }
-            .font(.callout)
+            .font(theme.bodyFont())
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -189,7 +183,7 @@ struct WorkspaceFocusRunning: View {
       .frame(maxHeight: 96)
     }
     .focusSurfaceGutter()
-    .padding(.vertical, 14)
+    .padding(.vertical, theme.space.md)
   }
 
   // MARK: - Readings
@@ -210,7 +204,7 @@ struct WorkspaceFocusRunning: View {
   }
 
   private func clockTint(overrun: Bool) -> Color {
-    if session.pausedAt != nil { return .secondary }
+    if session.pausedAt != nil { return theme.muted }
     return overrun ? theme.warning : theme.primary
   }
 }

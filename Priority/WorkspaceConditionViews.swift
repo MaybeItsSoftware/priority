@@ -8,10 +8,10 @@ struct WorkspaceFocusContextControls: View {
   @State private var showsConditions = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       ScrollView(.horizontal) {
-        HStack {
-          Text("AVAILABLE NOW").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+        HStack(spacing: theme.space.xs) {
+          MicroLabel("Available now")
           ForEach(model.focusConditions.filter { condition in
             !condition.isArchived || model.focusContext.conditionIDs.contains(condition.id) ||
               model.taskPlanningByID.values.contains { plan in
@@ -19,24 +19,30 @@ struct WorkspaceFocusContextControls: View {
               }
           }) { condition in
             Button(condition.name) { model.toggleFocusCondition(condition) }
-              .buttonStyle(.bordered)
-              .tint(model.focusContext.conditionIDs.contains(condition.id) ? theme.primary : theme.muted)
+              .buttonStyle(FocusChipButtonStyle(isOn: model.focusContext.conditionIDs.contains(condition.id)))
               .help(condition.isLocation ? "Current location" : "Available capability")
           }
           Button { showsConditions = true } label: { Image(systemName: "slider.horizontal.3") }
+            .buttonStyle(.plain)
+            .foregroundStyle(theme.muted)
             .help("Manage conditions")
         }
       }
       if !model.suggestedContextIDs.isEmpty {
-        HStack {
+        HStack(spacing: theme.space.sm) {
           Text("Last context: " + model.suggestedContextIDs.sorted().map { id in
             model.focusConditions.first(where: { $0.id == id })?.name ?? ""
-          }.joined(separator: ", ")).font(.caption)
+          }.joined(separator: ", ")).foregroundStyle(theme.muted)
           Button("Use again") { model.confirmSuggestedContext() }
+            .buttonStyle(.plain)
+            .foregroundStyle(theme.primary)
           Button("Dismiss") { model.suggestedContextIDs = [] }
+            .buttonStyle(.plain)
+            .foregroundStyle(theme.muted)
         }
+        .font(theme.captionFont)
       }
-      HStack {
+      HStack(spacing: theme.space.sm) {
         Menu(model.availableUntil.map { "Until \($0.formatted(date: .omitted, time: .shortened))" } ?? "Available time") {
           Button("No time limit") { model.availableUntil = nil; model.focusContextChanged() }
           ForEach([15, 30, 60, 90], id: \.self) { minutes in
@@ -53,18 +59,18 @@ struct WorkspaceFocusContextControls: View {
           Text("Finish something").tag(FocusTimeMode.finish)
         }.fixedSize()
       }
-      HStack {
+      HStack(spacing: theme.space.sm) {
         Toggle("Context expires", isOn: Binding(get: { model.contextExpiresAt != nil }, set: {
           model.contextExpiresAt = $0 ? Date.now.addingTimeInterval(3600) : nil; model.focusContextChanged()
-        })).toggleStyle(.switch)
+        })).toggleStyle(.switch).tint(theme.primary)
         if let end = model.contextExpiresAt {
           DatePicker("Context until", selection: Binding(get: { model.contextExpiresAt ?? end }, set: { model.contextExpiresAt = $0; model.focusContextChanged() }),
                      displayedComponents: [.date, .hourAndMinute]).labelsHidden()
         }
-      }.font(.caption)
+      }.font(theme.captionFont)
       if model.focusContext.conditionIDs.isEmpty {
         Text("General laptop tasks are available. Select conditions to reveal and promote matching work.")
-          .font(.caption).foregroundStyle(.secondary)
+          .font(theme.captionFont).foregroundStyle(theme.muted)
       }
     }
     .sheet(isPresented: $showsConditions) { WorkspaceConditionsEditor().environment(model) }
@@ -73,34 +79,45 @@ struct WorkspaceFocusContextControls: View {
 
 private struct WorkspaceConditionsEditor: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   @Environment(\.dismiss) private var dismiss
   @State private var newName = ""
   @State private var newIsLocation = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: theme.space.lg) {
       SheetTitle(
         "Conditions",
         subject: "Tasks refer to conditions by identity. Renaming keeps their requirements intact.")
       ScrollView {
-        VStack(spacing: 12) {
+        VStack(spacing: theme.space.md) {
           ForEach(model.focusConditions) { condition in WorkspaceConditionEditorRow(condition: condition) }
         }
       }
-      HStack {
+      HStack(spacing: theme.space.sm) {
         TextField("New condition", text: $newName)
         Toggle("Location", isOn: $newIsLocation)
           .toggleStyle(.switch)
         Button("Add") {
           model.createCondition(name: newName, isLocation: newIsLocation)
           if model.errorMessage == nil { newName = "" }
-        }.disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .buttonStyle(FocusActionButtonStyle())
+        .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       }
       if let error = model.errorMessage {
-        Text(error).font(.caption).foregroundStyle(model.themeColor(.danger))
+        Text(error).font(theme.captionFont).foregroundStyle(theme.danger)
       }
-      HStack { Spacer(); Button("Done") { dismiss() }.keyboardShortcut(.defaultAction) }
-    }.padding(24).frame(width: 560, height: 420)
+      HStack {
+        Spacer()
+        Button("Done") { dismiss() }
+          .buttonStyle(FocusActionButtonStyle(prominent: true))
+          .keyboardShortcut(.defaultAction)
+      }
+    }
+    .padding(theme.space.xl)
+    .frame(width: 560, height: 420)
+    .background(theme.raised)
   }
 }
 
@@ -126,6 +143,7 @@ private struct WorkspaceConditionEditorRow: View {
       Toggle("Archived", isOn: $archived)
         .toggleStyle(.switch)
       Button("Save") { model.saveCondition(condition, name: name, isLocation: location, isArchived: archived) }
+        .buttonStyle(FocusActionButtonStyle())
         .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
   }
@@ -133,11 +151,12 @@ private struct WorkspaceConditionEditorRow: View {
 
 struct WorkspaceTaskPlanningEditor: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let task: WorkspaceTask
   let values: TaskEditorValues
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       Toggle("Start time", isOn: Binding(get: { current.startAt != nil }, set: { enabled in
         edit { $0.startAt = enabled ? ($0.startAt ?? .now) : nil }
       }))
@@ -146,27 +165,28 @@ struct WorkspaceTaskPlanningEditor: View {
         DatePicker("Start", selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
                    displayedComponents: [.date, .hourAndMinute])
       }
-      Text("CONDITIONS").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+      MicroLabel("Conditions")
       if (values.requirementGroups ?? []).isEmpty {
-        Text("Anytime, on your laptop").font(.caption).foregroundStyle(.secondary)
+        Text("Anytime, on your laptop").font(theme.captionFont).foregroundStyle(theme.muted)
       }
       ForEach(Array((values.requirementGroups ?? []).enumerated()), id: \.offset) { index, group in
-        VStack(alignment: .leading, spacing: 4) {
-          Text(index == 0 ? "Requires" : "And requires").font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: theme.space.xs) {
+          Text(index == 0 ? "Requires" : "And requires").font(theme.captionFont).foregroundStyle(theme.muted)
           ForEach(group, id: \.self) { id in
-            HStack {
+            HStack(spacing: theme.space.xs) {
               Text(model.focusConditions.first(where: { $0.id == id })?.name ?? "Missing condition")
-              if group.count > 1 { Text("(either)").foregroundStyle(.secondary) }
+                .foregroundStyle(theme.ink)
+              if group.count > 1 { Text("(either)").foregroundStyle(theme.muted) }
               Spacer()
               Button { remove(id, from: index) } label: { Image(systemName: "minus.circle") }
-                .buttonStyle(.plain).help("Remove requirement")
-            }.font(.caption)
+                .buttonStyle(.plain).foregroundStyle(theme.muted).help("Remove requirement")
+            }.font(theme.captionFont)
           }
           Menu("Or…") {
             ForEach(model.focusConditions.filter { !$0.isArchived && !group.contains($0.id) }) { condition in
               Button(condition.name) { edit { $0.requirementGroups?[index].append(condition.id) } }
             }
-          }.font(.caption)
+          }.font(theme.captionFont)
         }
       }
       Menu("Add required condition") {
@@ -185,10 +205,11 @@ struct WorkspaceTaskPlanningEditor: View {
       })).textFieldStyle(.roundedBorder)
       if let unavailable = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
         Text(unavailable.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-          .font(.caption).foregroundStyle(model.themeColor(.warning))
+          .font(theme.captionFont).foregroundStyle(theme.warning)
       }
       Button("Apply saved requirements and start to subtasks") { model.applyPlanningToDescendants(of: task) }
-        .font(.caption).help("Copies saved conditions, start and block rules; keeps each subtask's own estimate and deadline")
+        .buttonStyle(FocusActionButtonStyle())
+        .font(theme.captionFont).help("Copies saved conditions, start and block rules; keeps each subtask's own estimate and deadline")
     }
   }
 
@@ -207,11 +228,12 @@ struct WorkspaceTaskPlanningEditor: View {
 
 struct WorkspaceTaskPlanningBadges: View {
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
   let task: WorkspaceTask
 
   var body: some View {
     let planning = model.taskPlanningByID[task.id]
-    VStack(alignment: .leading, spacing: 3) {
+    VStack(alignment: .leading, spacing: theme.space.xxs) {
       if let due = planning?.dueDate {
         Label("Due \(due)", systemImage: "calendar")
       }
@@ -226,8 +248,8 @@ struct WorkspaceTaskPlanningBadges: View {
       }
       if let blocked = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
         Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-          .foregroundStyle(model.themeColor(.warning))
+          .foregroundStyle(theme.warning)
       }
-    }.font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+    }.font(theme.captionFont).foregroundStyle(theme.muted).lineLimit(2)
   }
 }
