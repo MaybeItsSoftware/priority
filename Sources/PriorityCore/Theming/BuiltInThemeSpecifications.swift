@@ -82,17 +82,25 @@ public enum BuiltInThemeSpecifications {
       border: ThemeBorderScale(hairline: 1, emphasis: 2, focusRing: 2),
       spacing: ThemeSpacingScale(xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24),
       typography: ThemeTypography(
-        // No font files ship with the app, so these are requests: Arvo and
-        // Geist Mono are used if installed. Rockwell comes with macOS and is
-        // a slab too, so the house style's character survives without Arvo;
-        // the generic serif design is only the last resort.
-        display: ThemeFontFace(families: ["Arvo", "Rockwell"], design: .serif),
-        body: ThemeFontFace(families: ["Arvo", "Rockwell"], design: .serif),
-        mono: ThemeFontFace(families: ["Geist Mono", "SF Mono"], design: .monospaced),
+        // Zed's pair, bundled with the app and registered at launch (see
+        // `BundledFonts`): IBM Plex Sans for everything read, Lilex for code,
+        // key caps and numerals. One clean sans at regular weight is most of
+        // what makes Zed read as calm; the system sans and monospace are the
+        // fallback if registration ever fails, so nothing lands in a serif.
+        display: ThemeFontFace(families: ["IBM Plex Sans"], design: .sans),
+        body: ThemeFontFace(families: ["IBM Plex Sans"], design: .sans),
+        mono: ThemeFontFace(families: ["Lilex"], design: .monospaced),
         bodySize: 13,
-        scale: ThemeTypeScale(caption: 11, body: 13, title: 15, display: 28, hero: 64),
+        // Zed's proportions: 13 for body, a point under for captions, 15 for a
+        // pane's heading. The two numeral sizes stay large — they are the
+        // point of the screens they are on.
+        scale: ThemeTypeScale(caption: 12, body: 13, title: 15, display: 28, hero: 64),
+        // Labels the way Zed sets them: caption size, regular, as written,
+        // untracked, muted. The old house micro-label — 10pt bold tracked
+        // capitals — is a theme file away (see `docs/themes.md`); on every
+        // header at once it shouted more than the content it was labelling.
         microLabel: ThemeMicroLabel(
-          size: 10, weight: .bold, tracking: 0.15, isUppercased: true, role: .mutedText)
+          size: 12, weight: .regular, tracking: 0, isUppercased: false, role: .mutedText)
       )
     )
   )

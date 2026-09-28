@@ -89,6 +89,29 @@ final class ThemeFileTests: XCTestCase {
       "a new body size with no scale re-proportions the scale")
   }
 
+  /// The built-ins moved to Zed's faces and quiet labels; a theme file can
+  /// still put back the slab and the tracked capitals, in full.
+  func testAThemeCanRestoreTheSlabFaceAndTheTrackedCapitals() throws {
+    let library = load(
+      source(
+        "slab.json",
+        """
+        {
+          "structure": { "typography": {
+            "body": { "families": ["Arvo", "Rockwell"], "design": "serif" },
+            "microLabel": { "size": 10, "weight": "bold", "tracking": 0.15, "uppercase": true }
+          } }
+        }
+        """))
+    let slab = try XCTUnwrap(library.themes.first)
+    let type = slab.structure.typography
+    XCTAssertEqual(type.body, ThemeFontFace(families: ["Arvo", "Rockwell"], design: .serif))
+    XCTAssertEqual(type.mono, BuiltInThemeSpecifications.chalk.structure.typography.mono)
+    XCTAssertEqual(
+      type.microLabel,
+      ThemeMicroLabel(size: 10, weight: .bold, tracking: 0.15, isUppercased: true, role: .mutedText))
+  }
+
   func testExtendingChalkDarkInheritsItsLockUnlessClearedWithNull() throws {
     let library = load(
       source("a.json", ##"{ "extends": "native.theme.chalk.dark" }"##),

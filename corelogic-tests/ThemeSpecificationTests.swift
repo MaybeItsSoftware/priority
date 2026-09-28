@@ -270,15 +270,34 @@ final class ThemeSpecificationTests: XCTestCase {
     XCTAssertTrue(ThemeStructureAudit.findings(for: heavy).contains(.hairlineTooHeavy(value: 4)))
   }
 
-  /// The house style states tracking in em; SwiftUI wants points. One place
-  /// does the conversion, so a 10pt micro-label tracks 1.5pt.
+  /// Tracking is stated in em; SwiftUI wants points. One place does the
+  /// conversion, so the old house micro-label — 10pt at 0.15em — tracks 1.5pt.
   func testMicroLabelTrackingConvertsFromEmToPoints() {
-    let label = BuiltInThemeSpecifications.chalk.structure.typography.microLabel
-    XCTAssertEqual(label.size, 10)
-    XCTAssertEqual(label.tracking, 0.15, accuracy: 0.0001)
+    let label = ThemeMicroLabel(
+      size: 10, weight: .bold, tracking: 0.15, isUppercased: true, role: .mutedText)
     XCTAssertEqual(label.trackingPoints, 1.5, accuracy: 0.0001)
-    XCTAssertTrue(label.isUppercased)
-    XCTAssertEqual(label.weight, .bold)
-    XCTAssertEqual(label.role, .mutedText)
+  }
+
+  /// The built-ins are set the way Zed is: Plex Sans for everything read,
+  /// Lilex for code and numerals, and labels at caption size, regular, as
+  /// written and untracked. A system design sits behind each face so a failed
+  /// registration lands in a sans, never in a serif.
+  func testBuiltInsUseZedsFacesAndQuietLabels() {
+    for builtIn in BuiltInThemeSpecifications.all {
+      let type = builtIn.structure.typography
+      XCTAssertEqual(type.body, ThemeFontFace(families: ["IBM Plex Sans"], design: .sans))
+      XCTAssertEqual(type.display, ThemeFontFace(families: ["IBM Plex Sans"], design: .sans))
+      XCTAssertEqual(type.mono, ThemeFontFace(families: ["Lilex"], design: .monospaced))
+      XCTAssertEqual(type.scale.body, 13)
+      XCTAssertEqual(type.scale.caption, 12)
+      XCTAssertEqual(type.scale.title, 15)
+
+      let label = type.microLabel
+      XCTAssertEqual(label.size, type.scale.caption)
+      XCTAssertEqual(label.weight, .regular)
+      XCTAssertEqual(label.trackingPoints, 0)
+      XCTAssertFalse(label.isUppercased)
+      XCTAssertEqual(label.role, .mutedText)
+    }
   }
 }

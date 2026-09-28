@@ -62,9 +62,10 @@ public struct ThemeSpacingScale: Equatable, Sendable {
 
 /// What a face falls back to when none of its named fonts are installed.
 ///
-/// Priority ships no font files, so every face is a *request*: the named
-/// families are tried in order and the design is what you actually get until
-/// somebody installs Arvo.
+/// Every face is a *request*: the named families are tried in order against
+/// what is installed — the app registers the faces it bundles at launch, so
+/// the built-in themes' requests are always met — and the design is what you
+/// get when none of them is, as a user theme naming an absent font does.
 public enum ThemeFontDesign: String, Equatable, Sendable, Codable {
   case serif
   case sans
@@ -92,12 +93,14 @@ public struct ThemeFontFace: Equatable, Sendable {
   }
 }
 
-/// The micro-label: 10pt, bold, uppercase, 0.15em tracking, muted.
+/// The micro-label: the small muted label on section headers, column heads,
+/// chip captions and tab strips.
 ///
-/// The signature device of the house style, and the reason hierarchy here
-/// comes from surface and position rather than from label size — so it is a
-/// first-class part of the theme rather than a `.font(.caption2)` repeated
-/// forty times.
+/// The built-in themes set it the way Zed does — caption size, regular, as
+/// written, untracked. It used to be the house style's signature 10pt bold
+/// uppercase at 0.15em, and every part of that is still a token, so a theme
+/// can bring it back. Either way it is a first-class part of the theme rather
+/// than a `.font(.caption2)` repeated forty times.
 public struct ThemeMicroLabel: Equatable, Sendable {
   public let size: Double
   public let weight: ThemeFontWeight

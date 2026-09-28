@@ -65,7 +65,10 @@ struct HotkeyRecorderField: NSViewRepresentable {
     tf.isEditable = false
     tf.isSelectable = false
     tf.alignment = .center
-    tf.font = .systemFont(ofSize: 12)
+    // A shortcut is a key, and keys are set in the theme's monospace
+    // everywhere else they are drawn (`KeyCap`).
+    let theme = context.environment.theme
+    tf.font = Theme.nsFont(theme.type.mono, size: theme.scale.caption)
     tf.bezelStyle = .roundedBezel
     tf.displayString = Self.displayString(keyCode: keyCode, modifiers: modifiers)
     tf.stringValue = tf.displayString

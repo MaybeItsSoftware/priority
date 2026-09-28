@@ -1,6 +1,7 @@
 import AppKit
 import PriorityCore
 import SwiftUI
+import os
 
 /// A `ThemeSpecification` resolved against one appearance, in the currency
 /// SwiftUI spends: `Color`, `CGFloat`, `Font`.
@@ -90,13 +91,18 @@ struct Theme: Equatable {
 
   /// Fonts by role. Prefer these to a size: a literal point size is a place a
   /// theme can't reach.
+  ///
+  /// Weight is not how hierarchy is made here — surface, position and size
+  /// are — so everything defaults to regular and a pane title reaches no
+  /// further than medium. Heavier is kept for something that is *live*, such
+  /// as the running timer, where it says "this is the one moving".
   var captionFont: Font { bodyFont(size: scale.caption) }
-  var titleFont: Font { displayFont(size: scale.title, weight: .semibold) }
-  func numeralFont(_ size: CGFloat, weight: ThemeFontWeight = .medium) -> Font {
+  var titleFont: Font { displayFont(size: scale.title, weight: .medium) }
+  func numeralFont(_ size: CGFloat, weight: ThemeFontWeight = .regular) -> Font {
     monoFont(size: size, weight: weight)
   }
 
-  func displayFont(size: CGFloat, weight: ThemeFontWeight = .bold) -> Font {
+  func displayFont(size: CGFloat, weight: ThemeFontWeight = .medium) -> Font {
     font(type.display, size: size, weight: weight)
   }
 
@@ -129,14 +135,104 @@ struct Theme: Equatable {
   }
 
   static func font(_ face: ThemeFontFace, size: CGFloat, weight: ThemeFontWeight) -> Font {
-    // A *request*: Priority ships no font files, so the named families are
-    // tried against what is installed and the design is what you actually get
-    // until somebody installs Arvo. See `docs/plugins.md`.
-    if let installed = face.families.first(where: { NSFont(name: $0, size: size) != nil }) {
-      return Font.custom(installed, fixedSize: size).weight(swiftUIWeight(weight))
+    // A *request*: the named families are tried against what is installed —
+    // which includes the faces the app registers at launch, see
+    // `BundledFonts` — and the design is what you get when none is.
+    switch installedFont(face, weight: weight) {
+    case .face(let postScriptName):
+      return Font.custom(postScriptName, fixedSize: size)
+    case .named(let name):
+      return Font.custom(name, fixedSize: size).weight(swiftUIWeight(weight))
+    case nil:
+      return .system(
+        size: size, weight: swiftUIWeight(weight), design: swiftUIDesign(face.design))
     }
-    return .system(
-      size: size, weight: swiftUIWeight(weight), design: swiftUIDesign(face.design))
+  }
+
+  /// The same resolution for a surface that has to be AppKit — a toolbar
+  /// field, a table cell. One resolver, so the two halves cannot disagree
+  /// about which face a theme gets.
+  static func nsFont(_ face: ThemeFontFace, size: CGFloat, weight: ThemeFontWeight = .regular)
+    -> NSFont
+  {
+    switch installedFont(face, weight: weight) {
+    case .face(let postScriptName):
+      if let font = NSFont(name: postScriptName, size: size) { return font }
+    case .named(let name):
+      if let font = NSFont(name: name, size: size) {
+        let isBold = [.semibold, .bold, .black].contains(weight)
+        return isBold ? NSFontManager.shared.convert(font, toHaveTrait: .boldFontMask) : font
+      }
+    case nil:
+      break
+    }
+    let system = NSFont.systemFont(ofSize: size, weight: appKitWeight(weight))
+    let design: NSFontDescriptor.SystemDesign
+    switch face.design {
+    case .serif: design = .serif
+    case .monospaced: design = .monospaced
+    case .rounded: design = .rounded
+    case .sans: design = .default
+    }
+    return system.fontDescriptor.withDesign(design).flatMap { NSFont(descriptor: $0, size: size) }
+      ?? system
+  }
+
+  /// What a face request resolved to.
+  enum InstalledFont: Equatable {
+    /// A family was found and has a real face at this weight, named exactly —
+    /// so medium is the file drawn as medium, not regular made heavier.
+    case face(postScriptName: String)
+    /// A single font by PostScript or full name, which is how some families
+    /// can only be reached. The weight is applied to it as a trait.
+    case named(String)
+  }
+
+  /// Looked up per family and weight, not per size: the answer is the same
+  /// at every size, and views ask on every redraw.
+  private static let resolved = OSAllocatedUnfairLock<[String: InstalledFont?]>(initialState: [:])
+
+  static func installedFont(_ face: ThemeFontFace, weight: ThemeFontWeight) -> InstalledFont? {
+    let key = face.families.joined(separator: "\u{1F}") + "|" + weight.rawValue
+    if let cached = resolved.withLock({ $0[key] }) { return cached }
+    let answer = lookUp(face.families, weight: weight)
+    resolved.withLock { $0[key] = .some(answer) }
+    return answer
+  }
+
+  private static func lookUp(_ families: [String], weight: ThemeFontWeight) -> InstalledFont? {
+    let manager = NSFontManager.shared
+    for family in families {
+      if manager.availableMembers(ofFontFamily: family) != nil,
+        let font = manager.font(
+          withFamily: family, traits: [], weight: appKitManagerWeight(weight), size: 12) {
+        return .face(postScriptName: font.fontName)
+      }
+      if NSFont(name: family, size: 12) != nil { return .named(family) }
+    }
+    return nil
+  }
+
+  /// `NSFontManager`'s 0–15 weight scale: 5 is regular, 9 bold. It picks the
+  /// nearest face the family has, so Lilex, which has no semibold, gives bold.
+  static func appKitManagerWeight(_ weight: ThemeFontWeight) -> Int {
+    switch weight {
+    case .regular: return 5
+    case .medium: return 6
+    case .semibold: return 8
+    case .bold: return 9
+    case .black: return 11
+    }
+  }
+
+  static func appKitWeight(_ weight: ThemeFontWeight) -> NSFont.Weight {
+    switch weight {
+    case .regular: return .regular
+    case .medium: return .medium
+    case .semibold: return .semibold
+    case .bold: return .bold
+    case .black: return .black
+    }
   }
 
   static func swiftUIWeight(_ weight: ThemeFontWeight) -> Font.Weight {
@@ -226,7 +322,10 @@ extension View {
     modifier(ThemedBodyFontModifier())
   }
 
-  /// The signature device: 10pt, bold, uppercase, 0.15em tracking, muted.
+  /// The quiet label on section headers, column heads and chip captions:
+  /// caption-sized, regular, as written, muted — the way Zed labels a panel.
+  /// Case, tracking and weight are all theme tokens, so a theme can bring back
+  /// the old 10pt bold tracked capitals without touching a view.
   ///
   /// A modifier rather than a copied `.font(.system(size: 10, weight: .bold))`
   /// so that hierarchy stays a property of the theme. Every eyebrow, column

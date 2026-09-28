@@ -256,10 +256,11 @@ A plugin declares three things and nothing else:
   light table whatever the appearance, because the content underneath isn't
   ours to theme.
 - **`structure`** — radii, border weights, the spacing scale and the type
-  treatment, including the **micro-label**: 10pt, bold, uppercase, 0.15em
-  tracking, muted. Use `.microLabel(theme)`; a hand-rolled
-  `.font(.system(size: 10, weight: .bold))` with an `.uppercased()` next to it
-  is the same thing written out longhand, and it will not flip.
+  treatment, including the **micro-label** — in the built-ins caption-sized,
+  regular, as written and muted, the way Zed labels a panel; its size, weight,
+  tracking and case are all tokens. Use `.microLabel(theme)`; a hand-rolled
+  `.font(.system(size: 12))` next to a muted colour is the same thing written
+  out longhand, and a theme cannot reach it.
 - **`preferredAppearance`** — advisory only. Light/dark/system stays the user's
   own setting; a theme does not get to answer it on their behalf.
 
@@ -302,13 +303,16 @@ scale names only: `theme.paper`, `theme.panelRadius`, `theme.space.md`,
 `theme.bodyFont()`. `ThemeHRule` / `ThemeVRule` replace `Divider()`, which
 draws the system separator and does not flip.
 
-**Fonts are requests, not files.** Priority ships no font files, so a
-`ThemeFontFace` names families in preference order and falls back to its
-`design`. Chalk asks for Arvo and gets Rockwell, the slab macOS ships, until Arvo is
-installed.
-Shipping the real faces means adding the `.ttf`s to `Priority/Assets` (or a
-`Fonts/` resource folder), listing them under `ATSApplicationFontsPath` in the
-Info.plist, and honouring each face's licence — nothing in the contract changes.
+**Fonts are requests, backed by files the app ships.** A `ThemeFontFace`
+names families in preference order and falls back to its `design` when none is
+installed. The built-ins ask for Zed's pair — IBM Plex Sans for display and
+body, Lilex for mono and numerals — and the app bundles both: the `.ttf`s and
+their SIL OFL licences live in `Priority/Fonts/`, the synchronized group copies
+them into Resources, and `BundledFonts.register()` registers them for the
+process from `AppDelegate.init`, before any surface draws. `Theme.font` and its
+AppKit twin `Theme.nsFont` share one resolver, which picks the family's real
+face at each weight rather than thickening the regular one. A user theme can
+name any installed family instead.
 
 **What renders through it today.** The Eisenhower matrix, and the persistent
 shell chrome: the dock row, the resize strip, the sync readout, the top bevel,

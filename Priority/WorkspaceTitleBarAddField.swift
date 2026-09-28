@@ -125,24 +125,10 @@ struct WorkspaceTitleBarAddField: View {
   }
 
   /// The theme's body face as AppKit needs it, for a field that has to be an
-  /// `NSTextField`. Resolved the way `Theme.font` resolves it: the named
-  /// families if one is installed, the design otherwise.
+  /// `NSTextField`. `Theme.nsFont` resolves it exactly as `Theme.font` does
+  /// for SwiftUI, so the field and the rows below it are the same face.
   static func fieldFont(_ theme: Theme) -> NSFont {
-    let size = theme.scale.body
-    let face = theme.type.body
-    if let name = face.families.first(where: { NSFont(name: $0, size: size) != nil }),
-      let font = NSFont(name: name, size: size) {
-      return font
-    }
-    let system = NSFont.systemFont(ofSize: size)
-    let design: NSFontDescriptor.SystemDesign
-    switch face.design {
-    case .serif: design = .serif
-    case .monospaced: design = .monospaced
-    case .rounded: design = .rounded
-    case .sans: design = .default
-    }
-    return system.fontDescriptor.withDesign(design).flatMap { NSFont(descriptor: $0, size: size) } ?? system
+    Theme.nsFont(theme.type.body, size: theme.scale.body)
   }
 }
 

@@ -8,9 +8,11 @@ import SwiftUI
 /// its own caption size, tracking and key-cap padding inline, and they had
 /// already diverged by a point here and a corner radius there.
 
-/// 10pt, bold, uppercase, widely tracked, muted. Section eyebrows, column
-/// headers and chip captions all use it, so hierarchy reads from surface and
-/// position rather than from label size.
+/// The quiet label: in the built-ins, caption-sized, regular, as written and
+/// muted, the way Zed labels a panel. Section eyebrows, column headers and chip
+/// captions all use it, so hierarchy reads from surface and position rather
+/// than from label size. Write the text in sentence case — it is shown as
+/// given unless a theme asks for capitals.
 struct MicroLabel: View {
   @Environment(\.theme) private var theme
   let text: String
@@ -45,7 +47,7 @@ struct KeyCap: View {
   // so a key reads as belonging to the label beside it.
   var body: some View {
     Text(key)
-      .font(theme.monoFont(size: theme.type.microLabel.size, weight: .medium))
+      .font(theme.monoFont(size: theme.type.microLabel.size))
       .foregroundStyle(theme.muted)
       .padding(.horizontal, theme.space.xs)
       .padding(.vertical, theme.space.xxs)

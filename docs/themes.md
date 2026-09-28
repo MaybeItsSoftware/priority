@@ -119,16 +119,16 @@ is stated, so it is also a reference for what can be set.
     "border": { "hairline": 1, "emphasis": 2, "focusRing": 2 },
     "spacing": { "xxs": 2, "xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24 },
     "typography": {
-      "display": { "families": ["Arvo", "Rockwell"], "design": "serif" },
-      "body": { "families": ["Arvo", "Rockwell"], "design": "serif" },
-      "mono": { "families": ["Geist Mono", "SF Mono"], "design": "monospaced" },
+      "display": { "families": ["IBM Plex Sans"], "design": "sans" },
+      "body": { "families": ["IBM Plex Sans"], "design": "sans" },
+      "mono": { "families": ["Lilex"], "design": "monospaced" },
       "bodySize": 13,
-      "scale": { "caption": 11, "body": 13, "title": 15, "display": 28, "hero": 64 },
+      "scale": { "caption": 12, "body": 13, "title": 15, "display": 28, "hero": 64 },
       "microLabel": {
-        "size": 10,
-        "weight": "bold",
-        "tracking": 0.15,
-        "uppercase": true,
+        "size": 12,
+        "weight": "regular",
+        "tracking": 0,
+        "uppercase": false,
         "role": "mutedText"
       }
     },
@@ -193,11 +193,35 @@ All sizes are in points. Each group can be given in part.
 | `border.emphasis` | A selected or active edge. |
 | `border.focusRing` | The focus ring, drawn in `primary`. |
 | `spacing.xxs` … `spacing.xl` | The six-step spacing scale every padding comes from. Shrink them all for a denser app. |
-| `typography.display`, `.body`, `.mono` | A face: `families`, tried in order, and `design` — `serif`, `sans`, `monospaced` or `rounded` — used when none of the families is installed. Priority ships no fonts, so a family is a request. |
+| `typography.display`, `.body`, `.mono` | A face: `families`, tried in order, and `design` — `serif`, `sans`, `monospaced` or `rounded` — used when none of the families is installed. A family is a request: Priority bundles IBM Plex Sans and Lilex (the faces Zed ships), and anything else has to be installed on the Mac. Each weight uses the family's own face where it has one. |
 | `typography.bodySize` | The base text size. Changing it without giving a `scale` re-proportions the whole scale from it, so one number makes everything bigger. |
 | `typography.scale` | The named sizes views ask for: `caption`, `body`, `title`, `display` (large numerals) and `hero` (the focus timer). Any you state win over the proportioned ones. |
-| `typography.microLabel` | The small uppercase label on section headers and chips: `size`, `weight` (`regular`, `medium`, `semibold`, `bold`, `black`), `tracking` in em, `uppercase`, and the colour `role` it is set in. |
+| `typography.microLabel` | The small label on section headers, column heads, tabs and chips: `size`, `weight` (`regular`, `medium`, `semibold`, `bold`, `black`), `tracking` in em, `uppercase`, and the colour `role` it is set in. The built-ins set it the way Zed does — caption size, regular, untracked, as written. |
 | `usesShadows`, `usesGradientsOnChrome` | Declarations for the audit. Nothing in the app draws either; setting one true is reported. |
+
+### The old slab style
+
+Chalk used to be set in Arvo, with 10pt bold capitals tracked at 0.15em for
+its labels. It is Zed's IBM Plex Sans and Lilex now, with quiet sentence-case
+labels, but the old look is a theme away:
+
+```json
+{
+  "name": "Chalk, slab",
+  "structure": {
+    "typography": {
+      "display": { "families": ["Arvo", "Rockwell"], "design": "serif" },
+      "body": { "families": ["Arvo", "Rockwell"], "design": "serif" },
+      "scale": { "caption": 11 },
+      "microLabel": { "size": 10, "weight": "bold", "tracking": 0.15, "uppercase": true }
+    }
+  }
+}
+```
+
+Arvo is not bundled, so without it installed this is Rockwell, the slab macOS
+ships. The labels' text is written in sentence case and uppercased by the
+theme, so it comes out as it did.
 
 ## When something is wrong
 

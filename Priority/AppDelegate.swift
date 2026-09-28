@@ -13,6 +13,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   override init() {
     super.init()
     Self.shared = self
+    // Here rather than in `applicationDidFinishLaunching`: the adaptor builds
+    // this delegate before SwiftUI builds any scene, and every surface —
+    // window, panel, menu bar — resolves its theme's faces when it is first
+    // drawn. See `BundledFonts`.
+    BundledFonts.register()
   }
 
   private let pluginRegistry = PluginRegistry.nativeFirst()

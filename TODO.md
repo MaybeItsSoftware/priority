@@ -166,14 +166,6 @@ Two mechanisms are live at once — the plugin, and the older
 overrides and theme JSON import/export. A surface counts as migrated when its
 local `themeColor(_:)` helper is gone. See `docs/plugins.md`.
 
-### The theme asks for fonts that are not bundled
-
-Chalk requests `Arvo` (slab serif, brand and body) and `Geist Mono`, falling
-back to Rockwell — the slab serif macOS ships — and `SF Mono` when they are
-absent, which they are. So a slab is on screen, but not the house's own. To ship them: add the `.ttf`s as a resource, list them under
-`ATSApplicationFontsPath` in the Info.plist, and check the licences. Nothing in
-the theme contract changes.
-
 ### Theme values that were guessed
 
 Worth an eye from someone who owns the palette:

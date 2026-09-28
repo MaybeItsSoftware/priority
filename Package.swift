@@ -24,6 +24,7 @@ let pluginTargetExcludes = [
 
   // App resources and the core target's own source tree
   "Priority/Assets.xcassets",
+  "Priority/Fonts",
   "Priority/Priority.entitlements",
   "Priority/Priority.release.entitlements",
   "Priority/WorkspaceDesktopView.swift",
@@ -155,6 +156,7 @@ let appLogicTargetExcludes = [
 
   // App resources and other targets' source trees.
   "Priority/Assets.xcassets",
+  "Priority/Fonts",
   "Priority/Priority.entitlements",
   "Priority/Priority.release.entitlements",
   "Priority/WorkspaceDesktopView.swift",
