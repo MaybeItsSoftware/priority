@@ -33,7 +33,7 @@ a task as Zed treats a line:
 | Toggle bottom dock | `Cmd+J` | The progress graph |
 | Toggle right dock | `Cmd+Alt+B` | The right dock (`Cmd+Ctrl+I` still works) |
 | Close all docks | `Cmd+Alt+Y` | Put the sidebar, right dock and graph away |
-| Move line up / down | `Alt+↑` / `Alt+↓` | Move the task, or the sidebar row |
+| Move line up / down | `Alt+↑` / `Alt+↓` | Move the task, or the sidebar row; on Today, a planned card through the day |
 | Document start / end | `Cmd+↑` / `Cmd+↓` | First / last task, or sidebar row |
 | Delete line | `Cmd+Shift+K` | Delete the task |
 | New file / new directory | `Cmd+N` / `Cmd+Alt+N` | New task / new folder |
@@ -200,6 +200,35 @@ keys step onto each subtask the card is showing before the next card, and
 over a folded card's tree without stopping. Left/Right from a subtask leave
 from the column its card is in.
 Escape cancels task entry and returns to navigation.
+
+## Planning the day
+
+`Ctrl+T` puts the selected task on today — the Today board column — or takes
+it off, from any task surface, and the status bar says which it did. It is not
+`Cmd+T`, which sets the due date to today: a date is a fact about the task, a
+plan is a choice about the day, and Today treats them differently.
+
+On Today, `Alt+↑` / `Alt+↓` stop meaning "move among siblings", because the
+day's cards come from every list and are siblings of nothing. They move the
+card through the planned part of the day instead, and the whole planned order
+is written at once (one undo step, "Reorder Today"), so it holds when some
+other task's urgency changes. Only planned cards move. An overdue, due-today
+or starting-today card is in the day because of its date and stays where the
+date puts it; pressing `Alt+↓` on one leaves it and tells you to plan it first
+with `Ctrl+T`, after which it is yours to arrange. The running block heads the
+day whatever it is, and does not move either.
+
+## Typing a task
+
+Whatever adds a task reads the end of what you typed: `30m` or `1h30m` sets
+the estimate, `@fri`, `@tomorrow`, `@3d` or `@2026-10-02` the due day, `#work`
+a tag and `!1`–`!4` the priority. So `Write notes 45m #work @fri !1` is one
+Return, not a Return and four edits. Only trailing words count, and the first
+one from the end that is not a token stops the reading, so `Read 30 pages`
+keeps its `30`; the first word is always the title's. The title bar's field
+and the focus panel's "Add … to today" row show what they found as chips
+before you press Return. The full table is in the README, under
+[Typing a task](../README.md#typing-a-task).
 
 ## Undo
 

@@ -77,7 +77,8 @@ something you already have to know.
 | `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
 | `j` / `k` / `↑` / `↓` | Move the selection |
 | `Cmd+↑` / `Cmd+↓` | First / last task |
-| `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) |
+| `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) — on Today, earlier or later in the day |
+| `Ctrl+T` | Plan the task for today, or take it off |
 | `Cmd+Shift+K` | Delete the task (Zed's delete line) |
 | `Return` | Open the task you are on — on Today, start its card (or finish the one running); elsewhere, open its subtasks. With nothing selected, add a task |
 | `Shift+Return` / `Space` | Tick the task off without running a block |
@@ -121,6 +122,32 @@ field, which surfaces take the keyboard outright, and how to rebind any of it
 in `~/Library/Application Support/Priority/keymap.json` (**Open the keymap
 file** in the palette).
 
+### Typing a task
+
+A new task can say more about itself than its title. End it with any of these
+and they are set as it is filed, rather than by opening the task again straight
+afterwards:
+
+| Ending | Sets |
+| --- | --- |
+| `30m`, `1h`, `1.5h`, `1h30m` | The estimate (up to a day) |
+| `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included |
+| `#work` | A tag — it has to start with a letter, so `#12` stays in the title |
+| `!1`–`!4` | The priority |
+
+`Write the release notes 45m #work @fri !1` files a task called "Write the
+release notes", estimated at 45 minutes, tagged `work`, due on Friday, at
+priority 1.
+
+Only the **trailing** words are read, and the first word from the end that is
+not one of these stops the reading — so a title is never rewritten in the
+middle: `Read 30 pages` and `Buy 2m of cable` keep every word. The first word is
+always the title's, and a second estimate, day or priority stops the reading
+too, leaving the earlier one in the title where you can see it. As you type,
+what will be set shows as chips beside the field — in the title bar's **Add a
+task** and in the focus panel's "Add … to today" row — so nothing is a surprise
+after Return.
+
 ### Coming from Checkvist
 
 The desktop workspace supports Checkvist-style two-letter commands, including
@@ -151,13 +178,20 @@ far. `Return` on a card starts it; the card you are on grows a live clock and a
 strip of pause, skip, log and done, so a whole block runs without the list ever
 going away.
 
+The day also says when it ends: the header reads like `1h 20m of 3h · 1h 40m
+left · done by 17:35` — what the estimated tasks still owe, worked straight
+through from now, counting the block that is running. Tasks with no estimate
+are left out of it (the tooltip says how many), and in the window clicking a
+card's estimate, or its "No estimate", opens the same estimate editor as
+`Option+T`.
+
 The two mounts differ in their chrome only. In the window the pane is its header
 — the scope, and time logged against the day's estimates — and the list, walked
 with the ordinary selection keys like any other pane. The day's other numbers
 are in the status bar (click them for the timeline), a task is added from the
 title bar's field — which, while Today is up, puts it on today — and a search is
 `Cmd+F`. The summoned panel has no title bar or status bar to lean on, so it
-keeps its own: a bar of estimated against logged, a line setting today against
+keeps its own: a bar of estimated against logged under the same finish time, a line setting today against
 the week, a list of the day's logged blocks, and a field that searches every
 task's title and notes and offers to add what you typed to today.
 
@@ -191,6 +225,8 @@ of it is reachable only by a key you have to already know.
 | `Up` / `Down` | Move between cards |
 | `Return` | Start the card you are on, or finish the one running |
 | `Shift+Return` / `Space` / `x` | Tick the card off without running a block |
+| `Ctrl+T` | Plan the card for today, or take it off — an overdue or dated card becomes one you placed |
+| `Alt+↑` / `Alt+↓` | Arrange the day: move a planned card earlier or later, whichever lists they came from |
 | `Left` | Back to the list in the sidebar (the window) |
 | `Cmd+Return` | Open the card in the main window (the panel) |
 
@@ -270,7 +306,10 @@ today**. Each task appears once, under the strongest reason that claims it, and
 the card says which — so work with a date on it turns up in the panel without
 you having to go and find it first. A task you placed on Today by hand still
 outranks every automatic reason, because a plan you made is a decision and a
-due date is only a fact. Press a
+due date is only a fact. The planned cards are also the only ones you arrange:
+`Ctrl+T` plans the card you are on (or takes it off), and `Alt+↑` / `Alt+↓`
+move a planned card through the day. A dated card stays where its date puts it
+— press `Alt+↓` on one and the status bar says to plan it first. Press a
 card and it starts; the card you are on grows a live clock and its own strip of
 controls — pause, skip, log, done — while the rest of the list stays visible
 underneath. Finished work collects at the bottom, one line per task rather than
@@ -449,6 +488,9 @@ the bottom.
   On Today it also puts the task on today, and says so (`Today · Inbox`).
   Pressed on a task, `a` / `Alt+Return` / `Alt+Shift+Return` place it below,
   above or inside that task instead.
+  Endings like `30m`, `@fri`, `#work` and `!1` set the task's estimate, due
+  day, tags and priority, and show as chips before you press Return — see
+  [Typing a task](#typing-a-task).
 
 - **Left dock** — two tabs, **Lists** and **Agent**, in a tab bar like the
   right dock's; its tab, visibility and width are remembered.
