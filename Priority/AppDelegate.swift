@@ -134,6 +134,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.onShowDiagnostics = { [weak checkvistManager] in
       checkvistManager?.popoverChrome.showsDiagnostics = true
     }
+    workspace.onStatusMessage = { [weak checkvistManager] message in
+      checkvistManager?.statusMessage = message
+    }
     // Before the window takes a key, so the first press already means what
     // the user's keymap says. A problem in the file is a line in Diagnostics
     // and a message on the window, never a refusal to start.

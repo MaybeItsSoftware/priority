@@ -158,6 +158,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Opens the Diagnostics sheet, which the coordinator owns rather than the
   /// workspace.
   @ObservationIgnored var onShowDiagnostics: (() -> Void)?
+  /// Puts a passing line in the status bar, which reads the coordinator's
+  /// `statusMessage` rather than anything on the workspace. For feedback a
+  /// key owes when what it did is not visible where you are looking.
+  @ObservationIgnored var onStatusMessage: ((String) -> Void)?
   /// Called after any local write, so the Google Tasks mirror can push it.
   /// Coalesced on the far side — this fires far more often than it syncs.
   @ObservationIgnored var onLocalWrite: (() -> Void)?

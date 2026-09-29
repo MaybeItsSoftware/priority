@@ -128,6 +128,7 @@ extension WorkspaceViewModel {
     case .taskClearPriority: editTaskValues { $0.priority = 0 }
     case .taskToggleDaily:
       if let task = selectedTask { setDailyProgressTask(task, enabled: !isDailyProgressTask(task)) }
+    case .taskTogglePlannedToday: togglePlannedTodayForSelection()
     case .taskStartFocus: focusSelectedTask()
     case .taskMove: requestMoveSelectedTask()
     case .taskConvertToList: convertSelectionToList()
@@ -289,9 +290,13 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// On Today the rows are not siblings of anything — they come from every
+  /// list — so the same keys arrange the day instead.
   private func moveSelectionWithinSiblings(by offset: Int) {
     if keyboardFocusArea == .sidebar {
       reorderSidebarCursor(by: offset)
+    } else if arrangesDayOnMove {
+      arrangeSelectedDayTask(by: offset)
     } else if let task = selectedTask {
       moveTaskWithinSiblings(task, by: offset)
     }

@@ -35,7 +35,7 @@ public enum WorkspaceCommandCatalog {
     [.taskDueToday, .taskDueTomorrow, .taskClearDue, .taskClearNotes, .taskClearTags],
     [.taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown, .taskMove],
     [.taskConvertToList, .taskPromoteList, .taskExtractBranch],
-    [.taskToggleDaily, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
+    [.taskTogglePlannedToday, .taskToggleDaily, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
   ]
 
   // MARK: - Go
@@ -113,6 +113,12 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .taskToggleDaily, title: "Commit to this daily, or stop", group: "Task",
       keys: ["cmd+shift+d"], note: "A requirement to contribute to it every day"),
+    // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T is
+    // already "due today", which is a date rather than a choice.
+    .init(
+      id: .taskTogglePlannedToday, title: "Plan for today, or take it off", group: "Task",
+      keys: ["ctrl+t"],
+      note: "Puts it in the day you arrange by hand. On Today, plans an overdue or dated row"),
     .init(
       id: .taskStartFocus, title: "Start focus on the task", group: "Task", keys: ["f"],
       note: "Or add it to the queue behind a running block"),
@@ -137,8 +143,13 @@ public enum WorkspaceCommandCatalog {
       keys: ["shift+tab", "cmd+option+left"]),
     // ⌥↑ and ⌥↓ are Zed's move line; ⌘↑ and ⌘↓ go to the ends, as they do
     // in an editor.
-    .init(id: .taskMoveUp, title: "Move the task up", group: "Task", keys: ["option+up"]),
-    .init(id: .taskMoveDown, title: "Move the task down", group: "Task", keys: ["option+down"]),
+    // On Today there are no siblings to move among, so they arrange the day.
+    .init(
+      id: .taskMoveUp, title: "Move the task up", group: "Task", keys: ["option+up"],
+      note: "On Today, earlier in the day you planned"),
+    .init(
+      id: .taskMoveDown, title: "Move the task down", group: "Task", keys: ["option+down"],
+      note: "On Today, later in the day you planned"),
   ]
 
   // MARK: - Plan
