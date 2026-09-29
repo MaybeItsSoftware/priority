@@ -136,12 +136,6 @@ worth doing but is not a tooltip change.
 
 ## Code
 
-### Window restore does not clamp to a visible screen
-
-`MainWindowController` restores a saved frame without checking it against
-`NSScreen.visibleFrame`, so unplugging a monitor can strand the window
-off-screen with no way back but deleting the preference. Small fix.
-
 ### Surfaces that still ignore the theme
 
 What renders through it now: the shared primitives (`MicroLabel`, `KeyCap`,

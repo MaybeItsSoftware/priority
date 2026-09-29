@@ -120,9 +120,43 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       minContentSize: Self.minContentSize,
       maxContentSize: nil
     )
+    // The autosave name has just restored whatever frame was saved, which may
+    // be on a monitor that is no longer attached.
+    clampToVisibleScreens(window)
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(screenParametersDidChange(_:)),
+      name: NSApplication.didChangeScreenParametersNotification,
+      object: nil
+    )
 
     self.window = window
     return window
+  }
+
+  /// Moves the window back onto a screen if its title bar is on none of them.
+  /// A no-op for a window that is already reachable, so it is safe to run on
+  /// every screen change rather than only when something was unplugged.
+  private func clampToVisibleScreens(_ window: NSWindow) {
+    // `screens.first` is the one with the menu bar, which is where a
+    // stranded window should land.
+    let visibleFrames = NSScreen.screens.map(\.visibleFrame)
+    let clamped = WindowFrameClamp.clamp(
+      window.frame,
+      visibleFrames: visibleFrames,
+      minSize: window.minSize
+    )
+    if clamped != window.frame {
+      window.setFrame(clamped, display: window.isVisible)
+    }
+  }
+
+  /// A monitor unplugged while the window is open leaves it wherever that
+  /// monitor was; macOS usually rescues it, but not reliably for a window
+  /// that was spanning two displays.
+  @objc private func screenParametersDidChange(_ notification: Notification) {
+    guard let window else { return }
+    clampToVisibleScreens(window)
   }
 
   private func refresh() {
