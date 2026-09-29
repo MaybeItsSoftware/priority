@@ -102,7 +102,7 @@ extension WorkspaceViewModel {
     perform {
       let parentID = try visibleRootParentTaskID(for: inbox, store: store)
       let task = try store.createTask(
-        listId: inbox.id, title: title, parentTaskId: parentID, kanbanColumn: column?.id)
+        capturing: title, listId: inbox.id, parentTaskId: parentID, kanbanColumn: column?.id)
       // Selected only where it will be on screen to be selected.
       if isEverythingSelected || selectedListID == inbox.id { selectedTaskID = task.id }
       reloadOutline()

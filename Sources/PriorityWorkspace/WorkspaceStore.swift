@@ -431,9 +431,19 @@ public final class WorkspaceStore: @unchecked Sendable {
     atTop: Bool = false,
     adjacentTaskId: String? = nil,
     above: Bool = false,
+    dueAt: Date? = nil,
+    estimateSeconds: Int? = nil,
+    tags: [String] = [],
+    priority: Int? = nil,
     now: Date = .now
   ) throws -> WorkspaceTask {
     let trimmed = try Self.nonEmptyName(title)
+    // What the add field read off the end of the title, written in the same
+    // undo step as the task: undoing a typed task should not leave its
+    // estimate behind as a second step to undo first.
+    let tags = Self.normalizedStrings(tags)
+    let priority = priority.flatMap { (1...4).contains($0) ? $0 : nil }
+    let estimateSeconds = estimateSeconds.flatMap { $0 > 0 ? $0 : nil }
     return try journalledWrite("New Task") { db in
       guard try TaskList.fetchOne(db, key: listId) != nil else { throw WorkspaceStoreError.missingList }
       if let parentTaskId {
@@ -446,14 +456,15 @@ public final class WorkspaceStore: @unchecked Sendable {
         arguments: [listId, parentTaskId])
       let task = WorkspaceTask(
         id: UUID().uuidString, listId: listId, parentTaskId: parentTaskId, title: trimmed,
-        notes: "", status: .open, sortOrder: nextOrder, dueAt: nil, estimateSeconds: nil,
+        notes: "", status: .open, sortOrder: nextOrder, dueAt: dueAt, estimateSeconds: estimateSeconds,
         itemKind: kind, createdAt: now, updatedAt: now)
       try task.insert(db)
-      if kanbanColumn != nil || startAt != nil {
+      if kanbanColumn != nil || startAt != nil || !tags.isEmpty || priority != nil {
+        let tagsJSON = String(data: try JSONEncoder().encode(tags), encoding: .utf8) ?? "[]"
         try db.execute(sql: """
-          INSERT INTO task_metadata(taskId, startAt, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
-          VALUES (?, ?, '[]', '[]', ?, ?)
-          """, arguments: [task.id, startAt, kanbanColumn, now])
+          INSERT INTO task_metadata(taskId, priority, startAt, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
+          VALUES (?, ?, ?, ?, '[]', ?, ?)
+          """, arguments: [task.id, priority, startAt, tagsJSON, kanbanColumn, now])
       }
       if atTop || adjacentTaskId != nil {
         var siblings = try WorkspaceTask

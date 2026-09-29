@@ -17,7 +17,7 @@ extension WorkspaceViewModel {
     perform {
       let parentID = isMultiListScope
         ? try visibleRootParentTaskID(for: destinationList, store: store) : scopeTaskID
-      let task = try store.createTask(listId: destinationID, title: title, parentTaskId: parentID)
+      let task = try store.createTask(capturing: title, listId: destinationID, parentTaskId: parentID)
       selectedTaskID = task.id
       reloadOutline()
     }
@@ -26,7 +26,7 @@ extension WorkspaceViewModel {
   private func createRelativeTask(named title: String) {
     guard let store, let reference = taskInsertionReference else { return }
     perform {
-      let task = try store.createTask(listId: reference.listId, title: title,
+      let task = try store.createTask(capturing: title, listId: reference.listId,
         parentTaskId: taskInsertionIsChild ? reference.id : reference.parentTaskId,
         kanbanColumn: viewMode == .board ? column(for: reference)?.id : nil,
         adjacentTaskId: taskInsertionIsChild ? nil : reference.id, above: taskInsertionAbove)
@@ -53,7 +53,7 @@ extension WorkspaceViewModel {
     perform {
       let parentID = isMultiListScope
         ? try visibleRootParentTaskID(for: destinationList, store: store) : boardParentTaskID
-      let task = try store.createTask(listId: destinationID, title: title, parentTaskId: parentID,
+      let task = try store.createTask(capturing: title, listId: destinationID, parentTaskId: parentID,
         kanbanColumn: column?.id, atTop: atTop)
       selectedTaskID = task.id
       reloadOutline()
@@ -65,7 +65,7 @@ extension WorkspaceViewModel {
     let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
     perform {
-      _ = try store.createTask(listId: parent.listId, title: trimmed, parentTaskId: parent.id)
+      _ = try store.createTask(capturing: trimmed, listId: parent.listId, parentTaskId: parent.id)
       reloadOutline()
     }
   }

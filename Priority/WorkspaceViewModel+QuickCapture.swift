@@ -105,7 +105,7 @@ extension WorkspaceViewModel {
         parentID = nil
       }
       let task = try store.createTask(
-        listId: destination.listID, title: normalized, parentTaskId: parentID,
+        capturing: normalized, listId: destination.listID, parentTaskId: parentID,
         startAt: quickCaptureStartDate)
       selectedTaskID = destination.listID == selectedListID ? task.id : nil
       cancelQuickCapture()

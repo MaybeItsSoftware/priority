@@ -24,6 +24,10 @@ struct WorkspaceTitleBarAddField: View {
   /// The destination's share of the field, so a long list name truncates
   /// rather than squeezing the text you are typing.
   static let destinationWidth: CGFloat = 120
+  /// The destination's share while the capture preview shows. The chips can
+  /// run to four, and at the full share they and the list name would leave
+  /// the text itself no room; the name still reads, truncated, beside them.
+  static let compactDestinationWidth: CGFloat = 64
 
   var body: some View {
     HStack(spacing: theme.space.xs) {
@@ -53,18 +57,29 @@ struct WorkspaceTitleBarAddField: View {
         .strokeBorder(
           isEditing ? theme.focusRing : theme.inputBorder,
           lineWidth: isEditing ? theme.focusRingWidth : theme.hairline))
-    .commandHelp(.taskNew, note: "Add a task to \(model.addFieldDestinationTitle)")
+    .commandHelp(
+      .taskNew,
+      note: "Add a task to \(model.addFieldDestinationTitle). \(TaskCapturePreview.syntaxHint)")
   }
 
   @ViewBuilder
   private var trailing: some View {
+    let capture = TaskCapture.parse(title)
     HStack(spacing: theme.space.xs) {
+      // What Return will file beyond the title, shown before it is pressed:
+      // the parse only reads trailing words, and seeing it is what makes a
+      // bare `30m` safe to accept without a prefix.
+      if capture.hasDetails {
+        TaskCapturePreview(capture: capture)
+      }
       if model.isQuickCaptureActive {
         Text(model.quickCaptureStartLabel)
           .foregroundStyle(theme.muted)
           .help("← → the day it starts")
       }
-      destination
+      destination(width: capture.hasDetails ? Self.compactDestinationWidth : Self.destinationWidth)
+      // Only for an empty, idle field, which never has chips, so the keycap
+      // and the preview never compete for the field's fixed width.
       if !isEditing, title.isEmpty {
         KeyCap(WorkspaceCommandHelpText.firstKey(for: .taskNew))
       }
@@ -77,11 +92,11 @@ struct WorkspaceTitleBarAddField: View {
   /// The destination, and in a folder the menu that changes it — the one
   /// scope with more than one list a task could honestly go to.
   @ViewBuilder
-  private var destination: some View {
+  private func destination(width: CGFloat) -> some View {
     let label = Text(model.addFieldDestinationTitle)
       .foregroundStyle(isEditing ? theme.ink : theme.muted)
       .truncationMode(.tail)
-      .frame(maxWidth: Self.destinationWidth, alignment: .trailing)
+      .frame(maxWidth: width, alignment: .trailing)
     if model.selectedFolderID != nil && model.taskInsertionReference == nil && !model.isQuickCaptureActive {
       Menu {
         ForEach(model.scopeLists) { list in
@@ -225,5 +240,43 @@ struct TitleBarAddTextField: NSViewRepresentable {
       default: return false
       }
     }
+  }
+}
+
+/// What a typed task will be filed with beyond its title — `45m`, `Fri 2 Oct`,
+/// `#work`, `!1` — shown as the field is typed, so the trailing-word parse in
+/// `TaskCapture` is never a surprise after Return.
+///
+/// Each label is a status chip in the house convention: a tinted fill, a
+/// hairline of the same hue and text in it, squarish rather than a pill. The
+/// hue is the primary one because this is information, not a warning.
+struct TaskCapturePreview: View {
+  @Environment(\.theme) private var theme
+  let capture: TaskCapture
+
+  /// One sentence on the syntax, for the tooltips of the places that parse it.
+  static let syntaxHint =
+    "End it with 30m, @fri, #tag or !1 to set its estimate, due day, tags or priority."
+
+  var body: some View {
+    let labels = capture.detailLabels()
+    HStack(spacing: theme.space.xxs) {
+      ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
+        Text(label)
+          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .foregroundStyle(theme.primary)
+          .lineLimit(1)
+          .padding(.horizontal, theme.space.xxs)
+          .background(
+            RoundedRectangle(cornerRadius: theme.controlRadius)
+              .fill(theme.color(.primary, opacity: Theme.statusFillOpacity)))
+          .overlay(
+            RoundedRectangle(cornerRadius: theme.controlRadius)
+              .strokeBorder(theme.color(.primary, opacity: Theme.statusBorderOpacity), lineWidth: theme.hairline))
+      }
+    }
+    .fixedSize()
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Will set \(labels.joined(separator: ", "))")
   }
 }
