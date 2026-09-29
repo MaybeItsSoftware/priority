@@ -136,19 +136,22 @@ struct DayView: View {
   /// was meant to. The panel's bar and its week line said this in two rows of
   /// capitals above the list; the week and the points are the status bar's
   /// now, and this is the part only the day pane can say.
+  ///
+  /// It also says when the day ends — Blitzit's signature, and the one number
+  /// a list with estimates can work out that you would otherwise do in your
+  /// head. Inside a timeline so the finish time keeps moving: every minute
+  /// while idle (it slides later as the clock runs on without you), every
+  /// half-minute while a block runs (the running task's cost grows with it).
   private var dayTally: some View {
-    let estimated = dayTasks.reduce(0) { $0 + ($1.estimateSeconds ?? 0) }
-    let logged = loggedToday
-    return Text(
-      estimated > 0
-        ? "\(duration(logged)) of \(duration(estimated))"
-        : "\(duration(logged)) logged")
-      .font(theme.monoFont(size: theme.type.microLabel.size))
-      .foregroundStyle(logged > 0 ? theme.muted : theme.dim)
-      .monospacedDigit()
-      .help(estimated > 0
-        ? "Time focused today, against the day's estimates"
-        : "Time focused today. Nothing on the day has an estimate yet.")
+    TimelineView(.periodic(from: .now, by: model.isFocusBlockTicking ? 30 : 60)) { context in
+      let forecast = model.dayForecast(for: dayTasks, now: context.date)
+      Text(forecast.tallyText)
+        .font(theme.monoFont(size: theme.type.microLabel.size))
+        .foregroundStyle(forecast.loggedSeconds > 0 || forecast.remainingSeconds > 0 ? theme.muted : theme.dim)
+        .monospacedDigit()
+        .lineLimit(1)
+        .help(forecast.helpText)
+    }
   }
 
   /// What the day is supposed to cost against what it has cost so far. A bar
@@ -159,10 +162,17 @@ struct DayView: View {
     let logged = loggedToday
     let fraction = estimated > 0 ? min(1, Double(logged) / Double(estimated)) : 0
     return VStack(alignment: .leading, spacing: theme.space.xs) {
-      HStack(spacing: 0) {
-        MicroLabel(estimated > 0 ? "Est \(duration(estimated))" : "No estimates yet")
-        Spacer(minLength: theme.space.sm)
-        MicroLabel(logged > 0 ? "\(duration(logged)) logged" : "Nothing logged yet")
+      // The finish time rides on the estimate it came from, and ticks for the
+      // same reason the window's tally does.
+      TimelineView(.periodic(from: .now, by: model.isFocusBlockTicking ? 30 : 60)) { context in
+        let forecast = model.dayForecast(for: dayTasks, now: context.date)
+        HStack(spacing: 0) {
+          MicroLabel(forecast.panelLine)
+            .lineLimit(1)
+            .help(forecast.helpText)
+          Spacer(minLength: theme.space.sm)
+          MicroLabel(logged > 0 ? "\(duration(logged)) logged" : "Nothing logged yet")
+        }
       }
       // Square-ended: a bar is a length, and a rounded end makes the last
       // few percent read as decoration rather than progress.
@@ -360,10 +370,16 @@ struct DayView: View {
           if let listName { MicroLabel(listName).lineLimit(1) }
         }
         HStack(spacing: theme.space.sm) {
-          Text(task.estimateSeconds.map { duration($0) } ?? "No estimate")
-            .font(theme.captionFont)
-            .monospacedDigit()
-            .foregroundStyle(theme.dim)
+          // In the window the estimate opens its quick edit: the finish time is
+          // only as good as the estimates under it, and "No estimate" was a
+          // dead end for anyone not already using the key.
+          DayEstimateLabel(
+            text: task.estimateSeconds.map { duration($0) } ?? "No estimate",
+            help: "Set the time estimate (\(WorkspaceCommandHelpText.firstKey(for: .taskEditEstimate)))",
+            action: surface.isPanel ? nil : {
+              model.selectedTaskID = task.id
+              model.quickEdit(.estimate)
+            })
           if let detail {
             Text(detail)
               .font(theme.captionFont)
@@ -511,18 +527,25 @@ struct DayView: View {
     .accessibilityLabel(help)
   }
 
+  /// The title the task will actually get, with what the trailing words set
+  /// beside it — the same parse `createTask(capturing:)` runs on Return.
   private func createRow(_ row: DayRow) -> some View {
-    card(id: row.id) {
+    let capture = TaskCapture.parse(row.title)
+    return card(id: row.id) {
       HStack(spacing: theme.space.sm) {
         Image(systemName: "plus")
           .font(theme.bodyFont())
           .foregroundStyle(theme.primary)
-        Text("Add “\(row.title)” to today")
+        Text("Add “\(capture.title)” to today")
           .font(theme.bodyFont())
           .foregroundStyle(theme.ink)
           .lineLimit(1)
+        if capture.hasDetails {
+          TaskCapturePreview(capture: capture)
+        }
         Spacer(minLength: 0)
       }
+      .help(TaskCapturePreview.syntaxHint)
     } action: {
       createFromQuery()
     }
@@ -886,10 +909,7 @@ extension DayView {
   /// Hours and minutes, never seconds: an estimate measured to the second is
   /// a precision nobody typed in.
   private func duration(_ seconds: Int) -> String {
-    let minutes = max(0, seconds) / 60
-    if minutes < 60 { return "\(minutes)m" }
-    let remainder = minutes % 60
-    return remainder == 0 ? "\(minutes / 60)h" : "\(minutes / 60)h \(remainder)m"
+    DayForecast.hoursAndMinutes(seconds)
   }
 
   /// A stopwatch reading for time already spent on a task, so the column of
