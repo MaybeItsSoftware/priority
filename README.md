@@ -87,7 +87,7 @@ something you already have to know.
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
 | `Alt+Return` / `Alt+Shift+Return` | New task above the selection / new subtask |
 | `Cmd+F` / `Cmd+Shift+F` | Search |
-| `Cmd+P` | Go to a list — every list and nested list, filtered as you type |
+| `Cmd+P` / `ll` | Go to a list — every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |

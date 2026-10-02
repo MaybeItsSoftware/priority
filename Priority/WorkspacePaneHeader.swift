@@ -20,15 +20,20 @@ struct WorkspacePaneHeader<Subtitle: View, Trailing: View>: View {
   @Environment(\.theme) private var theme
 
   let title: String
+  /// When set, the title is a switcher: clicking it opens the list finder,
+  /// the way Zed's title bar opens its project picker from the project name.
+  var switchesList = false
   @ViewBuilder var subtitle: Subtitle
   @ViewBuilder var trailing: Trailing
 
   init(
     title: String,
+    switchesList: Bool = false,
     @ViewBuilder subtitle: () -> Subtitle,
     @ViewBuilder trailing: () -> Trailing
   ) {
     self.title = title
+    self.switchesList = switchesList
     self.subtitle = subtitle()
     self.trailing = trailing()
   }
@@ -44,12 +49,18 @@ struct WorkspacePaneHeader<Subtitle: View, Trailing: View>: View {
         // The theme's title role, deliberately only a step above body: the
         // house style puts hierarchy in surface and position, and a scope name
         // at 17–22pt was arguing with a screen of tasks.
-        Text(title)
-          .font(theme.titleFont)
-          .foregroundStyle(theme.ink)
-          .lineLimit(1)
-          .truncationMode(.middle)
-          .layoutPriority(1)
+        Group {
+          if switchesList {
+            WorkspaceListSwitcherTitle(title: title)
+          } else {
+            Text(title)
+              .font(theme.titleFont)
+              .foregroundStyle(theme.ink)
+              .lineLimit(1)
+              .truncationMode(.middle)
+          }
+        }
+        .layoutPriority(1)
         subtitle
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
@@ -64,6 +75,43 @@ struct WorkspacePaneHeader<Subtitle: View, Trailing: View>: View {
       .lineLimit(1)
       .fixedSize()
     }
+  }
+}
+
+/// The pane title as a way to the list finder: the name, a small chevron, and
+/// the hover fill every header control has. ⌘P and `ll` were the only ways
+/// in, and nothing on the screen said so.
+private struct WorkspaceListSwitcherTitle: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let title: String
+  @State private var isHovered = false
+
+  var body: some View {
+    Button { model.presentOverlay(.listNavigator) } label: {
+      HStack(spacing: theme.space.xxs) {
+        Text(title)
+          .font(theme.titleFont)
+          .foregroundStyle(theme.ink)
+          .lineLimit(1)
+          .truncationMode(.middle)
+        Image(systemName: "chevron.down")
+          .font(theme.captionFont)
+          .foregroundStyle(isHovered ? theme.ink : theme.muted)
+      }
+      .padding(.horizontal, theme.space.xs)
+      .padding(.vertical, theme.space.xxs)
+      .background(
+        RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
+          .fill(isHovered ? theme.hover : .clear))
+      // Back by the padding, so the name still sits over the text beneath it.
+      .padding(.horizontal, -theme.space.xs)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .focusable()
+    .onHover { isHovered = $0 }
+    .commandHelp(.goListNavigator, note: "Go to another list")
   }
 }
 

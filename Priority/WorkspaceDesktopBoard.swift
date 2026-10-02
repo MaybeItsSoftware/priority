@@ -71,7 +71,7 @@ struct WorkspaceKanbanBoard: View {
         VStack(spacing: 0) {
           // The board said nowhere on its face which list it was showing, so
           // ⌘2 from the outline took the scope name off the screen.
-          WorkspacePaneHeader(title: model.currentBoardScopeTitle) {
+          WorkspacePaneHeader(title: model.currentBoardScopeTitle, switchesList: true) {
             if let exit = model.scopeExitTitle {
               WorkspacePaneScopeExit(title: exit) { model.leaveTaskScope() }
             }

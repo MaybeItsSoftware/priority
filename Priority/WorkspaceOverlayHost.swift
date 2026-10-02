@@ -259,12 +259,41 @@ struct WorkspaceListNavigator: View {
     let id: String
     let title: String
     let task: WorkspaceTask?
+    /// Where it lives — a list's folder, a nested list's list — so two lists
+    /// with one name can be told apart, and a folder's name finds its lists.
+    let context: String?
   }
 
+  /// Every list then every nested list, in sidebar order with an empty query;
+  /// otherwise ranked by how well the letters match, the way the palette and
+  /// Zed's file finder match — `wsr` finds "Write the spring report". The
+  /// title counts for more than where it lives.
   private var destinations: [Destination] {
-    let lists = model.lists.map { Destination(id: $0.id, title: $0.name, task: nil) }
-    let nested = model.nestedLists.map { Destination(id: $0.task.id, title: $0.task.title, task: $0.task) }
-    return (lists + nested).filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) }
+    let folderNames = Dictionary(model.folders.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    let listNames = Dictionary(model.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    let lists = model.lists.map {
+      Destination(id: $0.id, title: $0.name, task: nil, context: $0.folderId.flatMap { folderNames[$0] })
+    }
+    let nested = model.nestedLists.map {
+      Destination(id: $0.task.id, title: $0.task.title, task: $0.task, context: listNames[$0.task.listId])
+    }
+    let all = lists + nested
+    let query = query.trimmingCharacters(in: .whitespaces)
+    guard !query.isEmpty else { return all }
+    let scored: [(Destination, Int)] = all.compactMap { destination in
+      let title = WorkspaceCommandQuery.fuzzyScore(query, in: destination.title).map { $0 * 2 }
+      let context = destination.context.flatMap { WorkspaceCommandQuery.fuzzyScore(query, in: $0) }
+      guard let best = [title, context].compactMap({ $0 }).max() else { return nil }
+      return (destination, best)
+    }
+    // Stable on ties, so equal matches keep sidebar order.
+    return scored.enumerated()
+      .sorted { $0.element.1 != $1.element.1 ? $0.element.1 > $1.element.1 : $0.offset < $1.offset }
+      .map(\.element.0)
+  }
+
+  private var currentID: String? {
+    model.scopeTask?.isList == true ? model.scopeTaskID : model.selectedListID
   }
 
   var body: some View {
@@ -280,10 +309,22 @@ struct WorkspaceListNavigator: View {
           ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
               ForEach(Array(items.enumerated()), id: \.element.id) { index, destination in
-                Label(destination.title, systemImage: destination.task == nil ? "list.bullet" : "list.bullet.indent")
+                HStack(spacing: theme.space.sm) {
+                  Label(destination.title, systemImage: destination.task == nil ? "list.bullet" : "list.bullet.indent")
+                    .foregroundStyle(theme.ink)
+                    .lineLimit(1)
+                  if let context = destination.context {
+                    Text(context)
+                      .foregroundStyle(theme.muted)
+                      .lineLimit(1)
+                      .truncationMode(.middle)
+                  }
+                  Spacer(minLength: theme.space.sm)
+                  if destination.id == currentID {
+                    Text("Current").font(theme.captionFont).foregroundStyle(theme.dim)
+                  }
+                }
                   .font(theme.bodyFont())
-                  .foregroundStyle(theme.ink)
-                  .lineLimit(1)
                   .overlayRow(isSelected: index == (selection ?? 0))
                   .id(index)
                   .onTapGesture { open(destination) }

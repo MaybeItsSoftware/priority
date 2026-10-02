@@ -34,7 +34,7 @@ struct WorkspaceMatrixDashboard: View {
     return VStack(spacing: 0) {
       // The matrix used to name itself in 22pt caps and never name the list it
       // was showing, which is the one thing the other modes put at the top.
-      WorkspacePaneHeader(title: model.currentBoardScopeTitle) {
+      WorkspacePaneHeader(title: model.currentBoardScopeTitle, switchesList: true) {
         Text(
           model.isMultiListScope
             ? "Urgency across every list in scope"

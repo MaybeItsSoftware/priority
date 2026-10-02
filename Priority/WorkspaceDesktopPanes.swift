@@ -21,7 +21,7 @@ struct WorkspaceOutlinePane: View {
       let selectedID = model.selectedTaskID
       let tasksHaveKeyboard = model.keyboardFocusArea == .tasks
       VStack(spacing: 0) {
-        WorkspacePaneHeader(title: model.currentBoardScopeTitle) {
+        WorkspacePaneHeader(title: model.currentBoardScopeTitle, switchesList: true) {
           if let exit = model.scopeExitTitle {
             WorkspacePaneScopeExit(title: exit) { model.leaveTaskScope() }
           }
