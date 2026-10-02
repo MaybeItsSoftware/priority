@@ -41,7 +41,9 @@ struct RootView: View {
     }
     .modifier(ListsPresenters())
     .overlay(alignment: .bottom) { ToastView() }
-    .sensoryFeedback(.success, trigger: model.completionCount)
+    .sensoryFeedback(trigger: model.completionCount) { _, _ in
+      CompletionHaptics.isEnabled() ? .success : nil
+    }
     .alert("Something went wrong", isPresented: errorBinding) {
       Button("OK", role: .cancel) { model.errorMessage = nil }
     } message: {

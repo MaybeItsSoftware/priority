@@ -84,6 +84,9 @@ struct WorkspaceStructure: Sendable, Equatable {
 @Observable
 final class WorkspaceModel {
   @ObservationIgnored nonisolated let store: WorkspaceStore
+  /// The file the store was opened on, when known — what the history sheet
+  /// reads the undo journal's labels from.
+  @ObservationIgnored nonisolated let databaseURL: URL?
   let workspace: Workspace
   private(set) var structure = WorkspaceStructure.empty
   /// Moves after every write, local or external. What every query keys on.
@@ -111,8 +114,9 @@ final class WorkspaceModel {
   @ObservationIgnored private var structureGeneration = 0
   @ObservationIgnored let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "WorkspaceModel")
 
-  init(store: WorkspaceStore) throws {
+  init(store: WorkspaceStore, databaseURL: URL? = nil) throws {
     self.store = store
+    self.databaseURL = databaseURL
     self.workspace = try store.bootstrapIfNeeded()
     try? store.recoverInterruptedFocus()
     _ = try? store.resolveStaleFocusSession()
@@ -129,14 +133,14 @@ final class WorkspaceModel {
       try? FileManager.default.removeItem(at: AppGroup.containerURL)
     }
     let store = try WorkspaceStore(databaseURL: AppGroup.databaseURL)
-    return try WorkspaceModel(store: store)
+    return try WorkspaceModel(store: store, databaseURL: AppGroup.databaseURL)
   }
 
   /// A workspace in a throwaway file, for tests and previews.
   static func temporary() throws -> WorkspaceModel {
     let url = FileManager.default.temporaryDirectory
       .appending(path: "priority-\(UUID().uuidString)/priority.sqlite")
-    return try WorkspaceModel(store: WorkspaceStore(databaseURL: url))
+    return try WorkspaceModel(store: WorkspaceStore(databaseURL: url), databaseURL: url)
   }
 
   // MARK: - Writing
