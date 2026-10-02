@@ -5,5 +5,8 @@ import WidgetKit
 struct PriorityWidgetsBundle: WidgetBundle {
   var body: some Widget {
     NextUpWidget()
+    TodayCountWidget()
+    FocusLiveActivity()
+    QuickAddControl()
   }
 }
