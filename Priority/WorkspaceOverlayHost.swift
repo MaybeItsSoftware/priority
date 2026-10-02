@@ -353,14 +353,27 @@ struct WorkspaceMoveOverlay: View {
     all.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
   }
 
+  /// The list the last row would create: what you typed, when no list is
+  /// called that already. Moving somewhere that does not exist yet is the
+  /// same gesture as moving somewhere that does, not a trip to the sidebar.
+  private var newListName: String? {
+    let name = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !name.isEmpty,
+      !model.lists.contains(where: { $0.name.compare(name, options: .caseInsensitive) == .orderedSame })
+    else { return nil }
+    return name
+  }
+
   var body: some View {
     let items = destinations
+    let newList = newListName
+    let rowCount = items.count + (newList == nil ? 0 : 1)
     VStack(spacing: 0) {
       WorkspaceOverlayField(
-        symbol: "arrow.right.doc.on.clipboard", prompt: "Move to…", text: $query,
+        symbol: "arrow.right.doc.on.clipboard", prompt: "Move to… or type a new list's name", text: $query,
         context: request.title)
       FocusRule()
-      if items.isEmpty {
+      if rowCount == 0 {
         WorkspaceOverlayHint(text: "Nowhere matches.")
           .frame(height: WorkspaceOverlayMetrics.listHeight)
       } else {
@@ -377,6 +390,16 @@ struct WorkspaceMoveOverlay: View {
                   .id(index)
                   .onTapGesture { move(to: destination) }
               }
+              if let newList {
+                Label("New list “\(newList)”", systemImage: "plus")
+                  .font(theme.bodyFont())
+                  .foregroundStyle(theme.primary)
+                  .lineLimit(1)
+                  .truncationMode(.middle)
+                  .overlayRow(isSelected: items.count == (selection ?? 0))
+                  .id(items.count)
+                  .onTapGesture { moveToNewList(named: newList) }
+              }
             }
           }
           .frame(height: WorkspaceOverlayMetrics.listHeight)
@@ -389,15 +412,26 @@ struct WorkspaceMoveOverlay: View {
     .onChange(of: query) { _, _ in selection = nil }
     .overlayKeys(model, id: overlayID) { key in
       let items = destinations
+      let newList = newListName
+      let rowCount = items.count + (newList == nil ? 0 : 1)
       if let step = WorkspaceOverlayStep.offset(for: key) {
-        selection = WorkspaceOverlayStep.index(from: selection ?? 0, by: step, count: items.count)
+        selection = WorkspaceOverlayStep.index(from: selection ?? 0, by: step, count: rowCount)
         return true
       }
       guard key == "enter" else { return false }
       let index = selection ?? 0
-      if items.indices.contains(index) { move(to: items[index]) }
+      if items.indices.contains(index) {
+        move(to: items[index])
+      } else if index == items.count, let newList {
+        moveToNewList(named: newList)
+      }
       return true
     }
+  }
+
+  private func moveToNewList(named name: String) {
+    model.dismissOverlay()
+    model.moveDroppedItem(request.payload, toNewListNamed: name)
   }
 
   private func move(to destination: Destination) {

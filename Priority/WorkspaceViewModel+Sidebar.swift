@@ -84,6 +84,18 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// Moves to a list made for it: the move picker's "New list" row. Two
+  /// steps in the undo history — the move, then the list — because the store
+  /// journals each write on its own.
+  func moveDroppedItem(_ payload: String, toNewListNamed name: String) {
+    guard let store, let workspace else { return }
+    perform {
+      let list = try store.createList(workspaceId: workspace.id, name: name)
+      try load()
+      moveDroppedItem(payload, toListID: list.id)
+    }
+  }
+
   func moveDroppedItem(_ payload: String, toFolderID folderID: String?) {
     guard let store else { return }
     taskEditor.flush()
