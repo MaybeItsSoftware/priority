@@ -1,15 +1,388 @@
 package uk.co.maybeitsadam.priority.ui.lists
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.AnimatedPane
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth
+import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
+import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
+import uk.co.maybeitsadam.priority.ui.commands.Chord
+import uk.co.maybeitsadam.priority.ui.commands.KeyCommand
+import uk.co.maybeitsadam.priority.ui.commands.RegisterCommands
 import uk.co.maybeitsadam.priority.ui.components.EmptyState
+import uk.co.maybeitsadam.priority.ui.components.IconAction
+import uk.co.maybeitsadam.priority.ui.components.MonoText
 import uk.co.maybeitsadam.priority.ui.components.PriorityTopBar
+import uk.co.maybeitsadam.priority.ui.components.VerticalHairline
+import uk.co.maybeitsadam.priority.ui.navigation.ListRoute
+import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
+import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.Metrics
+import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
-/** Stub: the Lists slice replaces this. */
+/** The Lists tree's dialogs and sheets. */
+private sealed interface ListsDialog {
+    data class NewList(val folderId: String?) : ListsDialog
+    data class NewFolder(val parentId: String?) : ListsDialog
+    data class RenameList(val id: String, val name: String) : ListsDialog
+    data class RenameFolder(val id: String, val name: String) : ListsDialog
+    data class DeleteList(val id: String, val name: String) : ListsDialog
+    data class DeleteFolder(val id: String, val name: String) : ListsDialog
+    data class MoveList(val id: String, val name: String, val folderId: String?) : ListsDialog
+    data class MoveFolder(val id: String, val name: String, val parentId: String?) : ListsDialog
+}
+
+/** What the detail pane shows: a list (or Everything) and a task to reveal, as one saveable string. */
+internal object DetailKey {
+    private const val EVERYTHING = "*"
+
+    fun encode(listId: String?, revealTaskId: String? = null): String = "${listId ?: EVERYTHING}|${revealTaskId.orEmpty()}"
+
+    fun decode(key: String): ListRoute {
+        val (list, reveal) = key.split('|', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+        return ListRoute(list.takeIf { it != EVERYTHING }, reveal.ifEmpty { null })
+    }
+}
+
+/**
+ * Folders and lists. On a phone, tapping a list pushes it; on a wide window
+ * the tree and the list sit side by side in a list-detail scaffold, so
+ * tapping a list does not navigate away.
+ */
 @Composable
 fun ListsScreen() {
-    Column {
-        PriorityTopBar("Lists")
-        EmptyState("Lists")
+    val shell = LocalShell.current
+    if (!shell.layout.isWide) {
+        ListsTree(selectedKey = null, onOpen = { listId, reveal -> shell.navigator.openList(listId, reveal) })
+        return
+    }
+    val directive = calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(currentWindowAdaptiveInfo())
+    val navigator = rememberListDetailPaneScaffoldNavigator<String>(scaffoldDirective = directive)
+    val scope = rememberCoroutineScope()
+    val current = navigator.currentDestination?.contentKey
+    NavigableListDetailPaneScaffold(
+        navigator = navigator,
+        listPane = {
+            AnimatedPane {
+                ListsTree(
+                    selectedKey = current?.let { DetailKey.decode(it).listId ?: "" },
+                    onOpen = { listId, reveal ->
+                        scope.launch { navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, DetailKey.encode(listId, reveal)) }
+                    },
+                    trailingRule = true,
+                )
+            }
+        },
+        detailPane = {
+            AnimatedPane {
+                val key = navigator.currentDestination?.contentKey
+                if (key == null) {
+                    Column(Modifier.fillMaxSize().background(Chalk.colors.paper)) {
+                        PriorityTopBar("Lists", showHistory = false)
+                        EmptyState("Choose a list", detail = "Its outline, board and matrix open here.")
+                    }
+                } else {
+                    val route = DetailKey.decode(key)
+                    ListContent(route, showBack = false, onClose = { scope.launch { navigator.navigateBack() } })
+                }
+            }
+        },
+    )
+}
+
+/**
+ * The tree: Inbox, Everything, pinned nested lists, folders (collapsible)
+ * with their lists, each list's nested lists beneath it, and an Archived
+ * section. Long-press a row for its menu.
+ */
+@Composable
+private fun ListsTree(
+    selectedKey: String?,
+    onOpen: (listId: String?, revealTaskId: String?) -> Unit,
+    trailingRule: Boolean = false,
+) {
+    val container = LocalShell.current.container
+    val vm: ListsViewModel = viewModel { ListsViewModel(container) }
+    val state by vm.tree.collectAsStateWithLifecycle()
+    var dialog by remember { mutableStateOf<ListsDialog?>(null) }
+
+    RegisterCommands(
+        listOf(
+            KeyCommand.LIST_NEW.palette { dialog = ListsDialog.NewList(null) },
+            KeyCommand.FOLDER_NEW.palette { dialog = ListsDialog.NewFolder(null) },
+            KeyCommand.GO_EVERYTHING.palette { onOpen(null, null) },
+        ),
+    )
+
+    Row(Modifier.fillMaxSize().background(Chalk.colors.paper)) {
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when {
+                        Chord(Key.N, ctrl = true, shift = true).matches(event) -> dialog = ListsDialog.NewList(null)
+                        Chord(Key.N, ctrl = true, alt = true).matches(event) -> dialog = ListsDialog.NewFolder(null)
+                        else -> return@onPreviewKeyEvent false
+                    }
+                    true
+                },
+        ) {
+            PriorityTopBar("Lists") {
+                IconAction(PIcons.Folder, "New folder", onClick = { dialog = ListsDialog.NewFolder(null) })
+                IconAction(Icons.Filled.Add, "New list", onClick = { dialog = ListsDialog.NewList(null) })
+            }
+            LazyColumn(Modifier.fillMaxSize().testTag("lists_tree")) {
+                items(state.rows, key = { it.key }, contentType = { it::class.simpleName }) { row ->
+                    TreeRowView(row, selectedKey, vm, onOpen) { dialog = it }
+                }
+            }
+        }
+        if (trailingRule) VerticalHairline()
+    }
+
+    ListsDialogHost(dialog, vm, state.folders) { dialog = null }
+}
+
+@Composable
+private fun TreeRowView(
+    row: TreeRow,
+    selectedKey: String?,
+    vm: ListsViewModel,
+    onOpen: (String?, String?) -> Unit,
+    show: (ListsDialog) -> Unit,
+) {
+    when (row) {
+        is TreeRow.Everything -> TreeLine(
+            title = "Everything", icon = ListIcons.Everything, depth = 0, count = row.openCount,
+            selected = selectedKey == "", onClick = { onOpen(null, null) },
+        )
+        is TreeRow.ListRow -> {
+            var menu by remember { mutableStateOf(false) }
+            Box {
+                TreeLine(
+                    title = row.name, icon = if (row.isInbox) PIcons.Inbox else PIcons.ListIcon, depth = row.depth,
+                    count = row.openCount, selected = selectedKey == row.id, muted = row.isCompleted,
+                    onClick = { onOpen(row.id, null) }, onLongClick = { menu = true },
+                )
+                PMenu(menu, { menu = false }) {
+                    ListMenu(row, vm, show) { menu = false }
+                }
+            }
+        }
+        is TreeRow.NestedRow -> {
+            var menu by remember { mutableStateOf(false) }
+            Box {
+                TreeLine(
+                    title = row.title, icon = if (row.isPinned) ListIcons.Pin else ListIcons.Nested, depth = row.depth,
+                    count = row.openCount, selected = false,
+                    onClick = { onOpen(row.listId, row.taskId) }, onLongClick = { menu = true },
+                )
+                PMenu(menu, { menu = false }) {
+                    PMenuItem(if (row.isPinned) "Unpin" else "Pin to the top", ListIcons.Pin, onClick = {
+                        menu = false
+                        vm.setNestedPinned(row.taskId, !row.isPinned)
+                    })
+                    PMenuItem("Archive nested list", PIcons.Archive, onClick = {
+                        menu = false
+                        vm.setNestedArchived(row.taskId, true)
+                    })
+                }
+            }
+        }
+        is TreeRow.FolderRow -> {
+            var menu by remember { mutableStateOf(false) }
+            Box {
+                TreeLine(
+                    title = row.name, icon = PIcons.Folder, depth = row.depth, count = null, selected = false,
+                    disclosure = row.isExpanded,
+                    onClick = { vm.toggleFolder(row.id) }, onLongClick = { menu = true },
+                )
+                PMenu(menu, { menu = false }) {
+                    FolderMenu(row, vm, show) { menu = false }
+                }
+            }
+        }
+        is TreeRow.ArchivedHeader -> TreeLine(
+            title = "Archived", icon = PIcons.Archive, depth = 0, count = row.count, selected = false, muted = true,
+            disclosure = row.isExpanded, onClick = { vm.toggleArchived() },
+        )
+        is TreeRow.ArchivedList -> {
+            var menu by remember { mutableStateOf(false) }
+            Box {
+                TreeLine(
+                    title = row.name, icon = PIcons.ListIcon, depth = row.depth, count = null, selected = false, muted = true,
+                    onClick = { menu = true }, onLongClick = { menu = true },
+                )
+                PMenu(menu, { menu = false }) {
+                    PMenuItem("Restore", ListIcons.Restore, onClick = {
+                        menu = false
+                        vm.setArchived(row.id, false)
+                    })
+                    PMenuItem("Delete…", Icons.Filled.Delete, destructive = true, onClick = {
+                        menu = false
+                        show(ListsDialog.DeleteList(row.id, row.name))
+                    })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TreeLine(
+    title: String,
+    icon: ImageVector,
+    depth: Int,
+    count: Int?,
+    selected: Boolean,
+    muted: Boolean = false,
+    /** Non-null for a collapsible row: whether it is open. */
+    disclosure: Boolean? = null,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+) {
+    val colors = Chalk.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(if (selected) colors.primary.copy(alpha = 0.10f) else colors.paper)
+            .heightIn(min = Metrics.touchTarget)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = onLongClick?.let { "$title actions" })
+            .padding(start = Metrics.md + Metrics.indent * depth, end = Metrics.lg)
+            .semantics {
+                if (disclosure != null) contentDescription = if (disclosure) "Collapse $title" else "Expand $title"
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (disclosure != null) {
+            Icon(
+                if (disclosure) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight, null,
+                tint = colors.mutedText, modifier = Modifier.size(18.dp),
+            )
+        } else {
+            Spacer(Modifier.width(18.dp))
+        }
+        Spacer(Modifier.width(Metrics.xs))
+        Icon(icon, null, tint = if (selected) colors.primary else colors.mutedText, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(Metrics.md))
+        Text(
+            title, style = Chalk.type.body, color = if (muted) colors.mutedText else colors.ink,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+        )
+        if (count != null && count > 0) MonoText(count.toString(), color = colors.dimText)
+    }
+}
+
+@Composable
+private fun ListMenu(row: TreeRow.ListRow, vm: ListsViewModel, show: (ListsDialog) -> Unit, close: () -> Unit) {
+    fun run(block: () -> Unit): () -> Unit = {
+        close()
+        block()
+    }
+    if (row.isInbox) {
+        PMenuItem("The Inbox is permanent", enabled = false, onClick = close)
+        return
+    }
+    PMenuItem("Rename…", Icons.Filled.Edit, onClick = run { show(ListsDialog.RenameList(row.id, row.name)) })
+    PMenuItem("Move to folder…", PIcons.Folder, onClick = run { show(ListsDialog.MoveList(row.id, row.name, row.folderId)) })
+    PMenuItem("Move up", Icons.Filled.KeyboardArrowUp, enabled = row.canMoveUp, onClick = run { vm.moveListBy(row.id, -1) })
+    PMenuItem("Move down", Icons.Filled.KeyboardArrowDown, enabled = row.canMoveDown, onClick = run { vm.moveListBy(row.id, 1) })
+    PMenuDivider()
+    PMenuItem(if (row.isCompleted) "Reopen list" else "Complete list", Icons.Filled.Check, onClick = run { vm.setCompleted(row.id, !row.isCompleted) })
+    PMenuItem("Archive", PIcons.Archive, onClick = run { vm.setArchived(row.id, true) })
+    PMenuItem("Convert to task", ListIcons.Nested, onClick = run { vm.convertListToTask(row.id) })
+    PMenuItem("Delete…", Icons.Filled.Delete, destructive = true, onClick = run { show(ListsDialog.DeleteList(row.id, row.name)) })
+}
+
+@Composable
+private fun FolderMenu(row: TreeRow.FolderRow, vm: ListsViewModel, show: (ListsDialog) -> Unit, close: () -> Unit) {
+    fun run(block: () -> Unit): () -> Unit = {
+        close()
+        block()
+    }
+    PMenuItem("New list here…", Icons.Filled.Add, onClick = run { show(ListsDialog.NewList(row.id)) })
+    PMenuItem("New folder here…", PIcons.Folder, onClick = run { show(ListsDialog.NewFolder(row.id)) })
+    PMenuItem("Rename…", Icons.Filled.Edit, onClick = run { show(ListsDialog.RenameFolder(row.id, row.name)) })
+    PMenuItem("Move to folder…", PIcons.Folder, onClick = run { show(ListsDialog.MoveFolder(row.id, row.name, row.parentId)) })
+    PMenuItem("Move up", Icons.Filled.KeyboardArrowUp, enabled = row.canMoveUp, onClick = run { vm.moveFolderBy(row.id, -1) })
+    PMenuItem("Move down", Icons.Filled.KeyboardArrowDown, enabled = row.canMoveDown, onClick = run { vm.moveFolderBy(row.id, 1) })
+    PMenuDivider()
+    PMenuItem("Delete…", Icons.Filled.Delete, destructive = true, onClick = run { show(ListsDialog.DeleteFolder(row.id, row.name)) })
+}
+
+@Composable
+private fun ListsDialogHost(dialog: ListsDialog?, vm: ListsViewModel, folders: ImmutableList<FolderChoice>, dismiss: () -> Unit) {
+    fun folderChoices(current: String?, excluding: String? = null): ImmutableList<Choice> =
+        (
+            listOf(Choice(null, "Top level", icon = PIcons.ListIcon, isCurrent = current == null)) +
+                folders.filter { it.id != excluding }.map { Choice(it.id, it.name, depth = it.depth, icon = PIcons.Folder, isCurrent = it.id == current) }
+            ).toImmutableList()
+    when (dialog) {
+        null -> Unit
+        is ListsDialog.NewList -> NamePromptDialog("New list", confirm = "Create", onDismiss = dismiss) { vm.createList(it, dialog.folderId) }
+        is ListsDialog.NewFolder -> NamePromptDialog("New folder", confirm = "Create", onDismiss = dismiss) { vm.createFolder(it, dialog.parentId) }
+        is ListsDialog.RenameList -> NamePromptDialog("Rename list", dialog.name, onDismiss = dismiss) { vm.renameList(dialog.id, it) }
+        is ListsDialog.RenameFolder -> NamePromptDialog("Rename folder", dialog.name, onDismiss = dismiss) { vm.renameFolder(dialog.id, it) }
+        is ListsDialog.DeleteList -> ConfirmDialog(
+            "Delete ${dialog.name}?", "This permanently deletes the list and all of its tasks. You can undo it.", onDismiss = dismiss,
+        ) { vm.deleteList(dialog.id) }
+        is ListsDialog.DeleteFolder -> ConfirmDialog(
+            "Delete ${dialog.name}?", "Lists remain, but move to the top level. Nested folders are deleted.", onDismiss = dismiss,
+        ) { vm.deleteFolder(dialog.id) }
+        is ListsDialog.MoveList -> ChoiceSheet("Move ${dialog.name} to", folderChoices(dialog.folderId), onDismiss = dismiss) {
+            vm.moveListToFolder(dialog.id, it.id)
+        }
+        is ListsDialog.MoveFolder -> ChoiceSheet("Move ${dialog.name} to", folderChoices(dialog.parentId, dialog.id), onDismiss = dismiss) {
+            vm.moveFolderTo(dialog.id, it.id)
+        }
     }
 }
