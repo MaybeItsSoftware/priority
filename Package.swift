@@ -20,6 +20,12 @@ let pluginTargetExcludes = [
   "workspace-editing-tests",
   "Priority/Editing",
   "Sources/PriorityWorkspace",
+  "Sources/PrioritySync",
+  "sync-tests",
+  // The sync server and the phone apps: other build systems, and their build
+  // trees are large enough that walking them slows every build.
+  "sync-server",
+  "mobile",
   "scripts",
 
   // App resources and the core target's own source tree
@@ -152,6 +158,12 @@ let appLogicTargetExcludes = [
   "plugin-tests-support",
   "workspace-tests",
   "Sources/PriorityWorkspace",
+  "Sources/PrioritySync",
+  "sync-tests",
+  // The sync server and the phone apps: other build systems, and their build
+  // trees are large enough that walking them slows every build.
+  "sync-server",
+  "mobile",
   "scripts",
 
   // App resources and other targets' source trees.
@@ -257,6 +269,7 @@ let package = Package(
     .library(name: "PriorityAppLogic", targets: ["PriorityAppLogic"]),
     .library(name: "PriorityWorkspace", targets: ["PriorityWorkspace"]),
     .library(name: "PriorityWorkspaceEditing", targets: ["PriorityWorkspaceEditing"]),
+    .library(name: "PrioritySync", targets: ["PrioritySync"]),
   ],
   dependencies: [
     .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.8.0"),
@@ -273,6 +286,13 @@ let package = Package(
         .product(name: "GRDB", package: "GRDB.swift"),
       ],
       path: "Sources/PriorityWorkspace"
+    ),
+    // The client half of multi-device sync (`docs/sync.md`), shared by the Mac
+    // and iOS apps. Android has its own in `mobile/android/data`.
+    .target(
+      name: "PrioritySync",
+      dependencies: ["PriorityWorkspace"],
+      path: "Sources/PrioritySync"
     ),
     .target(
       name: "PriorityPlugins",
@@ -387,6 +407,11 @@ let package = Package(
       name: "PriorityWorkspaceEditingTests",
       dependencies: ["PriorityWorkspaceEditing", "PriorityWorkspace"],
       path: "workspace-editing-tests"
+    ),
+    .testTarget(
+      name: "PrioritySyncTests",
+      dependencies: ["PrioritySync", "PriorityWorkspace", .product(name: "GRDB", package: "GRDB.swift")],
+      path: "sync-tests"
     ),
   ]
 )

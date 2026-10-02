@@ -319,6 +319,7 @@ final class WorkspaceConditionsTests: XCTestCase {
     let session = try store.startFocusSession(taskId: task.id, now: now)
     try store.completeActiveFocusTask(sessionId: session.id, elapsedSeconds: 600, qualityMultiplier: 1, completeTask: false, now: now)
     try DatabaseQueue(path: url.path).write { db in
+      try db.rollBackSyncMigration()
       for table in ["task_conditions", "task_metadata"] {
         for operation in ["insert", "update", "delete"] { try db.execute(sql: "DROP TRIGGER IF EXISTS change_log_\(table)_\(operation)") }
       }

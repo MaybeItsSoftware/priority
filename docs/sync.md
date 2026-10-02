@@ -110,9 +110,8 @@ For each change, the server resolves it against the stored row
   like. If `hlc <= deletedHlc`, the change is ignored.
 - **delete:** the row is deleted if `hlc` is greater than every `colHlc`. Then
   `deleted = true` and `deletedHlc = hlc`.
-- If anything changed, the row gets a new `seq` from one global sequence and
-  `lastDeviceId` is set: to the pusher if every pushed column won, `NULL`
-  otherwise.
+- If anything changed, the row gets a new `seq` from one global sequence.
+  `lastDeviceId` records the pusher, for diagnostics only.
 
 Pushing the same change twice changes nothing.
 
@@ -123,8 +122,11 @@ Response:
               "values": { "...every column..." }, "hlc": "<max colHlc>" } ],
   "cursor": 1234, "hasMore": false }
 ```
-The response holds the rows whose `seq > since`, in `seq` order, leaving out
-any whose `lastDeviceId` is the caller. It also returns the cursor to resume
+The response holds the rows whose `seq > since`, in `seq` order, **including
+rows the caller itself last wrote**. Skipping those looks like a free
+saving, but it's wrong: a row the caller last wrote can still hold another
+device's earlier edit to a different column that the caller has never seen.
+Re-applying your own row is harmless. It also returns the cursor to resume
 from. If there is nothing to send and `wait > 0` (at most 25), the request
 waits for new rows, woken through Postgres `LISTEN/NOTIFY`.
 

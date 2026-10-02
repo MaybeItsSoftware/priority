@@ -91,6 +91,7 @@ final class WorkspaceInboxTests: XCTestCase {
     let workspaceID = try WorkspaceStore(databaseURL: url).bootstrapIfNeeded().id
     let queue = try DatabaseQueue(path: url.path)
     try queue.write { db in
+      try db.rollBackSyncMigration()
       // The undo journal's triggers name every column of the tables they
       // watch, so they have to come off before a column can be taken away —
       // and all of them, because SQLite reparses the whole schema during an

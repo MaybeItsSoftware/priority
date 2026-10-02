@@ -26,6 +26,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v14_nested_lists",
     "v15_kanban_board_history",
     "v16_task_completion_time",
+    "v17_sync",
   ]
 
   private var directoryURL: URL!
@@ -98,6 +99,7 @@ final class WorkspaceMigrationTests: XCTestCase {
 
     // Recreate the previous schema and its snapshots without the new field.
     try DatabaseQueue(path: url.path).write { db in
+      try db.rollBackSyncMigration()
       for suffix in ["insert", "update", "delete"] {
         try db.execute(sql: "DROP TRIGGER change_log_task_lists_\(suffix)")
       }
@@ -137,6 +139,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     // Rewind the additive migrations: drop what they created, forget that they
     // ran, and reopen. What v1–v4 built, and the data in it, stays put.
     try DatabaseQueue(path: url.path).write { db in
+      try db.rollBackSyncMigration()
       let triggers = try String.fetchAll(
         db, sql: "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'change\\_log%' ESCAPE '\\'")
       for trigger in triggers { try db.execute(sql: "DROP TRIGGER \(trigger)") }

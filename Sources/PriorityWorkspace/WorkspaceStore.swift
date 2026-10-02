@@ -1134,6 +1134,10 @@ public final class WorkspaceStore: @unchecked Sendable {
         """)
       try WorkspaceStore.installChangeLogTriggers(db)
     }
+    migrator.registerMigration("v17_sync") { db in
+      try WorkspaceStore.createSyncTables(db)
+      try WorkspaceStore.installSyncTriggers(db)
+    }
 
     return migrator
   }()
