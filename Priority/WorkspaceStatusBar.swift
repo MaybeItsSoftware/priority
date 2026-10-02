@@ -1,4 +1,5 @@
 import PriorityCore
+import PrioritySync
 import PriorityWorkspace
 import SwiftUI
 
@@ -236,10 +237,21 @@ private struct WorkspaceStatusTrailing: View {
         + "\(progress.week.completed) done. Click for the timeline.")
   }
 
-  /// The Google Tasks mirror, the one thing here that syncs. Silent until it
+  /// The Google Tasks mirror. Silent until it
   /// has done something, so an app without the integration shows nothing.
   @ViewBuilder
   private var sync: some View {
+    // Workspace sync, once paired, is the sync that matters; the Google mirror
+    // keeps the slot otherwise.
+    if let session = model.syncSession, session.isPaired {
+      SyncPhaseText(phase: session.phase)
+    } else {
+      googleMirror
+    }
+  }
+
+  @ViewBuilder
+  private var googleMirror: some View {
     let mirror = manager.googleTasksMirror
     switch mirror.state {
     case .syncing:

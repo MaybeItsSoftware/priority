@@ -273,6 +273,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       .focusEffectDisabled()
       .themedBodyFont()
       .environment(checkvistManager)
+      .environment(workspace)
       .environment(navState)
       .themed(checkvistManager.theme)
       .frame(minWidth: 720, idealWidth: 820, minHeight: 560, idealHeight: 660)

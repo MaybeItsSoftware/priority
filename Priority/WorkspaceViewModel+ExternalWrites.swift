@@ -61,7 +61,8 @@ extension WorkspaceViewModel {
     }
   }
 
-  private func reloadAfterExternalWrite() {
+  /// Also run after a sync pull lands rows from another device.
+  func reloadAfterExternalWrite() {
     guard let store else { return }
     Self.externalWriteLog.debug("Another process wrote to the workspace; reloading")
     // Before the reload, so a draft being typed is saved to disk and then

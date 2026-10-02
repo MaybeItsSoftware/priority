@@ -220,6 +220,12 @@ extension WorkspaceStore {
     }
   }
 
+  /// The newest outbox entry, or nil when nothing is waiting. Polled so a
+  /// write from any process is noticed and sent.
+  public func latestSyncOutboxSeq() throws -> Int64? {
+    try database.read { db in try Int64.fetchOne(db, sql: "SELECT MAX(seq) FROM sync_outbox") }
+  }
+
   /// Unpairs: stops recording and forgets what was waiting to be sent. The
   /// workspace itself is untouched.
   public func endSync() throws {

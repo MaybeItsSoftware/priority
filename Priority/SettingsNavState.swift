@@ -7,6 +7,7 @@ import Observation
     case keybindings
     case theme
     case plugins
+    case sync
     #if DEBUG
       case debug
     #endif
@@ -17,6 +18,7 @@ import Observation
       case .keybindings: "Keybindings"
       case .theme: "Theme"
       case .plugins: "Plugins"
+      case .sync: "Sync"
       #if DEBUG
         case .debug: "Debug"
       #endif
@@ -29,6 +31,7 @@ import Observation
       case .keybindings: "keyboard"
       case .theme: "paintpalette"
       case .plugins: "puzzlepiece.extension"
+      case .sync: "arrow.triangle.2.circlepath"
       #if DEBUG
         case .debug: "ladybug"
       #endif
@@ -36,7 +39,7 @@ import Observation
     }
 
     static var allPanes: [Pane] {
-      var panes: [Pane] = [.preferences, .keybindings, .theme, .plugins]
+      var panes: [Pane] = [.preferences, .keybindings, .theme, .plugins, .sync]
       #if DEBUG
         panes.append(.debug)
       #endif

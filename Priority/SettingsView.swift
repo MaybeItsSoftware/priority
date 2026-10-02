@@ -222,6 +222,8 @@ struct SettingsView: View {
       themePane
     case .plugins:
       pluginsPane
+    case .sync:
+      SettingsSyncPane()
     #if DEBUG
       case .debug:
         debugPane

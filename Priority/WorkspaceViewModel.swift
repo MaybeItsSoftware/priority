@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import Observation
 import PriorityCore
+import PrioritySync
 import PriorityWorkspace
 import SwiftUI
 
@@ -167,6 +168,8 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var onLocalWrite: (() -> Void)?
   /// The watch for writes made by another process. See
   /// `WorkspaceViewModel+ExternalWrites.swift`.
+  /// Nil until the store opens. Observed, so the status bar follows it.
+  var syncSession: SyncSession?
   @ObservationIgnored var externalWriteToken: Int?
   @ObservationIgnored var externalWriteTimer: Timer?
   @ObservationIgnored var externalWriteCheckInFlight = false
@@ -601,6 +604,7 @@ enum WorkspaceSidebarItem: Identifiable {
       reloadNextUpNow()
       restoreSuggestedContext()
       watchForExternalWrites()
+      startSync()
     } catch {
       self.store = nil
       self.errorMessage = error.localizedDescription
