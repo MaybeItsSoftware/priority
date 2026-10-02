@@ -234,17 +234,31 @@ class SyncStore(private val database: WorkspaceDatabase) {
         val arguments: Array<Any?> = (listOf<Any?>(row.id) + values.values).toTypedArray()
         // Another key may already name this row locally: two devices logged the
         // same daily on the same day, imported the same source, or made an
-        // Inbox. The server's row wins; the local one goes with a tombstone.
+        // Inbox. The smaller id wins on every device; the loser goes with a
+        // tombstone. An Inbox rival is the exception: the incoming Inbox wins.
         // Swift catches SQLITE_CONSTRAINT_UNIQUE; the same rival is found here
         // before inserting, because the driver's error carries no result code.
-        when (resolveUniqueRival(db, row, keyColumn, insertSQL, arguments)) {
-            RivalResolution.INSERTED -> return true
-            RivalResolution.REMOVED, RivalResolution.NONE -> db.execute(insertSQL, *arguments)
+        when (val resolution = resolveUniqueRival(db, row, keyColumn, insertSQL, arguments)) {
+            RivalResolution.None -> db.execute(insertSQL, *arguments)
+            is RivalResolution.Removed -> {
+                db.execute(insertSQL, *arguments)
+                resolution.loser?.let { mergeContribution(db, into = row.id, from = it) }
+            }
+            RivalResolution.Inserted -> Unit
+            RivalResolution.Kept -> return false
         }
         return true
     }
 
-    private enum class RivalResolution { NONE, REMOVED, INSERTED }
+    private sealed interface RivalResolution {
+        data object None : RivalResolution
+        /** The local rival was deleted (its tombstone syncs); the incoming row takes over what it logged. */
+        data class Removed(val loser: SyncIncomingRow?) : RivalResolution
+        /** The incoming row is already in. */
+        data object Inserted : RivalResolution
+        /** The local rival won: the incoming row stays out and is tombstoned. */
+        data object Kept : RivalResolution
+    }
 
     private fun resolveUniqueRival(
         db: Db,
@@ -269,13 +283,36 @@ class SyncStore(private val database: WorkspaceDatabase) {
             )
             else -> null
         }
-        if (rival == null || rival == row.id) return RivalResolution.NONE
+        if (rival == null || rival == row.id) return RivalResolution.None
         // Recording on, so the rival's removal syncs.
         db.execute("UPDATE sync_control SET applying = 0 WHERE id = 0")
         try {
             if (row.table != "task_lists") {
+                // Two devices that each made a row for the same key must pick
+                // the same winner, or each deletes its own and the tombstones
+                // take both. The smaller id wins everywhere.
+                if (rival < row.id) {
+                    db.execute(
+                        "INSERT INTO sync_outbox (tableName, rowId, operation, changedJSON, changedAtMs) " +
+                            "VALUES (?, ?, 'delete', NULL, CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER))",
+                        row.table, row.id,
+                    )
+                    mergeContribution(db, into = rival, from = row)
+                    return RivalResolution.Kept
+                }
+                val loser = if (row.table == "daily_contributions") {
+                    db.queryOne("SELECT secondsLogged, completedAt FROM daily_contributions WHERE id = ?", rival) {
+                        val values = mutableMapOf<String, SyncValue>(
+                            "secondsLogged" to SyncValue.Integer(it.long("secondsLogged")),
+                        )
+                        it.stringOrNull("completedAt")?.let { at -> values["completedAt"] = SyncValue.Text(at) }
+                        SyncIncomingRow(row.table, rival, deleted = false, values = values)
+                    }
+                } else {
+                    null
+                }
                 db.execute("DELETE FROM ${row.table} WHERE \"$keyColumn\" = ?", rival)
-                return RivalResolution.REMOVED
+                return RivalResolution.Removed(loser)
             }
             // A rival Inbox keeps its tasks: they move into the incoming one,
             // which is inserted here (as a remote row) to receive them.
@@ -285,7 +322,33 @@ class SyncStore(private val database: WorkspaceDatabase) {
             db.execute("UPDATE sync_control SET applying = 0 WHERE id = 0")
             db.execute("UPDATE tasks SET listId = ? WHERE listId = ?", row.id, rival)
             db.execute("DELETE FROM task_lists WHERE id = ?", rival)
-            return RivalResolution.INSERTED
+            return RivalResolution.Inserted
+        } finally {
+            db.execute("UPDATE sync_control SET applying = 1 WHERE id = 0")
+        }
+    }
+
+    /**
+     * A day's tick on two devices keeps the most time either logged and the
+     * earlier finish. Written with `applying = 0`, so the combined row syncs.
+     */
+    private fun mergeContribution(db: Db, into: String, from: SyncIncomingRow) {
+        if (from.table != "daily_contributions") return
+        val seconds = (from.values["secondsLogged"] as? SyncValue.Integer)?.value
+        val completedAt = (from.values["completedAt"] as? SyncValue.Text)?.value
+        db.execute("UPDATE sync_control SET applying = 0 WHERE id = 0")
+        try {
+            db.execute(
+                """
+                UPDATE daily_contributions SET
+                  secondsLogged = MAX(secondsLogged, COALESCE(?, 0)),
+                  completedAt = CASE WHEN completedAt IS NULL THEN ? WHEN ? IS NULL THEN completedAt
+                    ELSE MIN(completedAt, ?) END
+                WHERE id = ?
+                  AND (secondsLogged < COALESCE(?, 0) OR (? IS NOT NULL AND (completedAt IS NULL OR completedAt > ?)))
+                """.trimIndent(),
+                seconds, completedAt, completedAt, completedAt, into, seconds, completedAt, completedAt,
+            )
         } finally {
             db.execute("UPDATE sync_control SET applying = 1 WHERE id = 0")
         }

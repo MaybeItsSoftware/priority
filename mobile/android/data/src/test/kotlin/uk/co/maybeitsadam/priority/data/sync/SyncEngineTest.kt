@@ -269,40 +269,38 @@ class SyncEngineTest {
         assertTrue(moved.tick(2) > later)
     }
 
-    /**
-     * Two devices tick the same daily on the same day: the unique
-     * `(dailyId, dayKey)` rule. The protocol says the remote row wins and the
-     * local one goes with a tombstone, and the devices must end up agreeing.
-     *
-     * They do agree, but on nothing: each device receives the other's row
-     * before its own tombstone has been pushed, so each deletes its own row
-     * and keeps the other's, and the two tombstones then delete both. The
-     * Swift client does the same (it is the rule in docs/sync.md, ported as
-     * written); a winner both sides can compute, such as the smaller id, would
-     * keep one. This test pins down agreement and integrity, not survival.
-     */
+    /** Mirrors Swift's testTickingOneDailyOnTwoDevicesKeepsOneTickWithTheMostTime: the smaller id wins everywhere. */
     @Test
-    fun aDailyTickedOnTwoDevicesOnTheSameDayConvergesWithoutDuplicates(): Unit = runBlocking {
+    fun tickingOneDailyOnTwoDevicesKeepsOneTickWithTheMostTime(): Unit = runBlocking {
         val mac = Device("mac")
         val inbox = mac.repository.inbox(mac.workspaceId)!!
-        val task = mac.repository.createTask(listId = inbox.id, title = "habit")
+        val task = mac.repository.createTask(listId = inbox.id, title = "stretch")
         val daily = mac.repository.makeDaily(task.id)
         mac.sync()
         val phone = Device("phone")
         phone.sync()
 
-        mac.repository.logContribution(daily.id, seconds = 60)
-        phone.repository.logContribution(daily.id, seconds = 120)
-        repeat(3) {
-            mac.sync()
-            phone.sync()
-        }
+        // Both tick today before either hears of the other.
+        mac.repository.logContribution(daily.id, seconds = 600)
+        phone.repository.logContribution(daily.id, seconds = 900)
+        mac.sync()
+        phone.sync()
+        mac.sync()
+        phone.sync()
 
-        suspend fun ids(device: Device) = device.database.read {
-            it.strings("SELECT id FROM daily_contributions WHERE dailyId = ? ORDER BY id", daily.id)
+        data class Tick(val id: String, val seconds: Long, val completedAt: String?)
+        suspend fun ticks(device: Device) = device.database.read { db ->
+            db.query("SELECT id, secondsLogged, completedAt FROM daily_contributions") {
+                Tick(it.string("id"), it.long("secondsLogged"), it.stringOrNull("completedAt"))
+            }
         }
-        assertEquals(ids(mac), ids(phone))
-        assertTrue(ids(mac).size <= 1)
-        for (device in listOf(mac, phone)) assertEquals(0, device.foreignKeyViolations())
+        for (device in listOf(mac, phone)) {
+            val rows = ticks(device)
+            assertEquals("one tick survives on each device", 1, rows.size)
+            assertEquals(900L, rows.first().seconds)
+            assertNotNull(rows.first().completedAt)
+            assertEquals(0, device.foreignKeyViolations())
+        }
+        assertEquals(ticks(mac).first().id, ticks(phone).first().id)
     }
 }
