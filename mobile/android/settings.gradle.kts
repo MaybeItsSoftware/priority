@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Priority"
-include(":core", ":data", ":app")
+include(":core", ":data", ":app", ":baselineprofile", ":benchmark")

@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,6 +16,7 @@ import uk.co.maybeitsadam.priority.ui.AppShell
 import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.ThemeMode
 import uk.co.maybeitsadam.priority.ui.theme.ThemeSpec
+import uk.co.maybeitsadam.priority.ui.theme.palette
 
 /** The one activity. Edge to edge; intents (quick add, tabs, pairing links) go to the shell. */
 class MainActivity : ComponentActivity() {
@@ -30,6 +33,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mode by container.settings.themeMode.collectAsStateWithLifecycle(ThemeMode.SYSTEM)
             val spec by container.settings.themeSpec.collectAsStateWithLifecycle(ThemeSpec.Chalk)
+            val dark = spec.palette(mode, isSystemInDarkTheme()).isDark
+            // Status and navigation bar icons follow the app's appearance, not the system's.
+            DisposableEffect(dark) {
+                val transparent = android.graphics.Color.TRANSPARENT
+                val style = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                onDispose { }
+            }
             PriorityTheme(spec = spec, mode = mode) {
                 AppShell(container, pendingIntent, onIntentHandled = { pendingIntent = null })
             }

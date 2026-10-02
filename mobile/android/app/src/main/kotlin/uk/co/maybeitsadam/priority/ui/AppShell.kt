@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -224,6 +225,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
+            .semantics { testTagsAsResourceId = true }
             .background(Chalk.colors.paper)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
