@@ -178,48 +178,56 @@ struct ThemedMenu<Content: View>: View {
   }
 }
 
-/// A toggle as a themed checkbox: a hairline square at the control radius
-/// that fills with the primary status tint and a check when on. The whole row
-/// is the hit target, and it is a button underneath, so Space and VoiceOver
-/// work as they did on the switch.
-struct ThemedCheckboxToggleStyle: ToggleStyle {
+/// A toggle as Zed's settings draw one: the label on the left, a small
+/// switch on the right. Off is a hairline track on the well; on fills the
+/// track with the primary status tint and slides the knob across. The whole
+/// row is the hit target, and it is a button underneath, so Space and
+/// VoiceOver work as they did on the stock control.
+///
+/// It replaced a themed checkbox, which was flat and on-palette but still a
+/// checkbox: a column of squares down the left of the inspector read as a
+/// form from System Settings however it was coloured.
+struct ThemedSwitchToggleStyle: ToggleStyle {
   func makeBody(configuration: Configuration) -> some View {
-    ThemedCheckbox(configuration: configuration)
+    ThemedSwitch(configuration: configuration)
   }
 }
 
-private struct ThemedCheckbox: View {
+private struct ThemedSwitch: View {
   @Environment(\.theme) private var theme
   @Environment(\.isEnabled) private var isEnabled
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let configuration: ToggleStyleConfiguration
 
   var body: some View {
-    let side = theme.scale.body + theme.space.xs
-    let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
     let isOn = configuration.isOn
+    let height = theme.scale.body
+    let width = height * 1.75
+    let inset = theme.hairline * 2
     Button {
       configuration.isOn.toggle()
     } label: {
       HStack(spacing: theme.space.sm) {
-        shape
-          .fill(isOn ? theme.primary.opacity(Theme.statusFillOpacity) : theme.raised)
-          .overlay(
-            shape.strokeBorder(
-              isOn ? theme.primary.opacity(Theme.statusBorderOpacity) : theme.inputBorder,
-              lineWidth: theme.hairline)
-          )
-          .overlay {
-            if isOn {
-              Image(systemName: "checkmark")
-                .font(theme.bodyFont(size: side * 0.6, weight: .semibold))
-                .foregroundStyle(theme.primary)
-            }
-          }
-          .frame(width: side, height: side)
         configuration.label
           .font(theme.bodyFont())
           .foregroundStyle(theme.ink)
-        Spacer(minLength: 0)
+          .multilineTextAlignment(.leading)
+        Spacer(minLength: theme.space.sm)
+        // A track and its knob are genuinely round things, the one place
+        // the radius scale allows a capsule.
+        Capsule()
+          .fill(isOn ? theme.primary.opacity(Theme.statusBorderOpacity) : theme.well)
+          .overlay(
+            Capsule().strokeBorder(
+              isOn ? theme.primary.opacity(Theme.statusBorderOpacity) : theme.inputBorder,
+              lineWidth: theme.hairline))
+          .overlay(alignment: isOn ? .trailing : .leading) {
+            Circle()
+              .fill(isOn ? theme.primary : theme.muted)
+              .padding(inset * 1.5)
+          }
+          .frame(width: width, height: height)
+          .animation(.easeOut(duration: reduceMotion ? 0.01 : 0.12), value: isOn)
       }
       .contentShape(Rectangle())
     }
@@ -230,8 +238,135 @@ private struct ThemedCheckbox: View {
   }
 }
 
-extension ToggleStyle where Self == ThemedCheckboxToggleStyle {
-  static var themedCheckbox: ThemedCheckboxToggleStyle { ThemedCheckboxToggleStyle() }
+extension ToggleStyle where Self == ThemedSwitchToggleStyle {
+  static var themedSwitch: ThemedSwitchToggleStyle { ThemedSwitchToggleStyle() }
+}
+
+/// A date as a themed control: the date written out in the control frame,
+/// opening a calendar beneath it. The stock `DatePicker` field is a bezelled
+/// stepper of AppKit's own, with its own accent, and no theme reaches it.
+///
+/// The calendar in the popover is still the system's graphical picker —
+/// redrawing a month grid would be a lot of code for no gain in a popover,
+/// which already sits on its own surface — but nothing system-drawn is left
+/// in the panel itself.
+struct ThemedDateField: View {
+  @Environment(\.theme) private var theme
+  @Binding var selection: Date
+  var includesTime = false
+  @State private var isPicking = false
+
+  private var title: String {
+    let day = selection.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+    let calendar = Calendar.current
+    let year = calendar.component(.year, from: selection) == calendar.component(.year, from: .now)
+      ? "" : " \(calendar.component(.year, from: selection))"
+    guard includesTime else { return day + year }
+    return day + year + ", " + selection.formatted(date: .omitted, time: .shortened)
+  }
+
+  var body: some View {
+    Button { isPicking.toggle() } label: {
+      Label(title, systemImage: "calendar")
+        .labelStyle(.titleAndIcon)
+        .monospacedDigit()
+        .lineLimit(1)
+    }
+    .buttonStyle(.plain)
+    .fixedSize()
+    .themedControlFrame()
+    .focusable()
+    .popover(isPresented: $isPicking, arrowEdge: .bottom) {
+      VStack(alignment: .leading, spacing: theme.space.sm) {
+        DatePicker("", selection: $selection, displayedComponents: [.date])
+          .datePickerStyle(.graphical)
+          .labelsHidden()
+        if includesTime {
+          ThemedControlRow("Time") {
+            DatePicker("", selection: $selection, displayedComponents: [.hourAndMinute])
+              .datePickerStyle(.field)
+              .labelsHidden()
+          }
+        }
+        HStack(spacing: theme.space.xs) {
+          Button("Today") { selection = Self.moving(selection, toDayOf: .now) }
+          Button("Tomorrow") {
+            selection = Self.moving(
+              selection, toDayOf: Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now)
+          }
+          Spacer()
+          Button("Done") { isPicking = false }
+            .keyboardShortcut(.defaultAction)
+        }
+        .buttonStyle(FocusChipButtonStyle(isOn: false))
+      }
+      .font(theme.bodyFont())
+      .padding(theme.space.md)
+      .background(theme.raised)
+    }
+  }
+
+  /// The same time of day on another day, so "Today" on a deadline at 17:00
+  /// keeps the 17:00.
+  private static func moving(_ date: Date, toDayOf day: Date) -> Date {
+    let calendar = Calendar.current
+    let time = calendar.dateComponents([.hour, .minute], from: date)
+    return calendar.date(
+      bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: 0,
+      of: day) ?? day
+  }
+}
+
+/// A value a task may or may not have — a start, a due day — as one row: its
+/// name, then either a quiet "Add" or the value with a button to clear it.
+/// What a checkbox beside a field used to say in two controls and two lines.
+struct ThemedOptionalRow<Value: View>: View {
+  @Environment(\.theme) private var theme
+  let title: String
+  let isSet: Bool
+  let add: () -> Void
+  let clear: () -> Void
+  @ViewBuilder var value: Value
+
+  init(
+    _ title: String, isSet: Bool, add: @escaping () -> Void, clear: @escaping () -> Void,
+    @ViewBuilder value: () -> Value
+  ) {
+    self.title = title
+    self.isSet = isSet
+    self.add = add
+    self.clear = clear
+    self.value = value()
+  }
+
+  var body: some View {
+    ThemedControlRow(title) {
+      if isSet {
+        HStack(spacing: theme.space.xs) {
+          value
+          Button(action: clear) {
+            Image(systemName: "xmark")
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
+              .frame(width: theme.scale.body, height: theme.scale.body)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .focusable()
+          .help("Clear \(title.lowercased())")
+          .accessibilityLabel("Clear \(title.lowercased())")
+        }
+      } else {
+        Button(action: add) {
+          Label("Add", systemImage: "plus")
+            .labelStyle(.titleAndIcon)
+        }
+        .buttonStyle(FocusChipButtonStyle(isOn: false))
+        .focusable()
+        .accessibilityLabel("Add \(title.lowercased())")
+      }
+    }
+  }
 }
 
 /// A short set of exclusive choices as a row of themed chips, for where a

@@ -51,8 +51,9 @@ struct WorkspaceFocusContextControls: View {
           Button("Choose end time") { model.availableUntil = Date.now.addingTimeInterval(1800); model.focusContextChanged() }
         }
         if let end = model.availableUntil {
-          DatePicker("Until", selection: Binding(get: { model.availableUntil ?? end }, set: { model.availableUntil = $0; model.focusContextChanged() }),
-                     displayedComponents: [.date, .hourAndMinute]).labelsHidden()
+          ThemedDateField(
+            selection: Binding(get: { model.availableUntil ?? end }, set: { model.availableUntil = $0; model.focusContextChanged() }),
+            includesTime: true)
         }
         ThemedSegmentedPicker(
           selection: Binding(get: { model.focusContext.mode }, set: { model.focusContext.mode = $0; model.focusContextChanged() }),
@@ -65,10 +66,11 @@ struct WorkspaceFocusContextControls: View {
       HStack(spacing: theme.space.sm) {
         Toggle("Context expires", isOn: Binding(get: { model.contextExpiresAt != nil }, set: {
           model.contextExpiresAt = $0 ? Date.now.addingTimeInterval(3600) : nil; model.focusContextChanged()
-        })).toggleStyle(.themedCheckbox).fixedSize()
+        })).toggleStyle(.themedSwitch).fixedSize()
         if let end = model.contextExpiresAt {
-          DatePicker("Context until", selection: Binding(get: { model.contextExpiresAt ?? end }, set: { model.contextExpiresAt = $0; model.focusContextChanged() }),
-                     displayedComponents: [.date, .hourAndMinute]).labelsHidden()
+          ThemedDateField(
+            selection: Binding(get: { model.contextExpiresAt ?? end }, set: { model.contextExpiresAt = $0; model.focusContextChanged() }),
+            includesTime: true)
         }
       }.font(theme.captionFont)
       if model.focusContext.conditionIDs.isEmpty {
@@ -101,7 +103,7 @@ private struct WorkspaceConditionsEditor: View {
         TextField("New condition", text: $newName)
           .themedTextField()
         Toggle("Location", isOn: $newIsLocation)
-          .toggleStyle(.themedCheckbox)
+          .toggleStyle(.themedSwitch)
           .fixedSize()
         Button("Add") {
           model.createCondition(name: newName, isLocation: newIsLocation)
@@ -145,10 +147,10 @@ private struct WorkspaceConditionEditorRow: View {
       TextField("Name", text: $name)
         .themedTextField()
       Toggle("Location", isOn: $location)
-        .toggleStyle(.themedCheckbox)
+        .toggleStyle(.themedSwitch)
         .fixedSize()
       Toggle("Archived", isOn: $archived)
-        .toggleStyle(.themedCheckbox)
+        .toggleStyle(.themedSwitch)
         .fixedSize()
       Button("Save") { model.saveCondition(condition, name: name, isLocation: location, isArchived: archived) }
         .buttonStyle(FocusActionButtonStyle())
@@ -165,15 +167,15 @@ struct WorkspaceTaskPlanningEditor: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.sm) {
-      Toggle("Start time", isOn: Binding(get: { current.startAt != nil }, set: { enabled in
-        edit { $0.startAt = enabled ? ($0.startAt ?? .now) : nil }
-      }))
-        .toggleStyle(.themedCheckbox)
-      if let start = values.startAt {
-        ThemedControlRow("Start") {
-          DatePicker("Start", selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
-                     displayedComponents: [.date, .hourAndMinute])
-            .labelsHidden()
+      ThemedOptionalRow(
+        "Start", isSet: values.startAt != nil,
+        add: { edit { $0.startAt = $0.startAt ?? .now } },
+        clear: { edit { $0.startAt = nil } }
+      ) {
+        if let start = values.startAt {
+          ThemedDateField(
+            selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
+            includesTime: true)
         }
       }
       MicroLabel("Conditions")
@@ -210,7 +212,7 @@ struct WorkspaceTaskPlanningEditor: View {
       Toggle("Must finish in one sitting", isOn: Binding(get: { current.requiresSingleSitting == true }, set: { enabled in
         edit { $0.requiresSingleSitting = enabled ? true : nil }
       }))
-        .toggleStyle(.themedCheckbox)
+        .toggleStyle(.themedSwitch)
       ThemedControlRow("Minimum block") {
         TextField("Minimum useful block (minutes)", text: Binding(get: { current.minimumBlockMinutes ?? "" }, set: { raw in
           edit { $0.minimumBlockMinutes = raw.isEmpty ? nil : raw }

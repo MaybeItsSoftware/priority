@@ -33,7 +33,7 @@ struct WorkspaceSearchOverlay: View {
 
       HStack(spacing: theme.space.md) {
         Toggle("Include completed", isOn: $model.searchIncludesCompleted)
-          .toggleStyle(.checkbox)
+          .toggleStyle(.themedSwitch)
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
         Spacer()

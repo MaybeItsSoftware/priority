@@ -177,31 +177,46 @@ struct LocalTaskInspector: View {
   @ViewBuilder
   private func scheduling(_ draft: TaskEditorDraft) -> some View {
     InspectorSection("When") {
-      Toggle(
-        "Due date",
-        isOn: Binding(
-          get: {
-            model.taskEditor.draft(for: task.id).map {
-              $0.values.dueAt != nil || $0.values.dueDate != nil
-            } ?? false
-          },
-          set: { enabled in
-            model.taskEditor.edit(task.id) {
-              if enabled {
-                $0.dueDate = $0.dueDate ?? TaskCalendarDate.string(.now)
-                $0.dueAt = nil
-              } else {
-                $0.dueAt = nil
-                $0.dueDate = nil
-              }
-            }
+      let hasDue = draft.values.dueAt != nil || draft.values.dueDate != nil
+      ThemedOptionalRow(
+        "Due", isSet: hasDue,
+        add: {
+          model.taskEditor.edit(task.id) {
+            $0.dueDate = $0.dueDate ?? TaskCalendarDate.string(.now)
+            $0.dueAt = nil
           }
-        )
-      )
-      .toggleStyle(.themedCheckbox).focusable()
-      if draft.values.dueAt != nil || draft.values.dueDate != nil {
+        },
+        clear: {
+          model.taskEditor.edit(task.id) {
+            $0.dueAt = nil
+            $0.dueDate = nil
+          }
+        }
+      ) {
+        if let dueAt = draft.values.dueAt {
+          ThemedDateField(
+            selection: Binding(
+              get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
+              set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }),
+            includesTime: true)
+        } else if let day = draft.values.dueDate {
+          ThemedDateField(
+            selection: Binding(
+              get: {
+                TaskCalendarDate.date(model.taskEditor.draft(for: task.id)?.values.dueDate ?? day)
+                  ?? .now
+              },
+              set: { date in
+                model.taskEditor.edit(task.id) {
+                  $0.dueDate = TaskCalendarDate.string(date)
+                  $0.dueAt = nil
+                }
+              }))
+        }
+      }
+      if hasDue {
         Toggle(
-          "Exact deadline time",
+          "At a set time",
           isOn: Binding(
             get: { model.taskEditor.draft(for: task.id)?.values.dueAt != nil },
             set: { exact in
@@ -216,39 +231,8 @@ struct LocalTaskInspector: View {
               }
             })
         )
-        .toggleStyle(.themedCheckbox)
-      }
-      if let day = draft.values.dueDate {
-        ThemedControlRow("Due") {
-        DatePicker(
-          "Due",
-          selection: Binding(
-            get: {
-              TaskCalendarDate.date(model.taskEditor.draft(for: task.id)?.values.dueDate ?? day)
-                ?? .now
-            },
-            set: { date in
-              model.taskEditor.edit(task.id) {
-                $0.dueDate = TaskCalendarDate.string(date)
-                $0.dueAt = nil
-              }
-            }
-          ), displayedComponents: [.date])
-          .labelsHidden()
-        }
-      }
-      if let dueAt = draft.values.dueAt {
-        ThemedControlRow("Due") {
-          DatePicker(
-            "Due",
-            selection: Binding(
-              get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
-              set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }
-            ), displayedComponents: [.date, .hourAndMinute]
-          )
-          .labelsHidden()
-          .focusable()
-        }
+        .toggleStyle(.themedSwitch)
+        .focusable()
       }
       ThemedControlRow("Repeat") {
         TextField(
@@ -257,7 +241,7 @@ struct LocalTaskInspector: View {
         .themedTextField()
       }
       Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
-        .toggleStyle(.themedCheckbox)
+        .toggleStyle(.themedSwitch)
         .focusable()
         .help("Show this ongoing task in Dailies without completing the task itself")
     }
@@ -443,7 +427,7 @@ private struct ListSettingsEditor: View {
         )
         .focusable()
         Toggle("Archived", isOn: $isArchived)
-          .toggleStyle(.themedCheckbox)
+          .toggleStyle(.themedSwitch)
           .focusable()
           .disabled(list.isSystemList)
         if !model.visibleRootCandidates(for: list).isEmpty || visibleRootTaskID != nil {
