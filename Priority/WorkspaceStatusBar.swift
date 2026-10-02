@@ -35,6 +35,12 @@ struct WorkspaceStatusBar: View {
       WorkspaceStatusMessage()
       Spacer(minLength: theme.space.sm)
       WorkspaceStatusTrailing()
+      // The cheat sheet, for whoever has not met ⌘/ yet — the reference every
+      // other way in assumes you already know a key to reach.
+      WorkspacePaneIconButton(
+        "keyboard", title: "Keyboard shortcuts", command: .goKeyboardReference,
+        isOn: model.activeOverlay?.id == WorkspaceOverlay.keyboardReference.id
+      ) { model.presentOverlay(.keyboardReference) }
       rightDockToggles
     }
     .padding(.horizontal, theme.space.xs)

@@ -114,8 +114,8 @@ palette); `Esc` or a click outside closes it, and `Return` confirms — in a
 notes edit too, where `Shift+Return` is the new line.
 
 The table above is the short version. The complete one is in the app: `Cmd+K`,
-or a **double-tap of Shift**, opens the palette, and `Cmd+/` shows the same
-commands as a grouped reference. Both are rendered from a single catalogue in
+or a **double-tap of Shift**, opens the palette, and `Cmd+/` — or the keyboard icon in
+the status bar — shows the same commands as a grouped reference. Both are rendered from a single catalogue in
 `Sources/PriorityCore/WorkspaceCommandCatalog.swift`, which is also what the
 key router dispatches through — so a key, a palette row and a reference row
 cannot disagree about what happens. [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md)
