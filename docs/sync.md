@@ -160,8 +160,14 @@ Returns `200 {"ok":true}`.
      - If an insert hits a unique conflict on another key
        (`daily_contributions(dailyId, dayKey)`,
        `tasks(sourceSystem, sourceId)`, `task_lists(workspaceId, systemRole)`),
-       the remote row wins. Delete the local row with recording on, so its
-       tombstone syncs.
+       the **smaller id wins on every device**, so two devices that made a row
+       for the same key settle on the same one instead of each deleting its own.
+       If the local row is smaller, keep it and queue a `delete` outbox entry for
+       the incoming id. Otherwise delete the local row (recording on) and insert
+       the incoming one. For `daily_contributions` the winner then takes
+       `MAX(secondsLogged)` and the earlier non-null `completedAt` of the two,
+       with recording on. Inbox rivals (`task_lists`) are the one exception:
+       the incoming Inbox always wins and inherits the local Inbox's tasks.
    - Then set `applying = 0` and run **workspace adoption**.
    - Then delete orphans until `PRAGMA foreign_key_check` is clean. A task whose
      list was deleted on another device is removed, and its tombstone syncs.

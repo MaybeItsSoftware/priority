@@ -42,6 +42,11 @@ final class SyncEngineTests: XCTestCase {
     return try lists.flatMap { try device.store.outline(in: $0.id).map(\.task.title) }.sorted()
   }
 
+  private func contributions(_ device: Device) throws -> [Row] {
+    let queue = try DatabaseQueue(path: device.url.path)
+    return try queue.read { try Row.fetchAll($0, sql: "SELECT id, secondsLogged, completedAt FROM daily_contributions") }
+  }
+
   private func foreignKeyViolations(_ device: Device) throws -> Int {
     let queue = try DatabaseQueue(path: device.url.path)
     return try queue.read { try Row.fetchAll($0, sql: "PRAGMA foreign_key_check").count }
@@ -156,6 +161,32 @@ final class SyncEngineTests: XCTestCase {
       XCTAssertNil(try device.store.task(id: stray.id))
       XCTAssertEqual(try foreignKeyViolations(device), 0)
     }
+  }
+
+  func testTickingOneDailyOnTwoDevicesKeepsOneTickWithTheMostTime() async throws {
+    let mac = try device("mac")
+    let inbox = try XCTUnwrap(mac.store.inbox(in: mac.workspaceID))
+    let task = try mac.store.createTask(listId: inbox.id, title: "stretch")
+    let daily = try mac.store.makeDaily(taskId: task.id)
+    try await mac.engine.sync()
+    let phone = try device("phone")
+    try await phone.engine.sync()
+
+    // Both tick today before either hears of the other.
+    _ = try mac.store.logContribution(dailyId: daily.id, seconds: 600)
+    _ = try phone.store.logContribution(dailyId: daily.id, seconds: 900)
+    try await mac.engine.sync()
+    try await phone.engine.sync()
+    try await mac.engine.sync()
+    try await phone.engine.sync()
+
+    for device in [mac, phone] {
+      let rows = try contributions(device)
+      XCTAssertEqual(rows.count, 1, "one tick survives on each device")
+      XCTAssertEqual(rows.first?["secondsLogged"] as Int64?, 900)
+      XCTAssertNotNil(rows.first?["completedAt"] as String?)
+    }
+    XCTAssertEqual(try contributions(mac).first?["id"] as String?, try contributions(phone).first?["id"] as String?)
   }
 
   func testOutboxCoalescesARowsEditsIntoOneChange() throws {

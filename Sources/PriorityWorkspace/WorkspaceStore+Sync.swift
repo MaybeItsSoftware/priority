@@ -415,17 +415,28 @@ extension WorkspaceStore {
       try db.execute(sql: sql, arguments: StatementArguments(arguments))
     } catch let error as DatabaseError where error.extendedResultCode == .SQLITE_CONSTRAINT_UNIQUE {
       // Another key already names this row locally: two devices logged the same
-      // daily on the same day, or imported the same source. The server's row
-      // wins, and the local one goes with a tombstone so the others drop it too.
+      // daily on the same day, or imported the same source. The smaller id
+      // wins on every device; the loser goes with a tombstone.
       switch try resolveUniqueRival(of: row, insertSQL: sql, arguments: arguments, db: db) {
       case .none: throw error
-      case .removed: try db.execute(sql: sql, arguments: StatementArguments(arguments))
-      case .inserted: break
+      case .removed(let loser):
+        try db.execute(sql: sql, arguments: StatementArguments(arguments))
+        if let loser { try mergeContribution(into: row.id, from: loser, db: db) }
+      case .inserted, .kept: break
       }
     }
   }
 
-  private enum RivalResolution { case none, removed, inserted }
+  private enum RivalResolution {
+    case none
+    /// The local rival was deleted (its tombstone syncs) and the incoming row
+    /// goes in, taking over what the rival had logged.
+    case removed(SyncIncomingRow?)
+    /// The incoming row is already in; nothing left to do.
+    case inserted
+    /// The local rival won: the incoming row stays out and is tombstoned.
+    case kept
+  }
 
   /// Clears the local row that holds the unique key an incoming row needs,
   /// with recording on so its removal syncs. A rival Inbox keeps its tasks:
@@ -458,8 +469,31 @@ extension WorkspaceStore {
     try db.execute(sql: "UPDATE sync_control SET applying = 0 WHERE id = 0")
     defer { try? db.execute(sql: "UPDATE sync_control SET applying = 1 WHERE id = 0") }
     guard row.table == "task_lists" else {
+      // Two devices that each made a row for the same key (both ticked one
+      // daily on one day; both imported one task) must pick the same winner,
+      // or each deletes its own and the tombstones take both. The smaller id
+      // wins everywhere, whichever device it came from.
+      if rival < row.id {
+        try db.execute(
+          sql: """
+            INSERT INTO sync_outbox (tableName, rowId, operation, changedJSON, changedAtMs)
+            VALUES (?, ?, 'delete', NULL, CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER))
+            """,
+          arguments: [row.table, row.id])
+        try mergeContribution(into: rival, from: row, db: db)
+        return .kept
+      }
+      var loser: SyncIncomingRow?
+      if row.table == "daily_contributions",
+        let local = try Row.fetchOne(
+          db, sql: "SELECT secondsLogged, completedAt FROM daily_contributions WHERE id = ?", arguments: [rival])
+      {
+        var values: [String: SyncValue] = ["secondsLogged": .integer(local["secondsLogged"])]
+        if let completedAt: String = local["completedAt"] { values["completedAt"] = .text(completedAt) }
+        loser = SyncIncomingRow(table: row.table, id: rival, deleted: false, values: values)
+      }
       try db.execute(sql: "DELETE FROM \(row.table) WHERE \"\(keyColumn)\" = ?", arguments: [rival])
-      return .removed
+      return .removed(loser)
     }
     try db.execute(sql: "UPDATE task_lists SET systemRole = NULL WHERE id = ?", arguments: [rival])
     try db.execute(sql: "UPDATE sync_control SET applying = 1 WHERE id = 0")
@@ -468,6 +502,29 @@ extension WorkspaceStore {
     try db.execute(sql: "UPDATE tasks SET listId = ? WHERE listId = ?", arguments: [row.id, rival])
     try db.execute(sql: "DELETE FROM task_lists WHERE id = ?", arguments: [rival])
     return .inserted
+  }
+
+  /// A day's tick on two devices keeps the most time either logged and the
+  /// earlier finish, so the merge loses neither. Runs with recording on, so the
+  /// combined row syncs. Other tables have nothing to combine.
+  private static func mergeContribution(into id: String, from row: SyncIncomingRow, db: Database) throws {
+    guard row.table == "daily_contributions" else { return }
+    var seconds: Int64?
+    if case .integer(let value)? = row.values["secondsLogged"] { seconds = value }
+    var completedAt: String?
+    if case .text(let value)? = row.values["completedAt"] { completedAt = value }
+    try db.execute(sql: "UPDATE sync_control SET applying = 0 WHERE id = 0")
+    defer { try? db.execute(sql: "UPDATE sync_control SET applying = 1 WHERE id = 0") }
+    try db.execute(
+      sql: """
+        UPDATE daily_contributions SET
+          secondsLogged = MAX(secondsLogged, COALESCE(?, 0)),
+          completedAt = CASE WHEN completedAt IS NULL THEN ? WHEN ? IS NULL THEN completedAt
+            ELSE MIN(completedAt, ?) END
+        WHERE id = ?
+          AND (secondsLogged < COALESCE(?, 0) OR (? IS NOT NULL AND (completedAt IS NULL OR completedAt > ?)))
+        """,
+      arguments: [seconds, completedAt, completedAt, completedAt, id, seconds, completedAt, completedAt])
   }
 
   /// Folds every workspace but the canonical one into it: the first workspace
