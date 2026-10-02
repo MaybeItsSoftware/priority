@@ -23,7 +23,10 @@ INSTALL_PATH="/Applications/$APP_NAME"
 
 BUILD_DIR="$ROOT_DIR/build"
 DERIVED_DIR="/tmp/priority-derived-install"
-BACKUP_DIR="$BUILD_DIR/backup"
+# `.noindex`, so Spotlight and Launch Services never offer the backup as a
+# second "Priority" beside the installed one.
+BACKUP_DIR="$BUILD_DIR/backup.noindex"
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 BACKUP_PATH="$BACKUP_DIR/$APP_NAME.$(date +%Y%m%d-%H%M%S)"
 
 echo "==> Building Release…"
@@ -54,6 +57,7 @@ if [[ -d "$INSTALL_PATH" ]]; then
   mkdir -p "$BACKUP_DIR"
   # `ditto` rather than `cp -R` so bundle metadata and symlinks survive intact.
   ditto "$INSTALL_PATH" "$BACKUP_PATH"
+  "$LSREGISTER" -u "$BACKUP_PATH" 2>/dev/null || true
   rm -rf "$INSTALL_PATH"
   # Everything older than the backup just taken.
   find "$BACKUP_DIR" -maxdepth 1 -name "$APP_NAME.*" ! -name "$(basename "$BACKUP_PATH")" \

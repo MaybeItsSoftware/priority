@@ -10,7 +10,7 @@ BUILD_DIR="$(pwd)/build"
 # known up front. It used to be discovered with
 #     find "$BUILD_DIR" -name Priority -type f -perm +111 | head -n 1
 # which silently launched whatever `find` happened to walk into first — a stale
-# Release build under build/rel/ (left by build_dmg.sh) or a build/backup/
+# Release build under build/rel/ (left by build_dmg.sh) or a build/backup.noindex/
 # snapshot, both of which sort ahead of build/Debug/. The build would succeed
 # and the *old* app would start, which looks exactly like a change not working.
 APP_PATH="$BUILD_DIR/$CONFIG/$SCHEME.app"
