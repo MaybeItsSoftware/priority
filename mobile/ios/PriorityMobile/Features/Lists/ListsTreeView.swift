@@ -30,6 +30,7 @@ struct ListsTreeView: View {
             .accessibilityIdentifier("toolbar.settings")
         }
       }
+      .refreshable { await SyncController.shared?.syncNow() }
       .accessibilityIdentifier("lists.tree")
     }
   }

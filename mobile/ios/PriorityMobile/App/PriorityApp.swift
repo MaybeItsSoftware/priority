@@ -1,3 +1,4 @@
+import PrioritySync
 import PriorityWorkspace
 import SwiftUI
 
@@ -23,8 +24,10 @@ struct PriorityApp: App {
               if phase == .active {
                 model.startWatchingExternalWrites()
                 Task { await model.checkExternalWrites() }
+                SyncController.shared?.sceneBecameActive()
               } else {
                 model.stopWatchingExternalWrites()
+                if phase == .background { SyncController.shared?.sceneLeftForeground() }
               }
             }
         } else {
@@ -34,6 +37,9 @@ struct PriorityApp: App {
       .preferredColorScheme(appearance.colorScheme)
       .tint(Palette.primary)
       .font(Typeface.body)
+    }
+    .backgroundTask(.appRefresh(SyncController.refreshTaskID)) {
+      await SyncController.shared?.backgroundRefresh()
     }
   }
 }
@@ -101,6 +107,13 @@ enum DeepLink {
   }
 
   static func handle(_ url: URL, model: WorkspaceModel) {
+    if url.scheme == SyncPairingLink.scheme {
+      if let link = SyncPairingLink(url.absoluteString), let sync = SyncController.shared {
+        model.navigation.isSettingsPresented = true
+        Task { await sync.pair(with: link) }
+      }
+      return
+    }
     guard url.scheme == "priority" else { return }
     let isPad = UIDevice.current.userInterfaceIdiom == .pad
     switch url.host() {

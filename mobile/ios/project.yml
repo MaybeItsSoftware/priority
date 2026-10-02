@@ -51,6 +51,8 @@ targets:
         product: PriorityWorkspace
       - package: Priority
         product: PriorityWorkspaceEditing
+      - package: Priority
+        product: PrioritySync
       - package: GRDB
         product: GRDB
       - target: PriorityWidgets
@@ -86,6 +88,14 @@ targets:
           - CFBundleURLName: uk.co.maybeitsadam.priority.ios
             CFBundleURLSchemes:
               - priority
+          - CFBundleURLName: uk.co.maybeitsadam.priority.ios.sync
+            CFBundleURLSchemes:
+              - priority-sync
+        NSCameraUsageDescription: Priority uses the camera to scan the pairing code shown on your other device.
+        BGTaskSchedulerPermittedIdentifiers:
+          - uk.co.maybeitsadam.priority.ios.sync
+        UIBackgroundModes:
+          - fetch
         UIAppFonts:
           - IBMPlexSans-Regular.ttf
           - IBMPlexSans-Medium.ttf
