@@ -117,13 +117,26 @@ extension WorkspaceViewModel {
       }).filter { treeIDs.insert($0.id).inserted }
       let metadata = try store.boardMetadata(for: treeTasks.map(\.id))
       let columnsByTask = metadata.columns
+      // A subtask nobody filed is in whatever column its parent is in. It
+      // used to count as being in the first column, so moving a card out of
+      // Backlog left every one of its subtasks behind there as a card of its
+      // own — as though each had been filed in Backlog on purpose.
+      var effectiveColumns: [String: String] = [:]
+      func effectiveColumn(of task: WorkspaceTask) -> String {
+        if let known = effectiveColumns[task.id] { return known }
+        let column = columnsByTask[task.id]
+          ?? parents[task.id].map { effectiveColumn(of: $0) }
+          ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
+        effectiveColumns[task.id] = column
+        return column
+      }
       let crossColumn = treeTasks.filter { task in
         if hidesCompletedTasks && task.status != .open { return false }
         guard !task.isList else { return false }
-        guard !boardIDs.contains(task.id), let parent = parents[task.id] else { return false }
-        let taskColumn = columnsByTask[task.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-        let parentColumn = columnsByTask[parent.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-        return taskColumn != parentColumn
+        guard !boardIDs.contains(task.id), let parent = parents[task.id],
+          let filed = columnsByTask[task.id]
+        else { return false }
+        return filed != effectiveColumn(of: parent)
       }
       let columns = try resolvedBoardColumns(usedColumnIDs: Set(columnsByTask.values), store: store)
       // Assigned only when they differ, so a refresh that changed nothing on
