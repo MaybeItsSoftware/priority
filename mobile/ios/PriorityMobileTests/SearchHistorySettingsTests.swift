@@ -45,18 +45,17 @@ final class SearchModelTests: XCTestCase {
 final class UndoHistoryTests: XCTestCase {
   func testListsLabelledStepsNewestFirstAndMovesThemToRedoOnUndo() throws {
     let model = try WorkspaceModel.temporary()
-    let url = try XCTUnwrap(model.databaseURL)
     let inbox = try XCTUnwrap(model.inbox)
     let task = try XCTUnwrap(model.createTask("Alpha", listID: inbox.id))
     model.toggleComplete(task.id)
 
-    var history = try UndoHistoryReader.read(databaseURL: url)
+    var history = try UndoHistory.read(model.store)
     XCTAssertEqual(history.undo.map(\.label), ["Change Status", "New Task"])
     XCTAssertTrue(history.redo.isEmpty)
     XCTAssertEqual(history.undoCount(through: history.undo[1]), 2)
 
     model.undo()
-    history = try UndoHistoryReader.read(databaseURL: url)
+    history = try UndoHistory.read(model.store)
     XCTAssertEqual(history.undo.map(\.label), ["New Task"])
     XCTAssertEqual(history.redo.map(\.label), ["Change Status"])
     XCTAssertEqual(history.redoCount(through: history.redo[0]), 1)
@@ -64,13 +63,12 @@ final class UndoHistoryTests: XCTestCase {
 
   func testUndoingSeveralStepsFromTheSheetRestoresTheEarlierState() throws {
     let model = try WorkspaceModel.temporary()
-    let url = try XCTUnwrap(model.databaseURL)
     let inbox = try XCTUnwrap(model.inbox)
     let task = try XCTUnwrap(model.createTask("Alpha", listID: inbox.id))
     model.rename(task.id, to: "Beta")
     model.toggleComplete(task.id)
 
-    let history = try UndoHistoryReader.read(databaseURL: url)
+    let history = try UndoHistory.read(model.store)
     let rename = try XCTUnwrap(history.undo.first { $0.label != "Change Status" && $0.label != "New Task" })
     for _ in 0..<(history.undoCount(through: rename) ?? 0) { model.undo() }
     XCTAssertEqual(model.task(task.id)?.title, "Alpha")

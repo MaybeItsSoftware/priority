@@ -28,6 +28,23 @@ final class WorkspaceUndoTests: XCTestCase {
     XCTAssertNil(try store.undo())
   }
 
+  func testUndoHistoryListsNamedStepsNewestFirstWithUndoneOnTop() throws {
+    XCTAssertEqual(try store.undoHistory(limit: 10), [])
+    let task = try store.createTask(listId: listID, title: "One")
+    try store.updateTask(id: task.id, title: "Two", notes: "", dueAt: nil, estimateSeconds: nil)
+    _ = try store.createTask(listId: listID, title: "Three")
+    try store.undo()
+
+    let history = try store.undoHistory(limit: 10)
+    XCTAssertEqual(history.map(\.label), ["New Task", "Edit Task", "New Task"])
+    XCTAssertEqual(history.map(\.isUndone), [true, false, false])
+    XCTAssertTrue(history.allSatisfy { $0.changeCount >= 1 })
+    XCTAssertEqual(Set(history.map(\.id)).count, 3)
+
+    XCTAssertEqual(try store.undoHistory(limit: 2).map(\.label), ["New Task", "Edit Task"])
+    XCTAssertEqual(try store.undoHistory(limit: 0), [])
+  }
+
   func testUndoTakesBackACreationAndRedoPutsItBack() throws {
     let task = try store.createTask(listId: listID, title: "Write the report")
     XCTAssertEqual(try store.undoableLabel(), "New Task")

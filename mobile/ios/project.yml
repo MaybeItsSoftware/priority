@@ -30,9 +30,6 @@ settings:
 packages:
   Priority:
     path: ../..
-  GRDB:
-    url: https://github.com/groue/GRDB.swift.git
-    from: "7.8.0"
 
 targets:
   PriorityMobile:
@@ -53,8 +50,6 @@ targets:
         product: PriorityWorkspaceEditing
       - package: Priority
         product: PrioritySync
-      - package: GRDB
-        product: GRDB
       - target: PriorityWidgets
         embed: true
     entitlements:

@@ -44,6 +44,33 @@ extension WorkspaceStore {
     }
   }
 
+  /// The journal's named steps, newest first, at most `limit` of them.
+  ///
+  /// The undone steps — the redo stack — come first, since they were done
+  /// later than anything still standing; the last of them is the next redo,
+  /// and the first step that is not undone is the next undo. A history view
+  /// reads this rather than the journal's rows, which are an implementation
+  /// detail of how undo replays.
+  public func undoHistory(limit: Int = 100) throws -> [WorkspaceUndoStep] {
+    try database.read { db in
+      let rows = try Row.fetchAll(db, sql: """
+        SELECT groupId, MAX(label) AS label, MAX(undone) AS undone, COUNT(*) AS changes, MAX(id) AS lastId
+        FROM change_log
+        WHERE groupId IS NOT NULL
+        GROUP BY groupId
+        ORDER BY lastId DESC
+        LIMIT ?
+        """, arguments: [max(0, limit)])
+      return rows.map { row in
+        WorkspaceUndoStep(
+          id: row["groupId"],
+          label: (row["label"] as String?) ?? "Change",
+          isUndone: (row["undone"] as Bool?) ?? false,
+          changeCount: row["changes"])
+      }
+    }
+  }
+
   /// The affected task/list lets the desktop reveal restored work after undo.
   public func historyTarget(forUndo: Bool) throws -> (taskId: String?, listId: String?) {
     try database.read { db in
@@ -238,5 +265,24 @@ extension WorkspaceStore {
         END
         """)
     }
+  }
+}
+
+/// One named step in the undo journal, as `undoHistory(limit:)` reports it.
+public struct WorkspaceUndoStep: Identifiable, Equatable, Hashable, Sendable {
+  /// The journal group the step's changes share.
+  public let id: String
+  /// What the step is offered back as — "New Task", "Delete List".
+  public let label: String
+  /// Undone steps are the redo stack.
+  public let isUndone: Bool
+  /// How many rows the step touched.
+  public let changeCount: Int
+
+  public init(id: String, label: String, isUndone: Bool, changeCount: Int) {
+    self.id = id
+    self.label = label
+    self.isUndone = isUndone
+    self.changeCount = changeCount
   }
 }

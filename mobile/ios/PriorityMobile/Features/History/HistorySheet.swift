@@ -61,8 +61,7 @@ struct HistorySheet: View {
         ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
       }
       .task(id: model.revision) {
-        guard let url = model.databaseURL else { return }
-        await history.load(model.store) { _ in try UndoHistoryReader.read(databaseURL: url) }
+        await history.load(model.store) { store in try UndoHistory.read(store) }
       }
     }
     .presentationDetents([.medium, .large])
