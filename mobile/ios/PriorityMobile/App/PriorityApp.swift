@@ -99,6 +99,9 @@ enum DeepLink {
     #if DEBUG
     let arguments = ProcessInfo.processInfo.arguments
     if arguments.contains("-demo"), model.structure.lists.count <= 1 { model.seedDemo(); model.reloadStructureNow() }
+    if arguments.contains("-seed5000"), !model.structure.lists.contains(where: { $0.name.hasPrefix("Seed") }) {
+      model.seedTasks()
+    }
     if let index = arguments.firstIndex(of: "-open"), arguments.indices.contains(index + 1),
       let url = URL(string: arguments[index + 1]) {
       handle(url, model: model)

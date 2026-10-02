@@ -21,6 +21,7 @@ struct ListsTreeView: View {
       .scrollContentBackground(.hidden)
       .background(Palette.paper)
       .navigationTitle("Lists")
+      .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ListsTreeToolbar()
         WorkspaceToolbar()

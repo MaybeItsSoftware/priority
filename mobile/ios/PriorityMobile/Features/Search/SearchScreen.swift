@@ -37,6 +37,7 @@ struct SearchScreen: View {
     .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search tasks")
     .searchFocused($isFieldFocused)
     .navigationTitle("Search")
+    .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         Toggle(isOn: $search.includesCompleted) {

@@ -57,6 +57,7 @@ struct TodayScreen: View {
       }
     }
     .navigationTitle("Today")
+    .navigationBarTitleDisplayMode(.inline)
     .toolbar { WorkspaceToolbar() }
     .task(id: model.revision) { await today.load(model) }
     .task(id: today.day.session?.id) { await refreshWhileRunning() }
