@@ -37,8 +37,10 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   /// An `.anywhere` row is written from a planning pane's point of view, so
   /// on the outline — which overrides nothing — every one of its keys is live.
   func testEveryAnywhereRowIsLiveOnTheOutline() {
+    // ←/→ are the outline's own: they fold, as Checkvist's do.
+    let outlineOwn: Set<String> = ["left", "right"]
     for command in WorkspaceCommandCatalog.all where command.surface == .anywhere {
-      for key in command.keys {
+      for key in command.keys where !outlineOwn.contains(key) {
         XCTAssertEqual(
           WorkspaceCommandCatalog.command(forKey: key, on: .outline)?.id, command.id,
           "\(key) on the outline does not run \(command.id)")
@@ -54,6 +56,14 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "x", on: .outline)?.id, .taskComplete)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "l", on: .outline)?.id, .planEnterTask)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "h", on: .outline)?.id, .planLeaveTask)
+  }
+
+  func testTheOutlineArrowsFoldAndTheOtherPanesStillEnter() {
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "right", on: .outline)?.id, .motionOutlineUnfold)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "left", on: .outline)?.id, .motionOutlineFold)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "right", on: .matrix)?.id, .planEnterTask)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "right", on: .board)?.id, .motionBoardColumn)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "za", on: .board)?.id, .planToggleFold)
   }
 
   /// Phase 1 made ⌘R sidebar-only by following the catalogue strictly. It
@@ -166,7 +176,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
       WorkspaceCommandCatalog.sequences(on: .outline),
       [
         "ee", "dd", "nn", "tt", "mm", "ll", "uu", "td", "tm", "cd", "cn", "ct",
-        "dr", "hc", "gh", "sd", "oo", "pc", "xx", "gg",
+        "dr", "hc", "gh", "sd", "oo", "pc", "xx", "gg", "za",
       ])
     let written = Set(
       WorkspaceCommandCatalog.all.flatMap(\.allKeys).filter(WorkspaceCommandCatalog.isSequence))

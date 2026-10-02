@@ -183,8 +183,16 @@ enum WorkspaceSidebarItem: Identifiable {
     didSet {
       outlineByList = Dictionary(grouping: outline) { $0.task.listId }
       outlineOpenCount = outline.reduce(0) { $0 + ($1.task.status == .open ? 1 : 0) }
+      let parents = TaskOutlineFolding.parentIDs(outline)
+      if outlineParentIDs != parents { outlineParentIDs = parents }
+      refoldOutline()
     }
   }
+  /// The outline as drawn: `outline` with every folded task's branch taken
+  /// out. What the pane lists and what the arrow keys walk.
+  private(set) var outlineRows: [TaskOutlineItem] = []
+  /// The outline's rows that have subtasks, folded or not.
+  private(set) var outlineParentIDs: Set<String> = []
   /// The outline grouped by list and its open count, derived once per reload
   /// rather than on every render of the combined outline.
   private(set) var outlineByList: [String: [TaskOutlineItem]] = [:]
@@ -391,10 +399,24 @@ enum WorkspaceSidebarItem: Identifiable {
   private static let bottomDockVisibleKey = "localWorkspaceBottomDockVisibleV1"
   private static let bottomDockHeightKey = "localWorkspaceBottomDockHeightV1"
   private static let progressPeriodKey = "localWorkspaceProgressPeriodV1"
-  /// Cards whose subtask tree is folded away. On the model rather than the
-  /// card, because the arrow keys walk the tree rows a card is showing and
-  /// have to know which ones it is not.
-  var boardCollapsedCardIDs: Set<String> = []
+  /// Tasks whose subtasks are folded away — in the outline, on a board card,
+  /// and on the subtask rows drawn on one; one set, so a branch put away in
+  /// one view stays put away in the other. On the model rather than the row,
+  /// because the arrow keys walk the rows that are showing and have to know
+  /// which ones are not. Persisted, as Checkvist keeps a fold.
+  var foldedTaskIDs = Set(UserDefaults.standard.stringArray(forKey: WorkspaceViewModel.foldedTasksKey) ?? []) {
+    didSet {
+      guard foldedTaskIDs != oldValue else { return }
+      UserDefaults.standard.set(Array(foldedTaskIDs).sorted(), forKey: Self.foldedTasksKey)
+      refoldOutline()
+    }
+  }
+  private static let foldedTasksKey = "localWorkspaceFoldedTasksV1"
+
+  private func refoldOutline() {
+    let rows = TaskOutlineFolding.visible(outline, folded: foldedTaskIDs)
+    if outlineRows != rows { outlineRows = rows }
+  }
 
   /// The column the arrow keys are in. A subtask row counts as being in the
   /// column of the card it is drawn on, not the column its own card would

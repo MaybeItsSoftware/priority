@@ -350,7 +350,7 @@ struct WorkspaceKanbanCard: View {
   let hasKeyboard: Bool
 
   private var isSelected: Bool { selectedRowID == task.id }
-  private var isTreeCollapsed: Bool { model.boardCollapsedCardIDs.contains(task.id) }
+  private var isTreeCollapsed: Bool { model.isFolded(task) }
 
   var body: some View {
     cardSurface
@@ -530,7 +530,7 @@ struct WorkspaceKanbanCard: View {
       }
       Button {
         isAddingSubtask = true
-        if isTreeCollapsed { model.toggleBoardTree(of: task) }
+        if isTreeCollapsed { model.toggleFold(of: task) }
         subtaskComposerFocused = true
       } label: {
         Image(systemName: "plus")
@@ -543,7 +543,7 @@ struct WorkspaceKanbanCard: View {
       .help("Add a subtask")
       if !model.descendants(of: task).isEmpty {
         Button {
-          model.toggleBoardTree(of: task)
+          model.toggleFold(of: task)
         } label: {
           Image(systemName: isTreeCollapsed ? "chevron.down" : "chevron.up")
             .font(theme.captionFont)
@@ -578,12 +578,13 @@ struct WorkspaceKanbanCard: View {
   /// Read from `boardDescendants`, which the board's load fills for every
   /// card and every task inside one, so drawing it is a dictionary lookup.
   @ViewBuilder private var subtaskTree: some View {
-    let items = isTreeCollapsed ? [] : model.descendants(of: task)
+    let items = model.boardTreeUnfoldedRows(of: task)
     if !items.isEmpty || isAddingSubtask {
       let limit = WorkspaceBoardMetrics.visibleSubtaskRows
+      let parents = TaskOutlineFolding.parentIDs(model.descendants(of: task))
       VStack(alignment: .leading, spacing: 0) {
         ForEach(model.boardTreeRows(of: task)) { item in
-          subtaskRow(item)
+          subtaskRow(item, isFolded: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
         }
         if items.count > limit {
           Button {
@@ -598,7 +599,7 @@ struct WorkspaceKanbanCard: View {
           .buttonStyle(.plain)
           .padding(.leading, Self.indentStep(theme))
           .padding(.vertical, theme.space.xxs)
-          .help("Open \(task.title) to see all \(items.count) subtasks")
+          .help("Open \(task.title) to see every subtask")
         }
         if isAddingSubtask { subtaskComposer }
       }
@@ -625,7 +626,7 @@ struct WorkspaceKanbanCard: View {
     .padding(.vertical, theme.space.xxs)
   }
 
-  private func subtaskRow(_ item: TaskOutlineItem) -> some View {
+  private func subtaskRow(_ item: TaskOutlineItem, isFolded: Bool?) -> some View {
     let isOpen = item.task.status == .open
     let step = Self.indentStep(theme)
     return HStack(spacing: 0) {
@@ -651,6 +652,11 @@ struct WorkspaceKanbanCard: View {
       .truncationMode(.tail)
       .frame(maxWidth: .infinity, alignment: .leading)
       .help(item.task.title)
+      // Trailing, as the card's own fold is, so the guides stay under the
+      // checks.
+      if let isFolded {
+        WorkspaceFoldButton(isFolded: isFolded, title: item.task.title) { model.toggleFold(of: item.task) }
+      }
     }
     .font(theme.captionFont)
     .padding(.vertical, theme.space.xxs)

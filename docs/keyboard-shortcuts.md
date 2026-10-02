@@ -199,6 +199,28 @@ Up/Down walk a column row by row, and a card's subtask rows are rows: the
 keys step onto each subtask the card is showing before the next card, and
 over a folded card's tree without stopping. Left/Right from a subtask leave
 from the column its card is in.
+
+## Folding subtasks where they are
+
+Opening a task with Return makes its subtasks the whole pane, which is the
+wrong move when you only want to look inside it. So, as in Checkvist, a task's
+subtasks fold and unfold where they stand:
+
+- **In the outline, `→` and `←` fold.** `→` on a folded task shows its
+  subtasks, and on an open one steps onto the first of them. `←` on an open
+  task folds it, and on anything else steps up to the task it hangs from; at
+  the top level it leaves, as `←` does everywhere else. A task with no
+  subtasks ignores `→` — Return, `l` and `]` still open it.
+- **`Cmd+←` / `Cmd+→` fold and unfold the whole outline**, as they do every
+  folder in the sidebar. Folding leaves the selection on the top-level task
+  it was inside.
+- **`za` (vim's fold toggle) folds the task you are on** in the outline, the
+  board card, or the subtask row on a card — where `←`/`→` belong to the
+  columns. Every row with subtasks carries a chevron that does the same.
+
+There is one set of folds, shared by the outline and the board, and it
+survives a relaunch. Going to a task from search or the done rail unfolds the
+branches it is in.
 Escape cancels task entry and returns to navigation.
 
 ## Planning the day

@@ -62,8 +62,10 @@ struct WorkspaceOutlinePane: View {
               }
             }
           } else {
-            ForEach(model.outline) { item in
-              row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard)
+            let parents = model.outlineParentIDs
+            ForEach(model.outlineRows) { item in
+              row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard,
+                fold: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
             }
           }
         }
@@ -88,9 +90,12 @@ struct WorkspaceOutlinePane: View {
     }
   }
 
-  private func row(_ item: TaskOutlineItem, selectedID: String?, tasksHaveKeyboard: Bool) -> some View {
+  private func row(
+    _ item: TaskOutlineItem, selectedID: String?, tasksHaveKeyboard: Bool, fold: Bool? = nil
+  ) -> some View {
     let isSelected = item.id == selectedID
-    return WorkspaceOutlineRow(item: item, isSelected: isSelected, hasKeyboard: isSelected && tasksHaveKeyboard)
+    return WorkspaceOutlineRow(
+      item: item, isSelected: isSelected, hasKeyboard: isSelected && tasksHaveKeyboard, isFolded: fold)
       .outlineRowChrome()
   }
 }
@@ -114,6 +119,8 @@ struct WorkspaceOutlineRow: View {
   let item: TaskOutlineItem
   let isSelected: Bool
   let hasKeyboard: Bool
+  /// Whether the row's subtasks are folded away; nil when it has none.
+  let isFolded: Bool?
 
   var body: some View {
     HStack(spacing: theme.space.sm) {
@@ -128,6 +135,15 @@ struct WorkspaceOutlineRow: View {
       }
       .buttonStyle(.plain)
       .focusable()
+      // In the space left of the glyph — the gutter, or the indent — so a row
+      // with subtasks takes no more width than one without, and the guides
+      // still hang from the glyphs.
+      .overlay(alignment: .leading) {
+        if let isFolded {
+          WorkspaceFoldButton(isFolded: isFolded, title: item.task.title) { model.toggleFold(of: item.task) }
+            .offset(x: -WorkspaceFoldButton.width)
+        }
+      }
 
       Button(item.task.title) {
         model.selectTask(item.task)
@@ -174,5 +190,29 @@ struct WorkspaceOutlineRow: View {
       .strokeBorder(
         model.dragDestinationListID == item.task.id && item.task.isList ? theme.primary : .clear,
         lineWidth: theme.borders.emphasis))
+  }
+}
+
+/// The disclosure on a row with subtasks: a chevron pointing at the branch
+/// when it is open, and along the row when it is folded away.
+struct WorkspaceFoldButton: View {
+  @Environment(\.theme) private var theme
+  static let width: CGFloat = 12
+  let isFolded: Bool
+  let title: String
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: isFolded ? "chevron.right" : "chevron.down")
+        .font(.system(size: 8, weight: .semibold))
+        .foregroundStyle(theme.muted)
+        .frame(width: Self.width)
+        .frame(maxHeight: .infinity)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(isFolded ? "Show the subtasks of \(title)" : "Hide the subtasks of \(title)")
+    .commandHelp(.planToggleFold, note: isFolded ? "Show subtasks" : "Hide subtasks")
   }
 }

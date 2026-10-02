@@ -164,6 +164,17 @@ public enum WorkspaceCommandCatalog {
       keys: ["left", "shift+left", "h", "["],
       note: "With nothing left to leave, hands the keyboard back to the sidebar"),
     .init(id: .planHideCompleted, title: "Hide or show completed tasks", group: "Plan", keys: ["hc"]),
+    // Checkvist folds a branch where it stands, so a task's subtasks can be
+    // read and walked without opening the task. `za` is vim's fold toggle.
+    .init(
+      id: .planToggleFold, title: "Show or hide the task's subtasks", group: "Plan", keys: ["za"],
+      note: "In the outline, or on the board card or row you are on"),
+    .init(
+      id: .planFoldAll, title: "Hide every task's subtasks", group: "Plan",
+      keys: ["cmd+left"], surface: .outline),
+    .init(
+      id: .planUnfoldAll, title: "Show every task's subtasks", group: "Plan",
+      keys: ["cmd+right"], surface: .outline),
     .init(
       id: .planBoardNewColumn, title: "Add a board column", group: "Plan",
       keys: ["cmd+shift+c"], surface: .board),
@@ -410,6 +421,14 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .motionBoardColumn, title: "Focus the next or previous column",
       group: "Moving around", keys: ["left", "right"], surface: .board, kind: .motion),
+    .init(
+      id: .motionOutlineUnfold, title: "Show the subtasks, or step into them",
+      group: "Moving around", keys: ["right"], surface: .outline, kind: .motion,
+      note: "Return, l or ] still opens the task"),
+    .init(
+      id: .motionOutlineFold, title: "Hide the subtasks, or step out to the parent",
+      group: "Moving around", keys: ["left"], surface: .outline, kind: .motion,
+      note: "At the top level it leaves, as ← does elsewhere"),
     .init(
       id: .motionDismiss, title: "Clear the selection, or leave the scope",
       group: "Moving around", keys: ["escape"], kind: .motion),

@@ -152,6 +152,9 @@ extension WorkspaceViewModel {
       // sidebar once there is nothing left to leave; the bracket never did.
       if key != "[" || scopeTaskID != nil { leaveSelectedTaskScope() }
     case .planHideCompleted: toggleHiddenCompletedTasks()
+    case .planToggleFold: if let task = selectedTask { toggleFold(of: task) }
+    case .planFoldAll: setOutlineFolded(true)
+    case .planUnfoldAll: setOutlineFolded(false)
     case .planBoardNewColumn: presentOverlay(.newBoardColumn)
     case .planBoardMoveCardLeft: moveSelectedTaskToAdjacentColumn(by: -1)
     case .planBoardMoveCardRight: moveSelectedTaskToAdjacentColumn(by: 1)
@@ -250,6 +253,8 @@ extension WorkspaceViewModel {
       if let key { activateSidebarCursor(expandOnly: key == "right" || key == "l") }
     case .motionSidebarCollapse: if key != nil { collapseSidebarCursor() }
     case .motionBoardColumn: if let key { focusAdjacentBoardColumn(by: key == "right" ? 1 : -1) }
+    case .motionOutlineUnfold: if key != nil { unfoldOrDescendSelection() }
+    case .motionOutlineFold: if key != nil { foldOrAscendSelection() }
     case .motionDismiss: if key != nil { dismissFromKeyboard() }
     case .motionSetPriority:
       if let key, let digit = Int(key) { editTaskValues { $0.priority = digit } }

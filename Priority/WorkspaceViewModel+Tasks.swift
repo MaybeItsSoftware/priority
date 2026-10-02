@@ -107,11 +107,17 @@ extension WorkspaceViewModel {
     boardTasksByColumn[column.id, default: []]
   }
 
-  /// The subtask rows a card is drawing: none while it is folded, and at
-  /// most the tree's row limit — the rows past it are behind "+N more".
+  /// The subtask rows a card is drawing: none while it is folded, none
+  /// beneath a folded subtask, and at most the tree's row limit — the rows
+  /// past it are behind "+N more".
   func boardTreeRows(of card: WorkspaceTask) -> [TaskOutlineItem] {
-    guard !boardCollapsedCardIDs.contains(card.id) else { return [] }
-    return Array(descendants(of: card).prefix(WorkspaceBoardMetrics.visibleSubtaskRows))
+    Array(boardTreeUnfoldedRows(of: card).prefix(WorkspaceBoardMetrics.visibleSubtaskRows))
+  }
+
+  /// Every subtask row the card's folds leave showing, before the row limit.
+  func boardTreeUnfoldedRows(of card: WorkspaceTask) -> [TaskOutlineItem] {
+    guard !foldedTaskIDs.contains(card.id) else { return [] }
+    return TaskOutlineFolding.visible(descendants(of: card), folded: foldedTaskIDs)
   }
 
   /// Every row the arrow keys stop on in a column, top to bottom: each card,
@@ -131,14 +137,82 @@ extension WorkspaceViewModel {
     return id
   }
 
-  func toggleBoardTree(of card: WorkspaceTask) {
-    if boardCollapsedCardIDs.remove(card.id) == nil {
-      boardCollapsedCardIDs.insert(card.id)
-      // Folding away the row the selection was on leaves it on the card.
-      if let selectedTaskID, selectedTaskID != card.id,
-        descendants(of: card).contains(where: { $0.task.id == selectedTaskID }) {
-        self.selectedTaskID = card.id
+  // MARK: - Folding
+
+  func isFolded(_ task: WorkspaceTask) -> Bool {
+    foldedTaskIDs.contains(task.id)
+  }
+
+  /// Folds or unfolds a task's subtasks where they are drawn — beneath it in
+  /// the outline, or on the card or row it is on the board. Folding away the
+  /// row the selection was on leaves it on the task.
+  func setFolded(_ task: WorkspaceTask, _ folded: Bool) {
+    guard folded else { foldedTaskIDs.remove(task.id); return }
+    foldedTaskIDs.insert(task.id)
+    if let selectedTaskID, selectedTaskID != task.id,
+      descendants(of: task).contains(where: { $0.task.id == selectedTaskID }) {
+      self.selectedTaskID = task.id
+    }
+  }
+
+  /// Opens every folded branch a task sits in, so going to it — from search,
+  /// or the done rail — lands on a row that is drawn.
+  func unfoldAncestors(of task: WorkspaceTask) {
+    var parentID = task.parentTaskId
+    var visited = Set<String>()
+    while let id = parentID, visited.insert(id).inserted {
+      foldedTaskIDs.remove(id)
+      parentID = self.task(withID: id)?.parentTaskId
+    }
+  }
+
+  func toggleFold(of task: WorkspaceTask) {
+    setFolded(task, !isFolded(task))
+  }
+
+  /// Folds or unfolds every branch of the outline on screen. Folding leaves
+  /// the selection on the top-level task it was inside.
+  func setOutlineFolded(_ folded: Bool) {
+    if folded {
+      foldedTaskIDs.formUnion(outlineParentIDs)
+      var id = selectedTaskID
+      while let current = id, !outlineRows.contains(where: { $0.id == current }) {
+        id = TaskOutlineFolding.parentID(of: current, in: outline)
       }
+      if selectedTaskID != nil, let id { selectedTaskID = id }
+    } else {
+      foldedTaskIDs.subtract(outlineParentIDs)
+    }
+  }
+
+  /// → on the outline, as in Checkvist: open a folded branch, then step into
+  /// it. A task with nothing beneath it stays put — Return opens it.
+  func unfoldOrDescendSelection() {
+    guard let task = selectedTask else {
+      selectedTaskID = outlineRows.first?.id
+      return
+    }
+    guard outlineParentIDs.contains(task.id) else { return }
+    if isFolded(task) {
+      setFolded(task, false)
+    } else if let child = TaskOutlineFolding.firstChildID(of: task.id, in: outlineRows) {
+      selectedTaskID = child
+    }
+  }
+
+  /// ← on the outline: fold an open branch, then step up to the task it hangs
+  /// from, and at the top of the outline leave, the way ← always has.
+  func foldOrAscendSelection() {
+    guard let task = selectedTask, outlineRows.contains(where: { $0.id == task.id }) else {
+      leaveSelectedTaskScope()
+      return
+    }
+    if outlineParentIDs.contains(task.id) && !isFolded(task) {
+      setFolded(task, true)
+    } else if let parent = TaskOutlineFolding.parentID(of: task.id, in: outlineRows) {
+      selectedTaskID = parent
+    } else {
+      leaveSelectedTaskScope()
     }
   }
 

@@ -81,6 +81,8 @@ something you already have to know.
 | `Ctrl+T` | Plan the task for today, or take it off |
 | `Cmd+Shift+K` | Delete the task (Zed's delete line) |
 | `Return` | Open the task you are on — on Today, start its card (or finish the one running); elsewhere, open its subtasks. With nothing selected, add a task |
+| `→` / `←` | In the outline, show a task's subtasks and step into them / hide them and step out — without opening the task. Elsewhere, open and leave it |
+| `za` / `Cmd+←` / `Cmd+→` | Fold or unfold the task you are on (outline or board) / fold / unfold the whole outline |
 | `Shift+Return` / `Space` | Tick the task off without running a block |
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
 | `Alt+Return` / `Alt+Shift+Return` | New task above the selection / new subtask |
@@ -156,6 +158,13 @@ Edit menu. Board arrows navigate every column, including empty ones, and
 `Up`/`Down` step through the subtask rows drawn on each card as well as the
 cards (folded cards are skipped over); `Space` and `Return` act on the row you
 are on. The sidebar outlines the list you are navigating.
+
+Subtasks fold where they stand, as they do in Checkvist, so you can look
+inside a task without opening it: in the outline `→` unfolds a task and steps
+into its subtasks and `←` folds it and steps back out, `za` folds the task you
+are on in the outline or on a board card, and every row with subtasks has a
+chevron. Folds are shared by the outline and the board and kept across
+launches — see [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md#folding-subtasks-where-they-are).
 
 A letter that begins a sequence and also means something on its own — `x`
 (complete, or `xx`), `l` (open subtasks, or `ll`), `h` (leave them, or `hc`) —
@@ -424,7 +433,7 @@ its end, set apart by a rule.
 | --- | --- | --- |
 | **Today** | `Cmd+1` | The day as a numbered list of cards — see [Today](#today) |
 | **Board** | `Cmd+2` | Columns of cards, dragged between and within |
-| **Outline** | `Cmd+3` | The list as a tree, indented |
+| **Outline** | `Cmd+3` | The list as a tree, indented, with each branch folding in place |
 | **Matrix** | `Cmd+4` | Eisenhower quadrants by importance and urgency |
 | **Focus** | `Cmd+8` | What to do next, or the block that is running |
 | **Timeline** | `Cmd+9` | The day as elapsed time rather than as a list |

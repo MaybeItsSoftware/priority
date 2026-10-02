@@ -342,6 +342,10 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "sidebar:gg",
       // On the board ←/→ change column instead of entering and leaving a task.
       "board:left", "board:right",
+      // In the outline they fold and unfold a branch and step between a task
+      // and its subtasks, as in Checkvist, so the subtasks can be walked
+      // without opening the task. Return, l and ] still open it.
+      "outline:left", "outline:right",
       // The done rail is a list of its own, so the list keys walk it, ⏎ opens
       // the finished task where it lives, and escape gives the keyboard back to
       // the work rather than clearing a selection the rail does not hold.

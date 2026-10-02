@@ -84,6 +84,7 @@ extension WorkspaceViewModel {
       hidesCompletedTasks = false
       reloadOutline(refreshSidebar: false)
     }
+    unfoldAncestors(of: task)
     selectedTaskID = task.id
     requestKeyboardFocus(.tasks)
   }

@@ -33,6 +33,7 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case planEnterTask, planLeaveTask, planHideCompleted
   case planBoardNewColumn, planBoardMoveCardLeft, planBoardMoveCardRight
   case planBoardRemoveColumn, planMatrixPlace
+  case planToggleFold, planFoldAll, planUnfoldAll
 
   // Lists and folders
   case listNew, listRename, listSettings, listArchive, listRestore, listComplete
@@ -60,6 +61,6 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   // Motions
   case motionSelectNext, motionSelectPrevious, motionSelectEnds, motionSelectPage
   case motionSidebarSelect, motionSidebarExpand, motionSidebarCollapse
-  case motionBoardColumn, motionDismiss, motionSetPriority
+  case motionBoardColumn, motionOutlineUnfold, motionOutlineFold, motionDismiss, motionSetPriority
   case todayStart, motionTodayLeave
 }

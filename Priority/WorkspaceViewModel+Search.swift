@@ -68,6 +68,7 @@ extension WorkspaceViewModel {
       viewMode = .outline
       reloadOutline(refreshSidebar: false)
     }
+    unfoldAncestors(of: result.task)
     selectedTaskID = result.task.id
     requestKeyboardFocus(.tasks)
   }
