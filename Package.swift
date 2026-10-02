@@ -247,12 +247,16 @@ let appLogicTargetExcludes = [
 
 let package = Package(
   name: "priority-core",
-  platforms: [.macOS(.v15)],
+  // iOS is for the phone app in `mobile/ios`, which links the workspace
+  // packages rather than re-implementing them. The plugin and app-logic targets
+  // are only ever built for the Mac.
+  platforms: [.macOS(.v15), .iOS(.v18)],
   products: [
     .library(name: "PriorityCore", targets: ["PriorityCore"]),
     .library(name: "PriorityPlugins", targets: ["PriorityPlugins"]),
     .library(name: "PriorityAppLogic", targets: ["PriorityAppLogic"]),
     .library(name: "PriorityWorkspace", targets: ["PriorityWorkspace"]),
+    .library(name: "PriorityWorkspaceEditing", targets: ["PriorityWorkspaceEditing"]),
   ],
   dependencies: [
     .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.8.0"),
