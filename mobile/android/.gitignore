@@ -8,5 +8,3 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
-# The schema is copied from cli/src/fixtures at build time.
-data/src/main/assets/generated/
