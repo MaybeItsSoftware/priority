@@ -1,0 +1,119 @@
+//! `GET /v1/changes`: the feed a device pulls other devices' rows from.
+
+use crate::AppState;
+use crate::error::Result;
+use crate::merge::row_hlc;
+use axum::Json;
+use axum::extract::{Query, State};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+use sqlx::types::Json as Jsonb;
+use std::collections::BTreeMap;
+use std::time::Duration;
+use tokio::time::Instant;
+
+const DEFAULT_LIMIT: i64 = 500;
+const MAX_LIMIT: i64 = 2000;
+/// Under the 30 s idle timeouts common in proxies in front of the server, so
+/// an empty long-poll comes back as an answer rather than a dropped request.
+const MAX_WAIT_SECONDS: u64 = 25;
+
+#[derive(Debug, Deserialize)]
+pub struct ChangesQuery {
+    pub since: Option<i64>,
+    pub limit: Option<i64>,
+    pub wait: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangesResponse {
+    pub rows: Vec<ChangedRow>,
+    pub cursor: i64,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ChangedRow {
+    pub table: String,
+    pub id: String,
+    pub deleted: bool,
+    pub values: Map<String, Value>,
+    pub hlc: Option<String>,
+}
+
+pub async fn changes(
+    State(state): State<AppState>,
+    Query(query): Query<ChangesQuery>,
+) -> Result<Json<ChangesResponse>> {
+    let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
+    let wait = Duration::from_secs(query.wait.unwrap_or(0).min(MAX_WAIT_SECONDS));
+    let deadline = Instant::now() + wait;
+    let since = query.since.unwrap_or(0).max(0);
+
+    let mut woken = state.changes.clone();
+    let mut shutdown = state.shutdown.clone();
+    loop {
+        // Marked seen before reading, so a push that commits between the read
+        // and the wait below still wakes it.
+        woken.borrow_and_update();
+        let page = scan(&state, since, limit).await?;
+        if !page.rows.is_empty() || page.has_more || Instant::now() >= deadline {
+            return Ok(Json(page));
+        }
+        tokio::select! {
+            changed = woken.changed() => if changed.is_err() { return Ok(Json(page)) },
+            () = tokio::time::sleep_until(deadline) => return Ok(Json(page)),
+            _ = shutdown.wait_for(|stopping| *stopping) => return Ok(Json(page)),
+        }
+    }
+}
+
+type ScanTuple = (
+    i64,
+    String,
+    String,
+    Jsonb<Map<String, Value>>,
+    Jsonb<BTreeMap<String, String>>,
+    bool,
+    Option<String>,
+);
+
+/// One page of the feed after `since`.
+///
+/// Every row is sent, the caller's own pushes included. Leaving those out
+/// looks free but loses data: a row the caller last wrote can still carry
+/// another device's earlier edit to a column the caller never received, and
+/// re-applying its own row is harmless. One more row is read than asked for,
+/// so `hasMore` is exact rather than a guess from a full page.
+async fn scan(state: &AppState, since: i64, limit: i64) -> Result<ChangesResponse> {
+    let mut scanned = sqlx::query_as::<_, ScanTuple>(
+        "SELECT seq, table_name, row_id, data, col_hlc, deleted, deleted_hlc \
+         FROM rows WHERE seq > $1 ORDER BY seq LIMIT $2",
+    )
+    .bind(since)
+    .bind(limit + 1)
+    .fetch_all(&state.pool)
+    .await?;
+
+    let has_more = scanned.len() as i64 > limit;
+    scanned.truncate(limit as usize);
+    let cursor = scanned.last().map_or(since, |row| row.0);
+    let rows = scanned
+        .into_iter()
+        .map(
+            |(_, table, id, data, col_hlc, deleted, deleted_hlc)| ChangedRow {
+                hlc: row_hlc(&col_hlc.0, deleted_hlc.as_deref()),
+                table,
+                id,
+                deleted,
+                values: data.0,
+            },
+        )
+        .collect();
+    Ok(ChangesResponse {
+        rows,
+        cursor,
+        has_more,
+    })
+}

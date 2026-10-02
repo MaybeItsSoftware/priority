@@ -1,0 +1,35 @@
+# The sync server, for Railway. Build context is this directory (Railway's
+# Root Directory is `sync-server`), so nothing outside it is copied.
+
+FROM rust:1-slim AS builder
+WORKDIR /build
+
+# Dependencies first, against stub sources, so a source-only change reuses
+# this layer instead of recompiling sqlx, axum and tokio.
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src \
+ && echo 'fn main() {}' > src/main.rs \
+ && touch src/lib.rs \
+ && cargo build --release --locked \
+ && rm -rf src
+
+# `sqlx::migrate!` embeds the migrations at compile time, so they are build
+# input, not something the runtime image needs to carry.
+COPY migrations ./migrations
+COPY src ./src
+# Make the real sources newer than the stub build's fingerprints.
+RUN touch src/main.rs src/lib.rs \
+ && cargo build --release --locked
+
+FROM debian:bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --system --uid 10001 sync
+COPY --from=builder /build/target/release/priority-sync-server /usr/local/bin/priority-sync-server
+USER sync
+ENV PORT=8080
+EXPOSE 8080
+# Exec form, so the server is PID 1 and receives Railway's SIGTERM itself; it
+# handles it with a graceful shutdown that answers open long-polls first.
+CMD ["/usr/local/bin/priority-sync-server"]
