@@ -78,6 +78,9 @@ something you already have to know.
 | `j` / `k` / `↑` / `↓` | Move the selection |
 | `Cmd+↑` / `Cmd+↓` | First / last task |
 | `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) — on Today, earlier or later in the day |
+| `Alt+←` / `Alt+→` | Outdent / indent the task — out of, or under, the task above |
+| `Shift+Alt+←` / `Shift+Alt+→` | Move the card a board column left / right |
+| `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |
 | `Ctrl+T` | Plan the task for today, or take it off |
 | `Cmd+Shift+K` | Delete the task (Zed's delete line) |
 | `Return` | Open the task you are on — on Today, start its card (or finish the one running); elsewhere, open its subtasks. With nothing selected, add a task |
@@ -112,6 +115,12 @@ one **overlay** at the top of the window rather than as sheets. One is up at a
 time and asking for another replaces it (`Cmd+K` from search opens the
 palette); `Esc` or a click outside closes it, and `Return` confirms — in a
 notes edit too, where `Shift+Return` is the new line.
+
+The arrows read by modifier. Bare, they move the cursor; with `Cmd`, they move
+it to the ends. `Alt` moves the *task* within its list — up and down among its
+siblings, out and in a level. `Shift+Alt` carries it somewhere else — another
+board column, another list. `Ctrl` is left to macOS, which gives it and the
+arrows to Spaces and Mission Control.
 
 The table above is the short version. The complete one is in the app: `Cmd+K`,
 or a **double-tap of Shift**, opens the palette, and `Cmd+/` — or the keyboard icon in

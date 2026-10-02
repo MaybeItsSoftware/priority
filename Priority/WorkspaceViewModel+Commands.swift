@@ -141,6 +141,8 @@ extension WorkspaceViewModel {
     case .taskOutdent: if let task = selectedTask { outdentTask(task) }
     case .taskMoveUp: moveSelectionWithinSiblings(by: -1)
     case .taskMoveDown: moveSelectionWithinSiblings(by: 1)
+    case .taskMoveToPreviousList: moveSelectedTaskToAdjacentList(by: -1)
+    case .taskMoveToNextList: moveSelectedTaskToAdjacentList(by: 1)
 
     // MARK: Plan
     // Return is "open the task" on every task surface. With nothing to open
@@ -159,7 +161,7 @@ extension WorkspaceViewModel {
     case .planBoardMoveCardLeft: moveSelectedTaskToAdjacentColumn(by: -1)
     case .planBoardMoveCardRight: moveSelectedTaskToAdjacentColumn(by: 1)
     case .planBoardRemoveColumn:
-      // The card you are on names the column, the way ⌥← and ⌥→ do. There is
+      // The card you are on names the column, the way ⇧⌥← and ⇧⌥→ do. There is
       // no separate "current column" to consult, and inventing one so a key
       // could delete something would be worse than asking for a selection.
       if boardColumns.count > 1, let task = selectedTask, let column = column(for: task) {

@@ -18,7 +18,19 @@ import PriorityWorkspace
 @MainActor
 extension WorkspaceViewModel {
   /// Every row in the sidebar, in the order they are drawn.
-  var sidebarRows: [WorkspaceSidebarRow] {
+  var sidebarRows: [WorkspaceSidebarRow] { sidebarRows(expandingEveryFolder: false) }
+
+  /// Every list, top to bottom as the sidebar draws them with every folder
+  /// open — the order ⇧⌥↑ and ⇧⌥↓ step a task through.
+  var listsInSidebarOrder: [TaskList] {
+    let byID = Dictionary(lists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    return sidebarRows(expandingEveryFolder: true).compactMap { row in
+      if case .list(let id) = row.kind { return byID[id] }
+      return nil
+    }
+  }
+
+  private func sidebarRows(expandingEveryFolder: Bool) -> [WorkspaceSidebarRow] {
     WorkspaceSidebarOutline.rows(
       inbox: inboxList.map { SidebarListDescriptor(id: $0.id, folderID: $0.folderId) },
       lists: lists.filter { $0.systemRole != .inbox }
@@ -31,7 +43,7 @@ extension WorkspaceViewModel {
           depth: $0.depth,
           isPromoted: $0.task.isPromoted == true && $0.task.status == .open)
       },
-      expandedFolderIDs: expandedFolderIDs)
+      expandedFolderIDs: expandingEveryFolder ? Set(folders.map(\.id)) : expandedFolderIDs)
   }
 
   /// The row the cursor is on.

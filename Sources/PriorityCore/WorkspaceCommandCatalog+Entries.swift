@@ -33,7 +33,8 @@ public enum WorkspaceCommandCatalog {
       .taskEditTags, .taskEditRecurrence,
     ],
     [.taskDueToday, .taskDueTomorrow, .taskClearDue, .taskClearNotes, .taskClearTags],
-    [.taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown, .taskMove],
+    [.taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown],
+    [.taskMoveToPreviousList, .taskMoveToNextList, .taskMove],
     [.taskConvertToList, .taskPromoteList, .taskExtractBranch],
     [.taskTogglePlannedToday, .taskToggleDaily, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
   ]
@@ -137,10 +138,18 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .taskToggleInspector, title: "Open or close the inspector", group: "Task",
       keys: ["i", "sd"]),
-    .init(id: .taskIndent, title: "Indent the task", group: "Task", keys: ["tab", "cmd+option+right"]),
+    // The modifier says what kind of move it is. Bare arrows move the cursor
+    // and ⌘ moves it far; ⌥ moves the task within its list (↑↓ among its
+    // siblings, ←→ out of or into the one above, as an outliner does); ⇧⌥
+    // carries it somewhere else (←→ a board column, ↑↓ another list). ⌃ is
+    // left alone: macOS gives ⌃ and the arrows to Spaces and Mission Control.
+    .init(
+      id: .taskIndent, title: "Indent the task", group: "Task",
+      keys: ["tab", "option+right", "cmd+option+right"],
+      note: "Under the task above it"),
     .init(
       id: .taskOutdent, title: "Outdent the task", group: "Task",
-      keys: ["shift+tab", "cmd+option+left"]),
+      keys: ["shift+tab", "option+left", "cmd+option+left"]),
     // ⌥↑ and ⌥↓ are Zed's move line; ⌘↑ and ⌘↓ go to the ends, as they do
     // in an editor.
     // On Today there are no siblings to move among, so they arrange the day.
@@ -150,6 +159,12 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .taskMoveDown, title: "Move the task down", group: "Task", keys: ["option+down"],
       note: "On Today, later in the day you planned"),
+    .init(
+      id: .taskMoveToPreviousList, title: "Move the task to the list above", group: "Task",
+      keys: ["option+shift+up"], note: "The list above its own in the sidebar. mm picks any list"),
+    .init(
+      id: .taskMoveToNextList, title: "Move the task to the list below", group: "Task",
+      keys: ["option+shift+down"], note: "The list below its own in the sidebar. mm picks any list"),
   ]
 
   // MARK: - Plan
@@ -180,10 +195,10 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+shift+c"], surface: .board),
     .init(
       id: .planBoardMoveCardLeft, title: "Move the card a column left", group: "Plan",
-      keys: ["option+left"], surface: .board),
+      keys: ["option+shift+left"], surface: .board),
     .init(
       id: .planBoardMoveCardRight, title: "Move the card a column right", group: "Plan",
-      keys: ["option+right"], surface: .board),
+      keys: ["option+shift+right"], surface: .board),
     .init(
       id: .planBoardRemoveColumn, title: "Remove this board column", group: "Plan",
       keys: ["cmd+ctrl+c"], surface: .board,

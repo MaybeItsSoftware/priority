@@ -31,6 +31,33 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// ⇧⌥↑ and ⇧⌥↓: the selected task to the list above or below its own in
+  /// the sidebar, landing at that list's top level. The cursor stays where the
+  /// task was, on its neighbour, so a run of tasks can be sent off one after
+  /// another; the status bar says where each went, since it has left the
+  /// screen.
+  func moveSelectedTaskToAdjacentList(by offset: Int) {
+    guard let task = selectedTask else { return }
+    let candidates = listsInSidebarOrder.filter {
+      !$0.isArchived && $0.completedAt == nil || $0.id == task.listId
+    }
+    guard let index = candidates.firstIndex(where: { $0.id == task.listId }) else { return }
+    guard candidates.indices.contains(index + offset) else {
+      onStatusMessage?(offset < 0 ? "Already in the first list" : "Already in the last list")
+      return
+    }
+    let destination = candidates[index + offset]
+    let rows = navigationRowIDs()
+    let hidden = Set(descendants(of: task).map(\.task.id)).union([task.id])
+    let neighbour = rows.firstIndex(of: task.id).flatMap { position in
+      rows[(position + 1)...].first { !hidden.contains($0) }
+        ?? rows[..<position].last { !hidden.contains($0) }
+    }
+    moveTask(task, toListId: destination.id)
+    if selectedTaskID == nil { selectedTaskID = neighbour }
+    onStatusMessage?("Moved to \(destination.name)")
+  }
+
   func moveTaskWithinSiblings(_ task: WorkspaceTask, by offset: Int) {
     guard let store else { return }
     perform {
