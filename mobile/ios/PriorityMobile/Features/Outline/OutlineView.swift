@@ -195,6 +195,14 @@ struct OutlineView: View {
     case .addAbove: if let selected { compose { outline.composeAbove(selected) } }
     case .rename: if let selected { beginRenaming(selected) }
     case .toggleFold: if let selected, selected.hasChildren { outline.toggleFold(selected.id) }
+    case .expand: if let selected, selected.isFolded { outline.toggleFold(selected.id) }
+    case .collapse:
+      guard let selected else { return }
+      if selected.hasChildren, !selected.isFolded {
+        outline.toggleFold(selected.id)
+      } else if let parent = selected.parentID, outline.rows.contains(where: { $0.id == parent }) {
+        model.navigation.selectedTaskID = parent
+      }
     case .foldAll: outline.setAllFolded(true)
     case .unfoldAll: outline.setAllFolded(false)
     case .toggleHideCompleted: outline.hidesCompleted.toggle()
@@ -218,7 +226,7 @@ struct OutlineView: View {
 /// A command for whichever outline is on screen, from the toolbar or a
 /// hardware key.
 enum OutlineCommand: Equatable {
-  case add, addChild, addAbove, rename, toggleFold, foldAll, unfoldAll, toggleHideCompleted
+  case add, addChild, addAbove, rename, toggleFold, expand, collapse, foldAll, unfoldAll, toggleHideCompleted
   case selectNext, selectPrevious
 }
 

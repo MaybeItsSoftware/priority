@@ -48,6 +48,7 @@ struct RootView: View {
       Text(model.errorMessage ?? "")
     }
     .background(ShakeToUndo())
+    .background(KeyboardCommands())
   }
 
   private var errorBinding: Binding<Bool> {
