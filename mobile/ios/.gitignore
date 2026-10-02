@@ -1,0 +1,8 @@
+PriorityMobile.xcodeproj/
+*.xcodeproj/
+build/
+DerivedData/
+PriorityMobile/Info.plist
+PriorityWidgets/Info.plist
+PriorityMobile/PriorityMobile.entitlements
+PriorityWidgets/PriorityWidgets.entitlements

@@ -1,0 +1,195 @@
+name: PriorityMobile
+
+# The iOS app. Generated with XcodeGen; the .xcodeproj is not committed.
+#
+#   cd mobile/ios && xcodegen
+#
+# The workspace logic is not re-implemented here: the app links the repo's own
+# Swift package (`../..`) — PriorityCore, PriorityWorkspace and
+# PriorityWorkspaceEditing — exactly the libraries the Mac app uses.
+
+options:
+  bundleIdPrefix: uk.co.maybeitsadam
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  groupSortPosition: top
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: 6NQNU5YSC2
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+packages:
+  Priority:
+    path: ../..
+  GRDB:
+    url: https://github.com/groue/GRDB.swift.git
+    from: "7.8.0"
+
+targets:
+  PriorityMobile:
+    type: application
+    platform: iOS
+    sources:
+      - path: PriorityMobile
+      - path: Shared
+      - path: ../../Priority/Fonts
+        group: Fonts
+        buildPhase: resources
+    dependencies:
+      - package: Priority
+        product: PriorityCore
+      - package: Priority
+        product: PriorityWorkspace
+      - package: Priority
+        product: PriorityWorkspaceEditing
+      - package: GRDB
+        product: GRDB
+      - target: PriorityWidgets
+        embed: true
+    entitlements:
+      path: PriorityMobile/PriorityMobile.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.uk.co.maybeitsadam.priority
+    info:
+      path: PriorityMobile/Info.plist
+      properties:
+        CFBundleDisplayName: Priority
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSupportsIndirectInputEvents: true
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSSupportsLiveActivities: true
+        CFBundleURLTypes:
+          - CFBundleURLName: uk.co.maybeitsadam.priority.ios
+            CFBundleURLSchemes:
+              - priority
+        UIAppFonts:
+          - IBMPlexSans-Regular.ttf
+          - IBMPlexSans-Medium.ttf
+          - IBMPlexSans-SemiBold.ttf
+          - IBMPlexSans-Bold.ttf
+          - IBMPlexSans-Italic.ttf
+          - Lilex-Regular.ttf
+          - Lilex-Medium.ttf
+          - Lilex-Bold.ttf
+    settings:
+      base:
+        PRODUCT_NAME: Priority
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: NO
+
+  PriorityWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: PriorityWidgets
+      - path: Shared
+      - path: ../../Priority/Fonts
+        group: WidgetFonts
+        buildPhase: resources
+        includes:
+          - "*.ttf"
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: ActivityKit.framework
+      - sdk: AppIntents.framework
+    entitlements:
+      path: PriorityWidgets/PriorityWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.uk.co.maybeitsadam.priority
+    info:
+      path: PriorityWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Priority
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        UIAppFonts:
+          - IBMPlexSans-Regular.ttf
+          - IBMPlexSans-Medium.ttf
+          - IBMPlexSans-SemiBold.ttf
+          - Lilex-Regular.ttf
+          - Lilex-Medium.ttf
+    settings:
+      base:
+        PRODUCT_NAME: PriorityWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios.widgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+
+  PriorityMobileTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PriorityMobileTests
+    dependencies:
+      - target: PriorityMobile
+      - package: Priority
+        product: PriorityWorkspace
+      - package: Priority
+        product: PriorityCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Priority.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Priority
+        BUNDLE_LOADER: $(TEST_HOST)
+
+  PriorityMobileUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PriorityMobileUITests
+    dependencies:
+      - target: PriorityMobile
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: PriorityMobile
+
+schemes:
+  PriorityMobile:
+    build:
+      targets:
+        PriorityMobile: all
+        PriorityWidgets: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - PriorityMobileTests
+        - PriorityMobileUITests
+    archive:
+      config: Release
