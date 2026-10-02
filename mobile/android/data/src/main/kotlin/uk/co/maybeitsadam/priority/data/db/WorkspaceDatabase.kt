@@ -171,7 +171,11 @@ class WorkspaceDatabase private constructor(
                     db.execute(
                         "CREATE TEMP TRIGGER IF NOT EXISTS \"priority_changed_${table}_$operation\" " +
                             "AFTER $operation ON main.\"$table\" " +
-                            "BEGIN INSERT OR IGNORE INTO priority_changed VALUES ('$table'); END",
+                            // Not INSERT OR IGNORE: an UPSERT's own conflict clause overrides a
+                            // trigger's, so the second upsert of a table in one write would fail
+                            // on the primary key. A guarded insert never conflicts at all.
+                            "BEGIN INSERT INTO priority_changed SELECT '$table' WHERE NOT EXISTS " +
+                            "(SELECT 1 FROM priority_changed WHERE tableName = '$table'); END",
                     )
                 }
             }

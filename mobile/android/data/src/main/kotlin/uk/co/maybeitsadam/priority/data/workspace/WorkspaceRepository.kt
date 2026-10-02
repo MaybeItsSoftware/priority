@@ -30,6 +30,7 @@ import uk.co.maybeitsadam.priority.core.WorkProgress
 import uk.co.maybeitsadam.priority.core.WorkspaceDaily
 import uk.co.maybeitsadam.priority.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.priority.core.secondsBetween
+import uk.co.maybeitsadam.priority.core.defaultFirstWeekday
 import uk.co.maybeitsadam.priority.core.ListFolder
 import uk.co.maybeitsadam.priority.core.TaskEditorMetadata
 import uk.co.maybeitsadam.priority.core.TaskList
@@ -1587,8 +1588,12 @@ class WorkspaceRepository(
     }
 
     /** Today measured against the week it is part of. */
-    suspend fun workProgress(now: Instant = now(), zone: ZoneId = this.zone): WorkProgress =
-        database.read { workProgress(it, now, zone) }
+    /** Today against its week; [firstWeekday] (1 = Sunday) is Swift's `Calendar.firstWeekday`. */
+    suspend fun workProgress(
+        now: Instant = now(),
+        zone: ZoneId = this.zone,
+        firstWeekday: Int = defaultFirstWeekday(),
+    ): WorkProgress = database.read { workProgress(it, now, zone, firstWeekday) }
 
     fun observeWorkProgress(zone: ZoneId = this.zone): Flow<WorkProgress> =
         database.observe(setOf("tasks", "focus_work_blocks")) { workProgress(it, now(), zone) }

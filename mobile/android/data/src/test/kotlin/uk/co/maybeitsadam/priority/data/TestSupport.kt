@@ -11,10 +11,14 @@ import uk.co.maybeitsadam.priority.data.db.WorkspaceDatabase
 import uk.co.maybeitsadam.priority.data.workspace.WorkspaceRepository
 
 /** A mutable clock, so a test can step time the way the Swift tests pass `now:`. */
-class TestClock(var instant: Instant = Instant.parse("2026-10-02T09:00:00Z")) : Clock() {
+class TestClock(
+    var instant: Instant = Instant.parse("2026-10-02T09:00:00Z"),
+    /** Milliseconds each reading moves the clock on, so default `now`s stay distinct like a real clock's. */
+    var stepMillis: Long = 0,
+) : Clock() {
     override fun getZone(): ZoneId = ZoneOffset.UTC
     override fun withZone(zone: ZoneId?): Clock = this
-    override fun instant(): Instant = instant
+    override fun instant(): Instant = instant.also { instant = instant.plusMillis(stepMillis) }
     fun advance(seconds: Long) {
         instant = instant.plusSeconds(seconds)
     }

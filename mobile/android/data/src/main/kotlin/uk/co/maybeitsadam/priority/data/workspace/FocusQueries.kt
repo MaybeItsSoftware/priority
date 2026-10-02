@@ -30,6 +30,7 @@ import uk.co.maybeitsadam.priority.core.WorkspaceListTree
 import uk.co.maybeitsadam.priority.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.priority.core.WorkspaceTask
 import uk.co.maybeitsadam.priority.core.earned
+import uk.co.maybeitsadam.priority.core.defaultFirstWeekday
 import uk.co.maybeitsadam.priority.data.db.Db
 
 /** A value an edit may leave alone ([Keep]) or set, possibly to null ([To]); Swift's `Int??`. */
@@ -332,8 +333,13 @@ internal fun completionsIn(db: Db, start: Instant, end: Instant): List<Instant> 
     start, end,
 ) { it.instant("completedAt") }
 
-internal fun workProgress(db: Db, now: Instant, zone: ZoneId): WorkProgress {
-    val start = WorkProgressSummary.startOfWeek(now, zone)
+internal fun workProgress(
+    db: Db,
+    now: Instant,
+    zone: ZoneId,
+    firstWeekday: Int = defaultFirstWeekday(),
+): WorkProgress {
+    val start = WorkProgressSummary.startOfWeek(now, zone, firstWeekday)
     val end = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
     if (end <= start) return WorkProgress.EMPTY
     return WorkProgressSummary.summarise(
@@ -341,6 +347,7 @@ internal fun workProgress(db: Db, now: Instant, zone: ZoneId): WorkProgress {
         blocks = workBlocksIn(db, start, end).map { WorkBlockTime(it.seconds, it.recordedAt) },
         now = now,
         zone = zone,
+        firstWeekday = firstWeekday,
     )
 }
 
