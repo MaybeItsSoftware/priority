@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Priority</string>
+    <string name="quick_add">Add a task</string>
+    <string name="quick_add_long">Add a task to Priority</string>
+    <string name="widget_name">Next up</string>
+    <string name="widget_description">The next task and how much of today is left.</string>
+    <string name="focus_channel">Focus block</string>
 </resources>

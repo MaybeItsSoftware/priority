@@ -1,0 +1,8 @@
+<resources>
+    <color name="paper">#FAF8F4</color>
+    <color name="ink">#444054</color>
+    <color name="primary">#007FFF</color>
+    <color name="raised">#FFFFFF</color>
+    <color name="muted">#6E6B7C</color>
+    <color name="border">#E6E4EA</color>
+</resources>

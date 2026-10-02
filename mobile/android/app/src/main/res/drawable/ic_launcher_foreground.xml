@@ -1,0 +1,8 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Three ranked bars and a tick: a priority list. -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M36,38h36a3,3 0,0 1,0 6H36a3,3 0,0 1,0 -6z" />
+    <path android:fillColor="#B3FFFFFF" android:pathData="M36,51h26a3,3 0,0 1,0 6H36a3,3 0,0 1,0 -6z" />
+    <path android:fillColor="#73FFFFFF" android:pathData="M36,64h16a3,3 0,0 1,0 6H36a3,3 0,0 1,0 -6z" />
+    <path android:fillColor="#FF4CC38E" android:pathData="M58,66l5,5 11,-12 -3.5,-3.2 -7.5,8.2 -1.6,-1.7z" />
+</vector>
