@@ -16,6 +16,12 @@ val keystoreProperties = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }
 
+// The sync server new accounts go to. `-PprioritySyncServer=https://…` (or the
+// same key in gradle.properties) builds an app that points somewhere else;
+// Settings can still be told another server at run time.
+val prioritySyncServer = (findProperty("prioritySyncServer") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+    ?: "https://priority-sync.up.railway.app"
+
 android {
     namespace = "uk.co.maybeitsadam.priority"
     compileSdk = 36
@@ -28,6 +34,7 @@ android {
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = (findProperty("versionName") as String?) ?: "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "SYNC_SERVER", "\"$prioritySyncServer\"")
     }
     signingConfigs {
         if (keystoreProperties.isNotEmpty()) {
@@ -53,6 +60,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     testOptions {
         unitTests.isReturnDefaultValues = true

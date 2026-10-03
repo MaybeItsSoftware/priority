@@ -85,6 +85,24 @@ class SyncCredentialCodecTest {
     }
 
     @Test
+    fun keepsTheEmailAndAccountWithTheToken() {
+        val codec = SyncCredentialCodec(FakeCipher())
+        val signedIn = SyncCredentials("https://sync.example.com", "device-1", "secret-token", email = "adam@example.com", accountId = "acct-1")
+        val text = codec.encode(signedIn)
+        assertFalse("the email must not be stored in the clear", "adam@example.com" in text)
+        assertEquals(signedIn, codec.decode(text))
+    }
+
+    @Test
+    fun readsCredentialsSavedBeforeAccounts() {
+        val codec = SyncCredentialCodec(FakeCipher())
+        // What a build before accounts sealed: no email, no account id.
+        val old = codec.encode(credentials).let(codec::decode)
+        assertEquals(null, old?.email)
+        assertEquals(credentials, old)
+    }
+
+    @Test
     fun freshNonceEachTime() {
         val codec = SyncCredentialCodec(FakeCipher())
         assertNotEquals(codec.encode(credentials), codec.encode(credentials))
@@ -113,13 +131,21 @@ class SyncStatusTest {
     }
 
     @Test
+    fun aRevokedTokenReadsAsSignedOutNotAsAFailure() {
+        assertEquals(SyncUiState.SessionExpired, SyncController.describe(creds, SyncEngine.Status.SignedOut, null))
+        assertEquals(SyncUiState.SessionExpired, SyncController.describe(null, null, null, expired = true))
+        assertEquals(SyncUiState.Unpaired, SyncController.describe(null, null, null, expired = false))
+    }
+
+    @Test
     fun describesTheStatusLine() {
         val utc = ZoneOffset.UTC
-        assertEquals("Not set up", SyncStatusText.describe(SyncUiState.Unpaired, now, utc))
-        assertEquals("Paired", SyncStatusText.describe(SyncUiState.Idle(null), now, utc))
+        assertEquals("Not signed in", SyncStatusText.describe(SyncUiState.Unpaired, now, utc))
+        assertEquals("Signed in", SyncStatusText.describe(SyncUiState.Idle(null), now, utc))
         assertEquals("Synced just now", SyncStatusText.describe(SyncUiState.Idle(now.minusSeconds(20)), now, utc))
         assertEquals("Synced at 14:05", SyncStatusText.describe(SyncUiState.Idle(now.minusSeconds(25 * 60)), now, utc))
         assertEquals("Synced 1 Oct 09:00", SyncStatusText.describe(SyncUiState.Idle(Instant.parse("2026-10-01T09:00:00Z")), now, utc))
+        assertEquals("Signed out — sign in again", SyncStatusText.describe(SyncUiState.SessionExpired, now, utc))
         assertEquals("Couldn't sync: offline", SyncStatusText.describe(SyncUiState.Failed("offline"), now, utc))
     }
 

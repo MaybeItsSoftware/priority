@@ -93,11 +93,18 @@ the user's work runs as one undo step, under the same labels the Mac uses.
 Sync is set up like this:
 
 ```kotlin
-val credentials = OkHttpSyncTransport.pair(serverURL, "Adam's Pixel", code = "ABCD-EFGH")
+val credentials = OkHttpSyncTransport.signIn(BuildConfig.SYNC_SERVER, email, password, "Adam's Pixel")
+// or .signUp(…) for a new account, or .pair(serverURL, "ABCD-EFGH", "Adam's Pixel") with a code
 val store = SyncStore(database).also { it.beginSync(credentials.deviceId, credentials.serverURL) }
 val engine = SyncEngine(store, OkHttpSyncTransport(credentials), credentials.deviceId)
 val scheduler = SyncScheduler(engine, scope).apply { watchLocalWrites(store); start() }
 ```
 
-Credentials are deliberately kept outside the database. Storing them, for
-example in an encrypted DataStore, is left to the app.
+Credentials (the token and the account's email, never the password) are kept
+outside the database, sealed with a Keystore key in `SyncCredentialStore`. A
+`401` on push or changes stops the scheduler and Settings asks for the
+password again.
+
+The default server is `https://priority-sync.up.railway.app`. Build against
+another with `./gradlew -PprioritySyncServer=https://… :app:assembleDebug`;
+Settings → Sync can also be pointed elsewhere under "Use a different server".

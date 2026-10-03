@@ -109,7 +109,35 @@ class SyncCredentialStore(
         prefs.edit(commit = true) { remove(KEY) }
     }
 
+    /**
+     * What to prefill once the device is signed out: the server and email
+     * (sealed like the credentials, with no token), and whether the server
+     * signed it out rather than the user.
+     */
+    fun loadSignedOut(): SignedOutHint? {
+        val sealed = prefs.getString(KEY_SIGNED_OUT, null) ?: return null
+        val remembered = codec.decode(sealed) ?: return null
+        return SignedOutHint(remembered.email, remembered.serverURL.takeIf { it.isNotBlank() }, prefs.getBoolean(KEY_EXPIRED, false))
+    }
+
+    fun saveSignedOut(hint: SignedOutHint) {
+        val remembered = SyncCredentials(hint.serverURL ?: "", deviceId = "", token = "", email = hint.email)
+        prefs.edit(commit = true) {
+            putString(KEY_SIGNED_OUT, codec.encode(remembered))
+            putBoolean(KEY_EXPIRED, hint.expired)
+        }
+    }
+
+    fun clearSignedOut() {
+        prefs.edit(commit = true) {
+            remove(KEY_SIGNED_OUT)
+            remove(KEY_EXPIRED)
+        }
+    }
+
     private companion object {
         const val KEY = "sealed"
+        const val KEY_SIGNED_OUT = "signed_out"
+        const val KEY_EXPIRED = "signed_out_expired"
     }
 }

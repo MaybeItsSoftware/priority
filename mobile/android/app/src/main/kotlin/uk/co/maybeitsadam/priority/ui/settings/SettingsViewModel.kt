@@ -27,13 +27,14 @@ object SyncStatusText {
     private val dayClock = DateTimeFormatter.ofPattern("d MMM HH:mm", Locale.UK)
 
     fun describe(state: SyncUiState, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): String = when (state) {
-        SyncUiState.Unpaired -> "Not set up"
+        SyncUiState.Unpaired -> "Not signed in"
+        SyncUiState.SessionExpired -> "Signed out — sign in again"
         SyncUiState.Syncing -> "Syncing…"
         is SyncUiState.Failed -> "Couldn't sync: ${state.message}"
         is SyncUiState.Idle -> {
             val last = state.lastSyncedAt
             when {
-                last == null -> "Paired"
+                last == null -> "Signed in"
                 now.epochSecond - last.epochSecond < 60 -> "Synced just now"
                 last.atZone(zone).toLocalDate() == now.atZone(zone).toLocalDate() -> "Synced at ${clock.format(last.atZone(zone))}"
                 else -> "Synced ${dayClock.format(last.atZone(zone))}"

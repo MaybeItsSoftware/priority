@@ -26,8 +26,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,6 +43,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
@@ -48,8 +52,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -60,6 +67,9 @@ import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.priority.app.CelebrationStyle
+import uk.co.maybeitsadam.priority.core.SyncCredentials
+import uk.co.maybeitsadam.priority.core.SyncDeviceInfo
+import uk.co.maybeitsadam.priority.settings.SignedOutHint
 import uk.co.maybeitsadam.priority.settings.SyncController
 import uk.co.maybeitsadam.priority.settings.SyncPairingLink
 import uk.co.maybeitsadam.priority.settings.SyncUiState
@@ -72,9 +82,9 @@ import uk.co.maybeitsadam.priority.ui.components.PButton
 import uk.co.maybeitsadam.priority.ui.components.PriorityTopBar
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
 import uk.co.maybeitsadam.priority.ui.review.Segmented
-import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 
 /** Theme, celebrations, sync and about. */
 @Composable
@@ -181,57 +191,200 @@ private fun ChoiceRowLike(title: String, trailing: String, onClick: () -> Unit) 
 private fun SyncSection(sync: SyncController) {
     val status by sync.status.collectAsStateWithLifecycle()
     val credentials by sync.credentials.collectAsStateWithLifecycle()
-    val pairing by sync.isPairing.collectAsStateWithLifecycle()
-    val error by sync.pairingError.collectAsStateWithLifecycle()
-    if (credentials != null) PairedSync(sync, status, credentials!!.serverURL) else UnpairedSync(sync, pairing)
-    error?.let {
-        Text(
-            it, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(PriorityTheme.colors.danger.copy(alpha = 0.08f), Metrics.control)
-                .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.danger.copy(alpha = 0.4f)), Metrics.control)
-                .padding(Metrics.md)
-                .testTag("sync_error"),
-        )
+    val signingIn by sync.isSigningIn.collectAsStateWithLifecycle()
+    val error by sync.signInError.collectAsStateWithLifecycle()
+    val hint by sync.signedOut.collectAsStateWithLifecycle()
+    val signedIn = credentials
+    if (signedIn != null) SignedInSync(sync, status, signedIn) else SignedOutSync(sync, signingIn, hint)
+    error?.let { ErrorNote(it, Modifier.testTag("sync_error")) }
+}
+
+@Composable
+private fun ErrorNote(message: String, modifier: Modifier = Modifier) {
+    Text(
+        message, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger,
+        modifier = modifier
+            .fillMaxWidth()
+            .background(PriorityTheme.colors.danger.copy(alpha = 0.08f), Metrics.control)
+            .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.danger.copy(alpha = 0.4f)), Metrics.control)
+            .padding(Metrics.md),
+    )
+}
+
+@Composable
+private fun InfoRow(title: String, modifier: Modifier = Modifier, value: @Composable () -> Unit) {
+    Row(
+        modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md, vertical = Metrics.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Metrics.md),
+    ) {
+        Text(title, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
+        value()
     }
 }
 
 @Composable
-private fun PairedSync(sync: SyncController, status: SyncUiState, serverURL: String) {
+private fun SignedInSync(sync: SyncController, status: SyncUiState, credentials: SyncCredentials) {
     val scope = rememberCoroutineScope()
-    val invite by sync.invite.collectAsStateWithLifecycle()
+    val account by sync.account.collectAsStateWithLifecycle()
     var now by remember { mutableStateOf(Instant.now()) }
-    var makingCode by remember { mutableStateOf(false) }
-    var codeError by remember { mutableStateOf<String?>(null) }
-    var confirmUnpair by remember { mutableStateOf(false) }
+    var confirmSignOut by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
+    var accountError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { while (true) { delay(30_000); now = Instant.now() } }
-    val clipboard = LocalClipboard.current
-    val context = LocalContext.current
+    LaunchedEffect(credentials.deviceId) { accountError = sync.refreshAccount() }
+    val email = account?.email ?: credentials.email
 
     Section("Sync") {
-        Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md), verticalAlignment = Alignment.CenterVertically) {
-            Text("Status", style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
+        InfoRow("Signed in as") {
             Text(
-                SyncStatusText.describe(status, now),
-                style = PriorityTheme.type.small,
-                color = if (status is SyncUiState.Failed) PriorityTheme.colors.danger else PriorityTheme.colors.mutedText,
-                modifier = Modifier.weight(2f, fill = false).testTag("sync_status"),
+                email ?: "this device's account", style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText,
+                modifier = Modifier.weight(2f, fill = false).testTag("sync_email"),
             )
         }
         Hairline(color = PriorityTheme.colors.borderMuted)
-        Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md), verticalAlignment = Alignment.CenterVertically) {
-            Text("Server", style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
-            MonoText(SyncController.hostOf(serverURL))
+        InfoRow("Status") {
+            Text(
+                SyncStatusText.describe(status, now),
+                style = PriorityTheme.type.small,
+                color = if (status is SyncUiState.Failed || status is SyncUiState.SessionExpired) PriorityTheme.colors.danger else PriorityTheme.colors.mutedText,
+                modifier = Modifier.weight(2f, fill = false).testTag("sync_status"),
+            )
+        }
+        if (credentials.serverURL.trimEnd('/') != SyncController.defaultServer.trimEnd('/')) {
+            Hairline(color = PriorityTheme.colors.borderMuted)
+            InfoRow("Server") { MonoText(SyncController.hostOf(credentials.serverURL)) }
         }
         Hairline(color = PriorityTheme.colors.borderMuted)
         Row(Modifier.padding(Metrics.md), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             PButton("Sync now", icon = PIcons.Sync, enabled = status != SyncUiState.Syncing, modifier = Modifier.testTag("sync_now")) { sync.syncNow() }
-            PButton("Unpair", destructive = true, modifier = Modifier.testTag("sync_unpair")) { confirmUnpair = true }
+            PButton("Sign out", modifier = Modifier.testTag("sync_sign_out")) { confirmSignOut = true }
         }
     }
+
+    Section("Devices", footer = "Every device signed in to this account.") {
+        val devices = account?.devices.orEmpty()
+        when {
+            devices.isNotEmpty() -> devices.forEachIndexed { index, device ->
+                if (index > 0) Hairline(color = PriorityTheme.colors.borderMuted)
+                DeviceRow(device, now)
+            }
+            accountError != null -> Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+                Text(accountError!!, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger)
+                PButton("Try again") { scope.launch { accountError = sync.refreshAccount() } }
+            }
+            else -> Text("Loading…", style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, modifier = Modifier.padding(Metrics.md))
+        }
+    }
+
+    AddDeviceSection(sync, now)
+
+    Section("Account", footer = "Deleting the account removes it and everything it synced from the server. Each device keeps its own copy of your tasks.") {
+        Row(Modifier.padding(Metrics.md)) {
+            PButton("Delete account", destructive = true, modifier = Modifier.testTag("sync_delete_account")) { deleting = true }
+        }
+    }
+
+    if (confirmSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            containerColor = PriorityTheme.colors.raised,
+            tonalElevation = 0.dp,
+            shape = Metrics.card,
+            title = { Text("Sign out of sync?", style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink) },
+            text = { Text("Your tasks stay on this device. They stop syncing until you sign in again.", style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText) },
+            confirmButton = {
+                TextButton(onClick = { confirmSignOut = false; sync.signOut() }, modifier = Modifier.testTag("sync_sign_out_confirm")) {
+                    Text("Sign out", color = PriorityTheme.colors.danger)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Cancel", color = PriorityTheme.colors.ink) } },
+        )
+    }
+    if (deleting) DeleteAccountDialog(sync, email) { deleting = false }
+}
+
+@Composable
+private fun DeviceRow(device: SyncDeviceInfo, now: Instant) {
+    val seen = device.lastSeenAt?.let(SyncController::parseExpiry)
+    val detail = buildList {
+        device.platform?.takeIf { it.isNotBlank() }?.let { add(platformName(it)) }
+        when {
+            device.current -> add("this device")
+            seen != null && now.epochSecond - seen.epochSecond < 120 -> add("seen just now")
+            seen != null -> add("last seen ${Format.day(seen)}, ${Format.time(seen)}")
+        }
+    }.joinToString(" · ")
+    Column(
+        Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md, vertical = Metrics.sm).testTag("sync_device"),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(device.name?.takeIf { it.isNotBlank() } ?: "Unnamed device", style = PriorityTheme.type.body, color = PriorityTheme.colors.ink)
+        if (detail.isNotEmpty()) Text(detail, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
+    }
+}
+
+private fun platformName(platform: String): String = when (platform.lowercase()) {
+    "ios" -> "iPhone"
+    "android" -> "Android"
+    "macos", "mac" -> "Mac"
+    else -> platform
+}
+
+@Composable
+private fun DeleteAccountDialog(sync: SyncController, email: String?, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var password by remember { mutableStateOf("") }
+    var working by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = { if (!working) onDismiss() },
+        containerColor = PriorityTheme.colors.raised,
+        tonalElevation = 0.dp,
+        shape = Metrics.card,
+        title = { Text("Delete your account?", style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+                Text(
+                    "This removes ${email ?: "the account"} and everything it synced from the server, and signs out every device. " +
+                        "Each device keeps its own copy of your tasks. Enter your password to confirm.",
+                    style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText,
+                )
+                Field(
+                    password, { password = it; error = null }, "Password", Modifier.testTag("sync_delete_password"),
+                    KeyboardType.Password, secret = true, autofill = ContentType.Password,
+                )
+                error?.let { Text(it, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger) }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !working && password.isNotEmpty(),
+                onClick = {
+                    scope.launch {
+                        working = true
+                        error = sync.deleteAccount(password)
+                        working = false
+                        if (error == null) onDismiss()
+                    }
+                },
+                modifier = Modifier.testTag("sync_delete_confirm"),
+            ) { Text(if (working) "Deleting…" else "Delete account", color = PriorityTheme.colors.danger) }
+        },
+        dismissButton = { TextButton(enabled = !working, onClick = onDismiss) { Text("Cancel", color = PriorityTheme.colors.ink) } },
+    )
+}
+
+@Composable
+private fun AddDeviceSection(sync: SyncController, now: Instant) {
+    val scope = rememberCoroutineScope()
+    val invite by sync.invite.collectAsStateWithLifecycle()
+    var makingCode by remember { mutableStateOf(false) }
+    var codeError by remember { mutableStateOf<String?>(null) }
+    val clipboard = LocalClipboard.current
+    val context = LocalContext.current
     val current = invite?.takeIf { it.expiresAt == null || it.expiresAt.isAfter(now) }
-    Section("Add a device", footer = "A one-time code. The other device scans it, or opens the link.") {
+    Section("Add a device", footer = "A one-time code, so the other device can skip the password. It scans the code, or opens the link.") {
         if (current != null) {
             val link = current.link.url
             Column(Modifier.fillMaxWidth().padding(Metrics.md), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Metrics.md)) {
@@ -255,7 +408,7 @@ private fun PairedSync(sync: SyncController, status: SyncUiState, serverURL: Str
                 PButton(if (makingCode) "Making a code…" else "Add a device", icon = PIcons.QrCode, enabled = !makingCode, modifier = Modifier.testTag("sync_add_device")) {
                     scope.launch {
                         makingCode = true
-                        codeError = sync.makePairingLink().exceptionOrNull()?.let { it.message ?: "Couldn't make a code." }
+                        codeError = sync.makePairingLink().exceptionOrNull()?.let { SyncController.message(it, "Couldn't make a code.") }
                         makingCode = false
                     }
                 }
@@ -263,40 +416,80 @@ private fun PairedSync(sync: SyncController, status: SyncUiState, serverURL: Str
             }
         }
     }
-    if (confirmUnpair) {
-        AlertDialog(
-            onDismissRequest = { confirmUnpair = false },
-            containerColor = PriorityTheme.colors.raised,
-            tonalElevation = 0.dp,
-            shape = Metrics.card,
-            title = { Text("Unpair this device?", style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink) },
-            text = { Text("Your tasks stay on this device. They stop syncing with your other devices.", style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText) },
-            confirmButton = {
-                TextButton(onClick = { confirmUnpair = false; sync.unpair() }, modifier = Modifier.testTag("sync_unpair_confirm")) {
-                    Text("Unpair", color = PriorityTheme.colors.danger)
-                }
-            },
-            dismissButton = { TextButton(onClick = { confirmUnpair = false }) { Text("Cancel", color = PriorityTheme.colors.ink) } },
-        )
-    }
 }
 
 @Composable
-private fun UnpairedSync(sync: SyncController, pairing: Boolean) {
+private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: SignedOutHint?) {
     val scope = rememberCoroutineScope()
+    var email by rememberSaveable(hint?.email) { mutableStateOf(hint?.email.orEmpty()) }
+    var password by rememberSaveable { mutableStateOf("") }
+    var server by rememberSaveable(hint?.serverURL) { mutableStateOf(hint?.serverURL ?: SyncController.defaultServer) }
+    var otherServer by rememberSaveable(hint?.serverURL) {
+        mutableStateOf(hint?.serverURL != null && hint.serverURL.trimEnd('/') != SyncController.defaultServer.trimEnd('/'))
+    }
     var scanning by remember { mutableStateOf(false) }
     var pasted by rememberSaveable { mutableStateOf("") }
-    Section("Sync", footer = "On a paired device, open Settings, then Add a device.") {
+    val ready = !signingIn && email.isNotBlank() && password.isNotEmpty()
+    val target = if (otherServer) server else SyncController.defaultServer
+
+    Section("Sync", footer = "One account keeps your tasks the same on every device. The password needs at least 8 characters.") {
+        if (hint?.expired == true) {
+            Text(
+                "Signed out — sign in again to keep syncing.", style = PriorityTheme.type.small, color = PriorityTheme.colors.danger,
+                modifier = Modifier.padding(start = Metrics.md, end = Metrics.md, top = Metrics.md).testTag("sync_status"),
+            )
+        }
         Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-            Text(if (pairing) "Pairing…" else "Not set up", style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, modifier = Modifier.testTag("sync_status"))
-            PButton("Scan code", icon = PIcons.QrCode, primary = true, enabled = !pairing, modifier = Modifier.fillMaxWidth().testTag("sync_scan")) { scanning = true }
+            Field(
+                email, { email = it; sync.clearSignInError() }, "Email", Modifier.testTag("sync_email_field"),
+                KeyboardType.Email, autofill = ContentType.EmailAddress + ContentType.Username, imeAction = ImeAction.Next,
+            )
+            Field(
+                password, { password = it; sync.clearSignInError() }, "Password", Modifier.testTag("sync_password_field"),
+                KeyboardType.Password, secret = true, autofill = ContentType.Password + ContentType.NewPassword, imeAction = ImeAction.Done,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+                PButton(if (signingIn) "Signing in…" else "Sign in", primary = true, enabled = ready, modifier = Modifier.testTag("sync_sign_in")) {
+                    scope.launch { if (sync.signIn(target, email, password)) password = "" }
+                }
+                PButton("Create account", enabled = ready, modifier = Modifier.testTag("sync_sign_up")) {
+                    scope.launch { if (sync.signUp(target, email, password)) password = "" }
+                }
+            }
+        }
+        Hairline(color = PriorityTheme.colors.borderMuted)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = Metrics.touchTarget)
+                .clickable(role = Role.Button) { otherServer = !otherServer }
+                .padding(horizontal = Metrics.md)
+                .testTag("sync_other_server"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Use a different server", style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
+            Icon(
+                Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = PriorityTheme.colors.mutedText,
+                modifier = Modifier.size(20.dp).rotate(if (otherServer) 180f else 0f),
+            )
+        }
+        if (otherServer) {
+            Column(Modifier.padding(start = Metrics.md, end = Metrics.md, bottom = Metrics.md)) {
+                Field(server, { server = it; sync.clearSignInError() }, "Server address", Modifier.testTag("sync_server_field"), KeyboardType.Uri)
+            }
+        }
+    }
+
+    Section("Pair with a code", footer = "On a device that's signed in, open Settings, then Add a device.") {
+        Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+            PButton("Scan code", icon = PIcons.QrCode, enabled = !signingIn, modifier = Modifier.fillMaxWidth().testTag("sync_scan")) { scanning = true }
             Field(pasted, { pasted = it }, "Or paste a pairing link", Modifier.testTag("sync_paste_field"), KeyboardType.Uri)
-            PButton("Pair", enabled = !pairing && pasted.isNotBlank(), modifier = Modifier.testTag("sync_paste_pair")) {
+            PButton("Pair", enabled = !signingIn && pasted.isNotBlank(), modifier = Modifier.testTag("sync_paste_pair")) {
                 val link = SyncPairingLink.parse(pasted)
                 if (link == null) {
                     sync.pairFromLink(pasted)
                 } else {
-                    sync.clearPairingError()
+                    sync.clearSignInError()
                     scope.launch { if (sync.pair(link)) pasted = "" }
                 }
             }
@@ -321,6 +514,8 @@ private fun Field(
     modifier: Modifier = Modifier,
     keyboard: KeyboardType = KeyboardType.Text,
     secret: Boolean = false,
+    autofill: ContentType? = null,
+    imeAction: ImeAction = ImeAction.Default,
 ) {
     val colors = PriorityTheme.colors
     BasicTextField(
@@ -330,8 +525,16 @@ private fun Field(
         textStyle = PriorityTheme.type.field.copy(color = colors.ink),
         cursorBrush = SolidColor(colors.primary),
         visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard, autoCorrectEnabled = false),
-        modifier = modifier.fillMaxWidth().semantics { contentDescription = placeholder },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboard,
+            autoCorrectEnabled = false,
+            capitalization = KeyboardCapitalization.None,
+            imeAction = imeAction,
+        ),
+        modifier = modifier.fillMaxWidth().semantics {
+            contentDescription = placeholder
+            if (autofill != null) contentType = autofill
+        },
         decorationBox = { inner ->
             Box(
                 Modifier
