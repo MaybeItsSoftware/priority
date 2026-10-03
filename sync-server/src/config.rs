@@ -5,13 +5,14 @@ use std::env;
 pub struct Config {
     pub database_url: String,
     pub port: u16,
-    /// Resend's API key and sender, both needed for password reset; without
-    /// either the server runs and the reset endpoint says it's not set up.
-    pub resend_api_key: Option<String>,
-    pub mail_from: Option<String>,
-    /// Where the reset page is reachable, for the link in the email. Defaults
-    /// to the Railway domain, which Railway sets as `RAILWAY_PUBLIC_DOMAIN`.
-    pub public_url: Option<String>,
+    /// The Supabase project the apps sign in with, `https://<ref>.supabase.co`.
+    /// Its published keys check every access token.
+    pub supabase_url: String,
+    /// The project's legacy HS256 JWT secret, for a project that still signs
+    /// with it. New projects sign with an asymmetric key and need none.
+    pub supabase_jwt_secret: Option<String>,
+    /// The project's secret API key, needed only to delete accounts.
+    pub supabase_secret_key: Option<String>,
 }
 
 fn non_empty(name: &str) -> Option<String> {
@@ -23,18 +24,16 @@ fn non_empty(name: &str) -> Option<String> {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
-    #[error("DATABASE_URL is not set")]
-    MissingDatabaseUrl,
+    #[error("{0} is not set")]
+    Missing(&'static str),
     #[error("PORT is not a port number: {0}")]
     BadPort(String),
 }
 
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
-        let database_url = env::var("DATABASE_URL")
-            .ok()
-            .filter(|value| !value.trim().is_empty())
-            .ok_or(ConfigError::MissingDatabaseUrl)?;
+        let database_url = non_empty("DATABASE_URL").ok_or(ConfigError::Missing("DATABASE_URL"))?;
+        let supabase_url = non_empty("SUPABASE_URL").ok_or(ConfigError::Missing("SUPABASE_URL"))?;
         let port = match env::var("PORT") {
             Ok(value) => value
                 .trim()
@@ -42,17 +41,12 @@ impl Config {
                 .map_err(|_| ConfigError::BadPort(value))?,
             Err(_) => 8080,
         };
-        let public_url = non_empty("PUBLIC_URL")
-            .or_else(|| {
-                non_empty("RAILWAY_PUBLIC_DOMAIN").map(|domain| format!("https://{domain}"))
-            })
-            .map(|url| url.trim_end_matches('/').to_owned());
         Ok(Config {
             database_url,
             port,
-            resend_api_key: non_empty("RESEND_API_KEY"),
-            mail_from: non_empty("MAIL_FROM"),
-            public_url,
+            supabase_url,
+            supabase_jwt_secret: non_empty("SUPABASE_JWT_SECRET"),
+            supabase_secret_key: non_empty("SUPABASE_SECRET_KEY"),
         })
     }
 }

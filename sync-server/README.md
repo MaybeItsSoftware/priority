@@ -13,22 +13,19 @@ nothing about tasks.
 | `src/push.rs` | `POST /v1/push`: one transaction per push, serialised by an advisory lock |
 | `src/changes.rs` | `GET /v1/changes`: the paged feed and its long-poll |
 | `src/notify.rs` | `LISTEN rows_changed`, fanned out to waiting long-polls |
-| `src/accounts.rs` | Sign up, sign in and out, the account's devices, deleting an account |
-| `src/reset.rs` | Password reset: the emailed link and the page it opens |
-| `src/mail.rs` | Sending that email through Resend |
-| `src/pairing.rs` | `POST /v1/pairing-codes` and `POST /v1/pair` |
-| `src/auth.rs` | Bearer tokens, stored as sha256 |
+| `src/auth.rs` | Checking the Supabase access token each request carries |
+| `src/devices.rs` | Registering a device, the account's devices, signing out, deleting an account |
 | `migrations/` | The Postgres schema, applied at boot |
 
 ## Configuration
 
 | Variable | |
 | --- | --- |
-| `DATABASE_URL` | Required. |
+| `DATABASE_URL` | Required. On Supabase, the **session** pooler (port 5432): `LISTEN` needs a session, which the transaction pooler (6543) doesn't keep. The server keeps its tables in a `sync` schema, which the Data API doesn't expose. |
 | `PORT` | Default 8080. |
-| `RESEND_API_KEY` | Resend API key, for password reset emails. Without it (or `MAIL_FROM`) reset answers 503 and everything else works. |
-| `MAIL_FROM` | Sender, on a domain verified in Resend: `Priority <reset@yourdomain>`. |
-| `PUBLIC_URL` | Where the reset page is reached, for the link. Defaults to `https://$RAILWAY_PUBLIC_DOMAIN`, which Railway sets. |
+| `SUPABASE_URL` | Required. The project the apps sign in with, `https://<ref>.supabase.co`. Tokens are checked against its published keys (`/auth/v1/.well-known/jwks.json`). |
+| `SUPABASE_JWT_SECRET` | Only for a project still signing with the legacy shared secret (HS256). |
+| `SUPABASE_SECRET_KEY` | The project's secret API key, used only to delete the Supabase user when an account is deleted. Without it deleting answers 503. |
 | `RUST_LOG` | Log filter, default `info`. Logs are JSON lines. |
 
 ## Running locally

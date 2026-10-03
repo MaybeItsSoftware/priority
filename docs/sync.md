@@ -50,7 +50,7 @@ folder into the table, see [themes](themes.md#the-chosen-theme-follows-you)).
 
 ```sql
 CREATE TABLE sync_control (id INTEGER PRIMARY KEY,
-  recording INTEGER NOT NULL DEFAULT 0,   -- 1 once the device is paired
+  recording INTEGER NOT NULL DEFAULT 0,   -- 1 once the device is signed in
   applying  INTEGER NOT NULL DEFAULT 0);  -- 1 while remote rows are written
 INSERT INTO sync_control (id) VALUES (0);
 
@@ -87,58 +87,33 @@ the row's HLC in the same way.
 
 ## Wire protocol (JSON over HTTPS)
 
-Every request except `/health`, `/v1/accounts`, `/v1/sessions` and `/v1/pair`
-sends `Authorization: Bearer <deviceToken>`. A token belongs to one device on
-one account, and every route reads and writes only that account's rows.
+Accounts are **Supabase Auth** users. The apps sign in with Supabase itself
+(email and password, Google, or Apple), and Supabase handles confirming
+emails and resetting passwords. Every request but `/health` then sends:
+
+- `Authorization: Bearer <Supabase access token>`. The server checks its
+  signature against the project's published keys and takes the account from
+  its `sub`. An expired token gets `401`; the app refreshes it with Supabase
+  and retries, and only a failed refresh means "signed out — sign in again".
+- `X-Priority-Device: <uuid>`, the device's own id, made once and kept.
+  Required on `/v1/push` (every write records its device); used elsewhere to
+  mark the current device.
+
 A value is a JSON `null`, number or string, exactly as SQLite stores it. Dates
 are GRDB's `"yyyy-MM-dd HH:mm:ss.SSS"` text in UTC, and booleans are `0`/`1`.
 
-### Accounts
+### Devices and the account
 
-Anyone can make an account. Signing up, signing in and pairing all answer
-`{ "accountId", "email", "deviceId", "token" }`; the device keeps the token
-and forgets the password.
-
-- `POST /v1/accounts` `{ "email", "password", "deviceName", "platform" }` makes
-  an account and signs the device in. The email is trimmed and lowercased; the
-  password needs 8 characters. `409` if the email is taken, `400` for a bad
-  field.
-- `POST /v1/sessions` takes the same body and signs in. `401 {"error":"wrong
-  email or password"}` for either mistake; `429` after 10 wrong passwords for
-  one email in 15 minutes.
-- `POST /v1/sign-out` forgets the calling device's token. The device keeps its
-  workspace.
+- `POST /v1/devices` `{ "id", "name", "platform" }` records the device on the
+  account. Sent after every sign-in; a device that was on another account
+  moves to this one.
 - `GET /v1/account` returns `{ "accountId", "email", "devices": [{ "id",
   "name", "platform", "createdAt", "lastSeenAt", "current" }] }`.
-- `POST /v1/account/delete` `{ "password" }` deletes the account, its rows and
-  its devices. Every device keeps its local copy.
-
-- `POST /v1/password-reset` `{ "email" }` emails a link to `GET /reset?token=…`,
-  a page the server serves, which sets a new password. The answer is
-  `200 {"ok":true}` whether or not the email has an account (the lookup and
-  the sending happen after answering), `400` for a malformed email, and `503`
-  when the server has no Resend key. A link works once, for an hour, and at
-  most three are sent per account per hour. Setting the password spends every
-  outstanding link and signs out every device on the account.
-
-A `401` on any device route means the token is gone (signed out, or the
-account deleted): the client stops syncing and asks the user to sign in again.
-The Swift client keeps the email beside the token in the Keychain so it can
-offer it back, and marks the stored credentials signed out rather than
-retrying (`SyncSession.Phase.needsSignIn`).
-
-The apps talk to `https://priority-sync.up.railway.app` unless the user names
-another server under "Use a different server" (`SyncServer.defaultURL` in
-`Sources/PrioritySync`).
-
-### `POST /v1/pair`
-Request: `{ "code": "ABCD-EFGH", "deviceName": "Adam's iPhone", "platform": "ios" }`
-Response: as signing in, on the code's account.
-
-A signed-in device mints the code with `POST /v1/pairing-codes`, which returns
-`{ "code": "...", "expiresAt": "<RFC3339>" }`. A code lasts 10 minutes and
-works once. It's the quick way to add a phone when the Mac is already signed
-in; signing in with the email and password does the same.
+- `POST /v1/sign-out` takes the calling device off the list. The app signs out
+  of Supabase itself and keeps its workspace.
+- `POST /v1/account/delete` deletes the account's rows, its devices and the
+  Supabase user. The app asks the user to confirm first. Every device keeps
+  its local copy.
 
 ### `POST /v1/push`
 Request:
@@ -235,19 +210,18 @@ in a long-poll loop while the app is in front, and in background refresh.
 
 ## Server storage (Postgres)
 
+In the `sync` schema of the Supabase project's database, which the Data API
+doesn't expose; RLS is on with no policies besides. `account_id` is the
+Supabase user's id.
+
 ```sql
-CREATE TABLE accounts (id UUID PRIMARY KEY, email TEXT UNIQUE,
-  password_hash TEXT /* argon2id */, created_at TIMESTAMPTZ);
-CREATE TABLE devices (id UUID PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
-  name TEXT, platform TEXT, token_hash TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ, last_seen_at TIMESTAMPTZ);
-CREATE TABLE pairing_codes (code TEXT PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
-  expires_at TIMESTAMPTZ NOT NULL, used_at TIMESTAMPTZ);
+CREATE TABLE devices (id UUID PRIMARY KEY, account_id UUID NOT NULL, name TEXT,
+  platform TEXT, created_at TIMESTAMPTZ, last_seen_at TIMESTAMPTZ);
 CREATE SEQUENCE row_seq;
-CREATE TABLE rows (account_id UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
-  table_name TEXT, row_id TEXT, data JSONB NOT NULL DEFAULT '{}',
-  col_hlc JSONB NOT NULL DEFAULT '{}', deleted BOOLEAN NOT NULL DEFAULT false,
-  deleted_hlc TEXT, seq BIGINT NOT NULL, last_device_id UUID,
-  PRIMARY KEY (account_id, table_name, row_id));
+CREATE TABLE rows (account_id UUID NOT NULL, table_name TEXT, row_id TEXT,
+  data JSONB NOT NULL DEFAULT '{}', col_hlc JSONB NOT NULL DEFAULT '{}',
+  deleted BOOLEAN NOT NULL DEFAULT false, deleted_hlc TEXT, seq BIGINT NOT NULL,
+  last_device_id UUID, PRIMARY KEY (account_id, table_name, row_id));
 CREATE INDEX rows_account_seq ON rows(account_id, seq);
 ```
 

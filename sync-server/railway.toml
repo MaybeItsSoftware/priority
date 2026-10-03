@@ -4,19 +4,15 @@
 # Railway resolves the repo root, where there is no Dockerfile (the root is the
 # macOS app), and fails or builds the wrong thing.
 #
-# Add the **Postgres plugin** to the project, then set the service variables:
+# Set the service variables:
 #
-#   DATABASE_URL=${{Postgres.DATABASE_URL}}
+#   DATABASE_URL=<the Supabase project's session pooler URL, port 5432>
+#   SUPABASE_URL=https://<ref>.supabase.co
+#   SUPABASE_SECRET_KEY=<the project's secret API key, for deleting accounts>
 #
-# DATABASE_URL is required; the server exits at boot without it. PORT is
-# provided by Railway. Anyone can make an account from an app.
-#
-# For password reset emails, also:
-#
-#   RESEND_API_KEY=<from resend.com>
-#   MAIL_FROM=Priority <reset@a-domain-verified-in-resend>
-#
-# Without them the server runs and "forgot password" answers 503.
+# DATABASE_URL and SUPABASE_URL are required; the server exits at boot
+# without them. PORT is provided by Railway. Accounts are Supabase Auth users:
+# people sign up in the apps with email, Google or Apple.
 #
 # No volume: every byte of state is in Postgres. Migrations run at boot.
 # See docs/sync.md for the protocol and sync-server/README.md for running it.

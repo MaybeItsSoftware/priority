@@ -1,6 +1,6 @@
+use priority_sync_server::auth::Verifier;
 use priority_sync_server::config::Config;
-use priority_sync_server::mail::Resend;
-use priority_sync_server::reset::ResetMail;
+use priority_sync_server::devices::{AccountAdmin, SupabaseAdmin};
 use priority_sync_server::{AppState, MIGRATOR, notify, router};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
@@ -19,25 +19,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let config = Config::from_env()?;
-    let reset = match (config.resend_api_key, config.mail_from, config.public_url) {
-        (Some(key), Some(from), Some(public_url)) => Some(Arc::new(ResetMail {
-            mailer: Box::new(Resend::new(key, from)),
-            public_url,
-        })),
-        _ => {
-            tracing::warn!(
-                "password reset is off: set RESEND_API_KEY and MAIL_FROM \
-                 (and PUBLIC_URL when not on Railway)"
-            );
+    let verifier = Arc::new(Verifier::for_project(
+        &config.supabase_url,
+        config.supabase_jwt_secret.as_deref(),
+    ));
+    let admin = match config.supabase_secret_key {
+        Some(key) => {
+            Some(Arc::new(SupabaseAdmin::new(&config.supabase_url, key)) as Arc<dyn AccountAdmin>)
+        }
+        None => {
+            tracing::warn!("deleting accounts is off: set SUPABASE_SECRET_KEY");
             None
         }
     };
 
+    // Supabase's pooler in session mode, or a direct connection: LISTEN needs
+    // a session, so not the transaction pooler on port 6543.
     // Long-polls hold no connection while they wait, so a small pool serves
     // many devices.
+    //
+    // Everything lives in the `sync` schema, which Supabase's Data API
+    // doesn't expose: only this server reads or writes it.
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .acquire_timeout(Duration::from_secs(10))
+        .after_connect(|connection, _| {
+            Box::pin(async move {
+                sqlx::query("CREATE SCHEMA IF NOT EXISTS sync")
+                    .execute(&mut *connection)
+                    .await?;
+                sqlx::query("SET search_path TO sync")
+                    .execute(&mut *connection)
+                    .await?;
+                Ok(())
+            })
+        })
         .connect(&config.database_url)
         .await?;
     MIGRATOR.run(&pool).await?;
@@ -47,8 +63,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (stop, shutdown) = watch::channel(false);
     let state = AppState {
         pool,
-        sign_ins: Arc::default(),
-        reset,
+        verifier,
+        admin,
         changes,
         shutdown,
     };

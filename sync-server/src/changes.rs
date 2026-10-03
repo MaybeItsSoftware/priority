@@ -1,7 +1,7 @@
 //! `GET /v1/changes`: the feed a device pulls other devices' rows from.
 
 use crate::AppState;
-use crate::auth::Device;
+use crate::auth::Caller;
 use crate::error::Result;
 use crate::merge::row_hlc;
 use axum::extract::{Query, State};
@@ -45,7 +45,7 @@ pub struct ChangedRow {
 
 pub async fn changes(
     State(state): State<AppState>,
-    Extension(device): Extension<Device>,
+    Extension(caller): Extension<Caller>,
     Query(query): Query<ChangesQuery>,
 ) -> Result<Json<ChangesResponse>> {
     let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
@@ -59,7 +59,7 @@ pub async fn changes(
         // Marked seen before reading, so a push that commits between the read
         // and the wait below still wakes it.
         woken.borrow_and_update();
-        let page = scan(&state, device.account, since, limit).await?;
+        let page = scan(&state, caller.account, since, limit).await?;
         if !page.rows.is_empty() || page.has_more || Instant::now() >= deadline {
             return Ok(Json(page));
         }

@@ -4,21 +4,18 @@
 //! rows and merges them by per-column last-write-wins. It knows nothing about
 //! tasks, so a schema change on the clients needs no change here.
 //!
-//! Anyone can make an account (`accounts.rs`). Every row, device and pairing
-//! code belongs to one account, and a device only ever sees its own account's
-//! rows.
+//! Accounts are Supabase Auth users (`auth.rs`): the apps sign in with
+//! Supabase and send its access token, and every row and device belongs to
+//! the token's user. A device only ever sees its own account's rows.
 
-pub mod accounts;
 pub mod auth;
 pub mod changes;
 pub mod config;
+pub mod devices;
 pub mod error;
-pub mod mail;
 pub mod merge;
 pub mod notify;
-pub mod pairing;
 pub mod push;
-pub mod reset;
 
 use axum::extract::DefaultBodyLimit;
 use axum::routing::{get, post};
@@ -40,10 +37,11 @@ pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
-    /// Failed sign-ins per email, to stop password guessing.
-    pub sign_ins: Arc<accounts::SignInLimiter>,
-    /// How password reset links are sent; `None` without a Resend key.
-    pub reset: Option<Arc<reset::ResetMail>>,
+    /// Checks the Supabase access token on every request.
+    pub verifier: Arc<auth::Verifier>,
+    /// Deletes Supabase users; `None` without the project's secret key, when
+    /// deleting an account says it isn't set up.
+    pub admin: Option<Arc<dyn devices::AccountAdmin>>,
     /// Bumped whenever any process commits a push. See `notify.rs`.
     pub changes: watch::Receiver<u64>,
     /// Flips to true on SIGTERM so long-polls answer at once rather than
@@ -52,25 +50,20 @@ pub struct AppState {
 }
 
 pub fn router(state: AppState) -> Router {
-    let device_routes = Router::new()
+    let user_routes = Router::new()
         .route("/v1/push", post(push::push))
         .route("/v1/changes", get(changes::changes))
-        .route("/v1/pairing-codes", post(pairing::create_code))
-        .route("/v1/account", get(accounts::account))
-        .route("/v1/account/delete", post(accounts::delete_account))
-        .route("/v1/sign-out", post(accounts::sign_out))
+        .route("/v1/devices", post(devices::register))
+        .route("/v1/account", get(devices::account))
+        .route("/v1/account/delete", post(devices::delete_account))
+        .route("/v1/sign-out", post(devices::sign_out))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
-            auth::require_device,
+            auth::require_user,
         ));
     Router::new()
         .route("/health", get(health))
-        .route("/v1/accounts", post(accounts::sign_up))
-        .route("/v1/sessions", post(accounts::sign_in))
-        .route("/v1/pair", post(pairing::pair))
-        .route("/v1/password-reset", post(reset::request))
-        .route("/reset", get(reset::page).post(reset::submit))
-        .merge(device_routes)
+        .merge(user_routes)
         .layer(DefaultBodyLimit::max(BODY_LIMIT))
         .layer(CompressionLayer::new().gzip(true))
         .layer(TraceLayer::new_for_http())

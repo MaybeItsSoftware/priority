@@ -14,16 +14,10 @@ use serde_json::json;
 pub enum AppError {
     #[error("{0}")]
     BadRequest(String),
-    #[error("missing or unknown bearer token")]
+    #[error("missing, expired or unknown access token")]
     Unauthorized,
-    #[error("wrong email or password")]
-    BadCredentials,
     #[error("{0}")]
     Forbidden(String),
-    #[error("{0}")]
-    Conflict(String),
-    #[error("{0}")]
-    TooManyRequests(String),
     #[error("{0}")]
     Unavailable(String),
     #[error("internal error: {0}")]
@@ -39,10 +33,7 @@ impl IntoResponse for AppError {
         let status = match &self {
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
-            AppError::BadCredentials => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
-            AppError::Conflict(_) => StatusCode::CONFLICT,
-            AppError::TooManyRequests(_) => StatusCode::TOO_MANY_REQUESTS,
             AppError::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,

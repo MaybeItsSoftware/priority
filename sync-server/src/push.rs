@@ -1,7 +1,7 @@
 //! `POST /v1/push`: a device's local changes, merged into the stored rows.
 
 use crate::AppState;
-use crate::auth::Device;
+use crate::auth::{Caller, DEVICE_HEADER};
 use crate::error::{AppError, Result};
 use crate::merge::{self, Change, Op, Outcome, StoredRow};
 use crate::notify::CHANNEL;
@@ -113,12 +113,14 @@ fn validate(change: WireChange) -> Result<Change> {
 
 pub async fn push(
     State(state): State<AppState>,
-    Extension(Device {
-        id: device,
-        account,
-    }): Extension<Device>,
+    Extension(caller): Extension<Caller>,
     Json(request): Json<PushRequest>,
 ) -> Result<Json<PushResponse>> {
+    let account = caller.account;
+    // Every write records its device, so a push has to say which it is.
+    let device = caller
+        .device
+        .ok_or_else(|| AppError::BadRequest(format!("a push needs {DEVICE_HEADER}")))?;
     let changes = request
         .changes
         .into_iter()
