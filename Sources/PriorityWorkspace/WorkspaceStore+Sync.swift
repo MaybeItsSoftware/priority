@@ -29,6 +29,9 @@ extension WorkspaceStore {
     ("focus_queue_items", "id"),
     ("focus_work_blocks", "id"),
     ("focus_awards", "id"),
+    // `v18_themes_and_preferences`. No foreign keys, so their place is free.
+    ("themes", "id"),
+    ("preferences", "key"),
   ]
 
   static func syncKey(for table: String) -> String? {

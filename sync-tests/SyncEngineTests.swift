@@ -189,6 +189,35 @@ final class SyncEngineTests: XCTestCase {
     XCTAssertEqual(try contributions(mac).first?["id"] as String?, try contributions(phone).first?["id"] as String?)
   }
 
+  /// A theme file saved on one device and the choice of it reach the other,
+  /// and a deletion follows them.
+  func testAThemeAndTheChoiceOfItReachTheOtherDevice() async throws {
+    let mac = try device("mac")
+    try mac.store.upsertTheme(id: "user.dusk", json: #"{ "name": "Dusk" }"#)
+    try mac.store.setPreference(WorkspacePreferenceKey.themeSelected, "user.dusk")
+    try mac.store.setPreference(WorkspacePreferenceKey.themeAppearance, "dark")
+    try await mac.engine.sync()
+    let phone = try device("phone")
+    try await phone.engine.sync()
+
+    XCTAssertEqual(try phone.store.themes().map(\.json), [#"{ "name": "Dusk" }"#])
+    XCTAssertEqual(try phone.store.preference(WorkspacePreferenceKey.themeSelected), "user.dusk")
+    XCTAssertEqual(try phone.store.preference(WorkspacePreferenceKey.themeAppearance), "dark")
+
+    // The phone changes its mind; the Mac hears of it.
+    try phone.store.setPreference(WorkspacePreferenceKey.themeAppearance, "system")
+    try phone.store.setPreference(WorkspacePreferenceKey.themeSelected, nil)
+    try await phone.engine.sync()
+    try await mac.engine.sync()
+    XCTAssertEqual(try mac.store.preference(WorkspacePreferenceKey.themeAppearance), "system")
+    XCTAssertNil(try mac.store.preference(WorkspacePreferenceKey.themeSelected))
+
+    try mac.store.deleteTheme(id: "user.dusk")
+    try await mac.engine.sync()
+    try await phone.engine.sync()
+    XCTAssertEqual(try phone.store.themes(), [])
+  }
+
   func testOutboxCoalescesARowsEditsIntoOneChange() throws {
     let mac = try device("mac")
     let inbox = try XCTUnwrap(mac.store.inbox(in: mac.workspaceID))

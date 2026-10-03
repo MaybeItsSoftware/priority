@@ -1138,6 +1138,12 @@ public final class WorkspaceStore: @unchecked Sendable {
       try WorkspaceStore.createSyncTables(db)
       try WorkspaceStore.installSyncTriggers(db)
     }
+    migrator.registerMigration("v18_themes_and_preferences") { db in
+      // Synced, so the outbox triggers are reinstalled to cover them. Not
+      // journalled for undo, so `installChangeLogTriggers` is not.
+      try WorkspaceStore.createThemeAndPreferenceTables(db)
+      try WorkspaceStore.installSyncTriggers(db)
+    }
 
     return migrator
   }()

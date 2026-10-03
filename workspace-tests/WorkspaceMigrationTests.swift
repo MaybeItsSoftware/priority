@@ -27,6 +27,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v15_kanban_board_history",
     "v16_task_completion_time",
     "v17_sync",
+    "v18_themes_and_preferences",
   ]
 
   private var directoryURL: URL!
