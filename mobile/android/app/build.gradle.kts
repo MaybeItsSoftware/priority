@@ -22,6 +22,17 @@ val keystoreProperties = Properties().apply {
 val prioritySyncServer = (findProperty("prioritySyncServer") as String?)?.trim()?.takeIf { it.isNotEmpty() }
     ?: "https://priority-sync.up.railway.app"
 
+// Accounts are Supabase Auth users (docs/sync.md). The publishable key is made
+// to ship in apps. Each can be pointed elsewhere with a gradle property.
+fun stringProperty(name: String): String? = (findProperty(name) as String?)?.trim()?.takeIf { it.isNotEmpty() }
+val prioritySupabaseUrl = stringProperty("prioritySupabaseUrl") ?: "https://rsckzmldfpfjdrvulwke.supabase.co"
+val prioritySupabaseKey = stringProperty("prioritySupabaseKey") ?: "sb_publishable_htC171zOquUGx7bBi8MrIQ_ZuIdqL5U"
+
+// The Google Cloud *Web* OAuth client id that Sign in with Google asks for an
+// ID token for (Supabase checks the token's audience against it). Empty hides
+// the Google button.
+val priorityGoogleWebClientId = stringProperty("priorityGoogleWebClientId") ?: ""
+
 android {
     namespace = "uk.co.maybeitsadam.priority"
     compileSdk = 36
@@ -35,6 +46,9 @@ android {
         versionName = (findProperty("versionName") as String?) ?: "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SYNC_SERVER", "\"$prioritySyncServer\"")
+        buildConfigField("String", "SUPABASE_URL", "\"$prioritySupabaseUrl\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$prioritySupabaseKey\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$priorityGoogleWebClientId\"")
     }
     signingConfigs {
         if (keystoreProperties.isNotEmpty()) {
@@ -99,11 +113,11 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-    implementation(libs.mlkit.barcode.scanning)
-    implementation(libs.zxing.core)
+    implementation(libs.supabase.auth)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.googleid)
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.profileinstaller)

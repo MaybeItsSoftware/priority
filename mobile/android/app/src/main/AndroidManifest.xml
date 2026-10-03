@@ -6,9 +6,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.CAMERA" />
-
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".PriorityApplication"
@@ -34,11 +31,13 @@
                 <action android:name="uk.co.maybeitsadam.priority.QUICK_ADD" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- Where Supabase sends the browser back after Sign in with Apple, an
+                 email confirmation or a password reset, with a PKCE code to exchange. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="priority-sync" android:host="pair" />
+                <data android:scheme="priority" android:host="auth-callback" />
             </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"

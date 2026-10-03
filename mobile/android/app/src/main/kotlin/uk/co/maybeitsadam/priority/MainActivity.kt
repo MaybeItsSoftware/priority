@@ -18,7 +18,7 @@ import uk.co.maybeitsadam.priority.core.theme.ThemeAppearance
 import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.ResolvedTheme
 
-/** The one activity. Edge to edge; intents (quick add, tabs, pairing links) go to the shell. */
+/** The one activity. Edge to edge; intents (quick add, tabs, sign-in redirects) go to the shell. */
 class MainActivity : ComponentActivity() {
     private var pendingIntent by mutableStateOf<Intent?>(null)
 

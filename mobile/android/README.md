@@ -90,21 +90,31 @@ Every read is a suspend function. Most also have an `observe…` variant that
 returns a `Flow` and re-queries when a write touches its tables. Every edit to
 the user's work runs as one undo step, under the same labels the Mac uses.
 
-Sync is set up like this:
+Accounts are Supabase Auth users (docs/sync.md). `SupabaseAccounts` signs in
+with supabase-kt — email and password, Google through Credential Manager, or
+Apple in a Custom Tab that comes back to `priority://auth-callback` — and
+hands the transport its tokens. Sync is then set up like this:
 
 ```kotlin
-val credentials = OkHttpSyncTransport.signIn(BuildConfig.SYNC_SERVER, email, password, "Adam's Pixel")
-// or .signUp(…) for a new account, or .pair(serverURL, "ABCD-EFGH", "Adam's Pixel") with a code
-val store = SyncStore(database).also { it.beginSync(credentials.deviceId, credentials.serverURL) }
-val engine = SyncEngine(store, OkHttpSyncTransport(credentials), credentials.deviceId)
+val deviceId = credentialStore.deviceId()                // a uuid, made once and kept
+val transport = OkHttpSyncTransport(BuildConfig.SYNC_SERVER, deviceId, accounts.tokens)
+transport.registerDevice("Adam's Pixel")                 // POST /v1/devices, after every sign-in
+val store = SyncStore(database).also { it.beginSync(deviceId, BuildConfig.SYNC_SERVER) }
+val engine = SyncEngine(store, transport, deviceId)
 val scheduler = SyncScheduler(engine, scope).apply { watchLocalWrites(store); start() }
 ```
 
-Credentials (the token and the account's email, never the password) are kept
-outside the database, sealed with a Keystore key in `SyncCredentialStore`. A
-`401` on push or changes stops the scheduler and Settings asks for the
-password again.
+Every request sends `Authorization: Bearer <access token>` and
+`X-Priority-Device`. The token is refreshed before a request when it is about
+to expire, and once more on a `401`; only a refresh Supabase refuses stops the
+scheduler and has Settings ask for a sign-in. The session (never the
+password) is kept outside the database, sealed with a Keystore key in
+`SyncCredentialStore`.
 
 The default server is `https://priority-sync.up.railway.app`. Build against
 another with `./gradlew -PprioritySyncServer=https://… :app:assembleDebug`;
 Settings → Sync can also be pointed elsewhere under "Use a different server".
+The Supabase project is `-PprioritySupabaseUrl=…` and `-PprioritySupabaseKey=…`
+(the publishable key). Sign in with Google needs the Google Cloud **Web**
+OAuth client id as `-PpriorityGoogleWebClientId=…` (or in
+`~/.gradle/gradle.properties`); without it the Google button is hidden.

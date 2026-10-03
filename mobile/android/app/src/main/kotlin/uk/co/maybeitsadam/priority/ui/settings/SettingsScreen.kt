@@ -1,7 +1,5 @@
 package uk.co.maybeitsadam.priority.ui.settings
 
-import android.content.ClipData
-import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,7 +26,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -47,8 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -70,9 +65,9 @@ import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.priority.app.CelebrationStyle
 import uk.co.maybeitsadam.priority.core.SyncCredentials
 import uk.co.maybeitsadam.priority.core.SyncDeviceInfo
+import uk.co.maybeitsadam.priority.settings.GoogleSignIn
 import uk.co.maybeitsadam.priority.settings.SignedOutHint
 import uk.co.maybeitsadam.priority.settings.SyncController
-import uk.co.maybeitsadam.priority.settings.SyncPairingLink
 import uk.co.maybeitsadam.priority.settings.SyncUiState
 import uk.co.maybeitsadam.priority.ui.components.Card
 import uk.co.maybeitsadam.priority.ui.components.Format
@@ -213,6 +208,18 @@ private fun ErrorNote(message: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun InfoNote(message: String, modifier: Modifier = Modifier) {
+    Text(
+        message, style = PriorityTheme.type.small, color = PriorityTheme.colors.ink,
+        modifier = modifier
+            .fillMaxWidth()
+            .background(PriorityTheme.colors.primary.copy(alpha = 0.08f), Metrics.control)
+            .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.primary.copy(alpha = 0.4f)), Metrics.control)
+            .padding(Metrics.md),
+    )
+}
+
+@Composable
 private fun InfoRow(title: String, modifier: Modifier = Modifier, value: @Composable () -> Unit) {
     Row(
         modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md, vertical = Metrics.sm),
@@ -228,9 +235,11 @@ private fun InfoRow(title: String, modifier: Modifier = Modifier, value: @Compos
 private fun SignedInSync(sync: SyncController, status: SyncUiState, credentials: SyncCredentials) {
     val scope = rememberCoroutineScope()
     val account by sync.account.collectAsStateWithLifecycle()
+    val choosingPassword by sync.choosingPassword.collectAsStateWithLifecycle()
     var now by remember { mutableStateOf(Instant.now()) }
     var confirmSignOut by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
+    var changingPassword by remember { mutableStateOf(false) }
     var accountError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { while (true) { delay(30_000); now = Instant.now() } }
     LaunchedEffect(credentials.deviceId) { accountError = sync.refreshAccount() }
@@ -263,7 +272,7 @@ private fun SignedInSync(sync: SyncController, status: SyncUiState, credentials:
         }
     }
 
-    Section("Devices", footer = "Every device signed in to this account.") {
+    Section("Devices", footer = "Every device signed in to this account. To add one, sign in on it with the same account.") {
         val devices = account?.devices.orEmpty()
         when {
             devices.isNotEmpty() -> devices.forEachIndexed { index, device ->
@@ -278,10 +287,9 @@ private fun SignedInSync(sync: SyncController, status: SyncUiState, credentials:
         }
     }
 
-    AddDeviceSection(sync, now)
-
     Section("Account", footer = "Deleting the account removes it and everything it synced from the server. Each device keeps its own copy of your tasks.") {
-        Row(Modifier.padding(Metrics.md)) {
+        Row(Modifier.padding(Metrics.md), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+            PButton("Change password", modifier = Modifier.testTag("sync_change_password")) { changingPassword = true }
             PButton("Delete account", destructive = true, modifier = Modifier.testTag("sync_delete_account")) { deleting = true }
         }
     }
@@ -303,6 +311,12 @@ private fun SignedInSync(sync: SyncController, status: SyncUiState, credentials:
         )
     }
     if (deleting) DeleteAccountDialog(sync, email) { deleting = false }
+    if (changingPassword || choosingPassword) {
+        NewPasswordDialog(sync, recovering = choosingPassword) {
+            changingPassword = false
+            sync.dismissChoosingPassword()
+        }
+    }
 }
 
 @Composable
@@ -335,7 +349,6 @@ private fun platformName(platform: String): String = when (platform.lowercase())
 @Composable
 private fun DeleteAccountDialog(sync: SyncController, email: String?, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
-    var password by remember { mutableStateOf("") }
     var working by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     AlertDialog(
@@ -348,23 +361,19 @@ private fun DeleteAccountDialog(sync: SyncController, email: String?, onDismiss:
             Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
                 Text(
                     "This removes ${email ?: "the account"} and everything it synced from the server, and signs out every device. " +
-                        "Each device keeps its own copy of your tasks. Enter your password to confirm.",
+                        "Each device keeps its own copy of your tasks. This can't be undone.",
                     style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText,
-                )
-                Field(
-                    password, { password = it; error = null }, "Password", Modifier.testTag("sync_delete_password"),
-                    KeyboardType.Password, secret = true, autofill = ContentType.Password,
                 )
                 error?.let { Text(it, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger) }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = !working && password.isNotEmpty(),
+                enabled = !working,
                 onClick = {
                     scope.launch {
                         working = true
-                        error = sync.deleteAccount(password)
+                        error = sync.deleteAccount()
                         working = false
                         if (error == null) onDismiss()
                     }
@@ -377,65 +386,66 @@ private fun DeleteAccountDialog(sync: SyncController, email: String?, onDismiss:
 }
 
 @Composable
-private fun AddDeviceSection(sync: SyncController, now: Instant) {
+private fun NewPasswordDialog(sync: SyncController, recovering: Boolean, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
-    val invite by sync.invite.collectAsStateWithLifecycle()
-    var makingCode by remember { mutableStateOf(false) }
-    var codeError by remember { mutableStateOf<String?>(null) }
-    val clipboard = LocalClipboard.current
-    val context = LocalContext.current
-    val current = invite?.takeIf { it.expiresAt == null || it.expiresAt.isAfter(now) }
-    Section("Add a device", footer = "A one-time code, so the other device can skip the password. It scans the code, or opens the link.") {
-        if (current != null) {
-            val link = current.link.url
-            Column(Modifier.fillMaxWidth().padding(Metrics.md), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Metrics.md)) {
-                QrImage(link, Modifier.size(224.dp))
-                current.expiresAt?.let {
-                    Text("Scan it on the other device. Expires at ${Format.time(it)}.", style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
-                }
-                MonoText(link, style = PriorityTheme.type.monoSmall, modifier = Modifier.testTag("pairing_link"))
-                Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-                    PButton("Copy link", icon = PIcons.Copy) {
-                        scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Pairing link", link))) }
-                    }
-                    PButton("Share", icon = Icons.Filled.Share) {
-                        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, link)
-                        context.startActivity(Intent.createChooser(send, "Share pairing link"))
-                    }
-                }
+    var password by remember { mutableStateOf("") }
+    var working by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = { if (!working) onDismiss() },
+        containerColor = PriorityTheme.colors.raised,
+        tonalElevation = 0.dp,
+        shape = Metrics.card,
+        title = {
+            Text(if (recovering) "Choose a new password" else "Change password", style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+                Text(
+                    "You'll sign in with it on your other devices. It needs at least 8 characters.",
+                    style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText,
+                )
+                Field(
+                    password, { password = it; error = null }, "New password", Modifier.testTag("sync_new_password"),
+                    KeyboardType.Password, secret = true, autofill = ContentType.NewPassword,
+                )
+                error?.let { Text(it, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger) }
             }
-        } else {
-            Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-                PButton(if (makingCode) "Making a code…" else "Add a device", icon = PIcons.QrCode, enabled = !makingCode, modifier = Modifier.testTag("sync_add_device")) {
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !working && password.isNotEmpty(),
+                onClick = {
                     scope.launch {
-                        makingCode = true
-                        codeError = sync.makePairingLink().exceptionOrNull()?.let { SyncController.message(it, "Couldn't make a code.") }
-                        makingCode = false
+                        working = true
+                        error = sync.setPassword(password)
+                        working = false
+                        if (error == null) onDismiss()
                     }
-                }
-                codeError?.let { Text(it, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger) }
-            }
-        }
-    }
+                },
+                modifier = Modifier.testTag("sync_new_password_save"),
+            ) { Text(if (working) "Saving…" else "Save", color = PriorityTheme.colors.primary) }
+        },
+        dismissButton = { TextButton(enabled = !working, onClick = onDismiss) { Text("Not now", color = PriorityTheme.colors.ink) } },
+    )
 }
 
 @Composable
 private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: SignedOutHint?) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var email by rememberSaveable(hint?.email) { mutableStateOf(hint?.email.orEmpty()) }
     var password by rememberSaveable { mutableStateOf("") }
     var server by rememberSaveable(hint?.serverURL) { mutableStateOf(hint?.serverURL ?: SyncController.defaultServer) }
     var otherServer by rememberSaveable(hint?.serverURL) {
         mutableStateOf(hint?.serverURL != null && hint.serverURL.trimEnd('/') != SyncController.defaultServer.trimEnd('/'))
     }
-    var scanning by remember { mutableStateOf(false) }
-    var pasted by rememberSaveable { mutableStateOf("") }
     val requestingReset by sync.isRequestingReset.collectAsStateWithLifecycle()
-    val resetNotice by sync.passwordResetNotice.collectAsStateWithLifecycle()
-    val ready =!signingIn && email.isNotBlank() && password.isNotEmpty()
+    val notice by sync.notice.collectAsStateWithLifecycle()
+    val ready = !signingIn && email.isNotBlank() && password.isNotEmpty()
     val target = if (otherServer) server else SyncController.defaultServer
 
-    Section("Sync", footer = "One account keeps your tasks the same on every device. The password needs at least 8 characters.") {
+    Section("Sync", footer = "One account keeps your tasks the same on every device. A password needs at least 8 characters.") {
         if (hint?.expired == true) {
             Text(
                 "Signed out — sign in again to keep syncing.", style = PriorityTheme.type.small, color = PriorityTheme.colors.danger,
@@ -456,7 +466,7 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
                     scope.launch { if (sync.signIn(target, email, password)) password = "" }
                 }
                 PButton("Create account", enabled = ready, modifier = Modifier.testTag("sync_sign_up")) {
-                    scope.launch { if (sync.signUp(target, email, password)) password = "" }
+                    scope.launch { sync.signUp(target, email, password) }
                 }
             }
             Text(
@@ -471,16 +481,17 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
                     .wrapContentHeight(Alignment.CenterVertically)
                     .testTag("sync_forgot_password"),
             )
-            resetNotice?.let {
-                Text(
-                    it, style = PriorityTheme.type.small, color = PriorityTheme.colors.ink,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(PriorityTheme.colors.primary.copy(alpha = 0.08f), Metrics.control)
-                        .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.primary.copy(alpha = 0.4f)), Metrics.control)
-                        .padding(Metrics.md)
-                        .testTag("sync_reset_notice"),
-                )
+            notice?.let { InfoNote(it, Modifier.testTag("sync_notice")) }
+        }
+        Hairline(color = PriorityTheme.colors.borderMuted)
+        Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+            if (GoogleSignIn.isConfigured) {
+                PButton("Sign in with Google", enabled = !signingIn, modifier = Modifier.fillMaxWidth().testTag("sync_google")) {
+                    scope.launch { sync.signInWithGoogle(context, target) }
+                }
+            }
+            PButton("Sign in with Apple", enabled = !signingIn, modifier = Modifier.fillMaxWidth().testTag("sync_apple")) {
+                scope.launch { sync.signInWithApple(target) }
             }
         }
         Hairline(color = PriorityTheme.colors.borderMuted)
@@ -504,31 +515,6 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
                 Field(server, { server = it; sync.clearSignInError() }, "Server address", Modifier.testTag("sync_server_field"), KeyboardType.Uri)
             }
         }
-    }
-
-    Section("Pair with a code", footer = "On a device that's signed in, open Settings, then Add a device.") {
-        Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-            PButton("Scan code", icon = PIcons.QrCode, enabled = !signingIn, modifier = Modifier.fillMaxWidth().testTag("sync_scan")) { scanning = true }
-            Field(pasted, { pasted = it }, "Or paste a pairing link", Modifier.testTag("sync_paste_field"), KeyboardType.Uri)
-            PButton("Pair", enabled = !signingIn && pasted.isNotBlank(), modifier = Modifier.testTag("sync_paste_pair")) {
-                val link = SyncPairingLink.parse(pasted)
-                if (link == null) {
-                    sync.pairFromLink(pasted)
-                } else {
-                    sync.clearSignInError()
-                    scope.launch { if (sync.pair(link)) pasted = "" }
-                }
-            }
-        }
-    }
-    if (scanning) {
-        PairingScanner(
-            onLink = { link ->
-                scanning = false
-                scope.launch { sync.pair(link) }
-            },
-            onDismiss = { scanning = false },
-        )
     }
 }
 

@@ -1,105 +1,50 @@
 package uk.co.maybeitsadam.priority.settings
 
+import java.security.SecureRandom
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.co.maybeitsadam.priority.core.SyncCredentials
 import uk.co.maybeitsadam.priority.data.sync.SyncEngine
 import uk.co.maybeitsadam.priority.ui.settings.SyncStatusText
 
-class SyncPairingLinkTest {
-    @Test
-    fun formatsAsSwiftDoes() {
-        val link = SyncPairingLink("https://sync.example.com:8443/base", "ABC-123")
-        assertEquals("priority-sync://pair?server=https://sync.example.com:8443/base&code=ABC-123", link.url)
+/** XOR with a fixed byte and a counter IV: reversible, and not the identity. */
+private class FakeCipher : CredentialCipher {
+    private var counter = 0
+    override fun seal(plaintext: ByteArray): SealedBytes {
+        val iv = byteArrayOf((++counter).toByte())
+        return SealedBytes(iv, ByteArray(plaintext.size) { (plaintext[it].toInt() xor 0x5A xor iv[0].toInt()).toByte() })
     }
 
-    @Test
-    fun encodesWhatAQueryValueCannotHold() {
-        val link = SyncPairingLink("https://example.com/a b", "x&y=z#")
-        assertEquals("priority-sync://pair?server=https://example.com/a%20b&code=x%26y%3Dz%23", link.url)
-        assertEquals(link, SyncPairingLink.parse(link.url))
-    }
-
-    @Test
-    fun parsesAndRoundTrips() {
-        val parsed = SyncPairingLink.parse("  priority-sync://pair?server=http://10.0.0.2:8080&code=K7Q2  ")
-        assertEquals(SyncPairingLink("http://10.0.0.2:8080", "K7Q2"), parsed)
-        assertEquals(parsed, SyncPairingLink.parse(parsed!!.url))
-    }
-
-    @Test
-    fun takesTheFirstOfRepeatedItemsAndIgnoresOthers() {
-        val parsed = SyncPairingLink.parse("priority-sync://pair/?extra=1&code=one&server=https://a.example&code=two#frag")
-        assertEquals(SyncPairingLink("https://a.example", "one"), parsed)
-    }
-
-    @Test
-    fun keepsPlusAsPlus() {
-        assertEquals("a+b", SyncPairingLink.parse("priority-sync://pair?server=https://x.example&code=a+b")?.code)
-    }
-
-    @Test
-    fun rejectsWhatSwiftRejects() {
-        listOf(
-            "priority-sync://pair?server=ftp://x.example&code=abc",
-            "priority-sync://pair?server=x.example&code=abc",
-            "priority-sync://pair?server=https://x.example&code=",
-            "priority-sync://pair?server=https://x.example",
-            "priority-sync://pair?code=abc",
-            "priority-sync://other?server=https://x.example&code=abc",
-            "https://pair?server=https://x.example&code=abc",
-            "PRIORITY-SYNC://pair?server=https://x.example&code=abc",
-            "priority-sync:pair?server=https://x.example&code=abc",
-            "priority-sync://pair?server=https://x.example&code=%zz",
-            "",
-        ).forEach { assertNull(it, SyncPairingLink.parse(it)) }
-    }
+    override fun open(sealed: SealedBytes): ByteArray =
+        ByteArray(sealed.ciphertext.size) { (sealed.ciphertext[it].toInt() xor 0x5A xor sealed.iv[0].toInt()).toByte() }
 }
 
 class SyncCredentialCodecTest {
-    /** XOR with a fixed byte and a counter IV: reversible, and not the identity. */
-    private class FakeCipher : CredentialCipher {
-        private var counter = 0
-        override fun seal(plaintext: ByteArray): SealedBytes {
-            val iv = byteArrayOf((++counter).toByte())
-            return SealedBytes(iv, ByteArray(plaintext.size) { (plaintext[it].toInt() xor 0x5A xor iv[0].toInt()).toByte() })
-        }
-
-        override fun open(sealed: SealedBytes): ByteArray =
-            ByteArray(sealed.ciphertext.size) { (sealed.ciphertext[it].toInt() xor 0x5A xor sealed.iv[0].toInt()).toByte() }
-    }
-
-    private val credentials = SyncCredentials("https://sync.example.com", "device-1", "secret-token")
+    private val credentials = SyncCredentials("https://sync.example.com", "7d1f3c2a-0000-4000-8000-000000000001", "me@example.com", "acct-1")
 
     @Test
     fun roundTrips() {
         val codec = SyncCredentialCodec(FakeCipher())
         val text = codec.encode(credentials)
-        assertFalse("the token must not be stored in the clear", "secret-token" in text)
+        assertFalse("the email must not be stored in the clear", "me@example.com" in text)
         assertEquals(credentials, codec.decode(text))
     }
 
     @Test
-    fun keepsTheEmailAndAccountWithTheToken() {
+    fun sealsTheSupabaseSession() {
         val codec = SyncCredentialCodec(FakeCipher())
-        val signedIn = SyncCredentials("https://sync.example.com", "device-1", "secret-token", email = "adam@example.com", accountId = "acct-1")
-        val text = codec.encode(signedIn)
-        assertFalse("the email must not be stored in the clear", "adam@example.com" in text)
-        assertEquals(signedIn, codec.decode(text))
-    }
-
-    @Test
-    fun readsCredentialsSavedBeforeAccounts() {
-        val codec = SyncCredentialCodec(FakeCipher())
-        // What a build before accounts sealed: no email, no account id.
-        val old = codec.encode(credentials).let(codec::decode)
-        assertEquals(null, old?.email)
-        assertEquals(credentials, old)
+        val session = """{"access_token":"secret-access","refresh_token":"secret-refresh"}"""
+        val text = codec.seal(session)
+        assertFalse("secret-access" in text)
+        assertFalse("secret-refresh" in text)
+        assertEquals(session, codec.open(text))
     }
 
     @Test
@@ -109,16 +54,68 @@ class SyncCredentialCodecTest {
     }
 
     @Test
-    fun corruptOrForeignTextReadsAsUnpaired() {
+    fun corruptOrForeignTextReadsAsSignedOut() {
         val codec = SyncCredentialCodec(FakeCipher())
         assertNull(codec.decode("not json"))
         assertNull(codec.decode("""{"v":2,"iv":"AQ==","ciphertext":"AQ=="}"""))
         assertNull(codec.decode("""{"v":1,"iv":"AQ==","ciphertext":"AAAA"}"""))
+        assertNull(codec.open("not json"))
+    }
+
+    @Test
+    fun readsWhatABuildBeforeSupabaseSealedWithoutItsToken() {
+        val codec = SyncCredentialCodec(FakeCipher())
+        val old = codec.seal(
+            """{"serverURL":"https://sync.example.com","deviceId":"7d1f3c2a-0000-4000-8000-000000000009","token":"old-token","email":"me@example.com","accountId":"acct-1"}""",
+        )
+        assertEquals(
+            LegacySignIn("https://sync.example.com", "me@example.com", "7d1f3c2a-0000-4000-8000-000000000009"),
+            codec.decodeLegacy(old),
+        )
+        // Credentials from before accounts had no email.
+        val older = codec.seal("""{"serverURL":"https://sync.example.com","deviceId":"d","token":"t"}""")
+        assertNull(codec.decodeLegacy(older)!!.email)
+        // What this build seals has no token, so it isn't mistaken for the old kind.
+        assertNull(codec.decodeLegacy(codec.encode(credentials)))
+    }
+}
+
+class SyncDeviceIdTest {
+    @Test
+    fun keepsAnOldIdOnlyWhenTheServerWouldTakeIt() {
+        val old = "7d1f3c2a-0000-4000-8000-000000000009"
+        assertEquals(old, SyncCredentialStore.stableDeviceId(old))
+        listOf(null, "", "device-1", "1-1-1-1-1").forEach { candidate ->
+            val made = SyncCredentialStore.stableDeviceId(candidate)
+            assertNotEquals(candidate, made)
+            assertEquals(made, UUID.fromString(made).toString())
+        }
+    }
+}
+
+class GoogleSignInNonceTest {
+    @Test
+    fun googleIsGivenTheSha256OfTheNonceSupabaseIsGiven() {
+        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", GoogleSignIn.sha256Hex("abc"))
+        val nonce = GoogleSignIn.newNonce(SecureRandom())
+        assertEquals(64, nonce.length)
+        assertTrue(nonce.all { it in "0123456789abcdef" })
+        assertNotEquals(nonce, GoogleSignIn.newNonce(SecureRandom()))
+    }
+}
+
+class SupabaseMessagesTest {
+    @Test
+    fun knownCodesReadInTheAppsWordsAndTheRestAsSupabaseSaysThem() {
+        assertEquals("Wrong email or password.", SupabaseAccounts.describe("invalid_credentials", "Invalid login credentials"))
+        assertEquals("There's already an account for that email. Sign in instead.", SupabaseAccounts.describe("user_already_exists", "User already registered"))
+        assertEquals("Signups not allowed for this instance.", SupabaseAccounts.describe("signup_disabled", "Signups not allowed for this instance"))
+        assertEquals("Something_odd.", SupabaseAccounts.describe("something_odd", null))
     }
 }
 
 class SyncStatusTest {
-    private val creds = SyncCredentials("https://x", "d", "t")
+    private val creds = SyncCredentials("https://x", "d")
     private val now = Instant.parse("2026-10-02T14:30:00Z")
 
     @Test
@@ -131,10 +128,11 @@ class SyncStatusTest {
     }
 
     @Test
-    fun aRevokedTokenReadsAsSignedOutNotAsAFailure() {
+    fun aRefusedRefreshReadsAsSignedOutNotAsAFailure() {
         assertEquals(SyncUiState.SessionExpired, SyncController.describe(creds, SyncEngine.Status.SignedOut, null))
         assertEquals(SyncUiState.SessionExpired, SyncController.describe(null, null, null, expired = true))
         assertEquals(SyncUiState.Unpaired, SyncController.describe(null, null, null, expired = false))
+        assertEquals("Signed out — sign in again", SyncStatusText.describe(SyncController.describe(creds, SyncEngine.Status.SignedOut, null)))
     }
 
     @Test
@@ -157,10 +155,19 @@ class SyncStatusTest {
     }
 
     @Test
-    fun thePasswordResetNoticeNamesTheEmailWithoutSayingTheAccountExists() {
+    fun checksTheServerAddressScheme() {
+        assertTrue(SyncController.isHttpURL("https://sync.example.com"))
+        assertTrue(SyncController.isHttpURL("http://10.0.0.2:8080"))
+        assertFalse(SyncController.isHttpURL("ftp://x.example"))
+        assertFalse(SyncController.isHttpURL("x.example"))
+    }
+
+    @Test
+    fun theNoticesNameTheEmailWithoutSayingTheAccountExists() {
         assertEquals(
-            "If there's an account for me@example.com, we've sent a link to reset its password. It works for an hour.",
+            "If there's an account for me@example.com, we've sent it a link. Open it on this device to choose a new password.",
             SyncController.passwordResetNotice("me@example.com"),
         )
+        assertTrue(SyncController.confirmEmailNotice("me@example.com").startsWith("Check your email to confirm."))
     }
 }

@@ -86,34 +86,9 @@ data class SyncIncomingRow(
 @Serializable
 data class SyncChangesResponse(val rows: List<SyncIncomingRow>, val cursor: Long, val hasMore: Boolean)
 
-/** `POST /v1/accounts` (sign up) and `POST /v1/sessions` (sign in). */
+/** `POST /v1/devices`: records this device on the account, after every sign-in. */
 @Serializable
-data class SyncAccountRequest(
-    val email: String,
-    val password: String,
-    val deviceName: String,
-    val platform: String,
-)
-
-/** `POST /v1/pair`: a one-time code minted by a device already signed in. */
-@Serializable
-data class SyncPairRequest(
-    val code: String,
-    val deviceName: String,
-    val platform: String,
-)
-
-/** What signing up, signing in and pairing all answer. `email` is null only for an account from before accounts existed. */
-@Serializable
-data class SyncSignedIn(
-    val accountId: String,
-    val email: String? = null,
-    val deviceId: String,
-    val token: String,
-)
-
-@Serializable
-data class SyncPairingCode(val code: String, val expiresAt: String)
+data class SyncRegisterDevice(val id: String, val name: String, val platform: String)
 
 /** One device signed in to the account, as `GET /v1/account` lists it. */
 @Serializable
@@ -131,30 +106,19 @@ data class SyncDeviceInfo(
 @Serializable
 data class SyncAccountInfo(val accountId: String, val email: String? = null, val devices: List<SyncDeviceInfo> = emptyList())
 
-/** `POST /v1/account/delete`. */
-@Serializable
-data class SyncDeleteAccountRequest(val password: String)
-
-/**
- * `POST /v1/password-reset`: mails a link to a page on the server where a new
- * password is set. The server answers the same whether or not the account exists.
- */
-@Serializable
-data class SyncPasswordResetRequest(val email: String)
-
 /** Every error the server sends: `{"error": "..."}`. */
 @Serializable
 data class SyncErrorBody(val error: String)
 
 /**
- * What a device needs to talk to the server, kept outside the database.
- * [email] and [accountId] are null for credentials saved before accounts.
+ * Which server this device syncs with, as which device, and for whom. The
+ * Supabase session that proves who is kept apart from this, and the device
+ * id is the device's own, made once and kept across sign-ins.
  */
 @Serializable
 data class SyncCredentials(
     val serverURL: String,
     val deviceId: String,
-    val token: String,
     val email: String? = null,
     val accountId: String? = null,
 )

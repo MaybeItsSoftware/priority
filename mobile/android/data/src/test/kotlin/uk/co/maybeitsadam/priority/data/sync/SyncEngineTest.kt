@@ -12,6 +12,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.co.maybeitsadam.priority.core.HybridLogicalClock
+import uk.co.maybeitsadam.priority.core.SyncChangesResponse
+import uk.co.maybeitsadam.priority.core.SyncPushChange
+import uk.co.maybeitsadam.priority.core.SyncPushResponse
 import uk.co.maybeitsadam.priority.core.SyncValue
 import uk.co.maybeitsadam.priority.data.TestClock
 import uk.co.maybeitsadam.priority.data.db.Db
@@ -354,5 +357,17 @@ class SyncEngineTest {
         mac.sync()
         phone.sync()
         assertEquals(emptyList<StoredTheme>(), phone.repository.themes())
+    }
+
+    @Test
+    fun aSessionSupabaseWillNotRefreshLeavesTheEngineSignedOut(): Unit = runBlocking {
+        val phone = Device("phone")
+        val refused = object : SyncTransport {
+            override suspend fun push(changes: List<SyncPushChange>): SyncPushResponse = throw SyncException.Unauthorized()
+            override suspend fun changes(since: Long, limit: Int, wait: Int): SyncChangesResponse = throw SyncException.Unauthorized()
+        }
+        val engine = SyncEngine(phone.sync, refused, phone.deviceId, clock)
+        expect<SyncException.Unauthorized> { runBlocking { engine.sync() } }
+        assertEquals(SyncEngine.Status.SignedOut, engine.status.value)
     }
 }

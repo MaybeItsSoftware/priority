@@ -100,18 +100,21 @@ import uk.co.maybeitsadam.priority.ui.navigation.WindowLayout
 import uk.co.maybeitsadam.priority.ui.quickadd.QuickAddSheet
 import uk.co.maybeitsadam.priority.ui.review.ReviewScreen
 import uk.co.maybeitsadam.priority.ui.search.SearchScreen
+import uk.co.maybeitsadam.priority.settings.SupabaseAccounts
 import uk.co.maybeitsadam.priority.ui.settings.SettingsScreen
 import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.today.TodayScreen
 import uk.co.maybeitsadam.priority.ui.undo.SnackAction
 
-/** Intents the shell understands: quick add (tile, launcher shortcut), a tab to open, a pairing link. */
+/**
+ * Intents the shell understands: quick add (tile, launcher shortcut), a tab
+ * to open, and the browser coming back from a sign-in (`priority://auth-callback`).
+ */
 object ShellIntents {
     const val ACTION_QUICK_ADD = "uk.co.maybeitsadam.priority.QUICK_ADD"
     const val EXTRA_TAB = "uk.co.maybeitsadam.priority.TAB"
     const val EXTRA_TASK_ID = "uk.co.maybeitsadam.priority.TASK_ID"
-    const val PAIRING_SCHEME = "priority-sync"
 }
 
 private class NavControllerNavigator(private val nav: NavHostController) : AppNavigator {
@@ -175,8 +178,8 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
         val intent = pendingIntent ?: return@LaunchedEffect
         when {
             intent.action == ShellIntents.ACTION_QUICK_ADD -> container.quickAdd.open(QuickAddRequest())
-            intent.data?.scheme == ShellIntents.PAIRING_SCHEME -> {
-                container.sync.pairFromLink(intent.data.toString())
+            SupabaseAccounts.isRedirect(intent.data) -> {
+                container.sync.handleAuthRedirect(intent.data!!)
                 navigator.openSettings()
             }
             else -> {
