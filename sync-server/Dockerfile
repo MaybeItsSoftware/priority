@@ -25,9 +25,9 @@ FROM debian:bookworm-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
- && useradd --system --uid 10001 sync
+ && useradd --system --uid 10001 priority
 COPY --from=builder /build/target/release/priority-sync-server /usr/local/bin/priority-sync-server
-USER sync
+USER priority
 ENV PORT=8080
 EXPOSE 8080
 # Exec form, so the server is PID 1 and receives Railway's SIGTERM itself; it
