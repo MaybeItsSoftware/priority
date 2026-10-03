@@ -43,6 +43,8 @@ private struct SyncSettingsForm: View {
   @State private var isDeletingAccount = false
   @State private var isMakingCode = false
   @State private var codeError: String?
+  /// What "Forgot password?" sent.
+  @State private var resetNotice: String?
 
   private var session: SyncSession { controller.session }
 
@@ -283,6 +285,16 @@ private struct SyncSettingsForm: View {
       }
       .disabled(!canSubmit)
       .accessibilityIdentifier("sync.signUp")
+      Button("Forgot password?") { requestPasswordReset() }
+        .font(theme.type.callout)
+        .foregroundStyle(theme.muted)
+        .accessibilityIdentifier("sync.forgotPassword")
+      if let resetNotice {
+        Text(resetNotice)
+          .font(theme.type.caption)
+          .foregroundStyle(theme.muted)
+          .accessibilityIdentifier("sync.resetNotice")
+      }
     } header: {
       header("Sign in")
     } footer: {
@@ -346,6 +358,13 @@ private struct SyncSettingsForm: View {
     Task {
       if await controller.signIn(email: email, password: password, serverURL: server) { password = "" }
     }
+  }
+
+  /// Emails a reset link for the typed address, on the chosen server.
+  private func requestPasswordReset() {
+    resetNotice = nil
+    guard let server = chosenServer() else { return }
+    Task { resetNotice = await controller.requestPasswordReset(email: email, serverURL: server) }
   }
 
   /// The hosted server, unless the disclosure names another.

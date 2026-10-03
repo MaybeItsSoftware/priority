@@ -101,6 +101,14 @@ final class SyncController {
     await attempt { try await self.session.pair(codeOrLink: codeOrLink, serverURL: serverURL) }
   }
 
+  /// Emails a link for setting a new password. The confirmation to show when
+  /// it was sent; nil, with `pairingError` set, when it wasn't.
+  func requestPasswordReset(email: String, serverURL: URL) async -> String? {
+    var sent: String?
+    await attempt { sent = try await self.session.requestPasswordReset(email: email, serverURL: serverURL) }
+    return sent.map(SyncSession.passwordResetSentMessage(for:))
+  }
+
   /// Signs this device out. Its tasks stay.
   func signOut() async {
     await session.signOut()

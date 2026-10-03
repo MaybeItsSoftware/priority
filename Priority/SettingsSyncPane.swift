@@ -21,6 +21,8 @@ struct SettingsSyncPane: View {
   @State private var pairingCode = ""
   @State private var isWorking = false
   @State private var message: String?
+  /// What "Forgot password?" sent, shown where an error would be.
+  @State private var notice: String?
   @State private var isConfirmingDelete = false
   @State private var deletePassword = ""
 
@@ -80,6 +82,13 @@ struct SettingsSyncPane: View {
           .buttonStyle(FocusActionButtonStyle())
           .disabled(isWorking || email.isEmpty || password.isEmpty)
           if isWorking { ProgressView().controlSize(.small) }
+          Spacer()
+          Button("Forgot password?") { requestPasswordReset(session) }
+            .buttonStyle(.plain)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
+            .help("Email a link for setting a new password. Setting one signs out every device.")
+            .disabled(isWorking)
         }
       }
       .padding(.vertical, theme.space.xs)
@@ -132,6 +141,15 @@ struct SettingsSyncPane: View {
     run { [email, password] in
       try await session.signIn(email: email, password: password, serverURL: try chosenServer())
       self.password = ""
+    }
+  }
+
+  /// Emails a reset link for the typed address, on the chosen server.
+  private func requestPasswordReset(_ session: SyncSession) {
+    guard !isWorking else { return }
+    run { [email] in
+      let sent = try await session.requestPasswordReset(email: email, serverURL: try chosenServer())
+      notice = SyncSession.passwordResetSentMessage(for: sent)
     }
   }
 
@@ -296,12 +314,18 @@ struct SettingsSyncPane: View {
       Text(message)
         .font(theme.captionFont)
         .foregroundStyle(theme.danger)
+    } else if let notice {
+      Text(notice)
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
+        .textSelection(.enabled)
     }
   }
 
   private func run(_ work: @escaping @MainActor () async throws -> Void) {
     isWorking = true
     message = nil
+    notice = nil
     Task { @MainActor in
       defer { isWorking = false }
       do { try await work() } catch { message = error.localizedDescription }
