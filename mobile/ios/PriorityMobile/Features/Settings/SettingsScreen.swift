@@ -13,24 +13,20 @@ struct SettingsScreen: View {
     NavigationStack {
       Form {
         Section {
-          Picker("Theme", selection: Binding(get: { themes.effectiveIdentifier }, set: { themes.select($0) })) {
-            ForEach(themes.available, id: \.identifier) { specification in
-              Text(specification.name).tag(specification.identifier)
+          NavigationLink {
+            ThemeSettingsView()
+          } label: {
+            HStack(spacing: theme.space.md) {
+              PaletteSwatch(specification: theme.specification)
+              VStack(alignment: .leading, spacing: theme.space.xxs) {
+                Text(theme.specification.name).font(theme.type.body).foregroundStyle(theme.ink)
+                Text(themes.usesDeviceTheme ? "This device only" : themes.effectiveAppearance.title)
+                  .font(theme.type.caption)
+                  .foregroundStyle(theme.muted)
+              }
             }
           }
-          .pickerStyle(.inline)
-          .labelsHidden()
           .accessibilityIdentifier("settings.theme")
-          Picker(
-            "Appearance", selection: Binding(get: { themes.effectiveAppearance }, set: { themes.setAppearance($0) })
-          ) {
-            ForEach(AppearanceChoice.allCases) { choice in
-              Text(choice.title).tag(choice)
-            }
-          }
-          .pickerStyle(.segmented)
-          .disabled(themes.theme.lockedColorScheme != nil)
-          .accessibilityIdentifier("settings.appearance")
         } header: {
           header("Theme")
         }

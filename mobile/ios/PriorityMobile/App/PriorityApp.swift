@@ -4,13 +4,16 @@ import SwiftUI
 
 @main
 struct PriorityApp: App {
-  @State private var boot = Boot()
+  @State private var boot: Boot
   @State private var themes: ThemeStore
   @Environment(\.scenePhase) private var scenePhase
 
   init() {
+    let boot = Boot()
     let themes = ThemeStore()
+    if let model = boot.model { themes.attach(to: model) }
     themes.install()
+    _boot = State(initialValue: boot)
     _themes = State(initialValue: themes)
   }
 

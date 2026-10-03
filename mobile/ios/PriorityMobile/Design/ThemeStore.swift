@@ -1,6 +1,7 @@
 import Foundation
 import OSLog
 import PriorityCore
+import PriorityWorkspace
 import SwiftUI
 import UIKit
 import WidgetKit
@@ -8,15 +9,21 @@ import WidgetKit
 /// Which theme is chosen, which appearance, and the `Theme` they resolve to.
 ///
 /// Owned by the app root and read through `@Environment(\.theme)` (the
-/// resolved value) or `@Environment(ThemeStore.self)` (the choices, for
-/// Settings). Every change rebuilds `theme`, so the window redraws in the new
-/// theme at once; it also re-dresses the UIKit chrome and writes the resolved
-/// palette to the app group for the widgets.
+/// resolved value) or `@Environment(ThemeStore.self)` (the choices and the
+/// imported themes, for Settings). Every change rebuilds `theme`, so the
+/// window redraws in the new theme at once; it also re-dresses the UIKit
+/// chrome and writes the resolved palette to the app group for the widgets.
 ///
-/// The choice of theme and appearance are the values docs/themes.md syncs
-/// (`theme.selected`, `theme.appearance`); "Use a different theme on this
-/// device" keeps a second pair that never leaves the device. Imported themes
-/// are files in the app group's `themes` folder.
+/// Imported themes and the choice live in the workspace, so they follow the
+/// user's other devices (docs/themes.md, "The chosen theme follows you"):
+/// each theme is a row in the synced `themes` table, and the choice is the
+/// `theme.selected` and `theme.appearance` preferences. "Use a different theme
+/// on this device" and the choice made under it stay in UserDefaults and never
+/// leave the phone.
+///
+/// The store is re-read after every change the workspace model hears of —
+/// local writes, a sync pull and another process's commit (`data_version`) —
+/// so a theme imported or chosen on the Mac shows up here without a relaunch.
 @MainActor
 @Observable
 final class ThemeStore {
@@ -25,50 +32,56 @@ final class ThemeStore {
   private(set) static var shared: ThemeStore?
 
   private(set) var theme: Theme
-  /// Every imported file and what became of it: the theme, or why not, and
-  /// the issues found on the way.
+  /// Every stored theme and what became of it on this phone: the theme, or
+  /// why not, and the issues found on the way. A theme that cannot load here
+  /// is still a row, and still reaches the other devices intact.
   private(set) var library: ThemeFileLibrary = .empty
 
-  /// The theme followed on every device, unless this one opts out.
-  var selectedIdentifier: String {
-    didSet { persist(selectedIdentifier, Keys.selected); refresh() }
-  }
+  /// The synced choice, as last read from the workspace.
+  private(set) var selectedIdentifier: String
+  private(set) var appearance: AppearanceChoice
 
-  var appearance: AppearanceChoice {
-    didSet { persist(appearance.rawValue, Keys.appearance); refresh() }
-  }
-
-  /// "Use a different theme on this device".
+  /// "Use a different theme on this device". Turning it on keeps what is on
+  /// screen as this device's own choice; turning it off follows the others
+  /// again.
   var usesDeviceTheme: Bool {
-    didSet { defaults.set(usesDeviceTheme, forKey: Keys.deviceEnabled); refresh() }
+    didSet {
+      guard usesDeviceTheme != oldValue else { return }
+      if usesDeviceTheme {
+        deviceSelectedIdentifier = selectedIdentifier
+        deviceAppearance = appearance
+      }
+      defaults.set(usesDeviceTheme, forKey: Keys.deviceEnabled)
+      refresh()
+    }
   }
 
-  var deviceSelectedIdentifier: String {
-    didSet { persist(deviceSelectedIdentifier, Keys.deviceSelected); refresh() }
+  private(set) var deviceSelectedIdentifier: String {
+    didSet { defaults.set(deviceSelectedIdentifier, forKey: Keys.deviceSelected) }
   }
 
-  var deviceAppearance: AppearanceChoice {
-    didSet { persist(deviceAppearance.rawValue, Keys.deviceAppearance); refresh() }
+  private(set) var deviceAppearance: AppearanceChoice {
+    didSet { defaults.set(deviceAppearance.rawValue, forKey: Keys.deviceAppearance) }
   }
 
-  private let defaults: UserDefaults
-  private let themesFolder: URL
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "ThemeStore")
-  private var lastWidgetTheme: WidgetTheme?
+  @ObservationIgnored private let defaults: UserDefaults
+  @ObservationIgnored private weak var model: WorkspaceModel?
+  @ObservationIgnored private var rows: [StoredTheme] = []
+  @ObservationIgnored private var lastWidgetTheme: WidgetTheme?
+  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "ThemeStore")
 
   enum Keys {
+    /// The choice as it was kept before it synced, and is still mirrored:
+    /// what the first run with a workspace seeds the synced choice from.
     static let selected = "theme.selected"
-    /// The key the appearance picker has always used, so a choice made
-    /// before themes survives.
     static let appearance = AppearanceChoice.storageKey
     static let deviceEnabled = "theme.device.enabled"
     static let deviceSelected = "theme.device.selected"
     static let deviceAppearance = "theme.device.appearance"
   }
 
-  init(defaults: UserDefaults = .standard, themesFolder: URL = ThemeStore.defaultThemesFolder) {
+  init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
-    self.themesFolder = themesFolder
     let chalk = BuiltInThemeSpecifications.chalkIdentifier
     selectedIdentifier = defaults.string(forKey: Keys.selected) ?? chalk
     appearance = defaults.string(forKey: Keys.appearance).flatMap(AppearanceChoice.init(rawValue:)) ?? .system
@@ -77,8 +90,18 @@ final class ThemeStore {
     deviceAppearance =
       defaults.string(forKey: Keys.deviceAppearance).flatMap(AppearanceChoice.init(rawValue:)) ?? .system
     theme = .chalk
-    library = Self.loadLibrary(from: themesFolder)
     theme = resolveTheme()
+  }
+
+  /// Reads themes and the choice from the workspace and follows its changes.
+  /// The first time, a choice made before it synced becomes the synced one,
+  /// rather than every device starting on Chalk.
+  func attach(to model: WorkspaceModel) {
+    self.model = model
+    migrateLocalFolder(into: model.store)
+    seedChoiceIfUnset(in: model.store)
+    model.changeObservers.append { [weak self] _ in self?.reloadFromStore() }
+    reloadFromStore()
   }
 
   /// Makes this the store the chrome and widgets follow, and dresses them.
@@ -86,10 +109,6 @@ final class ThemeStore {
     Self.shared = self
     ThemeChrome.apply(theme)
     publishToWidgets()
-  }
-
-  nonisolated static var defaultThemesFolder: URL {
-    AppGroup.containerURL.appending(path: "Priority/themes", directoryHint: .isDirectory)
   }
 
   // MARK: What is in force
@@ -101,56 +120,150 @@ final class ThemeStore {
   /// The scheme to force: the theme's lock if it has one, else the choice.
   var colorScheme: ColorScheme? { theme.lockedColorScheme ?? effectiveAppearance.colorScheme }
 
-  /// The built-ins, then every imported theme that loaded.
-  var available: [ThemeSpecification] { BuiltInThemeSpecifications.all + library.themes }
+  /// The built-ins, then every stored theme that loaded, as the iPhone
+  /// resolves them.
+  var available: [ThemeSpecification] { BuiltInThemeSpecifications.all(for: .ios) + library.themes }
 
   /// The chosen theme is unknown here (it failed to load, or has not
   /// arrived), so Chalk is standing in.
   var isFallingBack: Bool { theme.specification.identifier != effectiveIdentifier }
 
   /// Selects a theme for wherever the choice is being made: this device if it
-  /// has opted out, everywhere otherwise.
+  /// has opted out, every device otherwise.
   func select(_ identifier: String) {
-    if usesDeviceTheme { deviceSelectedIdentifier = identifier } else { selectedIdentifier = identifier }
+    if usesDeviceTheme {
+      deviceSelectedIdentifier = identifier
+      refresh()
+    } else {
+      write { try $0.setPreference(WorkspacePreferenceKey.themeSelected, identifier) }
+    }
   }
 
   func setAppearance(_ choice: AppearanceChoice) {
-    if usesDeviceTheme { deviceAppearance = choice } else { appearance = choice }
+    if usesDeviceTheme {
+      deviceAppearance = choice
+      refresh()
+    } else {
+      write { try $0.setPreference(WorkspacePreferenceKey.themeAppearance, choice.rawValue) }
+    }
   }
 
   // MARK: Imported themes
 
-  /// Copies a theme file in and reloads. Returns what the loader made of it.
-  @discardableResult
-  func importTheme(from url: URL) throws -> ThemeFileOutcome? {
+  /// What importing a file came to.
+  struct ImportResult {
+    let fileName: String
+    /// Nil when the file was not stored: it could not be read as a theme.
+    let identifier: String?
+    let issues: [ThemeFileIssue]
+  }
+
+  /// Stores a theme file as a synced row and reloads. A file that cannot be
+  /// read as a theme at all is not stored, and its problems are returned.
+  func importTheme(from url: URL) -> ImportResult {
+    let fileName = url.lastPathComponent
     let accessing = url.startAccessingSecurityScopedResource()
     defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-    let data = try Data(contentsOf: url)
-    try FileManager.default.createDirectory(at: themesFolder, withIntermediateDirectories: true)
-    let name = url.lastPathComponent.hasSuffix(".json") ? url.lastPathComponent : url.lastPathComponent + ".json"
-    try data.write(to: themesFolder.appending(path: name, directoryHint: .notDirectory), options: .atomic)
-    reloadLibrary()
-    return library.outcomes.first { $0.source == name }
+    func failed(_ message: String) -> ImportResult {
+      ImportResult(
+        fileName: fileName, identifier: nil,
+        issues: [ThemeFileIssue(source: fileName, severity: .error, message: message)])
+    }
+    guard let data = try? Data(contentsOf: url) else { return failed("could not be opened") }
+    guard let json = String(data: data, encoding: .utf8) else { return failed("is not UTF-8 text") }
+    let (decoded, decodeIssues) = ThemeFileLoader.decode(data, source: fileName)
+    guard let file = decoded else {
+      return ImportResult(fileName: fileName, identifier: nil, issues: decodeIssues)
+    }
+    let identifier = ThemeFileLoader.identifier(of: file, source: fileName)
+    if BuiltInThemeSpecifications.all.contains(where: { $0.identifier == identifier }) {
+      return failed("identifier \"\(identifier)\" is a built-in theme's; give it one of its own")
+    }
+    guard write({ try $0.upsertTheme(id: identifier, json: json) }) else {
+      return failed("could not be saved to the workspace")
+    }
+    let source = ThemeFolderMirror.fileName(for: identifier, json: json)
+    let issues = library.outcomes.first { $0.source == source }?.issues ?? decodeIssues
+    return ImportResult(fileName: fileName, identifier: identifier, issues: issues)
   }
 
-  /// Deletes an imported file. A theme in use falls back to Chalk.
+  /// The row an outcome was loaded from.
+  func identifier(ofSource source: String) -> String? {
+    rows.first { ThemeFolderMirror.fileName(for: $0.id, json: $0.json) == source }?.id
+  }
+
+  /// Deletes a stored theme everywhere. A device using it falls back to Chalk.
   func removeTheme(source: String) {
-    try? FileManager.default.removeItem(at: themesFolder.appending(path: source, directoryHint: .notDirectory))
-    reloadLibrary()
+    guard let identifier = identifier(ofSource: source) else { return }
+    write { try $0.deleteTheme(id: identifier) }
   }
 
-  func reloadLibrary() {
-    library = Self.loadLibrary(from: themesFolder)
+  // MARK: The workspace
+
+  /// Writes through the model, so the change is seen like any other: the
+  /// observers run, which re-reads this store.
+  @discardableResult
+  private func write(_ work: (WorkspaceStore) throws -> Void) -> Bool {
+    guard let model else { return false }
+    return model.perform(work)
+  }
+
+  /// Re-reads the themes and the choice. Cheap when nothing moved: the
+  /// library is only rebuilt when a row's text changed.
+  func reloadFromStore() {
+    guard let store = model?.store else { return }
+    if let stored = try? store.themes(), stored.map(\.json) != rows.map(\.json) || stored.map(\.id) != rows.map(\.id) {
+      rows = stored
+      library = ThemeFileLoader.load(
+        stored.map {
+          ThemeFileSource(name: ThemeFolderMirror.fileName(for: $0.id, json: $0.json), data: Data($0.json.utf8))
+        },
+        platform: .ios)
+    }
+    if let preferences = try? store.preferences() {
+      let selected =
+        (preferences[WorkspacePreferenceKey.themeSelected] ?? nil) ?? BuiltInThemeSpecifications.chalkIdentifier
+      let chosen =
+        (preferences[WorkspacePreferenceKey.themeAppearance] ?? nil).flatMap(AppearanceChoice.init(rawValue:))
+        ?? .system
+      if selected != selectedIdentifier { selectedIdentifier = selected }
+      if chosen != appearance { appearance = chosen }
+      defaults.set(selected, forKey: Keys.selected)
+      defaults.set(chosen.rawValue, forKey: Keys.appearance)
+    }
     refresh()
   }
 
-  private static func loadLibrary(from folder: URL) -> ThemeFileLibrary {
-    let files =
-      (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-    let sources = files.filter { $0.pathExtension == ThemeFileLoader.fileExtension }.compactMap { url in
-      (try? Data(contentsOf: url)).map { ThemeFileSource(name: url.lastPathComponent, data: $0) }
+  /// `theme.selected` has never been written: this phone's earlier, local
+  /// choice becomes everyone's.
+  private func seedChoiceIfUnset(in store: WorkspaceStore) {
+    guard let preferences = try? store.preferences(),
+      preferences[WorkspacePreferenceKey.themeSelected] == nil
+    else { return }
+    do {
+      try store.setPreference(WorkspacePreferenceKey.themeSelected, selectedIdentifier)
+      if preferences[WorkspacePreferenceKey.themeAppearance] == nil {
+        try store.setPreference(WorkspacePreferenceKey.themeAppearance, appearance.rawValue)
+      }
+    } catch {
+      logger.error("Seeding the theme choice failed: \(error.localizedDescription, privacy: .public)")
     }
-    return ThemeFileLoader.load(sources)
+  }
+
+  /// Themes imported before they synced were files in the app group. They
+  /// become rows, once, and the folder goes.
+  private func migrateLocalFolder(into store: WorkspaceStore) {
+    let folder = AppGroup.containerURL.appending(path: "Priority/themes", directoryHint: .isDirectory)
+    guard let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+    else { return }
+    for url in files where url.pathExtension == ThemeFileLoader.fileExtension {
+      guard let data = try? Data(contentsOf: url), let json = String(data: data, encoding: .utf8),
+        let file = ThemeFileLoader.decode(data, source: url.lastPathComponent).0
+      else { continue }
+      let identifier = ThemeFileLoader.identifier(of: file, source: url.lastPathComponent)
+      _ = try? store.upsertTheme(id: identifier, json: json)
+    }
+    try? FileManager.default.removeItem(at: folder)
   }
 
   // MARK: Resolution
@@ -158,10 +271,8 @@ final class ThemeStore {
   private func resolveTheme() -> Theme {
     let identifier = effectiveIdentifier
     let specification =
-      available.first { $0.identifier == identifier } ?? BuiltInThemeSpecifications.chalk
-    return Theme(
-      specification: specification, platform: PlatformStructure.resolve(specification),
-      displayScale: UIScreen.main.scale)
+      available.first { $0.identifier == identifier } ?? BuiltInThemeSpecifications.chalk(for: .ios)
+    return Theme(specification: specification, displayScale: UIScreen.main.scale)
   }
 
   private func refresh() {
@@ -172,10 +283,6 @@ final class ThemeStore {
     ThemeChrome.apply(resolved)
     ThemeChrome.redrawWindows()
     publishToWidgets()
-  }
-
-  private func persist(_ value: String, _ key: String) {
-    defaults.set(value, forKey: key)
   }
 
   // MARK: Widgets

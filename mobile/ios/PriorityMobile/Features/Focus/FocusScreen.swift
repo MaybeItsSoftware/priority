@@ -541,6 +541,8 @@ private struct FocusRunningView: View {
       Text(Format.clock(elapsed))
         .font(theme.type.hero)
         .monospacedDigit()
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
         .foregroundStyle(theme.ink)
         .accessibilityIdentifier("focus.clock")
       GeometryReader { proxy in

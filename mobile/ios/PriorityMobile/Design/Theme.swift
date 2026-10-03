@@ -31,11 +31,15 @@ struct Theme {
   private let colors: [ThemeColorRole: Color]
   private let uiColors: [ThemeColorRole: UIColor]
 
-  init(specification: ThemeSpecification, platform resolved: PlatformStructure.Resolved, displayScale: CGFloat) {
+  /// `specification` must already be resolved for `.ios` — the built-ins
+  /// through `BuiltInThemeSpecifications.all(for: .ios)`, files through
+  /// `ThemeFileLoader.load(_:platform: .ios)` — so its structure is the
+  /// phone's.
+  init(specification: ThemeSpecification, displayScale: CGFloat) {
     self.specification = specification
-    self.structure = resolved.structure
-    self.touchTarget = resolved.touchTarget
-    let structure = resolved.structure
+    let structure = specification.structure
+    self.structure = structure
+    self.touchTarget = structure.touchTarget
     radius = Radii(
       panel: structure.radius.panel, row: structure.radius.row, control: structure.radius.control,
       pill: structure.radius.pill)
@@ -57,8 +61,7 @@ struct Theme {
   /// Chalk, as the iPhone draws it: what the environment holds before a store
   /// has said otherwise, and what previews and tests see.
   static let chalk = Theme(
-    specification: BuiltInThemeSpecifications.chalk,
-    platform: PlatformStructure.resolve(BuiltInThemeSpecifications.chalk), displayScale: 3)
+    specification: BuiltInThemeSpecifications.chalk(for: .ios), displayScale: 3)
 
   /// The appearance this theme insists on, if it is a one-appearance theme
   /// such as Chalk Dark.
@@ -200,15 +203,14 @@ extension Theme {
       self.callout = bodyFace.font(callout, .regular, .callout)
       caption = bodyFace.font(scale.caption, .regular, .caption)
       footnote = bodyFace.font(scale.caption - 1, .regular, .footnote)
-      // The phone sets its pane headings, big numbers and the focus timer a
-      // step under the scale's title, display and hero, as it always has;
-      // stating them as proportions keeps them following a theme's scale.
-      title = displayFace.font((scale.title * 0.85).rounded(), .semibold, .headline)
-      largeTitle = displayFace.font((scale.display * 0.82).rounded(), .semibold, .largeTitle)
+      // Pane headings, big numbers and the focus timer are the scale's
+      // title, display and hero, as stated.
+      title = displayFace.font(scale.title, .semibold, .title3)
+      largeTitle = displayFace.font(scale.display, .semibold, .largeTitle)
       numeral = monoFace.font(scale.caption, .regular, .caption)
       numeralBody = monoFace.font(callout, .regular, .body)
       display = monoFace.font(scale.display, .medium, .largeTitle)
-      hero = monoFace.font((scale.hero * 0.78).rounded(), .medium, .largeTitle)
+      hero = monoFace.font(scale.hero, .medium, .largeTitle)
       microLabel = MicroLabel(typography.microLabel, face: bodyFace)
     }
 
@@ -372,55 +374,6 @@ extension EnvironmentValues {
   var theme: Theme {
     get { self[ThemeKey.self] }
     set { self[ThemeKey.self] = newValue }
-  }
-}
-
-// MARK: - Per-platform structure
-
-/// A theme's structure as the iPhone draws it.
-///
-/// docs/themes.md gives Chalk different sizes per platform — 17pt body text
-/// and 44pt hit targets in the hand, 13pt at a desk — and PriorityCore is
-/// gaining a `platforms` layer that resolves them. Until it lands, this lays
-/// the iOS column of that table over any group a theme inherited from Chalk
-/// unchanged, so a theme that only changes colours gets the phone's sizes
-/// and one that sets its own keeps them.
-enum PlatformStructure {
-  struct Resolved: Equatable {
-    let structure: ThemeStructure
-    let touchTarget: CGFloat
-  }
-
-  /// The iOS column of "Chalk's defaults per platform".
-  static let iOSScale = ThemeTypeScale(caption: 13, body: 17, title: 20, display: 34, hero: 72)
-  static let iOSBodySize: Double = 17
-  static let iOSMicroLabelSize: Double = 13
-  static let iOSTouchTarget: CGFloat = 44
-
-  static func resolve(_ specification: ThemeSpecification) -> Resolved {
-    let chalk = BuiltInThemeSpecifications.chalk.structure
-    let own = specification.structure
-    let radius =
-      own.radius == chalk.radius
-      ? ThemeRadiusScale(panel: 8, row: 0, control: 6, pill: own.radius.pill, shell: own.radius.shell)
-      : own.radius
-    var typography = own.typography
-    if typography.bodySize == chalk.typography.bodySize, typography.scale == chalk.typography.scale {
-      let label = typography.microLabel
-      let microLabel =
-        label.size == chalk.typography.microLabel.size
-        ? ThemeMicroLabel(
-          size: iOSMicroLabelSize, weight: label.weight, tracking: label.tracking,
-          isUppercased: label.isUppercased, role: label.role)
-        : label
-      typography = ThemeTypography(
-        display: typography.display, body: typography.body, mono: typography.mono,
-        bodySize: iOSBodySize, scale: iOSScale, microLabel: microLabel)
-    }
-    let structure = ThemeStructure(
-      radius: radius, border: own.border, spacing: own.spacing, typography: typography,
-      usesShadows: own.usesShadows, usesGradientsOnChrome: own.usesGradientsOnChrome)
-    return Resolved(structure: structure, touchTarget: iOSTouchTarget)
   }
 }
 
