@@ -5,6 +5,7 @@ import SwiftUI
 /// complete, a long-press menu with every task command, drag to reorder, and
 /// an inline composer for new tasks and subtasks.
 struct OutlineView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   @State private var outline: OutlineModel
@@ -38,7 +39,7 @@ struct OutlineView: View {
     .environment(\.defaultMinListRowHeight, 40)
     .overlay {
       if outline.isLoaded && outline.rows.isEmpty && outline.composer == nil {
-        VStack(spacing: Metrics.md) {
+        VStack(spacing: theme.space.md) {
           EmptyState(
             title: outline.scope.isSingleTree ? "Nothing here yet" : "Nothing to do",
             message: outline.scope.isSingleTree ? "Add a task to start the list." : "Every open task in these lists shows here.",
@@ -85,21 +86,21 @@ struct OutlineView: View {
       }
     }
     .tag(row.id)
-    .listRowInsets(EdgeInsets(top: 0, leading: Metrics.md, bottom: 0, trailing: Metrics.md))
-    .listRowBackground(isSelected ? Palette.primary.opacity(0.10) : Palette.paper)
-    .listRowSeparatorTint(Palette.borderMuted)
+    .listRowInsets(EdgeInsets(top: 0, leading: theme.space.md, bottom: 0, trailing: theme.space.md))
+    .listRowBackground(isSelected ? theme.primary.opacity(0.10) : theme.paper)
+    .listRowSeparatorTint(theme.borderMuted)
     .swipeActions(edge: .leading, allowsFullSwipe: true) {
       Button { model.completeCelebrating(row.id) } label: {
         Label(row.status == .open ? "Complete" : "Reopen", systemImage: row.status == .open ? "checkmark" : "arrow.uturn.backward")
       }
-      .tint(Palette.success)
+      .tint(theme.success)
     }
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
       Button(role: .destructive) { model.delete(row.id) } label: { Label("Delete", systemImage: "trash") }
       Button { model.toggleInvalidated(row.id) } label: {
         Label(row.status == .cancelled ? "Reopen" : "Invalidate", systemImage: "xmark")
       }
-      .tint(Palette.muted)
+      .tint(theme.muted)
     }
     .contextMenu {
       TaskContextMenu(
@@ -120,13 +121,13 @@ struct OutlineView: View {
 
   private var composerRow: some View {
     let depth = outline.composer?.depth ?? 0
-    return HStack(spacing: Metrics.sm) {
+    return HStack(spacing: theme.space.sm) {
       TaskCheckbox(status: .open).opacity(0.4)
       TextField("New task", text: Binding(
         get: { outline.composer?.text ?? "" },
         set: { outline.composer?.text = $0 }))
-        .font(Typeface.body)
-        .foregroundStyle(Palette.ink)
+        .font(theme.type.body)
+        .foregroundStyle(theme.ink)
         .focused($focusedField, equals: .composer)
         .submitLabel(.next)
         .onSubmit {
@@ -141,31 +142,31 @@ struct OutlineView: View {
         outline.composer = nil
         focusedField = nil
       } label: {
-        Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.dim)
+        Image(systemName: "xmark.circle.fill").foregroundStyle(theme.dim)
       }
       .buttonStyle(.plain)
       .accessibilityLabel("Cancel new task")
     }
     .padding(.leading, CGFloat(depth) * Metrics.indent + 24)
-    .frame(minHeight: 44)
-    .listRowInsets(EdgeInsets(top: 0, leading: Metrics.md, bottom: 0, trailing: Metrics.md))
-    .listRowBackground(Palette.raised)
+    .frame(minHeight: theme.touchTarget)
+    .listRowInsets(EdgeInsets(top: 0, leading: theme.space.md, bottom: 0, trailing: theme.space.md))
+    .listRowBackground(theme.raised)
     .moveDisabled(true)
     .selectionDisabled()
   }
 
   private func renameRow(_ row: OutlineRow) -> some View {
-    HStack(spacing: Metrics.sm) {
+    HStack(spacing: theme.space.sm) {
       TaskCheckbox(status: row.status, isList: row.isList)
       TextField("Title", text: $outline.editingText)
-        .font(Typeface.body)
+        .font(theme.type.body)
         .focused($focusedField, equals: .rename)
         .submitLabel(.done)
         .onSubmit { outline.commitRename(model) }
         .accessibilityIdentifier("outline.rename")
     }
     .padding(.leading, CGFloat(row.depth) * Metrics.indent + 24)
-    .frame(minHeight: 44)
+    .frame(minHeight: theme.touchTarget)
   }
 
   // MARK: - Commands
@@ -238,6 +239,7 @@ private struct OutlineScopeKey: Hashable {
 /// One outline row. Equatable on its value, so a list of five thousand rows
 /// redraws only the rows whose content changed.
 struct OutlineRowView: View, Equatable {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   let row: OutlineRow
@@ -249,7 +251,7 @@ struct OutlineRowView: View, Equatable {
   }
 
   var body: some View {
-    HStack(spacing: Metrics.xs) {
+    HStack(spacing: theme.space.xs) {
       Color.clear.frame(width: CGFloat(row.depth) * Metrics.indent, height: 1)
       disclosure
       Button {
@@ -265,13 +267,13 @@ struct OutlineRowView: View, Equatable {
       .accessibilityIdentifier("outline.check.\(row.title)")
       VStack(alignment: .leading, spacing: 1) {
         Text(row.title)
-          .font(row.isList ? Typeface.bodyMedium : Typeface.body)
-          .foregroundStyle(row.status == .open ? Palette.ink : Palette.muted)
-          .strikethrough(row.status != .open, color: Palette.dim)
+          .font(row.isList ? theme.type.bodyMedium : theme.type.body)
+          .foregroundStyle(row.status == .open ? theme.ink : theme.muted)
+          .strikethrough(row.status != .open, color: theme.dim)
           .lineLimit(3)
           .celebrationStrike(row.id)
         if let listName = row.listName {
-          Text(listName).font(Typeface.footnote).foregroundStyle(Palette.muted).lineLimit(1)
+          Text(listName).font(theme.type.footnote).foregroundStyle(theme.muted).lineLimit(1)
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -282,7 +284,7 @@ struct OutlineRowView: View, Equatable {
           model.navigation.inspect(row.id, isPad: isPad)
         } label: {
           Image(systemName: "info.circle")
-            .foregroundStyle(Palette.primary)
+            .foregroundStyle(theme.primary)
             .frame(width: 32, height: 40)
             .contentShape(Rectangle())
         }
@@ -301,8 +303,8 @@ struct OutlineRowView: View, Equatable {
         withAnimation(.snappy(duration: 0.2)) { onFold() }
       } label: {
         Image(systemName: "chevron.right")
-          .font(.system(size: 11, weight: .semibold))
-          .foregroundStyle(Palette.muted)
+          .font(theme.type.glyph(11, .semibold))
+          .foregroundStyle(theme.muted)
           .rotationEffect(.degrees(row.isFolded ? 0 : 90))
           .frame(width: 22, height: 40)
           .contentShape(Rectangle())
@@ -317,30 +319,30 @@ struct OutlineRowView: View, Equatable {
 
   @ViewBuilder
   private var badges: some View {
-    HStack(spacing: Metrics.xs) {
+    HStack(spacing: theme.space.xs) {
       if row.isPlanned {
-        Image(systemName: "sun.max").font(.system(size: 12)).foregroundStyle(Palette.warning)
+        Image(systemName: "sun.max").font(theme.type.glyph(12)).foregroundStyle(theme.warning)
           .accessibilityLabel("Planned for today")
       }
       if row.hasNotes {
-        Image(systemName: "note.text").font(.system(size: 11)).foregroundStyle(Palette.dim)
+        Image(systemName: "note.text").font(theme.type.glyph(11)).foregroundStyle(theme.dim)
       }
       if let estimate = row.estimateSeconds, estimate > 0 {
-        Text(Format.duration(estimate)).font(Typeface.numeral).foregroundStyle(Palette.muted)
+        Text(Format.duration(estimate)).font(theme.type.numeral).foregroundStyle(theme.muted)
       }
       if let due = row.dueAt {
         Tag(text: Format.due(due), tint: dueTint(due), mono: false)
       }
       if row.isList {
-        Image(systemName: "list.bullet").font(.system(size: 11)).foregroundStyle(Palette.muted)
+        Image(systemName: "list.bullet").font(theme.type.glyph(11)).foregroundStyle(theme.muted)
       }
     }
   }
 
   private func dueTint(_ due: Date) -> Color {
-    guard row.status == .open else { return Palette.muted }
-    if Format.isOverdue(due) { return Palette.danger }
-    if Format.isToday(due) { return Palette.primary }
-    return Palette.muted
+    guard row.status == .open else { return theme.muted }
+    if Format.isOverdue(due) { return theme.danger }
+    if Format.isToday(due) { return theme.primary }
+    return theme.muted
   }
 }

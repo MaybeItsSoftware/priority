@@ -3,6 +3,7 @@ import SwiftUI
 /// The labelled steps undo and redo would take, newest first. Tapping a
 /// step undoes (or redoes) everything up to and including it.
 struct HistorySheet: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.dismiss) private var dismiss
   @State private var history = StoreQuery(UndoHistory.empty)
@@ -11,7 +12,7 @@ struct HistorySheet: View {
     NavigationStack {
       List {
         Section {
-          HStack(spacing: Metrics.sm) {
+          HStack(spacing: theme.space.sm) {
             Button {
               model.undo()
             } label: {
@@ -44,7 +45,7 @@ struct HistorySheet: View {
         }
         Section {
           if history.value.undo.isEmpty {
-            Text("Nothing to undo").font(Typeface.body).foregroundStyle(Palette.muted)
+            Text("Nothing to undo").font(theme.type.body).foregroundStyle(theme.muted)
           }
           ForEach(history.value.undo) { step in
             row(step)
@@ -54,7 +55,7 @@ struct HistorySheet: View {
         }
       }
       .scrollContentBackground(.hidden)
-      .background(Palette.paper)
+      .background(theme.paper)
       .navigationTitle("History")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -68,7 +69,7 @@ struct HistorySheet: View {
   }
 
   private func label(_ text: String) -> some View {
-    Text(text).font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
+    Text(text).font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
   }
 
   private func row(_ step: UndoStep) -> some View {
@@ -81,20 +82,20 @@ struct HistorySheet: View {
     } label: {
       HStack {
         Image(systemName: step.isUndone ? "arrow.uturn.forward" : "arrow.uturn.backward")
-          .foregroundStyle(step.isUndone ? Palette.dim : Palette.muted)
+          .foregroundStyle(step.isUndone ? theme.dim : theme.muted)
           .frame(width: 22)
         Text(step.label)
-          .font(Typeface.body)
-          .foregroundStyle(step.isUndone ? Palette.muted : Palette.ink)
+          .font(theme.type.body)
+          .foregroundStyle(step.isUndone ? theme.muted : theme.ink)
         Spacer()
         if step.changeCount > 1 {
-          Text("\(step.changeCount) rows").font(Typeface.numeral).foregroundStyle(Palette.dim)
+          Text("\(step.changeCount) rows").font(theme.type.numeral).foregroundStyle(theme.dim)
         }
       }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .listRowBackground(Palette.raised)
+    .listRowBackground(theme.raised)
     .accessibilityIdentifier("history.step.\(step.label)")
   }
 }

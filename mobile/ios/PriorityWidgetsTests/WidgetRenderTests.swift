@@ -38,7 +38,7 @@ final class WidgetRenderTests: XCTestCase {
   private func render(_ view: some View, size: CGSize, name: String) throws {
     let framed = view
       .frame(width: size.width, height: size.height)
-      .background(ChalkColors.paper)
+      .background(WidgetPalette(theme: .chalk).paper)
       .clipShape(RoundedRectangle(cornerRadius: 22))
     let renderer = ImageRenderer(content: framed)
     renderer.scale = 3

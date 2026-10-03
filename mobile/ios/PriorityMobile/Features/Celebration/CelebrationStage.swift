@@ -113,6 +113,7 @@ extension WorkspaceModel {
 /// fold. Read from `CelebrationRowTreatment` per phase, so every surface
 /// draws a preset the same way.
 private struct CelebrationRowModifier: ViewModifier {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   let taskID: String
 
@@ -124,10 +125,10 @@ private struct CelebrationRowModifier: ViewModifier {
       .opacity(treatment.fades(at: phase) ? 0.15 : 1)
       .scaleEffect(treatment.rowScale(for: phase))
       .scaleEffect(x: 1, y: treatment.collapses(at: phase) ? 0.2 : 1, anchor: .top)
-      .background(Palette.success.opacity(treatment.tintOpacity(for: phase)))
+      .background(theme.success.opacity(treatment.tintOpacity(for: phase)))
       .overlay(alignment: .leading) {
         if treatment.marksLeadingEdge(at: phase) {
-          Rectangle().fill(Palette.success).frame(width: 2)
+          Rectangle().fill(theme.success).frame(width: 2)
         }
       }
   }
@@ -135,6 +136,7 @@ private struct CelebrationRowModifier: ViewModifier {
 
 /// The rule drawn through a title, left to right, while the row celebrates.
 private struct CelebrationStrikeModifier: ViewModifier {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   let taskID: String
 
@@ -143,7 +145,7 @@ private struct CelebrationStrikeModifier: ViewModifier {
     let drawn = stage.style.treatment.drawsStrikethrough && stage.phase(for: taskID) == .celebrating
     content.overlay(alignment: .leading) {
       Rectangle()
-        .fill(Palette.success)
+        .fill(theme.success)
         .frame(height: 1.5)
         .scaleEffect(x: drawn ? 1 : 0, anchor: .leading)
         .opacity(drawn ? 1 : 0)
@@ -177,6 +179,7 @@ private struct CelebrationIconModifier: ViewModifier {
 /// A few sparks thrown from the checkbox. Deterministic per seed, so a
 /// redraw mid-burst does not reshuffle it — the Mac's `SparkBurst`.
 private struct SparkBurst: View {
+  @Environment(\.theme) private var theme
   let seed: UInt64
   let reduceMotion: Bool
   @State private var progress: Double = 0
@@ -205,7 +208,7 @@ private struct SparkBurst: View {
       let x: Double = Double(center.x) + cos(angle) * distance
       let y: Double = Double(center.y) + sin(angle) * distance
       let rect = CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)
-      let colour: Color = Self.noise(seed, index, 4) > 0.5 ? Palette.success : Palette.warning
+      let colour: Color = Self.noise(seed, index, 4) > 0.5 ? theme.success : theme.warning
       context.fill(Path(ellipseIn: rect), with: .color(colour))
     }
   }

@@ -9,6 +9,7 @@ import SwiftUI
 /// button: a field saves itself a moment after you stop typing, a control at
 /// once, and anything still pending when the inspector goes away.
 struct TaskInspector: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   @Environment(\.dismiss) private var dismiss
@@ -38,7 +39,7 @@ struct TaskInspector: View {
             filing(values)
             actions(task)
           }
-          .padding(.bottom, Metrics.xl)
+          .padding(.bottom, theme.space.xl)
         }
         .scrollDismissesKeyboard(.interactively)
       } else if let error = inspector.error {
@@ -48,7 +49,7 @@ struct TaskInspector: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .background(Palette.paper)
+    .background(theme.paper)
     .navigationTitle("Details")
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
@@ -82,48 +83,48 @@ struct TaskInspector: View {
   // MARK: - Header
 
   private func header(_ task: WorkspaceTask, _ values: TaskEditorValues) -> some View {
-    VStack(alignment: .leading, spacing: Metrics.sm) {
-      HStack(alignment: .top, spacing: Metrics.sm) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
+      HStack(alignment: .top, spacing: theme.space.sm) {
         Button { model.toggleComplete(task.id) } label: {
           TaskCheckbox(status: task.status, isList: task.isList, size: 22)
             .frame(width: 36, height: 36)
-            .contentShape(Rectangle())
+            .hitTarget()
         }
         .buttonStyle(.plain)
         .accessibilityLabel(task.status == .open ? "Complete" : "Reopen")
         TextField("Title", text: binding(\.title), axis: .vertical)
-          .font(Typeface.sans(20, .medium, relativeTo: .title3))
-          .foregroundStyle(task.status == .open ? Palette.ink : Palette.muted)
+          .font(theme.type.sans(20, .medium, relativeTo: .title3))
+          .foregroundStyle(task.status == .open ? theme.ink : theme.muted)
           .focused($focused, equals: .title)
           .submitLabel(.done)
           .onSubmit { inspector.save(model) }
           .accessibilityIdentifier("inspector.title")
       }
-      HStack(spacing: Metrics.xs) {
+      HStack(spacing: theme.space.xs) {
         Tag(text: inspector.listName, systemImage: task.isList ? "list.bullet.indent" : "list.bullet")
-        if task.status == .completed { Tag(text: "Done", tint: Palette.success) }
-        if task.status == .cancelled { Tag(text: "Invalidated", tint: Palette.muted) }
+        if task.status == .completed { Tag(text: "Done", tint: theme.success) }
+        if task.status == .cancelled { Tag(text: "Invalidated", tint: theme.muted) }
         if inspector.isDirty {
-          Tag(text: "Saving…", tint: Palette.primary)
+          Tag(text: "Saving…", tint: theme.primary)
             .accessibilityIdentifier("inspector.dirty")
         }
       }
     }
-    .padding(.horizontal, Metrics.lg)
-    .padding(.vertical, Metrics.md)
+    .padding(.horizontal, theme.space.lg)
+    .padding(.vertical, theme.space.md)
     .overlay(alignment: .bottom) { Hairline() }
   }
 
   private var conflictBanner: some View {
-    VStack(alignment: .leading, spacing: Metrics.sm) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       Text("Changed elsewhere while you were editing")
-        .font(Typeface.callout).foregroundStyle(Palette.warning)
+        .font(theme.type.callout).foregroundStyle(theme.warning)
       if let draft = inspector.draft {
         ForEach(inspector.conflicts, id: \.self) { field in
-          VStack(alignment: .leading, spacing: Metrics.xs) {
-            Text(field.label).font(Typeface.caption).foregroundStyle(Palette.muted)
-            Text("Yours: \(inspector.display(field, in: draft.values))").font(Typeface.caption).lineLimit(2)
-            Text("Saved: \(inspector.display(field, in: draft.baseline.values))").font(Typeface.caption).lineLimit(2)
+          VStack(alignment: .leading, spacing: theme.space.xs) {
+            Text(field.label).font(theme.type.caption).foregroundStyle(theme.muted)
+            Text("Yours: \(inspector.display(field, in: draft.values))").font(theme.type.caption).lineLimit(2)
+            Text("Saved: \(inspector.display(field, in: draft.baseline.values))").font(theme.type.caption).lineLimit(2)
             HStack {
               Button("Keep mine") { inspector.resolve(field, useSaved: false, model: model) }
                 .buttonStyle(ThemedButtonStyle(kind: .primary, compact: true))
@@ -134,27 +135,27 @@ struct TaskInspector: View {
         }
       }
     }
-    .padding(Metrics.md)
-    .background(RoundedRectangle(cornerRadius: Metrics.cardRadius).fill(Palette.warning.opacity(0.08)))
-    .overlay(RoundedRectangle(cornerRadius: Metrics.cardRadius).strokeBorder(Palette.warning.opacity(0.4), lineWidth: 1))
-    .padding(Metrics.lg)
+    .padding(theme.space.md)
+    .background(RoundedRectangle(cornerRadius: theme.radius.panel).fill(theme.warning.opacity(0.08)))
+    .overlay(RoundedRectangle(cornerRadius: theme.radius.panel).strokeBorder(theme.warning.opacity(0.4), lineWidth: theme.stroke))
+    .padding(theme.space.lg)
     .accessibilityIdentifier("inspector.conflicts")
   }
 
   private func errorLine(_ error: String) -> some View {
     Text(error)
-      .font(Typeface.caption)
-      .foregroundStyle(Palette.danger)
-      .padding(.horizontal, Metrics.lg)
-      .padding(.top, Metrics.sm)
+      .font(theme.type.caption)
+      .foregroundStyle(theme.danger)
+      .padding(.horizontal, theme.space.lg)
+      .padding(.top, theme.space.sm)
   }
 
   private var unavailableLine: some View {
     Text("This task was deleted elsewhere. Your edits are kept but can't be saved.")
-      .font(Typeface.caption)
-      .foregroundStyle(Palette.warning)
-      .padding(.horizontal, Metrics.lg)
-      .padding(.top, Metrics.sm)
+      .font(theme.type.caption)
+      .foregroundStyle(theme.warning)
+      .padding(.horizontal, theme.space.lg)
+      .padding(.top, theme.space.sm)
   }
 
   // MARK: - Notes
@@ -188,8 +189,8 @@ struct TaskInspector: View {
             set: { date in inspector.edit(model, immediate: true) { $0.dueAt = date } }),
           displayedComponents: [.date, .hourAndMinute]
         )
-        .font(Typeface.body)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.body)
+        .foregroundStyle(theme.muted)
       case .day:
         DatePicker(
           "Due on",
@@ -198,8 +199,8 @@ struct TaskInspector: View {
             set: { date in inspector.edit(model, immediate: true) { $0.dueDate = TaskCalendarDate.string(date); $0.dueAt = nil } }),
           displayedComponents: [.date]
         )
-        .font(Typeface.body)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.body)
+        .foregroundStyle(theme.muted)
       case .none:
         quickDueButtons
       }
@@ -216,8 +217,8 @@ struct TaskInspector: View {
             set: { date in inspector.edit(model, immediate: true) { $0.startAt = date } }),
           displayedComponents: [.date, .hourAndMinute]
         )
-        .font(Typeface.body)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.body)
+        .foregroundStyle(theme.muted)
       }
       InspectorRow("Repeat") {
         TextField("Every Monday", text: binding(\.recurrenceRule))
@@ -246,7 +247,7 @@ struct TaskInspector: View {
   }
 
   private var quickDueButtons: some View {
-    HStack(spacing: Metrics.xs) {
+    HStack(spacing: theme.space.xs) {
       ForEach([(0, "Today"), (1, "Tomorrow"), (7, "Next week")], id: \.0) { offset, title in
         Button(title) {
           let day = Calendar.current.date(byAdding: .day, value: offset, to: .now) ?? .now
@@ -261,23 +262,23 @@ struct TaskInspector: View {
 
   private func plan(_ task: WorkspaceTask, _ values: TaskEditorValues) -> some View {
     InspectorSection("Plan") {
-      Text("Priority").font(Typeface.callout).foregroundStyle(Palette.muted)
+      Text("Priority").font(theme.type.callout).foregroundStyle(theme.muted)
       ChoiceChips(
         options: InspectorModel.priorityNames.enumerated().map { ($0.element, $0.offset) },
         selection: Binding(
           get: { inspector.values?.priority ?? 0 },
           set: { value in inspector.edit(model, immediate: true) { $0.priority = value } }),
-        tint: values.priority >= 3 ? Palette.danger : Palette.primary,
+        tint: values.priority >= 3 ? theme.danger : theme.primary,
         identifier: "inspector.priority")
       InspectorRow("Estimate") {
-        HStack(spacing: Metrics.sm) {
+        HStack(spacing: theme.space.sm) {
           TextField("Minutes", text: binding(\.estimateMinutes))
             .keyboardType(.decimalPad)
-            .font(Typeface.numeralBody)
+            .font(theme.type.numeralBody)
             .focused($focused, equals: .estimate)
             .controlFrame()
             .accessibilityIdentifier("inspector.estimate")
-          Text("min").font(Typeface.caption).foregroundStyle(Palette.muted)
+          Text("min").font(theme.type.caption).foregroundStyle(theme.muted)
         }
       }
       if inspector.progress.subtasks > 0 {
@@ -285,8 +286,8 @@ struct TaskInspector: View {
       }
       if inspector.loggedSeconds > 0 {
         Text(loggedLine(task))
-          .font(Typeface.numeral)
-          .foregroundStyle(Palette.muted)
+          .font(theme.type.numeral)
+          .foregroundStyle(theme.muted)
       }
       conditions(values)
       Toggle("Must finish in one sitting", isOn: Binding(
@@ -294,15 +295,15 @@ struct TaskInspector: View {
         set: { on in inspector.edit(model, immediate: true) { $0.requiresSingleSitting = on ? true : nil } }))
         .toggleStyle(ThemedToggleStyle())
       InspectorRow("Min block") {
-        HStack(spacing: Metrics.sm) {
+        HStack(spacing: theme.space.sm) {
           TextField("Minutes", text: Binding(
             get: { inspector.values?.minimumBlockMinutes ?? "" },
             set: { raw in inspector.edit(model) { $0.minimumBlockMinutes = raw.isEmpty ? nil : raw } }))
             .keyboardType(.decimalPad)
-            .font(Typeface.numeralBody)
+            .font(theme.type.numeralBody)
             .focused($focused, equals: .minimumBlock)
             .controlFrame()
-          Text("min").font(Typeface.caption).foregroundStyle(Palette.muted)
+          Text("min").font(theme.type.caption).foregroundStyle(theme.muted)
         }
       }
       Button("Apply conditions and start to subtasks") { inspector.applyPlanningToDescendants(model: model) }
@@ -326,29 +327,29 @@ struct TaskInspector: View {
   @ViewBuilder
   private func conditions(_ values: TaskEditorValues) -> some View {
     let groups = values.requirementGroups ?? []
-    VStack(alignment: .leading, spacing: Metrics.sm) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack {
-        Text("Conditions").font(Typeface.callout).foregroundStyle(Palette.muted)
+        Text("Conditions").font(theme.type.callout).foregroundStyle(theme.muted)
         Spacer()
         Button("Manage") { showsConditions = true }
-          .font(Typeface.caption)
-          .foregroundStyle(Palette.primary)
+          .font(theme.type.caption)
+          .foregroundStyle(theme.primary)
           .accessibilityIdentifier("inspector.manageConditions")
       }
       if groups.isEmpty {
-        Text("Anytime, anywhere").font(Typeface.caption).foregroundStyle(Palette.dim)
+        Text("Anytime, anywhere").font(theme.type.caption).foregroundStyle(theme.dim)
       }
       ForEach(Array(groups.enumerated()), id: \.offset) { index, group in
-        VStack(alignment: .leading, spacing: Metrics.xs) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
           Text(index == 0 ? "Requires" : "And requires")
-            .font(Typeface.caption).foregroundStyle(Palette.muted)
-          FlowLayout(spacing: Metrics.xs) {
+            .font(theme.type.caption).foregroundStyle(theme.muted)
+          FlowLayout(spacing: theme.space.xs) {
             ForEach(Array(group.enumerated()), id: \.element) { position, id in
-              if position > 0 { Text("or").font(Typeface.caption).foregroundStyle(Palette.muted) }
+              if position > 0 { Text("or").font(theme.type.caption).foregroundStyle(theme.muted) }
               Button {
                 inspector.removeRequirement(id, fromGroup: index, model: model)
               } label: {
-                Tag(text: inspector.conditionName(id), tint: Palette.purple, systemImage: "xmark")
+                Tag(text: inspector.conditionName(id), tint: theme.purple, systemImage: "xmark")
               }
               .buttonStyle(.plain)
               .frame(minHeight: 30)
@@ -361,15 +362,15 @@ struct TaskInspector: View {
                   Button(condition.name) { inspector.addRequirement(condition.id, toGroup: index, model: model) }
                 }
               } label: {
-                Text("or…").font(Typeface.caption).foregroundStyle(Palette.primary).frame(minHeight: 30)
+                Text("or…").font(theme.type.caption).foregroundStyle(theme.primary).frame(minHeight: 30)
               }
               .accessibilityIdentifier("inspector.orCondition.\(index)")
             }
           }
         }
-        .padding(Metrics.sm)
+        .padding(theme.space.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(RoundedRectangle(cornerRadius: Metrics.controlRadius).strokeBorder(Palette.borderMuted, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.borderMuted, lineWidth: theme.stroke))
       }
       Menu {
         ForEach(inspector.conditions.filter { condition in
@@ -385,7 +386,7 @@ struct TaskInspector: View {
       .accessibilityIdentifier("inspector.addCondition")
       if groups.count > 1 || groups.contains(where: { $0.count > 1 }) {
         Text("Every group must hold; any one condition within a group will do.")
-          .font(Typeface.footnote).foregroundStyle(Palette.dim)
+          .font(theme.type.footnote).foregroundStyle(theme.dim)
       }
     }
   }
@@ -405,7 +406,7 @@ struct TaskInspector: View {
         }
         .accessibilityIdentifier("inspector.column")
       }
-      Text("Matrix").font(Typeface.callout).foregroundStyle(Palette.muted)
+      Text("Matrix").font(theme.type.callout).foregroundStyle(theme.muted)
       ChoiceChips(
         options: [("None", MatrixQuadrant?.none)] + MatrixQuadrant.allCases.map { ($0.title, Optional($0)) },
         selection: Binding(get: { inspector.quadrant }, set: { inspector.setQuadrant($0, model: model) }),
@@ -432,8 +433,8 @@ struct TaskInspector: View {
           .controlFrame()
           .accessibilityIdentifier("inspector.tags")
       }
-      VStack(alignment: .leading, spacing: Metrics.xs) {
-        Text("Links, one per line").font(Typeface.callout).foregroundStyle(Palette.muted)
+      VStack(alignment: .leading, spacing: theme.space.xs) {
+        Text("Links, one per line").font(theme.type.callout).foregroundStyle(theme.muted)
         TextField("https://…", text: binding(\.links), axis: .vertical)
           .lineLimit(1...6)
           .keyboardType(.URL)
@@ -444,7 +445,7 @@ struct TaskInspector: View {
         ForEach(linkURLs(values), id: \.self) { url in
           Link(destination: url) {
             Label(url.host() ?? url.absoluteString, systemImage: "arrow.up.right.square")
-              .font(Typeface.caption)
+              .font(theme.type.caption)
               .underline()
           }
         }
@@ -463,7 +464,7 @@ struct TaskInspector: View {
   // MARK: - Actions
 
   private func actions(_ task: WorkspaceTask) -> some View {
-    VStack(spacing: Metrics.sm) {
+    VStack(spacing: theme.space.sm) {
       if !task.isList && task.status == .open {
         Button {
           inspector.save(model)
@@ -474,7 +475,7 @@ struct TaskInspector: View {
         }
         .buttonStyle(ThemedButtonStyle(kind: .primary))
       }
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         Button {
           model.navigation.movingTaskID = task.id
         } label: {
@@ -495,7 +496,7 @@ struct TaskInspector: View {
       }
       .buttonStyle(ThemedButtonStyle(kind: .danger))
     }
-    .padding(Metrics.lg)
+    .padding(theme.space.lg)
   }
 
   // MARK: - Bindings
@@ -511,16 +512,17 @@ struct TaskInspector: View {
 /// "3 of 5 subtasks done", with a hairline bar under it — the task's progress
 /// as the Mac's inspector shows it.
 private struct ProgressLine: View {
+  @Environment(\.theme) private var theme
   let done: Int
   let total: Int
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Metrics.xs) {
-      Text("\(done) of \(total) subtasks done").font(Typeface.numeral).foregroundStyle(Palette.muted)
+    VStack(alignment: .leading, spacing: theme.space.xs) {
+      Text("\(done) of \(total) subtasks done").font(theme.type.numeral).foregroundStyle(theme.muted)
       GeometryReader { proxy in
         ZStack(alignment: .leading) {
-          Rectangle().fill(Palette.border)
-          Rectangle().fill(Palette.success)
+          Rectangle().fill(theme.border)
+          Rectangle().fill(theme.success)
             .frame(width: proxy.size.width * CGFloat(done) / CGFloat(max(1, total)))
         }
       }

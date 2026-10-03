@@ -6,6 +6,7 @@ import SwiftUI
 /// ranked ladder, decide the estimate, begin — then the running block, and
 /// the question of how it went.
 struct FocusScreen: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @State private var focus: FocusModel?
 
@@ -17,7 +18,7 @@ struct FocusScreen: View {
         Color.clear
       }
     }
-    .background(Palette.paper)
+    .background(theme.paper)
     .navigationTitle("Focus")
     .navigationBarTitleDisplayMode(.inline)
     .toolbar { WorkspaceToolbar() }
@@ -70,6 +71,7 @@ private struct FocusContent: View {
 // MARK: - Planning
 
 private struct FocusPlanningView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Bindable var focus: FocusModel
   @State private var showsBlocked = false
@@ -82,7 +84,7 @@ private struct FocusPlanningView: View {
         }
         FocusContextControls(focus: focus)
       }
-      .listRowBackground(Palette.paper)
+      .listRowBackground(theme.paper)
       .listRowSeparator(.hidden)
 
       if focus.stagedTaskID != nil {
@@ -91,7 +93,7 @@ private struct FocusPlanningView: View {
         } header: {
           header("Staged")
         }
-        .listRowBackground(Palette.paper)
+        .listRowBackground(theme.paper)
         .listRowSeparator(.hidden)
       }
 
@@ -100,7 +102,7 @@ private struct FocusPlanningView: View {
           EmptyState(
             title: "Nothing to do here", message: "Nothing fits this context and time. Change them, or add a task.",
             systemImage: "scope")
-          .listRowBackground(Palette.paper)
+          .listRowBackground(theme.paper)
         }
         ForEach(Array(focus.ladder.enumerated()), id: \.element.id) { index, rung in
           FocusRungRow(focus: focus, rung: rung, index: index)
@@ -112,7 +114,7 @@ private struct FocusPlanningView: View {
           Spacer()
           if focus.snapshot.hasManualOrder {
             Button("Reset order") { focus.resetOrder() }
-              .font(Typeface.caption)
+              .font(theme.type.caption)
               .accessibilityIdentifier("focus.resetOrder")
           }
         }
@@ -122,10 +124,10 @@ private struct FocusPlanningView: View {
         Section {
           DisclosureGroup(isExpanded: $showsBlocked) {
             ForEach(focus.snapshot.blocked) { blocked in
-              VStack(alignment: .leading, spacing: 2) {
-                Text(blocked.candidate.title).font(Typeface.body).foregroundStyle(Palette.muted)
+              VStack(alignment: .leading, spacing: theme.space.xxs) {
+                Text(blocked.candidate.title).font(theme.type.body).foregroundStyle(theme.muted)
                 Text(blocked.reasons.map(focus.unavailableDescription).joined(separator: " · "))
-                  .font(Typeface.footnote).foregroundStyle(Palette.dim)
+                  .font(theme.type.footnote).foregroundStyle(theme.dim)
               }
               .contextMenu {
                 Button { focus.stage(blocked.id) } label: { Label("Stage anyway", systemImage: "target") }
@@ -133,10 +135,10 @@ private struct FocusPlanningView: View {
             }
           } label: {
             Text("Not available now · \(focus.snapshot.blocked.count)")
-              .font(Typeface.callout).foregroundStyle(Palette.muted)
+              .font(theme.type.callout).foregroundStyle(theme.muted)
           }
         }
-        .listRowBackground(Palette.paper)
+        .listRowBackground(theme.paper)
       }
     }
     .listStyle(.plain)
@@ -145,35 +147,36 @@ private struct FocusPlanningView: View {
   }
 
   private func header(_ text: String) -> some View {
-    Text(text).font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
+    Text(text).font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
   }
 }
 
 /// Points today, this week and ever, and what the last block earned.
 private struct FocusPointsStrip: View {
+  @Environment(\.theme) private var theme
   let points: FocusPointsSummary
   let award: FocusAward?
   let outcome: WorkspaceStore.FocusCompletionOutcome?
   let onDismiss: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Metrics.sm) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       if let award {
-        HStack(spacing: Metrics.sm) {
-          Image(systemName: "sparkles").foregroundStyle(Palette.warning)
+        HStack(spacing: theme.space.sm) {
+          Image(systemName: "sparkles").foregroundStyle(theme.warning)
           Text("+\(FocusPoints.formatted(award.points)) points")
-            .font(Typeface.numeralBody).foregroundStyle(Palette.ink)
-          Text(outcomeText).font(Typeface.caption).foregroundStyle(Palette.muted)
+            .font(theme.type.numeralBody).foregroundStyle(theme.ink)
+          Text(outcomeText).font(theme.type.caption).foregroundStyle(theme.muted)
           Spacer()
-          Button(action: onDismiss) { Image(systemName: "xmark").foregroundStyle(Palette.dim) }
+          Button(action: onDismiss) { Image(systemName: "xmark").foregroundStyle(theme.dim) }
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss")
         }
-        .padding(Metrics.md)
-        .background(Palette.warning.opacity(0.10), in: RoundedRectangle(cornerRadius: Metrics.cardRadius))
-        .overlay(RoundedRectangle(cornerRadius: Metrics.cardRadius).strokeBorder(Palette.warning.opacity(0.4), lineWidth: 1))
+        .padding(theme.space.md)
+        .background(theme.warning.opacity(0.10), in: RoundedRectangle(cornerRadius: theme.radius.panel))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.panel).strokeBorder(theme.warning.opacity(0.4), lineWidth: theme.stroke))
       }
-      HStack(spacing: Metrics.lg) {
+      HStack(spacing: theme.space.lg) {
         stat("Today", FocusPoints.formatted(points.today))
         stat("7 days", FocusPoints.formatted(points.last7Days))
         stat("All time", FocusPoints.formatted(points.allTime))
@@ -194,8 +197,8 @@ private struct FocusPointsStrip: View {
 
   private func stat(_ label: String, _ value: String) -> some View {
     VStack(alignment: .leading, spacing: 1) {
-      Text(value).font(Typeface.numeralBody).foregroundStyle(Palette.ink)
-      Text(label).font(Typeface.footnote).foregroundStyle(Palette.muted)
+      Text(value).font(theme.type.numeralBody).foregroundStyle(theme.ink)
+      Text(label).font(theme.type.footnote).foregroundStyle(theme.muted)
     }
   }
 }
@@ -203,6 +206,7 @@ private struct FocusPointsStrip: View {
 /// Where you are (condition chips), how long you have, and whether you want
 /// to make progress or finish something.
 private struct FocusContextControls: View {
+  @Environment(\.theme) private var theme
   @Bindable var focus: FocusModel
   @State private var isAddingCondition = false
   @State private var newCondition = ""
@@ -210,26 +214,26 @@ private struct FocusContextControls: View {
   @State private var showsConditions = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Metrics.md) {
+    VStack(alignment: .leading, spacing: theme.space.md) {
       ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: Metrics.sm) {
+        HStack(spacing: theme.space.sm) {
           ForEach(focus.visibleConditions) { condition in
             let isOn = focus.conditionIDs.contains(condition.id)
             Button {
               focus.toggleCondition(condition)
             } label: {
-              HStack(spacing: 4) {
+              HStack(spacing: theme.space.xs) {
                 if condition.isLocation { Image(systemName: "mappin").imageScale(.small) }
                 Text(condition.name)
               }
-              .font(Typeface.callout)
-              .foregroundStyle(isOn ? Palette.primary : Palette.ink)
-              .padding(.horizontal, Metrics.md)
+              .font(theme.type.callout)
+              .foregroundStyle(isOn ? theme.primary : theme.ink)
+              .padding(.horizontal, theme.space.md)
               .frame(minHeight: 34)
-              .background(isOn ? Palette.primary.opacity(0.10) : Palette.raised,
-                in: RoundedRectangle(cornerRadius: Metrics.controlRadius))
-              .overlay(RoundedRectangle(cornerRadius: Metrics.controlRadius)
-                .strokeBorder(isOn ? Palette.primary.opacity(0.5) : Palette.border, lineWidth: 1))
+              .background(isOn ? theme.primary.opacity(0.10) : theme.raised,
+                in: RoundedRectangle(cornerRadius: theme.radius.control))
+              .overlay(RoundedRectangle(cornerRadius: theme.radius.control)
+                .strokeBorder(isOn ? theme.primary.opacity(0.5) : theme.border, lineWidth: theme.stroke))
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(isOn ? .isSelected : [])
@@ -239,9 +243,9 @@ private struct FocusContextControls: View {
             isAddingCondition = true
           } label: {
             Image(systemName: "plus")
-              .foregroundStyle(Palette.muted)
+              .foregroundStyle(theme.muted)
               .frame(width: 34, height: 34)
-              .overlay(RoundedRectangle(cornerRadius: Metrics.controlRadius).strokeBorder(Palette.border, lineWidth: 1))
+              .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.border, lineWidth: theme.stroke))
           }
           .buttonStyle(.plain)
           .accessibilityLabel("New condition")
@@ -249,9 +253,9 @@ private struct FocusContextControls: View {
             showsConditions = true
           } label: {
             Image(systemName: "slider.horizontal.3")
-              .foregroundStyle(Palette.muted)
+              .foregroundStyle(theme.muted)
               .frame(width: 34, height: 34)
-              .overlay(RoundedRectangle(cornerRadius: Metrics.controlRadius).strokeBorder(Palette.border, lineWidth: 1))
+              .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.border, lineWidth: theme.stroke))
           }
           .buttonStyle(.plain)
           .accessibilityLabel("Manage conditions")
@@ -262,7 +266,7 @@ private struct FocusContextControls: View {
       if !focus.suggestedContextIDs.isEmpty {
         suggestedContext
       }
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         Menu {
           Button("No time limit") { focus.setAvailable(minutes: nil) }
           ForEach([15, 30, 60], id: \.self) { minutes in
@@ -278,7 +282,7 @@ private struct FocusContextControls: View {
           }
         } label: {
           Label(timeTitle, systemImage: "clock")
-            .font(Typeface.callout)
+            .font(theme.type.callout)
             .controlFrame(expands: false)
         }
         .accessibilityIdentifier("focus.time")
@@ -311,21 +315,21 @@ private struct FocusContextControls: View {
   /// "Last context: Office, Laptop — Use again". What an expired context
   /// leaves behind: offered back, not assumed.
   private var suggestedContext: some View {
-    HStack(spacing: Metrics.sm) {
+    HStack(spacing: theme.space.sm) {
       Text("Last context: " + focus.suggestedContextIDs.compactMap { id in
         focus.snapshot.conditions.first { $0.id == id }?.name
       }.sorted().joined(separator: ", "))
-        .font(Typeface.caption)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.caption)
+        .foregroundStyle(theme.muted)
         .lineLimit(2)
       Spacer(minLength: 0)
       Button("Use again") { focus.confirmSuggestedContext() }
-        .font(Typeface.caption)
-        .foregroundStyle(Palette.primary)
+        .font(theme.type.caption)
+        .foregroundStyle(theme.primary)
         .accessibilityIdentifier("focus.useContextAgain")
       Button("Dismiss") { focus.dismissSuggestedContext() }
-        .font(Typeface.caption)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.caption)
+        .foregroundStyle(theme.muted)
     }
     .buttonStyle(.plain)
   }
@@ -333,7 +337,7 @@ private struct FocusContextControls: View {
   /// "These conditions hold until…": past it the context lapses and is
   /// offered back. The available time also stops there.
   private var contextExpiry: some View {
-    HStack(spacing: Metrics.sm) {
+    HStack(spacing: theme.space.sm) {
       Toggle("Context expires", isOn: Binding(
         get: { focus.contextExpiresAt != nil }, set: { focus.setContextExpires($0) }))
         .toggleStyle(ThemedToggleStyle())
@@ -365,35 +369,36 @@ private struct FocusContextControls: View {
 
 /// The task about to be started and the estimate it is started with.
 private struct FocusStagedCard: View {
+  @Environment(\.theme) private var theme
   @Bindable var focus: FocusModel
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Metrics.md) {
+    VStack(alignment: .leading, spacing: theme.space.md) {
       Text(focus.stagedTitle ?? "")
-        .font(Typeface.title)
-        .foregroundStyle(Palette.ink)
+        .font(theme.type.title)
+        .foregroundStyle(theme.ink)
       if let rung = focus.stagedRung {
         Text(focus.explanation(for: rung).capitalizedFirst)
-          .font(Typeface.caption).foregroundStyle(Palette.muted)
+          .font(theme.type.caption).foregroundStyle(theme.muted)
       }
-      HStack(spacing: Metrics.md) {
+      HStack(spacing: theme.space.md) {
         Text(Format.duration(Int(focus.estimateMinutes * 60)))
-          .font(Typeface.numeralBody)
-          .foregroundStyle(Palette.ink)
+          .font(theme.type.numeralBody)
+          .foregroundStyle(theme.ink)
           .frame(minWidth: 64, alignment: .leading)
         Stepper("Estimate", value: $focus.estimateMinutes, in: 1...480, step: 5)
           .labelsHidden()
           .accessibilityIdentifier("focus.estimate")
         Spacer(minLength: 0)
       }
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         ForEach([15, 25, 45, 60, 90], id: \.self) { minutes in
           Button("\(minutes)m") { focus.estimateMinutes = Double(minutes) }
             .buttonStyle(ThemedButtonStyle(kind: Int(focus.estimateMinutes) == minutes ? .primary : .quiet, compact: true))
-            .font(Typeface.numeral)
+            .font(theme.type.numeral)
         }
       }
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         Button {
           focus.beginStaged()
         } label: {
@@ -405,12 +410,13 @@ private struct FocusStagedCard: View {
           .buttonStyle(ThemedButtonStyle(kind: .quiet))
       }
     }
-    .padding(Metrics.lg)
+    .padding(theme.space.lg)
     .cardSurface(selected: true)
   }
 }
 
 private struct FocusRungRow: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Bindable var focus: FocusModel
   let rung: ScoredNextUp
@@ -426,29 +432,29 @@ private struct FocusRungRow: View {
     Button {
       focus.stage(rung.id)
     } label: {
-      HStack(alignment: .firstTextBaseline, spacing: Metrics.md) {
+      HStack(alignment: .firstTextBaseline, spacing: theme.space.md) {
         Text("\(index + 1)")
-          .font(Typeface.numeral)
-          .foregroundStyle(index == 0 ? Palette.primary : Palette.dim)
+          .font(theme.type.numeral)
+          .foregroundStyle(index == 0 ? theme.primary : theme.dim)
           .frame(width: 22, alignment: .trailing)
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: theme.space.xxs) {
           Text(rung.candidate.title)
-            .font(index == 0 ? Typeface.bodyMedium : Typeface.body)
-            .foregroundStyle(Palette.ink)
+            .font(index == 0 ? theme.type.bodyMedium : theme.type.body)
+            .foregroundStyle(theme.ink)
             .lineLimit(2)
             .celebrationStrike(rung.id)
           Text(focus.explanation(for: rung).capitalizedFirst)
-            .font(Typeface.footnote)
-            .foregroundStyle(Palette.muted)
+            .font(theme.type.footnote)
+            .foregroundStyle(theme.muted)
             .lineLimit(2)
         }
-        Spacer(minLength: Metrics.sm)
+        Spacer(minLength: theme.space.sm)
         if rung.candidate.isDailyDueToday {
-          Image(systemName: "repeat").font(.system(size: 11)).foregroundStyle(Palette.purple)
+          Image(systemName: "repeat").font(theme.type.glyph(11)).foregroundStyle(theme.purple)
             .accessibilityLabel("Daily")
         }
         if let remaining = rung.candidate.remainingSeconds, remaining > 0 {
-          Text(Format.duration(remaining)).font(Typeface.numeral).foregroundStyle(Palette.muted)
+          Text(Format.duration(remaining)).font(theme.type.numeral).foregroundStyle(theme.muted)
         }
       }
       .padding(.vertical, 6)
@@ -456,18 +462,18 @@ private struct FocusRungRow: View {
       .celebrationRow(rung.id)
     }
     .buttonStyle(.plain)
-    .listRowBackground(isStaged ? Palette.primary.opacity(0.10) : Palette.paper)
-    .listRowSeparatorTint(Palette.borderMuted)
+    .listRowBackground(isStaged ? theme.primary.opacity(0.10) : theme.paper)
+    .listRowSeparatorTint(theme.borderMuted)
     .accessibilityIdentifier("focus.rung.\(rung.candidate.title)")
     .swipeActions(edge: .leading, allowsFullSwipe: true) {
       Button { tickOff() } label: { Label("Tick off", systemImage: "checkmark") }
-        .tint(Palette.success)
+        .tint(theme.success)
     }
     .swipeActions(edge: .trailing) {
       Button { focus.deferTask(rung.id, .tomorrow) } label: { Label("Tomorrow", systemImage: "sunrise") }
-        .tint(Palette.warning)
+        .tint(theme.warning)
       Button { focus.deferTask(rung.id, .anHour) } label: { Label("An hour", systemImage: "clock") }
-        .tint(Palette.muted)
+        .tint(theme.muted)
     }
     .contextMenu {
       Button { focus.stage(rung.id) } label: { Label("Stage this", systemImage: "target") }
@@ -489,20 +495,21 @@ private struct FocusRungRow: View {
 // MARK: - Running
 
 private struct FocusRunningView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Bindable var focus: FocusModel
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: Metrics.xl) {
+      VStack(alignment: .leading, spacing: theme.space.xl) {
         if let session = focus.session, let task = focus.activeTask {
-          VStack(alignment: .leading, spacing: Metrics.sm) {
+          VStack(alignment: .leading, spacing: theme.space.sm) {
             Text(session.pausedAt == nil ? "Focusing" : "Paused")
-              .font(Typeface.caption)
-              .foregroundStyle(session.pausedAt == nil ? Palette.primary : Palette.warning)
+              .font(theme.type.caption)
+              .foregroundStyle(session.pausedAt == nil ? theme.primary : theme.warning)
             Text(task.title)
-              .font(Typeface.largeTitle)
-              .foregroundStyle(Palette.ink)
+              .font(theme.type.largeTitle)
+              .foregroundStyle(theme.ink)
               .accessibilityIdentifier("focus.running.title")
           }
           TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -520,7 +527,7 @@ private struct FocusRunningView: View {
             .buttonStyle(ThemedButtonStyle(kind: .quiet))
         }
       }
-      .padding(Metrics.lg)
+      .padding(theme.space.lg)
       .frame(maxWidth: 640, alignment: .leading)
       .frame(maxWidth: .infinity)
     }
@@ -530,28 +537,28 @@ private struct FocusRunningView: View {
     let elapsed = session.elapsedSeconds(now: now)
     let planned = max(60, session.workDurationSeconds)
     let fraction = min(1, Double(elapsed) / Double(planned))
-    return VStack(alignment: .leading, spacing: Metrics.sm) {
+    return VStack(alignment: .leading, spacing: theme.space.sm) {
       Text(Format.clock(elapsed))
-        .font(Typeface.hero)
+        .font(theme.type.hero)
         .monospacedDigit()
-        .foregroundStyle(Palette.ink)
+        .foregroundStyle(theme.ink)
         .accessibilityIdentifier("focus.clock")
       GeometryReader { proxy in
         ZStack(alignment: .leading) {
-          Rectangle().fill(Palette.well)
-          Rectangle().fill(elapsed > planned ? Palette.warning : Palette.primary)
+          Rectangle().fill(theme.well)
+          Rectangle().fill(elapsed > planned ? theme.warning : theme.primary)
             .frame(width: proxy.size.width * fraction)
         }
       }
       .frame(height: 4)
       .clipShape(RoundedRectangle(cornerRadius: 2))
       Text("of \(Format.duration(planned)) planned")
-        .font(Typeface.caption).foregroundStyle(Palette.muted)
+        .font(theme.type.caption).foregroundStyle(theme.muted)
     }
   }
 
   private func controls(session: FocusSession) -> some View {
-    VStack(spacing: Metrics.sm) {
+    VStack(spacing: theme.space.sm) {
       Button {
         focus.requestCompletion(completeTask: true)
       } label: {
@@ -559,7 +566,7 @@ private struct FocusRunningView: View {
       }
       .buttonStyle(ThemedButtonStyle(kind: .primary))
       .accessibilityIdentifier("focus.done")
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         Button {
           focus.togglePause()
         } label: {
@@ -578,27 +585,27 @@ private struct FocusRunningView: View {
         .accessibilityIdentifier("focus.logKeep")
       }
       Button("End session") { focus.finish() }
-        .font(Typeface.callout)
-        .foregroundStyle(Palette.muted)
-        .padding(.top, Metrics.xs)
+        .font(theme.type.callout)
+        .foregroundStyle(theme.muted)
+        .padding(.top, theme.space.xs)
         .accessibilityIdentifier("focus.end")
     }
   }
 
   private func queue(activeID: String) -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text("Up next in this session").font(Typeface.caption).foregroundStyle(Palette.muted)
-        .padding(.bottom, Metrics.sm)
+      Text("Up next in this session").font(theme.type.caption).foregroundStyle(theme.muted)
+        .padding(.bottom, theme.space.sm)
       ForEach(focus.snapshot.queue.filter { $0.item.state == .queued && $0.task.id != activeID }) { entry in
         HStack {
-          Text(entry.task.title).font(Typeface.body).foregroundStyle(Palette.ink)
+          Text(entry.task.title).font(theme.type.body).foregroundStyle(theme.ink)
           Spacer()
           if let planned = entry.item.plannedSeconds {
-            Text(Format.duration(planned)).font(Typeface.numeral).foregroundStyle(Palette.muted)
+            Text(Format.duration(planned)).font(theme.type.numeral).foregroundStyle(theme.muted)
           }
         }
-        .padding(.vertical, Metrics.sm)
-        Hairline(color: Palette.borderMuted)
+        .padding(.vertical, theme.space.sm)
+        Hairline(role: .borderMuted)
       }
     }
   }

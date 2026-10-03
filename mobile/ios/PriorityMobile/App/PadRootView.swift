@@ -4,6 +4,7 @@ import SwiftUI
 /// iPad: the list tree and the root views in the sidebar, the chosen view in
 /// the content column, and the selected task's inspector in the detail column.
 struct PadRootView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @State private var columns = NavigationSplitViewVisibility.all
 
@@ -14,7 +15,7 @@ struct PadRootView: View {
         Section {
           ForEach([RootTab.today, .focus, .review, .search]) { tab in
             Label(tab.title, systemImage: tab.symbol)
-              .font(Typeface.body)
+              .font(theme.type.body)
               .tag(SidebarItem.root(tab))
               .accessibilityIdentifier("sidebar.\(tab.rawValue)")
           }
@@ -23,7 +24,7 @@ struct PadRootView: View {
       }
       .listStyle(.sidebar)
       .scrollContentBackground(.hidden)
-      .background(Palette.paper)
+      .background(theme.paper)
       .navigationTitle("Priority")
       .toolbar {
         ListsTreeToolbar()
@@ -46,7 +47,7 @@ struct PadRootView: View {
         } else {
           EmptyState(title: "No task selected", message: "Select a task to see its details.", systemImage: "sidebar.right")
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Palette.paper)
+            .background(theme.paper)
         }
       }
     }

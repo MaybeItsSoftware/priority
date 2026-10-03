@@ -6,6 +6,7 @@ import SwiftUI
 /// has cost, and the one you are on carrying its own controls. The Mac's
 /// `DayView`, for a phone.
 struct TodayScreen: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   @State private var today = TodayModel()
@@ -16,7 +17,7 @@ struct TodayScreen: View {
       Section {
         DayHeader(day: today.day)
           .listRowInsets(EdgeInsets())
-          .listRowBackground(Palette.paper)
+          .listRowBackground(theme.paper)
           .listRowSeparator(.hidden)
           .selectionDisabled()
       }
@@ -28,26 +29,26 @@ struct TodayScreen: View {
       } header: {
         if !today.day.cards.isEmpty && !today.day.isPlanned {
           Text("Nothing planned — the top of the ranking")
-            .font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
+            .font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
         }
       }
       if !today.day.dailies.isEmpty {
         Section {
           ForEach(today.day.dailies) { daily in
             DailyRow(daily: daily) { today.toggleDaily(daily, model: model) }
-              .listRowBackground(Palette.paper)
-              .listRowSeparatorTint(Palette.borderMuted)
+              .listRowBackground(theme.paper)
+              .listRowSeparatorTint(theme.borderMuted)
               .moveDisabled(true)
               .selectionDisabled()
           }
         } header: {
-          Text("Dailies").font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
+          Text("Dailies").font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
         }
       }
     }
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
-    .background(Palette.paper)
+    .background(theme.paper)
     .overlay {
       if today.isLoaded && today.day.cards.isEmpty && today.day.dailies.isEmpty {
         EmptyState(
@@ -85,22 +86,22 @@ struct TodayScreen: View {
       }
     }
     .tag(card.id)
-    .listRowInsets(EdgeInsets(top: 0, leading: Metrics.lg, bottom: 0, trailing: Metrics.lg))
-    .listRowBackground(card.isRunning ? Palette.primary.opacity(0.06) : (isSelected ? Palette.primary.opacity(0.10) : Palette.paper))
-    .listRowSeparatorTint(Palette.borderMuted)
+    .listRowInsets(EdgeInsets(top: 0, leading: theme.space.lg, bottom: 0, trailing: theme.space.lg))
+    .listRowBackground(card.isRunning ? theme.primary.opacity(0.06) : (isSelected ? theme.primary.opacity(0.10) : theme.paper))
+    .listRowSeparatorTint(theme.borderMuted)
     .moveDisabled(!card.isPlanned)
     .swipeActions(edge: .leading, allowsFullSwipe: true) {
       Button { today.tickOff(card, model: model) } label: {
         Label(card.dailyID != nil ? "Log today" : "Done", systemImage: "checkmark")
       }
-      .tint(Palette.success)
+      .tint(theme.success)
     }
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
       Button { today.deferToTomorrow(card, model: model) } label: { Label("Tomorrow", systemImage: "sunrise") }
-        .tint(Palette.warning)
+        .tint(theme.warning)
       if card.isPlanned {
         Button { model.togglePlannedToday(card.id) } label: { Label("Take off", systemImage: "sun.max") }
-          .tint(Palette.muted)
+          .tint(theme.muted)
       }
     }
     .contextMenu {
@@ -143,45 +144,46 @@ struct TodayScreen: View {
 /// What the day costs against what it has cost, and when it ends: the Mac
 /// pane's tally, with the panel's bar and week line under it.
 struct DayHeader: View {
+  @Environment(\.theme) private var theme
   let day: DaySnapshot
 
   var body: some View {
     let isTicking = day.session?.phase == .running && day.session?.pausedAt == nil
     TimelineView(.periodic(from: .now, by: isTicking ? 30 : 60)) { context in
       let forecast = day.forecast(now: context.date)
-      VStack(alignment: .leading, spacing: Metrics.sm) {
-        HStack(alignment: .firstTextBaseline, spacing: Metrics.sm) {
+      VStack(alignment: .leading, spacing: theme.space.sm) {
+        HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
           Text(Self.spent(forecast))
-            .font(Typeface.numeralBody)
-            .foregroundStyle(Palette.ink)
+            .font(theme.type.numeralBody)
+            .foregroundStyle(theme.ink)
             .accessibilityIdentifier("today.tally")
-          Spacer(minLength: Metrics.sm)
+          Spacer(minLength: theme.space.sm)
           if let finish = forecast.finishAt {
             Text("done by \(finish.formatted(date: .omitted, time: .shortened))")
-              .font(Typeface.numeral)
-              .foregroundStyle(Palette.primary)
+              .font(theme.type.numeral)
+              .foregroundStyle(theme.primary)
           }
         }
         bar(forecast)
-        HStack(spacing: Metrics.sm) {
+        HStack(spacing: theme.space.sm) {
           Text(Self.remaining(forecast))
-          Spacer(minLength: Metrics.sm)
+          Spacer(minLength: theme.space.sm)
           Text(day.loggedToday > 0 ? "\(Format.duration(day.loggedToday)) logged today" : "Nothing logged yet")
         }
-        .font(Typeface.caption)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.caption)
+        .foregroundStyle(theme.muted)
         if day.workProgress.week.seconds > 0 || day.workProgress.week.completed > 0 {
-          HStack(spacing: Metrics.sm) {
+          HStack(spacing: theme.space.sm) {
             Text(day.workProgress.today.completed == 1 ? "1 done today" : "\(day.workProgress.today.completed) done today")
-            Spacer(minLength: Metrics.sm)
+            Spacer(minLength: theme.space.sm)
             Text("\(Format.duration(day.workProgress.week.seconds)) this week · \(Format.duration(day.workProgress.averageSecondsPerDay))/day")
           }
-          .font(Typeface.caption)
-          .foregroundStyle(Palette.muted)
+          .font(theme.type.caption)
+          .foregroundStyle(theme.muted)
         }
       }
-      .padding(.horizontal, Metrics.lg)
-      .padding(.vertical, Metrics.md)
+      .padding(.horizontal, theme.space.lg)
+      .padding(.vertical, theme.space.md)
     }
     .overlay(alignment: .bottom) { Hairline() }
   }
@@ -192,8 +194,8 @@ struct DayHeader: View {
       ? min(1, Double(forecast.loggedSeconds) / Double(forecast.estimatedSeconds)) : 0
     return GeometryReader { proxy in
       ZStack(alignment: .leading) {
-        Rectangle().fill(Palette.well)
-        Rectangle().fill(Palette.primary).frame(width: proxy.size.width * fraction)
+        Rectangle().fill(theme.well)
+        Rectangle().fill(theme.primary).frame(width: proxy.size.width * fraction)
       }
     }
     .frame(height: 4)
@@ -230,6 +232,7 @@ enum DayForecastText {
 /// A card that is not running: a tick, the title and why it is here, its
 /// cost, and a play button.
 struct DayCardRow: View, Equatable {
+  @Environment(\.theme) private var theme
   let card: DayCard
   let index: Int
   let isSelected: Bool
@@ -242,29 +245,29 @@ struct DayCardRow: View, Equatable {
   }
 
   var body: some View {
-    HStack(spacing: Metrics.sm) {
+    HStack(spacing: theme.space.sm) {
       Text("\(index)")
-        .font(Typeface.numeral)
-        .foregroundStyle(Palette.dim)
+        .font(theme.type.numeral)
+        .foregroundStyle(theme.dim)
         .frame(minWidth: 16, alignment: .trailing)
       Button(action: onTick) {
         TaskCheckbox(status: card.isDailyDoneToday ? .completed : .open, isList: card.isList)
           .celebrationIcon(card.id)
-          .frame(width: 32, height: 44)
+          .frame(width: 32, height: theme.touchTarget)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .accessibilityLabel(card.dailyID != nil ? "Log \(card.title) for today" : "Complete \(card.title)")
       .accessibilityIdentifier("today.check.\(card.title)")
       Button(action: onOpen) {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: theme.space.xxs) {
           Text(card.title)
-            .font(Typeface.body)
-            .foregroundStyle(Palette.ink)
+            .font(theme.type.body)
+            .foregroundStyle(theme.ink)
             .lineLimit(2)
             .celebrationStrike(card.id)
             .frame(maxWidth: .infinity, alignment: .leading)
-          HStack(spacing: Metrics.xs) {
+          HStack(spacing: theme.space.xs) {
             if let reason = card.reason, reason != .planned {
               Text(card.detail ?? reason.label).foregroundStyle(tint(for: reason))
             } else if let detail = card.detail {
@@ -277,8 +280,8 @@ struct DayCardRow: View, Equatable {
               Text(list).lineLimit(1)
             }
           }
-          .font(Typeface.footnote)
-          .foregroundStyle(Palette.muted)
+          .font(theme.type.footnote)
+          .foregroundStyle(theme.muted)
         }
         .padding(.vertical, 9)
         .contentShape(Rectangle())
@@ -287,9 +290,9 @@ struct DayCardRow: View, Equatable {
       cost
       Button(action: onStart) {
         Image(systemName: "play.fill")
-          .font(.system(size: 13))
-          .foregroundStyle(Palette.primary)
-          .frame(width: 36, height: 44)
+          .font(theme.type.glyph(13))
+          .foregroundStyle(theme.primary)
+          .frame(width: 36, height: theme.touchTarget)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -304,19 +307,19 @@ struct DayCardRow: View, Equatable {
     if let estimate = card.estimateSeconds, estimate > 0 {
       Text(card.loggedSeconds > 0
         ? "\(Format.duration(card.loggedSeconds))/\(Format.duration(estimate))" : Format.duration(estimate))
-        .font(Typeface.numeral)
-        .foregroundStyle(card.loggedSeconds > estimate ? Palette.warning : Palette.muted)
+        .font(theme.type.numeral)
+        .foregroundStyle(card.loggedSeconds > estimate ? theme.warning : theme.muted)
     } else if card.loggedSeconds > 0 {
-      Text(Format.duration(card.loggedSeconds)).font(Typeface.numeral).foregroundStyle(Palette.muted)
+      Text(Format.duration(card.loggedSeconds)).font(theme.type.numeral).foregroundStyle(theme.muted)
     }
   }
 
   private func tint(for reason: DayPlanReason) -> Color {
     switch reason {
-    case .overdue: Palette.danger
-    case .dueToday: Palette.primary
-    case .startsToday: Palette.success
-    case .running, .planned: Palette.muted
+    case .overdue: theme.danger
+    case .dueToday: theme.primary
+    case .startsToday: theme.success
+    case .running, .planned: theme.muted
     }
   }
 }
@@ -324,6 +327,7 @@ struct DayCardRow: View, Equatable {
 /// The card you are on: the same card, grown — a live clock, and the
 /// controls that only apply to the task actually running.
 struct RunningDayCard: View {
+  @Environment(\.theme) private var theme
   let card: DayCard
   let index: Int
   let session: FocusSession
@@ -336,33 +340,33 @@ struct RunningDayCard: View {
   private var isPaused: Bool { session.pausedAt != nil }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Metrics.sm) {
-      HStack(spacing: Metrics.sm) {
-        Text("\(index)").font(Typeface.numeral).foregroundStyle(Palette.primary)
-        Text(card.title).font(Typeface.title).foregroundStyle(Palette.ink).lineLimit(2)
-        Spacer(minLength: Metrics.sm)
+    VStack(alignment: .leading, spacing: theme.space.sm) {
+      HStack(spacing: theme.space.sm) {
+        Text("\(index)").font(theme.type.numeral).foregroundStyle(theme.primary)
+        Text(card.title).font(theme.type.title).foregroundStyle(theme.ink).lineLimit(2)
+        Spacer(minLength: theme.space.sm)
         if let list = card.listName {
-          Text(list).font(Typeface.footnote).foregroundStyle(Palette.muted).lineLimit(1)
+          Text(list).font(theme.type.footnote).foregroundStyle(theme.muted).lineLimit(1)
         }
       }
-      HStack(alignment: .firstTextBaseline, spacing: Metrics.sm) {
+      HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
         TimelineView(.periodic(from: .now, by: 1)) { context in
           let reading = FocusTimerDisplay.reading(
             elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
             planned: TimeInterval(session.workDurationSeconds))
           Text(reading.text)
-            .font(Typeface.mono(34, .medium, relativeTo: .largeTitle))
+            .font(theme.type.display)
             .monospacedDigit()
-            .foregroundStyle(isPaused ? Palette.muted : (reading.isOverrun ? Palette.warning : Palette.primary))
+            .foregroundStyle(isPaused ? theme.muted : (reading.isOverrun ? theme.warning : theme.primary))
             .contentTransition(.numericText())
             .accessibilityIdentifier("today.clock")
         }
         Text(isPaused ? "paused" : "of \(Format.duration(session.workDurationSeconds))")
-          .font(Typeface.caption)
-          .foregroundStyle(isPaused ? Palette.warning : Palette.muted)
+          .font(theme.type.caption)
+          .foregroundStyle(isPaused ? theme.warning : theme.muted)
         Spacer(minLength: 0)
       }
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         control(isPaused ? "play.fill" : "pause.fill", isPaused ? "Resume" : "Pause", action: onPause)
         control("forward.end.fill", "Skip to the next queued task", action: onSkip)
           .disabled(!canSkip)
@@ -376,17 +380,17 @@ struct RunningDayCard: View {
         .accessibilityIdentifier("today.done")
       }
     }
-    .padding(.vertical, Metrics.md)
+    .padding(.vertical, theme.space.md)
   }
 
   private func control(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
     Button(action: action) {
       Image(systemName: symbol)
-        .font(.system(size: 14))
-        .foregroundStyle(Palette.ink)
+        .font(theme.type.glyph(14))
+        .foregroundStyle(theme.ink)
         .frame(width: 44, height: 36)
-        .overlay(RoundedRectangle(cornerRadius: Metrics.controlRadius).strokeBorder(Palette.inputBorder, lineWidth: 1))
-        .contentShape(Rectangle())
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.inputBorder, lineWidth: theme.stroke))
+        .hitTarget()
     }
     .buttonStyle(.plain)
     .accessibilityLabel(label)
@@ -395,22 +399,23 @@ struct RunningDayCard: View {
 
 /// A daily expected today, ticked when today's contribution is in.
 struct DailyRow: View {
+  @Environment(\.theme) private var theme
   let daily: DayDaily
   let onToggle: () -> Void
 
   var body: some View {
     Button(action: onToggle) {
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         TaskCheckbox(status: daily.isDone ? .completed : .open)
-          .frame(width: 32, height: 44)
+          .frame(width: 32, height: theme.touchTarget)
         Text(daily.title)
-          .font(Typeface.body)
-          .foregroundStyle(daily.isDone ? Palette.muted : Palette.ink)
-          .strikethrough(daily.isDone, color: Palette.dim)
+          .font(theme.type.body)
+          .foregroundStyle(daily.isDone ? theme.muted : theme.ink)
+          .strikethrough(daily.isDone, color: theme.dim)
           .lineLimit(2)
           .frame(maxWidth: .infinity, alignment: .leading)
         if daily.secondsToday > 0 || daily.targetSeconds != nil {
-          Text(progress).font(Typeface.numeral).foregroundStyle(Palette.muted)
+          Text(progress).font(theme.type.numeral).foregroundStyle(theme.muted)
         }
       }
       .contentShape(Rectangle())

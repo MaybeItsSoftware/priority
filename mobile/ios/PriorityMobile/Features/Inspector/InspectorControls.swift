@@ -4,43 +4,47 @@ import SwiftUI
 /// `ThemedSegmentedPicker`, at touch size. Selection is a border and a tint,
 /// never elevation.
 struct ChoiceChips<Value: Hashable>: View {
+  @Environment(\.theme) private var theme
   let options: [(title: String, value: Value)]
   @Binding var selection: Value
-  var tint: Color = Palette.primary
+  var tint: Color?
   var identifier: String?
 
   var body: some View {
-    HStack(spacing: Metrics.xs) {
+    HStack(spacing: theme.space.xs) {
       ForEach(Array(options.enumerated()), id: \.offset) { index, option in
         let selected = option.value == selection
         Button {
           selection = option.value
         } label: {
           Text(option.title)
-            .font(Typeface.callout)
-            .foregroundStyle(selected ? tint : Palette.ink)
+            .font(theme.type.callout)
+            .foregroundStyle(selected ? hue : theme.ink)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
             .frame(maxWidth: .infinity, minHeight: 36)
             .background(
-              RoundedRectangle(cornerRadius: Metrics.controlRadius, style: .continuous)
-                .fill(selected ? tint.opacity(0.10) : Palette.raised))
+              RoundedRectangle(cornerRadius: theme.radius.control, style: .continuous)
+                .fill(selected ? hue.opacity(0.10) : theme.raised))
             .overlay(
-              RoundedRectangle(cornerRadius: Metrics.controlRadius, style: .continuous)
-                .strokeBorder(selected ? tint.opacity(0.6) : Palette.inputBorder, lineWidth: selected ? 1 : Metrics.hairline))
-            .contentShape(Rectangle())
+              RoundedRectangle(cornerRadius: theme.radius.control, style: .continuous)
+                .strokeBorder(selected ? hue.opacity(0.6) : theme.inputBorder, lineWidth: selected ? theme.stroke : theme.hairline))
+            .hitTarget()
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier(identifier.map { "\($0).\(index)" } ?? "")
       }
     }
-    .frame(minHeight: Metrics.minimumHitTarget)
+    .frame(minHeight: theme.touchTarget)
   }
+
+  private var hue: Color { tint ?? theme.primary }
 }
 
 /// A labelled row: the muted label on the left, the control on the right.
 struct InspectorRow<Content: View>: View {
+  @Environment(\.theme) private var theme
   let label: String
   @ViewBuilder var content: Content
 
@@ -50,20 +54,21 @@ struct InspectorRow<Content: View>: View {
   }
 
   var body: some View {
-    HStack(alignment: .center, spacing: Metrics.md) {
+    HStack(alignment: .center, spacing: theme.space.md) {
       Text(label)
-        .font(Typeface.callout)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.callout)
+        .foregroundStyle(theme.muted)
         .frame(width: 92, alignment: .leading)
       content
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .frame(minHeight: Metrics.minimumHitTarget)
+    .frame(minHeight: theme.touchTarget)
   }
 }
 
 /// A group of rows under a sentence-case label, closed by a hairline.
 struct InspectorSection<Content: View>: View {
+  @Environment(\.theme) private var theme
   let title: String
   @ViewBuilder var content: Content
 
@@ -73,26 +78,27 @@ struct InspectorSection<Content: View>: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Metrics.sm) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       SectionLabel(title)
       content
     }
-    .padding(.horizontal, Metrics.lg)
-    .padding(.vertical, Metrics.md)
-    .overlay(alignment: .bottom) { Hairline(color: Palette.borderMuted) }
+    .padding(.horizontal, theme.space.lg)
+    .padding(.vertical, theme.space.md)
+    .overlay(alignment: .bottom) { Hairline(role: .borderMuted) }
   }
 }
 
 /// A menu drawn as a themed control rather than a stock pop-up button.
 struct ThemedMenuLabel: View {
+  @Environment(\.theme) private var theme
   let title: String
   var systemImage: String = "chevron.up.chevron.down"
 
   var body: some View {
     HStack {
       Text(title).lineLimit(1)
-      Spacer(minLength: Metrics.xs)
-      Image(systemName: systemImage).font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.muted)
+      Spacer(minLength: theme.space.xs)
+      Image(systemName: systemImage).font(theme.type.glyph(11, .semibold)).foregroundStyle(theme.muted)
     }
     .controlFrame()
     .contentShape(Rectangle())

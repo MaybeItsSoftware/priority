@@ -5,6 +5,7 @@ import SwiftUI
 /// foldable subtasks. Cards move by drag or by menu; columns can be added,
 /// renamed, reordered and removed.
 struct BoardView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   @State private var board: BoardModel
@@ -32,7 +33,7 @@ struct BoardView: View {
     GeometryReader { proxy in
       let width = columnWidth(for: proxy.size.width)
       ScrollView(.horizontal) {
-        LazyHStack(alignment: .top, spacing: Metrics.md) {
+        LazyHStack(alignment: .top, spacing: theme.space.md) {
           ForEach(board.columns) { column in
             BoardColumnView(
               column: column, cards: board.cards(in: column.id), board: board, width: width,
@@ -44,13 +45,13 @@ struct BoardView: View {
             .frame(width: min(width, 200))
         }
         .scrollTargetLayout()
-        .padding(.horizontal, Metrics.lg)
-        .padding(.vertical, Metrics.md)
+        .padding(.horizontal, theme.space.lg)
+        .padding(.vertical, theme.space.md)
       }
       .scrollTargetBehavior(.viewAligned)
       .scrollIndicators(.hidden)
     }
-    .background(Palette.paper)
+    .background(theme.paper)
     .task(id: QueryKey(revision: model.revision, scope: board.scope)) {
       await board.load(model)
     }
@@ -79,9 +80,9 @@ struct BoardView: View {
   /// One column fills an iPhone (less a peek of the next); an iPad shows
   /// several side by side.
   private func columnWidth(for width: CGFloat) -> CGFloat {
-    let available = width - Metrics.lg * 2
+    let available = width - theme.space.lg * 2
     if available < 500 { return max(240, available - 28) }
-    return min(340, max(260, (available - Metrics.md * 2) / 3))
+    return min(340, max(260, (available - theme.space.md * 2) / 3))
   }
 
   private var addColumnButton: some View {
@@ -90,12 +91,12 @@ struct BoardView: View {
       columnPrompt = .add
     } label: {
       Label("Add column", systemImage: "plus")
-        .font(Typeface.callout)
-        .foregroundStyle(Palette.muted)
-        .frame(maxWidth: .infinity, minHeight: 44)
+        .font(theme.type.callout)
+        .foregroundStyle(theme.muted)
+        .frame(maxWidth: .infinity, minHeight: theme.touchTarget)
         .overlay(
-          RoundedRectangle(cornerRadius: Metrics.cardRadius)
-            .strokeBorder(Palette.border, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+          RoundedRectangle(cornerRadius: theme.radius.panel)
+            .strokeBorder(theme.border, style: StrokeStyle(lineWidth: theme.stroke, dash: [4, 3])))
     }
     .buttonStyle(.plain)
     .accessibilityIdentifier("board.addColumn")
@@ -117,6 +118,7 @@ struct BoardView: View {
 
 /// One column: its header, its cards, and an inline add field.
 struct BoardColumnView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   let column: WorkspaceKanbanColumn
   let cards: [BoardCard]
@@ -130,25 +132,25 @@ struct BoardColumnView: View {
   var body: some View {
     VStack(spacing: 0) {
       header
-      Hairline(color: Palette.borderMuted)
+      Hairline(role: .borderMuted)
       ScrollView(.vertical) {
-        LazyVStack(spacing: Metrics.sm) {
+        LazyVStack(spacing: theme.space.sm) {
           ForEach(cards) { card in
             BoardCardView(card: card, board: board, column: column)
           }
           composer
         }
-        .padding(Metrics.sm)
+        .padding(theme.space.sm)
       }
       .scrollIndicators(.hidden)
     }
     .frame(width: width)
     .frame(maxHeight: .infinity, alignment: .top)
-    .background(isTargeted ? Palette.primary.opacity(0.06) : Palette.altRow)
-    .clipShape(RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous))
+    .background(isTargeted ? theme.primary.opacity(0.06) : theme.altRow)
+    .clipShape(RoundedRectangle(cornerRadius: theme.radius.panel, style: .continuous))
     .overlay(
-      RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-        .strokeBorder(isTargeted ? Palette.primary : Palette.border, lineWidth: isTargeted ? 1.5 : 1))
+      RoundedRectangle(cornerRadius: theme.radius.panel, style: .continuous)
+        .strokeBorder(isTargeted ? theme.primary : theme.border, lineWidth: isTargeted ? 1.5 : 1))
     .dropDestination(for: String.self) { ids, _ in
       guard let id = ids.first, board.snapshot.allCards.contains(where: { $0.id == id }) else { return false }
       board.move(id, toColumn: column.id, model: model)
@@ -158,24 +160,24 @@ struct BoardColumnView: View {
   }
 
   private var header: some View {
-    HStack(spacing: Metrics.sm) {
+    HStack(spacing: theme.space.sm) {
       Text(column.title)
-        .font(Typeface.bodyMedium)
-        .foregroundStyle(Palette.ink)
+        .font(theme.type.bodyMedium)
+        .foregroundStyle(theme.ink)
         .lineLimit(1)
       Text("\(cards.count)")
-        .font(Typeface.numeral)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.numeral)
+        .foregroundStyle(theme.muted)
       Spacer(minLength: 0)
       Button {
         board.composerText = ""
         board.composingColumnID = column.id
         composerFocused.wrappedValue = true
       } label: {
-        Image(systemName: "plus").frame(width: 32, height: 36).contentShape(Rectangle())
+        Image(systemName: "plus").frame(width: 32, height: 36).hitTarget()
       }
       .buttonStyle(.plain)
-      .foregroundStyle(Palette.muted)
+      .foregroundStyle(theme.muted)
       .accessibilityLabel("Add a card to \(column.title)")
       .accessibilityIdentifier("board.add.\(column.title)")
       Menu {
@@ -188,22 +190,22 @@ struct BoardColumnView: View {
         Button(role: .destructive) { onRemove() } label: { Label("Remove column…", systemImage: "trash") }
           .disabled(board.columns.count <= 1)
       } label: {
-        Image(systemName: "ellipsis").frame(width: 32, height: 36).contentShape(Rectangle())
+        Image(systemName: "ellipsis").frame(width: 32, height: 36).hitTarget()
       }
-      .foregroundStyle(Palette.muted)
+      .foregroundStyle(theme.muted)
       .accessibilityLabel("\(column.title) options")
     }
-    .padding(.leading, Metrics.md)
-    .padding(.trailing, Metrics.xs)
-    .frame(minHeight: 44)
+    .padding(.leading, theme.space.md)
+    .padding(.trailing, theme.space.xs)
+    .frame(minHeight: theme.touchTarget)
   }
 
   @ViewBuilder
   private var composer: some View {
     if board.composingColumnID == column.id {
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         TextField("New card", text: Binding(get: { board.composerText }, set: { board.composerText = $0 }))
-          .font(Typeface.body)
+          .font(theme.type.body)
           .focused(composerFocused)
           .submitLabel(.next)
           .onSubmit {
@@ -218,12 +220,12 @@ struct BoardColumnView: View {
         Button {
           board.composingColumnID = nil
         } label: {
-          Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.dim)
+          Image(systemName: "xmark.circle.fill").foregroundStyle(theme.dim)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Cancel new card")
       }
-      .padding(Metrics.md)
+      .padding(theme.space.md)
       .cardSurface()
     }
   }
@@ -231,6 +233,7 @@ struct BoardColumnView: View {
 
 /// One card. Equatable on its value so an unchanged card is not redrawn.
 struct BoardCardView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   let card: BoardCard
@@ -241,11 +244,11 @@ struct BoardCardView: View {
   private var isSelected: Bool { model.navigation.selectedTaskID == card.id }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Metrics.xs) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       if let parentTitle = card.parentTitle {
-        Text(parentTitle).font(Typeface.footnote).foregroundStyle(Palette.muted).lineLimit(1)
+        Text(parentTitle).font(theme.type.footnote).foregroundStyle(theme.muted).lineLimit(1)
       }
-      HStack(alignment: .top, spacing: Metrics.sm) {
+      HStack(alignment: .top, spacing: theme.space.sm) {
         Button { model.completeCelebrating(card.id) } label: {
           TaskCheckbox(status: card.status, isList: card.isList)
             .celebrationIcon(card.id)
@@ -255,9 +258,9 @@ struct BoardCardView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(card.status == .open ? "Complete \(card.title)" : "Reopen \(card.title)")
         Text(card.title)
-          .font(card.isList ? Typeface.bodyMedium : Typeface.body)
-          .foregroundStyle(card.status == .open ? Palette.ink : Palette.muted)
-          .strikethrough(card.status != .open, color: Palette.dim)
+          .font(card.isList ? theme.type.bodyMedium : theme.type.body)
+          .foregroundStyle(card.status == .open ? theme.ink : theme.muted)
+          .strikethrough(card.status != .open, color: theme.dim)
           .celebrationStrike(card.id)
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.top, 3)
@@ -268,18 +271,18 @@ struct BoardCardView: View {
       badges
       subtasks
     }
-    .padding(Metrics.sm)
+    .padding(theme.space.sm)
     .celebrationRow(card.id)
     .background(
-      RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-        .fill(isSelected ? Palette.primary.opacity(0.08) : Palette.raised))
+      RoundedRectangle(cornerRadius: theme.radius.panel, style: .continuous)
+        .fill(isSelected ? theme.primary.opacity(0.08) : theme.raised))
     .overlay(
-      RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-        .strokeBorder(isSelected || isTargeted ? Palette.primary : Palette.border, lineWidth: 1))
-    .contentShape(RoundedRectangle(cornerRadius: Metrics.cardRadius))
+      RoundedRectangle(cornerRadius: theme.radius.panel, style: .continuous)
+        .strokeBorder(isSelected || isTargeted ? theme.primary : theme.border, lineWidth: theme.stroke))
+    .contentShape(RoundedRectangle(cornerRadius: theme.radius.panel))
     .onTapGesture { model.navigation.inspect(card.id, isPad: isPad) }
     .draggable(card.id) {
-      Text(card.title).font(Typeface.body).padding(Metrics.sm).background(Palette.raised)
+      Text(card.title).font(theme.type.body).padding(theme.space.sm).background(theme.raised)
     }
     .dropDestination(for: String.self) { ids, _ in
       guard let id = ids.first, id != card.id, board.snapshot.allCards.contains(where: { $0.id == id }) else {
@@ -312,22 +315,22 @@ struct BoardCardView: View {
   private var badges: some View {
     let hasBadges = card.isPlanned || card.dueAt != nil || (card.estimateSeconds ?? 0) > 0 || card.listName != nil
     if hasBadges {
-      HStack(spacing: Metrics.xs) {
+      HStack(spacing: theme.space.xs) {
         if card.isPlanned {
-          Image(systemName: "sun.max").font(.system(size: 12)).foregroundStyle(Palette.warning)
+          Image(systemName: "sun.max").font(theme.type.glyph(12)).foregroundStyle(theme.warning)
         }
         if let estimate = card.estimateSeconds, estimate > 0 {
-          Text(Format.duration(estimate)).font(Typeface.numeral).foregroundStyle(Palette.muted)
+          Text(Format.duration(estimate)).font(theme.type.numeral).foregroundStyle(theme.muted)
         }
         if let due = card.dueAt {
           Tag(
             text: Format.due(due),
-            tint: card.status != .open ? Palette.muted
-              : Format.isOverdue(due) ? Palette.danger : Format.isToday(due) ? Palette.primary : Palette.muted)
+            tint: card.status != .open ? theme.muted
+              : Format.isOverdue(due) ? theme.danger : Format.isToday(due) ? theme.primary : theme.muted)
         }
         Spacer(minLength: 0)
         if let listName = card.listName {
-          Text(listName).font(Typeface.footnote).foregroundStyle(Palette.muted).lineLimit(1)
+          Text(listName).font(theme.type.footnote).foregroundStyle(theme.muted).lineLimit(1)
         }
       }
       .padding(.leading, 36)
@@ -341,9 +344,9 @@ struct BoardCardView: View {
       let parents = board.subtaskParentIDs(of: card)
       let shown = rows.prefix(BoardModel.visibleSubtaskRows)
       VStack(alignment: .leading, spacing: 0) {
-        Hairline(color: Palette.borderMuted).padding(.vertical, Metrics.xxs)
+        Hairline(role: .borderMuted).padding(.vertical, theme.space.xxs)
         ForEach(Array(shown), id: \.id) { item in
-          HStack(spacing: Metrics.xs) {
+          HStack(spacing: theme.space.xs) {
             Color.clear.frame(width: CGFloat(item.depth) * Metrics.indent, height: 1)
             Button { model.toggleComplete(item.id) } label: {
               TaskCheckbox(status: item.task.status, isList: item.task.isList, size: 16)
@@ -353,9 +356,9 @@ struct BoardCardView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(item.task.status == .open ? "Complete \(item.task.title)" : "Reopen \(item.task.title)")
             Text(item.task.title)
-              .font(Typeface.callout)
-              .foregroundStyle(item.task.status == .open ? Palette.ink : Palette.muted)
-              .strikethrough(item.task.status != .open, color: Palette.dim)
+              .font(theme.type.callout)
+              .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
+              .strikethrough(item.task.status != .open, color: theme.dim)
               .lineLimit(2)
               .frame(maxWidth: .infinity, alignment: .leading)
               .contentShape(Rectangle())
@@ -372,14 +375,14 @@ struct BoardCardView: View {
         }
         if rows.count > shown.count {
           Button("+\(rows.count - shown.count) more") { model.navigation.inspect(card.id, isPad: isPad) }
-            .font(Typeface.footnote)
-            .foregroundStyle(Palette.muted)
+            .font(theme.type.footnote)
+            .foregroundStyle(theme.muted)
             .buttonStyle(.plain)
             .padding(.leading, 32)
             .frame(minHeight: 28)
         }
       }
-      .padding(.leading, 4)
+      .padding(.leading, theme.space.xs)
     }
   }
 
@@ -388,8 +391,8 @@ struct BoardCardView: View {
       withAnimation(.snappy(duration: 0.2)) { board.toggleFold(id) }
     } label: {
       Image(systemName: "chevron.right")
-        .font(.system(size: 11, weight: .semibold))
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.glyph(11, .semibold))
+        .foregroundStyle(theme.muted)
         .rotationEffect(.degrees(folded ? 0 : 90))
         .frame(width: 28, height: 28)
         .contentShape(Rectangle())

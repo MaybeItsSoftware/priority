@@ -2,9 +2,10 @@ import SwiftUI
 
 /// Theme, celebrations, sync, and (in DEBUG) the seeding tools.
 struct SettingsScreen: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.dismiss) private var dismiss
-  @AppStorage(AppearanceChoice.storageKey) private var appearance = AppearanceChoice.system
+  @Environment(ThemeStore.self) private var themes
   @AppStorage(CelebrationStyle.storageKey) private var celebration = CelebrationStyle.default
   @AppStorage(CompletionHaptics.storageKey) private var haptics = true
 
@@ -12,25 +13,35 @@ struct SettingsScreen: View {
     NavigationStack {
       Form {
         Section {
-          Picker("Theme", selection: $appearance) {
-            ForEach(AppearanceChoice.allCases) { choice in
-              Text(choice.title).tag(choice)
+          Picker("Theme", selection: Binding(get: { themes.effectiveIdentifier }, set: { themes.select($0) })) {
+            ForEach(themes.available, id: \.identifier) { specification in
+              Text(specification.name).tag(specification.identifier)
             }
           }
           .pickerStyle(.inline)
           .labelsHidden()
           .accessibilityIdentifier("settings.theme")
+          Picker(
+            "Appearance", selection: Binding(get: { themes.effectiveAppearance }, set: { themes.setAppearance($0) })
+          ) {
+            ForEach(AppearanceChoice.allCases) { choice in
+              Text(choice.title).tag(choice)
+            }
+          }
+          .pickerStyle(.segmented)
+          .disabled(themes.theme.lockedColorScheme != nil)
+          .accessibilityIdentifier("settings.appearance")
         } header: {
           header("Theme")
         }
-        .listRowBackground(Palette.raised)
+        .listRowBackground(theme.raised)
 
         Section {
           Picker("Celebration", selection: $celebration) {
             ForEach(CelebrationStyle.allCases) { style in
-              VStack(alignment: .leading, spacing: 2) {
-                Text(style.title).font(Typeface.body)
-                Text(style.detail).font(Typeface.footnote).foregroundStyle(Palette.muted)
+              VStack(alignment: .leading, spacing: theme.space.xxs) {
+                Text(style.title).font(theme.type.body)
+                Text(style.detail).font(theme.type.footnote).foregroundStyle(theme.muted)
               }
               .tag(style)
             }
@@ -40,18 +51,18 @@ struct SettingsScreen: View {
           CelebrationPreview(style: celebration)
           Toggle("Haptic on complete", isOn: $haptics)
             .toggleStyle(ThemedToggleStyle())
-            .font(Typeface.body)
+            .font(theme.type.body)
         } header: {
           header("Completing a task")
         }
-        .listRowBackground(Palette.raised)
+        .listRowBackground(theme.raised)
 
         Section {
           NavigationLink {
             SyncSettingsView()
           } label: {
             HStack {
-              Label("Sync", systemImage: "arrow.triangle.2.circlepath").font(Typeface.body)
+              Label("Sync", systemImage: "arrow.triangle.2.circlepath").font(theme.type.body)
               Spacer()
               SyncStatusLine(compact: true)
             }
@@ -61,21 +72,21 @@ struct SettingsScreen: View {
           // without making anyone dig into the Sync page to find out.
           if let sync = SyncController.shared {
             if sync.isPairing {
-              HStack(spacing: Metrics.sm) {
+              HStack(spacing: theme.space.sm) {
                 ProgressView()
-                Text("Pairing…").font(Typeface.caption).foregroundStyle(Palette.muted)
+                Text("Pairing…").font(theme.type.caption).foregroundStyle(theme.muted)
               }
             } else if let error = sync.pairingError {
               Label(error, systemImage: "exclamationmark.triangle")
-                .font(Typeface.caption)
-                .foregroundStyle(Palette.danger)
+                .font(theme.type.caption)
+                .foregroundStyle(theme.danger)
                 .accessibilityIdentifier("settings.pairingError")
             }
           }
         } header: {
           header("Devices")
         }
-        .listRowBackground(Palette.raised)
+        .listRowBackground(theme.raised)
 
         #if DEBUG
         Section {
@@ -90,18 +101,18 @@ struct SettingsScreen: View {
         } header: {
           header("Debug")
         }
-        .font(Typeface.body)
-        .listRowBackground(Palette.raised)
+        .font(theme.type.body)
+        .listRowBackground(theme.raised)
         #endif
 
         Section {
           LabeledContent("Version", value: Self.version)
-            .font(Typeface.body)
+            .font(theme.type.body)
         }
-        .listRowBackground(Palette.raised)
+        .listRowBackground(theme.raised)
       }
       .scrollContentBackground(.hidden)
-      .background(Palette.paper)
+      .background(theme.paper)
       .navigationDestination(isPresented: Binding(
         get: { model.navigation.isSyncSettingsPresented },
         set: { model.navigation.isSyncSettingsPresented = $0 })) { SyncSettingsView() }
@@ -117,7 +128,7 @@ struct SettingsScreen: View {
   }
 
   private func header(_ text: String) -> some View {
-    Text(text).font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
+    Text(text).font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
   }
 
   static var version: String {
@@ -132,6 +143,7 @@ struct SettingsScreen: View {
 /// can be judged before a real task is spent on it. Plays even with Reduce
 /// Motion on — shortened, as it would be for real.
 private struct CelebrationPreview: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   let style: CelebrationStyle
   private static let id = "settings.celebration.preview"
@@ -141,13 +153,13 @@ private struct CelebrationPreview: View {
       guard !model.celebration.isPlaying else { return }
       Task { await model.celebration.play(style, on: Self.id) }
     } label: {
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         TaskCheckbox(status: model.celebration.phase(for: Self.id) == .celebrating ? .completed : .open)
           .celebrationIcon(Self.id)
           .frame(width: 32, height: 40)
         Text("Tap to preview")
-          .font(Typeface.body)
-          .foregroundStyle(Palette.ink)
+          .font(theme.type.body)
+          .foregroundStyle(theme.ink)
           .celebrationStrike(Self.id)
         Spacer(minLength: 0)
       }

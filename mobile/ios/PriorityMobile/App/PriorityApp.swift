@@ -5,11 +5,13 @@ import SwiftUI
 @main
 struct PriorityApp: App {
   @State private var boot = Boot()
-  @AppStorage(AppearanceChoice.storageKey) private var appearance = AppearanceChoice.system
+  @State private var themes: ThemeStore
   @Environment(\.scenePhase) private var scenePhase
 
   init() {
-    Typeface.applyChrome()
+    let themes = ThemeStore()
+    themes.install()
+    _themes = State(initialValue: themes)
   }
 
   var body: some Scene {
@@ -34,9 +36,11 @@ struct PriorityApp: App {
           LaunchFailureView(message: boot.failure ?? "")
         }
       }
-      .preferredColorScheme(appearance.colorScheme)
-      .tint(Palette.primary)
-      .font(Typeface.body)
+      .environment(themes)
+      .environment(\.theme, themes.theme)
+      .preferredColorScheme(themes.colorScheme)
+      .tint(themes.theme.primary)
+      .font(themes.theme.type.body)
     }
     .backgroundTask(.appRefresh(SyncController.refreshTaskID)) {
       await SyncController.shared?.backgroundRefresh()
@@ -75,17 +79,18 @@ enum AppServices {
 }
 
 struct LaunchFailureView: View {
+  @Environment(\.theme) private var theme
   let message: String
 
   var body: some View {
-    VStack(spacing: Metrics.md) {
-      Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Palette.danger)
-      Text("Priority couldn't open its workspace").font(Typeface.title)
-      Text(message).font(Typeface.caption).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+    VStack(spacing: theme.space.md) {
+      Image(systemName: "exclamationmark.triangle").font(theme.type.glyph(34)).foregroundStyle(theme.danger)
+      Text("Priority couldn't open its workspace").font(theme.type.title)
+      Text(message).font(theme.type.caption).foregroundStyle(theme.muted).multilineTextAlignment(.center)
     }
-    .padding(Metrics.xl)
+    .padding(theme.space.xl)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Palette.paper)
+    .background(theme.paper)
   }
 }
 

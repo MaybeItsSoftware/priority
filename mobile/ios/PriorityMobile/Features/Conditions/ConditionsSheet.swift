@@ -9,6 +9,7 @@ import SwiftUI
 /// out of the pickers and the Focus chips without touching the tasks that
 /// still need it — restore it and they are as they were.
 struct ConditionsSheet: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.dismiss) private var dismiss
   @State private var catalogue = StoreQuery(ConditionsCatalogue.empty)
@@ -23,23 +24,23 @@ struct ConditionsSheet: View {
       List {
         Section {
           Text("Tasks refer to conditions by identity. Renaming one keeps every requirement on it intact.")
-            .font(Typeface.caption)
-            .foregroundStyle(Palette.muted)
+            .font(theme.type.caption)
+            .foregroundStyle(theme.muted)
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: Metrics.xs, bottom: 0, trailing: Metrics.xs))
+            .listRowInsets(EdgeInsets(top: 0, leading: theme.space.xs, bottom: 0, trailing: theme.space.xs))
         }
         Section {
           if catalogue.isLoaded, catalogue.value.active.isEmpty {
-            Text("No conditions yet").font(Typeface.body).foregroundStyle(Palette.muted)
+            Text("No conditions yet").font(theme.type.body).foregroundStyle(theme.muted)
           }
           ForEach(catalogue.value.active) { condition in row(condition) }
         } header: {
           label("Available")
         }
         Section {
-          HStack(spacing: Metrics.sm) {
+          HStack(spacing: theme.space.sm) {
             TextField("New condition", text: $newName)
-              .font(Typeface.body)
+              .font(theme.type.body)
               .focused($addFocused)
               .submitLabel(.done)
               .onSubmit(add)
@@ -47,7 +48,7 @@ struct ConditionsSheet: View {
             Button {
               newIsLocation.toggle()
             } label: {
-              Tag(text: "Place", tint: newIsLocation ? Palette.primary : Palette.dim, systemImage: "mappin")
+              Tag(text: "Place", tint: newIsLocation ? theme.primary : theme.dim, systemImage: "mappin")
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Place")
@@ -58,13 +59,13 @@ struct ConditionsSheet: View {
               .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
               .accessibilityIdentifier("conditions.add")
           }
-          .listRowBackground(Palette.raised)
+          .listRowBackground(theme.raised)
         } header: {
           label("Add")
         } footer: {
           Text("A place is where you are; choosing one in Focus replaces the last. Anything else — a tool, a state — can be combined.")
-            .font(Typeface.footnote)
-            .foregroundStyle(Palette.dim)
+            .font(theme.type.footnote)
+            .foregroundStyle(theme.dim)
         }
         if !catalogue.value.archived.isEmpty {
           Section {
@@ -75,7 +76,7 @@ struct ConditionsSheet: View {
         }
       }
       .scrollContentBackground(.hidden)
-      .background(Palette.paper)
+      .background(theme.paper)
       .navigationTitle("Conditions")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -106,7 +107,7 @@ struct ConditionsSheet: View {
   }
 
   private func label(_ text: String) -> some View {
-    Text(text).font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
+    Text(text).font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
   }
 
   private func row(_ condition: TaskCondition) -> some View {
@@ -114,44 +115,44 @@ struct ConditionsSheet: View {
     return Button {
       startRename(condition)
     } label: {
-      HStack(spacing: Metrics.sm) {
+      HStack(spacing: theme.space.sm) {
         Image(systemName: condition.isLocation ? "mappin" : "circle.dotted")
-          .foregroundStyle(condition.isArchived ? Palette.dim : Palette.purple)
+          .foregroundStyle(condition.isArchived ? theme.dim : theme.purple)
           .frame(width: 20)
         VStack(alignment: .leading, spacing: 1) {
           Text(condition.name)
-            .font(Typeface.body)
-            .foregroundStyle(condition.isArchived ? Palette.muted : Palette.ink)
+            .font(theme.type.body)
+            .foregroundStyle(condition.isArchived ? theme.muted : theme.ink)
           Text(detail(condition, uses: uses))
-            .font(Typeface.footnote)
-            .foregroundStyle(Palette.dim)
+            .font(theme.type.footnote)
+            .foregroundStyle(theme.dim)
         }
         Spacer(minLength: 0)
-        Image(systemName: "pencil").foregroundStyle(Palette.dim).imageScale(.small)
+        Image(systemName: "pencil").foregroundStyle(theme.dim).imageScale(.small)
       }
-      .frame(minHeight: Metrics.minimumHitTarget - 8)
+      .frame(minHeight: theme.touchTarget - 8)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .listRowBackground(Palette.raised)
+    .listRowBackground(theme.raised)
     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
       if condition.isArchived {
         Button { model.saveCondition(condition, isArchived: false) } label: {
           Label("Restore", systemImage: "arrow.uturn.backward")
         }
-        .tint(Palette.success)
+        .tint(theme.success)
       } else {
         Button { model.saveCondition(condition, isArchived: true) } label: {
           Label("Archive", systemImage: "archivebox")
         }
-        .tint(Palette.warning)
+        .tint(theme.warning)
       }
     }
     .swipeActions(edge: .leading) {
       Button { model.saveCondition(condition, isLocation: !condition.isLocation) } label: {
         Label(condition.isLocation ? "Not a place" : "Place", systemImage: "mappin")
       }
-      .tint(Palette.primary)
+      .tint(theme.primary)
     }
     .contextMenu {
       Button { startRename(condition) } label: { Label("Rename", systemImage: "pencil") }

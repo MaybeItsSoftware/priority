@@ -6,6 +6,7 @@ import SwiftUI
 /// you type and shows it as chips before you add, a destination, and "plan
 /// for today". Stays open after Add so a run of tasks can go in one sitting.
 struct QuickAddSheet: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.dismiss) private var dismiss
   @State private var quickAdd = QuickAddModel()
@@ -13,32 +14,32 @@ struct QuickAddSheet: View {
 
   var body: some View {
     NavigationStack {
-      VStack(alignment: .leading, spacing: Metrics.md) {
+      VStack(alignment: .leading, spacing: theme.space.md) {
         field
         chips
-        Hairline(color: Palette.borderMuted)
+        Hairline(role: .borderMuted)
         destinationRow
         Toggle("Plan for today", isOn: $quickAdd.plansToday)
           .toggleStyle(ThemedToggleStyle())
           .accessibilityIdentifier("quickAdd.today")
         Text(TaskCapture.syntaxHintText)
-          .font(Typeface.footnote)
-          .foregroundStyle(Palette.dim)
+          .font(theme.type.footnote)
+          .foregroundStyle(theme.dim)
         if !quickAdd.added.isEmpty {
-          Hairline(color: Palette.borderMuted)
+          Hairline(role: .borderMuted)
           SectionLabel("Added")
           ForEach(Array(quickAdd.added.prefix(5).enumerated()), id: \.offset) { _, title in
             Label(title, systemImage: "checkmark")
-              .font(Typeface.callout)
-              .foregroundStyle(Palette.muted)
+              .font(theme.type.callout)
+              .foregroundStyle(theme.muted)
               .lineLimit(1)
           }
         }
         Spacer(minLength: 0)
       }
-      .padding(Metrics.lg)
+      .padding(theme.space.lg)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-      .background(Palette.paper)
+      .background(theme.paper)
       .navigationTitle("Add task")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -67,7 +68,7 @@ struct QuickAddSheet: View {
 
   private var field: some View {
     TextField("What needs doing?", text: $quickAdd.text, axis: .vertical)
-      .font(Typeface.sans(18, relativeTo: .body))
+      .font(theme.type.sans(18, relativeTo: .body))
       .lineLimit(1...4)
       .focused($fieldFocused)
       .submitLabel(.next)
@@ -80,13 +81,13 @@ struct QuickAddSheet: View {
   private var chips: some View {
     let capture = quickAdd.capture()
     let labels = quickAdd.chips()
-    HStack(spacing: Metrics.xs) {
+    HStack(spacing: theme.space.xs) {
       if labels.isEmpty {
-        Text(" ").font(Typeface.numeral)
+        Text(" ").font(theme.type.numeral)
       } else {
-        Text(capture.title).font(Typeface.caption).foregroundStyle(Palette.muted).lineLimit(1)
+        Text(capture.title).font(theme.type.caption).foregroundStyle(theme.muted).lineLimit(1)
         ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
-          Tag(text: label, tint: Palette.primary, mono: true)
+          Tag(text: label, tint: theme.primary, mono: true)
         }
       }
     }

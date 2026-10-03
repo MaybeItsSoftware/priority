@@ -5,6 +5,7 @@ import SwiftUI
 /// Sync row in settings (`compact`). Draws nothing until the device is paired
 /// unless it is the compact form, where "Off" is the answer.
 struct SyncStatusLine: View {
+  @Environment(\.theme) private var theme
   var compact = false
 
   var body: some View {
@@ -12,16 +13,16 @@ struct SyncStatusLine: View {
       let phase = controller.session.phase
       if compact {
         Text(SyncPhaseText.short(phase))
-          .font(Typeface.caption)
+          .font(theme.type.caption)
           .foregroundStyle(tint(phase))
       } else if phase != .unpaired {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-          HStack(spacing: Metrics.xs) {
+          HStack(spacing: theme.space.xs) {
             Image(systemName: SyncPhaseText.symbol(phase))
               .symbolEffect(.rotate, isActive: phase == .syncing)
             Text(SyncPhaseText.describe(phase, now: context.date)).lineLimit(1)
           }
-          .font(Typeface.footnote)
+          .font(theme.type.footnote)
           .foregroundStyle(tint(phase))
         }
         .listRowBackground(Color.clear)
@@ -31,7 +32,7 @@ struct SyncStatusLine: View {
   }
 
   private func tint(_ phase: SyncSession.Phase) -> Color {
-    if case .failed = phase { return Palette.danger }
-    return Palette.muted
+    if case .failed = phase { return theme.danger }
+    return theme.muted
   }
 }

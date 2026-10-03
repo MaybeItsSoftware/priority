@@ -162,17 +162,18 @@ struct WorkspaceToolbar: ToolbarContent {
 }
 
 struct ToastView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
 
   var body: some View {
     if let toast = model.toast {
       Text(toast)
-        .font(Typeface.callout)
-        .foregroundStyle(Palette.ink)
-        .padding(.horizontal, Metrics.lg)
-        .padding(.vertical, Metrics.sm)
-        .background(Palette.raised, in: RoundedRectangle(cornerRadius: Metrics.cardRadius))
-        .overlay(RoundedRectangle(cornerRadius: Metrics.cardRadius).strokeBorder(Palette.border, lineWidth: 1))
+        .font(theme.type.callout)
+        .foregroundStyle(theme.ink)
+        .padding(.horizontal, theme.space.lg)
+        .padding(.vertical, theme.space.sm)
+        .background(theme.raised, in: RoundedRectangle(cornerRadius: theme.radius.panel))
+        .overlay(RoundedRectangle(cornerRadius: theme.radius.panel).strokeBorder(theme.border, lineWidth: theme.stroke))
         .padding(.bottom, 64)
         .transition(.opacity.combined(with: .move(edge: .bottom)))
         .accessibilityIdentifier("toast")

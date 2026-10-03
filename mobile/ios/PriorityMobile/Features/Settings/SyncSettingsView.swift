@@ -11,6 +11,7 @@ import VisionKit
 /// paired device, paste its link, or — for the first device — the server's
 /// address and admin token.
 struct SyncSettingsView: View {
+  @Environment(\.theme) private var theme
   var body: some View {
     Group {
       if let controller = SyncController.shared {
@@ -18,7 +19,7 @@ struct SyncSettingsView: View {
       } else {
         EmptyState(title: "Sync is off", message: "Sync isn't available in this build.", systemImage: "icloud.slash")
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .background(Palette.paper)
+          .background(theme.paper)
       }
     }
     .navigationTitle("Sync")
@@ -27,6 +28,7 @@ struct SyncSettingsView: View {
 }
 
 private struct SyncSettingsForm: View {
+  @Environment(\.theme) private var theme
   @Bindable var controller: SyncController
   @State private var pastedLink = ""
   @State private var serverURL = ""
@@ -44,11 +46,11 @@ private struct SyncSettingsForm: View {
       if let error = controller.pairingError {
         Section {
           Label(error, systemImage: "exclamationmark.triangle")
-            .font(Typeface.caption)
-            .foregroundStyle(Palette.danger)
+            .font(theme.type.caption)
+            .foregroundStyle(theme.danger)
             .accessibilityIdentifier("sync.pairingError")
         }
-        .listRowBackground(Palette.danger.opacity(0.08))
+        .listRowBackground(theme.danger.opacity(0.08))
       }
       if session.isPaired {
         paired
@@ -57,14 +59,14 @@ private struct SyncSettingsForm: View {
       }
     }
     .scrollContentBackground(.hidden)
-    .background(Palette.paper)
-    .font(Typeface.body)
+    .background(theme.paper)
+    .font(theme.type.body)
     .disabled(controller.isPairing)
     .overlay {
       if controller.isPairing {
-        ProgressView("Pairing…").padding(Metrics.lg)
-          .background(Palette.raised, in: RoundedRectangle(cornerRadius: Metrics.cardRadius))
-          .overlay(RoundedRectangle(cornerRadius: Metrics.cardRadius).strokeBorder(Palette.border, lineWidth: 1))
+        ProgressView("Pairing…").padding(theme.space.lg)
+          .background(theme.raised, in: RoundedRectangle(cornerRadius: theme.radius.panel))
+          .overlay(RoundedRectangle(cornerRadius: theme.radius.panel).strokeBorder(theme.border, lineWidth: theme.stroke))
       }
     }
     .sheet(isPresented: $isScanning) {
@@ -92,7 +94,7 @@ private struct SyncSettingsForm: View {
       }
       if let server = session.credentials?.serverURL {
         LabeledContent("Server") {
-          Text(server.host() ?? server.absoluteString).font(Typeface.numeral).foregroundStyle(Palette.muted)
+          Text(server.host() ?? server.absoluteString).font(theme.type.numeral).foregroundStyle(theme.muted)
         }
       }
       Button {
@@ -105,24 +107,26 @@ private struct SyncSettingsForm: View {
     } header: {
       header("This device")
     }
-    .listRowBackground(Palette.raised)
+    .listRowBackground(theme.raised)
 
     Section {
       if let link = session.pairingLink, !isExpired {
-        VStack(spacing: Metrics.md) {
+        VStack(spacing: theme.space.md) {
           QRCodeImage(text: link.url.absoluteString)
             .frame(width: 200, height: 200)
-            .padding(Metrics.md)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: Metrics.cardRadius))
-            .overlay(RoundedRectangle(cornerRadius: Metrics.cardRadius).strokeBorder(Palette.border, lineWidth: 1))
+            .padding(theme.space.md)
+            // A QR code is read by a camera, not a person: always dark on white,
+            // whatever the theme, the way a photo’s letterbox is fixed.
+            .background(Color.white, in: RoundedRectangle(cornerRadius: theme.radius.panel))
+            .overlay(RoundedRectangle(cornerRadius: theme.radius.panel).strokeBorder(theme.border, lineWidth: theme.stroke))
             .accessibilityLabel("Pairing code")
           if let expires = session.pairingCodeExpiresAt {
             Text("Scan it on the other device. Expires \(expires, style: .relative).")
-              .font(Typeface.caption)
-              .foregroundStyle(Palette.muted)
+              .font(theme.type.caption)
+              .foregroundStyle(theme.muted)
               .multilineTextAlignment(.center)
           }
-          HStack(spacing: Metrics.sm) {
+          HStack(spacing: theme.space.sm) {
             Button {
               UIPasteboard.general.string = link.url.absoluteString
             } label: {
@@ -136,7 +140,7 @@ private struct SyncSettingsForm: View {
           }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Metrics.sm)
+        .padding(.vertical, theme.space.sm)
       } else {
         Button {
           Task { await makeCode() }
@@ -146,16 +150,16 @@ private struct SyncSettingsForm: View {
         .disabled(isMakingCode)
         .accessibilityIdentifier("sync.addDevice")
         if let codeError {
-          Text(codeError).font(Typeface.caption).foregroundStyle(Palette.danger)
+          Text(codeError).font(theme.type.caption).foregroundStyle(theme.danger)
         }
       }
     } header: {
       header("Add a device")
     } footer: {
       Text("A one-time code. The other device scans it, or opens the link.")
-        .font(Typeface.footnote).foregroundStyle(Palette.muted)
+        .font(theme.type.footnote).foregroundStyle(theme.muted)
     }
-    .listRowBackground(Palette.raised)
+    .listRowBackground(theme.raised)
 
     Section {
       Button("Unpair this device", role: .destructive) { isConfirmingUnpair = true }
@@ -166,7 +170,7 @@ private struct SyncSettingsForm: View {
           Text("Your tasks stay on this device. They stop syncing with your other devices.")
         }
     }
-    .listRowBackground(Palette.raised)
+    .listRowBackground(theme.raised)
   }
 
   private var isExpired: Bool {
@@ -175,8 +179,8 @@ private struct SyncSettingsForm: View {
   }
 
   private var statusTint: Color {
-    if case .failed = session.phase { return Palette.danger }
-    return Palette.ink
+    if case .failed = session.phase { return theme.danger }
+    return theme.ink
   }
 
   private func makeCode() async {
@@ -206,7 +210,7 @@ private struct SyncSettingsForm: View {
           .textInputAutocapitalization(.never)
           .autocorrectionDisabled()
           .keyboardType(.URL)
-          .font(Typeface.callout)
+          .font(theme.type.callout)
           .accessibilityIdentifier("sync.pasteField")
         Button("Pair") {
           guard let link = SyncPairingLink(pastedLink) else {
@@ -221,18 +225,18 @@ private struct SyncSettingsForm: View {
       header("Join your other devices")
     } footer: {
       Text("On a paired device, open Settings → Sync → Add a device.")
-        .font(Typeface.footnote).foregroundStyle(Palette.muted)
+        .font(theme.type.footnote).foregroundStyle(theme.muted)
     }
-    .listRowBackground(Palette.raised)
+    .listRowBackground(theme.raised)
 
     Section {
       TextField("Server URL", text: $serverURL)
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
         .keyboardType(.URL)
-        .font(Typeface.callout)
+        .font(theme.type.callout)
       SecureField("Admin token", text: $adminToken)
-        .font(Typeface.callout)
+        .font(theme.type.callout)
       Button("Pair with server") {
         guard let url = URL(string: serverURL.trimmingCharacters(in: .whitespaces)), url.scheme?.hasPrefix("http") == true
         else {
@@ -250,25 +254,26 @@ private struct SyncSettingsForm: View {
       header("Advanced")
     } footer: {
       Text("For the first device on a new server: its address and the admin token it was started with.")
-        .font(Typeface.footnote).foregroundStyle(Palette.muted)
+        .font(theme.type.footnote).foregroundStyle(theme.muted)
     }
-    .listRowBackground(Palette.raised)
+    .listRowBackground(theme.raised)
   }
 
   private func header(_ text: String) -> some View {
-    Text(text).font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
+    Text(text).font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
   }
 }
 
 /// A QR code for `text`, drawn crisp at any size.
 struct QRCodeImage: View {
+  @Environment(\.theme) private var theme
   let text: String
 
   var body: some View {
     if let image = Self.render(text) {
       Image(uiImage: image).interpolation(.none).resizable().scaledToFit()
     } else {
-      Image(systemName: "qrcode").resizable().scaledToFit().foregroundStyle(Palette.dim)
+      Image(systemName: "qrcode").resizable().scaledToFit().foregroundStyle(theme.dim)
     }
   }
 
@@ -288,6 +293,7 @@ struct QRCodeImage: View {
 /// Engine, camera access refused — it says so and offers the clipboard
 /// instead, so pairing never dead-ends on a missing camera.
 struct QRScannerSheet: View {
+  @Environment(\.theme) private var theme
   @Environment(\.dismiss) private var dismiss
   let onScan: (String) -> Void
 
@@ -297,7 +303,7 @@ struct QRScannerSheet: View {
         if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
           QRScanner(onScan: onScan).ignoresSafeArea()
         } else {
-          VStack(spacing: Metrics.lg) {
+          VStack(spacing: theme.space.lg) {
             EmptyState(
               title: "Camera unavailable",
               message: "Copy the pairing link on the other device, then paste it here.",
@@ -310,9 +316,9 @@ struct QRScannerSheet: View {
             .buttonStyle(ThemedButtonStyle(kind: .primary))
             .accessibilityIdentifier("sync.scanner.paste")
           }
-          .padding(Metrics.lg)
+          .padding(theme.space.lg)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .background(Palette.paper)
+          .background(theme.paper)
         }
       }
       .navigationTitle("Scan code")

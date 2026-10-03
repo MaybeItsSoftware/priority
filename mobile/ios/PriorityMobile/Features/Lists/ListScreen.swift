@@ -3,6 +3,7 @@ import SwiftUI
 
 /// One list scope, with the Outline / Board / Matrix switcher.
 struct ListScreen: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   let scope: ListScope
@@ -16,14 +17,14 @@ struct ListScreen: View {
         }
       }
       .pickerStyle(.segmented)
-      .padding(.horizontal, Metrics.lg)
-      .padding(.vertical, Metrics.sm)
+      .padding(.horizontal, theme.space.lg)
+      .padding(.vertical, theme.space.sm)
       .accessibilityIdentifier("list.mode")
       Hairline()
       content
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    .background(Palette.paper)
+    .background(theme.paper)
     .navigationTitle(model.title(for: scope))
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
@@ -56,6 +57,7 @@ struct ListScreen: View {
 
 /// Moves a task to another list — or a new one — the Mac's list picker.
 struct MoveToListSheet: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.dismiss) private var dismiss
   let taskID: String
@@ -70,7 +72,7 @@ struct MoveToListSheet: View {
           Button {
             isCreating = true
           } label: {
-            Label("New list…", systemImage: "plus").font(Typeface.body)
+            Label("New list…", systemImage: "plus").font(theme.type.body)
           }
           .accessibilityIdentifier("move.newList")
         }
@@ -83,16 +85,16 @@ struct MoveToListSheet: View {
             } label: {
               HStack {
                 Image(systemName: list.systemRole == .inbox ? "tray" : "list.bullet")
-                  .foregroundStyle(Palette.color(hex: list.colorHex) ?? Palette.muted)
+                  .foregroundStyle(ListColor.color(hex: list.colorHex) ?? theme.muted)
                 VStack(alignment: .leading, spacing: 1) {
-                  Text(list.name).font(Typeface.body).foregroundStyle(Palette.ink)
+                  Text(list.name).font(theme.type.body).foregroundStyle(theme.ink)
                   if let folder = model.structure.folder(list.folderId) {
-                    Text(folder.name).font(Typeface.footnote).foregroundStyle(Palette.muted)
+                    Text(folder.name).font(theme.type.footnote).foregroundStyle(theme.muted)
                   }
                 }
                 Spacer()
                 if list.id == currentListID {
-                  Image(systemName: "checkmark").foregroundStyle(Palette.primary)
+                  Image(systemName: "checkmark").foregroundStyle(theme.primary)
                 }
               }
             }

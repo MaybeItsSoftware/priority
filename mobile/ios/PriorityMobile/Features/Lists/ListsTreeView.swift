@@ -5,6 +5,7 @@ import SwiftUI
 /// (nested), lists, and the lists nested inside lists. The iPhone Lists tab,
 /// and the lower half of the iPad sidebar.
 struct ListsTreeView: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   /// On iPad the tree is part of the sidebar's `List`, which owns selection.
@@ -19,7 +20,7 @@ struct ListsTreeView: View {
       }
       .listStyle(.sidebar)
       .scrollContentBackground(.hidden)
-      .background(Palette.paper)
+      .background(theme.paper)
       .navigationTitle("Lists")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -109,6 +110,7 @@ enum NamePrompt: Identifiable, Equatable {
 
 /// The rows themselves, shared by the phone's tab and the pad's sidebar.
 struct ListsTreeRows: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.isPadLayout) private var isPad
   @State private var showsArchived = false
@@ -137,14 +139,14 @@ struct ListsTreeRows: View {
       }
       .onMove { source, destination in reorder(rootLists, source: source, destination: destination, folderID: nil) }
     } header: {
-      Text("Lists").font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
+      Text("Lists").font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
     }
     if !structure.archivedLists.isEmpty {
       Section {
         DisclosureGroup(isExpanded: $showsArchived) {
           ForEach(structure.archivedLists) { list in
             HStack {
-              Text(list.name).font(Typeface.body).foregroundStyle(Palette.muted)
+              Text(list.name).font(theme.type.body).foregroundStyle(theme.muted)
               Spacer()
               Button("Restore") { model.setArchived(false, list: list.id) }
                 .buttonStyle(ThemedButtonStyle(kind: .quiet, compact: true))
@@ -157,7 +159,7 @@ struct ListsTreeRows: View {
             }
           }
         } label: {
-          Label("Archived", systemImage: "archivebox").font(Typeface.body).foregroundStyle(Palette.muted)
+          Label("Archived", systemImage: "archivebox").font(theme.type.body).foregroundStyle(theme.muted)
         }
       }
     }
@@ -195,8 +197,8 @@ struct ListsTreeRows: View {
       model.navigation.open(.folder(folder.id), isPad: isPad)
     } label: {
       Label(folder.name, systemImage: "folder")
-        .font(Typeface.body)
-        .foregroundStyle(Palette.ink)
+        .font(theme.type.body)
+        .foregroundStyle(theme.ink)
     }
     .buttonStyle(.plain)
     .accessibilityIdentifier("lists.folder.\(folder.name)")
@@ -208,14 +210,14 @@ struct ListsTreeRows: View {
     let nested = structure.sidebar.nestedLists.filter { $0.task.listId == list.id && !($0.task.isPromoted ?? false) }
     scopeRow(
       .list(list.id), title: list.name, symbol: list.systemRole == .inbox ? "tray" : "list.bullet",
-      count: structure.sidebar.taskCounts[list.id], tint: Palette.color(hex: list.colorHex),
+      count: structure.sidebar.taskCounts[list.id], tint: ListColor.color(hex: list.colorHex),
       completed: list.completedAt != nil
     )
     .contextMenu { listMenu(list) }
     ForEach(nested) { item in
       scopeRow(
         .nested(listID: list.id, taskID: item.id), title: item.task.title, symbol: "list.bullet.indent",
-        count: structure.sidebar.taskCounts[item.id], indent: CGFloat(item.depth + 1) * Metrics.lg
+        count: structure.sidebar.taskCounts[item.id], indent: CGFloat(item.depth + 1) * theme.space.lg
       )
       .contextMenu {
         Button { model.togglePromoted(item.id) } label: { Label("Pin to lists", systemImage: "pin") }
@@ -232,18 +234,18 @@ struct ListsTreeRows: View {
     _ scope: ListScope, title: String, symbol: String, count: Int?, tint: Color? = nil, completed: Bool = false,
     indent: CGFloat = 0
   ) -> some View {
-    let label = HStack(spacing: Metrics.sm) {
+    let label = HStack(spacing: theme.space.sm) {
       Image(systemName: symbol)
-        .foregroundStyle(tint ?? Palette.muted)
+        .foregroundStyle(tint ?? theme.muted)
         .frame(width: 22)
       Text(title)
-        .font(Typeface.body)
-        .foregroundStyle(completed ? Palette.muted : Palette.ink)
-        .strikethrough(completed, color: Palette.dim)
+        .font(theme.type.body)
+        .foregroundStyle(completed ? theme.muted : theme.ink)
+        .strikethrough(completed, color: theme.dim)
         .lineLimit(1)
-      Spacer(minLength: Metrics.sm)
+      Spacer(minLength: theme.space.sm)
       if let count, count > 0 {
-        Text("\(count)").font(Typeface.numeral).foregroundStyle(Palette.muted)
+        Text("\(count)").font(theme.type.numeral).foregroundStyle(theme.muted)
       }
     }
     .padding(.leading, indent)
@@ -393,6 +395,7 @@ struct NamePromptHost: ViewModifier {
 
 /// A list's name and colour.
 struct ListSettingsSheet: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   @Environment(\.dismiss) private var dismiss
   let listID: String
@@ -403,20 +406,20 @@ struct ListSettingsSheet: View {
     NavigationStack {
       Form {
         Section("Name") {
-          TextField("Name", text: $name).font(Typeface.body)
+          TextField("Name", text: $name).font(theme.type.body)
         }
         Section("Colour") {
-          LazyVGrid(columns: [GridItem(.adaptive(minimum: 44))], spacing: Metrics.md) {
+          LazyVGrid(columns: [GridItem(.adaptive(minimum: 44))], spacing: theme.space.md) {
             swatch(nil, name: "None")
-            ForEach(Palette.listColors, id: \.hex) { entry in
+            ForEach(ListColor.choices, id: \.hex) { entry in
               swatch(entry.hex, name: entry.name)
             }
           }
-          .padding(.vertical, Metrics.sm)
+          .padding(.vertical, theme.space.sm)
         }
       }
       .scrollContentBackground(.hidden)
-      .background(Palette.paper)
+      .background(theme.paper)
       .navigationTitle("List settings")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -444,12 +447,12 @@ struct ListSettingsSheet: View {
       colorHex = hex
     } label: {
       ZStack {
-        Circle().fill(Palette.color(hex: hex) ?? Palette.well)
-        Circle().strokeBorder(selected ? Palette.ink : Palette.border, lineWidth: selected ? 2 : 1)
-        if hex == nil { Image(systemName: "slash.circle").foregroundStyle(Palette.muted) }
+        Circle().fill(ListColor.color(hex: hex) ?? theme.well)
+        Circle().strokeBorder(selected ? theme.ink : theme.border, lineWidth: selected ? theme.emphasis : theme.stroke)
+        if hex == nil { Image(systemName: "slash.circle").foregroundStyle(theme.muted) }
       }
       .frame(width: 32, height: 32)
-      .frame(width: 44, height: 44)
+      .frame(width: 44, height: theme.touchTarget)
     }
     .buttonStyle(.plain)
     .accessibilityLabel(name)

@@ -12,6 +12,7 @@ import SwiftUI
 /// of flattering yourself is visible at the moment you would do it. On a
 /// hardware keyboard 1–5 choose, Return logs and Escape keeps working.
 struct BlockQualityPrompt: View {
+  @Environment(\.theme) private var theme
   @Environment(WorkspaceModel.self) private var model
   let pending: PendingBlockCompletion
 
@@ -31,20 +32,20 @@ struct BlockQualityPrompt: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(alignment: .leading, spacing: Metrics.lg) {
+        VStack(alignment: .leading, spacing: theme.space.lg) {
           header
           choices
           customRow
           Hairline()
           tally
           Button("Log the time without a score") { model.confirmBlockCompletion(multiplier: nil) }
-            .font(Typeface.callout)
-            .foregroundStyle(Palette.muted)
+            .font(theme.type.callout)
+            .foregroundStyle(theme.muted)
             .accessibilityIdentifier("quality.skip")
         }
-        .padding(Metrics.lg)
+        .padding(theme.space.lg)
       }
-      .background(Palette.paper)
+      .background(theme.paper)
       .navigationTitle("How did that go?")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -68,17 +69,17 @@ struct BlockQualityPrompt: View {
   }
 
   private var header: some View {
-    VStack(alignment: .leading, spacing: Metrics.xs) {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
       Text(pending.completeTask ? "Complete task" : "Log progress, task stays open")
-        .font(Typeface.caption)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.caption)
+        .foregroundStyle(theme.muted)
       Text(pending.title)
-        .font(Typeface.title)
-        .foregroundStyle(Palette.ink)
+        .font(theme.type.title)
+        .foregroundStyle(theme.ink)
         .lineLimit(2)
       Text("\(FocusPoints.formatted(Double(pending.seconds) / 60)) minutes of focused work")
-        .font(Typeface.numeral)
-        .foregroundStyle(Palette.muted)
+        .font(theme.type.numeral)
+        .foregroundStyle(theme.muted)
     }
   }
 
@@ -90,21 +91,21 @@ struct BlockQualityPrompt: View {
           quality = option
           isCustom = false
         } label: {
-          HStack(spacing: Metrics.md) {
+          HStack(spacing: theme.space.md) {
             KeyCap("\(index + 1)")
             VStack(alignment: .leading, spacing: 1) {
-              Text(option.title).font(Typeface.body).foregroundStyle(Palette.ink)
-              Text(option.detail).font(Typeface.footnote).foregroundStyle(Palette.muted)
+              Text(option.title).font(theme.type.body).foregroundStyle(theme.ink)
+              Text(option.detail).font(theme.type.footnote).foregroundStyle(theme.muted)
             }
-            Spacer(minLength: Metrics.sm)
+            Spacer(minLength: theme.space.sm)
             Text("×\(FocusPoints.formatted(option.multiplier))")
-              .font(Typeface.numeralBody)
-              .foregroundStyle(isChosen ? Palette.primary : Palette.muted)
+              .font(theme.type.numeralBody)
+              .foregroundStyle(isChosen ? theme.primary : theme.muted)
           }
-          .padding(.vertical, Metrics.sm + 2)
-          .padding(.horizontal, Metrics.md)
-          .frame(minHeight: Metrics.minimumHitTarget)
-          .background(isChosen ? Palette.primary.opacity(0.10) : Color.clear)
+          .padding(.vertical, theme.space.sm + 2)
+          .padding(.horizontal, theme.space.md)
+          .frame(minHeight: theme.touchTarget)
+          .background(isChosen ? theme.primary.opacity(0.10) : Color.clear)
           .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -112,23 +113,23 @@ struct BlockQualityPrompt: View {
         .accessibilityLabel("\(option.title), \(option.detail)")
         .accessibilityAddTraits(isChosen ? .isSelected : [])
         .accessibilityIdentifier("quality.\(option.rawValue)")
-        if index < FocusQuality.allCases.count - 1 { Hairline(color: Palette.borderMuted) }
+        if index < FocusQuality.allCases.count - 1 { Hairline(role: .borderMuted) }
       }
     }
-    .clipShape(RoundedRectangle(cornerRadius: Metrics.cardRadius))
+    .clipShape(RoundedRectangle(cornerRadius: theme.radius.panel))
     .cardSurface()
   }
 
   private var customRow: some View {
-    VStack(alignment: .leading, spacing: Metrics.sm) {
+    VStack(alignment: .leading, spacing: theme.space.sm) {
       Toggle("Something else", isOn: $isCustom)
         .toggleStyle(ThemedToggleStyle())
         .accessibilityIdentifier("quality.customToggle")
       if isCustom {
-        HStack(spacing: Metrics.md) {
+        HStack(spacing: theme.space.md) {
           Text("×\(FocusPoints.formatted(customMultiplier))")
-            .font(Typeface.numeralBody)
-            .foregroundStyle(Palette.primary)
+            .font(theme.type.numeralBody)
+            .foregroundStyle(theme.primary)
             .frame(minWidth: 56, alignment: .leading)
           Stepper("Multiplier", value: $customMultiplier, in: FocusPoints.multiplierRange, step: 0.25)
             .labelsHidden()
@@ -141,20 +142,20 @@ struct BlockQualityPrompt: View {
 
   private var tally: some View {
     HStack(alignment: .firstTextBaseline) {
-      VStack(alignment: .leading, spacing: Metrics.xxs) {
-        Text("This block").font(Typeface.caption).foregroundStyle(Palette.muted)
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
+        Text("This block").font(theme.type.caption).foregroundStyle(theme.muted)
         Text("\(FocusPoints.formatted(points)) pts")
-          .font(Typeface.mono(28, .medium, relativeTo: .title))
-          .foregroundStyle(Palette.primary)
+          .font(theme.type.mono(28, .medium, relativeTo: .title))
+          .foregroundStyle(theme.primary)
           .contentTransition(.numericText())
           .animation(.snappy, value: points)
       }
       Spacer()
-      VStack(alignment: .trailing, spacing: Metrics.xxs) {
-        Text("Today").font(Typeface.caption).foregroundStyle(Palette.muted)
+      VStack(alignment: .trailing, spacing: theme.space.xxs) {
+        Text("Today").font(theme.type.caption).foregroundStyle(theme.muted)
         Text("\(FocusPoints.formatted(today.value + points)) pts")
-          .font(Typeface.numeralBody)
-          .foregroundStyle(Palette.ink)
+          .font(theme.type.numeralBody)
+          .foregroundStyle(theme.ink)
       }
     }
     .accessibilityElement(children: .combine)
@@ -165,15 +166,16 @@ struct BlockQualityPrompt: View {
 /// A key drawn as a key: the hardware shortcut that picks a row, which on a
 /// touch screen still numbers the choices.
 struct KeyCap: View {
+  @Environment(\.theme) private var theme
   let text: String
   init(_ text: String) { self.text = text }
 
   var body: some View {
     Text(text)
-      .font(Typeface.numeral)
-      .foregroundStyle(Palette.muted)
+      .font(theme.type.numeral)
+      .foregroundStyle(theme.muted)
       .frame(minWidth: 22, minHeight: 22)
-      .overlay(RoundedRectangle(cornerRadius: Metrics.controlRadius).strokeBorder(Palette.border, lineWidth: 1))
+      .overlay(RoundedRectangle(cornerRadius: theme.radius.control).strokeBorder(theme.border, lineWidth: theme.stroke))
       .accessibilityHidden(true)
   }
 }
