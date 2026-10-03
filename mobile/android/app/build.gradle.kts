@@ -23,8 +23,10 @@ android {
         applicationId = "uk.co.maybeitsadam.priority"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.2.0"
+        // scripts/build_play_bundle.sh passes the commit count, which only grows,
+        // because Play refuses an upload whose versionCode it has seen before.
+        versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
+        versionName = (findProperty("versionName") as String?) ?: "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
