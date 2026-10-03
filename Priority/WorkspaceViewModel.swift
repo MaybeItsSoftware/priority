@@ -584,6 +584,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// `.green` and `.orange`, which do not flip with the theme and are not the
   /// colours the app is set in.
   @ObservationIgnored var themeColorResolver: ((AppThemeColorToken) -> Color)?
+  /// Told after rows changed under the app — a sync pull or another
+  /// process's write — beside the reload of the task tree. The theme library
+  /// and the synced choice of theme listen here.
+  @ObservationIgnored var onWorkspaceChangedElsewhere: (() -> Void)?
 
   func themeColor(_ token: AppThemeColorToken) -> Color {
     themeColorResolver?(token) ?? token.fallback

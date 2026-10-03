@@ -46,6 +46,21 @@ struct ThemeSettingsPage: View {
         }
         .pickerStyle(.inline)
 
+        if let choiceSync = themeManager.choiceSync {
+          Toggle(
+            "Use a different theme on this Mac",
+            isOn: Binding(
+              get: { choiceSync.usesDeviceChoice },
+              set: { choiceSync.usesDeviceChoice = $0 }))
+          Text(
+            choiceSync.usesDeviceChoice
+              ? "This Mac keeps its own theme and appearance. Your other devices are not changed by it, and it is not changed by them."
+              : "Your theme and appearance follow you to your other devices, and a change on any of them shows here."
+          )
+          .font(theme.captionFont)
+          .foregroundStyle(.secondary)
+        }
+
         Text(themeManager.activeThemePlugin.pluginDescription)
           .font(theme.captionFont)
           .foregroundStyle(.secondary)

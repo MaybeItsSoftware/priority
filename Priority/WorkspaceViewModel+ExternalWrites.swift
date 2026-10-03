@@ -69,6 +69,8 @@ extension WorkspaceViewModel {
     // reconciled against the new rows rather than lost or silently overwritten.
     // A field changed on both sides becomes a conflict the editor shows.
     taskEditor.flush()
+    // Themes and the choice of one are rows too, and arrive the same way.
+    onWorkspaceChangedElsewhere?()
     perform {
       try load()
       // Same clean-up as after undo: whatever was selected may be gone.

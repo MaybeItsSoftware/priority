@@ -98,6 +98,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // The mirror needs the workspace, and the workspace has only just been
     // built — the coordinator is constructed before it.
     checkvistManager.workspaceStoreProvider = { [weak workspace] in workspace?.store }
+    // The themes folder mirrors into the workspace's synced `themes` table,
+    // and the choice of theme follows the synced preferences; both need the
+    // store, which exists only from here.
+    if let store = workspace.store {
+      let choiceSync = ThemeChoiceSync(
+        theme: checkvistManager.theme, preferences: checkvistManager.preferences,
+        preferencesStore: checkvistManager.preferencesStore, store: store)
+      checkvistManager.theme.choiceSync = choiceSync
+      workspace.onWorkspaceChangedElsewhere = { [weak choiceSync] in choiceSync?.workspaceDidChange() }
+    }
     workspace.asksHowEachBlockWent = { [weak checkvistManager] in
       checkvistManager?.preferences.scoresEachFocusBlock ?? true
     }

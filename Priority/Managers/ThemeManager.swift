@@ -42,7 +42,7 @@ import os
   var activeThemeIdentifier: String {
     didSet {
       guard activeThemeIdentifier != oldValue else { return }
-      guard plugin(withIdentifier: activeThemeIdentifier) != nil else {
+      guard adoptingSyncedChoice || plugin(withIdentifier: activeThemeIdentifier) != nil else {
         activeThemeIdentifier = oldValue
         return
       }
@@ -51,6 +51,23 @@ import os
       preferencesStore.set(activeThemeIdentifier, for: .activeThemePluginIdentifier)
     }
   }
+
+  @ObservationIgnored private var adoptingSyncedChoice = false
+
+  /// Takes the choice made on another device, even when the theme is not
+  /// here (yet): it may not have arrived, or may not load on this Mac. Chalk
+  /// stands in until it does, the same as for a stored pick whose file
+  /// stopped loading, and the pick is kept so the theme appears when it lands.
+  func adoptSyncedChoice(_ identifier: String) {
+    adoptingSyncedChoice = true
+    defer { adoptingSyncedChoice = false }
+    activeThemeIdentifier = identifier
+  }
+
+  /// Bound by `AppDelegate` once the workspace is open: the synced choice of
+  /// theme and appearance, and the "use a different theme on this Mac"
+  /// switch the theme settings page shows.
+  var choiceSync: ThemeChoiceSync?
 
   /// Resolved through the observed identifier rather than the registry's own
   /// active pointer, so everything derived from it redraws on a swap.

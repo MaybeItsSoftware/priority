@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import Observation
 import PriorityCore
+import PriorityWorkspace
 import os
 
 /// Loads the user's themes from `~/Library/Application Support/Priority/themes/`
@@ -15,6 +16,11 @@ import os
 /// watching the directory rather than each file (editors save by renaming a
 /// new file over the old one) and re-reading when the app becomes active, for
 /// an edit the watcher missed.
+///
+/// It also mirrors the folder into the workspace's synced `themes` table, so
+/// the themes reach the phones: a saved file updates its row, a removed file
+/// deletes it, and a row that arrives from another device with no file here
+/// is written into the folder. See `mirror(_:)`.
 @MainActor
 @Observable
 final class UserThemeLibrary {
@@ -50,6 +56,10 @@ final class UserThemeLibrary {
   @ObservationIgnored private var fileWatchers: [DispatchSourceFileSystemObject] = []
   @ObservationIgnored private var activationObserver: NSObjectProtocol?
   @ObservationIgnored private var started = false
+  /// The workspace the folder is mirrored into. Nil until the workspace is
+  /// open, and the folder works on its own until then.
+  @ObservationIgnored private var store: WorkspaceStore?
+  @ObservationIgnored private let preferencesStore = PreferencesStore()
   @ObservationIgnored private let logger = Logger(
     subsystem: "uk.co.maybeitsadam.priority", category: "UserThemeLibrary")
 
@@ -81,10 +91,19 @@ final class UserThemeLibrary {
     }
   }
 
-  /// Re-reads every theme file. Without `force`, a folder whose files have
-  /// not changed since the last read is left alone.
+  /// Starts mirroring the folder into `store`'s `themes` table, and the
+  /// table back into the folder.
+  func attach(store: WorkspaceStore) {
+    self.store = store
+    reload(force: true)
+  }
+
+  /// Re-reads every theme file, after first reconciling the folder with the
+  /// `themes` table. Without `force`, a folder whose files have not changed
+  /// since the last read is left alone.
   func reload(force: Bool = false) {
-    let contents = readFolder()
+    var contents = readFolder()
+    if mirror(contents) { contents = readFolder() }
     // Re-armed even when nothing changed: a file replaced by rename has a new
     // inode, and the old watch would be following the one that went away.
     watchFiles(contents.keys)
@@ -92,7 +111,7 @@ final class UserThemeLibrary {
     lastContents = contents
 
     let library = ThemeFileLoader.load(
-      contents.map { ThemeFileSource(name: $0.key, data: $0.value) })
+      contents.map { ThemeFileSource(name: $0.key, data: $0.value) }, platform: .macos)
     plugins = library.outcomes.compactMap { outcome in
       outcome.specification.map {
         UserThemePlugin(
@@ -128,7 +147,9 @@ final class UserThemeLibrary {
   func exportCurrentTheme() {
     guard let specification = currentSpecification?() else { return }
     let stem = availableStem(for: specification.name)
-    var file = ThemeFile(specification: specification)
+    // With the phones' sizes as well, so the copy looks like itself there.
+    var file = ThemeFile(
+      specification: specification, platformVariants: platformVariants(of: specification))
     file.identifier = ThemeFileLoader.derivedIdentifierPrefix + stem
     file.name = "\(specification.name) copy"
     file.summary = "Exported from \(specification.name). Edit freely; see docs/themes.md."
@@ -144,6 +165,74 @@ final class UserThemeLibrary {
     reload(force: true)
     if let identifier = file.identifier { onExported?(identifier) }
     NSWorkspace.shared.open(url)
+  }
+
+  // MARK: - Mirroring into the workspace
+
+  /// Reconciles the folder with the `themes` table, as `ThemeFolderMirror`
+  /// decides, and returns whether it wrote or removed a file.
+  private func mirror(_ contents: [String: Data]) -> Bool {
+    guard let store else { return false }
+    let rows: [String: String]
+    do {
+      rows = Dictionary(
+        try store.themes().map { ($0.id, $0.json) }, uniquingKeysWith: { first, _ in first })
+    } catch {
+      logger.error("Could not read synced themes: \(error.localizedDescription, privacy: .public)")
+      return false
+    }
+    let plan = ThemeFolderMirror.plan(
+      files: contents.map { ThemeFileSource(name: $0.key, data: $0.value) },
+      rows: rows,
+      digests: preferencesStore.stringDictionary(.mirroredUserThemeDigests))
+
+    let previous = preferencesStore.stringDictionary(.mirroredUserThemeDigests)
+    var digests = plan.digests
+    var folderChanged = false
+    let now = Date()
+    for action in plan.actions {
+      do {
+        switch action {
+        case .upsertRow(let identifier, let json):
+          try store.upsertTheme(id: identifier, json: json, now: now)
+        case .deleteRow(let identifier):
+          try store.deleteTheme(id: identifier)
+        case .writeFile(_, let name, let json):
+          try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+          try Data(json.utf8).write(
+            to: folderURL.appending(path: name, directoryHint: .notDirectory), options: .atomic)
+          logger.info("Wrote \(name, privacy: .public) from another device")
+          folderChanged = true
+        case .removeFile(_, let name):
+          try FileManager.default.trashItem(
+            at: folderURL.appending(path: name, directoryHint: .notDirectory), resultingItemURL: nil)
+          logger.info("Moved \(name, privacy: .public) to the Trash: removed on another device")
+          folderChanged = true
+        }
+      } catch {
+        // As it was before, so the next pass sees the same difference and
+        // tries again rather than reading the failure as a deletion.
+        digests[action.identifier] = previous[action.identifier]
+        report("Could not sync a theme (\(action)): \(error.localizedDescription)")
+      }
+    }
+    preferencesStore.set(digests, for: .mirroredUserThemeDigests)
+    return folderChanged
+  }
+
+  /// The theme in force as each platform resolves it, for an export that
+  /// carries the phones' sizes.
+  private func platformVariants(of specification: ThemeSpecification) -> [ThemePlatform: ThemeSpecification] {
+    var variants: [ThemePlatform: ThemeSpecification] = [:]
+    let sources = (lastContents ?? [:]).map { ThemeFileSource(name: $0.key, data: $0.value) }
+    for platform in ThemePlatform.allCases {
+      variants[platform] =
+        BuiltInThemeSpecifications.specification(withIdentifier: specification.identifier, for: platform)
+        ?? ThemeFileLoader.load(sources, platform: platform).themes.first {
+          $0.identifier == specification.identifier
+        }
+    }
+    return variants
   }
 
   // MARK: - Private

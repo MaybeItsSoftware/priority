@@ -43,6 +43,13 @@ final class PreferencesStore {
     /// which is the light/dark/system question a theme does not get to answer
     /// on the user's behalf.
     case activeThemePluginIdentifier
+    /// "Use a different theme on this Mac": when true, the theme and
+    /// appearance are this Mac's own, and the synced `theme.selected` and
+    /// `theme.appearance` preferences are neither read nor written.
+    case usesDeviceThemeChoice
+    /// Identifier → SHA-256 of the text last mirrored between a theme file and
+    /// its `themes` row, so `UserThemeLibrary` can tell which side changed.
+    case mirroredUserThemeDigests
     case themeAccentPresetRawValue
     case themeCustomAccentHex
     case themeColorTokenHexOverrides
