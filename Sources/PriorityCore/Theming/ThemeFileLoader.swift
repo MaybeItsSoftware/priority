@@ -123,7 +123,7 @@ public enum ThemeFileLoader {
     defaultBase: ThemeSpecification? = nil
   ) -> ThemeFileLibrary {
     let builtIns = builtIns ?? BuiltInThemeSpecifications.all(for: platform)
-    let defaultBase = defaultBase ?? BuiltInThemeSpecifications.chalk(for: platform)
+    let defaultBase = defaultBase ?? BuiltInThemeSpecifications.defaultTheme(for: platform)
     let ordered = sources.sorted { $0.name < $1.name }
     let builtInsByIdentifier = Dictionary(
       builtIns.map { ($0.identifier, $0) }, uniquingKeysWith: { first, _ in first })
@@ -220,7 +220,8 @@ public enum ThemeFileLoader {
   ) -> ThemeFileOutcome {
     ThemeFileMerger.merge(
       file, identifier: identifier(of: file, source: source), source: source, base: base,
-      structureFallback: BuiltInThemeSpecifications.chalk(for: platform).structure, platform: platform)
+      structureFallback: BuiltInThemeSpecifications.defaultTheme(for: platform).structure,
+      platform: platform)
   }
 
   /// Lays a partial structure over a whole one, the way a theme file's
@@ -321,11 +322,43 @@ enum ThemeFileMerger {
       issues.append(.init(source: source, severity: severity, message: message))
     }
 
+    // Seeds, then palette: the base's table, the roles grown from the
+    // seeds this file gives for the appearance (over the seeds the base
+    // implies), then the roles the file states outright.
+    func seeded(
+      _ appearance: ThemeAppearance, _ table: [ThemeColorRole: ThemeColorValue]
+    ) -> [ThemeColorRole: ThemeColorValue] {
+      guard let raw = file.seeds?[appearance] else { return table }
+      var stated = ThemeSeeds()
+      for key in raw.keys.sorted() {
+        let value = raw[key] ?? ""
+        guard let seed = ThemeSeeds.Key(rawValue: key) else {
+          report(
+            .warning,
+            "seeds.\(appearance.rawValue).\(key) is not a seed (background, foreground, accent, success, danger or warning); ignored")
+          continue
+        }
+        guard let color = ThemeColorValue(hex: value) else {
+          report(
+            .error,
+            "seeds.\(appearance.rawValue).\(key) \"\(value)\" is not a hex colour (#rgb, #rrggbb or #rrggbbaa)")
+          continue
+        }
+        stated[seed] = color
+      }
+      let seeds = ThemeSeeds(implicitIn: table).overlaid(with: stated)
+      guard let roles = seeds.roles(in: appearance) else {
+        report(.error, "seeds.\(appearance.rawValue) needs a background and a foreground; ignored")
+        return table
+      }
+      return table.merging(roles) { _, derived in derived }
+    }
+
     // Palette.
     func table(
       _ appearance: ThemeAppearance, _ overrides: [String: String]?
     ) -> [ThemeColorRole: ThemeColorValue] {
-      var table = base?.palette.table(appearance) ?? [:]
+      var table = seeded(appearance, base?.palette.table(appearance) ?? [:])
       for key in (overrides ?? [:]).keys.sorted() {
         let raw = overrides?[key] ?? ""
         guard let role = ThemeColorRole(rawValue: key) else {
@@ -590,6 +623,8 @@ enum ThemeFileSchema {
       "identifier": .any, "name": .any, "summary": .any, "lockedAppearance": .any, "extends": .any,
       // Role names are checked by the merger, which can say which role.
       "palette": .object(["light": .any, "dark": .any]),
+      // So are seed names.
+      "seeds": .object(["light": .any, "dark": .any]),
       "structure": structure,
       "platforms": .object(
         Dictionary(uniqueKeysWithValues: ThemePlatform.allCases.map { ($0.rawValue, platform) })),

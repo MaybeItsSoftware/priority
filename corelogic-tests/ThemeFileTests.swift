@@ -60,7 +60,7 @@ final class ThemeFileTests: XCTestCase {
 
   // MARK: - extends and merging
 
-  func testAFewOverridesInheritEverythingElseFromChalk() throws {
+  func testAFewOverridesInheritEverythingElseFromTheDefault() throws {
     let library = load(
       source(
         "dusk.json",
@@ -72,7 +72,7 @@ final class ThemeFileTests: XCTestCase {
         }
         """))
     let dusk = try XCTUnwrap(library.themes.first)
-    let chalk = BuiltInThemeSpecifications.chalk
+    let chalk = BuiltInThemeSpecifications.priority
 
     XCTAssertEqual(dusk.identifier, "user.dusk", "no identifier: named after the file")
     XCTAssertEqual(dusk.name, "Dusk")
@@ -106,7 +106,7 @@ final class ThemeFileTests: XCTestCase {
     let slab = try XCTUnwrap(library.themes.first)
     let type = slab.structure.typography
     XCTAssertEqual(type.body, ThemeFontFace(families: ["Arvo", "Rockwell"], design: .serif))
-    XCTAssertEqual(type.mono, BuiltInThemeSpecifications.chalk.structure.typography.mono)
+    XCTAssertEqual(type.mono, BuiltInThemeSpecifications.priority.structure.typography.mono)
     XCTAssertEqual(
       type.microLabel,
       ThemeMicroLabel(size: 10, weight: .bold, tracking: 0.15, isUppercased: true, role: .mutedText))
@@ -158,7 +158,7 @@ final class ThemeFileTests: XCTestCase {
     let outcome = try XCTUnwrap(library.outcomes.first)
     let theme = try XCTUnwrap(outcome.specification)
     XCTAssertEqual(
-      theme.color(.paper, in: .light), BuiltInThemeSpecifications.chalk.color(.paper, in: .light))
+      theme.color(.paper, in: .light), BuiltInThemeSpecifications.priority.color(.paper, in: .light))
     XCTAssertEqual(theme.color(.ink, in: .light).hexString, "#222222")
     XCTAssertEqual(outcome.issues.first?.severity, .error)
     XCTAssertTrue(messages(outcome).contains { $0.contains("palette.light.paper \"#nothex\"") })
@@ -272,7 +272,9 @@ final class ThemeFileTests: XCTestCase {
         microLabel: 12, radius: (8, 0, 6), touchTarget: 48),
     ]
     for (platform, row) in table {
-      for builtIn in BuiltInThemeSpecifications.all(for: platform) {
+      for builtIn in [
+        BuiltInThemeSpecifications.chalk(for: platform), BuiltInThemeSpecifications.chalkDark(for: platform),
+      ] {
         let structure = builtIn.structure
         let label = "\(builtIn.name) on \(platform.rawValue)"
         XCTAssertEqual(structure.typography.bodySize, row.bodySize, label)
@@ -287,6 +289,23 @@ final class ThemeFileTests: XCTestCase {
         XCTAssertEqual(builtIn.palette, BuiltInThemeSpecifications.chalk.palette, "\(label): one palette")
         XCTAssertEqual(builtIn.validate().filter { $0.severity == .error }, [], label)
       }
+    }
+  }
+
+  func testPrioritysPerPlatformStructureIsTheDocumentedTable() {
+    let table: [ThemePlatform: (bodySize: Double, radius: [Double], touchTarget: Double)] = [
+      .macos: (13, [8, 6, 6], 0),
+      .ios: (17, [10, 8, 8], 44),
+      .android: (16, [12, 8, 8], 48),
+    ]
+    for (platform, row) in table {
+      let structure = BuiltInThemeSpecifications.priority(for: platform).structure
+      XCTAssertEqual(structure.typography.bodySize, row.bodySize, platform.rawValue)
+      XCTAssertEqual(
+        [structure.radius.panel, structure.radius.row, structure.radius.control], row.radius, platform.rawValue)
+      XCTAssertEqual(structure.touchTarget, row.touchTarget, platform.rawValue)
+      XCTAssertEqual(
+        BuiltInThemeSpecifications.priority(for: platform).palette, BuiltInThemeSpecifications.priority.palette)
     }
   }
 
@@ -333,10 +352,10 @@ final class ThemeFileTests: XCTestCase {
       XCTAssertEqual(theme.color(.paper, in: .dark).hexString, "#15131C", "one palette")
     }
     XCTAssertEqual(mac.structure.typography.bodySize, 13)
-    XCTAssertEqual(mac.structure.radius.panel, 0, "inherits the Mac's Chalk")
+    XCTAssertEqual(mac.structure.radius.panel, 8, "inherits the Mac's default")
     XCTAssertEqual(ios.structure.typography.bodySize, 18)
     XCTAssertEqual(ios.structure.typography.scale, .proportioned(fromBody: 18))
-    XCTAssertEqual(ios.structure.radius.panel, 8, "inherits the iPhone's Chalk")
+    XCTAssertEqual(ios.structure.radius.panel, 10, "inherits the iPhone's default")
     XCTAssertEqual(ios.structure.touchTarget, 44)
     XCTAssertEqual(ios.structure.spacing.md, 12)
     XCTAssertEqual(android.structure.spacing.md, 14)
@@ -366,7 +385,7 @@ final class ThemeFileTests: XCTestCase {
     XCTAssertEqual(resolved.structure.radius.panel, 12)
     XCTAssertEqual(resolved.structure.border.emphasis, 3)
     XCTAssertEqual(
-      load(for: .macos, child, parent).themes.first { $0.identifier == "user.child" }?.structure.radius.panel, 0)
+      load(for: .macos, child, parent).themes.first { $0.identifier == "user.child" }?.structure.radius.panel, 8)
   }
 
   func testAPaletteUnderPlatformsIsAWarningAndIgnored() throws {
@@ -375,7 +394,7 @@ final class ThemeFileTests: XCTestCase {
       ##"{ "platforms": { "ios": { "palette": { "light": { "paper": "#000000" } } }, "windows": {} } }"##)
     let outcome = try XCTUnwrap(load(for: .ios, file).outcomes.first)
     let theme = try XCTUnwrap(outcome.specification)
-    XCTAssertEqual(theme.color(.paper, in: .light), BuiltInThemeSpecifications.chalk.color(.paper, in: .light))
+    XCTAssertEqual(theme.color(.paper, in: .light), BuiltInThemeSpecifications.priority.color(.paper, in: .light))
     let warnings = outcome.issues.filter { $0.severity == .warning }.map(\.message)
     XCTAssertTrue(
       warnings.contains("platforms.ios.palette is not allowed: colour is the same on every platform; ignored"),
@@ -395,7 +414,7 @@ final class ThemeFileTests: XCTestCase {
         messages(outcome).contains("platforms.android.structure.radius.panel -2 should be zero or more"),
         "\(platform): \(messages(outcome))")
     }
-    XCTAssertEqual(load(for: .android, file).themes.first?.structure.radius.panel, 8)
+    XCTAssertEqual(load(for: .android, file).themes.first?.structure.radius.panel, 12)
   }
 
   func testATouchTargetIsDecodedAndAudited() throws {

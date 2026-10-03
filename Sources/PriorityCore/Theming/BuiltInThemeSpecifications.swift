@@ -7,16 +7,35 @@ import Foundation
 /// `Priority/Plugins/Native/Theme/` is a pair of four-line wrappers over these
 /// two values.
 public enum BuiltInThemeSpecifications {
+  /// Priority, the default: what a fresh install shows, what a theme file
+  /// extends unless it says otherwise, and what stands in for a theme that
+  /// will not load.
+  public static let priorityIdentifier = "native.theme.priority"
+  /// The Zed look. The identifiers still say Chalk, its old name, because
+  /// they are stored as people's choice and synced between devices.
   public static let chalkIdentifier = "native.theme.chalk"
   public static let chalkDarkIdentifier = "native.theme.chalk.dark"
 
-  /// The built-ins as the Mac resolves them.
-  public static var all: [ThemeSpecification] { [chalk, chalkDark] }
+  /// The identifier a device uses when nothing has been chosen.
+  public static let defaultIdentifier = priorityIdentifier
 
-  /// The built-ins as `platform` resolves them: the same palettes, with
-  /// Chalk's per-platform structure.
+  /// The built-ins as the Mac resolves them, the default first.
+  public static var all: [ThemeSpecification] { [priority, chalk, chalkDark] }
+
+  /// The built-ins as `platform` resolves them: the same palettes, with each
+  /// theme's per-platform structure.
   public static func all(for platform: ThemePlatform) -> [ThemeSpecification] {
-    [chalk(for: platform), chalkDark(for: platform)]
+    [priority(for: platform), chalk(for: platform), chalkDark(for: platform)]
+  }
+
+  /// The default theme, resolved for `platform`.
+  public static func defaultTheme(for platform: ThemePlatform) -> ThemeSpecification {
+    priority(for: platform)
+  }
+
+  /// Priority, resolved for `platform`. `priority` is the macOS one.
+  public static func priority(for platform: ThemePlatform) -> ThemeSpecification {
+    priorityByPlatform[platform] ?? priority
   }
 
   public static func specification(withIdentifier identifier: String) -> ThemeSpecification? {
@@ -69,21 +88,50 @@ public enum BuiltInThemeSpecifications {
       touchTarget: 48),
   ]
 
-  private static let chalkByPlatform: [ThemePlatform: ThemeSpecification] = Dictionary(
-    uniqueKeysWithValues: ThemePlatform.allCases.map { platform in
-      (platform, withStructure(chalk, for: platform))
-    })
+  /// What Priority lays over its own structure on each platform. The same
+  /// sizes as Chalk's on the phones, with the rounder corners the platforms'
+  /// own controls have.
+  public static let priorityPlatformStructures: [ThemePlatform: ThemeFile.Structure] = [
+    .ios: ThemeFile.Structure(
+      radius: .init(panel: 10, row: 8, control: 8),
+      typography: .init(
+        bodySize: 17,
+        scale: .init(caption: 13, body: 17, title: 20, display: 34, hero: 72),
+        microLabel: .init(size: 13)),
+      touchTarget: 44),
+    .android: ThemeFile.Structure(
+      radius: .init(panel: 12, row: 8, control: 8),
+      typography: .init(
+        bodySize: 16,
+        scale: .init(caption: 12, body: 16, title: 20, display: 32, hero: 72),
+        microLabel: .init(size: 12)),
+      touchTarget: 48),
+  ]
 
-  private static let chalkDarkByPlatform: [ThemePlatform: ThemeSpecification] = Dictionary(
-    uniqueKeysWithValues: ThemePlatform.allCases.map { platform in
-      (platform, withStructure(chalkDark, for: platform))
-    })
+  /// Every built-in's per-platform structure, by identifier.
+  public static let platformStructures: [String: [ThemePlatform: ThemeFile.Structure]] = [
+    priorityIdentifier: priorityPlatformStructures,
+    chalkIdentifier: chalkPlatformStructures,
+    chalkDarkIdentifier: chalkPlatformStructures,
+  ]
 
-  /// `specification` with Chalk's entry for `platform` laid over its
-  /// structure, through the same merge a theme file's `platforms` goes
-  /// through.
+  private static let priorityByPlatform = byPlatform(priority, priorityPlatformStructures)
+  private static let chalkByPlatform = byPlatform(chalk, chalkPlatformStructures)
+  private static let chalkDarkByPlatform = byPlatform(chalkDark, chalkPlatformStructures)
+
+  private static func byPlatform(
+    _ specification: ThemeSpecification, _ structures: [ThemePlatform: ThemeFile.Structure]
+  ) -> [ThemePlatform: ThemeSpecification] {
+    Dictionary(
+      uniqueKeysWithValues: ThemePlatform.allCases.map { platform in
+        (platform, withStructure(specification, structures[platform]))
+      })
+  }
+
+  /// `specification` with `structure` laid over its own, through the same
+  /// merge a theme file's `platforms` goes through.
   private static func withStructure(
-    _ specification: ThemeSpecification, for platform: ThemePlatform
+    _ specification: ThemeSpecification, _ structure: ThemeFile.Structure?
   ) -> ThemeSpecification {
     ThemeSpecification(
       identifier: specification.identifier,
@@ -91,11 +139,68 @@ public enum BuiltInThemeSpecifications {
       summary: specification.summary,
       lockedAppearance: specification.lockedAppearance,
       palette: specification.palette,
-      structure: ThemeFileLoader.merge(
-        chalkPlatformStructures[platform], over: specification.structure))
+      structure: ThemeFileLoader.merge(structure, over: specification.structure))
   }
 
-  // MARK: - Chalk — the house style
+  // MARK: - Priority — the default
+
+  /// Plain enough to build on. Cool neutral greys, one blue, the system's own
+  /// faces, and the house radius scale: 8 for panels, 6 for what you press.
+  ///
+  /// It is made the way a theme file is meant to be: from seeds. The eleven
+  /// neutrals are mixed from the background and the text (see `ThemeSeeds`),
+  /// so its palette is what a themer gets by writing three colours.
+  public static let priority = ThemeSpecification(
+    identifier: priorityIdentifier,
+    name: "Priority",
+    summary: "The default. Quiet greys, one blue, and your system's own fonts — easy to make your own.",
+    palette: ThemePalette(
+      light: seeded(
+        ThemeSeeds(
+          background: hex("#f7f7f8"), foreground: hex("#1f2026"), accent: hex("#3d63dd"),
+          success: emerald, danger: raspberry, warning: amber),
+        .light),
+      dark: seeded(
+        ThemeSeeds(
+          background: hex("#19191d"), foreground: hex("#ececf0"), accent: hex("#7b9bff"),
+          success: emerald, danger: raspberry, warning: amber),
+        .dark)),
+    structure: ThemeStructure(
+      radius: ThemeRadiusScale(panel: 8, row: 6, control: 6, pill: 9999, shell: 20),
+      border: ThemeBorderScale(hairline: 1, emphasis: 2, focusRing: 2),
+      spacing: ThemeSpacingScale(xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24),
+      typography: ThemeTypography(
+        // No families: the system's faces — SF Pro and SF Mono on Apple,
+        // Roboto and its monospace on Android.
+        display: ThemeFontFace(families: [], design: .sans),
+        body: ThemeFontFace(families: [], design: .sans),
+        mono: ThemeFontFace(families: [], design: .monospaced),
+        bodySize: 13,
+        scale: ThemeTypeScale(caption: 11, body: 13, title: 15, display: 28, hero: 64),
+        microLabel: ThemeMicroLabel(
+          size: 11, weight: .medium, tracking: 0, isUppercased: false, role: .mutedText)
+      )
+    )
+  )
+
+  /// A table grown from `seeds`, plus the roles seeds do not reach: the
+  /// categorical hues and, in the light table, the media surfaces.
+  private static func seeded(_ seeds: ThemeSeeds, _ appearance: ThemeAppearance)
+    -> [ThemeColorRole: ThemeColorValue]
+  {
+    var table = seeds.roles(in: appearance) ?? [:]
+    table[.categoricalPurple] = purple
+    table[.categoricalPink] = pink
+    table[.categoricalOrange] = orange
+    if appearance == .light {
+      table[.mediaLetterbox] = hex("#000000")
+      table[.mediaScrim] = hex("#000000").withAlpha(0.7)
+      table[.mediaScrimInk] = hex("#ffffff")
+    }
+    return table
+  }
+
+  // MARK: - Zed (née Chalk) — the house style
 
   /// Flat, bordered, editorial: paper-white surfaces with a bruised-purple
   /// ink, separated by hairlines rather than depth.
@@ -105,9 +210,9 @@ public enum BuiltInThemeSpecifications {
   /// even though both are "a grey".
   public static let chalk = ThemeSpecification(
     identifier: chalkIdentifier,
-    name: "Chalk",
+    name: "Zed",
     summary:
-      "The house style. Warm off-white paper, grape ink, hairline borders, and colour kept for meaning.",
+      "The Zed look: IBM Plex Sans and Lilex, square panels, hairlines, warm paper and grape ink.",
     palette: ThemePalette(
       light: [
         .paper: hex("#faf8f4"),
@@ -204,9 +309,9 @@ public enum BuiltInThemeSpecifications {
   /// wants; this one was specified before the picker existed.
   public static let chalkDark = ThemeSpecification(
     identifier: chalkDarkIdentifier,
-    name: "Chalk Dark",
+    name: "Zed Dark",
     summary:
-      "The house style with the lights off. The same grape hue pulled down, never neutral grey.",
+      "The Zed look with the lights off. The same grape hue pulled down, never neutral grey.",
     lockedAppearance: .dark,
     palette: chalk.palette,
     structure: chalk.structure

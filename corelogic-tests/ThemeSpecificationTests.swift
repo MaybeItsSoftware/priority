@@ -14,8 +14,10 @@ final class ThemeSpecificationTests: XCTestCase {
     XCTAssertEqual(identifiers.count, Set(identifiers).count)
     XCTAssertEqual(
       BuiltInThemeSpecifications.specification(withIdentifier: "native.theme.chalk")?.name,
-      "Chalk"
+      "Zed"
     )
+    XCTAssertEqual(BuiltInThemeSpecifications.all.first?.identifier, BuiltInThemeSpecifications.defaultIdentifier)
+    XCTAssertEqual(BuiltInThemeSpecifications.defaultIdentifier, "native.theme.priority")
     XCTAssertNil(BuiltInThemeSpecifications.specification(withIdentifier: "native.theme.nope"))
   }
 
@@ -282,8 +284,27 @@ final class ThemeSpecificationTests: XCTestCase {
   /// Lilex for code and numerals, and labels at caption size, regular, as
   /// written and untracked. A system design sits behind each face so a failed
   /// registration lands in a sans, never in a serif.
-  func testBuiltInsUseZedsFacesAndQuietLabels() {
-    for builtIn in BuiltInThemeSpecifications.all {
+  /// The default names no families, so each platform draws its own system
+  /// faces, and its palette is the one its seeds grow.
+  func testTheDefaultUsesSystemFacesAndIsGrownFromSeeds() {
+    let priority = BuiltInThemeSpecifications.priority
+    let type = priority.structure.typography
+    XCTAssertEqual(type.body, ThemeFontFace(families: [], design: .sans))
+    XCTAssertEqual(type.mono, ThemeFontFace(families: [], design: .monospaced))
+    XCTAssertEqual(priority.structure.radius.panel, 8)
+    XCTAssertEqual(priority.structure.radius.control, 6)
+    for appearance in ThemeAppearance.allCases {
+      let seeds = ThemeSeeds(implicitIn: priority.palette.table(appearance))
+      let grown = seeds.roles(in: appearance) ?? [:]
+      for (role, value) in grown {
+        XCTAssertEqual(priority.color(role, in: appearance), value, "\(appearance) \(role)")
+      }
+    }
+    XCTAssertTrue(priority.validate().filter { $0.severity == .error }.isEmpty)
+  }
+
+  func testZedUsesZedsFacesAndQuietLabels() {
+    for builtIn in [BuiltInThemeSpecifications.chalk, BuiltInThemeSpecifications.chalkDark] {
       let type = builtIn.structure.typography
       XCTAssertEqual(type.body, ThemeFontFace(families: ["IBM Plex Sans"], design: .sans))
       XCTAssertEqual(type.display, ThemeFontFace(families: ["IBM Plex Sans"], design: .sans))

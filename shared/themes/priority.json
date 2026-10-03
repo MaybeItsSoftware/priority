@@ -1,63 +1,67 @@
 {
   "extends" : null,
-  "identifier" : "native.theme.chalk",
+  "identifier" : "native.theme.priority",
   "lockedAppearance" : null,
-  "name" : "Zed",
+  "name" : "Priority",
   "palette" : {
     "dark" : {
-      "altRow" : "#211f29",
-      "border" : "#34313f",
-      "borderMuted" : "#2d2b38",
+      "altRow" : "#1e1e22",
+      "border" : "#323236",
+      "borderMuted" : "#28282c",
       "categoricalOrange" : "#ff6b2b",
       "categoricalPink" : "#ff88dc",
       "categoricalPurple" : "#7a4de8",
       "danger" : "#d62246",
-      "dimText" : "#6e6b7c",
-      "hover" : "#2d2b38",
-      "ink" : "#f5f4f7",
-      "inputBorder" : "#403d4d",
-      "mutedText" : "#b6b3bf",
-      "paper" : "#1c1a23",
-      "primary" : "#007fff",
-      "raised" : "#25232f",
+      "dimText" : "#69696d",
+      "hover" : "#242428",
+      "ink" : "#ececf0",
+      "inputBorder" : "#434347",
+      "mutedText" : "#b7b7bb",
+      "paper" : "#19191d",
+      "primary" : "#7b9bff",
+      "raised" : "#212125",
       "success" : "#4cc38e",
       "warning" : "#ffbf00",
-      "well" : "#2d2b38"
+      "well" : "#28282c"
     },
     "light" : {
-      "altRow" : "#f5f3f1",
-      "border" : "#e6e4ea",
-      "borderMuted" : "#efedf2",
+      "altRow" : "#f2f2f3",
+      "border" : "#dddddf",
+      "borderMuted" : "#e8e8e9",
       "categoricalOrange" : "#ff6b2b",
       "categoricalPink" : "#ff88dc",
       "categoricalPurple" : "#7a4de8",
       "danger" : "#d62246",
-      "dimText" : "#b6b3bf",
-      "hover" : "#f1eff1",
-      "ink" : "#444054",
-      "inputBorder" : "#d8d5dd",
+      "dimText" : "#a5a5a8",
+      "hover" : "#ececee",
+      "ink" : "#1f2026",
+      "inputBorder" : "#ccccce",
       "mediaLetterbox" : "#000000",
       "mediaScrim" : "#000000b3",
       "mediaScrimInk" : "#ffffff",
-      "mutedText" : "#6e6b7c",
-      "paper" : "#faf8f4",
-      "primary" : "#007fff",
-      "raised" : "#ffffff",
+      "mutedText" : "#55565b",
+      "paper" : "#f7f7f8",
+      "primary" : "#3d63dd",
+      "raised" : "#fcfcfc",
       "success" : "#4cc38e",
       "warning" : "#ffbf00",
-      "well" : "#edebef"
+      "well" : "#e8e8e9"
     }
   },
   "platforms" : {
     "android" : {
       "structure" : {
         "radius" : {
-          "control" : 6,
-          "panel" : 8
+          "control" : 8,
+          "panel" : 12,
+          "row" : 8
         },
         "touchTarget" : 48,
         "typography" : {
           "bodySize" : 16,
+          "microLabel" : {
+            "size" : 12
+          },
           "scale" : {
             "body" : 16,
             "caption" : 12,
@@ -71,8 +75,9 @@
     "ios" : {
       "structure" : {
         "radius" : {
-          "control" : 6,
-          "panel" : 8
+          "control" : 8,
+          "panel" : 10,
+          "row" : 8
         },
         "touchTarget" : 44,
         "typography" : {
@@ -98,10 +103,10 @@
       "hairline" : 1
     },
     "radius" : {
-      "control" : 4,
-      "panel" : 0,
+      "control" : 6,
+      "panel" : 8,
       "pill" : 9999,
-      "row" : 0,
+      "row" : 6,
       "shell" : 20
     },
     "spacing" : {
@@ -117,32 +122,32 @@
       "body" : {
         "design" : "sans",
         "families" : [
-          "IBM Plex Sans"
+
         ]
       },
       "bodySize" : 13,
       "display" : {
         "design" : "sans",
         "families" : [
-          "IBM Plex Sans"
+
         ]
       },
       "microLabel" : {
         "role" : "mutedText",
-        "size" : 12,
+        "size" : 11,
         "tracking" : 0,
         "uppercase" : false,
-        "weight" : "regular"
+        "weight" : "medium"
       },
       "mono" : {
         "design" : "monospaced",
         "families" : [
-          "Lilex"
+
         ]
       },
       "scale" : {
         "body" : 13,
-        "caption" : 12,
+        "caption" : 11,
         "display" : 28,
         "hero" : 64,
         "title" : 15
@@ -151,5 +156,5 @@
     "usesGradientsOnChrome" : false,
     "usesShadows" : false
   },
-  "summary" : "The Zed look: IBM Plex Sans and Lilex, square panels, hairlines, warm paper and grape ink."
+  "summary" : "The default. Quiet greys, one blue, and your system's own fonts — easy to make your own."
 }

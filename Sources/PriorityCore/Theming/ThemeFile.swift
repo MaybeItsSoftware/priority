@@ -41,6 +41,9 @@ public struct ThemeFile: Codable, Equatable, Sendable {
   public var summary: String?
   public var lockedAppearance: Lock
   public var extends: Base
+  /// A few colours per appearance the palette is grown from; see
+  /// `ThemeSeeds`. Laid under `palette`, which still wins role by role.
+  public var seeds: Palette?
   public var palette: Palette?
   public var structure: Structure?
   /// Per-platform structure, laid over `structure` on that platform only.
@@ -52,6 +55,7 @@ public struct ThemeFile: Codable, Equatable, Sendable {
     summary: String? = nil,
     lockedAppearance: Lock = .inherit,
     extends: Base = .defaultTheme,
+    seeds: Palette? = nil,
     palette: Palette? = nil,
     structure: Structure? = nil,
     platforms: Platforms? = nil
@@ -61,6 +65,7 @@ public struct ThemeFile: Codable, Equatable, Sendable {
     self.summary = summary
     self.lockedAppearance = lockedAppearance
     self.extends = extends
+    self.seeds = seeds
     self.palette = palette
     self.structure = structure
     self.platforms = platforms
@@ -68,8 +73,9 @@ public struct ThemeFile: Codable, Equatable, Sendable {
 
   // MARK: - Sections
 
-  /// Role name → hex, per appearance. `#rgb`, `#rrggbb` or `#rrggbbaa`; the
-  /// last two digits of the eight-digit form are alpha.
+  /// Name → hex, per appearance: a role name under `palette`, a seed name
+  /// under `seeds`. `#rgb`, `#rrggbb` or `#rrggbbaa`; the last two digits of
+  /// the eight-digit form are alpha.
   public struct Palette: Codable, Equatable, Sendable {
     public var light: [String: String]?
     public var dark: [String: String]?
@@ -77,6 +83,10 @@ public struct ThemeFile: Codable, Equatable, Sendable {
     public init(light: [String: String]? = nil, dark: [String: String]? = nil) {
       self.light = light
       self.dark = dark
+    }
+
+    public subscript(appearance: ThemeAppearance) -> [String: String]? {
+      appearance == .light ? light : dark
     }
   }
 
@@ -278,7 +288,7 @@ public struct ThemeFile: Codable, Equatable, Sendable {
   // MARK: - Coding
 
   enum CodingKeys: String, CodingKey, CaseIterable {
-    case identifier, name, summary, lockedAppearance, extends, palette, structure, platforms
+    case identifier, name, summary, lockedAppearance, extends, seeds, palette, structure, platforms
   }
 
   public init(from decoder: any Decoder) throws {
@@ -286,6 +296,7 @@ public struct ThemeFile: Codable, Equatable, Sendable {
     identifier = try container.decodeIfPresent(String.self, forKey: .identifier)
     name = try container.decodeIfPresent(String.self, forKey: .name)
     summary = try container.decodeIfPresent(String.self, forKey: .summary)
+    seeds = try container.decodeIfPresent(Palette.self, forKey: .seeds)
     palette = try container.decodeIfPresent(Palette.self, forKey: .palette)
     structure = try container.decodeIfPresent(Structure.self, forKey: .structure)
     platforms = try container.decodeIfPresent(Platforms.self, forKey: .platforms)
@@ -314,6 +325,7 @@ public struct ThemeFile: Codable, Equatable, Sendable {
     try container.encodeIfPresent(identifier, forKey: .identifier)
     try container.encodeIfPresent(name, forKey: .name)
     try container.encodeIfPresent(summary, forKey: .summary)
+    try container.encodeIfPresent(seeds, forKey: .seeds)
     try container.encodeIfPresent(palette, forKey: .palette)
     try container.encodeIfPresent(structure, forKey: .structure)
     try container.encodeIfPresent(platforms, forKey: .platforms)

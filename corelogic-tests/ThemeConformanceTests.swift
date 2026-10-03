@@ -135,6 +135,27 @@ final class ThemeConformanceTests: XCTestCase {
       "mine.same"
     ),
     ("builtin-chalk-dark", [], BuiltInThemeSpecifications.chalkDarkIdentifier),
+    ("builtin-priority", [], BuiltInThemeSpecifications.priorityIdentifier),
+    (
+      "seeds-only",
+      [("sea.json", ##"{ "name": "Sea", "seeds": { "light": { "background": "#f4f8f9", "foreground": "#14303a", "accent": "#0b7a8c" }, "dark": { "background": "#0e1d22", "foreground": "#dcecef", "accent": "#4fc3d4" } } }"##)],
+      "user.sea"
+    ),
+    (
+      "seeds-with-overrides",
+      [("sea-tuned.json", ##"{ "name": "Sea, tuned", "seeds": { "light": { "background": "#f4f8f9", "foreground": "#14303a", "accent": "#0b7a8c", "danger": "#c4314b" } }, "palette": { "light": { "border": "#c9d9dd" } } }"##)],
+      "user.sea-tuned"
+    ),
+    (
+      "seeds-one-sided",
+      [("half.json", ##"{ "name": "Half", "seeds": { "light": { "background": "#ffffff", "accent": "#ff0000", "glow": "#00ff00" } } }"##)],
+      "user.half"
+    ),
+    (
+      "extends-zed",
+      [("zed-teal.json", ##"{ "name": "Zed, teal", "extends": "native.theme.chalk", "palette": { "light": { "primary": "#0b7a8c" } } }"##)],
+      "user.zed-teal"
+    ),
   ]
 
   func testTheSharedBuiltInFilesMatchSwift() throws {
@@ -184,11 +205,36 @@ final class ThemeConformanceTests: XCTestCase {
 
     let bad = try built("bad-hex")
     XCTAssertTrue(bad.issues.contains { $0.severity == "error" && $0.message.contains("#ggg") })
-    XCTAssertEqual(bad.expected["macos"]?["light"]?.colors["paper"], "#faf8f4", "the value is kept")
+    XCTAssertEqual(
+      bad.expected["macos"]?["light"]?.colors["paper"],
+      BuiltInThemeSpecifications.priority.palette.light[.paper]?.hexString.lowercased(),
+      "the default's value is kept")
     XCTAssertEqual(bad.expected["macos"]?["light"]?.colors["ink"], "#123456")
 
     let cycle = try built("cycle")
-    XCTAssertEqual(cycle.expected["macos"]?["light"]?.identifier, BuiltInThemeSpecifications.chalkIdentifier)
+    XCTAssertEqual(cycle.expected["macos"]?["light"]?.identifier, BuiltInThemeSpecifications.defaultIdentifier)
+
+    let sea = try built("seeds-only")
+    XCTAssertEqual(sea.expected["macos"]?["light"]?.colors["paper"], "#f4f8f9", "background is the page")
+    XCTAssertEqual(sea.expected["macos"]?["light"]?.colors["ink"], "#14303a", "foreground is the text")
+    XCTAssertEqual(sea.expected["macos"]?["dark"]?.colors["primary"], "#4fc3d4")
+    XCTAssertNotEqual(sea.expected["macos"]?["light"]?.colors["border"], sea.expected["macos"]?["light"]?.colors["paper"])
+    XCTAssertTrue(sea.issues.filter { $0.severity == "error" }.isEmpty)
+
+    let tuned = try built("seeds-with-overrides")
+    XCTAssertEqual(tuned.expected["macos"]?["light"]?.colors["border"], "#c9d9dd", "palette beats seeds")
+    XCTAssertEqual(tuned.expected["macos"]?["light"]?.colors["danger"], "#c4314b")
+
+    let half = try built("seeds-one-sided")
+    XCTAssertEqual(
+      half.expected["macos"]?["light"]?.colors["ink"],
+      BuiltInThemeSpecifications.priority.palette.light[.ink]?.hexString.lowercased(),
+      "a missing seed comes from the theme it extends")
+    XCTAssertTrue(half.issues.contains { $0.severity == "warning" && $0.message.contains("glow") })
+
+    let zedTeal = try built("extends-zed")
+    XCTAssertEqual(zedTeal.expected["macos"]?["light"]?.colors["paper"], "#faf8f4", "Zed's paper")
+    XCTAssertEqual(zedTeal.expected["ios"]?["light"]?.structure.typography.bodySize, 17)
 
     let cleared = try built("locked-appearance-cleared")
     XCTAssertNil(cleared.expected["ios"]?["light"]?.lockedAppearance)

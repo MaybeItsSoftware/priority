@@ -26,9 +26,9 @@
           "warning" : "#ffbf00",
           "well" : "#2d2b38"
         },
-        "identifier" : "native.theme.chalk.dark",
-        "lockedAppearance" : "dark",
-        "name" : "Zed Dark",
+        "identifier" : "user.zed-teal",
+        "lockedAppearance" : null,
+        "name" : "Zed, teal",
         "structure" : {
           "border" : {
             "emphasis" : 2,
@@ -91,33 +91,33 @@
         }
       },
       "light" : {
-        "appearance" : "dark",
+        "appearance" : "light",
         "colors" : {
-          "altRow" : "#211f29",
-          "border" : "#34313f",
-          "borderMuted" : "#2d2b38",
+          "altRow" : "#f5f3f1",
+          "border" : "#e6e4ea",
+          "borderMuted" : "#efedf2",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
           "danger" : "#d62246",
-          "dimText" : "#6e6b7c",
-          "hover" : "#2d2b38",
-          "ink" : "#f5f4f7",
-          "inputBorder" : "#403d4d",
+          "dimText" : "#b6b3bf",
+          "hover" : "#f1eff1",
+          "ink" : "#444054",
+          "inputBorder" : "#d8d5dd",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#b6b3bf",
-          "paper" : "#1c1a23",
-          "primary" : "#007fff",
-          "raised" : "#25232f",
+          "mutedText" : "#6e6b7c",
+          "paper" : "#faf8f4",
+          "primary" : "#0b7a8c",
+          "raised" : "#ffffff",
           "success" : "#4cc38e",
           "warning" : "#ffbf00",
-          "well" : "#2d2b38"
+          "well" : "#edebef"
         },
-        "identifier" : "native.theme.chalk.dark",
-        "lockedAppearance" : "dark",
-        "name" : "Zed Dark",
+        "identifier" : "user.zed-teal",
+        "lockedAppearance" : null,
+        "name" : "Zed, teal",
         "structure" : {
           "border" : {
             "emphasis" : 2,
@@ -206,9 +206,9 @@
           "warning" : "#ffbf00",
           "well" : "#2d2b38"
         },
-        "identifier" : "native.theme.chalk.dark",
-        "lockedAppearance" : "dark",
-        "name" : "Zed Dark",
+        "identifier" : "user.zed-teal",
+        "lockedAppearance" : null,
+        "name" : "Zed, teal",
         "structure" : {
           "border" : {
             "emphasis" : 2,
@@ -271,33 +271,33 @@
         }
       },
       "light" : {
-        "appearance" : "dark",
+        "appearance" : "light",
         "colors" : {
-          "altRow" : "#211f29",
-          "border" : "#34313f",
-          "borderMuted" : "#2d2b38",
+          "altRow" : "#f5f3f1",
+          "border" : "#e6e4ea",
+          "borderMuted" : "#efedf2",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
           "danger" : "#d62246",
-          "dimText" : "#6e6b7c",
-          "hover" : "#2d2b38",
-          "ink" : "#f5f4f7",
-          "inputBorder" : "#403d4d",
+          "dimText" : "#b6b3bf",
+          "hover" : "#f1eff1",
+          "ink" : "#444054",
+          "inputBorder" : "#d8d5dd",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#b6b3bf",
-          "paper" : "#1c1a23",
-          "primary" : "#007fff",
-          "raised" : "#25232f",
+          "mutedText" : "#6e6b7c",
+          "paper" : "#faf8f4",
+          "primary" : "#0b7a8c",
+          "raised" : "#ffffff",
           "success" : "#4cc38e",
           "warning" : "#ffbf00",
-          "well" : "#2d2b38"
+          "well" : "#edebef"
         },
-        "identifier" : "native.theme.chalk.dark",
-        "lockedAppearance" : "dark",
-        "name" : "Zed Dark",
+        "identifier" : "user.zed-teal",
+        "lockedAppearance" : null,
+        "name" : "Zed, teal",
         "structure" : {
           "border" : {
             "emphasis" : 2,
@@ -386,9 +386,9 @@
           "warning" : "#ffbf00",
           "well" : "#2d2b38"
         },
-        "identifier" : "native.theme.chalk.dark",
-        "lockedAppearance" : "dark",
-        "name" : "Zed Dark",
+        "identifier" : "user.zed-teal",
+        "lockedAppearance" : null,
+        "name" : "Zed, teal",
         "structure" : {
           "border" : {
             "emphasis" : 2,
@@ -451,33 +451,33 @@
         }
       },
       "light" : {
-        "appearance" : "dark",
+        "appearance" : "light",
         "colors" : {
-          "altRow" : "#211f29",
-          "border" : "#34313f",
-          "borderMuted" : "#2d2b38",
+          "altRow" : "#f5f3f1",
+          "border" : "#e6e4ea",
+          "borderMuted" : "#efedf2",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
           "danger" : "#d62246",
-          "dimText" : "#6e6b7c",
-          "hover" : "#2d2b38",
-          "ink" : "#f5f4f7",
-          "inputBorder" : "#403d4d",
+          "dimText" : "#b6b3bf",
+          "hover" : "#f1eff1",
+          "ink" : "#444054",
+          "inputBorder" : "#d8d5dd",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#b6b3bf",
-          "paper" : "#1c1a23",
-          "primary" : "#007fff",
-          "raised" : "#25232f",
+          "mutedText" : "#6e6b7c",
+          "paper" : "#faf8f4",
+          "primary" : "#0b7a8c",
+          "raised" : "#ffffff",
           "success" : "#4cc38e",
           "warning" : "#ffbf00",
-          "well" : "#2d2b38"
+          "well" : "#edebef"
         },
-        "identifier" : "native.theme.chalk.dark",
-        "lockedAppearance" : "dark",
-        "name" : "Zed Dark",
+        "identifier" : "user.zed-teal",
+        "lockedAppearance" : null,
+        "name" : "Zed, teal",
         "structure" : {
           "border" : {
             "emphasis" : 2,
@@ -542,10 +542,13 @@
     }
   },
   "files" : [
-
+    {
+      "json" : "{ \"name\": \"Zed, teal\", \"extends\": \"native.theme.chalk\", \"palette\": { \"light\": { \"primary\": \"#0b7a8c\" } } }",
+      "name" : "zed-teal.json"
+    }
   ],
   "issues" : [
 
   ],
-  "selected" : "native.theme.chalk.dark"
+  "selected" : "user.zed-teal"
 }

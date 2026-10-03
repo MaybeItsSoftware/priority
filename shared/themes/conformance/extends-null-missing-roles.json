@@ -36,10 +36,10 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 6,
-            "panel" : 8,
+            "control" : 8,
+            "panel" : 12,
             "pill" : 9999,
-            "row" : 0,
+            "row" : 8,
             "shell" : 20
           },
           "spacing" : {
@@ -55,14 +55,14 @@
             "body" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "bodySize" : 16,
             "display" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "microLabel" : {
@@ -70,12 +70,12 @@
               "size" : 12,
               "tracking" : 0,
               "uppercase" : false,
-              "weight" : "regular"
+              "weight" : "medium"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-                "Lilex"
+
               ]
             },
             "scale" : {
@@ -125,10 +125,10 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 6,
-            "panel" : 8,
+            "control" : 8,
+            "panel" : 12,
             "pill" : 9999,
-            "row" : 0,
+            "row" : 8,
             "shell" : 20
           },
           "spacing" : {
@@ -144,14 +144,14 @@
             "body" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "bodySize" : 16,
             "display" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "microLabel" : {
@@ -159,12 +159,12 @@
               "size" : 12,
               "tracking" : 0,
               "uppercase" : false,
-              "weight" : "regular"
+              "weight" : "medium"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-                "Lilex"
+
               ]
             },
             "scale" : {
@@ -216,10 +216,10 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 6,
-            "panel" : 8,
+            "control" : 8,
+            "panel" : 10,
             "pill" : 9999,
-            "row" : 0,
+            "row" : 8,
             "shell" : 20
           },
           "spacing" : {
@@ -235,14 +235,14 @@
             "body" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "bodySize" : 17,
             "display" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "microLabel" : {
@@ -250,12 +250,12 @@
               "size" : 13,
               "tracking" : 0,
               "uppercase" : false,
-              "weight" : "regular"
+              "weight" : "medium"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-                "Lilex"
+
               ]
             },
             "scale" : {
@@ -305,10 +305,10 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 6,
-            "panel" : 8,
+            "control" : 8,
+            "panel" : 10,
             "pill" : 9999,
-            "row" : 0,
+            "row" : 8,
             "shell" : 20
           },
           "spacing" : {
@@ -324,14 +324,14 @@
             "body" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "bodySize" : 17,
             "display" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "microLabel" : {
@@ -339,12 +339,12 @@
               "size" : 13,
               "tracking" : 0,
               "uppercase" : false,
-              "weight" : "regular"
+              "weight" : "medium"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-                "Lilex"
+
               ]
             },
             "scale" : {
@@ -396,10 +396,10 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 4,
-            "panel" : 0,
+            "control" : 6,
+            "panel" : 8,
             "pill" : 9999,
-            "row" : 0,
+            "row" : 6,
             "shell" : 20
           },
           "spacing" : {
@@ -415,32 +415,32 @@
             "body" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "bodySize" : 13,
             "display" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
-              "size" : 12,
+              "size" : 11,
               "tracking" : 0,
               "uppercase" : false,
-              "weight" : "regular"
+              "weight" : "medium"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-                "Lilex"
+
               ]
             },
             "scale" : {
               "body" : 13,
-              "caption" : 12,
+              "caption" : 11,
               "display" : 28,
               "hero" : 64,
               "title" : 15
@@ -485,10 +485,10 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 4,
-            "panel" : 0,
+            "control" : 6,
+            "panel" : 8,
             "pill" : 9999,
-            "row" : 0,
+            "row" : 6,
             "shell" : 20
           },
           "spacing" : {
@@ -504,32 +504,32 @@
             "body" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "bodySize" : 13,
             "display" : {
               "design" : "sans",
               "families" : [
-                "IBM Plex Sans"
+
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
-              "size" : 12,
+              "size" : 11,
               "tracking" : 0,
               "uppercase" : false,
-              "weight" : "regular"
+              "weight" : "medium"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-                "Lilex"
+
               ]
             },
             "scale" : {
               "body" : 13,
-              "caption" : 12,
+              "caption" : 11,
               "display" : 28,
               "hero" : 64,
               "title" : 15

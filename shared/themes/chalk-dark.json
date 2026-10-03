@@ -2,7 +2,7 @@
   "extends" : null,
   "identifier" : "native.theme.chalk.dark",
   "lockedAppearance" : "dark",
-  "name" : "Chalk Dark",
+  "name" : "Zed Dark",
   "palette" : {
     "dark" : {
       "altRow" : "#211f29",
@@ -151,5 +151,5 @@
     "usesGradientsOnChrome" : false,
     "usesShadows" : false
   },
-  "summary" : "The house style with the lights off. The same grape hue pulled down, never neutral grey."
+  "summary" : "The Zed look with the lights off. The same grape hue pulled down, never neutral grey."
 }

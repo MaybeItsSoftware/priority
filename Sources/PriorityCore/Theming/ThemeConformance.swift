@@ -177,13 +177,13 @@ public enum ThemeConformance {
   }
 
   /// What a device shows for the theme `identifier`: the user theme of that
-  /// name if it loaded, else the built-in, else Chalk standing in.
+  /// name if it loaded, else the built-in, else the default standing in.
   public static func selected(
     _ identifier: String, in library: ThemeFileLibrary, for platform: ThemePlatform
   ) -> ThemeSpecification {
     library.themes.first { $0.identifier == identifier }
       ?? BuiltInThemeSpecifications.specification(withIdentifier: identifier, for: platform)
-      ?? BuiltInThemeSpecifications.chalk(for: platform)
+      ?? BuiltInThemeSpecifications.defaultTheme(for: platform)
   }
 
   /// A built-in as the complete file `shared/themes/` holds: every colour and
@@ -207,11 +207,19 @@ public enum ThemeConformance {
   public static func sharedFiles() throws -> [String: Data] {
     var files: [String: Data] = [:]
     for builtIn in BuiltInThemeSpecifications.all {
-      let name =
-        builtIn.identifier == BuiltInThemeSpecifications.chalkIdentifier ? "chalk" : "chalk-dark"
-      files["\(name).json"] = try encode(sharedFile(for: builtIn))
+      files["\(sharedFileName(for: builtIn.identifier)).json"] = try encode(sharedFile(for: builtIn))
     }
     return files
+  }
+
+  /// The stem a built-in's shared file goes under. Zed keeps its old
+  /// name, Chalk, here as in its identifier.
+  public static func sharedFileName(for identifier: String) -> String {
+    switch identifier {
+    case BuiltInThemeSpecifications.chalkIdentifier: return "chalk"
+    case BuiltInThemeSpecifications.chalkDarkIdentifier: return "chalk-dark"
+    default: return "priority"
+    }
   }
 
   static func encode(_ value: some Encodable) throws -> Data {
