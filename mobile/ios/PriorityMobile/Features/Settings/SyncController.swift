@@ -19,14 +19,14 @@ final class SyncController {
   /// run on a throwaway workspace that must never reach a server.
   private(set) static var shared: SyncController?
 
-  static let refreshTaskID = "uk.co.maybeitsadam.priority.ios.sync"
+  static let refreshTaskID = "uk.co.maybeitssoftware.takt.sync"
 
   let session: SyncSession
   /// The last sign-in attempt's failure, for the settings screen.
   var signInError: String?
   var isSigningIn = false
 
-  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "SyncController")
+  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "SyncController")
 
   init(model: WorkspaceModel) {
     session = SyncSession(store: model.store, deviceName: UIDevice.current.name, platform: "ios")
@@ -106,7 +106,7 @@ final class SyncController {
     await attempt { try await self.session.signInWithApple(idToken: idToken, nonce: nonce, serverURL: serverURL) }
   }
 
-  /// `priority://auth-callback` from a Supabase email: confirming the
+  /// `takt://auth-callback` from a Supabase email: confirming the
   /// address, or resetting the password.
   func openAuthLink(_ url: URL) async {
     isSigningIn = true

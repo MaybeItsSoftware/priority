@@ -3,7 +3,7 @@ import Foundation
 import PriorityWorkspace
 import WidgetKit
 
-/// "Add task to Priority", for Shortcuts and Siri.
+/// "Add task to Takt", for Shortcuts and Siri.
 ///
 /// Runs without opening the app: the workspace database is in the app group
 /// container, so the intent writes it directly, through the same capture path
@@ -11,9 +11,9 @@ import WidgetKit
 /// and filed with the task. A running app notices the commit through
 /// `PRAGMA data_version`, and the widgets are refreshed here.
 struct AddTaskIntent: AppIntent {
-  static let title: LocalizedStringResource = "Add task to Priority"
+  static let title: LocalizedStringResource = "Add task to Takt"
   static let description = IntentDescription(
-    "Adds a task to Priority. Details typed on the end — 45m, #tag, @fri, !1 — are filed with it.")
+    "Adds a task to Takt. Details typed on the end — 45m, #tag, @fri, !1 — are filed with it.")
 
   @Parameter(title: "Title", requestValueDialog: "What's the task?")
   var taskTitle: String
@@ -51,7 +51,7 @@ enum IntentError: Error, CustomLocalizedStringResourceConvertible {
 
   var localizedStringResource: LocalizedStringResource {
     switch self {
-    case .noInbox: "Priority has no Inbox to add to."
+    case .noInbox: "Takt has no Inbox to add to."
     }
   }
 }

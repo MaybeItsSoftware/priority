@@ -88,7 +88,7 @@ struct LaunchFailureView: View {
   var body: some View {
     VStack(spacing: theme.space.md) {
       Image(systemName: "exclamationmark.triangle").font(theme.type.glyph(34)).foregroundStyle(theme.danger)
-      Text("Priority couldn't open its workspace").font(theme.type.title)
+      Text("Takt couldn't open its workspace").font(theme.type.title)
       Text(message).font(theme.type.caption).foregroundStyle(theme.muted).multilineTextAlignment(.center)
     }
     .padding(theme.space.xl)
@@ -97,7 +97,7 @@ struct LaunchFailureView: View {
   }
 }
 
-/// `priority://` links from the widgets, the Control Center control and the
+/// `takt://` links from the widgets, the Control Center control and the
 /// Live Activity.
 @MainActor
 enum DeepLink {
@@ -133,7 +133,7 @@ enum DeepLink {
       }
       return
     }
-    guard url.scheme == "priority" else { return }
+    guard url.scheme == "takt" else { return }
     let isPad = UIDevice.current.userInterfaceIdiom == .pad
     switch url.host() {
     case "add":

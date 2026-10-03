@@ -1,4 +1,4 @@
-# Priority for iPhone and iPad
+# Takt for iPhone and iPad
 
 The native iOS app. It links the repo's own Swift package (`../..`), so the
 data layer is the Mac's: `WorkspaceStore` (GRDB) from `PriorityWorkspace`, the
@@ -29,23 +29,23 @@ complete → undo smoke, and a scroll measurement over a 5,000-task outline
 (it seeds the list first, so it takes a couple of minutes).
 
 DEBUG launch arguments: `-uiTesting` (a fresh workspace in a temp directory),
-`-demo` (a small sample workspace), `-seed5000`, and `-open <priority://…>` to
-start on a screen, e.g. `-open priority://lists/Work`.
+`-demo` (a small sample workspace), `-seed5000`, and `-open <takt://…>` to
+start on a screen, e.g. `-open takt://lists/Work`.
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `project.yml` | XcodeGen spec: app `PriorityMobile` (product "Priority"), `PriorityWidgets`, tests |
+| `project.yml` | XcodeGen spec: app `PriorityMobile` (product "Takt", bundle id `uk.co.maybeitssoftware.takt`), `PriorityWidgets`, tests |
 | `Shared/` | Compiled into the app and the widget: app group paths, widget snapshot, Live Activity attributes, widget palette, quick-add intent |
 | `PriorityMobile/Model/` | `WorkspaceModel` (the one write funnel, `revision`), `StoreQuery`, `AppNavigation`, task and list commands |
 | `PriorityMobile/Features/` | One folder per screen: Lists, Outline, Board, Matrix, Today, Focus, Review, Search, Inspector, QuickAdd, History, Settings (incl. sync) |
 | `PriorityMobile/App/` | Entry point, iPhone tabs / iPad split view, deep links, keyboard shortcuts |
 | `PriorityMobile/Bridge/` | Widget snapshot writer and the focus Live Activity |
-| `PriorityMobile/Intents/` | "Add task to Priority" App Intent and Siri phrases |
+| `PriorityMobile/Intents/` | "Add task to Takt" App Intent and Siri phrases |
 | `PriorityWidgets/` | Next-up and Today-count widgets, Live Activity / Dynamic Island, Control Center quick add |
 
-The database lives in the app group `group.uk.co.maybeitsadam.priority`
+The database lives in the app group `group.uk.co.maybeitssoftware.takt`
 (`Priority/priority.sqlite`), so the widgets and intents read the same file.
 
 ## How data stays current

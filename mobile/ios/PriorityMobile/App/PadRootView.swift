@@ -25,7 +25,7 @@ struct PadRootView: View {
       .listStyle(.sidebar)
       .scrollContentBackground(.hidden)
       .background(theme.paper)
-      .navigationTitle("Priority")
+      .navigationTitle("Takt")
       .toolbar {
         ListsTreeToolbar()
         ToolbarItem(placement: .topBarLeading) {

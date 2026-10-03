@@ -68,7 +68,7 @@ final class ThemeStore {
   @ObservationIgnored private weak var model: WorkspaceModel?
   @ObservationIgnored private var rows: [StoredTheme] = []
   @ObservationIgnored private var lastWidgetTheme: WidgetTheme?
-  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "ThemeStore")
+  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "ThemeStore")
 
   enum Keys {
     /// The choice as it was kept before it synced, and is still mirrored:

@@ -15,8 +15,13 @@ final class SyncPhaseTextTests: XCTestCase {
   }
 
   func testSupabaseComesBackOnTheAppsOwnScheme() throws {
-    let callback = try XCTUnwrap(URL(string: "priority://auth-callback?code=abc"))
+    let scheme = try XCTUnwrap(SyncServer.authCallbackURL.scheme)
+    let callback = try XCTUnwrap(URL(string: "\(scheme)://auth-callback?code=abc"))
     XCTAssertTrue(SyncServer.isAuthCallback(callback))
-    XCTAssertFalse(SyncServer.isAuthCallback(try XCTUnwrap(URL(string: "priority://add"))))
+    XCTAssertFalse(SyncServer.isAuthCallback(try XCTUnwrap(URL(string: "\(scheme)://add"))))
+    // The app answers to that scheme: it is the one Info.plist registers.
+    let registered = (Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]] ?? [])
+      .flatMap { $0["CFBundleURLSchemes"] as? [String] ?? [] }
+    XCTAssertTrue(registered.contains(scheme), "\(scheme) is not among \(registered)")
   }
 }

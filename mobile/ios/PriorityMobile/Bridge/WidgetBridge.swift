@@ -14,7 +14,7 @@ import WidgetKit
 final class WidgetBridge {
   static let shared = WidgetBridge()
 
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "WidgetBridge")
+  private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "WidgetBridge")
   private var pending: Task<Void, Never>?
   private var lastSnapshot: WidgetSnapshot?
   private var lastReload = Date.distantPast
@@ -82,7 +82,7 @@ final class WidgetBridge {
 /// requesting fails quietly, and there is then nothing to update or end.
 @MainActor
 final class FocusLiveActivityController {
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "LiveActivity")
+  private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "LiveActivity")
   private var lastState: FocusActivityAttributes.ContentState?
 
   func sync(_ running: (sessionID: String, state: FocusActivityAttributes.ContentState)?) async {

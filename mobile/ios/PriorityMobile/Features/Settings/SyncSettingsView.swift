@@ -9,7 +9,7 @@ import SwiftUI
 /// are Supabase accounts. Signed in: the account, the status, Sync now, the
 /// account's devices, signing out, and deleting the account — which the App
 /// Store requires be possible in the app (5.1.1(v)). The server is
-/// Priority's unless "Use a different server" says otherwise.
+/// Takt's unless "Use a different server" says otherwise.
 struct SyncSettingsView: View {
   @Environment(\.theme) private var theme
   var body: some View {
@@ -288,7 +288,7 @@ private struct SyncSettingsForm: View {
           .accessibilityIdentifier("sync.server")
       }
     } footer: {
-      Text("For a server you run yourself. Leave it as it is to use Priority's.")
+      Text("For a server you run yourself. Leave it as it is to use Takt's.")
         .font(theme.type.footnote).foregroundStyle(theme.muted)
     }
     .listRowBackground(theme.raised)

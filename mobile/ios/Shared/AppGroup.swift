@@ -7,7 +7,7 @@ import Foundation
 /// app writes. Everything outside the app reads it; only the app (and the
 /// intents it runs) writes it.
 enum AppGroup {
-  static let identifier = "group.uk.co.maybeitsadam.priority"
+  static let identifier = "group.uk.co.maybeitssoftware.takt"
 
   /// Set by the UI tests so every run starts from an empty workspace.
   static var isUITesting: Bool {

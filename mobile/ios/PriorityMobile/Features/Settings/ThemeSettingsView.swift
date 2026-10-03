@@ -47,7 +47,7 @@ struct ThemeSettingsView: View {
         header("Theme")
       } footer: {
         if themes.isFallingBack {
-          footer("The chosen theme isn't available on this phone yet, so Priority is standing in.")
+          footer("The chosen theme isn't available on this phone yet, so the default theme is standing in.")
         }
       }
       .listRowBackground(theme.raised)

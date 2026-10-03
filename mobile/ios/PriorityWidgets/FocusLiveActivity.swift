@@ -11,7 +11,7 @@ struct FocusLiveActivity: Widget {
         .environment(\.widgetPalette, palette)
         .activityBackgroundTint(palette.paper)
         .activitySystemActionForegroundColor(palette.ink)
-        .widgetURL(URL(string: "priority://focus"))
+        .widgetURL(URL(string: "takt://focus"))
     } dynamicIsland: { context in
       let state = context.state
       let palette = WidgetPalette.current
@@ -46,7 +46,7 @@ struct FocusLiveActivity: Widget {
         Image(systemName: state.isPaused ? "pause.fill" : "scope")
           .foregroundStyle(state.isPaused ? palette.warning : palette.primary)
       }
-      .widgetURL(URL(string: "priority://focus"))
+      .widgetURL(URL(string: "takt://focus"))
       .keylineTint(palette.primary)
     }
   }

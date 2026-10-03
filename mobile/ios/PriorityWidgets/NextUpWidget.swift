@@ -87,7 +87,7 @@ struct NextUpWidgetView: View {
   }
 
   private var url: URL {
-    snapshot.nextUp.map { URL(string: "priority://task/\($0.id)")! } ?? URL(string: "priority://today")!
+    snapshot.nextUp.map { URL(string: "takt://task/\($0.id)")! } ?? URL(string: "takt://today")!
   }
 
   private var small: some View {
@@ -126,7 +126,7 @@ struct NextUpWidgetView: View {
         Spacer()
       } else {
         ForEach(Array(snapshot.items.prefix(family == .systemLarge ? 6 : 3))) { item in
-          Link(destination: URL(string: "priority://task/\(item.id)")!) {
+          Link(destination: URL(string: "takt://task/\(item.id)")!) {
             ItemRow(item: item, isRunning: item.id == snapshot.running?.taskID)
           }
           Rectangle().fill(palette.border).frame(height: palette.hairline)
@@ -135,7 +135,7 @@ struct NextUpWidgetView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .widgetURL(URL(string: "priority://today"))
+    .widgetURL(URL(string: "takt://today"))
   }
 
   private var header: some View {
@@ -242,7 +242,7 @@ struct TodayCountView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       }
     }
-    .widgetURL(URL(string: "priority://today"))
+    .widgetURL(URL(string: "takt://today"))
   }
 }
 

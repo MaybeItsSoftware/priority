@@ -116,7 +116,7 @@ final class WorkspaceModel {
   @ObservationIgnored private var externalToken: Int?
   @ObservationIgnored private var externalWatch: Task<Void, Never>?
   @ObservationIgnored private var structureGeneration = 0
-  @ObservationIgnored let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "WorkspaceModel")
+  @ObservationIgnored let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "WorkspaceModel")
 
   init(store: WorkspaceStore) throws {
     self.store = store

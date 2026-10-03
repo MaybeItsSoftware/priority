@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the iPhone app for App Store Connect (TestFlight, then the App Store).
 #
-#   scripts/build_app_store.sh            # archive and export build/app-store/PriorityMobile.ipa
+#   scripts/build_app_store.sh            # archive and export build/app-store/Takt.ipa
 #   scripts/build_app_store.sh --upload   # archive and upload straight to App Store Connect
 #
 # Signs automatically with the team in mobile/ios/project.yml, using the Apple
@@ -14,8 +14,9 @@
 #     role App Manager), named by ASC_KEY_PATH (the .p8), ASC_KEY_ID and
 #     ASC_ISSUER_ID.
 #
-# Uploading uses the same. The app has to exist in App
-# Store Connect first, with bundle id uk.co.maybeitsadam.priority.ios.
+# Uploading uses the same. The app has to exist in App Store Connect first,
+# with bundle id uk.co.maybeitssoftware.takt (its widgets extension is
+# uk.co.maybeitssoftware.takt.widgets).
 #
 # The build number must rise with every upload. It is the number of commits
 # on HEAD, as for the Play bundle, so nobody has to remember to bump it.
@@ -55,7 +56,7 @@ cat > "$options" <<PLIST
 </plist>
 PLIST
 
-echo "Archiving Priority for iPhone, build $build_number"
+echo "Archiving Takt for iPhone, build $build_number"
 rm -rf "$archive"
 xcodebuild -project "$ios/PriorityMobile.xcodeproj" -scheme PriorityMobile \
   -configuration Release -destination 'generic/platform=iOS' \
@@ -69,5 +70,5 @@ xcodebuild -exportArchive -archivePath "$archive" -exportPath "$out" \
 if [[ "$destination" == "upload" ]]; then
   echo "Uploaded build $build_number to App Store Connect; it appears in TestFlight once processed."
 else
-  echo "Exported: $out/PriorityMobile.ipa (build $build_number)"
+  echo "Exported: $out/Takt.ipa (build $build_number)"
 fi

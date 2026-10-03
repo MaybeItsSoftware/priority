@@ -9,7 +9,7 @@ name: PriorityMobile
 # PriorityWorkspaceEditing — exactly the libraries the Mac app uses.
 
 options:
-  bundleIdPrefix: uk.co.maybeitsadam
+  bundleIdPrefix: uk.co.maybeitssoftware
   deploymentTarget:
     iOS: "18.0"
   createIntermediateGroups: true
@@ -56,14 +56,14 @@ targets:
       path: PriorityMobile/PriorityMobile.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.uk.co.maybeitsadam.priority
+          - group.uk.co.maybeitssoftware.takt
         # Sign in with Apple, natively, for sync accounts (Supabase).
         com.apple.developer.applesignin:
           - Default
     info:
       path: PriorityMobile/Info.plist
       properties:
-        CFBundleDisplayName: Priority
+        CFBundleDisplayName: Takt
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
@@ -82,15 +82,15 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         NSSupportsLiveActivities: true
-        # `priority://`: the widgets' links, and `priority://auth-callback`,
+        # `takt://`: the widgets' links, and `takt://auth-callback`,
         # where Supabase's emails (confirming an address, resetting a
         # password) open the app.
         CFBundleURLTypes:
-          - CFBundleURLName: uk.co.maybeitsadam.priority.ios
+          - CFBundleURLName: uk.co.maybeitssoftware.takt
             CFBundleURLSchemes:
-              - priority
+              - takt
         BGTaskSchedulerPermittedIdentifiers:
-          - uk.co.maybeitsadam.priority.ios.sync
+          - uk.co.maybeitssoftware.takt.sync
         UIBackgroundModes:
           - fetch
         UIAppFonts:
@@ -104,8 +104,11 @@ targets:
           - Lilex-Bold.ttf
     settings:
       base:
-        PRODUCT_NAME: Priority
-        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios
+        # The bundle is Takt.app; the Swift module keeps its name, so the
+        # tests' `@testable import Priority` still resolves.
+        PRODUCT_NAME: Takt
+        PRODUCT_MODULE_NAME: Priority
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SUPPORTS_MACCATALYST: NO
@@ -130,11 +133,11 @@ targets:
       path: PriorityWidgets/PriorityWidgets.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.uk.co.maybeitsadam.priority
+          - group.uk.co.maybeitssoftware.takt
     info:
       path: PriorityWidgets/Info.plist
       properties:
-        CFBundleDisplayName: Priority
+        CFBundleDisplayName: Takt
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
@@ -148,7 +151,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: PriorityWidgets
-        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.widgets
         TARGETED_DEVICE_FAMILY: "1,2"
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -166,9 +169,9 @@ targets:
         product: PriorityCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios.tests
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.tests
         GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Priority.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Priority
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Takt.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Takt
         BUNDLE_LOADER: $(TEST_HOST)
 
   # The widget views and the Live Activity's lock-screen view, rendered from
@@ -192,9 +195,9 @@ targets:
       - sdk: AppIntents.framework
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios.widgettests
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.widgettests
         GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Priority.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Priority
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Takt.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Takt
         BUNDLE_LOADER: $(TEST_HOST)
 
   PriorityMobileUITests:
@@ -206,7 +209,7 @@ targets:
       - target: PriorityMobile
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.uitests
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: PriorityMobile
 

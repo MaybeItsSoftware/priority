@@ -1,7 +1,7 @@
 import AppIntents
 import Foundation
 
-/// Opens Priority on its quick-add sheet. Run by the Control Center control
+/// Opens Takt on its quick-add sheet. Run by the Control Center control
 /// and offered to Shortcuts.
 ///
 /// Compiled into the app and the widget extension both, as a control's intent
@@ -10,7 +10,7 @@ import Foundation
 /// app's handler is not yet installed — still opens the sheet once it is.
 struct OpenQuickAddIntent: AppIntent {
   static let title: LocalizedStringResource = "Quick add"
-  static let description = IntentDescription("Opens Priority ready to capture a task.")
+  static let description = IntentDescription("Opens Takt ready to capture a task.")
   static let openAppWhenRun = true
 
   @MainActor
