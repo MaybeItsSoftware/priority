@@ -111,9 +111,24 @@ enum DeepLink {
 
   static func handle(_ url: URL, model: WorkspaceModel) {
     if url.scheme == SyncPairingLink.scheme {
-      if let link = SyncPairingLink(url.absoluteString), let sync = SyncController.shared {
-        model.navigation.isSettingsPresented = true
-        Task { await sync.pair(with: link) }
+      // Settings shows the attempt and, if it fails, why — a bad link or an
+      // unreachable server is a message there, never a crash or a no-op.
+      guard let sync = SyncController.shared else {
+        model.errorMessage = "Sync isn't available in this build."
+        return
+      }
+      model.navigation.isSettingsPresented = true
+      model.navigation.isSyncSettingsPresented = true
+      guard let link = SyncPairingLink(url.absoluteString) else {
+        sync.pairingError = "That isn't a Priority pairing link."
+        return
+      }
+      Task {
+        if await sync.pair(with: link) {
+          model.showToast("Paired")
+        } else {
+          model.showToast("Couldn't pair")
+        }
       }
       return
     }

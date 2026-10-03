@@ -40,18 +40,20 @@ private struct SyncSettingsForm: View {
 
   var body: some View {
     Form {
-      if session.isPaired {
-        paired
-      } else {
-        unpaired
-      }
+      // First, so a link that failed to pair says so without scrolling.
       if let error = controller.pairingError {
         Section {
           Label(error, systemImage: "exclamationmark.triangle")
             .font(Typeface.caption)
             .foregroundStyle(Palette.danger)
+            .accessibilityIdentifier("sync.pairingError")
         }
         .listRowBackground(Palette.danger.opacity(0.08))
+      }
+      if session.isPaired {
+        paired
+      } else {
+        unpaired
       }
     }
     .scrollContentBackground(.hidden)
@@ -281,8 +283,10 @@ struct QRCodeImage: View {
   }
 }
 
-/// A camera sheet that reads the first QR code it sees. Falls back to a
-/// message where the camera or the scanner is unavailable (the simulator).
+/// A camera sheet that reads the first QR code it sees. Where the camera or
+/// the scanner is unavailable — the simulator, a device without the Neural
+/// Engine, camera access refused — it says so and offers the clipboard
+/// instead, so pairing never dead-ends on a missing camera.
 struct QRScannerSheet: View {
   @Environment(\.dismiss) private var dismiss
   let onScan: (String) -> Void
@@ -293,12 +297,22 @@ struct QRScannerSheet: View {
         if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
           QRScanner(onScan: onScan).ignoresSafeArea()
         } else {
-          EmptyState(
-            title: "Camera unavailable",
-            message: "Paste the pairing link instead — copy it on the other device.",
-            systemImage: "camera")
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Palette.paper)
+          VStack(spacing: Metrics.lg) {
+            EmptyState(
+              title: "Camera unavailable",
+              message: "Copy the pairing link on the other device, then paste it here.",
+              systemImage: "camera")
+            Button {
+              if let text = UIPasteboard.general.string { onScan(text) } else { dismiss() }
+            } label: {
+              Label("Paste pairing link", systemImage: "doc.on.clipboard")
+            }
+            .buttonStyle(ThemedButtonStyle(kind: .primary))
+            .accessibilityIdentifier("sync.scanner.paste")
+          }
+          .padding(Metrics.lg)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .background(Palette.paper)
         }
       }
       .navigationTitle("Scan code")

@@ -57,6 +57,21 @@ struct SettingsScreen: View {
             }
           }
           .accessibilityIdentifier("settings.sync")
+          // A pairing link opened from outside lands here: say what happened
+          // without making anyone dig into the Sync page to find out.
+          if let sync = SyncController.shared {
+            if sync.isPairing {
+              HStack(spacing: Metrics.sm) {
+                ProgressView()
+                Text("Pairing…").font(Typeface.caption).foregroundStyle(Palette.muted)
+              }
+            } else if let error = sync.pairingError {
+              Label(error, systemImage: "exclamationmark.triangle")
+                .font(Typeface.caption)
+                .foregroundStyle(Palette.danger)
+                .accessibilityIdentifier("settings.pairingError")
+            }
+          }
         } header: {
           header("Devices")
         }
@@ -87,7 +102,11 @@ struct SettingsScreen: View {
       }
       .scrollContentBackground(.hidden)
       .background(Palette.paper)
+      .navigationDestination(isPresented: Binding(
+        get: { model.navigation.isSyncSettingsPresented },
+        set: { model.navigation.isSyncSettingsPresented = $0 })) { SyncSettingsView() }
       .navigationTitle("Settings")
+      .onDisappear { model.navigation.isSyncSettingsPresented = false }
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
