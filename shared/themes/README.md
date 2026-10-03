@@ -10,12 +10,14 @@ PRIORITY_REGENERATE_THEMES=1 swift test --filter PriorityCoreTests.ThemeConforma
 `ThemeConformanceTests` fails whenever these files differ from what Swift
 produces. The theme format itself is in [`docs/themes.md`](../../docs/themes.md).
 
-## `chalk.json`, `chalk-dark.json`
+## `priority.json`, `chalk.json`, `chalk-dark.json`
 
 The built-ins as complete theme files. Every colour and every structural value
 is stated, `extends` is `null`, `structure` holds the Mac's values, and
 `platforms.ios` / `platforms.android` hold the phones' differences from them.
-They resolve like any other file, so a reader needs no Chalk of its own. It
+They resolve like any other file, so a reader needs no built-in of its own.
+`priority.json` is the default; `chalk.json` and `chalk-dark.json` are Zed and
+Zed Dark, under their old file names. It
 loads these as its built-ins. The Android app copies them into its assets.
 
 ## `conformance/*.json`

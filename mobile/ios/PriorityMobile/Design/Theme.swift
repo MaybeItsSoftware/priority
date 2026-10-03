@@ -58,10 +58,10 @@ struct Theme {
     colors = uiColors.mapValues { Color(uiColor: $0) }
   }
 
-  /// Chalk, as the iPhone draws it: what the environment holds before a store
-  /// has said otherwise, and what previews and tests see.
-  static let chalk = Theme(
-    specification: BuiltInThemeSpecifications.chalk(for: .ios), displayScale: 3)
+  /// The default theme, as the iPhone draws it: what the environment holds
+  /// before a store has said otherwise, and what previews and tests see.
+  static let standard = Theme(
+    specification: BuiltInThemeSpecifications.defaultTheme(for: .ios), displayScale: 3)
 
   /// The appearance this theme insists on, if it is a one-appearance theme
   /// such as Chalk Dark.
@@ -367,7 +367,7 @@ extension Font.TextStyle {
 // MARK: - Environment
 
 private struct ThemeKey: EnvironmentKey {
-  static let defaultValue = Theme.chalk
+  static let defaultValue = Theme.standard
 }
 
 extension EnvironmentValues {

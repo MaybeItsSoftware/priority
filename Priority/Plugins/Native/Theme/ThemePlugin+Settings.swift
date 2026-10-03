@@ -25,6 +25,7 @@ extension ThemePlugin where Self: PluginSettingsPageProviding {
   var settingsCardIdentifier: String { "native.theme" }
 }
 
+extension PriorityThemePlugin: PluginSettingsPageProviding {}
 extension ChalkThemePlugin: PluginSettingsPageProviding {}
 extension ChalkDarkThemePlugin: PluginSettingsPageProviding {}
 extension UserThemePlugin: PluginSettingsPageProviding {}
@@ -67,7 +68,7 @@ struct ThemeSettingsPage: View {
 
         if themeManager.isFallingBack {
           Text(
-            "Your theme \"\(themeManager.activeThemeIdentifier)\" did not load, so Chalk is standing in until its file is fixed. Why is under Your themes."
+            "Your theme \"\(themeManager.activeThemeIdentifier)\" did not load, so Priority is standing in until its file is fixed. Why is under Your themes."
           )
           .font(theme.captionFont)
           .foregroundStyle(theme.warning)
@@ -75,7 +76,7 @@ struct ThemeSettingsPage: View {
 
         if let locked = themeManager.specification.lockedAppearance {
           Text(
-            "Always \(locked.rawValue), whatever your desktop is set to — that is what picking this one means. Choose Chalk to follow your Light/Dark/System setting instead."
+            "Always \(locked.rawValue), whatever your desktop is set to — that is what picking this one means. Choose Priority or Zed to follow your Light/Dark/System setting instead."
           )
           .font(theme.captionFont)
           .foregroundStyle(.secondary)
@@ -140,7 +141,7 @@ struct ThemeSettingsPage: View {
     let library = themeManager.userThemes
     Section("Your themes") {
       Text(
-        "Any .json file in the themes folder is a theme. It can extend Chalk and change only a few colours or sizes, and it reloads as you save it. The format is in docs/themes.md."
+        "Any .json file in the themes folder is a theme. The quickest start is three seed colours — background, foreground and accent — and the rest is worked out from them. It reloads as you save it. The format is in docs/themes.md."
       )
       .font(theme.captionFont)
       .foregroundStyle(.secondary)

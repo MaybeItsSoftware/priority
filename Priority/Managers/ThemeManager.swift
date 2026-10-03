@@ -27,8 +27,8 @@ import os
 
   /// Fallback when nothing is stored, or when a stored identifier no longer
   /// resolves — a theme removed between releases should land the user on the
-  /// house style rather than on magenta.
-  static let defaultThemeIdentifier = BuiltInThemeSpecifications.chalkIdentifier
+  /// default rather than on magenta.
+  static let defaultThemeIdentifier = BuiltInThemeSpecifications.defaultIdentifier
 
   /// The built-ins in registration order, then the user's files in name order.
   var availableThemes: [any ThemePlugin] {
@@ -37,7 +37,7 @@ import os
 
   /// The user's pick. For a user theme this can outlive its file — a save that
   /// briefly removes it, or a typo that stops it loading — in which case
-  /// `activeThemePlugin` renders Chalk until the file is back, and the pick
+  /// `activeThemePlugin` renders the default until the file is back, and the pick
   /// comes back with it rather than having been overwritten.
   var activeThemeIdentifier: String {
     didSet {
@@ -55,7 +55,7 @@ import os
   @ObservationIgnored private var adoptingSyncedChoice = false
 
   /// Takes the choice made on another device, even when the theme is not
-  /// here (yet): it may not have arrived, or may not load on this Mac. Chalk
+  /// here (yet): it may not have arrived, or may not load on this Mac. The default
   /// stands in until it does, the same as for a stored pick whose file
   /// stopped loading, and the pick is kept so the theme appears when it lands.
   func adoptSyncedChoice(_ identifier: String) {
@@ -72,11 +72,11 @@ import os
   /// Resolved through the observed identifier rather than the registry's own
   /// active pointer, so everything derived from it redraws on a swap.
   var activeThemePlugin: any ThemePlugin {
-    plugin(withIdentifier: activeThemeIdentifier) ?? ChalkThemePlugin()
+    plugin(withIdentifier: activeThemeIdentifier) ?? PriorityThemePlugin()
   }
 
   /// True while the pick is a user theme whose file is missing or did not
-  /// load, so Chalk is standing in for it.
+  /// load, so the default is standing in for it.
   var isFallingBack: Bool { plugin(withIdentifier: activeThemeIdentifier) == nil }
 
   var specification: ThemeSpecification { activeThemePlugin.specification }
@@ -115,7 +115,7 @@ import os
     registry.activateThemePlugin(identifier: known ? resolved : Self.defaultThemeIdentifier)
 
     userThemes.currentSpecification = { [weak self] in
-      self?.specification ?? BuiltInThemeSpecifications.chalk
+      self?.specification ?? BuiltInThemeSpecifications.priority
     }
     userThemes.onExported = { [weak self] identifier in
       self?.activeThemeIdentifier = identifier

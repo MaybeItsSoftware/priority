@@ -82,14 +82,14 @@ final class ThemeStore {
 
   init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
-    let chalk = BuiltInThemeSpecifications.chalkIdentifier
-    selectedIdentifier = defaults.string(forKey: Keys.selected) ?? chalk
+    let standard = BuiltInThemeSpecifications.defaultIdentifier
+    selectedIdentifier = defaults.string(forKey: Keys.selected) ?? standard
     appearance = defaults.string(forKey: Keys.appearance).flatMap(AppearanceChoice.init(rawValue:)) ?? .system
     usesDeviceTheme = defaults.bool(forKey: Keys.deviceEnabled)
-    deviceSelectedIdentifier = defaults.string(forKey: Keys.deviceSelected) ?? chalk
+    deviceSelectedIdentifier = defaults.string(forKey: Keys.deviceSelected) ?? standard
     deviceAppearance =
       defaults.string(forKey: Keys.deviceAppearance).flatMap(AppearanceChoice.init(rawValue:)) ?? .system
-    theme = .chalk
+    theme = .standard
     theme = resolveTheme()
   }
 
@@ -125,7 +125,7 @@ final class ThemeStore {
   var available: [ThemeSpecification] { BuiltInThemeSpecifications.all(for: .ios) + library.themes }
 
   /// The chosen theme is unknown here (it failed to load, or has not
-  /// arrived), so Chalk is standing in.
+  /// arrived), so the default is standing in.
   var isFallingBack: Bool { theme.specification.identifier != effectiveIdentifier }
 
   /// Selects a theme for wherever the choice is being made: this device if it
@@ -222,7 +222,7 @@ final class ThemeStore {
     }
     if let preferences = try? store.preferences() {
       let selected =
-        (preferences[WorkspacePreferenceKey.themeSelected] ?? nil) ?? BuiltInThemeSpecifications.chalkIdentifier
+        (preferences[WorkspacePreferenceKey.themeSelected] ?? nil) ?? BuiltInThemeSpecifications.defaultIdentifier
       let chosen =
         (preferences[WorkspacePreferenceKey.themeAppearance] ?? nil).flatMap(AppearanceChoice.init(rawValue:))
         ?? .system
@@ -271,7 +271,7 @@ final class ThemeStore {
   private func resolveTheme() -> Theme {
     let identifier = effectiveIdentifier
     let specification =
-      available.first { $0.identifier == identifier } ?? BuiltInThemeSpecifications.chalk(for: .ios)
+      available.first { $0.identifier == identifier } ?? BuiltInThemeSpecifications.defaultTheme(for: .ios)
     return Theme(specification: specification, displayScale: UIScreen.main.scale)
   }
 

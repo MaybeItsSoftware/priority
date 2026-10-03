@@ -1,6 +1,6 @@
 import PriorityCore
 
-/// The house style with the lights off.
+/// The Zed look with the lights off.
 ///
 /// It shares Chalk's palette object outright and differs only in fixing the
 /// appearance, so the two can never drift apart — a dark mode that had to be

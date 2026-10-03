@@ -293,10 +293,10 @@ struct Theme: Equatable {
 // MARK: - Environment
 
 private struct ThemeEnvironmentKey: EnvironmentKey {
-  /// The house style, in light. Only ever seen by a preview or a view that
+  /// The default theme, in light. Only ever seen by a preview or a view that
   /// escaped `.themed(_:)`; every real surface is handed the user's choice.
   static let defaultValue = Theme(
-    specification: BuiltInThemeSpecifications.chalk,
+    specification: BuiltInThemeSpecifications.priority,
     appearance: .light
   )
 }

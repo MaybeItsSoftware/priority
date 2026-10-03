@@ -501,7 +501,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
 extension AppDelegate {
   /// Theme files report the way `keymap.json` does: a line per problem in
-  /// Diagnostics, and errors on the window. A broken theme is Chalk on screen
+  /// Diagnostics, and errors on the window. A broken theme is the default on screen
   /// and a message, never a failed launch; the audit's notes stay in the
   /// theme settings page, where they read as advice rather than alarms.
   func reportThemeFileIssues() {

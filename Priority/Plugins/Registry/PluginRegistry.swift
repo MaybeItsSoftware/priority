@@ -243,10 +243,12 @@ final class PluginRegistry {
     registry.register(StrikeCelebrationPlugin(), activate: true)
     registry.register(FoldCelebrationPlugin())
     registry.register(SparkCelebrationPlugin())
-    // Themes, likewise a menu. Chalk is the house style and follows the
-    // system; Chalk Dark is the same palette with the appearance fixed, for
-    // running the app dark on a light desktop.
-    registry.register(ChalkThemePlugin(), activate: true)
+    // Themes, likewise a menu. Priority is the default and follows the
+    // system. Zed (ChalkThemePlugin) is the Zed look; Zed Dark is the same
+    // palette with the appearance fixed, for running the app dark on a light
+    // desktop.
+    registry.register(PriorityThemePlugin(), activate: true)
+    registry.register(ChalkThemePlugin())
     registry.register(ChalkDarkThemePlugin())
     return registry
   }

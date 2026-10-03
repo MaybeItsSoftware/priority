@@ -1,18 +1,29 @@
 # Themes
 
 Priority's look is a theme: a colour palette and a set of structural values
-(radii, borders, spacing, type) under a name. Two ship with the app — **Chalk**,
-the house style, which follows your Light/Dark setting, and **Chalk Dark** — and
-you can add your own the way Zed does: as JSON files in a folder.
+(radii, borders, spacing, type) under a name. Three ship with every app — the
+Mac, the iPhone and Android:
+
+- **Priority**, the default. Quiet cool greys, one blue, the platform's own
+  fonts (SF on Apple, Roboto on Android) and 8px panels. It is deliberately
+  plain, and it is built from three colours, so it is the easiest one to make
+  your own.
+- **Zed**, the Zed look: IBM Plex Sans and Lilex, square panels, hairlines,
+  warm paper and grape ink. It was called Chalk, and its identifier still is
+  (`native.theme.chalk`).
+- **Zed Dark**, Zed with the appearance fixed to dark.
+
+You can add your own the way Zed does: as JSON files in a folder.
 
 ```
 ~/Library/Application Support/Priority/themes/*.json
 ```
 
 Every `.json` file there is a theme. It appears in **Settings → Theme** beside
-Chalk and Chalk Dark, and the app reloads it as you save it. If the theme you
-are using is edited, the window redraws; if its file disappears or stops
-loading, Chalk stands in until it comes back.
+the built-ins, and the app reloads it as you save it. If the theme you are
+using is edited, the window redraws; if its file disappears or stops loading,
+Priority stands in until it comes back. Your themes and your choice sync to
+the iPhone and Android.
 
 ## Getting started
 
@@ -30,14 +41,58 @@ The quickest way in is from the command palette (`⌘K`):
 The same three are buttons under **Your themes** in the theme settings page,
 which also lists every problem found in the files.
 
-## A theme can be a few lines
+## A theme can be three colours
 
 Every field is optional. Anything a file leaves out comes from the theme it
-**extends**, which is Chalk unless it says otherwise. This is a complete theme:
+**extends**, which is Priority unless it says otherwise.
+
+The quickest start is **seeds**: the page, the text and the accent, for each
+appearance. The app works out the other neutrals (rows, hover, wells, the
+three border strengths, muted and dim text) by mixing the text into the page
+in fixed steps, so they always sit in the right order and keep their contrast.
+This is a complete theme:
 
 ```json
 {
-  "name": "Chalk, violet",
+  "name": "Sea",
+  "seeds": {
+    "light": { "background": "#f4f8f9", "foreground": "#14303a", "accent": "#0b7a8c" },
+    "dark":  { "background": "#0e1d22", "foreground": "#dcecef", "accent": "#4fc3d4" }
+  }
+}
+```
+
+| Seed | Becomes |
+| --- | --- |
+| `background` | `paper`, and the base of every neutral |
+| `foreground` | `ink`, and the other end of every neutral |
+| `accent` | `primary` |
+| `success`, `danger`, `warning` | the status colours of the same name |
+
+How the neutrals are mixed, as a share of the way from background to
+foreground: `altRow` 2.5%, `hover` 5%, `well` and `borderMuted` 7%, `border`
+12%, `inputBorder` 20%, `dimText` 38%, `mutedText` 75%. `raised`, for cards,
+is the one that sits *above* the page: 60% of the way to white in light, and
+4% towards the text in dark. Priority itself is made exactly this way.
+
+A seed you leave out comes from the theme you extend, so a file can give only
+an accent. If one colour comes out wrong, name it under `palette` — anything
+in `palette` wins over what the seeds produced:
+
+```json
+{
+  "name": "Sea, tuned",
+  "seeds": { "light": { "background": "#f4f8f9", "foreground": "#14303a", "accent": "#0b7a8c" } },
+  "palette": { "light": { "border": "#c9d9dd" } }
+}
+```
+
+You can also skip seeds and change single roles. This is Priority with a
+violet accent:
+
+```json
+{
+  "name": "Priority, violet",
   "palette": {
     "light": { "primary": "#7a4de8" },
     "dark": { "primary": "#9b7bf0" }
@@ -45,12 +100,11 @@ Every field is optional. Anything a file leaves out comes from the theme it
 }
 ```
 
-So is this, which is Chalk Dark with bigger type and the softer, rounded
-look the app had before it went square:
+Or start from Zed instead, with bigger type and rounder corners:
 
 ```json
 {
-  "name": "Big Dark",
+  "name": "Big Zed Dark",
   "extends": "native.theme.chalk.dark",
   "structure": {
     "radius": { "panel": 8, "row": 6, "control": 6 },
@@ -61,7 +115,7 @@ look the app had before it went square:
 
 ## The full format
 
-This is what **Export** writes for Chalk, reordered for reading. Every value
+This is what **Export** writes for Zed, reordered for reading. Every value
 is stated, so it is also a reference for what can be set.
 
 ```json
@@ -143,11 +197,11 @@ is stated, so it is also a reference for what can be set.
 
 | Key | Meaning |
 | --- | --- |
-| `identifier` | What the app stores as your choice. Optional: a file without one is `user.<file name>`, so `dusk.json` is `user.dusk`. It cannot be a built-in's (`native.theme.chalk`, `native.theme.chalk.dark`), and two files cannot share one — the second, in file-name order, is skipped. |
+| `identifier` | What the app stores as your choice. Optional: a file without one is `user.<file name>`, so `dusk.json` is `user.dusk`. It cannot be a built-in's (`native.theme.priority`, `native.theme.chalk`, `native.theme.chalk.dark`), and two files cannot share one — the second, in file-name order, is skipped. |
 | `name` | Shown in the picker. Defaults to the file name. Not inherited. |
 | `summary` | Shown under the picker. Not inherited. |
-| `extends` | The identifier of the theme to take every unstated value from: a built-in, or another of your files (in any order; a cycle is reported and both are skipped). Leave it out for Chalk. `null` inherits no colours at all — see [Missing roles](#missing-roles). |
-| `lockedAppearance` | `"light"` or `"dark"` makes the theme *be* that appearance whatever the system is set to, the way Chalk Dark does. `null` clears an inherited lock, so a theme extending Chalk Dark can follow the system again. Leave it out to inherit. |
+| `extends` | The identifier of the theme to take every unstated value from: a built-in, or another of your files (in any order; a cycle is reported and both are skipped). Leave it out for Priority; `"native.theme.chalk"` is Zed. `null` inherits no colours at all — see [Missing roles](#missing-roles). |
+| `lockedAppearance` | `"light"` or `"dark"` makes the theme *be* that appearance whatever the system is set to, the way Zed Dark does. `null` clears an inherited lock, so a theme extending Zed Dark can follow the system again. Leave it out to inherit. |
 
 ### Palette
 
@@ -203,7 +257,7 @@ All sizes are in points. Each group can be given in part.
 
 ### The old slab style
 
-Chalk used to be set in Arvo, with 10pt bold capitals tracked at 0.15em for
+Zed (as Chalk) used to be set in Arvo, with 10pt bold capitals tracked at 0.15em for
 its labels. It is Zed's IBM Plex Sans and Lilex now, with quiet sentence-case
 labels, but the old look is a theme away:
 
@@ -257,12 +311,25 @@ order a value is resolved in, latest winning:
 3. This theme's `platforms.<this platform>.structure`.
 
 So a theme that only changes colours inherits each platform's sensible sizes
-from Chalk, and a theme that sets `structure.typography.bodySize` sets it
+from Priority (or from Zed, if it extends Zed), and a theme that sets `structure.typography.bodySize` sets it
 everywhere unless a `platforms` entry says otherwise. Palette is not allowed
 under `platforms`. A `palette` key there is a warning and is ignored, because
 the point is that colour stays consistent.
 
-### Chalk's defaults per platform
+### The built-ins per platform
+
+Priority:
+
+| | macOS | iOS | Android |
+| --- | --- | --- | --- |
+| `typography.bodySize` | 13 | 17 | 16 |
+| `typography.scale` caption / body / title / display / hero | 11 / 13 / 15 / 28 / 64 | 13 / 17 / 20 / 34 / 72 | 12 / 16 / 20 / 32 / 72 |
+| `radius` panel / row / control | 8 / 6 / 6 | 10 / 8 / 8 | 12 / 8 / 8 |
+| `spacing` xxs … xl | 2 4 8 12 16 24 | 2 4 8 12 16 24 | 2 4 8 12 16 24 |
+| `touchTarget` | 0 (pointer) | 44 | 48 |
+| fonts | system (SF) | system (SF) | system (Roboto) |
+
+Zed:
 
 | | macOS | iOS | Android |
 | --- | --- | --- | --- |
@@ -272,8 +339,9 @@ the point is that colour stays consistent.
 | `radius` panel / row / control | 0 / 0 / 4 | 8 / 0 / 6 | 8 / 0 / 6 |
 | `spacing` xxs … xl | 2 4 8 12 16 24 | 2 4 8 12 16 24 | 2 4 8 12 16 24 |
 | `touchTarget` | 0 (pointer) | 44 | 48 |
+| fonts | IBM Plex Sans, Lilex | the same | the same |
 
-Chalk Dark extends Chalk and so takes the same per-platform structure.
+Zed Dark extends Zed and so takes the same per-platform structure.
 
 `touchTarget` is new in the structure: the minimum hit area a control is
 grown to, invisibly, so the painted control keeps its size. 0 means a pointer
@@ -281,9 +349,10 @@ platform with no minimum.
 
 ### Built-ins are shared files
 
-Chalk and Chalk Dark are defined once, in Swift
-(`BuiltInThemeSpecifications`), and exported as complete JSON to
-`shared/themes/chalk.json` and `shared/themes/chalk-dark.json`. A Swift test
+The built-ins are defined once, in Swift (`BuiltInThemeSpecifications`), and
+exported as complete JSON to `shared/themes/priority.json`,
+`shared/themes/chalk.json` (Zed) and `shared/themes/chalk-dark.json` (Zed
+Dark). A Swift test
 fails if those files and the Swift definitions disagree; run it with
 `PRIORITY_REGENERATE_THEMES=1` to rewrite them. The Android app reads those files
 from its assets (a Gradle task copies them in, the same way it copies the
@@ -323,7 +392,7 @@ Your themes and your choice of theme sync with the rest of the workspace
   the workspace, its current theme and appearance become the synced choice,
   unless another device has already set one.
 - A device that does not know the chosen theme (it failed to load there, or
-  has not arrived yet) shows Chalk until it does.
+  has not arrived yet) shows Priority until it does.
 
 ## When something is wrong
 
@@ -348,8 +417,8 @@ Every theme that loads is also put through the same audit as the built-ins,
 and the result is on the settings page under **Audit**: body text under 4.5:1
 against the page is a warning, `primary` under 3:1 is a warning (it has to
 carry the focus ring), and an accent under 4.5:1 is a *note* — fine for
-headlines, fills and controls, not for a paragraph. Azure on Chalk's paper is
-3.6:1, which is why Chalk itself has notes.
+headlines, fills and controls, not for a paragraph. Azure on Zed's paper is
+3.6:1, which is why Zed itself has notes.
 
 ### Missing roles
 
@@ -358,7 +427,7 @@ With the default `extends`, every role always has a value. A theme with
 role missing from one table is borrowed from the other and reported as an
 error; a role missing from **both** would draw as debug magenta, so that theme
 is skipped (`not loaded: no colour for categoricalPink`). Structure is never
-missing: without a base it falls back to Chalk's.
+missing: without a base it falls back to Priority's.
 
 ## For developers
 
@@ -369,11 +438,14 @@ and tested in `corelogic-tests/ThemeFileTests.swift`.
 - **Platforms.** `ThemeFileLoader.load(_:platform:)` resolves a folder for
   one `ThemePlatform` (`.macos`, `.ios`, `.android`). The default is `.macos`,
   so the Mac reads exactly as it did before platforms existed.
-  `BuiltInThemeSpecifications.chalk(for:)`, `chalkDark(for:)`, `all(for:)` and
-  `specification(withIdentifier:for:)` are the built-ins per platform. The
-  phones' differences from the Mac are `chalkPlatformStructures`, a partial
-  `ThemeFile.Structure` per platform. `chalk` and `chalkDark` without a
-  platform are the Mac's. `ThemeStructureAudit` warns about a `touchTarget`
+  `BuiltInThemeSpecifications.priority(for:)`, `chalk(for:)`, `chalkDark(for:)`,
+  `defaultTheme(for:)`, `all(for:)` and `specification(withIdentifier:for:)`
+  are the built-ins per platform. The phones' differences from the Mac are
+  `priorityPlatformStructures` and `chalkPlatformStructures`, a partial
+  `ThemeFile.Structure` per platform. Without a platform they are the Mac's.
+  `defaultIdentifier` is Priority's.
+- **Seeds.** `ThemeSeeds` grows a palette table from up to six colours; the
+  loader applies a file's `seeds` after the base and before its `palette`. `ThemeStructureAudit` warns about a `touchTarget`
   between 0 and 44.
 - **Shared files.** `ThemeConformance` (in `PriorityCore`) builds the
   complete built-in files and the canonical resolved form, and

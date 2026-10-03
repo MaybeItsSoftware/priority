@@ -52,7 +52,7 @@ final class ThemeChoiceSync {
 
     theme.userThemes.attach(store: store)
     // The first run after this arrived: the choice made before it becomes the
-    // synced one, rather than every device starting on Chalk.
+    // synced one, rather than every device starting on the default.
     seedIfUnset()
     applySynced()
     observeLocalChoice()

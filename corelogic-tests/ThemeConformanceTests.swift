@@ -138,12 +138,24 @@ final class ThemeConformanceTests: XCTestCase {
     ("builtin-priority", [], BuiltInThemeSpecifications.priorityIdentifier),
     (
       "seeds-only",
-      [("sea.json", ##"{ "name": "Sea", "seeds": { "light": { "background": "#f4f8f9", "foreground": "#14303a", "accent": "#0b7a8c" }, "dark": { "background": "#0e1d22", "foreground": "#dcecef", "accent": "#4fc3d4" } } }"##)],
+      [
+        (
+          "sea.json",
+          ##"{ "name": "Sea", "seeds": { "light": { "background": "#f4f8f9", "foreground": "#14303a", "accent": "#0b7a8c" }, "##
+            + ##""dark": { "background": "#0e1d22", "foreground": "#dcecef", "accent": "#4fc3d4" } } }"##
+        )
+      ],
       "user.sea"
     ),
     (
       "seeds-with-overrides",
-      [("sea-tuned.json", ##"{ "name": "Sea, tuned", "seeds": { "light": { "background": "#f4f8f9", "foreground": "#14303a", "accent": "#0b7a8c", "danger": "#c4314b" } }, "palette": { "light": { "border": "#c9d9dd" } } }"##)],
+      [
+        (
+          "sea-tuned.json",
+          ##"{ "name": "Sea, tuned", "seeds": { "light": { "background": "#f4f8f9", "foreground": "#14303a", "##
+            + ##""accent": "#0b7a8c", "danger": "#c4314b" } }, "palette": { "light": { "border": "#c9d9dd" } } }"##
+        )
+      ],
       "user.sea-tuned"
     ),
     (

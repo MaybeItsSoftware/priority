@@ -39,21 +39,22 @@ struct WidgetTheme: Codable, Equatable, Sendable {
     try encoder.encode(self).write(to: url, options: .atomic)
   }
 
-  /// Chalk, the fallback: the same hexes as `BuiltInThemeSpecifications.chalk`.
-  static let chalk = WidgetTheme(
-    identifier: "native.theme.chalk",
+  /// Priority, the default and the fallback: the same hexes as
+  /// `shared/themes/priority.json`, and the system's own faces.
+  static let fallback = WidgetTheme(
+    identifier: "native.theme.priority",
     lockedAppearance: nil,
     light: [
-      "paper": "#faf8f4", "raised": "#ffffff", "well": "#edebef", "border": "#e6e4ea",
-      "ink": "#444054", "mutedText": "#6e6b7c", "dimText": "#b6b3bf",
-      "primary": "#007fff", "success": "#4cc38e", "danger": "#d62246", "warning": "#ffbf00",
+      "paper": "#f7f7f8", "raised": "#fcfcfc", "well": "#e8e8e9", "border": "#dddddf",
+      "ink": "#1f2026", "mutedText": "#55565b", "dimText": "#a5a5a8",
+      "primary": "#3d63dd", "success": "#4cc38e", "danger": "#d62246", "warning": "#ffbf00",
     ],
     dark: [
-      "paper": "#1c1a23", "raised": "#25232f", "well": "#2d2b38", "border": "#34313f",
-      "ink": "#f5f4f7", "mutedText": "#b6b3bf", "dimText": "#6e6b7c",
-      "primary": "#007fff", "success": "#4cc38e", "danger": "#d62246", "warning": "#ffbf00",
+      "paper": "#19191d", "raised": "#212125", "well": "#28282c", "border": "#323236",
+      "ink": "#ececf0", "mutedText": "#b7b7bb", "dimText": "#69696d",
+      "primary": "#7b9bff", "success": "#4cc38e", "danger": "#d62246", "warning": "#ffbf00",
     ],
-    bodyFamily: "IBM Plex Sans", monoFamily: "Lilex", controlRadius: 6, hairline: 1)
+    bodyFamily: nil, monoFamily: nil, controlRadius: 8, hairline: 1)
 }
 
 /// The colours, faces and radius a widget view draws with, read from the
@@ -61,8 +62,8 @@ struct WidgetTheme: Codable, Equatable, Sendable {
 struct WidgetPalette {
   let theme: WidgetTheme
 
-  /// The theme the app last wrote, or Chalk.
-  static var current: WidgetPalette { WidgetPalette(theme: WidgetTheme.load() ?? .chalk) }
+  /// The theme the app last wrote, or the default.
+  static var current: WidgetPalette { WidgetPalette(theme: WidgetTheme.load() ?? .fallback) }
 
   var paper: Color { color("paper") }
   var raised: Color { color("raised") }
@@ -80,7 +81,7 @@ struct WidgetPalette {
 
   /// A role, flipping with the appearance unless the theme is locked to one.
   func color(_ role: String) -> Color {
-    let fallback = WidgetTheme.chalk
+    let fallback = WidgetTheme.fallback
     let light = Self.parse(theme.light[role]) ?? Self.parse(fallback.light[role]) ?? .clear
     let dark = Self.parse(theme.dark[role]) ?? Self.parse(fallback.dark[role]) ?? light
     switch theme.lockedAppearance {
@@ -131,7 +132,7 @@ enum WidgetType {
 }
 
 private struct WidgetPaletteKey: EnvironmentKey {
-  static let defaultValue = WidgetPalette(theme: .chalk)
+  static let defaultValue = WidgetPalette(theme: .fallback)
 }
 
 extension EnvironmentValues {
