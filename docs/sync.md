@@ -113,6 +113,14 @@ and forgets the password.
 - `POST /v1/account/delete` `{ "password" }` deletes the account, its rows and
   its devices. Every device keeps its local copy.
 
+- `POST /v1/password-reset` `{ "email" }` emails a link to `GET /reset?token=…`,
+  a page the server serves, which sets a new password. The answer is
+  `200 {"ok":true}` whether or not the email has an account (the lookup and
+  the sending happen after answering), `400` for a malformed email, and `503`
+  when the server has no Resend key. A link works once, for an hour, and at
+  most three are sent per account per hour. Setting the password spends every
+  outstanding link and signs out every device on the account.
+
 A `401` on any device route means the token is gone (signed out, or the
 account deleted): the client stops syncing and asks the user to sign in again.
 The Swift client keeps the email beside the token in the Keychain so it can

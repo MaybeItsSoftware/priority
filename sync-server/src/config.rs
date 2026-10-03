@@ -5,6 +5,20 @@ use std::env;
 pub struct Config {
     pub database_url: String,
     pub port: u16,
+    /// Resend's API key and sender, both needed for password reset; without
+    /// either the server runs and the reset endpoint says it's not set up.
+    pub resend_api_key: Option<String>,
+    pub mail_from: Option<String>,
+    /// Where the reset page is reachable, for the link in the email. Defaults
+    /// to the Railway domain, which Railway sets as `RAILWAY_PUBLIC_DOMAIN`.
+    pub public_url: Option<String>,
+}
+
+fn non_empty(name: &str) -> Option<String> {
+    env::var(name)
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -28,6 +42,17 @@ impl Config {
                 .map_err(|_| ConfigError::BadPort(value))?,
             Err(_) => 8080,
         };
-        Ok(Config { database_url, port })
+        let public_url = non_empty("PUBLIC_URL")
+            .or_else(|| {
+                non_empty("RAILWAY_PUBLIC_DOMAIN").map(|domain| format!("https://{domain}"))
+            })
+            .map(|url| url.trim_end_matches('/').to_owned());
+        Ok(Config {
+            database_url,
+            port,
+            resend_api_key: non_empty("RESEND_API_KEY"),
+            mail_from: non_empty("MAIL_FROM"),
+            public_url,
+        })
     }
 }

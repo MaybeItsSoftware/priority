@@ -14,6 +14,8 @@ nothing about tasks.
 | `src/changes.rs` | `GET /v1/changes`: the paged feed and its long-poll |
 | `src/notify.rs` | `LISTEN rows_changed`, fanned out to waiting long-polls |
 | `src/accounts.rs` | Sign up, sign in and out, the account's devices, deleting an account |
+| `src/reset.rs` | Password reset: the emailed link and the page it opens |
+| `src/mail.rs` | Sending that email through Resend |
 | `src/pairing.rs` | `POST /v1/pairing-codes` and `POST /v1/pair` |
 | `src/auth.rs` | Bearer tokens, stored as sha256 |
 | `migrations/` | The Postgres schema, applied at boot |
@@ -24,6 +26,9 @@ nothing about tasks.
 | --- | --- |
 | `DATABASE_URL` | Required. |
 | `PORT` | Default 8080. |
+| `RESEND_API_KEY` | Resend API key, for password reset emails. Without it (or `MAIL_FROM`) reset answers 503 and everything else works. |
+| `MAIL_FROM` | Sender, on a domain verified in Resend: `Priority <reset@yourdomain>`. |
+| `PUBLIC_URL` | Where the reset page is reached, for the link. Defaults to `https://$RAILWAY_PUBLIC_DOMAIN`, which Railway sets. |
 | `RUST_LOG` | Log filter, default `info`. Logs are JSON lines. |
 
 ## Running locally

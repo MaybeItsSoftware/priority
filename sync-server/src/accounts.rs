@@ -92,7 +92,7 @@ pub fn check_password(password: &str) -> Result<()> {
     Ok(())
 }
 
-async fn hash_password(password: String) -> Result<String> {
+pub(crate) async fn hash_password(password: String) -> Result<String> {
     tokio::task::spawn_blocking(move || {
         let mut salt = [0u8; 16];
         rand::thread_rng().fill_bytes(&mut salt);
@@ -163,7 +163,7 @@ impl SignInLimiter {
         entry.0 += 1;
     }
 
-    fn clear(&self, email: &str) {
+    pub(crate) fn clear(&self, email: &str) {
         self.failures.lock().expect("limiter lock").remove(email);
     }
 }

@@ -9,7 +9,14 @@
 #   DATABASE_URL=${{Postgres.DATABASE_URL}}
 #
 # DATABASE_URL is required; the server exits at boot without it. PORT is
-# provided by Railway. Nothing else: anyone can make an account from an app.
+# provided by Railway. Anyone can make an account from an app.
+#
+# For password reset emails, also:
+#
+#   RESEND_API_KEY=<from resend.com>
+#   MAIL_FROM=Priority <reset@a-domain-verified-in-resend>
+#
+# Without them the server runs and "forgot password" answers 503.
 #
 # No volume: every byte of state is in Postgres. Migrations run at boot.
 # See docs/sync.md for the protocol and sync-server/README.md for running it.

@@ -1,4 +1,6 @@
 use priority_sync_server::config::Config;
+use priority_sync_server::mail::Resend;
+use priority_sync_server::reset::ResetMail;
 use priority_sync_server::{AppState, MIGRATOR, notify, router};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
@@ -17,6 +19,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let config = Config::from_env()?;
+    let reset = match (config.resend_api_key, config.mail_from, config.public_url) {
+        (Some(key), Some(from), Some(public_url)) => Some(Arc::new(ResetMail {
+            mailer: Box::new(Resend::new(key, from)),
+            public_url,
+        })),
+        _ => {
+            tracing::warn!(
+                "password reset is off: set RESEND_API_KEY and MAIL_FROM \
+                 (and PUBLIC_URL when not on Railway)"
+            );
+            None
+        }
+    };
 
     // Long-polls hold no connection while they wait, so a small pool serves
     // many devices.
@@ -33,6 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         pool,
         sign_ins: Arc::default(),
+        reset,
         changes,
         shutdown,
     };

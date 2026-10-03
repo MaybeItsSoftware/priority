@@ -13,10 +13,12 @@ pub mod auth;
 pub mod changes;
 pub mod config;
 pub mod error;
+pub mod mail;
 pub mod merge;
 pub mod notify;
 pub mod pairing;
 pub mod push;
+pub mod reset;
 
 use axum::extract::DefaultBodyLimit;
 use axum::routing::{get, post};
@@ -40,6 +42,8 @@ pub struct AppState {
     pub pool: PgPool,
     /// Failed sign-ins per email, to stop password guessing.
     pub sign_ins: Arc<accounts::SignInLimiter>,
+    /// How password reset links are sent; `None` without a Resend key.
+    pub reset: Option<Arc<reset::ResetMail>>,
     /// Bumped whenever any process commits a push. See `notify.rs`.
     pub changes: watch::Receiver<u64>,
     /// Flips to true on SIGTERM so long-polls answer at once rather than
@@ -64,6 +68,8 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/accounts", post(accounts::sign_up))
         .route("/v1/sessions", post(accounts::sign_in))
         .route("/v1/pair", post(pairing::pair))
+        .route("/v1/password-reset", post(reset::request))
+        .route("/reset", get(reset::page).post(reset::submit))
         .merge(device_routes)
         .layer(DefaultBodyLimit::max(BODY_LIMIT))
         .layer(CompressionLayer::new().gzip(true))

@@ -6,11 +6,16 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
+use priority_sync_server::mail::{Mailer, Message, SendResult};
+use priority_sync_server::reset::ResetMail;
 use priority_sync_server::{AppState, MIGRATOR, notify, router};
 use serde_json::{Value, json};
 use sqlx::PgPool;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
 use tokio::sync::watch;
 use tower::ServiceExt;
 
@@ -22,11 +27,35 @@ struct Server {
 }
 
 async fn server(pool: PgPool) -> Server {
+    server_with(pool, None).await
+}
+
+/// Keeps every email "sent", for the tests to read the reset link out of.
+struct OutBox(mpsc::UnboundedSender<Message>);
+
+impl Mailer for OutBox {
+    fn send(&self, message: Message) -> Pin<Box<dyn Future<Output = SendResult> + Send + '_>> {
+        let _ = self.0.send(message);
+        Box::pin(async { Ok(()) })
+    }
+}
+
+async fn server_with_mail(pool: PgPool) -> (Server, mpsc::UnboundedReceiver<Message>) {
+    let (sender, receiver) = mpsc::unbounded_channel();
+    let reset = ResetMail {
+        mailer: Box::new(OutBox(sender)),
+        public_url: "https://sync.example.com".into(),
+    };
+    (server_with(pool, Some(Arc::new(reset))).await, receiver)
+}
+
+async fn server_with(pool: PgPool, reset: Option<Arc<ResetMail>>) -> Server {
     let changes = notify::spawn_listener(&pool).await.expect("listen");
     let (stop, shutdown) = watch::channel(false);
     let state = AppState {
         pool,
         sign_ins: Arc::default(),
+        reset,
         changes,
         shutdown,
     };
@@ -37,6 +66,27 @@ async fn server(pool: PgPool) -> Server {
 }
 
 impl Server {
+    /// A page request, form-encoded when there is a body; returns the HTML.
+    async fn page(&self, method: &str, uri: &str, form: Option<&str>) -> (StatusCode, String) {
+        let request = Request::builder().method(method).uri(uri);
+        let request = match form {
+            Some(form) => request
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(form.to_owned())),
+            None => request.body(Body::empty()),
+        }
+        .expect("request");
+        let response = self.app.clone().oneshot(request).await.expect("response");
+        let status = response.status();
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes();
+        (status, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
     async fn call(
         &self,
         method: &str,
@@ -645,4 +695,180 @@ async fn an_idle_long_poll_returns_empty_when_its_wait_runs_out(pool: PgPool) {
     assert_eq!(page["rows"], json!([]));
     assert_eq!(page["cursor"], 0);
     assert_eq!(page["hasMore"], false);
+}
+
+/// The token in a reset email's link.
+fn reset_token(message: &Message) -> String {
+    let start = message.text.find("token=").expect("a link") + "token=".len();
+    message.text[start..start + 64].to_owned()
+}
+
+async fn next_mail(outbox: &mut mpsc::UnboundedReceiver<Message>) -> Message {
+    tokio::time::timeout(Duration::from_secs(10), outbox.recv())
+        .await
+        .expect("an email in time")
+        .expect("an email")
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn reset_says_so_when_mail_is_not_set_up(pool: PgPool) {
+    let server = server(pool).await;
+    let (status, body) = server
+        .call(
+            "POST",
+            "/v1/password-reset",
+            None,
+            Some(json!({"email": "me@example.com"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(body["error"], "password reset isn't set up on this server");
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn a_reset_link_sets_a_new_password_once_and_signs_every_device_out(pool: PgPool) {
+    let (server, mut outbox) = server_with_mail(pool).await;
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
+    let phone = server.pair_with_code(&mac, "Phone").await;
+
+    let (status, body) = server
+        .call(
+            "POST",
+            "/v1/password-reset",
+            None,
+            Some(json!({"email": " ME@example.com"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let mail = next_mail(&mut outbox).await;
+    assert_eq!(mail.to, "me@example.com");
+    assert!(mail.text.contains("https://sync.example.com/reset?token="));
+    let token = reset_token(&mail);
+    assert!(mail.html.contains(&token));
+
+    let (status, html) = server
+        .page("GET", &format!("/reset?token={token}"), None)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(html.contains("Choose a new password"));
+    assert!(html.contains(&token));
+
+    let (_, html) = server
+        .page(
+            "POST",
+            "/reset",
+            Some(&format!(
+                "token={token}&password=new+password+1&confirm=other+one+12"
+            )),
+        )
+        .await;
+    assert!(html.contains("don&#39;t match"), "{html}");
+    let (_, html) = server
+        .page(
+            "POST",
+            "/reset",
+            Some(&format!("token={token}&password=short&confirm=short")),
+        )
+        .await;
+    assert!(html.contains("at least 8"), "{html}");
+
+    let (status, html) = server
+        .page(
+            "POST",
+            "/reset",
+            Some(&format!(
+                "token={token}&password=new+password+1&confirm=new+password+1"
+            )),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(html.contains("Your password is changed"), "{html}");
+
+    for token in [&mac, &phone] {
+        let (status, _) = server.call("GET", "/v1/changes", Some(token), None).await;
+        assert_eq!(
+            status,
+            StatusCode::UNAUTHORIZED,
+            "every device is signed out"
+        );
+    }
+    let sign_in = |password: &str| json!({"email": "me@example.com", "password": password});
+    let (status, _) = server
+        .call("POST", "/v1/sessions", None, Some(sign_in(PASSWORD)))
+        .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "the old password is gone");
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/sessions",
+            None,
+            Some(sign_in("new password 1")),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, html) = server
+        .page(
+            "POST",
+            "/reset",
+            Some(&format!(
+                "token={token}&password=third+password&confirm=third+password"
+            )),
+        )
+        .await;
+    assert!(html.contains("expired"), "a link works once");
+    let (_, html) = server.page("GET", "/reset?token=nonsense", None).await;
+    assert!(html.contains("expired"));
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn reset_answers_the_same_for_unknown_emails_and_limits_links(pool: PgPool) {
+    let (server, mut outbox) = server_with_mail(pool).await;
+    let (status, body) = server
+        .call(
+            "POST",
+            "/v1/password-reset",
+            None,
+            Some(json!({"email": "nobody@example.com"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, json!({"ok": true}));
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/password-reset",
+            None,
+            Some(json!({"email": "not an email"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    server.sign_up("me@example.com", "Mac").await;
+    for _ in 0..3 {
+        server
+            .call(
+                "POST",
+                "/v1/password-reset",
+                None,
+                Some(json!({"email": "me@example.com"})),
+            )
+            .await;
+        // One at a time, so the count each request checks is settled.
+        assert_eq!(next_mail(&mut outbox).await.to, "me@example.com");
+    }
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/password-reset",
+            None,
+            Some(json!({"email": "me@example.com"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "the answer gives nothing away");
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert!(
+        outbox.try_recv().is_err(),
+        "no fourth email this hour, and none for nobody@"
+    );
 }
