@@ -522,7 +522,7 @@ impl Workspace {
                     .is_some_and(|rule| !rule.trim().is_empty());
                 if status != "open" && was_open && recurs && !task.is_list() {
                     return Err(ToolError::new(format!(
-                        "\"{}\" repeats ({}). Complete it in Priority, which schedules the next \
+                        "\"{}\" repeats ({}). Complete it in Takt, which schedules the next \
                          occurrence; completing it here would end the series.",
                         task.title,
                         task.recurrence_rule.as_deref().unwrap_or_default()
@@ -920,7 +920,7 @@ impl Workspace {
             .map_err(map_write_error)?;
         if armed != 1 {
             return Err(ToolError::new(
-                "The workspace has no undo journal to record into. Open Priority once, then try again.",
+                "The workspace has no undo journal to record into. Open Takt once, then try again.",
             ));
         }
 
@@ -954,7 +954,7 @@ impl Workspace {
     fn open_for_writing(&self) -> Result<Connection> {
         if !self.database_path.exists() {
             return Err(ToolError::new(format!(
-                "No workspace database at {}. Open Priority once, or set database_path.",
+                "No workspace database at {}. Open Takt once, or set database_path.",
                 self.database_path.display()
             )));
         }
@@ -984,8 +984,8 @@ impl Workspace {
             .unwrap_or(false);
         if !migrated {
             return Err(ToolError::new(format!(
-                "The workspace at {} predates the schema this build of priority writes \
-                 ({REQUIRED_MIGRATION}). Open an up-to-date Priority once to migrate it.",
+                "The workspace at {} predates the schema this build of takt writes \
+                 ({REQUIRED_MIGRATION}). Open an up-to-date Takt once to migrate it.",
                 self.database_path.display()
             )));
         }
@@ -1093,7 +1093,7 @@ fn workspace_row(connection: &Connection) -> Result<(String, String)> {
         .optional()
         .map_err(map_query_error)?
         .ok_or_else(|| {
-            ToolError::new("The workspace database has no workspace yet. Open Priority once.")
+            ToolError::new("The workspace database has no workspace yet. Open Takt once.")
         })
 }
 
@@ -1276,7 +1276,7 @@ fn map_write_error(error: rusqlite::Error) -> ToolError {
     );
     if busy {
         return ToolError::new(format!(
-            "The workspace stayed locked for {}s — Priority is in the middle of a long write. \
+            "The workspace stayed locked for {}s — Takt is in the middle of a long write. \
              Nothing was changed; try again.",
             BUSY_TIMEOUT.as_secs()
         ));

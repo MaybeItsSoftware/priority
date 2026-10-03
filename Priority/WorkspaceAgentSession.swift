@@ -163,7 +163,7 @@ import os
       items.append(
         Item(
           entry: .notice(
-            "Priority's MCP server is missing from this build (Contents/Helpers/priority), so the "
+            "Priority's MCP server is missing from this build (Contents/Helpers/takt), so the "
               + "assistant would have no tools. Build without PRIORITY_SKIP_CLI_BUNDLE, or install the "
               + "CLI with scripts/install_cli.sh.",
             isError: true)))

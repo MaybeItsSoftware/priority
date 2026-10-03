@@ -25,13 +25,13 @@ use serde_json::{Map, Value, json};
 use std::io::IsTerminal;
 
 pub fn run(tools: Tools) -> Result<()> {
-    // Refuse rather than take over a pipe. `priority | cat`, a cron job or a
+    // Refuse rather than take over a pipe. `takt | cat`, a cron job or a
     // CI step would otherwise put an interactive UI somewhere nobody can quit
     // it from, and the terminal-setup call would fail obscurely.
     if !std::io::stdout().is_terminal() {
         return Err(ToolError::new(
             "The terminal UI needs an interactive terminal. \
-             Run `priority --help` for the subcommands, which work anywhere.",
+             Run `takt --help` for the subcommands, which work anywhere.",
         ));
     }
 

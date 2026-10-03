@@ -1,4 +1,5 @@
 import Foundation
+import PriorityCore
 
 private struct MCPClientServerConfig: Encodable {
   let command: String
@@ -22,16 +23,16 @@ final class NativeMCPIntegrationPlugin: MCPIntegrationPlugin {
 
   let pluginIdentifier = "native.mcp.integration"
   let displayName = "Native MCP Integration"
-  let pluginDescription = "Expose Priority as a local MCP server for AI assistants and tools."
+  let pluginDescription = "Expose Takt as a local MCP server for AI assistants and tools."
 
   private let guideRelativePath = "docs/mcp-server.md"
-  /// The MCP server is the `priority` CLI, shipped inside the bundle by
+  /// The MCP server is the `takt` CLI, shipped inside the bundle by
   /// `scripts/bundle_cli.sh`. Configurations point straight at it rather than
-  /// at `Priority --mcp-server`, which now only exists to keep configurations
+  /// at `Takt --mcp-server`, which now only exists to keep configurations
   /// written before that change working. See `MCPServerShim`.
-  private let helperRelativePath = "Contents/Helpers/priority"
+  private let helperRelativePath = "Contents/Helpers/takt"
   private let defaultCommandPlaceholder =
-    "/Applications/Priority.app/Contents/Helpers/priority"
+    "/Applications/Takt.app/Contents/Helpers/takt"
   private let serverArguments = ["mcp"]
 
   func serverCommandURL() -> URL? {
@@ -57,7 +58,7 @@ final class NativeMCPIntegrationPlugin: MCPIntegrationPlugin {
   /// file at all for a variable the environment already sets — so a
   /// `CHECKVIST_REMOTE_KEY` here would both pin the key at install time (a
   /// rotation then 401s every configured client, silently) and permanently
-  /// shut out `~/.config/priority/config.json`, which is the store the app
+  /// shut out `~/.config/takt/config.json`, which is the store the app
   /// seeds. The list id is neither a secret nor a credential, and overriding it
   /// per client is the point of having it here.
   func serverEnvironment(listId: String) -> [String: String] {
@@ -72,7 +73,7 @@ final class NativeMCPIntegrationPlugin: MCPIntegrationPlugin {
 
     let config = MCPClientConfigRoot(
       mcpServers: [
-        "priority": MCPClientServerConfig(
+        MCPClientCatalog.serverName: MCPClientServerConfig(
           command: command.command,
           args: command.args,
           env: env.isEmpty ? nil : env
@@ -128,12 +129,12 @@ final class NativeMCPIntegrationPlugin: MCPIntegrationPlugin {
     // The installed app first, so a configuration written from a development
     // build still names the path the user will actually have.
     candidates.append(
-      URL(fileURLWithPath: "/Applications/Priority.app").appendingPathComponent(
+      URL(fileURLWithPath: "/Applications/Takt.app").appendingPathComponent(
         helperRelativePath))
 
     let bundleParent = Bundle.main.bundleURL.deletingLastPathComponent()
     candidates.append(
-      bundleParent.appendingPathComponent("Priority.app").appendingPathComponent(
+      bundleParent.appendingPathComponent("Takt.app").appendingPathComponent(
         helperRelativePath))
     candidates.append(Bundle.main.bundleURL.appendingPathComponent(helperRelativePath))
 
@@ -141,10 +142,10 @@ final class NativeMCPIntegrationPlugin: MCPIntegrationPlugin {
     // PRIORITY_SKIP_CLI_BUNDLE=1.
     let home = NSHomeDirectory()
     candidates.append(contentsOf: [
-      "\(home)/.local/bin/priority",
-      "\(home)/bin/priority",
-      "/usr/local/bin/priority",
-      "/opt/homebrew/bin/priority",
+      "\(home)/.local/bin/takt",
+      "\(home)/bin/takt",
+      "/usr/local/bin/takt",
+      "/opt/homebrew/bin/takt",
     ].map(URL.init(fileURLWithPath:)))
 
     var deduplicated: [URL] = []

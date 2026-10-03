@@ -228,7 +228,7 @@ fn footer(app: &App) -> Paragraph<'static> {
 fn render_help(frame: &mut Frame, area: Rect) {
     let lines = vec![
         Line::from(Span::styled(
-            " Priority ",
+            " Takt ",
             Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
         )),
         Line::from(""),

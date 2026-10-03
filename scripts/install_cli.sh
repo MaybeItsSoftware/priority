@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Builds the Rust CLI in release and puts `priority` on your PATH.
+# Builds the Rust CLI in release and puts `takt` on your PATH.
 #
 # Symlinks rather than copies, so `git pull && cargo build --release` updates the
 # installed command without re-running this. The link target is the build
@@ -13,7 +13,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 MANIFEST="$ROOT_DIR/cli/Cargo.toml"
-BINARY="$ROOT_DIR/cli/target/release/priority"
+BINARY="$ROOT_DIR/cli/target/release/takt"
 
 if ! command -v cargo >/dev/null 2>&1; then
   echo "cargo is not installed. Get it from https://rustup.rs" >&2
@@ -44,13 +44,30 @@ if [[ -z "${INSTALL_DIR:-}" ]]; then
   echo "  $BINARY"
   echo
   echo "Put it on your PATH with, for example:"
-  echo "  mkdir -p ~/.local/bin && ln -sf '$BINARY' ~/.local/bin/priority"
+  echo "  mkdir -p ~/.local/bin && ln -sf '$BINARY' ~/.local/bin/takt"
   exit 0
 fi
 
-ln -sf "$BINARY" "$INSTALL_DIR/priority"
+ln -sf "$BINARY" "$INSTALL_DIR/takt"
 echo
-echo "Installed:  $INSTALL_DIR/priority -> $BINARY"
+echo "Installed:  $INSTALL_DIR/takt -> $BINARY"
+
+# The command was called `priority` before the product became Takt. Its old
+# symlink points at `cli/target/release/priority`, which nothing builds any
+# more, so it would go on running a frozen copy of an old build. Only a
+# symlink into this repo's build tree is removed — a `priority` that is
+# anything else is not ours to delete.
+for candidate in "$HOME/.local/bin" "$HOME/bin" "/usr/local/bin"; do
+  legacy="$candidate/priority"
+  if [[ -L "$legacy" ]]; then
+    case "$(readlink "$legacy")" in
+      "$ROOT_DIR/cli/target/"*)
+        rm -f "$legacy"
+        echo "Removed the old command:  $legacy"
+        ;;
+    esac
+  fi
+done
 
 case ":$PATH:" in
   *":$INSTALL_DIR:"*) ;;
@@ -61,5 +78,5 @@ esac
 
 echo
 echo "Try:"
-echo "  priority --help"
-echo "  priority dailies"
+echo "  takt --help"
+echo "  takt dailies"

@@ -3,8 +3,8 @@ import Foundation
 /// What the agent panel's assistant may do on its own, and what it has to ask.
 ///
 /// The rule is the one the user chose: **read freely, write only with a
-/// click.** The assistant gets exactly one MCP server, Priority's own (the
-/// bundled `priority` CLI), and no built-in tools at all — no shell, no files,
+/// click.** The assistant gets exactly one MCP server, Takt's own (the
+/// bundled `takt` CLI), and no built-in tools at all — no shell, no files,
 /// no web. Of that server's tools, the ones that only read are pre-allowed on
 /// the command line; everything else is left to Claude Code's permission
 /// check, which with `--permission-prompt-tool stdio` asks the app, which asks
@@ -17,8 +17,8 @@ import Foundation
 public enum AgentToolPolicy {
 
   /// The MCP server's name in `--mcp-config`, and so the middle of every
-  /// tool's qualified name: `mcp__priority__task_search`.
-  public static let serverName = "priority"
+  /// tool's qualified name: `mcp__takt__task_search`.
+  public static let serverName = "takt"
   public static let toolPrefix = "mcp__\(serverName)__"
 
   /// The tools that change nothing, from `cli/src/tools.rs`. The Checkvist

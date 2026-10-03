@@ -1,7 +1,7 @@
 //! The CLI's own configuration, kept deliberately apart from the app's.
 //!
-//! `priority` is a peer of the macOS app, not a front end for it, and its
-//! credentials live accordingly: in `~/.config/priority/config.json` rather
+//! `takt` is a peer of the macOS app, not a front end for it, and its
+//! credentials live accordingly: in `~/.config/takt/config.json` rather
 //! than in the app's login-keychain item or its preferences plist. Signing in
 //! here does not sign you in there, and vice versa — which is the point. The
 //! app's storage is reachable only by something carrying the app's code
@@ -10,7 +10,7 @@
 //!
 //! Precedence is the conventional one: **environment beats file**. An MCP
 //! client config that sets `CHECKVIST_REMOTE_KEY` therefore keeps working
-//! untouched, and a one-off `CHECKVIST_LIST_ID=... priority tasks` overrides
+//! untouched, and a one-off `CHECKVIST_LIST_ID=... takt tasks` overrides
 //! the stored default without editing anything.
 //!
 //! The file is *not* read when the corresponding environment variable is set.
@@ -22,6 +22,31 @@ use crate::error::{Result, ToolError};
 use serde_json::{Map, Value, json};
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
+
+/// The directory under `~/.config` this CLI keeps its own settings in.
+pub const CONFIG_DIRECTORY: &str = "takt";
+/// What it was called before, newest first. Read when the current one is
+/// missing, never written to unless that is where the file already is.
+pub const LEGACY_CONFIG_DIRECTORIES: &[&str] = &["priority"];
+
+/// The app's directory under `~/Library/Application Support`.
+pub const APP_SUPPORT_DIRECTORY: &str = "Takt";
+/// Its earlier names, newest first. The app copies these forward on its
+/// first launch under the new name; until then, they are where the data is.
+pub const LEGACY_APP_SUPPORT_DIRECTORIES: &[&str] = &["Priority"];
+
+/// The first candidate that exists on disk, or the first candidate if none do.
+///
+/// The first is always the current name, so a fresh machine is pointed at the
+/// new location and an old one at whatever it actually has.
+pub fn first_existing(candidates: Vec<PathBuf>) -> PathBuf {
+    candidates
+        .iter()
+        .find(|path| path.exists())
+        .or(candidates.first())
+        .cloned()
+        .unwrap_or_default()
+}
 
 /// Where a value actually came from, so `auth status` can say rather than imply.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -49,8 +74,14 @@ pub struct Config {
 }
 
 impl Config {
-    /// `$PRIORITY_CONFIG_PATH`, else `$XDG_CONFIG_HOME/priority/config.json`,
-    /// else `~/.config/priority/config.json`.
+    /// `$PRIORITY_CONFIG_PATH`, else `$XDG_CONFIG_HOME/takt/config.json`,
+    /// else `~/.config/takt/config.json`.
+    ///
+    /// The CLI was called `priority` before the product became Takt, so when
+    /// the new file doesn't exist yet but `…/priority/config.json` does, that is
+    /// the one read — and the one written back, so a sign-in made before the
+    /// rename keeps working rather than being silently forgotten. Running
+    /// `takt auth login` against a fresh machine writes the new path.
     ///
     /// The explicit override exists for tests and for the parity check, which
     /// must not read whatever the developer happens to have configured.
@@ -63,7 +94,12 @@ impl Config {
             .unwrap_or_else(|| {
                 PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".config")
             });
-        base.join("priority").join("config.json")
+        first_existing(
+            std::iter::once(CONFIG_DIRECTORY)
+                .chain(LEGACY_CONFIG_DIRECTORIES.iter().copied())
+                .map(|name| base.join(name).join("config.json"))
+                .collect(),
+        )
     }
 
     /// A missing or unreadable file is an empty config, not an error — that is
@@ -222,16 +258,42 @@ fn expand_tilde(value: &str) -> String {
 /// place the two are joined: reading the dailies and day log the app writes is
 /// the whole reason those commands exist. It stays overridable, so a CLI-only
 /// setup on a machine without the app is a `store_directory` away.
+///
+/// `Takt` when it exists, else the app's pre-rename `Priority` directory, so
+/// the CLI keeps reading the right data across the gap between installing the
+/// renamed app and first opening it.
 pub fn default_store_directory() -> PathBuf {
-    Path::new(&std::env::var("HOME").unwrap_or_default())
-        .join("Library")
-        .join("Application Support")
-        .join("Priority")
+    app_support_path(None)
 }
 
-pub fn default_prefs_path(bundle_id: &str) -> PathBuf {
-    Path::new(&std::env::var("HOME").unwrap_or_default())
+/// `entry` inside the app's Application Support directory, preferring the
+/// current directory name and falling back to an earlier one that has it.
+///
+/// Asked per entry rather than per directory, because the app can create its
+/// new directory (for plugins, say) before it has copied the database into it.
+pub fn app_support_path(entry: Option<&str>) -> PathBuf {
+    let base = Path::new(&std::env::var("HOME").unwrap_or_default())
         .join("Library")
-        .join("Preferences")
-        .join(format!("{bundle_id}.plist"))
+        .join("Application Support");
+    first_existing(
+        std::iter::once(APP_SUPPORT_DIRECTORY)
+            .chain(LEGACY_APP_SUPPORT_DIRECTORIES.iter().copied())
+            .map(|name| match entry {
+                Some(entry) => base.join(name).join(entry),
+                None => base.join(name),
+            })
+            .collect(),
+    )
+}
+
+pub fn default_prefs_path(bundle_ids: &[&str]) -> PathBuf {
+    let base = Path::new(&std::env::var("HOME").unwrap_or_default())
+        .join("Library")
+        .join("Preferences");
+    first_existing(
+        bundle_ids
+            .iter()
+            .map(|id| base.join(format!("{id}.plist")))
+            .collect(),
+    )
 }

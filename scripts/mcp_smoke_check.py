@@ -9,7 +9,7 @@ depending on how it was wired up. It drove both over stdio and diffed their tool
 lists, their answers, the files they left on disk, and their HTTP requests.
 
 There is now one implementation. The Swift server is gone; the app bundles the
-CLI at `Contents/Helpers/priority` and `--mcp-server` hands the process over to
+CLI at `Contents/Helpers/takt` and `--mcp-server` hands the process over to
 it (see `Priority/MCPServerShim.swift`). Correctness of the server itself is
 `cargo test`'s job.
 
@@ -48,14 +48,14 @@ def find_app() -> pathlib.Path | None:
     # Stale bundles from earlier builds linger — `scripts/run.sh` keeps its own
     # under `build/`. Prefer one that actually carries the helper, so a leftover
     # from before this change doesn't shadow the build under test.
-    with_helper = [c for c in binaries if (c / "Contents/Helpers/priority").exists()]
+    with_helper = [c for c in binaries if (c / "Contents/Helpers/takt").exists()]
 
     def freshness(app: pathlib.Path) -> float:
         # The *helper's* mtime, not the bundle directory's. A directory's mtime
         # only moves when its own entries change, and a rebuild replaces files
         # deeper inside — so keying on the bundle picked a months-old app over
         # the one just built and reported it as passing.
-        helper = app / "Contents/Helpers/priority"
+        helper = app / "Contents/Helpers/takt"
         target = helper if helper.exists() else app / "Contents/MacOS/Priority"
         return target.stat().st_mtime
 
@@ -105,7 +105,7 @@ def main() -> int:
         )
         return 2
 
-    helper = app / "Contents/Helpers/priority"
+    helper = app / "Contents/Helpers/takt"
     if not helper.exists():
         print(
             f"error: {helper} is missing — the app has no MCP server.\n"
@@ -129,7 +129,7 @@ def main() -> int:
         # How configurations written before the migration name it.
         "Priority --mcp-server": [str(app / "Contents/MacOS/Priority"), "--mcp-server"],
         # How they are written now.
-        "priority mcp": [str(helper), "mcp"],
+        "takt mcp": [str(helper), "mcp"],
     }
 
     tool_lists = {}

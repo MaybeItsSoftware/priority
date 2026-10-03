@@ -113,9 +113,10 @@ private struct MCPIntegrationPluginSettingsView: View {
       } else {
         // Re-running this on a client that is already set up rewrites its
         // entry, which is how a configuration written before the MCP server
-        // moved into `Contents/Helpers/priority` gets updated. Those keep
-        // working either way — `Priority --mcp-server` hands over to the same
-        // binary — so this is an offer rather than a repair.
+        // moved into `Contents/Helpers/takt` gets updated, along with one written
+        // under the old `priority` name. Those keep working either way — the
+        // app's `--mcp-server` hands over to the same binary — so this is an
+        // offer rather than a repair.
         Text("Already set up? Adding again updates the entry to the current command.")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)

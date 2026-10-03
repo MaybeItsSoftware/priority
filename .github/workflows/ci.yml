@@ -86,7 +86,7 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      # The app build now cargo-builds the `priority` CLI and bundles it as the
+      # The app build now cargo-builds the `takt` CLI and bundles it as the
       # MCP server (scripts/bundle_cli.sh), so an xcodebuild here needs Rust.
       - name: Cache cargo
         uses: actions/cache@v4
@@ -203,8 +203,8 @@ jobs:
       - name: Test
         run: cargo test --manifest-path cli/Cargo.toml
 
-  # The app no longer implements MCP itself: it bundles the `priority` CLI at
-  # Contents/Helpers/priority and `--mcp-server` execs it. This checks the seam,
+  # The app no longer implements MCP itself: it bundles the `takt` CLI at
+  # Contents/Helpers/takt and `--mcp-server` execs it. This checks the seam,
   # and specifically that a client configuration written *before* that change —
   # naming `Priority --mcp-server`, with credentials in `env` — still reaches a
   # working server. Nothing else covers that promise. Reads no real data and

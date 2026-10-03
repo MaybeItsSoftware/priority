@@ -1,7 +1,7 @@
 //! The command-line surface.
 //!
 //! Every subcommand here is a thin translation into a [`crate::tools`] call and
-//! a rendering of the result. Nothing is implemented twice: `priority daily
+//! a rendering of the result. Nothing is implemented twice: `takt daily
 //! add` and the `daily_add` MCP tool are the same code path with different
 //! spellings, so a fix to one is a fix to both.
 
@@ -16,18 +16,18 @@ use serde_json::{Map, Value, json};
 
 #[derive(Parser)]
 #[command(
-    name = "priority",
+    name = "takt",
     version,
-    about = "Priority from the command line: Checkvist lists, dailies, and your day log.",
-    long_about = "Priority from the command line.\n\n\
-        Talks to the Checkvist API directly and reads Priority's local state \
+    about = "Takt from the command line: Checkvist lists, dailies, and your day log.",
+    long_about = "Takt from the command line.\n\n\
+        Talks to the Checkvist API directly and reads Takt's local state \
         (dailies, day log, priorities) straight off disk, so it works whether or \
         not the app is running. Writes to the dailies and the day log take the \
         same file lock the app does.\n\n\
-        Every command is one of the tools the MCP server exposes; `priority \
-        tools` lists them and `priority call` invokes one by name.",
-    after_help = "Run `priority auth login` once to store your Checkvist credentials in \
-        ~/.config/priority/config.json. They are this CLI's own — separate from the app's, \
+        Every command is one of the tools the MCP server exposes; `takt \
+        tools` lists them and `takt call` invokes one by name.",
+    after_help = "Run `takt auth login` once to store your Checkvist credentials in \
+        ~/.config/takt/config.json. They are this CLI's own — separate from the app's, \
         which live in the login keychain. CHECKVIST_USERNAME, CHECKVIST_REMOTE_KEY and \
         CHECKVIST_LIST_ID override the file if set. The dailies, log and metadata commands \
         need no credentials at all."
@@ -61,7 +61,7 @@ pub enum Command {
     /// Place tasks on the Eisenhower matrix.
     ///
     /// Each placement is `TASK_ID:URGENCY:IMPORTANCE`, both axes -9 to 9.
-    /// `0:0` removes a placement. Needs Priority to be closed.
+    /// `0:0` removes a placement. Needs Takt to be closed.
     Matrix {
         /// One or more `TASK_ID:URGENCY:IMPORTANCE` triples.
         #[arg(required = true, num_args = 1.., value_name = "TASK:U:I")]
@@ -178,13 +178,13 @@ pub enum Command {
         command: DailyCommand,
     },
 
-    /// Priority's own per-task state: priority ranks, recurrence, start dates.
+    /// Takt's own per-task state: priority ranks, recurrence, start dates.
     Metadata,
 
     /// The app's local workspace: folders, lists and tasks, read and edited.
     ///
     /// Ids are the workspace's UUIDs, not Checkvist's. Every change is one
-    /// step in Priority's Undo menu, labelled "MCP: …", and a running app
+    /// step in Takt's Undo menu, labelled "MCP: …", and a running app
     /// picks it up within about a second.
     #[command(visible_alias = "workspace")]
     Ws {
@@ -206,7 +206,7 @@ pub enum Command {
 
     /// Call a tool by name with raw JSON arguments.
     Call {
-        /// Tool name, as listed by `priority tools`.
+        /// Tool name, as listed by `takt tools`.
         name: String,
         /// Arguments as a JSON object. Defaults to {}.
         #[arg(default_value = "{}", value_name = "JSON")]
@@ -479,7 +479,7 @@ pub fn parse_weekdays(spec: &str) -> Result<Vec<i64>> {
 /// Translates a subcommand into `(tool name, arguments)`.
 ///
 /// Returning the pair rather than calling straight through is what lets
-/// `priority tools` and the MCP server share one dispatch table, and keeps the
+/// `takt tools` and the MCP server share one dispatch table, and keeps the
 /// CLI honest: if a command cannot be expressed as a tool call, it does not
 /// belong here.
 pub fn resolve(cli: &Cli) -> Result<(String, Map<String, Value>)> {
@@ -841,7 +841,7 @@ pub fn print_tools() {
             .unwrap_or("");
         println!("  {name:<16}  {description}");
     }
-    println!("\nCall one directly:  priority call <name> '{{\"key\": \"value\"}}'");
+    println!("\nCall one directly:  takt call <name> '{{\"key\": \"value\"}}'");
 }
 
 pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
@@ -1526,11 +1526,11 @@ fn print_auth_status(config: &Config) {
 
     println!();
     if username.is_none() || key.is_none() {
-        println!("Not signed in. Run:  priority auth login");
+        println!("Not signed in. Run:  takt auth login");
         println!("The dailies, log and metadata commands work without credentials.");
     } else {
         println!("Signed in. The credentials are this CLI's own — signing in or out");
-        println!("here does not affect the Priority app, or the reverse.");
+        println!("here does not affect the Takt app, or the reverse.");
     }
 }
 
@@ -1547,7 +1547,7 @@ fn suggest_a_default_list(client: &CheckvistClient) {
         let name = list.get("name").and_then(Value::as_str).unwrap_or("");
         println!("  {id:>8}  {name}");
     }
-    println!("\nSet one with:  priority auth set-list <ID>");
+    println!("\nSet one with:  takt auth set-list <ID>");
 }
 
 /// Says so when an exported variable will win over the file that was just

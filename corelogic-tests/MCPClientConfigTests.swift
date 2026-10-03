@@ -35,7 +35,7 @@ final class MCPClientConfigTests: XCTestCase {
     XCTAssertEqual(result.outcome, .added)
 
     let servers = try XCTUnwrap(parse(result.contents)["mcpServers"] as? [String: Any])
-    let server = try XCTUnwrap(servers["priority"] as? [String: Any])
+    let server = try XCTUnwrap(servers["takt"] as? [String: Any])
     XCTAssertEqual(server["command"] as? String, entry.command)
     XCTAssertEqual(server["args"] as? [String], ["--mcp-server"])
   }
@@ -62,7 +62,7 @@ final class MCPClientConfigTests: XCTestCase {
     XCTAssertEqual(root["globalShortcut"] as? String, "Cmd+Shift+X")
 
     let servers = try XCTUnwrap(root["mcpServers"] as? [String: Any])
-    XCTAssertEqual(Set(servers.keys), ["github", "priority"])
+    XCTAssertEqual(Set(servers.keys), ["github", "takt"])
     let github = try XCTUnwrap(servers["github"] as? [String: Any])
     XCTAssertEqual(github["command"] as? String, "npx")
   }
@@ -84,7 +84,7 @@ final class MCPClientConfigTests: XCTestCase {
     XCTAssertEqual(second.outcome, .updated)
 
     let servers = try XCTUnwrap(parse(second.contents)["mcpServers"] as? [String: Any])
-    let server = try XCTUnwrap(servers["priority"] as? [String: Any])
+    let server = try XCTUnwrap(servers["takt"] as? [String: Any])
     let env = try XCTUnwrap(server["env"] as? [String: String])
     XCTAssertEqual(env["CHECKVIST_REMOTE_KEY"], "rotated")
   }
@@ -121,19 +121,52 @@ final class MCPClientConfigTests: XCTestCase {
     let root = try parse(result.contents)
     XCTAssertNil(root["mcpServers"])
     let servers = try XCTUnwrap(root["servers"] as? [String: Any])
-    let server = try XCTUnwrap(servers["priority"] as? [String: Any])
+    let server = try XCTUnwrap(servers["takt"] as? [String: Any])
     XCTAssertEqual(server["type"] as? String, "stdio")
+  }
+
+  // MARK: - The rename from Priority
+
+  /// An entry this app wrote when it was called Priority is replaced, so the
+  /// client isn't left with a second server pointing at an app that is gone.
+  func testAnEntryWrittenUnderTheOldNameIsReplaced() throws {
+    let existing = """
+      {
+        "mcpServers": {
+          "github": { "command": "npx", "args": [] },
+          "priority": { "command": "/Applications/Priority.app/Contents/Helpers/priority", "args": ["mcp"] }
+        }
+      }
+      """
+    let result = try merge(into: existing)
+    XCTAssertEqual(result.outcome, .updated)
+    let servers = try XCTUnwrap(parse(result.contents)["mcpServers"] as? [String: Any])
+    XCTAssertEqual(Set(servers.keys), ["github", "takt"])
+  }
+
+  /// One the user wrote themselves, for something else that happens to be
+  /// called `priority`, is not this app's to delete.
+  func testAnUnrelatedEntryNamedPriorityIsLeftAlone() throws {
+    let existing = """
+      { "mcpServers": { "priority": { "command": "/opt/other/server", "args": [] } } }
+      """
+    let result = try merge(into: existing)
+    XCTAssertEqual(result.outcome, .added)
+    let servers = try XCTUnwrap(parse(result.contents)["mcpServers"] as? [String: Any])
+    XCTAssertEqual(Set(servers.keys), ["priority", "takt"])
   }
 
   // MARK: - Terminal command
 
   func testTerminalCommandIsASingleShellSafeLine() throws {
     let command = MCPClientConfigWriter.terminalCommand(entry: entry)
-    XCTAssertTrue(command.hasPrefix("claude mcp add-json priority --scope user '"))
+    let removal = "claude mcp remove priority --scope user >/dev/null 2>&1; "
+    let add = "claude mcp add-json takt --scope user '"
+    XCTAssertTrue(command.hasPrefix(removal + add))
     XCTAssertTrue(command.hasSuffix("'"))
     XCTAssertFalse(command.contains("\n"))
 
-    let json = String(command.dropFirst("claude mcp add-json priority --scope user '".count))
+    let json = String(command.dropFirst((removal + add).count))
       .dropLast()
     let server = try parse(String(json))
     XCTAssertEqual(server["command"] as? String, entry.command)
@@ -159,7 +192,7 @@ final class MCPClientConfigTests: XCTestCase {
     // Wrapping it back in braces must yield the object Zed expects.
     let root = try parse("{\(snippet)}")
     let servers = try XCTUnwrap(root["context_servers"] as? [String: Any])
-    let server = try XCTUnwrap(servers["priority"] as? [String: Any])
+    let server = try XCTUnwrap(servers["takt"] as? [String: Any])
     XCTAssertEqual(server["command"] as? String, entry.command)
   }
 

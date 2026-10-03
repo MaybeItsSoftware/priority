@@ -50,7 +50,9 @@ public enum MCPConfigError: LocalizedError, Equatable {
 
 public enum MCPClientConfigWriter {
   /// Merges `entry` into an existing config, preserving every other key and
-  /// every other server.
+  /// every other server — except an entry this app wrote under one of its
+  /// earlier names (`MCPClientCatalog.legacyServerNames`), which the new entry
+  /// replaces.
   ///
   /// Returns `.unchanged` when the entry is already byte-identical, so a repeat
   /// install doesn't rewrite the file (and doesn't claim it did something).
@@ -87,11 +89,19 @@ public enum MCPClientConfigWriter {
     }
 
     let newEntry = entry.jsonObject
-    let outcome: MCPConfigWriteOutcome
+    var outcome: MCPConfigWriteOutcome
     if let previous = servers[serverName] as? [String: Any] {
       outcome = NSDictionary(dictionary: previous).isEqual(to: newEntry) ? .unchanged : .updated
     } else {
       outcome = .added
+    }
+
+    for legacyName in MCPClientCatalog.legacyServerNames where legacyName != serverName {
+      guard let legacy = servers[legacyName] as? [String: Any],
+        MCPClientCatalog.isLegacyEntryWrittenByThisApp(legacy)
+      else { continue }
+      servers.removeValue(forKey: legacyName)
+      outcome = .updated
     }
 
     servers[serverName] = newEntry
@@ -102,12 +112,21 @@ public enum MCPClientConfigWriter {
 
   /// The `claude mcp add-json` invocation for clients that own their config file
   /// and would race a direct write.
+  ///
+  /// Led by a quiet `claude mcp remove` of each earlier name, so an entry the
+  /// app added when it was called Priority is replaced rather than left to
+  /// point at an app that is gone. `;` rather than `&&`, because on a machine
+  /// that never had one the remove fails, and the add must run regardless.
   public static func terminalCommand(
     entry: MCPServerEntry,
     named serverName: String = MCPClientCatalog.serverName
   ) -> String {
     let json = (try? compactPrinted(entry.jsonObject)) ?? "{}"
-    return "claude mcp add-json \(serverName) --scope user \(singleQuoted(json))"
+    let removals = MCPClientCatalog.legacyServerNames
+      .filter { $0 != serverName }
+      .map { "claude mcp remove \($0) --scope user >/dev/null 2>&1; " }
+      .joined()
+    return "\(removals)claude mcp add-json \(serverName) --scope user \(singleQuoted(json))"
   }
 
   /// A fragment to paste inside an existing top-level object, for configs that

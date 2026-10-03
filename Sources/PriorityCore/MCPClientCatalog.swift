@@ -1,12 +1,12 @@
 import Foundation
 
-/// How Priority can add itself to a given MCP client.
+/// How Takt can add itself to a given MCP client.
 ///
 /// Not every client can be configured the same way, and picking the wrong route
 /// is worse than doing nothing — it either races the client's own writes or
 /// destroys parts of a file the user hand-wrote.
 public enum MCPClientInstallStyle: Equatable, Sendable {
-  /// A plain JSON file that only ever holds MCP configuration. Priority can
+  /// A plain JSON file that only ever holds MCP configuration. Takt can
   /// read it, merge one server entry in, and write it back.
   case mergeConfigFile
 
@@ -21,7 +21,7 @@ public enum MCPClientInstallStyle: Equatable, Sendable {
   case pasteSnippet
 }
 
-/// A known MCP client and everything needed to add Priority to it.
+/// A known MCP client and everything needed to add Takt to it.
 public struct MCPClientDescriptor: Identifiable, Equatable, Sendable {
   public let id: String
   public let displayName: String
@@ -64,8 +64,26 @@ public struct MCPClientDescriptor: Identifiable, Equatable, Sendable {
 }
 
 public enum MCPClientCatalog {
-  /// The server name Priority registers itself under in every client.
-  public static let serverName = "priority"
+  /// The server name Takt registers itself under in every client.
+  public static let serverName = "takt"
+
+  /// Names earlier versions registered under, when the app was Priority. An
+  /// entry under one of these that this app wrote is replaced, not left
+  /// beside the new one, so a client doesn't end up with two copies of the
+  /// same server — one of them pointing at an app that is no longer there.
+  public static let legacyServerNames = ["priority"]
+
+  /// Whether a server entry is one this app wrote under an earlier name, as
+  /// opposed to something the user happens to have called `priority`.
+  ///
+  /// Recognised by its command: the bundled helper, the app's own
+  /// `--mcp-server` executable, or an installed `priority` CLI.
+  public static func isLegacyEntryWrittenByThisApp(_ entry: [String: Any]) -> Bool {
+    guard let command = entry["command"] as? String else { return false }
+    return command.hasSuffix("/Contents/Helpers/priority")
+      || command.hasSuffix("/Contents/MacOS/Priority")
+      || command.hasSuffix("/bin/priority")
+  }
 
   public static let claudeCode = MCPClientDescriptor(
     id: "claude-code",

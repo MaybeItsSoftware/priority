@@ -1,4 +1,4 @@
-//! The state Priority keeps on this machine rather than in Checkvist.
+//! The state Takt keeps on this machine rather than in Checkvist.
 //!
 //! Priorities, recurrence rules, start dates, focus history and dailies have no
 //! Checkvist representation, so anything limited to the API cannot see them.
@@ -17,7 +17,13 @@ use serde_json::{Map, Value, json};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 
-pub const BUNDLE_ID: &str = "uk.co.maybeitsadam.priority";
+pub const BUNDLE_ID: &str = "uk.co.maybeitssoftware.takt";
+/// The bundle ids the app shipped under before, newest first. Its preferences
+/// domain is named after the id, so until the renamed app has run once and
+/// carried its preferences forward, the old domain is where they are.
+pub const LEGACY_BUNDLE_IDS: &[&str] = &["uk.co.maybeitsadam.priority"];
+/// Process names the app has run under, current first.
+const APP_PROCESS_NAMES: &[&str] = &["Takt", "Priority"];
 pub const DEFAULT_ROLLOVER_HOUR: u32 = 4;
 
 const ALL_WEEKDAYS: [i64; 7] = [1, 2, 3, 4, 5, 6, 7];
@@ -44,7 +50,12 @@ impl LocalState {
             prefs_path: config
                 .resolve_path("PRIORITY_MCP_PREFS_PATH", "prefs_path")
                 .0
-                .unwrap_or_else(|| crate::config::default_prefs_path(BUNDLE_ID)),
+                .unwrap_or_else(|| {
+                    let ids: Vec<&str> = std::iter::once(BUNDLE_ID)
+                        .chain(LEGACY_BUNDLE_IDS.iter().copied())
+                        .collect();
+                    crate::config::default_prefs_path(&ids)
+                }),
         }
     }
 
@@ -57,19 +68,44 @@ impl LocalState {
         }
     }
 
-    /// Whether Priority.app is currently running.
+    /// The `defaults` domain behind `prefs_path`: whichever of the app's
+    /// bundle ids names the file being read, so a write lands where the next
+    /// read looks. A hand-configured path is written to by path.
+    fn prefs_domain(&self) -> String {
+        let stem = self
+            .prefs_path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or_default();
+        if std::iter::once(BUNDLE_ID)
+            .chain(LEGACY_BUNDLE_IDS.iter().copied())
+            .any(|id| id == stem)
+        {
+            stem.to_string()
+        } else {
+            self.prefs_path
+                .with_extension("")
+                .to_string_lossy()
+                .into_owned()
+        }
+    }
+
+    /// Whether the app is currently running, under its current name or its
+    /// old one.
     ///
     /// The guard on every write into the app's preferences. macOS keeps a
-    /// running app's `UserDefaults` in memory via `cfprefsd`, and Priority
+    /// running app's `UserDefaults` in memory via `cfprefsd`, and the app
     /// rewrites the whole `eisenhowerLevelsByTaskIdByListId` blob on its next
     /// placement — so anything written here while it is running is discarded
     /// without a word the moment the user drags one card. Refusing is the only
     /// honest behaviour; the alternative looks like it worked.
     fn app_is_running(&self) -> bool {
-        std::process::Command::new("/usr/bin/pgrep")
-            .args(["-x", "Priority"])
-            .output()
-            .is_ok_and(|output| output.status.success() && !output.stdout.is_empty())
+        APP_PROCESS_NAMES.iter().any(|name| {
+            std::process::Command::new("/usr/bin/pgrep")
+                .args(["-x", name])
+                .output()
+                .is_ok_and(|output| output.status.success() && !output.stdout.is_empty())
+        })
     }
 
     /// Write matrix coordinates for a batch of tasks.
@@ -87,8 +123,8 @@ impl LocalState {
     ) -> Result<Value> {
         if self.app_is_running() {
             return Err(ToolError::new(
-                "Priority is running, and it would overwrite this the next time it saves. \
-                 Quit Priority, run this again, then reopen it.",
+                "Takt is running, and it would overwrite this the next time it saves. \
+                 Quit Takt, run this again, then reopen it.",
             ));
         }
 
@@ -145,10 +181,11 @@ impl LocalState {
 
         let encoded = serde_json::to_vec(&all)
             .map_err(|err| ToolError::new(format!("Could not encode placements: {err}")))?;
+        let domain = self.prefs_domain();
         let status = std::process::Command::new("/usr/bin/defaults")
             .args([
                 "write",
-                BUNDLE_ID,
+                &domain,
                 "eisenhowerLevelsByTaskIdByListId",
                 "-data",
                 &hex_encode(&encoded),
@@ -163,7 +200,7 @@ impl LocalState {
             "list_id": list_id,
             "placed": written,
             "cleared": cleared,
-            "note": "Reopen Priority to see these.",
+            "note": "Reopen Takt to see these.",
         }))
     }
 

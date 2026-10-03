@@ -2,11 +2,11 @@
 name = "priority-cli"
 version = "0.3.0"
 edition = "2024"
-description = "Command-line access to Priority's Checkvist lists, dailies and day log, plus a third MCP server implementation."
+description = "Command-line access to Takt's Checkvist lists, dailies and day log, plus a third MCP server implementation."
 publish = false
 
 [[bin]]
-name = "priority"
+name = "takt"
 path = "src/main.rs"
 
 [dependencies]

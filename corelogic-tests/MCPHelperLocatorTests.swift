@@ -2,7 +2,7 @@ import XCTest
 
 @testable import PriorityCore
 
-/// Where `Priority --mcp-server` looks for the CLI it hands over to.
+/// Where `Takt --mcp-server` looks for the CLI it hands over to.
 ///
 /// This is the compatibility story for retiring the in-process MCP server:
 /// client configurations already on disk name
@@ -12,7 +12,7 @@ final class MCPHelperLocatorTests: XCTestCase {
 
   private func candidates(
     override: String? = nil,
-    bundle: String = "/Applications/Priority.app",
+    bundle: String = "/Applications/Takt.app",
     home: String = "/Users/someone"
   ) -> [String] {
     MCPHelperLocator.candidates(
@@ -23,9 +23,9 @@ final class MCPHelperLocatorTests: XCTestCase {
   /// machine, still resolves — because the CLI ships inside the bundle.
   func testTheBundledHelperIsFoundWithNothingElseInstalled() {
     let resolved = MCPHelperLocator.resolve(candidates: candidates()) {
-      $0 == "/Applications/Priority.app/Contents/Helpers/priority"
+      $0 == "/Applications/Takt.app/Contents/Helpers/takt"
     }
-    XCTAssertEqual(resolved, "/Applications/Priority.app/Contents/Helpers/priority")
+    XCTAssertEqual(resolved, "/Applications/Takt.app/Contents/Helpers/takt")
   }
 
   /// So a development build can be pointed at a freshly built CLI without
@@ -48,15 +48,15 @@ final class MCPHelperLocatorTests: XCTestCase {
   /// or one run straight out of DerivedData.
   func testASeparatelyInstalledCLIIsFoundWhenTheBundleHasNone() {
     let resolved = MCPHelperLocator.resolve(candidates: candidates()) {
-      $0 == "/Users/someone/.local/bin/priority"
+      $0 == "/Users/someone/.local/bin/takt"
     }
-    XCTAssertEqual(resolved, "/Users/someone/.local/bin/priority")
+    XCTAssertEqual(resolved, "/Users/someone/.local/bin/takt")
   }
 
   func testTheSearchOrderPrefersTheBundleOverAnInstalledCLI() {
     let all = candidates()
-    let bundled = all.firstIndex(of: "/Applications/Priority.app/Contents/Helpers/priority")
-    let installed = all.firstIndex(of: "/usr/local/bin/priority")
+    let bundled = all.firstIndex(of: "/Applications/Takt.app/Contents/Helpers/takt")
+    let installed = all.firstIndex(of: "/usr/local/bin/takt")
     XCTAssertNotNil(bundled)
     XCTAssertNotNil(installed)
     XCTAssertLessThan(
@@ -69,7 +69,7 @@ final class MCPHelperLocatorTests: XCTestCase {
   }
 
   func testDuplicateCandidatesAreTriedOnce() {
-    let withDuplicate = candidates(override: "/Applications/Priority.app/Contents/Helpers/priority")
+    let withDuplicate = candidates(override: "/Applications/Takt.app/Contents/Helpers/takt")
     XCTAssertEqual(Set(withDuplicate).count, withDuplicate.count)
   }
 

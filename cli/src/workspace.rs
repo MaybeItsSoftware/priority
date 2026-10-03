@@ -3,7 +3,8 @@
 //! Everything else in this crate is a peer of the macOS app that happens to
 //! read the same files. This module and `workspace_tasks.rs` are the places
 //! that reach into the app's own store —
-//! `~/Library/Application Support/Priority/priority.sqlite`.
+//! `~/Library/Application Support/Takt/priority.sqlite` (or the pre-rename
+//! `Priority/` directory, until the app has carried it forward).
 //!
 //! This half is **read-only**, and says so by opening the connection with
 //! `SQLITE_OPEN_READ_ONLY` rather than by promising to behave. It exists
@@ -50,7 +51,7 @@ impl Workspace {
     pub(crate) fn open(&self) -> Result<Connection> {
         if !self.database_path.exists() {
             return Err(ToolError::new(format!(
-                "No workspace database at {}. Open Priority once, or set database_path.",
+                "No workspace database at {}. Open Takt once, or set database_path.",
                 self.database_path.display()
             )));
         }
@@ -250,7 +251,7 @@ struct SessionRow {
 }
 
 pub fn default_database_path() -> PathBuf {
-    crate::config::default_store_directory().join("priority.sqlite")
+    crate::config::app_support_path(Some("priority.sqlite"))
 }
 
 /// GRDB stores dates as `YYYY-MM-DD HH:MM:SS.SSS` in UTC, with the

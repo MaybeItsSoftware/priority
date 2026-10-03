@@ -34,7 +34,7 @@ fn main() -> std::process::ExitCode {
     };
 
     // `--mcp-server` is accepted as a bare flag, not just as the `mcp`
-    // subcommand, so a client config written for `Priority --mcp-server`
+    // subcommand, so a client config written for `Priority --mcp-server` (the app's name before Takt)
     // works unchanged when pointed at this binary instead.
     if std::env::args()
         .skip(1)
@@ -72,14 +72,14 @@ fn main() -> std::process::ExitCode {
 }
 
 fn report(error: &ToolError) {
-    eprintln!("priority: {error}");
+    eprintln!("takt: {error}");
     if let Some(status) = error.status {
         eprintln!("  HTTP {status}");
         // The one failure worth naming, because the fix is a command rather
         // than a puzzle: an expired or mistyped key looks identical to a
         // server problem otherwise.
         if status == 401 {
-            eprintln!("  Check your credentials with:  priority auth status");
+            eprintln!("  Check your credentials with:  takt auth status");
         }
     }
     if let Some(body) = &error.body {

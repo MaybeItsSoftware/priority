@@ -1,4 +1,4 @@
-//! The Priority tools, implemented once.
+//! The Takt tools, implemented once.
 //!
 //! Both front ends — the CLI subcommands in `cli.rs` and the MCP server in
 //! `mcp.rs` — dispatch through [`Tools::call`], so the two cannot drift from
@@ -6,7 +6,7 @@
 //! command line with the same arguments and the same answer, by construction
 //! rather than by discipline.
 //!
-//! These are also the app's tools. Priority ships this binary as its MCP
+//! These are also the app's tools. Takt ships this binary as its MCP
 //! server, so there is no second implementation to keep in step any more —
 //! which is what retired `scripts/mcp_parity_check.py`. See `cli/src/mcp.rs`.
 
@@ -225,10 +225,7 @@ impl Tools {
             "task_metadata" => {
                 let list_id = list_id()?;
                 let payload = self.local.task_metadata(&list_id);
-                Ok(outcome(
-                    format!("Priority metadata (list {list_id})"),
-                    payload,
-                ))
+                Ok(outcome(format!("Takt metadata (list {list_id})"), payload))
             }
 
             "task_matrix_set" => {

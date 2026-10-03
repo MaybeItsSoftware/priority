@@ -1027,12 +1027,38 @@ fn a_tilde_in_a_hand_edited_path_is_expanded() {
 fn the_store_defaults_to_the_apps_own_directory() {
     // The one place the CLI and the app are deliberately joined: reading the
     // dailies and day log the app writes is why those commands exist.
+    // `Takt`, or the pre-rename `Priority` on a machine that still has only
+    // that — which one depends on the machine running the tests.
     let local = LocalState::resolve(&scratch_config(None));
     assert!(
-        local
-            .store_directory
-            .ends_with("Application Support/Priority")
+        local.store_directory.ends_with("Application Support/Takt")
+            || local
+                .store_directory
+                .ends_with("Application Support/Priority")
     );
+}
+
+#[test]
+fn a_renamed_location_falls_back_to_the_old_one_only_while_the_new_one_is_missing() {
+    let unique = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let root = std::env::temp_dir().join(format!("takt-rename-{}-{unique}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let current = root.join("Takt");
+    let legacy = root.join("Priority");
+    let candidates = || vec![current.clone(), legacy.clone()];
+
+    // Neither exists: the new name, so a fresh machine starts there.
+    assert_eq!(crate::config::first_existing(candidates()), current);
+
+    // Only the old one: read what is actually on disk.
+    std::fs::create_dir_all(&legacy).expect("legacy directory");
+    assert_eq!(crate::config::first_existing(candidates()), legacy);
+
+    // Both: the new one wins, for good.
+    std::fs::create_dir_all(&current).expect("current directory");
+    assert_eq!(crate::config::first_existing(candidates()), current);
+
+    let _ = std::fs::remove_dir_all(&root);
 }
 
 #[test]

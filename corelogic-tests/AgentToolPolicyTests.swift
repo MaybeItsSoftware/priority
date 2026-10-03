@@ -17,7 +17,7 @@ final class AgentToolPolicyTests: XCTestCase {
     for tool in AgentToolPolicy.writeTools {
       XCTAssertFalse(AgentToolPolicy.isReadOnly(AgentToolPolicy.qualifiedName(tool)), tool)
     }
-    XCTAssertTrue(AgentToolPolicy.isReadOnly("mcp__priority__workspace_tasks"))
+    XCTAssertTrue(AgentToolPolicy.isReadOnly("mcp__takt__workspace_tasks"))
     // Another server's tool of the same name is not ours to allow.
     XCTAssertFalse(AgentToolPolicy.isReadOnly("mcp__other__workspace_tasks"))
     XCTAssertFalse(AgentToolPolicy.isReadOnly("workspace_tasks"))
@@ -25,16 +25,16 @@ final class AgentToolPolicyTests: XCTestCase {
 
   func testPermissionRequestsAskOrRefuseButNeverAllow() {
     XCTAssertEqual(
-      AgentToolPolicy.decision(forPermissionRequestOn: "mcp__priority__workspace_task_delete"), .askUser)
-    XCTAssertEqual(AgentToolPolicy.decision(forPermissionRequestOn: "mcp__priority__task_search"), .askUser)
+      AgentToolPolicy.decision(forPermissionRequestOn: "mcp__takt__workspace_task_delete"), .askUser)
+    XCTAssertEqual(AgentToolPolicy.decision(forPermissionRequestOn: "mcp__takt__task_search"), .askUser)
     XCTAssertEqual(AgentToolPolicy.decision(forPermissionRequestOn: "Bash"), .refuse)
     XCTAssertEqual(AgentToolPolicy.decision(forPermissionRequestOn: "mcp__filesystem__write"), .refuse)
-    XCTAssertEqual(AgentToolPolicy.decision(forPermissionRequestOn: "mcp__priority__"), .refuse)
+    XCTAssertEqual(AgentToolPolicy.decision(forPermissionRequestOn: "mcp__takt__"), .refuse)
   }
 
   func testInvocationLoadsOnlyPriorityAndOnlyPreAllowsReads() throws {
     let arguments = AgentInvocation.arguments(
-      helperPath: "/Applications/Priority.app/Contents/Helpers/priority", systemPrompt: "Hi")
+      helperPath: "/Applications/Takt.app/Contents/Helpers/takt", systemPrompt: "Hi")
     func value(after flag: String) -> String? {
       arguments.firstIndex(of: flag).map { arguments[$0 + 1] }
     }
@@ -55,9 +55,9 @@ final class AgentToolPolicyTests: XCTestCase {
 
     let config = try XCTUnwrap(JSONValue.parse(try XCTUnwrap(value(after: "--mcp-config"))))
     let servers = try XCTUnwrap(config["mcpServers"]?.objectValue)
-    XCTAssertEqual(Array(servers.keys), ["priority"])
-    XCTAssertEqual(servers["priority"]?["command"], .string("/Applications/Priority.app/Contents/Helpers/priority"))
-    XCTAssertEqual(servers["priority"]?["args"], .array([.string("--mcp-server")]))
+    XCTAssertEqual(Array(servers.keys), ["takt"])
+    XCTAssertEqual(servers["takt"]?["command"], .string("/Applications/Takt.app/Contents/Helpers/takt"))
+    XCTAssertEqual(servers["takt"]?["args"], .array([.string("--mcp-server")]))
   }
 
   func testAModelIsPassedOnlyWhenSet() {
@@ -100,7 +100,7 @@ final class AgentToolPolicyTests: XCTestCase {
 
   func testWriteSummaryResolvesIdsAndReadsInOrder() {
     let summary = AgentToolSummary.describe(
-      tool: "mcp__priority__workspace_task_add",
+      tool: "mcp__takt__workspace_task_add",
       input: .object([
         "list_id": .string("L1"), "title": .string("Milk"), "notes": .string(""), "at_top": .bool(true),
       ]),
@@ -118,14 +118,14 @@ final class AgentToolPolicyTests: XCTestCase {
 
   func testAnUnresolvedIdIsShownRatherThanHidden() {
     let summary = AgentToolSummary.describe(
-      tool: "mcp__priority__workspace_task_delete", input: .object(["task_id": .string("T9")]))
+      tool: "mcp__takt__workspace_task_delete", input: .object(["task_id": .string("T9")]))
     XCTAssertTrue(summary.isDestructive)
     XCTAssertEqual(summary.fields, [.init(label: "Task", value: "T9")])
   }
 
   func testClearingAValueSaysSo() {
     let summary = AgentToolSummary.describe(
-      tool: "mcp__priority__workspace_task_update",
+      tool: "mcp__takt__workspace_task_update",
       input: .object(["task_id": .string("T1"), "kanban_column": .null]),
       name: { _ in "Milk" })
     XCTAssertEqual(
@@ -134,21 +134,21 @@ final class AgentToolPolicyTests: XCTestCase {
 
   func testAnUnknownToolStillGetsWords() {
     let summary = AgentToolSummary.describe(
-      tool: "mcp__priority__brand_new_tool", input: .object(["some_flag": .bool(false)]))
+      tool: "mcp__takt__brand_new_tool", input: .object(["some_flag": .bool(false)]))
     XCTAssertEqual(summary.title, "Brand new tool")
     XCTAssertEqual(summary.fields, [.init(label: "Some flag", value: "No")])
   }
 
   func testReadLineNamesTheToolAndWhatItLookedAt() {
     XCTAssertEqual(
-      AgentToolSummary.readLine(tool: "mcp__priority__task_search", input: .object(["query": .string("milk")])),
+      AgentToolSummary.readLine(tool: "mcp__takt__task_search", input: .object(["query": .string("milk")])),
       "task_search · milk")
     XCTAssertEqual(
       AgentToolSummary.readLine(
-        tool: "mcp__priority__workspace_tasks", input: .object(["list_id": .string("L1")]),
+        tool: "mcp__takt__workspace_tasks", input: .object(["list_id": .string("L1")]),
         name: { _ in "Groceries" }),
       "workspace_tasks · Groceries")
     XCTAssertEqual(
-      AgentToolSummary.readLine(tool: "mcp__priority__workspace_tree", input: .object([:])), "workspace_tree")
+      AgentToolSummary.readLine(tool: "mcp__takt__workspace_tree", input: .object([:])), "workspace_tree")
   }
 }

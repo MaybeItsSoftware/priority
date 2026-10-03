@@ -43,6 +43,6 @@ final class NativeMCPIntegrationPluginTests: XCTestCase {
     let data = try XCTUnwrap(json.data(using: .utf8))
     let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
     let servers = try XCTUnwrap(object?["mcpServers"] as? [String: Any])
-    return try XCTUnwrap(servers["priority"] as? [String: Any])
+    return try XCTUnwrap(servers["takt"] as? [String: Any])
   }
 }

@@ -2,16 +2,16 @@ import Darwin
 import Foundation
 import PriorityCore
 
-/// `Priority --mcp-server` hands the process over to the bundled `priority`
-/// CLI, which is the MCP server.
+/// `Takt --mcp-server` hands the process over to the bundled `takt` CLI,
+/// which is the MCP server.
 ///
 /// There used to be a second, in-process implementation — 1,760 lines of Swift
 /// in `Plugins/MCP/MCPServer.swift` — kept alive by one thing: MCP client
 /// configurations already written to users' disks name
-/// `/Applications/Priority.app/Contents/MacOS/Priority --mcp-server`. Deleting
-/// it would have broken every one of them.
+/// `/Applications/Priority.app/Contents/MacOS/Priority --mcp-server` (the app's
+/// name before Takt). Deleting it would have broken every one of them.
 ///
-/// So the app ships the CLI instead (`Contents/Helpers/priority`, installed by
+/// So the app ships the CLI instead (`Contents/Helpers/takt`, installed by
 /// `scripts/bundle_cli.sh`) and this hands over to it. Those configs keep
 /// working untouched, because the CLI already accepts the bare `--mcp-server`
 /// flag for exactly this reason (`cli/src/main.rs`) and already reads
@@ -65,7 +65,7 @@ enum MCPServerShim {
 
     // Only reachable if execv failed.
     FileHandle.standardError.write(
-      Data("priority: could not start \(helper): \(String(cString: strerror(errno)))\n".utf8))
+      Data("takt: could not start \(helper): \(String(cString: strerror(errno)))\n".utf8))
     exit(126)
   }
 }

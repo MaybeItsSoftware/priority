@@ -1,10 +1,10 @@
-//! Priority's MCP stdio server.
+//! Takt's MCP stdio server.
 //!
 //! This is now the only one. There were three — a Swift server embedded in the
 //! app and a Python fallback script alongside this — and holding them equal
 //! from the outside cost more than it bought, since none could import another.
-//! The app ships this binary instead (`Priority.app/Contents/Helpers/priority`)
-//! and `Priority --mcp-server` hands the process over to it, which is why the
+//! The app ships this binary instead (`Takt.app/Contents/Helpers/takt`)
+//! and `Takt --mcp-server` hands the process over to it, which is why the
 //! bare flag is accepted in `main.rs` and why the environment outranks the
 //! config file in `config.rs`: configurations written for the old server keep
 //! working untouched.
@@ -20,7 +20,7 @@ use std::io::{BufRead, BufReader, Read, Stdin, Write};
 
 const JSONRPC_VERSION: &str = "2.0";
 const DEFAULT_PROTOCOL_VERSION: &str = "2024-11-05";
-const SERVER_NAME: &str = "priority-mcp";
+const SERVER_NAME: &str = "takt";
 const SERVER_VERSION: &str = "0.3.0";
 
 const JSONRPC_PARSE_ERROR: i64 = -32700;
@@ -469,7 +469,7 @@ pub fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "daily_log_fetch",
-            "description": "What actually happened on recent days: completions, focus time, unfinished and deferred tasks, and daily ticks. Local to Priority; read-only.",
+            "description": "What actually happened on recent days: completions, focus time, unfinished and deferred tasks, and daily ticks. Local to Takt; read-only.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -486,12 +486,12 @@ pub fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "dailies_list",
-            "description": "The configured dailies (habits) with today's schedule and tick state. Local to Priority; read-only.",
+            "description": "The configured dailies (habits) with today's schedule and tick state. Local to Takt; read-only.",
             "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
         }),
         json!({
             "name": "task_metadata",
-            "description": "Priority-only per-task state that Checkvist does not store: priority ranks, recurrence rules, and start dates. Read-only.",
+            "description": "Takt-only per-task state that Checkvist does not store: priority ranks, recurrence rules, and start dates. Read-only.",
             "inputSchema": {
                 "type": "object",
                 "properties": { "list_id": list_id() },
@@ -500,7 +500,7 @@ pub fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "task_matrix_set",
-            "description": "Place tasks on the Eisenhower matrix (urgency and importance, each -9 to 9; 0,0 removes a placement). Local to Priority. Requires Priority to be closed - a running app overwrites these on its next save.",
+            "description": "Place tasks on the Eisenhower matrix (urgency and importance, each -9 to 9; 0,0 removes a placement). Local to Takt. Requires Takt to be closed - a running app overwrites these on its next save.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -526,7 +526,7 @@ pub fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "daily_add",
-            "description": "Create a daily (a habit that resets each day, not a task). Local to Priority.",
+            "description": "Create a daily (a habit that resets each day, not a task). Local to Takt.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -615,7 +615,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
     let links = json!({
         "type": "array",
         "items": { "type": "string" },
-        "description": "URLs the task links to. Priority opens the first http, https or obsidian:// link from the task with its open-link command.",
+        "description": "URLs the task links to. Takt opens the first http, https or obsidian:// link from the task with its open-link command.",
     });
     let column = json!({
         "type": ["string", "null"],
@@ -625,7 +625,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
     vec![
         json!({
             "name": "workspace_tree",
-            "description": "Priority's local workspace, the app's source of truth: folders, lists (with folder_id and open task counts) and nested lists, each with its id. Start here to find a list_id or folder_id.",
+            "description": "Takt's local workspace, the app's source of truth: folders, lists (with folder_id and open task counts) and nested lists, each with its id. Start here to find a list_id or folder_id.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -669,7 +669,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_task_update",
-            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind or sidebar pin. Fields left out are unchanged; one call is one undo step. Completing a repeating task is refused: do that in Priority, which schedules the next occurrence.",
+            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind or sidebar pin. Fields left out are unchanged; one call is one undo step. Completing a repeating task is refused: do that in Takt, which schedules the next occurrence.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -722,7 +722,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_task_delete",
-            "description": "Delete a local task and its whole subtree. Undoable from Priority's Undo menu.",
+            "description": "Delete a local task and its whole subtree. Undoable from Takt's Undo menu.",
             "inputSchema": {
                 "type": "object",
                 "properties": { "task_id": id("From workspace_tasks.") },

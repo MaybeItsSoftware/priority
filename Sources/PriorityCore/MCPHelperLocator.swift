@@ -1,14 +1,14 @@
 import Foundation
 
-/// Where `Priority --mcp-server` finds the CLI to hand over to.
+/// Where `Takt --mcp-server` finds the CLI to hand over to.
 ///
-/// The MCP server is the `priority` CLI, shipped inside the app bundle at
-/// `Contents/Helpers/priority`. This is the pure half of `MCPServerShim` — the
+/// The MCP server is the `takt` CLI, shipped inside the app bundle at
+/// `Contents/Helpers/takt`. This is the pure half of `MCPServerShim` — the
 /// search order and the diagnostic — so both can be tested without launching a
 /// process.
 public enum MCPHelperLocator {
 
-  public static let bundleRelativePath = "Contents/Helpers/priority"
+  public static let bundleRelativePath = "Contents/Helpers/takt"
 
   /// Most specific first.
   public static func candidates(
@@ -32,10 +32,10 @@ public enum MCPHelperLocator {
     // A separately installed CLI, for a bundle built with
     // PRIORITY_SKIP_CLI_BUNDLE=1 or run straight out of DerivedData.
     candidates.append(contentsOf: [
-      "\(homeDirectory)/.local/bin/priority",
-      "\(homeDirectory)/bin/priority",
-      "/usr/local/bin/priority",
-      "/opt/homebrew/bin/priority",
+      "\(homeDirectory)/.local/bin/takt",
+      "\(homeDirectory)/bin/takt",
+      "/usr/local/bin/takt",
+      "/opt/homebrew/bin/takt",
     ])
 
     var seen = Set<String>()
@@ -52,9 +52,9 @@ public enum MCPHelperLocator {
   /// error that costs an afternoon.
   public static func missingHelperMessage(candidates: [String]) -> String {
     """
-    priority: no MCP server to run.
+    takt: no MCP server to run.
 
-    `Priority --mcp-server` hands over to the bundled `priority` CLI, which was \
+    `Takt --mcp-server` hands over to the bundled `takt` CLI, which was \
     not found. Looked in:
     \(candidates.map { "  \($0)" }.joined(separator: "\n"))
 
