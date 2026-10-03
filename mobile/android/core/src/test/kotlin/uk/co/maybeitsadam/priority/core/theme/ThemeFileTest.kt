@@ -242,7 +242,7 @@ class ThemeFileTest {
         val theme = library.themes.first()
         assertEquals(1.0, theme.structure.border.hairline, 0.0)
         assertEquals(ThemeIssueSeverity.ERROR, library.issues.first().severity)
-        assertEquals("structure.border.hairline -1.0 should be zero or more", library.issues.first().message)
+        assertEquals("structure.border.hairline -1 should be zero or more", library.issues.first().message)
     }
 
     // Missing roles
@@ -354,6 +354,50 @@ class ThemeFileTest {
         assertEquals(chalk.color(ThemeColorRole.PAPER, light), theme.color(ThemeColorRole.PAPER, light))
         val issue = library.issues.first { it.message.contains("platforms.android.palette") }
         assertEquals(ThemeIssueSeverity.WARNING, issue.severity)
+        assertEquals("platforms.android.palette is not allowed: colour is the same on every platform; ignored", issue.message)
+    }
+
+    @Test
+    fun aBadValueForAnotherPlatformIsReportedHereTooButNotUsed() {
+        val text = """{ "platforms": { "ios": { "structure": { "spacing": { "md": -2 }, "radius": { "row": 3 } } } } }"""
+        for (platform in ThemePlatform.entries) {
+            val library = ThemeFileLoader.load(listOf(source("x.json", text)), platform)
+            assertTrue(platform.raw, library.issues.any { it.message == "platforms.ios.structure.spacing.md -2 should be zero or more" })
+            val expectedRow = if (platform == ThemePlatform.IOS) 3.0 else 0.0
+            assertEquals(platform.raw, expectedRow, library.themes.first().structure.radius.row, 0.0)
+        }
+    }
+
+    @Test
+    fun auditFindingsAreMarkedAndMissingRolesAreNot() {
+        val library = load(source("x.json", """{ "structure": { "touchTarget": 30, "border": { "hairline": -1 } } }"""))
+        val issues = library.issues
+        assertTrue(issues.first { it.message == "a 30.00pt touch target is under the 44.00pt a finger needs" }.isAudit)
+        assertFalse(issues.first { it.message.startsWith("structure.border.hairline") }.isAudit)
+        assertTrue(issues.first { it.message.startsWith("primary is 3.61:1") }.isAudit)
+    }
+
+    @Test
+    fun theSharedBuiltInsStateEveryValueAndLoadCleanly() {
+        for (platform in ThemePlatform.entries) {
+            val library = BuiltInThemeSpecifications.library(platform)
+            assertTrue(library.issues.filterNot { it.isAudit }.toString(), library.issues.none { !it.isAudit })
+            // Nothing of the bootstrap base underneath survives: a different one changes nothing.
+            val other = BuiltInThemeSpecifications.bootstrap.copy(
+                structure = BuiltInThemeSpecifications.bootstrap.structure.copy(
+                    radius = ThemeRadiusScale(7.0, 7.0, 7.0, 7.0, 7.0),
+                    border = ThemeBorderScale(7.0, 7.0, 7.0),
+                    spacing = ThemeSpacingScale(7.0, 7.0, 7.0, 7.0, 7.0, 7.0),
+                    touchTarget = 7.0,
+                    usesShadows = true,
+                    usesGradientsOnChrome = true,
+                ),
+            )
+            val again = ThemeFileLoader.load(
+                BuiltInThemeSpecifications.sharedSources(), platform, builtIns = emptyList(), defaultBase = other,
+            )
+            assertEquals(library.themes, again.themes)
+        }
     }
 
     @Test
@@ -366,7 +410,7 @@ class ThemeFileTest {
         )
         val text = messages(library.outcomes.first()).joinToString("\n")
         for (fragment in listOf("platforms.windows", "platforms.android.structure.radius.pannel",
-            "platforms.android.structure.touchTarget -4.0 should be zero or more")) {
+            "platforms.android.structure.touchTarget -4 should be zero or more")) {
             assertTrue("missing $fragment in:\n$text", text.contains(fragment))
         }
         assertEquals(48.0, library.themes.first().structure.touchTarget, 0.0)

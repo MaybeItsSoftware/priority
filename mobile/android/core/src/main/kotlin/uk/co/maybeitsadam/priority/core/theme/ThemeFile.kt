@@ -109,7 +109,7 @@ data class ThemeFile(
     )
 
     /** One platform's override. A `palette` here is read only to be reported and ignored. */
-    data class PlatformOverride(val structure: Structure? = null, val hasPalette: Boolean = false)
+    data class PlatformOverride(val structure: Structure? = null)
 
     data class Platforms(
         val macos: PlatformOverride? = null,
@@ -261,9 +261,9 @@ internal object ThemeFileReader {
             structure = child(o, "structure", "")?.let { (s, path) -> structure(s, path) },
             platforms = child(o, "platforms", "")?.let { (p, path) ->
                 fun one(key: String) = child(p, key, path)?.let { (entry, entryPath) ->
+                    // `palette` here is never read; the schema walk reports it.
                     ThemeFile.PlatformOverride(
                         structure = child(entry, "structure", entryPath)?.let { (s, sp) -> structure(s, sp) },
-                        hasPalette = entry["palette"].let { it != null && it !is JsonNull },
                     )
                 }
                 ThemeFile.Platforms(macos = one("macos"), ios = one("ios"), android = one("android"))

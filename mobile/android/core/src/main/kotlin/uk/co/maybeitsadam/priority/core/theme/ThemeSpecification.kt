@@ -43,6 +43,10 @@ enum class ThemeIssueSeverity(val rank: Int) {
 
     /** True, and worth knowing, but intended. */
     NOTE(0),
+    ;
+
+    /** As the conformance cases write it: `error`, `warning`, `note`. */
+    val raw: String get() = name.lowercase()
 }
 
 sealed interface ThemeIssue {
@@ -105,6 +109,13 @@ sealed interface ThemeIssue {
         override val message get() = "a ${format(value)}pt hairline is a border, not a hairline"
     }
 
+    /** A touch target set, but under the 44pt a finger needs. Zero (a pointer platform) is fine. */
+    data class TouchTargetTooSmall(val value: Double) : ThemeIssue {
+        override val severity get() = ThemeIssueSeverity.WARNING
+        override val message get() =
+            "a ${format(value)}pt touch target is under the ${format(ThemeStructureAudit.SMALLEST_TOUCH_TARGET)}pt a finger needs"
+    }
+
     companion object {
         fun format(value: Double): String = String.format(Locale.ROOT, "%.2f", value)
     }
@@ -151,6 +162,7 @@ object ThemeContrastAudit {
 object ThemeStructureAudit {
     val SHELL_RADIUS_RANGE = 18.0..22.0
     const val HEAVIEST_HAIRLINE = 2.0
+    const val SMALLEST_TOUCH_TARGET = 44.0
 
     fun findings(structure: ThemeStructure): List<ThemeIssue> {
         val issues = mutableListOf<ThemeIssue>()
@@ -160,6 +172,9 @@ object ThemeStructureAudit {
         if (panelOutOfOrder || radius.pill < 999) issues += ThemeIssue.RadiusScaleOutOfOrder
         if (radius.shell != 0.0 && radius.shell !in SHELL_RADIUS_RANGE) issues += ThemeIssue.ShellRadiusOffScale(radius.shell)
         if (structure.border.hairline > HEAVIEST_HAIRLINE) issues += ThemeIssue.HairlineTooHeavy(structure.border.hairline)
+        if (structure.touchTarget != 0.0 && structure.touchTarget < SMALLEST_TOUCH_TARGET) {
+            issues += ThemeIssue.TouchTargetTooSmall(structure.touchTarget)
+        }
         if (structure.usesShadows) issues += ThemeIssue.ShadowsUsed
         if (structure.usesGradientsOnChrome) issues += ThemeIssue.GradientsOnChrome
         return issues

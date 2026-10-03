@@ -11,7 +11,17 @@ import kotlinx.serialization.json.JsonObject
  * on. Never fatal: a bad value is skipped and the value it would have
  * replaced stays; only a theme that cannot paint every role is dropped.
  */
-data class ThemeFileIssue(val source: String, val severity: ThemeIssueSeverity, val message: String) {
+data class ThemeFileIssue(
+    val source: String,
+    val severity: ThemeIssueSeverity,
+    val message: String,
+    /**
+     * A finding of the `validate()` audit of the theme the file produced, as
+     * opposed to something the file says. Audit findings depend on the
+     * platform the theme was resolved for; everything else does not.
+     */
+    val isAudit: Boolean = false,
+) {
     override fun toString(): String = "$source: $message"
 }
 
@@ -64,18 +74,15 @@ object ThemeFileLoader {
         } catch (error: ThemeFileReadException) {
             return null to listOf(ThemeFileIssue(source, ThemeIssueSeverity.ERROR, error.message ?: "not a theme file"))
         }
-        val issues = ThemeFileSchema.unknownKeys(element).map {
-            ThemeFileIssue(source, ThemeIssueSeverity.WARNING, "$it is not a theme setting; ignored")
-        }.toMutableList()
-        file.platforms?.let { platforms ->
-            for (platform in ThemePlatform.entries) {
-                if (platforms.of(platform)?.hasPalette == true) {
-                    issues += ThemeFileIssue(
-                        source, ThemeIssueSeverity.WARNING,
-                        "platforms.${platform.raw}.palette is ignored: a theme's colours are the same on every platform",
-                    )
-                }
-            }
+        val issues = ThemeFileSchema.unknownKeys(element).map { path ->
+            ThemeFileIssue(
+                source, ThemeIssueSeverity.WARNING,
+                if (ThemeFileSchema.isPlatformPalette(path)) {
+                    "$path is not allowed: colour is the same on every platform; ignored"
+                } else {
+                    "$path is not a theme setting; ignored"
+                },
+            )
         }
         return file to issues
     }
@@ -279,11 +286,15 @@ internal object ThemeFileMerger {
         }
 
         // The base (already resolved for this platform), then the theme's
-        // structure, then its own word for this platform.
-        val shared = mergeStructure(file.structure, base?.structure ?: structureFallback, "structure", report)
-        val structure = mergeStructure(
-            file.platforms?.of(platform)?.structure, shared, "platforms.${platform.raw}.structure", report,
-        )
+        // structure, then its entry for this platform. Every platform's entry
+        // is checked, so a bad value for the phone is reported on the Mac too,
+        // but only this platform's is used.
+        var structure = mergeStructure(file.structure, base?.structure ?: structureFallback, "structure", report)
+        for (candidate in ThemePlatform.entries) {
+            val entry = file.platforms?.of(candidate)?.structure ?: continue
+            val merged = mergeStructure(entry, structure, "platforms.${candidate.raw}.structure", report)
+            if (candidate == platform) structure = merged
+        }
 
         val specification = ThemeSpecification(
             identifier = identifier,
@@ -293,7 +304,10 @@ internal object ThemeFileMerger {
             palette = palette,
             structure = structure,
         )
-        for (finding in specification.validate()) report(finding.severity, finding.message)
+        for (finding in specification.validate()) {
+            // A missing role is a fact about the file; the rest is the audit.
+            issues += ThemeFileIssue(source, finding.severity, finding.message, isAudit = finding !is ThemeIssue.MissingRole)
+        }
         return ThemeFileOutcome(source, specification, null, ThemeFileLoader.sorted(issues))
     }
 
@@ -309,7 +323,7 @@ internal object ThemeFileMerger {
             if (value == null) return fallback
             val ok = value.isFinite() && if (positive) value > 0 else value >= 0
             if (!ok) {
-                report(ThemeIssueSeverity.ERROR, "$prefix.$path $value should be ${if (positive) "above zero" else "zero or more"}")
+                report(ThemeIssueSeverity.ERROR, "$prefix.$path ${number(value)} should be ${if (positive) "above zero" else "zero or more"}")
                 return fallback
             }
             return value
@@ -440,6 +454,14 @@ internal object ThemeFileMerger {
         )
     }
 
+    /** `13`, not `13.0`, as Swift writes an integral value; anything else as Kotlin does. */
+    fun number(value: Double): String =
+        if (value.isFinite() && value == kotlin.math.round(value) && kotlin.math.abs(value) < 1e15) {
+            value.toLong().toString()
+        } else {
+            value.toString()
+        }
+
     private fun nonEmpty(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
 }
 
@@ -470,8 +492,9 @@ internal object ThemeFileSchema {
                 "touchTarget" to any, "usesShadows" to any, "usesGradientsOnChrome" to any,
             ),
         )
-        // `palette` under a platform is reported by the decoder with a reason of its own.
-        val platform = Node.Obj(mapOf("structure" to structure, "palette" to any))
+        // A platform's entry is structure only; a `palette` there is reported
+        // with a reason of its own (see isPlatformPalette).
+        val platform = Node.Obj(mapOf("structure" to structure))
         Node.Obj(
             mapOf(
                 "identifier" to any, "name" to any, "summary" to any, "lockedAppearance" to any, "extends" to any,
@@ -481,6 +504,12 @@ internal object ThemeFileSchema {
                 "platforms" to Node.Obj(ThemePlatform.entries.associate { it.raw to platform }),
             ),
         )
+    }
+
+    /** `platforms.ios.palette`: not a typo, so it gets a warning that says why. */
+    fun isPlatformPalette(path: String): Boolean {
+        val parts = path.split(".")
+        return parts.size == 3 && parts[0] == "platforms" && parts[2] == "palette" && ThemePlatform.of(parts[1]) != null
     }
 
     /** Dotted paths of keys the format does not have, sorted. */
