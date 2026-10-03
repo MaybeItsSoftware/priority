@@ -168,10 +168,10 @@ struct KeyboardCommands: View {
   }
 
   private var isOnList: Bool {
-    isPad ? navigation_isScope : model.navigation.tab == .lists && !model.navigation.listPath.isEmpty
+    isPad ? navigationIsScoped : model.navigation.tab == .lists && !model.navigation.listPath.isEmpty
   }
 
-  private var navigation_isScope: Bool {
+  private var navigationIsScoped: Bool {
     if case .scope = model.navigation.sidebarSelection { return true }
     return false
   }
