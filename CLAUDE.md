@@ -110,6 +110,37 @@ python3 scripts/mcp_smoke_check.py
 
 There used to be two implementations of the same MCP server — one in Swift inside the app, one in the CLI — held equal from the outside by `scripts/mcp_parity_check.py`, because neither could import the other. The Swift one is gone: the app bundles the CLI and `--mcp-server` execs it, so there is one implementation to be right instead of two to keep equal. `cargo test` covers the server; the smoke check covers the seam, and specifically that a client configuration written before that change — naming `Priority --mcp-server`, with credentials in `env` — still reaches a working server. Needs a Debug app build; reads no real data and needs no credentials.
 
+### Phones and sync
+
+The iPhone app (`mobile/ios`, XcodeGen) and the Android app (`mobile/android`, Gradle) share the workspace with the Mac through `sync-server/` (Railway). The protocol is `docs/sync.md`. The theme format and its per-platform rules are in `docs/themes.md`. The shared fixtures they're held to are `cli/src/fixtures/workspace_schema.sql` and `shared/themes/`.
+
+- **`WorkspaceStore` schema changes** have to reach every client. Add the Android step in `mobile/android/data/.../WorkspaceSchema.kt` with the same SQL, reinstall the sync triggers if a synced table changed, and regenerate the fixture (`scripts/dump_workspace_schema.sh`). Both Android's schema test and the CLI's tests check against it.
+- **Theme format changes** go into `Sources/PriorityCore/Theming` first. Rerun `PRIORITY_REGENERATE_THEMES=1 swift test --filter ThemeConformance` and commit the regenerated `shared/themes`. The Kotlin port must still pass every conformance case.
+
+After changing anything under `mobile/ios`:
+
+```bash
+(cd mobile/ios && xcodegen generate)
+xcodebuild -project mobile/ios/PriorityMobile.xcodeproj -scheme PriorityMobile -destination 'generic/platform=iOS Simulator' build-for-testing
+./scripts/install_ios.sh            # Release build onto the booted simulator, or DEVICE_ID=<udid>
+```
+
+After changing anything under `mobile/android` (Gradle builds share `/tmp/priority-gradle.lock`):
+
+```bash
+(cd mobile/android && ./gradlew :core:test :data:testDebugUnitTest :app:testDebugUnitTest lint :app:assembleDebug :app:assembleRelease)
+./scripts/install_android.sh        # onto the connected device or emulator
+./scripts/build_play_bundle.sh      # signed .aab for the Play Console, into build/play/
+```
+
+After changing `sync-server/`:
+
+```bash
+cargo test --manifest-path sync-server/Cargo.toml   # integration tests need a local Postgres; see sync-server/README.md
+cargo clippy --manifest-path sync-server/Cargo.toml --all-targets -- -D warnings
+cargo fmt --manifest-path sync-server/Cargo.toml --check
+```
+
 ## Working Loop
 
 Three things happen on every piece of work here without being asked for.
