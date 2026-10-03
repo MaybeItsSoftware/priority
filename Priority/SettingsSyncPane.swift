@@ -1,27 +1,35 @@
 import CoreImage.CIFilterBuiltins
+import PriorityCore
 import PrioritySync
 import SwiftUI
 
-/// Pairing this Mac with the sync server, and letting a phone join it.
+/// Signing this Mac in to sync, and letting a phone join it.
 ///
-/// The first device pairs with the server's admin token; every device after
-/// joins by scanning the QR code this pane shows, which carries the server and
-/// a ten-minute, one-use code (`SyncPairingLink`). See `docs/sync.md`.
+/// Signed out: an email and password, to sign in or make an account, or a
+/// code from a device already signed in. Signed in: the account, its devices,
+/// a QR code for a phone (`SyncPairingLink`), signing out and deleting the
+/// account. The server is the hosted one unless "Use a different server"
+/// says otherwise. See `docs/sync.md`.
 struct SettingsSyncPane: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
-  @State private var serverURL = ""
-  @State private var adminToken = ""
-  @State private var joinLink = ""
+  @State private var email = ""
+  @State private var password = ""
+  @State private var serverURL = SyncServer.defaultURL.absoluteString
+  @State private var usesOtherServer = false
+  @State private var usesPairingCode = false
+  @State private var pairingCode = ""
   @State private var isWorking = false
   @State private var message: String?
+  @State private var isConfirmingDelete = false
+  @State private var deletePassword = ""
 
   var body: some View {
     if let session = model.syncSession {
-      if let credentials = session.credentials {
-        paired(session, credentials: credentials)
+      if session.isSignedIn {
+        signedIn(session)
       } else {
-        unpaired(session)
+        signedOut(session)
       }
     } else {
       Section(header: Text("Sync")) {
@@ -31,67 +39,219 @@ struct SettingsSyncPane: View {
     }
   }
 
-  private func unpaired(_ session: SyncSession) -> some View {
+  // MARK: - Signed out
+
+  private func signedOut(_ session: SyncSession) -> some View {
     Section(header: Text("Sync")) {
+      if session.phase == .needsSignIn {
+        Label("Signed out. Sign in again to keep syncing.", systemImage: "exclamationmark.icloud")
+          .foregroundStyle(theme.danger)
+      }
       Text(
         "Keep this Mac, your iPhone and your Android phone on one workspace. Every device keeps "
-          + "a full copy and works offline; changes travel through your sync server."
+          + "a full copy and works offline; changes travel through the sync server."
       )
       .font(theme.captionFont)
       .foregroundStyle(theme.muted)
 
-      VStack(alignment: .leading, spacing: 6) {
-        Text("First device: the server and its admin token")
-        TextField("https://priority-sync.up.railway.app", text: $serverURL)
-          .textFieldStyle(.roundedBorder)
-        SecureField("SYNC_ADMIN_TOKEN", text: $adminToken)
-          .textFieldStyle(.roundedBorder)
-        Button("Pair this Mac") {
-          run { [serverURL, adminToken] in
-            guard let url = URL(string: serverURL.trimmingCharacters(in: .whitespaces)) else {
-              throw SyncError.server(status: 0, message: "That server address is not a URL.")
+      VStack(alignment: .leading, spacing: theme.space.sm) {
+        field("Email") {
+          TextField("", text: $email, prompt: Text("you@example.com"))
+            .textContentType(.username)
+            .themedTextField()
+        }
+        field("Password") {
+          SecureField("", text: $password, prompt: Text("At least 8 characters"))
+            .textContentType(.password)
+            .themedTextField()
+            .onSubmit { signIn(session) }
+        }
+        HStack(spacing: theme.space.sm) {
+          Button("Sign in") { signIn(session) }
+            .buttonStyle(FocusActionButtonStyle(prominent: true))
+            .keyboardShortcut(.defaultAction)
+            .disabled(isWorking || email.isEmpty || password.isEmpty)
+          Button("Create account") {
+            run { [email, password] in
+              try await session.signUp(email: email, password: password, serverURL: try chosenServer())
+              self.password = ""
             }
-            try await session.pair(serverURL: url, adminToken: adminToken)
+          }
+          .buttonStyle(FocusActionButtonStyle())
+          .disabled(isWorking || email.isEmpty || password.isEmpty)
+          if isWorking { ProgressView().controlSize(.small) }
+        }
+      }
+      .padding(.vertical, theme.space.xs)
+
+      DisclosureGroup("Use a pairing code", isExpanded: $usesPairingCode) {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
+          Text("On a device that is already signed in, choose Add a phone, then type the code here.")
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
+          HStack(spacing: theme.space.sm) {
+            TextField("", text: $pairingCode, prompt: Text("ABCD-EFGH, or a pairing link"))
+              .themedTextField()
+            Button("Join") {
+              run { [pairingCode] in
+                try await session.pair(codeOrLink: pairingCode, serverURL: try chosenServer())
+                self.pairingCode = ""
+              }
+            }
+            .buttonStyle(FocusActionButtonStyle())
+            .disabled(isWorking || pairingCode.trimmingCharacters(in: .whitespaces).isEmpty)
           }
         }
-        .disabled(isWorking || serverURL.isEmpty || adminToken.isEmpty)
+        .padding(.top, theme.space.xs)
       }
 
-      VStack(alignment: .leading, spacing: 6) {
-        Text("Or join with a link from a device that is already paired")
-        TextField("priority-sync://pair?…", text: $joinLink)
-          .textFieldStyle(.roundedBorder)
-        Button("Join") {
-          run { [joinLink] in
-            guard let link = SyncPairingLink(joinLink) else {
-              throw SyncError.server(status: 0, message: "That is not a Priority pairing link.")
-            }
-            try await session.pair(with: link)
-          }
+      DisclosureGroup("Use a different server", isExpanded: $usesOtherServer) {
+        VStack(alignment: .leading, spacing: theme.space.xs) {
+          TextField("", text: $serverURL, prompt: Text(SyncServer.defaultURL.absoluteString))
+            .themedTextField()
+          Text("For a server you run yourself. Leave it as it is to use Priority's.")
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
         }
-        .disabled(isWorking || joinLink.isEmpty)
+        .padding(.top, theme.space.xs)
       }
       feedback
     }
+    .onAppear { prefill(from: session) }
   }
 
-  private func paired(_ session: SyncSession, credentials: SyncCredentials) -> some View {
+  private func field(_ title: String, @ViewBuilder control: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: theme.space.xs) {
+      Text(title).foregroundStyle(theme.muted)
+      control()
+    }
+  }
+
+  private func signIn(_ session: SyncSession) {
+    guard !email.isEmpty, !password.isEmpty, !isWorking else { return }
+    run { [email, password] in
+      try await session.signIn(email: email, password: password, serverURL: try chosenServer())
+      self.password = ""
+    }
+  }
+
+  /// The hosted server, unless the disclosure names another.
+  private func chosenServer() throws -> URL {
+    guard let url = SyncServer.url(from: serverURL) else {
+      throw SyncError.invalid("That server address isn't a web address.")
+    }
+    return url
+  }
+
+  /// After a refused token, the same email and server again.
+  private func prefill(from session: SyncSession) {
+    if email.isEmpty, let remembered = session.rememberedEmail { email = remembered }
+    if let server = session.rememberedServerURL, server != SyncServer.defaultURL {
+      serverURL = server.absoluteString
+      usesOtherServer = true
+    }
+  }
+
+  // MARK: - Signed in
+
+  @ViewBuilder
+  private func signedIn(_ session: SyncSession) -> some View {
     Section(header: Text("Sync")) {
-      LabeledContent("Server", value: credentials.serverURL.absoluteString)
+      LabeledContent("Signed in as") {
+        Text(session.email ?? "an account without an email").textSelection(.enabled)
+      }
       LabeledContent("Status") { SyncPhaseText(phase: session.phase) }
-      HStack {
+      if let server = session.credentials?.serverURL, server != SyncServer.defaultURL {
+        LabeledContent("Server") {
+          Text(server.absoluteString).font(theme.monoFont(size: 11)).foregroundStyle(theme.muted)
+        }
+      }
+      HStack(spacing: theme.space.sm) {
         Button("Sync now") { run { await session.syncNow() } }
-          .disabled(isWorking)
+          .buttonStyle(FocusActionButtonStyle())
+          .disabled(isWorking || session.phase == .syncing)
         Button("Add a phone") { run { try await session.makePairingLink() } }
+          .buttonStyle(FocusActionButtonStyle())
           .disabled(isWorking)
         Spacer()
-        Button("Unpair", role: .destructive) { run { try session.unpair() } }
-          .foregroundStyle(theme.danger)
+        Button("Sign out") {
+          run {
+            await session.signOut()
+            password = ""
+          }
+        }
+        .buttonStyle(FocusActionButtonStyle())
+        .disabled(isWorking)
       }
       if let link = session.pairingLink {
         pairingCode(link, expiresAt: session.pairingCodeExpiresAt)
       }
       feedback
+    }
+    .task(id: session.credentials?.token) {
+      try? await session.refreshAccount()
+    }
+
+    Section(header: Text("Devices")) {
+      if let devices = session.account?.devices {
+        ForEach(devices) { device in deviceRow(device) }
+      } else {
+        Text("Loading…").foregroundStyle(theme.muted)
+      }
+    }
+
+    Section(header: Text("Account")) {
+      HStack(alignment: .firstTextBaseline, spacing: theme.space.md) {
+        Text(
+          "Deleting the account removes everything synced to the server and signs out every device. "
+            + "Each device keeps its own copy of the workspace."
+        )
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
+        Spacer()
+        Button("Delete account…", role: .destructive) {
+          deletePassword = ""
+          isConfirmingDelete = true
+        }
+        .buttonStyle(FocusActionButtonStyle())
+        .disabled(isWorking)
+      }
+    }
+    .alert("Delete your sync account?", isPresented: $isConfirmingDelete) {
+      SecureField("Password", text: $deletePassword)
+      Button("Delete account", role: .destructive) {
+        run { [deletePassword] in
+          try await session.deleteAccount(password: deletePassword)
+          self.deletePassword = ""
+        }
+      }
+      Button("Cancel", role: .cancel) { deletePassword = "" }
+    } message: {
+      Text(
+        "Enter your password to delete \(session.email ?? "this account") and everything synced to it. "
+          + "Every device is signed out. Each one keeps its own copy of the workspace, and this Mac keeps its tasks."
+      )
+    }
+  }
+
+  private func deviceRow(_ device: SyncDevice) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
+      VStack(alignment: .leading, spacing: 2) {
+        Text(device.displayName)
+        HStack(spacing: 4) {
+          Text(device.platformName)
+          if let seen = device.lastSeenDate {
+            Text("·")
+            Text("seen \(seen, format: .relative(presentation: .named))")
+          }
+        }
+        .font(theme.captionFont)
+        .foregroundStyle(theme.muted)
+      }
+      Spacer()
+      if device.current {
+        Text("This Mac").font(theme.captionFont).foregroundStyle(theme.muted)
+      }
     }
   }
 
@@ -107,7 +267,10 @@ struct SettingsSyncPane: View {
           .overlay(RoundedRectangle(cornerRadius: 8).stroke(theme.border))
       }
       VStack(alignment: .leading, spacing: 8) {
-        Text("Scan this in Priority on the phone: Settings → Sync → Scan code.")
+        Text("Scan this in Priority on the phone: Settings → Sync → Scan code. Or type the code.")
+        Text(link.code)
+          .font(theme.monoFont(size: 20))
+          .textSelection(.enabled)
         Text(link.url.absoluteString)
           .font(theme.monoFont(size: 11))
           .textSelection(.enabled)
@@ -121,6 +284,7 @@ struct SettingsSyncPane: View {
           NSPasteboard.general.clearContents()
           NSPasteboard.general.setString(link.url.absoluteString, forType: .string)
         }
+        .buttonStyle(FocusActionButtonStyle())
       }
     }
     .padding(.vertical, 4)
@@ -165,7 +329,11 @@ struct SyncPhaseText: View {
   var body: some View {
     switch phase {
     case .unpaired:
-      Text("Not paired")
+      Text("Not signed in")
+    case .needsSignIn:
+      Label("Signed out — sign in again", systemImage: "exclamationmark.icloud")
+        .foregroundStyle(theme.danger)
+        .help("The sync server no longer recognises this Mac. Sign in again in Settings → Sync.")
     case .syncing:
       Label("Syncing", systemImage: "arrow.triangle.2.circlepath")
     case .failed(let reason):

@@ -243,7 +243,7 @@ private struct WorkspaceStatusTrailing: View {
   private var sync: some View {
     // Workspace sync, once paired, is the sync that matters; the Google mirror
     // keeps the slot otherwise.
-    if let session = model.syncSession, session.isPaired {
+    if let session = model.syncSession, session.isSignedIn || session.phase == .needsSignIn {
       SyncPhaseText(phase: session.phase)
     } else {
       googleMirror

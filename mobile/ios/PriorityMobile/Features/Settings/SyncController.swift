@@ -51,14 +51,14 @@ final class SyncController {
 
   /// Pull-to-refresh and "Sync now". Quietly nothing when unpaired.
   func syncNow() async {
-    guard session.isPaired else { return }
+    guard session.isSignedIn else { return }
     await session.syncNow()
   }
 
   /// Asks for a background refresh in a quarter of an hour or so. The
   /// system decides when; a paired device is all that asks.
   func scheduleBackgroundRefresh() {
-    guard session.isPaired else { return }
+    guard session.isSignedIn else { return }
     let request = BGAppRefreshTaskRequest(identifier: Self.refreshTaskID)
     request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
     do {
@@ -70,22 +70,46 @@ final class SyncController {
 
   /// The background refresh task's body: one cycle, then ask for the next.
   func backgroundRefresh() async {
-    guard session.isPaired else { return }
+    guard session.isSignedIn else { return }
     await session.syncNow()
     scheduleBackgroundRefresh()
   }
 
-  // MARK: - Pairing
+  // MARK: - Signing in
 
-  /// Joins with a link scanned, pasted or opened. True when paired.
+  /// Signs in to an existing account. True when signed in.
+  @discardableResult
+  func signIn(email: String, password: String, serverURL: URL) async -> Bool {
+    await attempt { try await self.session.signIn(email: email, password: password, serverURL: serverURL) }
+  }
+
+  /// Makes an account and signs in to it. True when signed in.
+  @discardableResult
+  func signUp(email: String, password: String, serverURL: URL) async -> Bool {
+    await attempt { try await self.session.signUp(email: email, password: password, serverURL: serverURL) }
+  }
+
+  /// Joins with a link scanned, pasted or opened. True when signed in.
   @discardableResult
   func pair(with link: SyncPairingLink) async -> Bool {
     await attempt { try await self.session.pair(with: link) }
   }
 
+  /// Joins with a typed code (or a pasted link). True when signed in.
   @discardableResult
-  func pair(serverURL: URL, adminToken: String) async -> Bool {
-    await attempt { try await self.session.pair(serverURL: serverURL, adminToken: adminToken) }
+  func pair(codeOrLink: String, serverURL: URL) async -> Bool {
+    await attempt { try await self.session.pair(codeOrLink: codeOrLink, serverURL: serverURL) }
+  }
+
+  /// Signs this device out. Its tasks stay.
+  func signOut() async {
+    await session.signOut()
+  }
+
+  /// Deletes the account on the server. True when it is gone.
+  @discardableResult
+  func deleteAccount(password: String) async -> Bool {
+    await attempt { try await self.session.deleteAccount(password: password) }
   }
 
   private func attempt(_ work: () async throws -> Void) async -> Bool {
@@ -100,14 +124,6 @@ final class SyncController {
       return false
     }
   }
-
-  func unpair() {
-    do {
-      try session.unpair()
-    } catch {
-      pairingError = error.localizedDescription
-    }
-  }
 }
 
 /// The phase in words, shared by the status line and the settings screen.
@@ -115,10 +131,11 @@ enum SyncPhaseText {
   static func describe(_ phase: SyncSession.Phase, now: Date = .now) -> String {
     switch phase {
     case .unpaired: return "Not set up"
+    case .needsSignIn: return "Signed out — sign in again"
     case .syncing: return "Syncing…"
     case .failed(let message): return "Couldn't sync: \(message)"
     case .idle(let last):
-      guard let last else { return "Paired" }
+      guard let last else { return "Signed in" }
       if now.timeIntervalSince(last) < 60 { return "Synced just now" }
       let relative = RelativeDateTimeFormatter()
       relative.unitsStyle = .short
@@ -129,6 +146,7 @@ enum SyncPhaseText {
   static func short(_ phase: SyncSession.Phase) -> String {
     switch phase {
     case .unpaired: "Off"
+    case .needsSignIn: "Signed out"
     case .syncing: "Syncing"
     case .failed: "Error"
     case .idle: "On"
@@ -138,9 +156,17 @@ enum SyncPhaseText {
   static func symbol(_ phase: SyncSession.Phase) -> String {
     switch phase {
     case .unpaired: "icloud.slash"
+    case .needsSignIn, .failed: "exclamationmark.icloud"
     case .syncing: "arrow.triangle.2.circlepath"
-    case .failed: "exclamationmark.icloud"
     case .idle: "checkmark.icloud"
+    }
+  }
+
+  /// Whether the phase is something the user has to deal with.
+  static func isProblem(_ phase: SyncSession.Phase) -> Bool {
+    switch phase {
+    case .needsSignIn, .failed: true
+    default: false
     }
   }
 }

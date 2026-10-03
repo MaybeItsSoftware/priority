@@ -115,6 +115,13 @@ and forgets the password.
 
 A `401` on any device route means the token is gone (signed out, or the
 account deleted): the client stops syncing and asks the user to sign in again.
+The Swift client keeps the email beside the token in the Keychain so it can
+offer it back, and marks the stored credentials signed out rather than
+retrying (`SyncSession.Phase.needsSignIn`).
+
+The apps talk to `https://priority-sync.up.railway.app` unless the user names
+another server under "Use a different server" (`SyncServer.defaultURL` in
+`Sources/PrioritySync`).
 
 ### `POST /v1/pair`
 Request: `{ "code": "ABCD-EFGH", "deviceName": "Adam's iPhone", "platform": "ios" }`

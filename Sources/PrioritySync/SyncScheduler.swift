@@ -14,6 +14,10 @@ public actor SyncScheduler {
   private var loop: Task<Void, Never>?
   private var pending: Task<Void, Never>?
   private var failures = 0
+  /// Set when the server refuses the token. Nothing runs after that: every
+  /// cycle would get the same 401, so the scheduler waits to be replaced by
+  /// one with a fresh sign-in.
+  public private(set) var isSignedOut = false
 
   public init(engine: SyncEngine, debounce: Duration = .seconds(2), listener: @escaping Listener) {
     self.engine = engine
@@ -24,10 +28,10 @@ public actor SyncScheduler {
   /// Syncs now and keeps a long-poll open until `stop()`. Call when the app
   /// comes to the front.
   public func start() {
-    guard loop == nil else { return }
+    guard loop == nil, !isSignedOut else { return }
     loop = Task { [weak self] in
       while !Task.isCancelled {
-        guard let self else { return }
+        guard let self, await !self.isSignedOut else { return }
         let delay = await self.runOnce(wait: 25)
         if let delay { try? await Task.sleep(for: delay) }
       }
@@ -65,12 +69,14 @@ public actor SyncScheduler {
   /// One cycle, for a background refresh or a "Sync now" button.
   @discardableResult
   public func syncNow() async -> Bool {
-    await runOnce(wait: 0) == nil
+    guard !isSignedOut else { return false }
+    return await runOnce(wait: 0) == nil && !isSignedOut
   }
 
   /// Runs a cycle and reports it. Returns how long to back off before the next
   /// long-poll, or nil to go straight back.
   private func runOnce(wait: Int) async -> Duration? {
+    if isSignedOut { return nil }
     await listener(.syncing, nil)
     do {
       let outcome = try await engine.sync(wait: wait)
@@ -80,10 +86,15 @@ public actor SyncScheduler {
     } catch where Task.isCancelled || (error as? URLError)?.code == .cancelled || error is CancellationError {
       // A long-poll restarted to push a local edit, not a failure.
       return nil
+    } catch SyncError.unauthorized {
+      isSignedOut = true
+      stop()
+      pending?.cancel()
+      await listener(.signedOut, nil)
+      return nil
     } catch {
       failures += 1
       await listener(.failed(error.localizedDescription), nil)
-      if case SyncError.unauthorized = error { stop() }
       // 2, 4, 8 … seconds, capped at five minutes, so an outage costs nothing.
       return .seconds(min(300, 1 << min(failures, 8)))
     }

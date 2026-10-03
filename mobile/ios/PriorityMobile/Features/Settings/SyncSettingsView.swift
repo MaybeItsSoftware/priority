@@ -31,8 +31,6 @@ private struct SyncSettingsForm: View {
   @Environment(\.theme) private var theme
   @Bindable var controller: SyncController
   @State private var pastedLink = ""
-  @State private var serverURL = ""
-  @State private var adminToken = ""
   @State private var isScanning = false
   @State private var isConfirmingUnpair = false
   @State private var isMakingCode = false
@@ -52,7 +50,7 @@ private struct SyncSettingsForm: View {
         }
         .listRowBackground(theme.danger.opacity(0.08))
       }
-      if session.isPaired {
+      if session.isSignedIn {
         paired
       } else {
         unpaired
@@ -165,7 +163,7 @@ private struct SyncSettingsForm: View {
       Button("Unpair this device", role: .destructive) { isConfirmingUnpair = true }
         .accessibilityIdentifier("sync.unpair")
         .confirmationDialog("Unpair this device?", isPresented: $isConfirmingUnpair, titleVisibility: .visible) {
-          Button("Unpair", role: .destructive) { controller.unpair() }
+          Button("Sign out", role: .destructive) { Task { await controller.signOut() } }
         } message: {
           Text("Your tasks stay on this device. They stop syncing with your other devices.")
         }
@@ -225,35 +223,6 @@ private struct SyncSettingsForm: View {
       header("Join your other devices")
     } footer: {
       Text("On a paired device, open Settings → Sync → Add a device.")
-        .font(theme.type.footnote).foregroundStyle(theme.muted)
-    }
-    .listRowBackground(theme.raised)
-
-    Section {
-      TextField("Server URL", text: $serverURL)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .keyboardType(.URL)
-        .font(theme.type.callout)
-      SecureField("Admin token", text: $adminToken)
-        .font(theme.type.callout)
-      Button("Pair with server") {
-        guard let url = URL(string: serverURL.trimmingCharacters(in: .whitespaces)), url.scheme?.hasPrefix("http") == true
-        else {
-          controller.pairingError = "Enter the server's full address, starting with https://."
-          return
-        }
-        Task {
-          if await controller.pair(serverURL: url, adminToken: adminToken.trimmingCharacters(in: .whitespaces)) {
-            adminToken = ""
-          }
-        }
-      }
-      .disabled(serverURL.isEmpty || adminToken.isEmpty)
-    } header: {
-      header("Advanced")
-    } footer: {
-      Text("For the first device on a new server: its address and the admin token it was started with.")
         .font(theme.type.footnote).foregroundStyle(theme.muted)
     }
     .listRowBackground(theme.raised)

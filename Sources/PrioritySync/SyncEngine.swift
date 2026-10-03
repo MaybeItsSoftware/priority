@@ -11,6 +11,8 @@ public actor SyncEngine {
     case idle(lastSyncedAt: Date?)
     case syncing
     case failed(String)
+    /// The server refused the token. Retrying cannot help; signing in can.
+    case signedOut
   }
 
   public struct Outcome: Equatable, Sendable {
@@ -72,7 +74,7 @@ public actor SyncEngine {
       status = .idle(lastSyncedAt: wallClock())
       return outcome
     } catch {
-      status = .failed(error.localizedDescription)
+      status = error as? SyncError == .unauthorized ? .signedOut : .failed(error.localizedDescription)
       throw error
     }
   }

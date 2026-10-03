@@ -32,7 +32,6 @@ struct SyncStatusLine: View {
   }
 
   private func tint(_ phase: SyncSession.Phase) -> Color {
-    if case .failed = phase { return theme.danger }
-    return theme.muted
+    SyncPhaseText.isProblem(phase) ? theme.danger : theme.muted
   }
 }

@@ -7,7 +7,7 @@ final class SyncPhaseTextTests: XCTestCase {
     let now = Date()
     XCTAssertEqual(SyncPhaseText.describe(.unpaired, now: now), "Not set up")
     XCTAssertEqual(SyncPhaseText.describe(.syncing, now: now), "Syncing…")
-    XCTAssertEqual(SyncPhaseText.describe(.idle(lastSyncedAt: nil), now: now), "Paired")
+    XCTAssertEqual(SyncPhaseText.describe(.idle(lastSyncedAt: nil), now: now), "Signed in")
     XCTAssertEqual(SyncPhaseText.describe(.idle(lastSyncedAt: now.addingTimeInterval(-10)), now: now), "Synced just now")
     XCTAssertTrue(SyncPhaseText.describe(.idle(lastSyncedAt: now.addingTimeInterval(-3_600)), now: now).hasPrefix("Synced "))
     XCTAssertEqual(SyncPhaseText.describe(.failed("offline"), now: now), "Couldn't sync: offline")
