@@ -13,10 +13,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.co.maybeitsadam.priority.ui.AppShell
+import uk.co.maybeitsadam.priority.app.ThemeLibraryState
+import uk.co.maybeitsadam.priority.core.theme.ThemeAppearance
 import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
-import uk.co.maybeitsadam.priority.ui.theme.ThemeMode
-import uk.co.maybeitsadam.priority.ui.theme.ThemeSpec
-import uk.co.maybeitsadam.priority.ui.theme.palette
+import uk.co.maybeitsadam.priority.ui.theme.ResolvedTheme
 
 /** The one activity. Edge to edge; intents (quick add, tabs, pairing links) go to the shell. */
 class MainActivity : ComponentActivity() {
@@ -31,9 +31,13 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) pendingIntent = intent
         val container = appContainer
         setContent {
-            val mode by container.settings.themeMode.collectAsStateWithLifecycle(ThemeMode.SYSTEM)
-            val spec by container.settings.themeSpec.collectAsStateWithLifecycle(ThemeSpec.Chalk)
-            val dark = spec.palette(mode, isSystemInDarkTheme()).isDark
+            // The theme is state, not configuration: choosing or editing one
+            // recomposes in place, with no activity restart.
+            val themes by container.themes.state.collectAsStateWithLifecycle(ThemeLibraryState())
+            val spec = themes.specification
+            val mode = themes.mode
+            // A locked theme (Chalk Dark) wins over both the setting and the system.
+            val dark = ResolvedTheme.appearance(spec, mode, isSystemInDarkTheme()) == ThemeAppearance.DARK
             // Status and navigation bar icons follow the app's appearance, not the system's.
             DisposableEffect(dark) {
                 val transparent = android.graphics.Color.TRANSPARENT

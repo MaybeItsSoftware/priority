@@ -2,8 +2,6 @@ package uk.co.maybeitsadam.priority.ui.settings
 
 import android.content.ClipData
 import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,7 +54,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.Instant
@@ -75,17 +72,16 @@ import uk.co.maybeitsadam.priority.ui.components.PButton
 import uk.co.maybeitsadam.priority.ui.components.PriorityTopBar
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
 import uk.co.maybeitsadam.priority.ui.review.Segmented
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
-import uk.co.maybeitsadam.priority.ui.theme.ThemeMode
 
 /** Theme, celebrations, sync and about. */
 @Composable
 fun SettingsScreen() {
     val shell = LocalShell.current
     val model = viewModel { SettingsViewModel(shell.container) }
-    Column(Modifier.fillMaxSize().background(Chalk.colors.paper)) {
+    Column(Modifier.fillMaxSize().background(PriorityTheme.colors.paper)) {
         PriorityTopBar(
             "Settings",
             showHistory = false,
@@ -104,17 +100,17 @@ fun SettingsScreen() {
 }
 
 @Composable
-private fun Section(title: String, footer: String? = null, content: @Composable ColumnScope.() -> Unit) {
+internal fun Section(title: String, footer: String? = null, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-        Text(title, style = Chalk.type.label, color = Chalk.colors.mutedText)
+        Text(title, style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText)
         Card(Modifier.fillMaxWidth()) { Column(content = content) }
-        if (footer != null) Text(footer, style = Chalk.type.small, color = Chalk.colors.mutedText)
+        if (footer != null) Text(footer, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
     }
 }
 
 /** A radio row: a ring that fills azure when chosen. */
 @Composable
-private fun ChoiceRow(title: String, selected: Boolean, detail: String? = null, tag: String = "", onClick: () -> Unit) {
+internal fun ChoiceRow(title: String, selected: Boolean, detail: String? = null, tag: String = "", onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -126,55 +122,10 @@ private fun ChoiceRow(title: String, selected: Boolean, detail: String? = null, 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = Chalk.type.body, color = Chalk.colors.ink)
-            if (detail != null) Text(detail, style = Chalk.type.small, color = Chalk.colors.mutedText)
+            Text(title, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink)
+            if (detail != null) Text(detail, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
         }
-        Box(
-            Modifier.size(20.dp).border(BorderStroke(1.5.dp, if (selected) Chalk.colors.primary else Chalk.colors.inputBorder), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (selected) Box(Modifier.size(10.dp).background(Chalk.colors.primary, CircleShape))
-        }
-    }
-}
-
-@Composable
-private fun ThemeSection(model: SettingsViewModel) {
-    val theme by model.theme.collectAsStateWithLifecycle()
-    val error by model.themeError.collectAsStateWithLifecycle()
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(model::import) }
-    Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-        Text("Appearance", style = Chalk.type.label, color = Chalk.colors.mutedText)
-        Segmented(
-            options = ThemeMode.entries,
-            selected = theme.mode,
-            label = { it.title },
-            tag = { "settings_mode_${it.raw}" },
-            onSelect = model::setMode,
-        )
-    }
-    Section("Theme", footer = "A theme file is JSON: a name and colours for light and dark. See docs/themes.md.") {
-        ChoiceRow("Chalk", theme.choice == ThemeChoice.Chalk, tag = "settings_theme_chalk") { model.choose(ThemeChoice.Chalk) }
-        Hairline(color = Chalk.colors.borderMuted)
-        ChoiceRow("Chalk Dark", theme.choice == ThemeChoice.ChalkDark, detail = "Always dark", tag = "settings_theme_chalk_dark") {
-            model.choose(ThemeChoice.ChalkDark)
-        }
-        theme.importedName?.let { name ->
-            Hairline(color = Chalk.colors.borderMuted)
-            ChoiceRow(name, theme.choice is ThemeChoice.Imported, detail = "Imported", tag = "settings_theme_imported") {
-                model.choose(ThemeChoice.Imported(name))
-            }
-        }
-        Hairline(color = Chalk.colors.borderMuted)
-        Row(Modifier.padding(Metrics.md), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-            PButton("Import theme…", modifier = Modifier.testTag("settings_import_theme")) {
-                picker.launch(arrayOf("application/json", "text/*"))
-            }
-            if (theme.importedName != null) PButton("Remove imported theme", destructive = true) { model.removeImported() }
-        }
-        error?.let {
-            Text(it, style = Chalk.type.small, color = Chalk.colors.danger, modifier = Modifier.padding(start = Metrics.md, end = Metrics.md, bottom = Metrics.md))
-        }
+        RadioRing(selected)
     }
 }
 
@@ -183,7 +134,7 @@ private fun CelebrationSection(model: SettingsViewModel) {
     val style by model.celebration.collectAsStateWithLifecycle()
     Section("Completing a task") {
         CelebrationStyle.entries.forEachIndexed { index, option ->
-            if (index > 0) Hairline(color = Chalk.colors.borderMuted)
+            if (index > 0) Hairline(color = PriorityTheme.colors.borderMuted)
             ChoiceRow(option.title, option == style, detail = option.detail, tag = "settings_celebration_${option.raw}") {
                 model.setCelebration(option)
             }
@@ -197,15 +148,15 @@ private fun AboutSection(model: SettingsViewModel) {
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     Section("About") {
         Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md), verticalAlignment = Alignment.CenterVertically) {
-            Text("Version", style = Chalk.type.body, color = Chalk.colors.ink, modifier = Modifier.weight(1f))
+            Text("Version", style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
             MonoText(remember { model.versionName() })
         }
         licences.forEach { (name, text) ->
-            Hairline(color = Chalk.colors.borderMuted)
+            Hairline(color = PriorityTheme.colors.borderMuted)
             ChoiceRowLike(name, if (open == name) "Hide" else "Licence") { open = if (open == name) null else name }
             if (open == name) {
                 Text(
-                    text, style = Chalk.type.monoSmall, color = Chalk.colors.mutedText,
+                    text, style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.mutedText,
                     modifier = Modifier.padding(horizontal = Metrics.md, vertical = Metrics.sm),
                 )
             }
@@ -219,8 +170,8 @@ private fun ChoiceRowLike(title: String, trailing: String, onClick: () -> Unit) 
         Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).clickable(onClick = onClick).padding(horizontal = Metrics.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, style = Chalk.type.body, color = Chalk.colors.ink, modifier = Modifier.weight(1f))
-        Text(trailing, style = Chalk.type.small, color = Chalk.colors.primary)
+        Text(title, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
+        Text(trailing, style = PriorityTheme.type.small, color = PriorityTheme.colors.primary)
     }
 }
 
@@ -235,11 +186,11 @@ private fun SyncSection(sync: SyncController) {
     if (credentials != null) PairedSync(sync, status, credentials!!.serverURL) else UnpairedSync(sync, pairing)
     error?.let {
         Text(
-            it, style = Chalk.type.small, color = Chalk.colors.danger,
+            it, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger,
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Chalk.colors.danger.copy(alpha = 0.08f), Metrics.control)
-                .border(BorderStroke(Metrics.hairline, Chalk.colors.danger.copy(alpha = 0.4f)), Metrics.control)
+                .background(PriorityTheme.colors.danger.copy(alpha = 0.08f), Metrics.control)
+                .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.danger.copy(alpha = 0.4f)), Metrics.control)
                 .padding(Metrics.md)
                 .testTag("sync_error"),
         )
@@ -260,20 +211,20 @@ private fun PairedSync(sync: SyncController, status: SyncUiState, serverURL: Str
 
     Section("Sync") {
         Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md), verticalAlignment = Alignment.CenterVertically) {
-            Text("Status", style = Chalk.type.body, color = Chalk.colors.ink, modifier = Modifier.weight(1f))
+            Text("Status", style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
             Text(
                 SyncStatusText.describe(status, now),
-                style = Chalk.type.small,
-                color = if (status is SyncUiState.Failed) Chalk.colors.danger else Chalk.colors.mutedText,
+                style = PriorityTheme.type.small,
+                color = if (status is SyncUiState.Failed) PriorityTheme.colors.danger else PriorityTheme.colors.mutedText,
                 modifier = Modifier.weight(2f, fill = false).testTag("sync_status"),
             )
         }
-        Hairline(color = Chalk.colors.borderMuted)
+        Hairline(color = PriorityTheme.colors.borderMuted)
         Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md), verticalAlignment = Alignment.CenterVertically) {
-            Text("Server", style = Chalk.type.body, color = Chalk.colors.ink, modifier = Modifier.weight(1f))
+            Text("Server", style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
             MonoText(SyncController.hostOf(serverURL))
         }
-        Hairline(color = Chalk.colors.borderMuted)
+        Hairline(color = PriorityTheme.colors.borderMuted)
         Row(Modifier.padding(Metrics.md), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             PButton("Sync now", icon = PIcons.Sync, enabled = status != SyncUiState.Syncing, modifier = Modifier.testTag("sync_now")) { sync.syncNow() }
             PButton("Unpair", destructive = true, modifier = Modifier.testTag("sync_unpair")) { confirmUnpair = true }
@@ -286,9 +237,9 @@ private fun PairedSync(sync: SyncController, status: SyncUiState, serverURL: Str
             Column(Modifier.fillMaxWidth().padding(Metrics.md), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Metrics.md)) {
                 QrImage(link, Modifier.size(224.dp))
                 current.expiresAt?.let {
-                    Text("Scan it on the other device. Expires at ${Format.time(it)}.", style = Chalk.type.small, color = Chalk.colors.mutedText)
+                    Text("Scan it on the other device. Expires at ${Format.time(it)}.", style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
                 }
-                MonoText(link, style = Chalk.type.monoSmall, modifier = Modifier.testTag("pairing_link"))
+                MonoText(link, style = PriorityTheme.type.monoSmall, modifier = Modifier.testTag("pairing_link"))
                 Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
                     PButton("Copy link", icon = PIcons.Copy) {
                         scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Pairing link", link))) }
@@ -308,24 +259,24 @@ private fun PairedSync(sync: SyncController, status: SyncUiState, serverURL: Str
                         makingCode = false
                     }
                 }
-                codeError?.let { Text(it, style = Chalk.type.small, color = Chalk.colors.danger) }
+                codeError?.let { Text(it, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger) }
             }
         }
     }
     if (confirmUnpair) {
         AlertDialog(
             onDismissRequest = { confirmUnpair = false },
-            containerColor = Chalk.colors.raised,
+            containerColor = PriorityTheme.colors.raised,
             tonalElevation = 0.dp,
             shape = Metrics.card,
-            title = { Text("Unpair this device?", style = Chalk.type.heading, color = Chalk.colors.ink) },
-            text = { Text("Your tasks stay on this device. They stop syncing with your other devices.", style = Chalk.type.body, color = Chalk.colors.mutedText) },
+            title = { Text("Unpair this device?", style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink) },
+            text = { Text("Your tasks stay on this device. They stop syncing with your other devices.", style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText) },
             confirmButton = {
                 TextButton(onClick = { confirmUnpair = false; sync.unpair() }, modifier = Modifier.testTag("sync_unpair_confirm")) {
-                    Text("Unpair", color = Chalk.colors.danger)
+                    Text("Unpair", color = PriorityTheme.colors.danger)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmUnpair = false }) { Text("Cancel", color = Chalk.colors.ink) } },
+            dismissButton = { TextButton(onClick = { confirmUnpair = false }) { Text("Cancel", color = PriorityTheme.colors.ink) } },
         )
     }
 }
@@ -339,7 +290,7 @@ private fun UnpairedSync(sync: SyncController, pairing: Boolean) {
     var token by remember { mutableStateOf("") }
     Section("Sync", footer = "On a paired device, open Settings, then Add a device.") {
         Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-            Text(if (pairing) "Pairing…" else "Not set up", style = Chalk.type.small, color = Chalk.colors.mutedText, modifier = Modifier.testTag("sync_status"))
+            Text(if (pairing) "Pairing…" else "Not set up", style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, modifier = Modifier.testTag("sync_status"))
             PButton("Scan code", icon = PIcons.QrCode, primary = true, enabled = !pairing, modifier = Modifier.fillMaxWidth().testTag("sync_scan")) { scanning = true }
             Field(pasted, { pasted = it }, "Or paste a pairing link", Modifier.testTag("sync_paste_field"), KeyboardType.Uri)
             PButton("Pair", enabled = !pairing && pasted.isNotBlank(), modifier = Modifier.testTag("sync_paste_pair")) {
@@ -382,12 +333,12 @@ private fun Field(
     keyboard: KeyboardType = KeyboardType.Text,
     secret: Boolean = false,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     BasicTextField(
         value = value,
         onValueChange = onChange,
         singleLine = true,
-        textStyle = Chalk.type.body.copy(color = colors.ink, fontSize = 16.sp),
+        textStyle = PriorityTheme.type.field.copy(color = colors.ink),
         cursorBrush = SolidColor(colors.primary),
         visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboard, autoCorrectEnabled = false),
@@ -402,7 +353,7 @@ private fun Field(
                     .padding(horizontal = Metrics.md),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                if (value.isEmpty()) Text(placeholder, style = Chalk.type.body.copy(fontSize = 16.sp), color = colors.dimText)
+                if (value.isEmpty()) Text(placeholder, style = PriorityTheme.type.field, color = colors.dimText)
                 inner()
             }
         },

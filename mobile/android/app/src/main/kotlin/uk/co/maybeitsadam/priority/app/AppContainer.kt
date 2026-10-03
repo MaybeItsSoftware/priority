@@ -13,7 +13,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import androidx.glance.appwidget.updateAll
+import uk.co.maybeitsadam.priority.widget.NextUpWidget
 import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.priority.core.Workspace
 import uk.co.maybeitsadam.priority.data.db.WorkspaceDatabase
@@ -67,6 +74,13 @@ class AppContainer(
         session.filterNotNull().flatMapLatest { block(it) }
 
     val settings = SettingsStore(context)
+    val themes = ThemeStore(settings)
+
+    /**
+     * The theme library, kept current for the surfaces outside Compose (the
+     * widget, the focus notification) that read it synchronously.
+     */
+    val theme: StateFlow<ThemeLibraryState> = themes.state.stateIn(scope, SharingStarted.Eagerly, ThemeLibraryState())
     val folds = FoldStore(context)
     val inspector = InspectorController()
     val quickAdd = QuickAddController()
@@ -78,6 +92,12 @@ class AppContainer(
         scope.launch { awaitSession() }
         FocusServiceLauncher.attach(this)
         sync.attach()
+        // The widget is drawn from the theme in force, so a new one redraws it.
+        scope.launch {
+            theme.map { it.specification to it.mode }.distinctUntilChanged().drop(1).collect {
+                runCatching { NextUpWidget().updateAll(context) }
+            }
+        }
     }
 
     companion object {

@@ -12,8 +12,6 @@ import uk.co.maybeitsadam.priority.core.TaskProgressPeriod
 import uk.co.maybeitsadam.priority.core.TaskStatus
 import uk.co.maybeitsadam.priority.core.WorkspaceTask
 import uk.co.maybeitsadam.priority.ui.search.SearchMatching
-import uk.co.maybeitsadam.priority.ui.settings.ThemeChoice
-import uk.co.maybeitsadam.priority.ui.settings.ThemeChoices
 
 private val utc = ZoneOffset.UTC
 
@@ -159,23 +157,5 @@ class SearchMatchingTest {
         assertEquals(2, SearchMatching.move(2, 1, 3))
         assertEquals(0, SearchMatching.move(0, -1, 3))
         assertNull(SearchMatching.move(1, 1, 0))
-    }
-}
-
-class ThemeChoicesTest {
-    @Test
-    fun readsTheChoiceFromTheActiveJson() {
-        assertEquals(ThemeChoice.Chalk, ThemeChoices.choice(null))
-        assertEquals(ThemeChoice.ChalkDark, ThemeChoices.choice(ThemeChoices.chalkDarkJson))
-        assertEquals(ThemeChoice.Imported("Paper"), ThemeChoices.choice("""{"name":"Paper"}"""))
-        assertEquals(ThemeChoice.Chalk, ThemeChoices.choice("not json"))
-    }
-
-    @Test
-    fun keepsTheImportedThemeWhileAnotherIsActive() {
-        val paper = """{"name":"Paper"}"""
-        assertEquals(paper, ThemeChoices.importedJson(null, paper))
-        assertEquals(paper, ThemeChoices.importedJson(paper, null))
-        assertNull(ThemeChoices.importedJson(ThemeChoices.chalkDarkJson, null))
     }
 }

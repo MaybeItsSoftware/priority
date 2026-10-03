@@ -41,7 +41,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.collections.immutable.ImmutableList
 import uk.co.maybeitsadam.priority.ui.components.Card
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /** One line or set of bars on a chart. */
@@ -74,12 +74,12 @@ fun ChartCard(
     Card(modifier.fillMaxWidth()) {
         Column(Modifier.padding(Metrics.md)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f))
+                Text(title, style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f))
                 if (series.size > 1) {
                     series.forEach { s ->
                         Box(Modifier.size(8.dp).background(s.color, RoundedCornerShape(2.dp)))
-                        Spacer(Modifier.width(4.dp))
-                        Text(s.name, style = Chalk.type.small, color = Chalk.colors.mutedText)
+                        Spacer(Modifier.width(Metrics.xs))
+                        Text(s.name, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
                         Spacer(Modifier.width(Metrics.sm))
                     }
                 }
@@ -100,9 +100,9 @@ fun ChartCard(
 @Composable
 private fun Plot(days: ImmutableList<Instant>, series: ImmutableList<ChartSeries>, kind: ChartKind, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
-    val labelStyle = Chalk.type.monoSmall.copy(color = Chalk.colors.mutedText)
-    val grid = Chalk.colors.borderMuted
-    val baseline = Chalk.colors.border
+    val labelStyle = PriorityTheme.type.monoSmall.copy(color = PriorityTheme.colors.mutedText)
+    val grid = PriorityTheme.colors.borderMuted
+    val baseline = PriorityTheme.colors.border
     val zone = remember { ZoneId.systemDefault() }
     val maxValue = series.maxOfOrNull { s -> s.values.maxOrNull() ?: 0.0 } ?: 0.0
     val scale = remember(maxValue) { ChartScale.nice(maxValue) }
@@ -194,8 +194,8 @@ fun StatRow(stats: List<Pair<String, String>>, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Metrics.xl)) {
         stats.forEach { (label, value) ->
             Column {
-                Text(value, style = Chalk.type.mono.copy(fontSize = Chalk.type.heading.fontSize), color = Chalk.colors.ink, maxLines = 1)
-                Text(label, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1)
+                Text(value, style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.heading.fontSize), color = PriorityTheme.colors.ink, maxLines = 1)
+                Text(label, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1)
             }
         }
     }

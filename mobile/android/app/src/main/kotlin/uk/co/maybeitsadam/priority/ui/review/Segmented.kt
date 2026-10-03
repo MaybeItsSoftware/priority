@@ -19,7 +19,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import uk.co.maybeitsadam.priority.ui.components.VerticalHairline
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /**
@@ -40,16 +40,16 @@ fun <T> Segmented(
             .fillMaxWidth()
             .height(Metrics.touchTarget)
             .clip(Metrics.control)
-            .border(BorderStroke(Metrics.hairline, Chalk.colors.inputBorder), Metrics.control),
+            .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.inputBorder), Metrics.control),
     ) {
         options.forEachIndexed { index, option ->
-            if (index > 0) VerticalHairline(color = Chalk.colors.inputBorder)
+            if (index > 0) VerticalHairline(color = PriorityTheme.colors.inputBorder)
             val isSelected = option == selected
             Box(
                 Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .background(if (isSelected) Chalk.colors.well else Chalk.colors.raised)
+                    .background(if (isSelected) PriorityTheme.colors.well else PriorityTheme.colors.raised)
                     .clickable(role = Role.Tab) { onSelect(option) }
                     .semantics { this.selected = isSelected }
                     .then(tag(option).takeIf { it.isNotEmpty() }?.let { Modifier.testTag(it) } ?: Modifier),
@@ -57,8 +57,8 @@ fun <T> Segmented(
             ) {
                 Text(
                     label(option),
-                    style = if (isSelected) Chalk.type.bodyStrong.copy(fontSize = Chalk.type.small.fontSize) else Chalk.type.small,
-                    color = if (isSelected) Chalk.colors.ink else Chalk.colors.mutedText,
+                    style = if (isSelected) PriorityTheme.type.bodyStrong.copy(fontSize = PriorityTheme.type.small.fontSize) else PriorityTheme.type.small,
+                    color = if (isSelected) PriorityTheme.colors.ink else PriorityTheme.colors.mutedText,
                     maxLines = 1,
                 )
             }

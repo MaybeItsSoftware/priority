@@ -54,7 +54,7 @@ import uk.co.maybeitsadam.priority.ui.components.IconAction
 import uk.co.maybeitsadam.priority.ui.components.MonoText
 import uk.co.maybeitsadam.priority.ui.components.Tag
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /** How many subtask rows a card draws before "+N more", as on the Mac. */
@@ -119,7 +119,7 @@ internal fun BoardPane(vm: ListViewModel, actions: TaskActions, show: (ListDialo
                     Tag(
                         "${column.title} ${column.cards.size}",
                         selected = index == pager.currentPage,
-                        color = if (index == pager.currentPage) Chalk.colors.primary else Chalk.colors.mutedText,
+                        color = if (index == pager.currentPage) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText,
                         onClick = { scope.launch { pager.animateScrollToPage(index) } },
                     )
                 }
@@ -175,8 +175,8 @@ private fun BoardColumnView(
             Modifier.fillMaxWidth().heightIn(min = 36.dp).padding(horizontal = Metrics.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(column.title, style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f))
-            MonoText(column.cards.size.toString(), style = Chalk.type.monoSmall, color = Chalk.colors.dimText)
+            Text(column.title, style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f))
+            MonoText(column.cards.size.toString(), style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.dimText)
         }
         LazyColumn(
             Modifier.fillMaxSize().testTag("board_column_${column.id}"),
@@ -185,7 +185,7 @@ private fun BoardColumnView(
         ) {
             if (column.cards.isEmpty()) {
                 item(key = "empty", contentType = "empty") {
-                    Text("No cards", style = Chalk.type.small, color = Chalk.colors.dimText, modifier = Modifier.padding(Metrics.sm))
+                    Text("No cards", style = PriorityTheme.type.small, color = PriorityTheme.colors.dimText, modifier = Modifier.padding(Metrics.sm))
                 }
             }
             items(column.cards, key = { it.id }, contentType = { "card" }) { card ->
@@ -221,7 +221,7 @@ private fun BoardCardView(
                 }
                 val detail = card.parentTitle?.let { "Under $it" } ?: card.listName
                 if (detail != null) {
-                    Text(detail, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1, modifier = Modifier.padding(start = Metrics.touchTarget))
+                    Text(detail, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1, modifier = Modifier.padding(start = Metrics.touchTarget))
                 }
                 Box(Modifier.padding(start = Metrics.touchTarget).heightIn(max = 24.dp)) { RowMarkers(row) }
                 for (sub in card.subtasks.take(VISIBLE_SUBTASK_ROWS)) {
@@ -229,12 +229,12 @@ private fun BoardCardView(
                 }
                 if (card.subtasks.size > VISIBLE_SUBTASK_ROWS) {
                     Text(
-                        "+${card.subtasks.size - VISIBLE_SUBTASK_ROWS} more", style = Chalk.type.small, color = Chalk.colors.dimText,
+                        "+${card.subtasks.size - VISIBLE_SUBTASK_ROWS} more", style = PriorityTheme.type.small, color = PriorityTheme.colors.dimText,
                         modifier = Modifier.padding(start = Metrics.touchTarget, top = Metrics.xxs),
                     )
                 } else if (row.isFolded && card.subtaskCount > 0) {
                     Text(
-                        "${card.subtaskCount} folded", style = Chalk.type.small, color = Chalk.colors.dimText,
+                        "${card.subtaskCount} folded", style = PriorityTheme.type.small, color = PriorityTheme.colors.dimText,
                         modifier = Modifier.padding(start = Metrics.touchTarget, top = Metrics.xxs),
                     )
                 }
@@ -266,7 +266,7 @@ private fun SubtaskRow(row: OutlineRow, celebration: CelebrationStyle, actions: 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CelebratedCheck(row.status, row.isList, row.title, celebration) { actions.toggleComplete(row.id) }
-        TaskTitle(row.title, row.status, celebration, Modifier.weight(1f), style = Chalk.type.small, maxLines = 2)
+        TaskTitle(row.title, row.status, celebration, Modifier.weight(1f), style = PriorityTheme.type.small, maxLines = 2)
         if (row.hasChildren) {
             FoldChevron(row.title, row.isFolded, onToggle = { actions.toggleFold(row.id) })
         } else {

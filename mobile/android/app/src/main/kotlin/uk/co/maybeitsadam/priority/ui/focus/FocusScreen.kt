@@ -51,7 +51,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.Instant
@@ -74,7 +73,7 @@ import uk.co.maybeitsadam.priority.ui.components.SectionHeader
 import uk.co.maybeitsadam.priority.ui.components.SettingsAction
 import uk.co.maybeitsadam.priority.ui.components.Tag
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 import uk.co.maybeitsadam.priority.ui.today.ChalkMenu
@@ -112,7 +111,7 @@ fun FocusScreen() {
         },
     )
 
-    Column(Modifier.fillMaxSize().background(Chalk.colors.paper)) {
+    Column(Modifier.fillMaxSize().background(PriorityTheme.colors.paper)) {
         PriorityTopBar(
             "Focus",
             subtitle = if (session != null) null else FocusText.timeTitle(context.endsAt, Instant.now()),
@@ -137,8 +136,8 @@ fun FocusScreen() {
             onConfirm = { gate { vm.confirmOverride() } },
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(Metrics.xs)) {
-                Text(held.title, style = Chalk.type.bodyStrong, color = Chalk.colors.ink)
-                Text(held.explanation, style = Chalk.type.small, color = Chalk.colors.mutedText)
+                Text(held.title, style = PriorityTheme.type.bodyStrong, color = PriorityTheme.colors.ink)
+                Text(held.explanation, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
             }
         }
     }
@@ -230,7 +229,7 @@ private fun Planning(state: FocusUiState, context: FocusContextState, vm: FocusV
 private fun PointsStrip(state: FocusUiState, last: LastBlock?, onDismiss: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = Metrics.lg, vertical = Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
         if (last != null) {
-            val warning = Chalk.colors.warning
+            val warning = PriorityTheme.colors.warning
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -241,9 +240,9 @@ private fun PointsStrip(state: FocusUiState, last: LastBlock?, onDismiss: () -> 
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val award = last.award
-                MonoText(if (award != null) "+${FocusPoints.formatted(award.points)} points" else "Logged", color = Chalk.colors.ink)
+                MonoText(if (award != null) "+${FocusPoints.formatted(award.points)} points" else "Logged", color = PriorityTheme.colors.ink)
                 Spacer(Modifier.width(Metrics.sm))
-                Text(FocusActions.outcomeText(last.outcome), style = Chalk.type.small, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f))
+                Text(FocusActions.outcomeText(last.outcome), style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f))
                 IconAction(Icons.Filled.Close, "Dismiss", onClick = onDismiss)
             }
         }
@@ -260,8 +259,8 @@ private fun PointsStrip(state: FocusUiState, last: LastBlock?, onDismiss: () -> 
 @Composable
 private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier) {
-        MonoText(value, style = Chalk.type.mono.copy(fontSize = 17.sp), color = Chalk.colors.ink)
-        Text(label, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1)
+        MonoText(value, style = PriorityTheme.type.monoBody, color = PriorityTheme.colors.ink)
+        Text(label, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1)
     }
 }
 
@@ -271,7 +270,7 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
     var customMinutes by rememberSaveable { mutableStateOf(false) }
     var pickingUntil by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(vertical = Metrics.sm), verticalArrangement = Arrangement.spacedBy(Metrics.xs)) {
-        Text("Where you are", style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.padding(horizontal = Metrics.lg))
+        Text("Where you are", style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.padding(horizontal = Metrics.lg))
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Metrics.lg),
             horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
@@ -282,7 +281,7 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
                 val on = condition.id in context.selected
                 Tag(
                     condition.name,
-                    color = if (on) Chalk.colors.primary else Chalk.colors.mutedText,
+                    color = if (on) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText,
                     selected = on,
                     leading = if (condition.isLocation) Icons.Filled.LocationOn else null,
                     modifier = Modifier.testTag("focus_condition_${condition.name}"),
@@ -291,7 +290,7 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
             }
             Tag("New condition", leading = Icons.Filled.Add, onClick = { addingCondition = true })
         }
-        Text("Time you have", style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.padding(start = Metrics.lg, end = Metrics.lg, top = Metrics.xs))
+        Text("Time you have", style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.padding(start = Metrics.lg, end = Metrics.lg, top = Metrics.xs))
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Metrics.lg),
             horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
@@ -306,7 +305,7 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
             val until = time as? AvailableTime.Until
             TimeTag(until?.let { "Until ${FocusText.hourMinute(it.time)}" } ?: "Until…", until != null) { pickingUntil = true }
         }
-        Text("Mode", style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.padding(start = Metrics.lg, end = Metrics.lg, top = Metrics.xs))
+        Text("Mode", style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.padding(start = Metrics.lg, end = Metrics.lg, top = Metrics.xs))
         Row(Modifier.padding(horizontal = Metrics.lg), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             TimeTag("Make progress", context.mode == FocusTimeMode.PROGRESS) { vm.setMode(FocusTimeMode.PROGRESS) }
             TimeTag("Finish something", context.mode == FocusTimeMode.FINISH) { vm.setMode(FocusTimeMode.FINISH) }
@@ -340,7 +339,7 @@ private fun ContextControls(state: FocusUiState, context: FocusContextState, vm:
 
 @Composable
 private fun TimeTag(text: String, selected: Boolean, mono: Boolean = false, onClick: () -> Unit) {
-    Tag(text, color = if (selected) Chalk.colors.primary else Chalk.colors.mutedText, selected = selected, mono = mono, onClick = onClick)
+    Tag(text, color = if (selected) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText, selected = selected, mono = mono, onClick = onClick)
 }
 
 @Composable
@@ -354,10 +353,10 @@ private fun StagedCard(
 ) {
     Card(Modifier.fillMaxWidth().padding(horizontal = Metrics.lg, vertical = Metrics.sm), selected = true) {
         Column(Modifier.padding(Metrics.lg), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-            Text(title, style = Chalk.type.title, color = Chalk.colors.ink, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            if (explanation != null) Text(explanation, style = Chalk.type.small, color = Chalk.colors.mutedText)
+            Text(title, style = PriorityTheme.type.title, color = PriorityTheme.colors.ink, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            if (explanation != null) Text(explanation, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-                MonoText(Format.duration(minutes * 60), style = Chalk.type.mono.copy(fontSize = 22.sp), color = Chalk.colors.ink, modifier = Modifier.widthIn(min = 72.dp).testTag("focus_block_length"))
+                MonoText(Format.duration(minutes * 60), style = PriorityTheme.type.monoTitle, color = PriorityTheme.colors.ink, modifier = Modifier.widthIn(min = 72.dp).testTag("focus_block_length"))
                 BlockIconButton(MinusIcon, "Five minutes shorter", onClick = { onMinutes(minutes - 5) })
                 BlockIconButton(Icons.Filled.Add, "Five minutes longer", onClick = { onMinutes(minutes + 5) })
             }
@@ -395,12 +394,12 @@ private fun RungRow(
     var menu by remember { mutableStateOf(false) }
     var pickingTime by rememberSaveable { mutableStateOf(false) }
     val title = rung.candidate.title
-    Column(modifier.background(if (isStaged) Chalk.colors.primary.copy(alpha = 0.08f) else Chalk.colors.paper)) {
+    Column(modifier.background(if (isStaged) PriorityTheme.colors.primary.copy(alpha = 0.08f) else PriorityTheme.colors.paper)) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = Metrics.lg, end = Metrics.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MonoText("${index + 1}", color = if (index == 0) Chalk.colors.primary else Chalk.colors.dimText, modifier = Modifier.width(24.dp))
+            MonoText("${index + 1}", color = if (index == 0) PriorityTheme.colors.primary else PriorityTheme.colors.dimText, modifier = Modifier.width(24.dp))
             Box(Modifier.weight(1f)) {
                 Column(
                     Modifier
@@ -409,11 +408,11 @@ private fun RungRow(
                         .combinedClickable(onClick = { vm.stage(rung) }, onLongClick = { menu = true }, onClickLabel = "Stage", onLongClickLabel = "Task actions")
                         .padding(vertical = Metrics.sm, horizontal = Metrics.xs),
                 ) {
-                    Text(title, style = if (index == 0) Chalk.type.bodyStrong else Chalk.type.body, color = Chalk.colors.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (rung.candidate.isDailyDueToday) Icon(PIcons.Repeat, "Daily", tint = Chalk.colors.categoricalPurple, modifier = Modifier.size(12.dp))
-                        if (rung.candidate.focusRank != null) Icon(PIcons.Flag, "Pinned", tint = Chalk.colors.mutedText, modifier = Modifier.size(12.dp))
-                        Text(explanation, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(title, style = if (index == 0) PriorityTheme.type.bodyStrong else PriorityTheme.type.body, color = PriorityTheme.colors.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Row(horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs), verticalAlignment = Alignment.CenterVertically) {
+                        if (rung.candidate.isDailyDueToday) Icon(PIcons.Repeat, "Daily", tint = PriorityTheme.colors.categoricalPurple, modifier = Modifier.size(12.dp))
+                        if (rung.candidate.focusRank != null) Icon(PIcons.Flag, "Pinned", tint = PriorityTheme.colors.mutedText, modifier = Modifier.size(12.dp))
+                        Text(explanation, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 ChalkMenu(menu, onDismiss = { menu = false }) {
@@ -433,9 +432,9 @@ private fun RungRow(
             rung.candidate.remainingSeconds?.takeIf { it > 0 }?.let {
                 MonoText(Format.duration(it), modifier = Modifier.padding(horizontal = Metrics.xs))
             }
-            IconAction(Icons.Filled.PlayArrow, "Start focus on $title", tint = Chalk.colors.primary, onClick = onBegin)
+            IconAction(Icons.Filled.PlayArrow, "Start focus on $title", tint = PriorityTheme.colors.primary, onClick = onBegin)
         }
-        Hairline(color = Chalk.colors.borderMuted)
+        Hairline(color = PriorityTheme.colors.borderMuted)
     }
     if (pickingTime) {
         TimeOfDayDialog(
@@ -464,15 +463,15 @@ private fun BlockedRow(title: String, reasons: String, onStage: () -> Unit, onIn
                     .combinedClickable(onClick = { menu = true }, onLongClick = { menu = true })
                     .padding(horizontal = Metrics.lg, vertical = Metrics.sm),
             ) {
-                Text(title, style = Chalk.type.body, color = Chalk.colors.mutedText, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(reasons, style = Chalk.type.small, color = Chalk.colors.dimText, maxLines = 3)
+                Text(title, style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(reasons, style = PriorityTheme.type.small, color = PriorityTheme.colors.dimText, maxLines = 3)
             }
             ChalkMenu(menu, onDismiss = { menu = false }) {
                 ChalkMenuItem("Stage anyway") { menu = false; onStage() }
                 ChalkMenuItem("Open inspector") { menu = false; onInspect() }
             }
         }
-        Hairline(color = Chalk.colors.borderMuted)
+        Hairline(color = PriorityTheme.colors.borderMuted)
     }
 }
 
@@ -497,22 +496,22 @@ private fun RunningBlock(state: FocusUiState, vm: FocusViewModel) {
             return@Column
         }
         Column(verticalArrangement = Arrangement.spacedBy(Metrics.xs)) {
-            Text(if (paused) "Paused" else "Focusing", style = Chalk.type.label, color = if (paused) Chalk.colors.warning else Chalk.colors.primary)
-            Text(state.activeTitle ?: "", style = Chalk.type.title.copy(fontSize = 24.sp, lineHeight = 30.sp), color = Chalk.colors.ink)
+            Text(if (paused) "Paused" else "Focusing", style = PriorityTheme.type.label, color = if (paused) PriorityTheme.colors.warning else PriorityTheme.colors.primary)
+            Text(state.activeTitle ?: "", style = PriorityTheme.type.headline, color = PriorityTheme.colors.ink)
         }
         Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             Text(
                 reading.text,
-                style = Chalk.type.monoLarge.copy(fontSize = 64.sp, lineHeight = 72.sp),
+                style = PriorityTheme.type.hero,
                 color = when {
-                    paused -> Chalk.colors.mutedText
-                    reading.isOverrun -> Chalk.colors.warning
-                    else -> Chalk.colors.ink
+                    paused -> PriorityTheme.colors.mutedText
+                    reading.isOverrun -> PriorityTheme.colors.warning
+                    else -> PriorityTheme.colors.ink
                 },
                 modifier = Modifier.testTag("focus_clock").semantics { contentDescription = "Elapsed ${reading.text}" },
             )
-            Box(Modifier.fillMaxWidth().height(4.dp).background(Chalk.colors.well)) {
-                Box(Modifier.fillMaxWidth(reading.fraction).height(4.dp).background(if (reading.isOverrun) Chalk.colors.warning else Chalk.colors.primary))
+            Box(Modifier.fillMaxWidth().height(4.dp).background(PriorityTheme.colors.well)) {
+                Box(Modifier.fillMaxWidth(reading.fraction).height(4.dp).background(if (reading.isOverrun) PriorityTheme.colors.warning else PriorityTheme.colors.primary))
             }
             MonoText("${Format.clock(reading.elapsedSeconds)} / ${Format.duration(maxOf(60, session.workDurationSeconds))} planned")
         }
@@ -536,23 +535,23 @@ private fun RunningBlock(state: FocusUiState, vm: FocusViewModel) {
         }
         Text(
             "End session",
-            style = Chalk.type.body,
-            color = Chalk.colors.mutedText,
+            style = PriorityTheme.type.body,
+            color = PriorityTheme.colors.mutedText,
             modifier = Modifier
                 .clip(Metrics.control)
                 .clickable(role = Role.Button, onClick = vm::endSession)
                 .heightIn(min = Metrics.touchTarget)
-                .padding(horizontal = Metrics.sm, vertical = 14.dp),
+                .padding(horizontal = Metrics.sm, vertical = Metrics.md + Metrics.xxs),
         )
         if (state.queue.isNotEmpty()) {
             Column {
-                Text("Up next in this session", style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.padding(bottom = Metrics.xs))
+                Text("Up next in this session", style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.padding(bottom = Metrics.xs))
                 for (entry in state.queue) {
                     Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(entry.task.title, style = Chalk.type.body, color = Chalk.colors.ink, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(entry.task.title, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         entry.item.plannedSeconds?.let { MonoText(Format.duration(it)) }
                     }
-                    Hairline(color = Chalk.colors.borderMuted)
+                    Hairline(color = PriorityTheme.colors.borderMuted)
                 }
             }
         }

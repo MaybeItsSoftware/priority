@@ -41,7 +41,7 @@ import uk.co.maybeitsadam.priority.ui.components.Format
 import uk.co.maybeitsadam.priority.ui.components.Hairline
 import uk.co.maybeitsadam.priority.ui.components.MonoText
 import uk.co.maybeitsadam.priority.ui.components.PButton
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /**
@@ -61,8 +61,8 @@ fun QualityPrompt(
     ModalBottomSheet(
         onDismissRequest = onCancel,
         sheetState = sheet,
-        containerColor = Chalk.colors.paper,
-        contentColor = Chalk.colors.ink,
+        containerColor = PriorityTheme.colors.paper,
+        contentColor = PriorityTheme.colors.ink,
         tonalElevation = 0.dp,
         shape = Metrics.card,
         modifier = Modifier.testTag("quality_prompt"),
@@ -71,18 +71,18 @@ fun QualityPrompt(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = Metrics.lg),
             verticalArrangement = Arrangement.spacedBy(Metrics.md),
         ) {
-            Text("How did that go?", style = Chalk.type.title, color = Chalk.colors.ink)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(pending.title, style = Chalk.type.heading, color = Chalk.colors.ink, maxLines = 2)
+            Text("How did that go?", style = PriorityTheme.type.title, color = PriorityTheme.colors.ink)
+            Column(verticalArrangement = Arrangement.spacedBy(Metrics.xxs)) {
+                Text(pending.title, style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink, maxLines = 2)
                 MonoText(
                     "${Format.duration(pending.seconds)} · ${if (pending.completeTask) "finishes the task" else "task stays open"}",
                 )
             }
             Column(
-                Modifier.clip(Metrics.card).background(Chalk.colors.raised).border(BorderStroke(Metrics.hairline, Chalk.colors.border), Metrics.card),
+                Modifier.clip(Metrics.card).background(PriorityTheme.colors.raised).border(BorderStroke(Metrics.hairline, PriorityTheme.colors.border), Metrics.card),
             ) {
                 FocusQuality.entries.forEachIndexed { index, quality ->
-                    if (index > 0) Hairline(color = Chalk.colors.borderMuted)
+                    if (index > 0) Hairline(color = PriorityTheme.colors.borderMuted)
                     val isOn = multiplier == quality.multiplier
                     Row(
                         Modifier
@@ -96,21 +96,21 @@ fun QualityPrompt(
                         horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(quality.title, style = Chalk.type.body, color = Chalk.colors.ink)
-                            Text(quality.detail, style = Chalk.type.small, color = Chalk.colors.mutedText)
+                            Text(quality.title, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink)
+                            Text(quality.detail, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
                         }
-                        MonoText(FocusText.multiplier(quality.multiplier), color = if (isOn) Chalk.colors.primary else Chalk.colors.mutedText)
+                        MonoText(FocusText.multiplier(quality.multiplier), color = if (isOn) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText)
                         Box(
                             Modifier.size(18.dp).clip(CircleShape)
-                                .border(BorderStroke(if (isOn) 5.dp else 1.5.dp, if (isOn) Chalk.colors.primary else Chalk.colors.inputBorder), CircleShape),
+                                .border(BorderStroke(if (isOn) 5.dp else 1.5.dp, if (isOn) PriorityTheme.colors.primary else PriorityTheme.colors.inputBorder), CircleShape),
                         )
                     }
                 }
             }
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Custom multiplier", style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f))
-                    MonoText(FocusText.multiplier(multiplier), color = Chalk.colors.ink)
+                    Text("Custom multiplier", style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f))
+                    MonoText(FocusText.multiplier(multiplier), color = PriorityTheme.colors.ink)
                 }
                 Slider(
                     value = multiplier.toFloat(),
@@ -118,18 +118,18 @@ fun QualityPrompt(
                     valueRange = MIN_MULTIPLIER..FocusPoints.multiplierRange.endInclusive.toFloat(),
                     steps = ((FocusPoints.multiplierRange.endInclusive - MIN_MULTIPLIER) / 0.25).toInt() - 1,
                     colors = SliderDefaults.colors(
-                        thumbColor = Chalk.colors.primary,
-                        activeTrackColor = Chalk.colors.primary,
-                        inactiveTrackColor = Chalk.colors.well,
-                        activeTickColor = Chalk.colors.primary,
-                        inactiveTickColor = Chalk.colors.inputBorder,
+                        thumbColor = PriorityTheme.colors.primary,
+                        activeTrackColor = PriorityTheme.colors.primary,
+                        inactiveTrackColor = PriorityTheme.colors.well,
+                        activeTickColor = PriorityTheme.colors.primary,
+                        inactiveTickColor = PriorityTheme.colors.inputBorder,
                     ),
                     modifier = Modifier.testTag("quality_custom"),
                 )
                 MonoText(
                     "Earns ${FocusText.points(pending.seconds, multiplier)}",
-                    style = Chalk.type.mono,
-                    color = Chalk.colors.ink,
+                    style = PriorityTheme.type.mono,
+                    color = PriorityTheme.colors.ink,
                     modifier = Modifier.testTag("quality_points"),
                 )
             }

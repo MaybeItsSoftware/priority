@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import uk.co.maybeitsadam.priority.ui.components.Hairline
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /**
@@ -72,16 +72,16 @@ fun CommandPalette(commands: List<PaletteCommand>, onDismiss: () -> Unit) {
                 .padding(Metrics.lg)
                 .widthIn(max = 560.dp)
                 .fillMaxWidth()
-                .background(Chalk.colors.raised, Metrics.card)
-                .border(BorderStroke(Metrics.hairline, Chalk.colors.border), Metrics.card)
+                .background(PriorityTheme.colors.raised, Metrics.card)
+                .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.border), Metrics.card)
                 .testTag("command_palette"),
         ) {
             BasicTextField(
                 value = query,
                 onValueChange = { query = it; selected = 0 },
                 singleLine = true,
-                textStyle = Chalk.type.body.copy(color = Chalk.colors.ink),
-                cursorBrush = SolidColor(Chalk.colors.primary),
+                textStyle = PriorityTheme.type.body.copy(color = PriorityTheme.colors.ink),
+                cursorBrush = SolidColor(PriorityTheme.colors.primary),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { matches.getOrNull(selected)?.let(::run) }),
                 modifier = Modifier
@@ -100,7 +100,7 @@ fun CommandPalette(commands: List<PaletteCommand>, onDismiss: () -> Unit) {
                         }
                     },
                 decorationBox = { inner ->
-                    if (query.isEmpty()) Text("Run a command…", style = Chalk.type.body, color = Chalk.colors.dimText)
+                    if (query.isEmpty()) Text("Run a command…", style = PriorityTheme.type.body, color = PriorityTheme.colors.dimText)
                     inner()
                 },
             )
@@ -112,17 +112,17 @@ fun CommandPalette(commands: List<PaletteCommand>, onDismiss: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .heightIn(min = Metrics.touchTarget)
-                            .background(if (index == selected) Chalk.colors.hover else Chalk.colors.raised)
+                            .background(if (index == selected) PriorityTheme.colors.hover else PriorityTheme.colors.raised)
                             .clickable { run(command) }
                             .padding(horizontal = Metrics.lg),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(command.title, style = Chalk.type.body, color = Chalk.colors.ink)
-                            Text(command.group, style = Chalk.type.small, color = Chalk.colors.mutedText)
+                            Text(command.title, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink)
+                            Text(command.group, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
                         }
                         if (command.keys.isNotEmpty()) {
-                            Text(command.keys, style = Chalk.type.monoSmall, color = Chalk.colors.mutedText)
+                            Text(command.keys, style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.mutedText)
                         }
                     }
                 }
@@ -130,7 +130,7 @@ fun CommandPalette(commands: List<PaletteCommand>, onDismiss: () -> Unit) {
                     item(key = "none", contentType = "empty") {
                         Text(
                             "No command matches",
-                            style = Chalk.type.small, color = Chalk.colors.mutedText,
+                            style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText,
                             modifier = Modifier.padding(Metrics.lg),
                         )
                     }

@@ -66,14 +66,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 import uk.co.maybeitsadam.priority.settings.SyncPairingLink
 import uk.co.maybeitsadam.priority.ui.components.IconAction
 import uk.co.maybeitsadam.priority.ui.components.PButton
-import uk.co.maybeitsadam.priority.ui.theme.ChalkPalette
+import uk.co.maybeitsadam.priority.core.theme.ThemeAppearance
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
+import uk.co.maybeitsadam.priority.ui.theme.ThemeColors
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /**
  * A QR code for [text], one pixel per module, drawn ink on paper. Always the
- * light palette: a scanner reads dark-on-light, so this is a theme-invariant surface.
+ * theme's light half: a scanner reads dark-on-light, so this surface does not
+ * flip with the appearance.
  */
-fun qrBitmap(text: String, ink: Color = ChalkPalette.ChalkLight.ink, paper: Color = ChalkPalette.ChalkLight.paper): ImageBitmap {
+fun qrBitmap(text: String, ink: Color, paper: Color): ImageBitmap {
     val hints = mapOf(EncodeHintType.MARGIN to 1, EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M)
     val matrix = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, 0, 0, hints)
     val on = ink.toArgb()
@@ -84,15 +87,17 @@ fun qrBitmap(text: String, ink: Color = ChalkPalette.ChalkLight.ink, paper: Colo
 
 @Composable
 fun QrImage(text: String, modifier: Modifier = Modifier) {
-    val bitmap = remember(text) { qrBitmap(text) }
+    val spec = PriorityTheme.current.specification
+    val light = remember(spec) { ThemeColors.of(spec, ThemeAppearance.LIGHT) }
+    val bitmap = remember(text, light) { qrBitmap(text, light.ink, light.paper) }
     Image(
         bitmap,
         contentDescription = "Pairing code",
         filterQuality = FilterQuality.None,
         contentScale = ContentScale.Fit,
         modifier = modifier
-            .background(ChalkPalette.ChalkLight.paper, Metrics.card)
-            .border(BorderStroke(Metrics.hairline, ChalkPalette.ChalkLight.border), Metrics.card)
+            .background(light.paper, Metrics.card)
+            .border(BorderStroke(Metrics.hairline, light.border), Metrics.card)
             .padding(Metrics.md)
             .testTag("pairing_qr"),
     )
@@ -117,11 +122,11 @@ fun PairingScanner(onLink: (SyncPairingLink) -> Unit, onDismiss: () -> Unit) {
     LaunchedEffect(Unit) { if (!granted) launcher.launch(Manifest.permission.CAMERA) }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Box(Modifier.fillMaxSize().background(Color.Black).testTag("pairing_scanner")) {
+        Box(Modifier.fillMaxSize().background(PriorityTheme.colors.mediaLetterbox).testTag("pairing_scanner")) {
             if (granted) CameraFeed(onLink)
             Box(
                 Modifier.align(Alignment.Center).size(240.dp)
-                    .border(BorderStroke(Metrics.hairline, Color.White.copy(alpha = 0.85f)), Metrics.card),
+                    .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.mediaScrimInk.copy(alpha = 0.85f)), Metrics.card),
             )
             Column(
                 Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(Metrics.xl),
@@ -129,12 +134,12 @@ fun PairingScanner(onLink: (SyncPairingLink) -> Unit, onDismiss: () -> Unit) {
             ) {
                 Text(
                     if (denied) "Priority needs the camera to scan a code. Paste the link instead." else "Point at the code on your other device.",
-                    color = Color.White,
+                    color = PriorityTheme.colors.mediaScrimInk,
                 )
                 if (denied) PButton("Allow camera", modifier = Modifier.padding(top = Metrics.md)) { launcher.launch(Manifest.permission.CAMERA) }
             }
             Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing).padding(Metrics.sm).fillMaxWidth()) {
-                IconAction(Icons.Filled.Close, "Close scanner", tint = Color.White, onClick = onDismiss)
+                IconAction(Icons.Filled.Close, "Close scanner", tint = PriorityTheme.colors.mediaScrimInk, onClick = onDismiss)
             }
         }
     }

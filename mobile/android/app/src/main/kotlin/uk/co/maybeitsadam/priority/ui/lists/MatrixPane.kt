@@ -40,17 +40,17 @@ import uk.co.maybeitsadam.priority.ui.commands.Chord
 import uk.co.maybeitsadam.priority.ui.components.Hairline
 import uk.co.maybeitsadam.priority.ui.components.MonoText
 import uk.co.maybeitsadam.priority.ui.components.VerticalHairline
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
 /** A quadrant's hue, as the Mac picks it: danger, primary, warning, dim. */
 @Composable
 internal fun MatrixCell.tint(): Color = when (this) {
-    MatrixCell.DO_NOW -> Chalk.colors.danger
-    MatrixCell.SCHEDULE -> Chalk.colors.primary
-    MatrixCell.DELEGATE -> Chalk.colors.warning
-    MatrixCell.ELIMINATE -> Chalk.colors.dimText
+    MatrixCell.DO_NOW -> PriorityTheme.colors.danger
+    MatrixCell.SCHEDULE -> PriorityTheme.colors.primary
+    MatrixCell.DELEGATE -> PriorityTheme.colors.warning
+    MatrixCell.ELIMINATE -> PriorityTheme.colors.dimText
 }
 
 /**
@@ -87,8 +87,8 @@ internal fun MatrixPane(vm: ListViewModel, actions: TaskActions, modifier: Modif
     ) {
         if (shape.unplaced.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().heightIn(min = 36.dp).padding(horizontal = Metrics.lg), verticalAlignment = Alignment.CenterVertically) {
-                Text("Unplaced", style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f))
-                MonoText(shape.unplaced.size.toString(), style = Chalk.type.monoSmall, color = Chalk.colors.dimText)
+                Text("Unplaced", style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f))
+                MonoText(shape.unplaced.size.toString(), style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.dimText)
             }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 168.dp).testTag("matrix_unplaced")) {
                 items(shape.unplaced, key = { it.id }, contentType = { "matrix_row" }) { card ->
@@ -124,11 +124,11 @@ private fun QuadrantView(
     val tint = quadrant.cell.tint()
     Column(modifier.testTag("matrix_${quadrant.cell.name.lowercase()}")) {
         Row(Modifier.fillMaxWidth().heightIn(min = 36.dp).padding(horizontal = Metrics.md), verticalAlignment = Alignment.CenterVertically) {
-            Text(quadrant.cell.title, style = Chalk.type.label, color = tint, modifier = Modifier.weight(1f), maxLines = 1)
-            MonoText(quadrant.cards.size.toString(), style = Chalk.type.monoSmall, color = Chalk.colors.dimText)
+            Text(quadrant.cell.title, style = PriorityTheme.type.label, color = tint, modifier = Modifier.weight(1f), maxLines = 1)
+            MonoText(quadrant.cards.size.toString(), style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.dimText)
         }
         if (quadrant.cards.isEmpty()) {
-            Text(quadrant.cell.detail, style = Chalk.type.small, color = Chalk.colors.dimText, modifier = Modifier.padding(horizontal = Metrics.md))
+            Text(quadrant.cell.detail, style = PriorityTheme.type.small, color = PriorityTheme.colors.dimText, modifier = Modifier.padding(horizontal = Metrics.md))
         }
         LazyColumn(Modifier.fillMaxSize()) {
             items(quadrant.cards, key = { it.id }, contentType = { "matrix_row" }) { card ->
@@ -153,7 +153,7 @@ private fun MatrixRow(
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(if (isSelected) Chalk.colors.primary.copy(alpha = 0.10f) else Color.Transparent)
+                .background(if (isSelected) PriorityTheme.colors.primary.copy(alpha = 0.10f) else Color.Transparent)
                 .heightIn(min = Metrics.touchTarget)
                 .combinedClickable(onClick = { actions.tap(row.id) }, onLongClick = { menu = true }, onLongClickLabel = "Task actions")
                 .padding(end = Metrics.sm),
@@ -161,8 +161,8 @@ private fun MatrixRow(
         ) {
             CelebratedCheck(row.status, row.isList, row.title, celebration) { actions.toggleComplete(row.id) }
             Column(Modifier.weight(1f)) {
-                TaskTitle(row.title, row.status, celebration, style = Chalk.type.small, maxLines = 2)
-                card.listName?.let { Text(it, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                TaskTitle(row.title, row.status, celebration, style = PriorityTheme.type.small, maxLines = 2)
+                card.listName?.let { Text(it, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
         }
         PMenu(menu, { menu = false }) {

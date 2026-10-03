@@ -62,7 +62,7 @@ import uk.co.maybeitsadam.priority.ui.components.EmptyState
 import uk.co.maybeitsadam.priority.ui.components.Hairline
 import uk.co.maybeitsadam.priority.ui.components.MonoText
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -202,17 +202,17 @@ private fun ListHeaderRow(header: OutlineEntry.Header, onOpen: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .background(Chalk.colors.paper)
+            .background(PriorityTheme.colors.paper)
             .heightIn(min = 40.dp)
             .clickable(onClick = onOpen)
             .padding(horizontal = Metrics.lg)
             .semantics { contentDescription = "Open ${header.name}" },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(header.name, style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f))
-        MonoText(header.count.toString(), style = Chalk.type.monoSmall, color = Chalk.colors.dimText)
+        Text(header.name, style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f))
+        MonoText(header.count.toString(), style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.dimText)
     }
-    Hairline(color = Chalk.colors.borderMuted)
+    Hairline(color = PriorityTheme.colors.borderMuted)
 }
 
 @Composable
@@ -241,7 +241,7 @@ private fun OutlineRowView(
             scope.launch { dismiss.reset() }
         },
     ) {
-        val colors = Chalk.colors
+        val colors = PriorityTheme.colors
         Box {
             Row(
                 Modifier
@@ -259,11 +259,11 @@ private fun OutlineRowView(
                 }
                 CelebratedCheck(row.status, row.isList, row.title, celebration) { actions.toggleComplete(row.id) }
                 if (row.isList) {
-                    Icon(ListIcons.Nested, "List", tint = colors.mutedText, modifier = Modifier.padding(end = 6.dp).size(16.dp))
+                    Icon(ListIcons.Nested, "List", tint = colors.mutedText, modifier = Modifier.padding(end = Metrics.xs + Metrics.xxs).size(16.dp))
                 }
                 TaskTitle(
                     row.title, row.status, celebration,
-                    style = if (row.isList) Chalk.type.bodyStrong else Chalk.type.body,
+                    style = if (row.isList) PriorityTheme.type.bodyStrong else PriorityTheme.type.body,
                     modifier = Modifier.weight(1f, fill = true).padding(vertical = Metrics.xs),
                 )
                 RowMarkers(row, Modifier.padding(start = Metrics.xs).heightIn(min = 24.dp))
@@ -287,7 +287,7 @@ private fun OutlineRowView(
 /** Emerald behind a swipe right (complete), raspberry behind a swipe left (cancel): tinted, not solid. */
 @Composable
 private fun SwipeBackground(direction: SwipeToDismissBoxValue, row: OutlineRow) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val (tint, icon, text, alignment) = when (direction) {
         SwipeToDismissBoxValue.StartToEnd -> Quad(colors.success, Icons.Filled.Check, if (row.status == uk.co.maybeitsadam.priority.core.TaskStatus.OPEN) "Complete" else "Reopen", Alignment.CenterStart)
         SwipeToDismissBoxValue.EndToStart -> Quad(colors.danger, Icons.Filled.Close, if (row.status == uk.co.maybeitsadam.priority.core.TaskStatus.CANCELLED) "Reinstate" else "Cancel", Alignment.CenterEnd)
@@ -298,9 +298,9 @@ private fun SwipeBackground(direction: SwipeToDismissBoxValue, row: OutlineRow) 
         contentAlignment = alignment,
     ) {
         if (icon != null) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs)) {
                 Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
-                Text(text, style = Chalk.type.label, color = tint)
+                Text(text, style = PriorityTheme.type.label, color = tint)
             }
         }
     }

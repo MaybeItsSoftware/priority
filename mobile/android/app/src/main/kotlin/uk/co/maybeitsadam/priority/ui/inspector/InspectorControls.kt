@@ -45,7 +45,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import uk.co.maybeitsadam.priority.ui.components.Hairline
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /** A block of the inspector: a sentence-case muted label, its controls, a hairline under it. */
@@ -62,8 +62,8 @@ fun InspectorSection(
             verticalArrangement = Arrangement.spacedBy(Metrics.sm),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f))
-                if (detail != null) Text(detail, style = Chalk.type.monoSmall, color = Chalk.colors.dimText)
+                Text(label, style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f))
+                if (detail != null) Text(detail, style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.dimText)
             }
             content()
         }
@@ -74,13 +74,13 @@ fun InspectorSection(
 /** A sub-label inside a section: smaller, still muted, still sentence case. */
 @Composable
 fun FieldLabel(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = Chalk.type.small, color = Chalk.colors.mutedText, modifier = modifier)
+    Text(text, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, modifier = modifier)
 }
 
 /** A line of explanation under a control. */
 @Composable
-fun Hint(text: String, modifier: Modifier = Modifier, color: Color = Chalk.colors.dimText) {
-    Text(text, style = Chalk.type.small, color = color, modifier = modifier)
+fun Hint(text: String, modifier: Modifier = Modifier, color: Color = PriorityTheme.colors.dimText) {
+    Text(text, style = PriorityTheme.type.small, color = color, modifier = modifier)
 }
 
 /**
@@ -96,7 +96,7 @@ fun ChalkField(
     singleLine: Boolean = true,
     minLines: Int = 1,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    style: TextStyle = Chalk.type.body,
+    style: TextStyle = PriorityTheme.type.body,
     isError: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -104,7 +104,7 @@ fun ChalkField(
     trailing: (@Composable () -> Unit)? = null,
     contentDescription: String? = null,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val borderColor = when {
@@ -133,7 +133,7 @@ fun ChalkField(
                     .clip(Metrics.control)
                     .background(colors.raised)
                     .border(BorderStroke(Metrics.hairline, borderColor), Metrics.control)
-                    .padding(horizontal = Metrics.md, vertical = 10.dp),
+                    .padding(horizontal = Metrics.md, vertical = Metrics.sm + Metrics.xxs),
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
             ) {
@@ -160,7 +160,7 @@ fun SwitchRow(
     detail: String? = null,
     enabled: Boolean = true,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     Row(
         modifier
             .fillMaxWidth()
@@ -170,8 +170,8 @@ fun SwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f).padding(vertical = Metrics.xs)) {
-            Text(label, style = Chalk.type.body, color = if (enabled) colors.ink else colors.dimText)
-            if (detail != null) Text(detail, style = Chalk.type.small, color = colors.mutedText)
+            Text(label, style = PriorityTheme.type.body, color = if (enabled) colors.ink else colors.dimText)
+            if (detail != null) Text(detail, style = PriorityTheme.type.small, color = colors.mutedText)
         }
         Spacer(Modifier.width(Metrics.sm))
         Switch(
@@ -207,7 +207,7 @@ fun <T> Segmented(
     modifier: Modifier = Modifier,
     mono: Boolean = false,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     Row(
         modifier
             .fillMaxWidth()
@@ -230,7 +230,7 @@ fun <T> Segmented(
             ) {
                 Text(
                     option.label,
-                    style = if (mono) Chalk.type.mono else Chalk.type.small,
+                    style = if (mono) PriorityTheme.type.mono else PriorityTheme.type.small,
                     color = when {
                         isSelected && option.tint != null -> option.tint
                         isSelected -> colors.ink
@@ -254,7 +254,7 @@ fun MenuField(
     contentDescription: String? = null,
     menu: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     Box(modifier) {
         Row(
             Modifier
@@ -270,7 +270,7 @@ fun MenuField(
             horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
         ) {
             if (leading != null) Icon(leading, null, tint = colors.mutedText, modifier = Modifier.size(18.dp))
-            Text(text, style = Chalk.type.body, color = colors.ink, maxLines = 1, modifier = Modifier.weight(1f))
+            Text(text, style = PriorityTheme.type.body, color = colors.ink, maxLines = 1, modifier = Modifier.weight(1f))
             Icon(
                 androidx.compose.material.icons.Icons.Filled.KeyboardArrowDown, null,
                 tint = colors.mutedText, modifier = Modifier.size(20.dp),
@@ -287,10 +287,10 @@ fun ChalkMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Col
         expanded = expanded,
         onDismissRequest = onDismiss,
         shape = Metrics.card,
-        containerColor = Chalk.colors.raised,
+        containerColor = PriorityTheme.colors.raised,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
-        border = BorderStroke(Metrics.hairline, Chalk.colors.border),
+        border = BorderStroke(Metrics.hairline, PriorityTheme.colors.border),
         content = content,
     )
 }
@@ -298,17 +298,17 @@ fun ChalkMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Col
 @Composable
 fun ChalkMenuItem(text: String, onClick: () -> Unit, selected: Boolean = false, modifier: Modifier = Modifier) {
     DropdownMenuItem(
-        text = { Text(text, style = if (selected) Chalk.type.bodyStrong else Chalk.type.body) },
+        text = { Text(text, style = if (selected) PriorityTheme.type.bodyStrong else PriorityTheme.type.body) },
         onClick = onClick,
         modifier = modifier,
-        colors = MenuDefaults.itemColors(textColor = if (selected) Chalk.colors.primary else Chalk.colors.ink),
+        colors = MenuDefaults.itemColors(textColor = if (selected) PriorityTheme.colors.primary else PriorityTheme.colors.ink),
     )
 }
 
 /** A small square button for steppers: 48dp target, 6dp hairline box. */
 @Composable
 fun StepButton(icon: ImageVector, description: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     Box(
         modifier
             .size(Metrics.touchTarget)

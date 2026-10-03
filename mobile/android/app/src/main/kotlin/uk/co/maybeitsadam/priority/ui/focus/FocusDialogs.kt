@@ -21,10 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.time.LocalTime
 import uk.co.maybeitsadam.priority.ui.components.Tag
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /** A flat Chalk alert: paper, 8dp, no tonal tint. */
@@ -40,13 +39,13 @@ fun ChalkDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, style = Chalk.type.heading, color = Chalk.colors.ink) },
+        title = { Text(title, style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink) },
         text = content,
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = confirmEnabled) { Text(confirm, style = Chalk.type.bodyStrong, color = if (confirmEnabled) Chalk.colors.primary else Chalk.colors.dimText) }
+            TextButton(onClick = onConfirm, enabled = confirmEnabled) { Text(confirm, style = PriorityTheme.type.bodyStrong, color = if (confirmEnabled) PriorityTheme.colors.primary else PriorityTheme.colors.dimText) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(dismiss, style = Chalk.type.body, color = Chalk.colors.mutedText) } },
-        containerColor = Chalk.colors.paper,
+        dismissButton = { TextButton(onClick = onDismiss) { Text(dismiss, style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText) } },
+        containerColor = PriorityTheme.colors.paper,
         tonalElevation = 0.dp,
         shape = Metrics.card,
     )
@@ -79,11 +78,11 @@ fun NewConditionDialog(onCreate: (name: String, isLocation: Boolean) -> Unit, on
     var isPlace by rememberSaveable { mutableStateOf(false) }
     ChalkDialog("New condition", onDismiss, "Add", onConfirm = { onCreate(name, isPlace) }, confirmEnabled = name.isNotBlank()) {
         Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-            Text("A place, a tool or a state you need to be in for some tasks.", style = Chalk.type.small, color = Chalk.colors.mutedText)
+            Text("A place, a tool or a state you need to be in for some tasks.", style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
             ChalkField(name, { name = it }, "Name", KeyboardType.Text)
             Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-                Tag("Condition", selected = !isPlace, color = if (!isPlace) Chalk.colors.primary else Chalk.colors.mutedText) { isPlace = false }
-                Tag("Place", selected = isPlace, color = if (isPlace) Chalk.colors.primary else Chalk.colors.mutedText) { isPlace = true }
+                Tag("Condition", selected = !isPlace, color = if (!isPlace) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText) { isPlace = false }
+                Tag("Place", selected = isPlace, color = if (isPlace) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText) { isPlace = true }
             }
         }
     }
@@ -94,20 +93,20 @@ private fun ChalkField(value: String, onChange: (String) -> Unit, label: String,
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, style = Chalk.type.small) },
+        label = { Text(label, style = PriorityTheme.type.small) },
         singleLine = true,
         // 16sp: anything smaller makes some keyboards zoom.
-        textStyle = Chalk.type.body.copy(fontSize = 16.sp, color = Chalk.colors.ink),
+        textStyle = PriorityTheme.type.field.copy(color = PriorityTheme.colors.ink),
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
         shape = Metrics.control,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Chalk.colors.primary,
-            unfocusedBorderColor = Chalk.colors.inputBorder,
-            focusedLabelColor = Chalk.colors.primary,
-            unfocusedLabelColor = Chalk.colors.mutedText,
-            cursorColor = Chalk.colors.primary,
-            focusedContainerColor = Chalk.colors.raised,
-            unfocusedContainerColor = Chalk.colors.raised,
+            focusedBorderColor = PriorityTheme.colors.primary,
+            unfocusedBorderColor = PriorityTheme.colors.inputBorder,
+            focusedLabelColor = PriorityTheme.colors.primary,
+            unfocusedLabelColor = PriorityTheme.colors.mutedText,
+            cursorColor = PriorityTheme.colors.primary,
+            focusedContainerColor = PriorityTheme.colors.raised,
+            unfocusedContainerColor = PriorityTheme.colors.raised,
         ),
         modifier = Modifier.fillMaxWidth(),
     )

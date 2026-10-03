@@ -2,6 +2,7 @@ package uk.co.maybeitsadam.priority.app
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -10,9 +11,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import uk.co.maybeitsadam.priority.ui.theme.ThemeJson
-import uk.co.maybeitsadam.priority.ui.theme.ThemeMode
-import uk.co.maybeitsadam.priority.ui.theme.ThemeSpec
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -24,6 +22,8 @@ enum class CelebrationStyle(val raw: String, val title: String, val detail: Stri
     NONE("none", "None", "Nothing but the tick.");
 
     companion object {
+        fun key(name: String): Preferences.Key<String> = stringPreferencesKey(name)
+
         fun of(raw: String?): CelebrationStyle = entries.firstOrNull { it.raw == raw } ?: STRIKE
     }
 }
@@ -36,21 +36,10 @@ enum class CelebrationStyle(val raw: String, val title: String, val detail: Stri
 class SettingsStore(context: Context) {
     private val store = context.applicationContext.settingsDataStore
 
-    val themeMode: Flow<ThemeMode> = string(THEME_MODE).map { ThemeMode.of(it) }.distinctUntilChanged()
-
-    /** The imported theme's JSON, if one is in use. */
-    val importedThemeJson: Flow<String?> = string(THEME_JSON)
-
-    /** The theme in force: the imported one when it still parses, otherwise Chalk. */
-    val themeSpec: Flow<ThemeSpec> = string(THEME_JSON).map { json ->
-        json?.let { runCatching { ThemeJson.parse(it) }.getOrNull() } ?: ThemeSpec.Chalk
-    }.distinctUntilChanged()
+    /** Every preference, for stores that read several keys together (see [ThemeStore]). */
+    val data: Flow<Preferences> get() = store.data
 
     val celebrationStyle: Flow<CelebrationStyle> = string(CELEBRATION).map { CelebrationStyle.of(it) }
-
-    suspend fun setThemeMode(mode: ThemeMode) = putString(THEME_MODE, mode.raw)
-
-    suspend fun setImportedThemeJson(json: String?) = putString(THEME_JSON, json)
 
     suspend fun setCelebrationStyle(style: CelebrationStyle) = putString(CELEBRATION, style.raw)
 
@@ -65,13 +54,18 @@ class SettingsStore(context: Context) {
     fun stringSet(key: String): Flow<Set<String>> =
         store.data.map { it[stringSetPreferencesKey(key)] ?: emptySet() }.distinctUntilChanged()
 
+    /** Several keys in one transaction. */
+    suspend fun edit(block: (MutablePreferences) -> Unit) {
+        store.edit { block(it) }
+    }
+
     suspend fun putStringSet(key: String, value: Set<String>) {
         store.edit { it[stringSetPreferencesKey(key)] = value }
     }
 
     companion object {
-        const val THEME_MODE = "themeMode"
-        const val THEME_JSON = "themeJSON"
+        fun key(name: String): Preferences.Key<String> = stringPreferencesKey(name)
+
         const val CELEBRATION = "celebrationStyle"
     }
 }

@@ -53,7 +53,7 @@ import uk.co.maybeitsadam.priority.ui.inspector.ChalkMenuItem
 import uk.co.maybeitsadam.priority.ui.inspector.FieldLabel
 import uk.co.maybeitsadam.priority.ui.inspector.MenuField
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -98,8 +98,8 @@ fun QuickAddSheet(request: QuickAddRequest, onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Chalk.colors.paper,
-        contentColor = Chalk.colors.ink,
+        containerColor = PriorityTheme.colors.paper,
+        contentColor = PriorityTheme.colors.ink,
         tonalElevation = 0.dp,
         shape = RoundedCornerShape(topStart = Metrics.cardRadius, topEnd = Metrics.cardRadius),
         dragHandle = { SheetHandle() },
@@ -114,15 +114,15 @@ fun QuickAddSheet(request: QuickAddRequest, onDismiss: () -> Unit) {
                 .testTag("quick_add_sheet"),
             verticalArrangement = Arrangement.spacedBy(Metrics.sm),
         ) {
-            Text("Add a task", style = Chalk.type.title, color = Chalk.colors.ink)
+            Text("Add a task", style = PriorityTheme.type.title, color = PriorityTheme.colors.ink)
             ChalkField(
                 text,
                 onValueChange = { text = it.replace("\n", " ") },
                 placeholder = "What needs doing?",
-                style = Chalk.type.body.copy(fontSize = Chalk.type.heading.fontSize),
+                style = PriorityTheme.type.body.copy(fontSize = PriorityTheme.type.heading.fontSize),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { submit() }),
-                leading = { Icon(PIcons.Inbox, null, tint = Chalk.colors.mutedText, modifier = Modifier.size(18.dp)) },
+                leading = { Icon(PIcons.Inbox, null, tint = PriorityTheme.colors.mutedText, modifier = Modifier.size(18.dp)) },
                 modifier = Modifier
                     .focusRequester(focus)
                     .onPreviewKeyEvent { event ->
@@ -146,8 +146,8 @@ fun QuickAddSheet(request: QuickAddRequest, onDismiss: () -> Unit) {
                 if (preview.chips.isNotEmpty()) {
                     Text(
                         preview.title,
-                        style = Chalk.type.small,
-                        color = Chalk.colors.mutedText,
+                        style = PriorityTheme.type.small,
+                        color = PriorityTheme.colors.mutedText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false).testTag("quick_add_title_preview"),
@@ -181,7 +181,7 @@ fun QuickAddSheet(request: QuickAddRequest, onDismiss: () -> Unit) {
                     onClick = ::submit,
                 )
             }
-            Text(CapturePreview.HINT, style = Chalk.type.small, color = Chalk.colors.dimText)
+            Text(CapturePreview.HINT, style = PriorityTheme.type.small, color = PriorityTheme.colors.dimText)
             if (added.isNotEmpty()) {
                 FieldLabel("Added")
                 for ((index, title) in added.take(5).withIndex()) {
@@ -190,8 +190,8 @@ fun QuickAddSheet(request: QuickAddRequest, onDismiss: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
                         modifier = Modifier.testTag("quick_add_added_$index"),
                     ) {
-                        Icon(Icons.Filled.Check, null, tint = Chalk.colors.success, modifier = Modifier.size(16.dp))
-                        Text(title, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(Icons.Filled.Check, null, tint = PriorityTheme.colors.success, modifier = Modifier.size(16.dp))
+                        Text(title, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

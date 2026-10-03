@@ -37,7 +37,7 @@ import uk.co.maybeitsadam.priority.app.CelebrationStyle
 import uk.co.maybeitsadam.priority.core.TaskStatus
 import uk.co.maybeitsadam.priority.ui.components.TaskCheck
 import uk.co.maybeitsadam.priority.ui.components.priorityColor
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -56,7 +56,7 @@ internal fun FoldChevron(title: String, isFolded: Boolean, onToggle: () -> Unit,
         Icon(
             if (isFolded) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Filled.KeyboardArrowDown,
             contentDescription = null,
-            tint = Chalk.colors.mutedText,
+            tint = PriorityTheme.colors.mutedText,
             modifier = Modifier.size(18.dp),
         )
     }
@@ -81,7 +81,7 @@ internal fun CelebratedCheck(
         }
         previous = status
     }
-    val color = Chalk.colors.success
+    val color = PriorityTheme.colors.success
     Box(
         Modifier.drawBehind {
             val t = spark.value
@@ -116,7 +116,7 @@ internal fun TaskTitle(
     status: TaskStatus,
     celebration: CelebrationStyle,
     modifier: Modifier = Modifier,
-    style: TextStyle = Chalk.type.body,
+    style: TextStyle = PriorityTheme.type.body,
     maxLines: Int = 2,
 ) {
     val closed = status != TaskStatus.OPEN
@@ -134,11 +134,11 @@ internal fun TaskTitle(
         }
         previous = status
     }
-    val ruleColor = Chalk.colors.mutedText
+    val ruleColor = PriorityTheme.colors.mutedText
     Text(
         title,
         style = style,
-        color = if (closed) Chalk.colors.mutedText else Chalk.colors.ink,
+        color = if (closed) PriorityTheme.colors.mutedText else PriorityTheme.colors.ink,
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier.drawWithContent {
@@ -156,16 +156,16 @@ internal fun TaskTitle(
 /** Due, estimate, priority, tags, daily and planned, compactly, after the title. */
 @Composable
 internal fun RowMarkers(row: OutlineRow, modifier: Modifier = Modifier, maxTags: Int = 2) {
-    Row(modifier.fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        val colors = Chalk.colors
+    Row(modifier.fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs), verticalAlignment = Alignment.CenterVertically) {
+        val colors = PriorityTheme.colors
         if (row.isPlanned) Icon(PIcons.Today, "Planned for today", tint = colors.primary, modifier = Modifier.size(14.dp))
         if (row.isDaily) Icon(PIcons.Repeat, "Daily", tint = colors.success, modifier = Modifier.size(14.dp))
         for (tag in row.tags.take(maxTags)) {
-            Text("#$tag", style = Chalk.type.small, color = colors.mutedText, maxLines = 1)
+            Text("#$tag", style = PriorityTheme.type.small, color = colors.mutedText, maxLines = 1)
         }
-        if (row.tags.size > maxTags) Text("+${row.tags.size - maxTags}", style = Chalk.type.monoSmall, color = colors.dimText)
-        row.priority?.let { Text("!$it", style = Chalk.type.mono, color = priorityColor(it)) }
-        row.estimate?.let { Text(it, style = Chalk.type.monoSmall, color = colors.mutedText) }
+        if (row.tags.size > maxTags) Text("+${row.tags.size - maxTags}", style = PriorityTheme.type.monoSmall, color = colors.dimText)
+        row.priority?.let { Text("!$it", style = PriorityTheme.type.mono, color = priorityColor(it)) }
+        row.estimate?.let { Text(it, style = PriorityTheme.type.monoSmall, color = colors.mutedText) }
         row.due?.let { due ->
             val tint = when {
                 row.status != TaskStatus.OPEN -> colors.dimText
@@ -173,7 +173,7 @@ internal fun RowMarkers(row: OutlineRow, modifier: Modifier = Modifier, maxTags:
                 due.isToday -> colors.warning
                 else -> colors.mutedText
             }
-            Text(due.text, style = Chalk.type.monoSmall, color = tint, maxLines = 1)
+            Text(due.text, style = PriorityTheme.type.monoSmall, color = tint, maxLines = 1)
         }
         if (row.hasNotes) Icon(PIcons.Notes, "Has notes", tint = colors.dimText, modifier = Modifier.size(14.dp))
     }

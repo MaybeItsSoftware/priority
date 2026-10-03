@@ -64,7 +64,7 @@ import uk.co.maybeitsadam.priority.ui.components.TaskCheck
 import uk.co.maybeitsadam.priority.ui.components.priorityColor
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
 import uk.co.maybeitsadam.priority.ui.navigation.Tab
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -89,7 +89,7 @@ internal fun InspectorBody(
         if (draft.isUnavailable) {
             Hint(
                 "This task was deleted elsewhere. Your edits are kept here but can't be saved.",
-                color = Chalk.colors.warning,
+                color = PriorityTheme.colors.warning,
                 modifier = Modifier.padding(horizontal = Metrics.lg, vertical = Metrics.sm),
             )
         }
@@ -132,7 +132,7 @@ private fun TitleBlock(
 ) {
     val shell = LocalShell.current
     val commands = shell.container.commands
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val focus = LocalFocusManager.current
     Column(
         Modifier.fillMaxWidth().padding(start = Metrics.xs, end = Metrics.lg, top = Metrics.sm, bottom = Metrics.md),
@@ -143,17 +143,17 @@ private fun TitleBlock(
             BasicTextField(
                 value = values.title,
                 onValueChange = { text -> vm.edit { it.copy(title = text.replace("\n", " ")) } },
-                textStyle = Chalk.type.title.copy(color = if (task.status == TaskStatus.OPEN) colors.ink else colors.mutedText),
+                textStyle = PriorityTheme.type.title.copy(color = if (task.status == TaskStatus.OPEN) colors.ink else colors.mutedText),
                 cursorBrush = SolidColor(colors.primary),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
                 modifier = Modifier
                     .weight(1f)
-                    .padding(top = 10.dp)
+                    .padding(top = Metrics.sm + Metrics.xxs)
                     .testTag("inspector_title")
                     .semantics { contentDescription = "Title" },
                 decorationBox = { inner ->
-                    if (values.title.isEmpty()) Text("Task title", style = Chalk.type.title, color = colors.dimText)
+                    if (values.title.isEmpty()) Text("Task title", style = PriorityTheme.type.title, color = colors.dimText)
                     inner()
                 },
             )
@@ -242,7 +242,7 @@ private fun WhenSection(
             onTime = { time -> edit { v -> v.copy(startAt = v.startAt?.let { DateFieldMath.withTime(it, time, zone) }) } },
             testTag = "inspector_start",
         )
-        if (startError != null) Hint(startError, color = Chalk.colors.danger)
+        if (startError != null) Hint(startError, color = PriorityTheme.colors.danger)
         else Hint("It stays out of Next up until then.")
     }
 }
@@ -255,17 +255,17 @@ private fun PlanSection(
     estimateError: String?,
     edit: ((TaskEditorValues) -> TaskEditorValues) -> Unit,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     InspectorSection("Plan") {
         FieldLabel("Estimate")
         ChalkField(
             values.estimateMinutes,
             onValueChange = { text -> edit { it.copy(estimateMinutes = text) } },
             placeholder = "Minutes",
-            style = Chalk.type.mono.copy(fontSize = Chalk.type.body.fontSize),
+            style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.body.fontSize),
             isError = estimateError != null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-            trailing = { Text("min", style = Chalk.type.small, color = colors.mutedText) },
+            trailing = { Text("min", style = PriorityTheme.type.small, color = colors.mutedText) },
             modifier = Modifier.testTag("inspector_estimate"),
             contentDescription = "Estimate in minutes",
         )
@@ -299,7 +299,7 @@ private fun PlanSection(
 /** Tags as chips (tap to remove) and a field that adds one on Enter. */
 @Composable
 private fun TagEditor(raw: String, onChange: (String) -> Unit) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val tags = remember(raw) { tagList(raw) }
     var adding by rememberSaveable { mutableStateOf("") }
     fun commit() {
@@ -346,7 +346,7 @@ private fun TagEditor(raw: String, onChange: (String) -> Unit) {
 
 @Composable
 private fun RepeatSection(values: TaskEditorValues, zone: ZoneId, edit: ((TaskEditorValues) -> TaskEditorValues) -> Unit) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val presets = remember(values.dueAt, values.dueDate) { RecurrencePresets.presets(DueEditing.day(values, zone)) }
     val selected = remember(values.recurrenceRule, presets) { RecurrencePresets.selected(values.recurrenceRule, presets) }
     val description = remember(values.recurrenceRule) { RecurrencePresets.describe(values.recurrenceRule) }
@@ -367,7 +367,7 @@ private fun RepeatSection(values: TaskEditorValues, zone: ZoneId, edit: ((TaskEd
             values.recurrenceRule,
             onValueChange = { text -> edit { it.copy(recurrenceRule = text) } },
             placeholder = "every monday",
-            style = Chalk.type.mono.copy(fontSize = Chalk.type.body.fontSize),
+            style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.body.fontSize),
             isError = !description.valid,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, imeAction = ImeAction.Done),
             leading = { Icon(PIcons.Repeat, null, tint = colors.mutedText, modifier = Modifier.size(18.dp)) },
@@ -387,7 +387,7 @@ private fun ConditionsSection(
     sittingError: String?,
     edit: ((TaskEditorValues) -> TaskEditorValues) -> Unit,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val groups = values.requirementGroups.orEmpty()
     InspectorSection("Conditions", detail = if (groups.isEmpty()) null else "${groups.size} needed") {
         if (groups.isEmpty()) Hint("Anytime, anywhere. Add a condition to hold it back until you're somewhere or have something.")
@@ -398,9 +398,9 @@ private fun ConditionsSection(
                 verticalArrangement = Arrangement.spacedBy(Metrics.xs),
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(if (index == 0) "Needs" else "and", style = Chalk.type.small, color = colors.mutedText)
+                Text(if (index == 0) "Needs" else "and", style = PriorityTheme.type.small, color = colors.mutedText)
                 group.forEachIndexed { position, id ->
-                    if (position > 0) Text("or", style = Chalk.type.small, color = colors.mutedText)
+                    if (position > 0) Text("or", style = PriorityTheme.type.small, color = colors.mutedText)
                     val name = around.conditionName(id)
                     Tag(
                         name,
@@ -458,10 +458,10 @@ private fun ConditionsSection(
             values.minimumBlockMinutes ?: "",
             onValueChange = { text -> edit { it.copy(minimumBlockMinutes = text.ifEmpty { null }) } },
             placeholder = "Minutes",
-            style = Chalk.type.mono.copy(fontSize = Chalk.type.body.fontSize),
+            style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.body.fontSize),
             isError = minimumError != null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-            trailing = { Text("min", style = Chalk.type.small, color = colors.mutedText) },
+            trailing = { Text("min", style = PriorityTheme.type.small, color = colors.mutedText) },
             contentDescription = "Minimum useful block in minutes",
         )
         if (minimumError != null) Hint(minimumError, color = colors.danger)
@@ -511,7 +511,7 @@ private fun TodaySection(
 
 @Composable
 private fun DailyScheduleEditor(vm: TaskInspectorViewModel, daily: WorkspaceDaily) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val interval = daily.intervalDays
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
         Segmented(
@@ -541,7 +541,7 @@ private fun DailyScheduleEditor(vm: TaskInspectorViewModel, daily: WorkspaceDail
                 }
                 Text(
                     if (interval == 1) "Every day" else "Every $interval days",
-                    style = Chalk.type.mono.copy(fontSize = Chalk.type.body.fontSize),
+                    style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.body.fontSize),
                     color = colors.ink,
                     modifier = Modifier.weight(1f),
                 )
@@ -557,7 +557,7 @@ private fun DailyScheduleEditor(vm: TaskInspectorViewModel, daily: WorkspaceDail
             }
             Text(
                 daily.targetSeconds?.let { Format.duration(it) } ?: "None",
-                style = Chalk.type.mono.copy(fontSize = Chalk.type.body.fontSize),
+                style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.body.fontSize),
                 color = if (daily.targetSeconds == null) colors.dimText else colors.ink,
                 modifier = Modifier.weight(1f),
             )
@@ -573,7 +573,7 @@ private fun DailyScheduleEditor(vm: TaskInspectorViewModel, daily: WorkspaceDail
 private fun LinksSection(values: TaskEditorValues, edit: ((TaskEditorValues) -> TaskEditorValues) -> Unit) {
     val context = LocalContext.current
     val undo = LocalShell.current.container.undo
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val links = remember(values.links) { linkLines(values.links) }
     InspectorSection("Links") {
         ChalkField(
@@ -607,7 +607,7 @@ private fun LinksSection(values: TaskEditorValues, edit: ((TaskEditorValues) -> 
                 horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
             ) {
                 Icon(InspectorIcons.OpenLink, null, tint = colors.primary, modifier = Modifier.size(18.dp))
-                Text(host, style = Chalk.type.body.copy(textDecoration = TextDecoration.Underline), color = colors.ink, maxLines = 1)
+                Text(host, style = PriorityTheme.type.body.copy(textDecoration = TextDecoration.Underline), color = colors.ink, maxLines = 1)
             }
         }
     }
@@ -615,7 +615,7 @@ private fun LinksSection(values: TaskEditorValues, edit: ((TaskEditorValues) -> 
 
 @Composable
 private fun PlacementSection(vm: TaskInspectorViewModel, around: InspectorSurroundings) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val quadrant = MatrixPicker.quadrant(around.facts.matrix)
     val column = around.facts.kanbanColumn
     InspectorSection("Placement") {
@@ -652,10 +652,10 @@ private fun PlacementSection(vm: TaskInspectorViewModel, around: InspectorSurrou
 
 @Composable
 private fun quadrantColor(quadrant: MatrixQuadrant) = when (quadrant) {
-    MatrixQuadrant.DO_NOW -> Chalk.colors.danger
-    MatrixQuadrant.SCHEDULE -> Chalk.colors.primary
-    MatrixQuadrant.DELEGATE -> Chalk.colors.warning
-    MatrixQuadrant.ELIMINATE -> Chalk.colors.mutedText
+    MatrixQuadrant.DO_NOW -> PriorityTheme.colors.danger
+    MatrixQuadrant.SCHEDULE -> PriorityTheme.colors.primary
+    MatrixQuadrant.DELEGATE -> PriorityTheme.colors.warning
+    MatrixQuadrant.ELIMINATE -> PriorityTheme.colors.mutedText
 }
 
 @Composable
@@ -677,11 +677,11 @@ private fun AboutSection(task: WorkspaceTask, around: InspectorSurroundings, zon
 @Composable
 private fun FactRow(label: String, value: String, mono: Boolean = false) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = Chalk.type.small, color = Chalk.colors.mutedText, modifier = Modifier.width(96.dp))
+        Text(label, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, modifier = Modifier.width(96.dp))
         Text(
             value,
-            style = if (mono) Chalk.type.mono else Chalk.type.body,
-            color = Chalk.colors.ink,
+            style = if (mono) PriorityTheme.type.mono else PriorityTheme.type.body,
+            color = PriorityTheme.colors.ink,
             modifier = Modifier.weight(1f),
             maxLines = 2,
         )
@@ -703,8 +703,8 @@ private fun DeleteSection(task: WorkspaceTask, onClose: () -> Unit) {
         } else {
             Text(
                 "Delete “${task.title}” and everything under it? You can undo this.",
-                style = Chalk.type.body,
-                color = Chalk.colors.ink,
+                style = PriorityTheme.type.body,
+                color = PriorityTheme.colors.ink,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
                 PButton("Cancel", modifier = Modifier.weight(1f)) { confirming = false }

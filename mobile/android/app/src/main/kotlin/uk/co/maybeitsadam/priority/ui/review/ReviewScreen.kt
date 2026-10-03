@@ -72,7 +72,7 @@ import uk.co.maybeitsadam.priority.ui.components.SectionHeader
 import uk.co.maybeitsadam.priority.ui.components.SettingsAction
 import uk.co.maybeitsadam.priority.ui.components.TaskCheck
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /** Review: the day's focus on an hour ruler, the work that got done, and the trend. */
@@ -90,7 +90,7 @@ fun ReviewScreen() {
         },
     )
 
-    Column(Modifier.fillMaxSize().background(Chalk.colors.paper)) {
+    Column(Modifier.fillMaxSize().background(PriorityTheme.colors.paper)) {
         PriorityTopBar("Review", actions = { SettingsAction() })
         Segmented(
             options = ReviewSection.entries,
@@ -112,7 +112,7 @@ fun ReviewScreen() {
 /** The identity hues a task takes on the ruler and in the breakdown. Primary first; never danger. */
 @Composable
 private fun hue(index: Int): Color {
-    val c = Chalk.colors
+    val c = PriorityTheme.colors
     val palette = listOf(c.primary, c.categoricalPurple, c.success, c.categoricalOrange, c.categoricalPink, c.warning)
     return palette[index % palette.size]
 }
@@ -136,16 +136,16 @@ private fun TimelinePane(model: ReviewViewModel) {
         verticalArrangement = Arrangement.spacedBy(Metrics.lg),
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Metrics.sm), verticalAlignment = Alignment.CenterVertically) {
-            IconAction(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous day", tint = Chalk.colors.ink) { model.moveDay(-1) }
+            IconAction(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous day", tint = PriorityTheme.colors.ink) { model.moveDay(-1) }
             Text(
                 Format.day(day, today),
-                style = Chalk.type.heading,
-                color = Chalk.colors.ink,
+                style = PriorityTheme.type.heading,
+                color = PriorityTheme.colors.ink,
                 modifier = Modifier.testTag("review_day_title"),
             )
             IconAction(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next day",
-                enabled = day < today, tint = Chalk.colors.ink,
+                enabled = day < today, tint = PriorityTheme.colors.ink,
             ) { model.moveDay(1) }
             Spacer(Modifier.weight(1f))
             if (day != today) PButton("Today", modifier = Modifier.padding(end = Metrics.sm)) { model.showDay(today) }
@@ -170,8 +170,8 @@ private fun TimelinePane(model: ReviewViewModel) {
             if (current.summaries.isEmpty() && current.completions.isEmpty()) {
                 Text(
                     "No focus logged on this day.",
-                    style = Chalk.type.small,
-                    color = Chalk.colors.mutedText,
+                    style = PriorityTheme.type.small,
+                    color = PriorityTheme.colors.mutedText,
                     modifier = Modifier.padding(horizontal = Metrics.lg),
                 )
             }
@@ -191,15 +191,15 @@ private fun DayStrip(selected: LocalDate, today: LocalDate, onSelect: (LocalDate
     ) {
         items(days, key = { it.toEpochDay() }, contentType = { "day" }) { date ->
             val isSelected = date == selected
-            val accent = Chalk.colors.primary
+            val accent = PriorityTheme.colors.primary
             Column(
                 Modifier
                     .width(44.dp)
                     .height(56.dp)
                     .clip(Metrics.control)
-                    .background(if (isSelected) accent.copy(alpha = 0.10f) else Chalk.colors.raised)
+                    .background(if (isSelected) accent.copy(alpha = 0.10f) else PriorityTheme.colors.raised)
                     .border(
-                        BorderStroke(Metrics.hairline, if (isSelected) accent.copy(alpha = 0.6f) else Chalk.colors.border),
+                        BorderStroke(Metrics.hairline, if (isSelected) accent.copy(alpha = 0.6f) else PriorityTheme.colors.border),
                         Metrics.control,
                     )
                     .clickable(role = Role.Button, onClickLabel = "Show this day") { onSelect(date) }
@@ -207,8 +207,8 @@ private fun DayStrip(selected: LocalDate, today: LocalDate, onSelect: (LocalDate
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(shortWeekday(date.dayOfWeek), style = Chalk.type.small, color = if (isSelected) Chalk.colors.ink else Chalk.colors.mutedText)
-                Text(date.dayOfMonth.toString(), style = Chalk.type.mono, color = if (isSelected) accent else Chalk.colors.ink)
+                Text(shortWeekday(date.dayOfWeek), style = PriorityTheme.type.small, color = if (isSelected) PriorityTheme.colors.ink else PriorityTheme.colors.mutedText)
+                Text(date.dayOfMonth.toString(), style = PriorityTheme.type.mono, color = if (isSelected) accent else PriorityTheme.colors.ink)
             }
         }
     }
@@ -219,7 +219,7 @@ private fun Ruler(day: TimelineDay, modifier: Modifier = Modifier) {
     val layout = day.layout
     val zone = remember { ZoneId.systemDefault() }
     val height = HOUR_HEIGHT * layout.hourCount
-    val gridColor = Chalk.colors.borderMuted
+    val gridColor = PriorityTheme.colors.borderMuted
     Row(
         modifier
             .fillMaxWidth()
@@ -230,13 +230,13 @@ private fun Ruler(day: TimelineDay, modifier: Modifier = Modifier) {
             layout.hours.forEachIndexed { index, hour ->
                 Text(
                     hourFormat.format(hour.atZone(zone)),
-                    style = Chalk.type.monoSmall,
-                    color = Chalk.colors.mutedText,
+                    style = PriorityTheme.type.monoSmall,
+                    color = PriorityTheme.colors.mutedText,
                     modifier = Modifier.offset(y = HOUR_HEIGHT * index - 2.dp),
                 )
             }
         }
-        BoxWithConstraints(Modifier.weight(1f).height(height + 8.dp).padding(top = 4.dp)) {
+        BoxWithConstraints(Modifier.weight(1f).height(height + 8.dp).padding(top = Metrics.xs)) {
             val laneWidth = maxWidth / maxOf(1, layout.laneCount)
             for (index in 0..layout.hourCount) {
                 Box(
@@ -257,23 +257,23 @@ private fun Ruler(day: TimelineDay, modifier: Modifier = Modifier) {
                         .offset(x = laneWidth * placement.lane, y = HOUR_HEIGHT * (placement.offsetMinutes / 60).toFloat())
                         .width(laneWidth - 4.dp)
                         .height(blockHeight)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(Metrics.control)
                         .background(color.copy(alpha = 0.14f))
-                        .border(BorderStroke(Metrics.hairline, color.copy(alpha = 0.4f)), RoundedCornerShape(4.dp))
+                        .border(BorderStroke(Metrics.hairline, color.copy(alpha = 0.4f)), Metrics.control)
                         .clearAndSetSemantics { contentDescription = description },
                 ) {
                     Box(Modifier.width(3.dp).height(blockHeight).background(color))
-                    Column(Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
+                    Column(Modifier.padding(horizontal = Metrics.xs + Metrics.xxs, vertical = Metrics.xxs)) {
                         if (blockHeight > 20.dp) {
                             Text(
-                                placement.block.title, style = Chalk.type.small, color = Chalk.colors.ink,
+                                placement.block.title, style = PriorityTheme.type.small, color = PriorityTheme.colors.ink,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                         }
                         if (blockHeight > 38.dp) {
                             MonoText(
                                 Format.duration(placement.block.seconds) + if (placement.block.isLive) " · live" else "",
-                                style = Chalk.type.monoSmall,
+                                style = PriorityTheme.type.monoSmall,
                             )
                         }
                     }
@@ -282,7 +282,7 @@ private fun Ruler(day: TimelineDay, modifier: Modifier = Modifier) {
             // Completions: an emerald dot at the right edge, at the minute the task was closed.
             day.completions.forEach { completion ->
                 val minutes = day.offsetMinutes(completion.at) ?: return@forEach
-                val color = if (completion.cancelled) Chalk.colors.danger else Chalk.colors.success
+                val color = if (completion.cancelled) PriorityTheme.colors.danger else PriorityTheme.colors.success
                 val verb = if (completion.cancelled) "Cancelled" else "Finished"
                 Box(
                     Modifier
@@ -291,7 +291,7 @@ private fun Ruler(day: TimelineDay, modifier: Modifier = Modifier) {
                         .size(10.dp)
                         .clip(CircleShape)
                         .background(color)
-                        .border(BorderStroke(Metrics.hairline, Chalk.colors.paper), CircleShape)
+                        .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.paper), CircleShape)
                         .clearAndSetSemantics {
                             contentDescription = "$verb ${completion.title} at ${Format.time(completion.at, zone)}"
                         },
@@ -313,13 +313,13 @@ private fun Breakdown(day: TimelineDay) {
             ) {
                 Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(hue(summary.hue)))
                 Text(
-                    summary.title, style = Chalk.type.body, color = Chalk.colors.ink,
+                    summary.title, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 )
-                MonoText("${summary.blocks}×", color = Chalk.colors.dimText)
+                MonoText("${summary.blocks}×", color = PriorityTheme.colors.dimText)
                 MonoText(Format.duration(summary.seconds), modifier = Modifier.width(56.dp))
             }
-            Hairline(Modifier.padding(start = Metrics.lg), color = Chalk.colors.borderMuted)
+            Hairline(Modifier.padding(start = Metrics.lg), color = PriorityTheme.colors.borderMuted)
         }
     }
 }
@@ -342,16 +342,16 @@ private fun FinishedOnDay(day: TimelineDay) {
             ) {
                 Box(
                     Modifier.size(8.dp).clip(CircleShape)
-                        .background(if (completion.cancelled) Chalk.colors.danger else Chalk.colors.success),
+                        .background(if (completion.cancelled) PriorityTheme.colors.danger else PriorityTheme.colors.success),
                 )
                 Text(
-                    completion.title, style = Chalk.type.body, color = Chalk.colors.mutedText,
+                    completion.title, style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText,
                     textDecoration = if (completion.cancelled) TextDecoration.LineThrough else null,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 )
-                MonoText(Format.time(completion.at, zone), color = Chalk.colors.dimText)
+                MonoText(Format.time(completion.at, zone), color = PriorityTheme.colors.dimText)
             }
-            Hairline(Modifier.padding(start = Metrics.lg), color = Chalk.colors.borderMuted)
+            Hairline(Modifier.padding(start = Metrics.lg), color = PriorityTheme.colors.borderMuted)
         }
     }
 }
@@ -377,7 +377,7 @@ private fun DonePane(model: ReviewViewModel) {
     LazyColumn(Modifier.fillMaxSize().testTag("review_done")) {
         current.forEach { group ->
             item(key = "day-${group.day.epochSecond}", contentType = "header") {
-                SectionHeader(group.title(zone), detail = group.items.size.toString(), modifier = Modifier.background(Chalk.colors.paper))
+                SectionHeader(group.title(zone), detail = group.items.size.toString(), modifier = Modifier.background(PriorityTheme.colors.paper))
             }
             items(group.items, key = { it.task.id }, contentType = { "done" }) { item ->
                 val task = item.task
@@ -399,19 +399,19 @@ private fun DonePane(model: ReviewViewModel) {
                         Column(Modifier.weight(1f)) {
                             Text(
                                 task.title,
-                                style = Chalk.type.body,
-                                color = Chalk.colors.mutedText,
+                                style = PriorityTheme.type.body,
+                                color = PriorityTheme.colors.mutedText,
                                 textDecoration = if (task.status == TaskStatus.CANCELLED) TextDecoration.LineThrough else null,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             if (item.listName.isNotEmpty()) {
-                                Text(item.listName, style = Chalk.type.small, color = Chalk.colors.dimText, maxLines = 1)
+                                Text(item.listName, style = PriorityTheme.type.small, color = PriorityTheme.colors.dimText, maxLines = 1)
                             }
                         }
-                        task.completedAt?.let { MonoText(Format.time(it, zone), color = Chalk.colors.dimText) }
+                        task.completedAt?.let { MonoText(Format.time(it, zone), color = PriorityTheme.colors.dimText) }
                     }
-                    Hairline(Modifier.padding(start = Metrics.touchTarget), color = Chalk.colors.borderMuted)
+                    Hairline(Modifier.padding(start = Metrics.touchTarget), color = PriorityTheme.colors.borderMuted)
                 }
             }
         }
@@ -427,8 +427,8 @@ private fun ProgressPane(model: ReviewViewModel) {
     val period by model.period.collectAsStateWithLifecycle()
     val progress by model.progress.collectAsStateWithLifecycle()
     val points by model.points.collectAsStateWithLifecycle()
-    val success = Chalk.colors.success
-    val primary = Chalk.colors.primary
+    val success = PriorityTheme.colors.success
+    val primary = PriorityTheme.colors.primary
     val days = remember(progress) { progress.days.map { it.day }.toImmutableList() }
     val bestFormat = remember { DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH) }
     val zone = remember { ZoneId.systemDefault() }
@@ -489,8 +489,8 @@ private fun ProgressPane(model: ReviewViewModel) {
         progress.bestDay?.let { best ->
             Text(
                 "Best day: ${bestFormat.format(best.day.atZone(zone))}, ${best.completed} finished",
-                style = Chalk.type.small,
-                color = Chalk.colors.mutedText,
+                style = PriorityTheme.type.small,
+                color = PriorityTheme.colors.mutedText,
             )
         }
         PointsSummary(points)
@@ -500,7 +500,7 @@ private fun ProgressPane(model: ReviewViewModel) {
 @Composable
 private fun PointsSummary(points: FocusPointsSummary) {
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-        Text("Focus points", style = Chalk.type.label, color = Chalk.colors.mutedText)
+        Text("Focus points", style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText)
         StatRow(
             listOf(
                 "Today" to FocusPoints.formatted(points.today),

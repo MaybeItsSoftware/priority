@@ -101,7 +101,7 @@ import uk.co.maybeitsadam.priority.ui.quickadd.QuickAddSheet
 import uk.co.maybeitsadam.priority.ui.review.ReviewScreen
 import uk.co.maybeitsadam.priority.ui.search.SearchScreen
 import uk.co.maybeitsadam.priority.ui.settings.SettingsScreen
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.today.TodayScreen
 import uk.co.maybeitsadam.priority.ui.undo.SnackAction
@@ -226,7 +226,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
         Modifier
             .fillMaxSize()
             .semantics { testTagsAsResourceId = true }
-            .background(Chalk.colors.paper)
+            .background(PriorityTheme.colors.paper)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val match = chords.firstOrNull { it.first.matches(event) } ?: return@onPreviewKeyEvent false
@@ -258,7 +258,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
                     val taskId = inspectorTaskId
                     if (layout.inspectorAsPane && taskId != null) {
                         VerticalHairline()
-                        Box(Modifier.width(Metrics.inspectorWidth).fillMaxHeight().background(Chalk.colors.paper)) {
+                        Box(Modifier.width(Metrics.inspectorWidth).fillMaxHeight().background(PriorityTheme.colors.paper)) {
                             TaskInspector(taskId = taskId, asSheet = false, onClose = container.inspector::close)
                         }
                     }
@@ -269,11 +269,11 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
                 val itemColors = navItemColors()
                 NavigationSuiteScaffold(
                     layoutType = NavigationSuiteType.NavigationRail,
-                    containerColor = Chalk.colors.paper,
-                    contentColor = Chalk.colors.ink,
+                    containerColor = PriorityTheme.colors.paper,
+                    contentColor = PriorityTheme.colors.ink,
                     navigationSuiteColors = NavigationSuiteDefaults.colors(
-                        navigationRailContainerColor = Chalk.colors.paper,
-                        navigationRailContentColor = Chalk.colors.mutedText,
+                        navigationRailContainerColor = PriorityTheme.colors.paper,
+                        navigationRailContentColor = PriorityTheme.colors.mutedText,
                     ),
                     navigationSuiteItems = {
                         Tab.entries.forEach { tab ->
@@ -281,7 +281,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
                                 selected = tab == currentTab,
                                 onClick = { navigator.openTab(tab) },
                                 icon = { Icon(tab.icon, null) },
-                                label = { Text(tab.title, style = Chalk.type.small) },
+                                label = { Text(tab.title, style = PriorityTheme.type.small) },
                                 colors = itemColors,
                                 modifier = Modifier.testTag("tab_${tab.name}"),
                             )
@@ -310,9 +310,9 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
                 Snackbar(
                     snackbarData = data,
                     shape = Metrics.control,
-                    containerColor = Chalk.colors.ink,
-                    contentColor = Chalk.colors.paper,
-                    actionColor = if (Chalk.colors.isDark) Chalk.colors.primary else Chalk.colors.dimText,
+                    containerColor = PriorityTheme.colors.ink,
+                    contentColor = PriorityTheme.colors.paper,
+                    actionColor = if (PriorityTheme.colors.isDark) PriorityTheme.colors.primary else PriorityTheme.colors.dimText,
                 )
             }
 
@@ -322,7 +322,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
                 ModalBottomSheet(
                     onDismissRequest = container.inspector::close,
                     sheetState = sheetState,
-                    containerColor = Chalk.colors.paper,
+                    containerColor = PriorityTheme.colors.paper,
                     tonalElevation = 0.dp,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = Metrics.cardRadius, topEnd = Metrics.cardRadius),
                     dragHandle = { SheetHandle() },
@@ -370,14 +370,14 @@ private fun AppNavHost(nav: NavHostController) {
 @Composable
 private fun navItemColors(): NavigationSuiteItemColors = NavigationSuiteDefaults.itemColors(
     navigationBarItemColors = NavigationBarItemDefaults.colors(
-        selectedIconColor = Chalk.colors.primary, selectedTextColor = Chalk.colors.ink,
-        indicatorColor = Chalk.colors.well, unselectedIconColor = Chalk.colors.mutedText,
-        unselectedTextColor = Chalk.colors.mutedText,
+        selectedIconColor = PriorityTheme.colors.primary, selectedTextColor = PriorityTheme.colors.ink,
+        indicatorColor = PriorityTheme.colors.well, unselectedIconColor = PriorityTheme.colors.mutedText,
+        unselectedTextColor = PriorityTheme.colors.mutedText,
     ),
     navigationRailItemColors = NavigationRailItemDefaults.colors(
-        selectedIconColor = Chalk.colors.primary, selectedTextColor = Chalk.colors.ink,
-        indicatorColor = Chalk.colors.well, unselectedIconColor = Chalk.colors.mutedText,
-        unselectedTextColor = Chalk.colors.mutedText,
+        selectedIconColor = PriorityTheme.colors.primary, selectedTextColor = PriorityTheme.colors.ink,
+        indicatorColor = PriorityTheme.colors.well, unselectedIconColor = PriorityTheme.colors.mutedText,
+        unselectedTextColor = PriorityTheme.colors.mutedText,
     ),
     navigationDrawerItemColors = NavigationDrawerItemDefaults.colors(),
 )
@@ -385,7 +385,7 @@ private fun navItemColors(): NavigationSuiteItemColors = NavigationSuiteDefaults
 /** The phone's bottom bar: five flat items over a hairline, padded above the gesture bar. */
 @Composable
 private fun PhoneNavBar(current: Tab?, onSelect: (Tab) -> Unit) {
-    Column(Modifier.fillMaxWidth().background(Chalk.colors.paper)) {
+    Column(Modifier.fillMaxWidth().background(PriorityTheme.colors.paper)) {
         Hairline()
         Row(
             Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).height(56.dp),
@@ -405,13 +405,13 @@ private fun PhoneNavBar(current: Tab?, onSelect: (Tab) -> Unit) {
                 ) {
                     Icon(
                         tab.icon, null,
-                        tint = if (selected) Chalk.colors.primary else Chalk.colors.mutedText,
+                        tint = if (selected) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText,
                         modifier = Modifier.size(22.dp),
                     )
                     Text(
                         tab.title,
-                        style = Chalk.type.small.copy(fontSize = Chalk.type.monoSmall.fontSize),
-                        color = if (selected) Chalk.colors.ink else Chalk.colors.mutedText,
+                        style = PriorityTheme.type.small.copy(fontSize = PriorityTheme.type.monoSmall.fontSize),
+                        color = if (selected) PriorityTheme.colors.ink else PriorityTheme.colors.mutedText,
                     )
                 }
             }
@@ -426,20 +426,20 @@ private fun QuickAddFab(modifier: Modifier = Modifier, onClick: () -> Unit) {
         modifier
             .size(52.dp)
             .clip(Metrics.control)
-            .background(Chalk.colors.primary)
+            .background(PriorityTheme.colors.primary)
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = "Add a task" }
             .testTag("quick_add_fab"),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Filled.Add, null, tint = Chalk.colors.onAccent)
+        Icon(Icons.Filled.Add, null, tint = PriorityTheme.colors.onAccent)
     }
 }
 
 /** The bottom sheet's grabber: a short dim rule. */
 @Composable
 fun SheetHandle() {
-    Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.width(36.dp).height(4.dp).clip(Metrics.control).background(Chalk.colors.dimText))
+    Box(Modifier.fillMaxWidth().padding(vertical = Metrics.sm + Metrics.xxs), contentAlignment = Alignment.Center) {
+        Box(Modifier.width(36.dp).height(4.dp).clip(Metrics.control).background(PriorityTheme.colors.dimText))
     }
 }

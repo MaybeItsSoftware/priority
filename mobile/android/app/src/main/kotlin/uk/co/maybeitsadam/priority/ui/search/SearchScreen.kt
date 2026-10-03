@@ -58,7 +58,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import uk.co.maybeitsadam.priority.core.TaskStatus
@@ -73,7 +72,7 @@ import uk.co.maybeitsadam.priority.ui.components.SettingsAction
 import uk.co.maybeitsadam.priority.ui.components.Tag
 import uk.co.maybeitsadam.priority.ui.components.TaskCheck
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 import uk.co.maybeitsadam.priority.ui.theme.parseHexColor
@@ -104,7 +103,7 @@ fun SearchScreen() {
     LaunchedEffect(Unit) { focus.requestFocus() }
     LaunchedEffect(selected) { selected?.let { listState.animateScrollToItem(it + 1) } }
 
-    Column(Modifier.fillMaxSize().background(Chalk.colors.paper).imePadding()) {
+    Column(Modifier.fillMaxSize().background(PriorityTheme.colors.paper).imePadding()) {
         PriorityTopBar("Search", actions = { SettingsAction() })
         Column(Modifier.padding(horizontal = Metrics.lg, vertical = Metrics.sm), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             SearchField(
@@ -130,7 +129,7 @@ fun SearchScreen() {
             Tag(
                 "Include completed",
                 selected = includeCompleted,
-                color = if (includeCompleted) Chalk.colors.primary else Chalk.colors.mutedText,
+                color = if (includeCompleted) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText,
                 leading = if (includeCompleted) Icons.Filled.Check else null,
                 modifier = Modifier
                     .testTag("search_include_completed")
@@ -172,12 +171,12 @@ private fun SearchField(
     modifier: Modifier = Modifier,
     onSubmit: () -> Unit,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = Chalk.type.body.copy(color = colors.ink, fontSize = 16.sp),
+        textStyle = PriorityTheme.type.field.copy(color = colors.ink),
         cursorBrush = SolidColor(colors.primary),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSubmit() }),
@@ -198,7 +197,7 @@ private fun SearchField(
                 Icon(Icons.Filled.Search, null, tint = colors.mutedText, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(Metrics.sm))
                 Box(Modifier.weight(1f)) {
-                    if (value.isEmpty()) Text("Search tasks", style = Chalk.type.body.copy(fontSize = 16.sp), color = colors.dimText)
+                    if (value.isEmpty()) Text("Search tasks", style = PriorityTheme.type.field, color = colors.dimText)
                     inner()
                 }
                 if (value.isNotEmpty()) IconAction(Icons.Filled.Clear, "Clear search") { onValueChange("") }
@@ -216,7 +215,7 @@ private fun ResultRow(
     onInspect: () -> Unit,
     onToggle: () -> Unit,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val task = result.task
     val open = task.status == TaskStatus.OPEN
     val highlight = SpanStyle(color = colors.ink, fontWeight = FontWeight.SemiBold, background = colors.warning.copy(alpha = 0.22f))
@@ -233,10 +232,10 @@ private fun ResultRow(
     ) {
         Row(Modifier.fillMaxWidth().padding(end = Metrics.lg, top = Metrics.xs, bottom = Metrics.xs), verticalAlignment = Alignment.Top) {
             TaskCheck(task.status, isList = task.isList, label = task.title, onToggle = onToggle)
-            Column(Modifier.weight(1f).padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.weight(1f).padding(top = Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.xxs)) {
                 Text(
                     title,
-                    style = Chalk.type.body,
+                    style = PriorityTheme.type.body,
                     color = if (open) colors.ink else colors.mutedText,
                     textDecoration = if (open) null else TextDecoration.LineThrough,
                     maxLines = 2,
@@ -245,18 +244,18 @@ private fun ResultRow(
                 if (snippet != null) {
                     Text(
                         remember(snippet, query, highlight) { highlighted(snippet, query, highlight) },
-                        style = Chalk.type.small,
+                        style = PriorityTheme.type.small,
                         color = colors.mutedText,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.xs)) {
                     Icon(PIcons.ListIcon, null, tint = listColor, modifier = Modifier.size(12.dp))
-                    Text(result.list.name, style = Chalk.type.small, color = listColor, maxLines = 1)
+                    Text(result.list.name, style = PriorityTheme.type.small, color = listColor, maxLines = 1)
                     statusLabel(task.status)?.let { label ->
                         Spacer(Modifier.width(Metrics.xs))
-                        Text(label, style = Chalk.type.small, color = colors.dimText)
+                        Text(label, style = PriorityTheme.type.small, color = colors.dimText)
                     }
                 }
             }
@@ -266,7 +265,7 @@ private fun ResultRow(
                     Format.due(due),
                     color = if (overdue) colors.danger else colors.mutedText,
                     mono = true,
-                    modifier = Modifier.padding(top = 12.dp, start = Metrics.sm),
+                    modifier = Modifier.padding(top = Metrics.md, start = Metrics.sm),
                 )
             }
         }

@@ -52,7 +52,7 @@ import uk.co.maybeitsadam.priority.ui.components.MonoText
 import uk.co.maybeitsadam.priority.ui.components.PButton
 import uk.co.maybeitsadam.priority.ui.components.SectionHeader
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -96,7 +96,7 @@ fun HistorySheet(onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Chalk.colors.paper,
+        containerColor = PriorityTheme.colors.paper,
         tonalElevation = 0.dp,
         shape = RoundedCornerShape(topStart = Metrics.cardRadius, topEnd = Metrics.cardRadius),
         dragHandle = { SheetHandle() },
@@ -107,7 +107,7 @@ fun HistorySheet(onDismiss: () -> Unit) {
                 Modifier.fillMaxWidth().padding(horizontal = Metrics.lg),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("History", style = Chalk.type.title, color = Chalk.colors.ink, modifier = Modifier.weight(1f))
+                Text("History", style = PriorityTheme.type.title, color = PriorityTheme.colors.ink, modifier = Modifier.weight(1f))
             }
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = Metrics.lg, vertical = Metrics.sm),
@@ -143,8 +143,8 @@ fun HistorySheet(onDismiss: () -> Unit) {
                     item(key = "empty", contentType = "empty") {
                         Text(
                             "Nothing to undo",
-                            style = Chalk.type.body,
-                            color = Chalk.colors.mutedText,
+                            style = PriorityTheme.type.body,
+                            color = PriorityTheme.colors.mutedText,
                             modifier = Modifier.padding(horizontal = Metrics.lg, vertical = Metrics.md),
                         )
                     }
@@ -176,20 +176,20 @@ private fun StepRow(entry: HistoryEntry, onClick: () -> Unit) {
                 Icon(
                     if (entry.isUndone) PIcons.Redo else PIcons.Undo,
                     null,
-                    tint = if (entry.isUndone) Chalk.colors.dimText else Chalk.colors.mutedText,
+                    tint = if (entry.isUndone) PriorityTheme.colors.dimText else PriorityTheme.colors.mutedText,
                     modifier = Modifier.size(16.dp),
                 )
             }
             Spacer(Modifier.width(Metrics.sm))
             Text(
                 title,
-                style = Chalk.type.body,
-                color = if (entry.isUndone) Chalk.colors.dimText else Chalk.colors.ink,
+                style = PriorityTheme.type.body,
+                color = if (entry.isUndone) PriorityTheme.colors.dimText else PriorityTheme.colors.ink,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
             )
-            if (entry.changeCount > 1) MonoText("${entry.changeCount} rows", color = Chalk.colors.dimText)
+            if (entry.changeCount > 1) MonoText("${entry.changeCount} rows", color = PriorityTheme.colors.dimText)
         }
-        Hairline(Modifier.padding(start = Metrics.lg).background(Chalk.colors.paper), color = Chalk.colors.borderMuted)
+        Hairline(Modifier.padding(start = Metrics.lg).background(PriorityTheme.colors.paper), color = PriorityTheme.colors.borderMuted)
     }
 }

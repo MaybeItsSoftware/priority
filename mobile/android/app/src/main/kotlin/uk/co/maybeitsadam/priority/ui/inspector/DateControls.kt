@@ -48,7 +48,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import uk.co.maybeitsadam.priority.ui.components.Format
 import uk.co.maybeitsadam.priority.ui.components.Tag
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -82,7 +82,7 @@ fun ChalkDateField(
     clearable: Boolean = true,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val description = buildString {
         append(label).append(": ")
         append(date?.let { spokenDay.format(it) } ?: placeholder)
@@ -106,13 +106,13 @@ fun ChalkDateField(
             Icon(PIcons.Calendar, null, tint = if (date != null) colors.primary else colors.mutedText, modifier = Modifier.size(18.dp))
             Text(
                 date?.let { Format.day(it, today) } ?: placeholder,
-                style = Chalk.type.body,
+                style = PriorityTheme.type.body,
                 color = if (date != null) colors.ink else colors.dimText,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
             )
             if (date != null && time != null) {
-                Text(hhmm(time), style = Chalk.type.mono.copy(fontSize = Chalk.type.body.fontSize), color = colors.ink)
+                Text(hhmm(time), style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.body.fontSize), color = colors.ink)
             }
             Icon(
                 if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null,
@@ -155,7 +155,7 @@ fun ChalkDateField(
 /** A month of days, Monday first, with arrows to the neighbouring months. */
 @Composable
 fun MonthGrid(selected: LocalDate?, today: LocalDate, onPick: (LocalDate) -> Unit, modifier: Modifier = Modifier) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     var monthIndex by rememberSaveable { mutableIntStateOf(YearMonth.from(selected ?: today).index()) }
     val month = monthAt(monthIndex)
     val grid = remember(monthIndex) { DateFieldMath.monthGrid(month) }
@@ -165,7 +165,7 @@ fun MonthGrid(selected: LocalDate?, today: LocalDate, onPick: (LocalDate) -> Uni
             StepIcon(Icons.Filled.KeyboardArrowLeft, "Previous month") { monthIndex -= 1 }
             Text(
                 monthTitle.format(month),
-                style = Chalk.type.bodyStrong,
+                style = PriorityTheme.type.bodyStrong,
                 color = colors.ink,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f),
@@ -175,7 +175,7 @@ fun MonthGrid(selected: LocalDate?, today: LocalDate, onPick: (LocalDate) -> Uni
         Row(Modifier.fillMaxWidth()) {
             for (header in headers) {
                 Text(
-                    header, style = Chalk.type.small, color = colors.mutedText, textAlign = TextAlign.Center,
+                    header, style = PriorityTheme.type.small, color = colors.mutedText, textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f).padding(vertical = Metrics.xs),
                 )
             }
@@ -194,10 +194,10 @@ fun MonthGrid(selected: LocalDate?, today: LocalDate, onPick: (LocalDate) -> Uni
 
 @Composable
 private fun DayCell(day: LocalDate, isSelected: Boolean, isToday: Boolean, onClick: () -> Unit) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     Box(
         Modifier
-            .padding(2.dp)
+            .padding(Metrics.xxs)
             .fillMaxWidth()
             .aspectRatio(1f)
             .clip(Metrics.control)
@@ -212,7 +212,7 @@ private fun DayCell(day: LocalDate, isSelected: Boolean, isToday: Boolean, onCli
     ) {
         Text(
             day.dayOfMonth.toString(),
-            style = Chalk.type.mono.copy(fontSize = Chalk.type.body.fontSize),
+            style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.body.fontSize),
             color = when {
                 isSelected -> colors.onAccent
                 isToday -> colors.primary
@@ -225,7 +225,7 @@ private fun DayCell(day: LocalDate, isSelected: Boolean, isToday: Boolean, onCli
 /** Hour and minute, each with its own minus and plus; minutes move in fives. */
 @Composable
 fun TimeStepper(time: LocalTime, onChange: (LocalTime) -> Unit, label: String, modifier: Modifier = Modifier) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     Row(
         modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -234,7 +234,7 @@ fun TimeStepper(time: LocalTime, onChange: (LocalTime) -> Unit, label: String, m
         StepButton(InspectorIcons.Minus, "$label hour earlier") { onChange(DateFieldMath.stepHour(time, -1)) }
         ClockDigits("%02d".format(time.hour))
         StepButton(Icons.Filled.Add, "$label hour later") { onChange(DateFieldMath.stepHour(time, 1)) }
-        Text(":", style = Chalk.type.mono.copy(fontSize = Chalk.type.title.fontSize), color = colors.mutedText)
+        Text(":", style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.title.fontSize), color = colors.mutedText)
         StepButton(InspectorIcons.Minus, "$label minutes earlier") { onChange(DateFieldMath.stepMinute(time, -1)) }
         ClockDigits("%02d".format(time.minute))
         StepButton(Icons.Filled.Add, "$label minutes later") { onChange(DateFieldMath.stepMinute(time, 1)) }
@@ -245,8 +245,8 @@ fun TimeStepper(time: LocalTime, onChange: (LocalTime) -> Unit, label: String, m
 private fun ClockDigits(text: String) {
     Text(
         text,
-        style = Chalk.type.mono.copy(fontSize = Chalk.type.title.fontSize),
-        color = Chalk.colors.ink,
+        style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.title.fontSize),
+        color = PriorityTheme.colors.ink,
         textAlign = TextAlign.Center,
         modifier = Modifier.width(36.dp),
     )
@@ -262,6 +262,6 @@ private fun StepIcon(icon: ImageVector, description: String, onClick: () -> Unit
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, tint = Chalk.colors.mutedText, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = PriorityTheme.colors.mutedText, modifier = Modifier.size(20.dp))
     }
 }

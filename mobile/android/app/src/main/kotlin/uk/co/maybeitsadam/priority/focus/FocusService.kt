@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.content.res.Configuration
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -29,6 +30,8 @@ import uk.co.maybeitsadam.priority.appContainer
 import uk.co.maybeitsadam.priority.core.FocusSession
 import uk.co.maybeitsadam.priority.core.FocusSessionPhase
 import uk.co.maybeitsadam.priority.ui.ShellIntents
+import uk.co.maybeitsadam.priority.ui.theme.ResolvedTheme
+import uk.co.maybeitsadam.priority.core.theme.ThemeColorRole
 
 /**
  * The running focus block's foreground service: an ongoing notification with
@@ -145,6 +148,13 @@ class FocusService : LifecycleService() {
         NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
     }
 
+    private fun accent(): Int {
+        val state = appContainer.theme.value
+        val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val appearance = ResolvedTheme.appearance(state.specification, state.mode, night)
+        return state.specification.color(ThemeColorRole.PRIMARY, appearance).argb
+    }
+
     private fun placeholder(): Notification = baseBuilder()
         .setContentTitle("Focus block")
         .build()
@@ -158,6 +168,9 @@ class FocusService : LifecycleService() {
         .setPriority(NotificationCompat.PRIORITY_LOW)
         .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         .setContentIntent(openFocusTab(this))
+        // The only colour a notification may carry: the theme's primary, in
+        // the appearance the app is drawn in.
+        .setColor(accent())
 
     private fun build(model: FocusNotificationModel): Notification {
         val builder = baseBuilder()

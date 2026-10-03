@@ -13,15 +13,16 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import uk.co.maybeitsadam.priority.ui.components.Tag
 import uk.co.maybeitsadam.priority.ui.components.priorityColor
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.Metrics
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
 /** A token's colour: the estimate is neutral, the due day azure, tags purple, priority its own hue. */
 @Composable
 fun captureChipColor(chip: CaptureChip): Color = when (chip.kind) {
-    CaptureChipKind.ESTIMATE -> Chalk.colors.mutedText
-    CaptureChipKind.DUE -> Chalk.colors.primary
-    CaptureChipKind.TAG -> Chalk.colors.categoricalPurple
+    CaptureChipKind.ESTIMATE -> PriorityTheme.colors.mutedText
+    CaptureChipKind.DUE -> PriorityTheme.colors.primary
+    CaptureChipKind.TAG -> PriorityTheme.colors.categoricalPurple
     CaptureChipKind.PRIORITY -> priorityColor(chip.priority)
 }
 
@@ -32,7 +33,7 @@ fun CaptureChipRow(preview: CapturePreview, modifier: Modifier = Modifier) {
         modifier
             .horizontalScroll(rememberScrollState())
             .clearAndSetSemantics { contentDescription = preview.spoken },
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Metrics.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         for (chip in preview.chips) {

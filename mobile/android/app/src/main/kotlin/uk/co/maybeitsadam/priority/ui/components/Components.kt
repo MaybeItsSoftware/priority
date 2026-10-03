@@ -51,17 +51,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.co.maybeitsadam.priority.core.TaskStatus
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /** A 1dp rule in the border colour: the app's only means of separation. */
 @Composable
-fun Hairline(modifier: Modifier = Modifier, color: Color = Chalk.colors.border) {
+fun Hairline(modifier: Modifier = Modifier, color: Color = PriorityTheme.colors.border) {
     Box(modifier.fillMaxWidth().height(Metrics.hairline).background(color))
 }
 
 @Composable
-fun VerticalHairline(modifier: Modifier = Modifier, color: Color = Chalk.colors.border) {
+fun VerticalHairline(modifier: Modifier = Modifier, color: Color = PriorityTheme.colors.border) {
     Box(modifier.fillMaxHeight().width(Metrics.hairline).background(color))
 }
 
@@ -83,7 +83,7 @@ fun PriorityTopBar(
     Column(
         modifier
             .fillMaxWidth()
-            .background(Chalk.colors.paper)
+            .background(PriorityTheme.colors.paper)
             .then(if (insetStatusBar) Modifier.windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top)) else Modifier),
     ) {
         Row(
@@ -92,9 +92,9 @@ fun PriorityTopBar(
         ) {
             navigation?.invoke()
             Column(Modifier.weight(1f).padding(vertical = Metrics.xs)) {
-                Text(title, style = Chalk.type.title, color = Chalk.colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, style = PriorityTheme.type.title, color = PriorityTheme.colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (subtitle != null) {
-                    Text(subtitle, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(subtitle, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             actions()
@@ -131,14 +131,14 @@ fun IconAction(
     contentDescription: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    tint: Color = Chalk.colors.mutedText,
+    tint: Color = PriorityTheme.colors.mutedText,
     onClick: () -> Unit,
 ) {
     IconButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.size(Metrics.touchTarget),
-        colors = IconButtonDefaults.iconButtonColors(contentColor = tint, disabledContentColor = Chalk.colors.dimText),
+        colors = IconButtonDefaults.iconButtonColors(contentColor = tint, disabledContentColor = PriorityTheme.colors.dimText),
     ) {
         Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(20.dp))
     }
@@ -163,10 +163,10 @@ fun SectionHeader(
         modifier.fillMaxWidth().heightIn(min = 36.dp).padding(horizontal = Metrics.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text, style = Chalk.type.label, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f, fill = false))
+        Text(text, style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f, fill = false))
         if (detail != null) {
             Spacer(Modifier.width(Metrics.sm))
-            Text(detail, style = Chalk.type.monoSmall, color = Chalk.colors.dimText)
+            Text(detail, style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.dimText)
         }
         Spacer(Modifier.weight(1f))
         trailing?.invoke()
@@ -181,7 +181,7 @@ fun SectionHeader(
 fun Tag(
     text: String,
     modifier: Modifier = Modifier,
-    color: Color = Chalk.colors.mutedText,
+    color: Color = PriorityTheme.colors.mutedText,
     selected: Boolean = false,
     mono: Boolean = false,
     leading: ImageVector? = null,
@@ -196,12 +196,12 @@ fun Tag(
                 .clip(shape)
                 .background(fill)
                 .border(BorderStroke(Metrics.hairline, border), shape)
-                .padding(horizontal = 8.dp, vertical = 3.dp),
+                .padding(horizontal = Metrics.sm, vertical = Metrics.xxs + Metrics.hairline),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(Metrics.xs),
         ) {
             if (leading != null) Icon(leading, null, tint = color, modifier = Modifier.size(14.dp))
-            Text(text, style = if (mono) Chalk.type.monoSmall.copy(fontSize = Chalk.type.small.fontSize) else Chalk.type.small, color = if (color == Chalk.colors.mutedText) Chalk.colors.ink else color, maxLines = 1)
+            Text(text, style = if (mono) PriorityTheme.type.monoSmall.copy(fontSize = PriorityTheme.type.small.fontSize) else PriorityTheme.type.small, color = if (color == PriorityTheme.colors.mutedText) PriorityTheme.colors.ink else color, maxLines = 1)
         }
     }
     if (onClick == null) {
@@ -229,7 +229,7 @@ fun PButton(
     contentPadding: PaddingValues = PaddingValues(horizontal = Metrics.md),
     onClick: () -> Unit,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val accent = if (destructive) colors.danger else colors.primary
     val fill = when {
         !enabled -> colors.well
@@ -251,10 +251,10 @@ fun PButton(
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(contentPadding),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, tint = textColor, modifier = Modifier.size(18.dp))
-        Text(text, style = Chalk.type.bodyStrong.copy(fontSize = Chalk.type.small.fontSize.times(1.05f)), color = textColor, maxLines = 1)
+        Text(text, style = PriorityTheme.type.bodyStrong.copy(fontSize = PriorityTheme.type.small.fontSize.times(1.05f)), color = textColor, maxLines = 1)
     }
 }
 
@@ -262,12 +262,12 @@ fun PButton(
 @Composable
 fun EmptyState(title: String, modifier: Modifier = Modifier, detail: String? = null, action: (@Composable () -> Unit)? = null) {
     Column(
-        modifier.fillMaxWidth().padding(horizontal = Metrics.xl, vertical = 40.dp),
+        modifier.fillMaxWidth().padding(horizontal = Metrics.xl, vertical = Metrics.xl + Metrics.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Metrics.sm),
     ) {
-        Text(title, style = Chalk.type.heading, color = Chalk.colors.ink)
-        if (detail != null) Text(detail, style = Chalk.type.small, color = Chalk.colors.mutedText)
+        Text(title, style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink)
+        if (detail != null) Text(detail, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText)
         action?.invoke()
     }
 }
@@ -287,7 +287,7 @@ fun TaskCheck(
     label: String? = null,
     onToggle: () -> Unit,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val verb = when (status) {
         TaskStatus.OPEN -> "Complete"
         TaskStatus.COMPLETED -> "Reopen"
@@ -318,10 +318,10 @@ fun TaskCheck(
 /** `!1` … `!4`, coloured raspberry, amber, azure, muted. */
 @Composable
 fun priorityColor(priority: Int?): Color = when (priority) {
-    1 -> Chalk.colors.danger
-    2 -> Chalk.colors.warning
-    3 -> Chalk.colors.primary
-    else -> Chalk.colors.mutedText
+    1 -> PriorityTheme.colors.danger
+    2 -> PriorityTheme.colors.warning
+    3 -> PriorityTheme.colors.primary
+    else -> PriorityTheme.colors.mutedText
 }
 
 /** A raised card: white on paper, a hairline border, 8dp corners, no shadow. */
@@ -330,13 +330,13 @@ fun Card(modifier: Modifier = Modifier, selected: Boolean = false, content: @Com
     Box(
         modifier
             .clip(Metrics.card)
-            .background(Chalk.colors.raised)
-            .border(BorderStroke(Metrics.hairline, if (selected) Chalk.colors.primary else Chalk.colors.border), Metrics.card),
+            .background(PriorityTheme.colors.raised)
+            .border(BorderStroke(Metrics.hairline, if (selected) PriorityTheme.colors.primary else PriorityTheme.colors.border), Metrics.card),
     ) { content() }
 }
 
 /** Monospaced numbers: counts, clocks, estimates. */
 @Composable
-fun MonoText(text: String, modifier: Modifier = Modifier, style: TextStyle = Chalk.type.mono, color: Color = Chalk.colors.mutedText) {
+fun MonoText(text: String, modifier: Modifier = Modifier, style: TextStyle = PriorityTheme.type.mono, color: Color = PriorityTheme.colors.mutedText) {
     Text(text, modifier = modifier, style = style, color = color, maxLines = 1)
 }

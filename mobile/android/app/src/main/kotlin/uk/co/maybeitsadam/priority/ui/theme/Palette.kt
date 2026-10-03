@@ -2,13 +2,19 @@ package uk.co.maybeitsadam.priority.ui.theme
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import uk.co.maybeitsadam.priority.core.theme.ThemeAppearance
+import uk.co.maybeitsadam.priority.core.theme.ThemeColorRole
+import uk.co.maybeitsadam.priority.core.theme.ThemeColorValue
+import uk.co.maybeitsadam.priority.core.theme.ThemeSpecification
 
 /**
- * Every colour role a theme can set, as `docs/themes.md` names them. Chalk is
- * the default; an imported theme overrides any subset, light and dark apart.
+ * Every colour role in `docs/themes.md`, resolved for one appearance of one
+ * theme. Components name a role, never a hex value, so a theme changes
+ * everything drawn in a role by changing the role.
  */
 @Immutable
-data class ChalkPalette(
+data class ThemeColors(
     val paper: Color,
     val raised: Color,
     val altRow: Color,
@@ -27,97 +33,85 @@ data class ChalkPalette(
     val categoricalPurple: Color,
     val categoricalPink: Color,
     val categoricalOrange: Color,
+    /** Behind a photo. Theme-invariant: the content underneath is not ours to theme. */
+    val mediaLetterbox: Color,
+    /** Under chrome sitting on an image. Theme-invariant. */
+    val mediaScrim: Color,
+    /** Text on [mediaScrim]. Theme-invariant. */
+    val mediaScrimInk: Color,
     val isDark: Boolean,
 ) {
-    /** Text drawn on a filled accent (primary buttons, the running block). */
-    val onAccent: Color get() = Color.White
+    /**
+     * Text drawn on a filled accent (primary buttons, the running block): the
+     * scrim's light ink or the letterbox's dark, whichever reads on [primary].
+     */
+    val onAccent: Color
+        get() = if (contrast(mediaScrimInk, primary) >= contrast(mediaLetterbox, primary)) mediaScrimInk else mediaLetterbox
 
-    /** The role by its docs/themes.md key, for the theme importer. */
-    fun with(role: String, color: Color): ChalkPalette = when (role) {
-        "paper" -> copy(paper = color)
-        "raised" -> copy(raised = color)
-        "altRow" -> copy(altRow = color)
-        "hover" -> copy(hover = color)
-        "well" -> copy(well = color)
-        "border" -> copy(border = color)
-        "borderMuted" -> copy(borderMuted = color)
-        "inputBorder" -> copy(inputBorder = color)
-        "ink" -> copy(ink = color)
-        "mutedText" -> copy(mutedText = color)
-        "dimText" -> copy(dimText = color)
-        "primary" -> copy(primary = color)
-        "success" -> copy(success = color)
-        "danger" -> copy(danger = color)
-        "warning" -> copy(warning = color)
-        "categoricalPurple" -> copy(categoricalPurple = color)
-        "categoricalPink" -> copy(categoricalPink = color)
-        "categoricalOrange" -> copy(categoricalOrange = color)
-        else -> this
+    /** A role by its docs/themes.md name, for things a theme names by role (the micro-label). */
+    fun role(role: ThemeColorRole): Color = when (role) {
+        ThemeColorRole.PAPER -> paper
+        ThemeColorRole.RAISED -> raised
+        ThemeColorRole.ALT_ROW -> altRow
+        ThemeColorRole.HOVER -> hover
+        ThemeColorRole.WELL -> well
+        ThemeColorRole.BORDER -> border
+        ThemeColorRole.BORDER_MUTED -> borderMuted
+        ThemeColorRole.INPUT_BORDER -> inputBorder
+        ThemeColorRole.INK -> ink
+        ThemeColorRole.MUTED_TEXT -> mutedText
+        ThemeColorRole.DIM_TEXT -> dimText
+        ThemeColorRole.PRIMARY -> primary
+        ThemeColorRole.SUCCESS -> success
+        ThemeColorRole.DANGER -> danger
+        ThemeColorRole.WARNING -> warning
+        ThemeColorRole.CATEGORICAL_PURPLE -> categoricalPurple
+        ThemeColorRole.CATEGORICAL_PINK -> categoricalPink
+        ThemeColorRole.CATEGORICAL_ORANGE -> categoricalOrange
+        ThemeColorRole.MEDIA_LETTERBOX -> mediaLetterbox
+        ThemeColorRole.MEDIA_SCRIM -> mediaScrim
+        ThemeColorRole.MEDIA_SCRIM_INK -> mediaScrimInk
     }
 
     companion object {
-        val ChalkLight = ChalkPalette(
-            paper = Color(0xFFFAF8F4),
-            raised = Color(0xFFFFFFFF),
-            altRow = Color(0xFFF5F3F1),
-            hover = Color(0xFFF1EFF1),
-            well = Color(0xFFEDEBEF),
-            border = Color(0xFFE6E4EA),
-            borderMuted = Color(0xFFEFEDF2),
-            inputBorder = Color(0xFFD8D5DD),
-            ink = Color(0xFF444054),
-            mutedText = Color(0xFF6E6B7C),
-            dimText = Color(0xFFB6B3BF),
-            primary = Color(0xFF007FFF),
-            success = Color(0xFF4CC38E),
-            danger = Color(0xFFD62246),
-            warning = Color(0xFFFFBF00),
-            categoricalPurple = Color(0xFF7A4DE8),
-            categoricalPink = Color(0xFFFF88DC),
-            categoricalOrange = Color(0xFFFF6B2B),
-            isDark = false,
-        )
+        /** The theme's colours in one appearance. */
+        fun of(spec: ThemeSpecification, appearance: ThemeAppearance): ThemeColors {
+            fun c(role: ThemeColorRole) = spec.color(role, appearance).compose
+            return ThemeColors(
+                paper = c(ThemeColorRole.PAPER),
+                raised = c(ThemeColorRole.RAISED),
+                altRow = c(ThemeColorRole.ALT_ROW),
+                hover = c(ThemeColorRole.HOVER),
+                well = c(ThemeColorRole.WELL),
+                border = c(ThemeColorRole.BORDER),
+                borderMuted = c(ThemeColorRole.BORDER_MUTED),
+                inputBorder = c(ThemeColorRole.INPUT_BORDER),
+                ink = c(ThemeColorRole.INK),
+                mutedText = c(ThemeColorRole.MUTED_TEXT),
+                dimText = c(ThemeColorRole.DIM_TEXT),
+                primary = c(ThemeColorRole.PRIMARY),
+                success = c(ThemeColorRole.SUCCESS),
+                danger = c(ThemeColorRole.DANGER),
+                warning = c(ThemeColorRole.WARNING),
+                categoricalPurple = c(ThemeColorRole.CATEGORICAL_PURPLE),
+                categoricalPink = c(ThemeColorRole.CATEGORICAL_PINK),
+                categoricalOrange = c(ThemeColorRole.CATEGORICAL_ORANGE),
+                mediaLetterbox = c(ThemeColorRole.MEDIA_LETTERBOX),
+                mediaScrim = c(ThemeColorRole.MEDIA_SCRIM),
+                mediaScrimInk = c(ThemeColorRole.MEDIA_SCRIM_INK),
+                isDark = appearance == ThemeAppearance.DARK,
+            )
+        }
 
-        val ChalkDark = ChalkPalette(
-            paper = Color(0xFF1C1A23),
-            raised = Color(0xFF25232F),
-            altRow = Color(0xFF211F29),
-            hover = Color(0xFF2D2B38),
-            well = Color(0xFF2D2B38),
-            border = Color(0xFF34313F),
-            borderMuted = Color(0xFF2D2B38),
-            inputBorder = Color(0xFF403D4D),
-            ink = Color(0xFFF5F4F7),
-            mutedText = Color(0xFFB6B3BF),
-            dimText = Color(0xFF6E6B7C),
-            primary = Color(0xFF007FFF),
-            success = Color(0xFF4CC38E),
-            danger = Color(0xFFD62246),
-            warning = Color(0xFFFFBF00),
-            categoricalPurple = Color(0xFF7A4DE8),
-            categoricalPink = Color(0xFFFF88DC),
-            categoricalOrange = Color(0xFFFF6B2B),
-            isDark = true,
-        )
-
-        /** The colours a list can carry, in picker order. */
-        val listColors: List<Pair<String, String>> = listOf(
-            "Azure" to "#007fff", "Emerald" to "#4cc38e", "Raspberry" to "#d62246", "Amber" to "#ffbf00",
-            "Purple" to "#7a4de8", "Pink" to "#ff88dc", "Orange" to "#ff6b2b", "Grape" to "#444054",
-        )
+        private fun contrast(a: Color, b: Color): Float {
+            val (lighter, darker) = a.luminance().let { la -> b.luminance().let { lb -> maxOf(la, lb) to minOf(la, lb) } }
+            return (lighter + 0.05f) / (darker + 0.05f)
+        }
     }
 }
 
-/** `#rrggbb` or `#rrggbbaa`; null for anything else. */
-fun parseHexColor(hex: String?): Color? {
-    val body = hex?.trim()?.removePrefix("#") ?: return null
-    if (body.length != 6 && body.length != 8) return null
-    val value = body.toLongOrNull(16) ?: return null
-    return if (body.length == 6) {
-        Color(0xFF000000 or value)
-    } else {
-        val rgb = value shr 8
-        val alpha = value and 0xFF
-        Color((alpha shl 24) or rgb)
-    }
-}
+/** A core colour as Compose draws it. */
+val ThemeColorValue.compose: Color get() = Color(argb)
+
+/** `#rgb`, `#rrggbb` or `#rrggbbaa`; null for anything else. */
+fun parseHexColor(hex: String?): Color? = hex?.let { ThemeColorValue.hex(it) }?.compose

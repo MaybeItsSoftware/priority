@@ -52,11 +52,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.collections.immutable.ImmutableList
 import uk.co.maybeitsadam.priority.ui.components.Hairline
 import uk.co.maybeitsadam.priority.ui.components.PButton
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -81,10 +80,10 @@ internal fun PMenu(
         onDismissRequest = onDismiss,
         offset = offset,
         shape = Metrics.card,
-        containerColor = Chalk.colors.raised,
+        containerColor = PriorityTheme.colors.raised,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
-        border = BorderStroke(Metrics.hairline, Chalk.colors.border),
+        border = BorderStroke(Metrics.hairline, PriorityTheme.colors.border),
         content = content,
     )
 }
@@ -98,13 +97,13 @@ internal fun PMenuItem(
     trailing: String? = null,
     onClick: () -> Unit,
 ) {
-    val color = if (destructive) Chalk.colors.danger else Chalk.colors.ink
+    val color = if (destructive) PriorityTheme.colors.danger else PriorityTheme.colors.ink
     DropdownMenuItem(
-        text = { Text(text, style = Chalk.type.body, color = if (enabled) color else Chalk.colors.dimText) },
+        text = { Text(text, style = PriorityTheme.type.body, color = if (enabled) color else PriorityTheme.colors.dimText) },
         onClick = onClick,
         enabled = enabled,
-        leadingIcon = icon?.let { { Icon(it, null, tint = if (destructive) Chalk.colors.danger else Chalk.colors.mutedText, modifier = Modifier.size(18.dp)) } },
-        trailingIcon = trailing?.let { { Text(it, style = Chalk.type.monoSmall, color = Chalk.colors.dimText) } },
+        leadingIcon = icon?.let { { Icon(it, null, tint = if (destructive) PriorityTheme.colors.danger else PriorityTheme.colors.mutedText, modifier = Modifier.size(18.dp)) } },
+        trailingIcon = trailing?.let { { Text(it, style = PriorityTheme.type.monoSmall, color = PriorityTheme.colors.dimText) } },
         colors = MenuDefaults.itemColors(),
         modifier = Modifier.heightIn(min = Metrics.touchTarget),
     )
@@ -127,12 +126,12 @@ internal fun PDialog(
         Column(
             Modifier
                 .clip(Metrics.card)
-                .background(Chalk.colors.raised)
-                .border(BorderStroke(Metrics.hairline, Chalk.colors.border), Metrics.card)
+                .background(PriorityTheme.colors.raised)
+                .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.border), Metrics.card)
                 .padding(Metrics.lg),
             verticalArrangement = Arrangement.spacedBy(Metrics.md),
         ) {
-            Text(title, style = Chalk.type.heading, color = Chalk.colors.ink)
+            Text(title, style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink)
             body()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Metrics.sm, Alignment.End)) { buttons() }
         }
@@ -153,8 +152,8 @@ internal fun PTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = Chalk.type.body.copy(fontSize = 16.sp, color = Chalk.colors.ink),
-        cursorBrush = SolidColor(Chalk.colors.primary),
+        textStyle = PriorityTheme.type.field.copy(color = PriorityTheme.colors.ink),
+        cursorBrush = SolidColor(PriorityTheme.colors.primary),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = imeAction),
         keyboardActions = KeyboardActions(onAny = { onSubmit() }),
         modifier = modifier,
@@ -164,12 +163,12 @@ internal fun PTextField(
                     .fillMaxWidth()
                     .heightIn(min = Metrics.touchTarget)
                     .clip(Metrics.control)
-                    .background(Chalk.colors.paper)
-                    .border(BorderStroke(Metrics.hairline, Chalk.colors.inputBorder), Metrics.control)
+                    .background(PriorityTheme.colors.paper)
+                    .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.inputBorder), Metrics.control)
                     .padding(horizontal = Metrics.md),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                if (value.isEmpty()) Text(placeholder, style = Chalk.type.body.copy(fontSize = 16.sp), color = Chalk.colors.dimText)
+                if (value.isEmpty()) Text(placeholder, style = PriorityTheme.type.field, color = PriorityTheme.colors.dimText)
                 inner()
             }
         },
@@ -227,7 +226,7 @@ internal fun ConfirmDialog(
             })
         },
     ) {
-        Text(message, style = Chalk.type.body, color = Chalk.colors.mutedText)
+        Text(message, style = PriorityTheme.type.body, color = PriorityTheme.colors.mutedText)
     }
 }
 
@@ -256,12 +255,12 @@ internal fun ChoiceSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
-        containerColor = Chalk.colors.raised,
+        containerColor = PriorityTheme.colors.raised,
         tonalElevation = 0.dp,
         shape = Metrics.card,
     ) {
         Column(Modifier.navigationBarsPadding().imePadding()) {
-            Text(title, style = Chalk.type.heading, color = Chalk.colors.ink, modifier = Modifier.padding(horizontal = Metrics.lg, vertical = Metrics.sm))
+            Text(title, style = PriorityTheme.type.heading, color = PriorityTheme.colors.ink, modifier = Modifier.padding(horizontal = Metrics.lg, vertical = Metrics.sm))
             Hairline()
             leading?.invoke()
             LazyColumn(Modifier.fillMaxWidth().testTag("choice_sheet")) {
@@ -278,18 +277,18 @@ internal fun ChoiceSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (choice.icon != null) {
-                            Icon(choice.icon, null, tint = choice.tint ?: Chalk.colors.mutedText, modifier = Modifier.size(18.dp))
+                            Icon(choice.icon, null, tint = choice.tint ?: PriorityTheme.colors.mutedText, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(Metrics.md))
                         }
                         Column(Modifier.weight(1f)) {
                             Text(
-                                choice.title, style = Chalk.type.body,
-                                color = if (choice.isCurrent) Chalk.colors.dimText else Chalk.colors.ink,
+                                choice.title, style = PriorityTheme.type.body,
+                                color = if (choice.isCurrent) PriorityTheme.colors.dimText else PriorityTheme.colors.ink,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
-                            if (choice.detail != null) Text(choice.detail, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1)
+                            if (choice.detail != null) Text(choice.detail, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1)
                         }
-                        if (choice.isCurrent) Text("Current", style = Chalk.type.small, color = Chalk.colors.dimText)
+                        if (choice.isCurrent) Text("Current", style = PriorityTheme.type.small, color = PriorityTheme.colors.dimText)
                     }
                 }
             }

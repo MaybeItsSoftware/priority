@@ -43,7 +43,7 @@ import uk.co.maybeitsadam.priority.ui.components.Tag
 import uk.co.maybeitsadam.priority.ui.navigation.ListRoute
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
 import uk.co.maybeitsadam.priority.ui.quickadd.QuickAddBar
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -112,7 +112,7 @@ internal fun ListContent(route: ListRoute, showBack: Boolean, onClose: () -> Uni
     Column(
         modifier
             .fillMaxSize()
-            .background(Chalk.colors.paper)
+            .background(PriorityTheme.colors.paper)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when {
@@ -130,7 +130,7 @@ internal fun ListContent(route: ListRoute, showBack: Boolean, onClose: () -> Uni
             title = title,
             subtitle = list?.completedAt?.let { "Completed" },
             navigation = if (showBack) {
-                { IconAction(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Chalk.colors.ink, onClick = { shell.navigator.back() }) }
+                { IconAction(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = PriorityTheme.colors.ink, onClick = { shell.navigator.back() }) }
             } else {
                 null
             },
@@ -164,7 +164,7 @@ private fun ModeTag(mode: ListViewMode, icon: androidx.compose.ui.graphics.vecto
     Tag(
         mode.title,
         modifier = Modifier.testTag(tag),
-        color = if (selected) Chalk.colors.primary else Chalk.colors.mutedText,
+        color = if (selected) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText,
         selected = selected,
         leading = icon,
         onClick = { vm.setViewMode(mode) },

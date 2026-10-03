@@ -69,7 +69,7 @@ import uk.co.maybeitsadam.priority.ui.focus.rememberTicker
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
 import uk.co.maybeitsadam.priority.ui.navigation.Tab
 import uk.co.maybeitsadam.priority.ui.quickadd.QuickAddBar
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 import uk.co.maybeitsadam.priority.ui.theme.parseHexColor
@@ -97,7 +97,7 @@ fun TodayScreen() {
         ),
     )
 
-    Column(Modifier.fillMaxSize().background(Chalk.colors.paper)) {
+    Column(Modifier.fillMaxSize().background(PriorityTheme.colors.paper)) {
         PriorityTopBar("Today", subtitle = longDay(LocalDate.now()), actions = { SettingsAction() })
         QuickAddBar(listId = null)
         val sections = day.sections
@@ -196,34 +196,34 @@ private fun DayHeader(day: DayState) {
             val finish = forecast.finishAt
             Text(
                 if (finish != null) "done by ${Format.time(finish)}" else if (forecast.estimatedSeconds > 0) "All estimates spent" else "No finish time",
-                style = Chalk.type.mono.copy(fontSize = Chalk.type.heading.fontSize),
-                color = if (finish != null) Chalk.colors.primary else Chalk.colors.mutedText,
+                style = PriorityTheme.type.mono.copy(fontSize = PriorityTheme.type.heading.fontSize),
+                color = if (finish != null) PriorityTheme.colors.primary else PriorityTheme.colors.mutedText,
                 modifier = Modifier.weight(1f).testTag("today_forecast"),
             )
-            MonoText(forecast.spentText, color = Chalk.colors.ink, modifier = Modifier.testTag("today_tally"))
+            MonoText(forecast.spentText, color = PriorityTheme.colors.ink, modifier = Modifier.testTag("today_tally"))
         }
         val fraction = if (forecast.estimatedSeconds > 0) minOf(1f, forecast.loggedSeconds.toFloat() / forecast.estimatedSeconds) else 0f
-        Box(Modifier.fillMaxWidth().height(4.dp).background(Chalk.colors.well)) {
-            Box(Modifier.fillMaxWidth(fraction).height(4.dp).background(Chalk.colors.primary))
+        Box(Modifier.fillMaxWidth().height(4.dp).background(PriorityTheme.colors.well)) {
+            Box(Modifier.fillMaxWidth(fraction).height(4.dp).background(PriorityTheme.colors.primary))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             MonoText(
                 "est ${DayForecast.hoursAndMinutes(forecast.estimatedSeconds)} · logged ${DayForecast.hoursAndMinutes(forecast.loggedSeconds)}",
-                style = Chalk.type.monoSmall,
+                style = PriorityTheme.type.monoSmall,
                 modifier = Modifier.weight(1f),
             )
-            Text(forecast.remainingText, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1)
+            Text(forecast.remainingText, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1)
         }
         val progress = day.workProgress
         if (progress.week.seconds > 0 || progress.week.completed > 0) {
             Row {
                 Text(
                     if (progress.today.completed == 1) "1 done today" else "${progress.today.completed} done today",
-                    style = Chalk.type.small, color = Chalk.colors.mutedText, modifier = Modifier.weight(1f),
+                    style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, modifier = Modifier.weight(1f),
                 )
                 MonoText(
                     "${Format.duration(progress.today.seconds)} today · ${Format.duration(progress.week.seconds)} this week",
-                    style = Chalk.type.monoSmall,
+                    style = PriorityTheme.type.monoSmall,
                 )
             }
         }
@@ -249,7 +249,7 @@ private fun DayCardRow(
     modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    Column(modifier.background(if (isDragging) Chalk.colors.raised else Chalk.colors.paper)) {
+    Column(modifier.background(if (isDragging) PriorityTheme.colors.raised else PriorityTheme.colors.paper)) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = Metrics.xs, end = Metrics.xs),
             verticalAlignment = Alignment.CenterVertically,
@@ -268,25 +268,25 @@ private fun DayCardRow(
                         .combinedClickable(onClick = onOpen, onLongClick = { menuOpen = true }, onLongClickLabel = "Task actions")
                         .padding(vertical = Metrics.sm, horizontal = Metrics.xs),
                 ) {
-                    Text(card.title, style = Chalk.type.body, color = Chalk.colors.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(card.title, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     CardDetail(card)
                 }
                 ChalkMenu(menuOpen, onDismiss = { menuOpen = false }) { menu { menuOpen = false } }
             }
             CardCost(card)
             if (canStart) {
-                IconAction(Icons.Filled.PlayArrow, "Start focus on ${card.title}", tint = Chalk.colors.primary, onClick = onStart)
+                IconAction(Icons.Filled.PlayArrow, "Start focus on ${card.title}", tint = PriorityTheme.colors.primary, onClick = onStart)
             }
             if (handle != null) {
                 Box(
                     handle.size(Metrics.touchTarget).semantics { contentDescription = "Reorder ${card.title}" },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(PIcons.DragHandle, null, tint = Chalk.colors.dimText, modifier = Modifier.size(20.dp))
+                    Icon(PIcons.DragHandle, null, tint = PriorityTheme.colors.dimText, modifier = Modifier.size(20.dp))
                 }
             }
         }
-        Hairline(color = Chalk.colors.borderMuted)
+        Hairline(color = PriorityTheme.colors.borderMuted)
     }
 }
 
@@ -294,21 +294,21 @@ private fun DayCardRow(
 private fun CardDetail(card: DayCard) {
     val detail = DayShaping.detail(card) { Format.due(it) }
     val tint = when (card.reason) {
-        DayPlanReason.OVERDUE -> Chalk.colors.danger
-        DayPlanReason.DUE_TODAY -> Chalk.colors.primary
-        DayPlanReason.STARTS_TODAY -> Chalk.colors.success
-        else -> Chalk.colors.mutedText
+        DayPlanReason.OVERDUE -> PriorityTheme.colors.danger
+        DayPlanReason.DUE_TODAY -> PriorityTheme.colors.primary
+        DayPlanReason.STARTS_TODAY -> PriorityTheme.colors.success
+        else -> PriorityTheme.colors.mutedText
     }
     if (detail == null && card.listName == null && card.dailyId == null) return
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (detail != null) Text(detail, style = Chalk.type.small, color = tint, maxLines = 1)
+    Row(horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs), verticalAlignment = Alignment.CenterVertically) {
+        if (detail != null) Text(detail, style = PriorityTheme.type.small, color = tint, maxLines = 1)
         if (card.dailyId != null) {
-            Icon(PIcons.Repeat, "Daily", tint = Chalk.colors.categoricalPurple, modifier = Modifier.size(12.dp))
+            Icon(PIcons.Repeat, "Daily", tint = PriorityTheme.colors.categoricalPurple, modifier = Modifier.size(12.dp))
         }
         card.listName?.let { name ->
             val dot = parseHexColor(card.listColorHex)
             if (dot != null) Box(Modifier.size(6.dp).clip(Metrics.control).background(dot))
-            Text(name, style = Chalk.type.small, color = Chalk.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name, style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -323,7 +323,7 @@ private fun CardCost(card: DayCard) {
         else -> return
     }
     val over = estimate != null && card.loggedSeconds > estimate
-    MonoText(text, color = if (over) Chalk.colors.warning else Chalk.colors.mutedText, modifier = Modifier.padding(start = Metrics.xs))
+    MonoText(text, color = if (over) PriorityTheme.colors.warning else PriorityTheme.colors.mutedText, modifier = Modifier.padding(start = Metrics.xs))
 }
 
 @Composable
@@ -358,14 +358,14 @@ private fun RunningDayCard(
     Column(
         modifier
             .fillMaxWidth()
-            .background(Chalk.colors.primary.copy(alpha = 0.06f))
+            .background(PriorityTheme.colors.primary.copy(alpha = 0.06f))
             .padding(horizontal = Metrics.lg, vertical = Metrics.md),
         verticalArrangement = Arrangement.spacedBy(Metrics.sm),
     ) {
         Text(
             card.title,
-            style = Chalk.type.title,
-            color = Chalk.colors.ink,
+            style = PriorityTheme.type.title,
+            color = PriorityTheme.colors.ink,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.clip(Metrics.control).combinedClickable(onClick = onOpen),
@@ -373,19 +373,19 @@ private fun RunningDayCard(
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             Text(
                 reading.text,
-                style = Chalk.type.monoLarge,
+                style = PriorityTheme.type.monoLarge,
                 color = when {
-                    paused -> Chalk.colors.mutedText
-                    reading.isOverrun -> Chalk.colors.warning
-                    else -> Chalk.colors.primary
+                    paused -> PriorityTheme.colors.mutedText
+                    reading.isOverrun -> PriorityTheme.colors.warning
+                    else -> PriorityTheme.colors.primary
                 },
                 modifier = Modifier.testTag("today_clock"),
             )
             Text(
                 if (paused) "paused" else "of ${Format.duration(session.workDurationSeconds)}",
-                style = Chalk.type.small,
-                color = if (paused) Chalk.colors.warning else Chalk.colors.mutedText,
-                modifier = Modifier.padding(bottom = 6.dp),
+                style = PriorityTheme.type.small,
+                color = if (paused) PriorityTheme.colors.warning else PriorityTheme.colors.mutedText,
+                modifier = Modifier.padding(bottom = Metrics.xs + Metrics.xxs),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm), verticalAlignment = Alignment.CenterVertically) {
@@ -401,7 +401,7 @@ private fun RunningDayCard(
             )
         }
     }
-    Hairline(color = Chalk.colors.borderMuted)
+    Hairline(color = PriorityTheme.colors.borderMuted)
 }
 
 // endregion
@@ -423,21 +423,21 @@ private fun DailyRow(daily: DayDaily, onToggle: () -> Unit, modifier: Modifier =
             Column(Modifier.weight(1f).padding(horizontal = Metrics.xs)) {
                 Text(
                     daily.title,
-                    style = Chalk.type.body,
-                    color = if (daily.isDone) Chalk.colors.mutedText else Chalk.colors.ink,
+                    style = PriorityTheme.type.body,
+                    color = if (daily.isDone) PriorityTheme.colors.mutedText else PriorityTheme.colors.ink,
                     textDecoration = if (daily.isDone) TextDecoration.LineThrough else null,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 daily.progressFraction?.let { fraction ->
-                    Box(Modifier.padding(top = 4.dp).width(120.dp).height(3.dp).background(Chalk.colors.well)) {
-                        Box(Modifier.fillMaxWidth(fraction).height(3.dp).background(if (daily.isDone) Chalk.colors.success else Chalk.colors.categoricalPurple))
+                    Box(Modifier.padding(top = Metrics.xs).width(120.dp).height(3.dp).background(PriorityTheme.colors.well)) {
+                        Box(Modifier.fillMaxWidth(fraction).height(3.dp).background(if (daily.isDone) PriorityTheme.colors.success else PriorityTheme.colors.categoricalPurple))
                     }
                 }
             }
             daily.progressText?.let { MonoText(it) }
         }
-        Hairline(color = Chalk.colors.borderMuted)
+        Hairline(color = PriorityTheme.colors.borderMuted)
     }
 }
 

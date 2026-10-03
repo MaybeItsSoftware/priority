@@ -44,7 +44,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /**
@@ -57,7 +57,7 @@ import uk.co.maybeitsadam.priority.ui.theme.Metrics
 fun QuickAddBar(listId: String?, modifier: Modifier = Modifier, parentTaskId: String? = null) {
     val container = LocalShell.current.container
     val session by container.session.collectAsStateWithLifecycle()
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     var text by rememberSaveable(listId, parentTaskId) { mutableStateOf("") }
     val preview by remember { derivedStateOf { CapturePreview.of(text) } }
     val interaction = remember { MutableInteractionSource() }
@@ -76,7 +76,7 @@ fun QuickAddBar(listId: String?, modifier: Modifier = Modifier, parentTaskId: St
         value = text,
         onValueChange = { text = it.replace("\n", " ") },
         singleLine = true,
-        textStyle = Chalk.type.body.copy(color = colors.ink),
+        textStyle = PriorityTheme.type.body.copy(color = colors.ink),
         cursorBrush = SolidColor(colors.primary),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
         // Done adds and keeps the keyboard up for the next task.
@@ -112,7 +112,7 @@ fun QuickAddBar(listId: String?, modifier: Modifier = Modifier, parentTaskId: St
                     if (text.isEmpty()) {
                         Text(
                             if (parentTaskId != null) "Add a subtask" else "Add a task",
-                            style = Chalk.type.body,
+                            style = PriorityTheme.type.body,
                             color = colors.dimText,
                             maxLines = 1,
                         )

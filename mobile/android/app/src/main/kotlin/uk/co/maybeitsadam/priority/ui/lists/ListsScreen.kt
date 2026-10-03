@@ -63,7 +63,7 @@ import uk.co.maybeitsadam.priority.ui.components.PriorityTopBar
 import uk.co.maybeitsadam.priority.ui.components.VerticalHairline
 import uk.co.maybeitsadam.priority.ui.navigation.ListRoute
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 import uk.co.maybeitsadam.priority.ui.theme.PIcons
 
@@ -124,7 +124,7 @@ fun ListsScreen() {
             AnimatedPane {
                 val key = navigator.currentDestination?.contentKey
                 if (key == null) {
-                    Column(Modifier.fillMaxSize().background(Chalk.colors.paper)) {
+                    Column(Modifier.fillMaxSize().background(PriorityTheme.colors.paper)) {
                         PriorityTopBar("Lists", showHistory = false)
                         EmptyState("Choose a list", detail = "Its outline, board and matrix open here.")
                     }
@@ -161,7 +161,7 @@ private fun ListsTree(
         ),
     )
 
-    Row(Modifier.fillMaxSize().background(Chalk.colors.paper)) {
+    Row(Modifier.fillMaxSize().background(PriorityTheme.colors.paper)) {
         Column(
             Modifier
                 .weight(1f)
@@ -290,7 +290,7 @@ private fun TreeLine(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     Row(
         Modifier
             .fillMaxWidth()
@@ -315,7 +315,7 @@ private fun TreeLine(
         Icon(icon, null, tint = if (selected) colors.primary else colors.mutedText, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(Metrics.md))
         Text(
-            title, style = Chalk.type.body, color = if (muted) colors.mutedText else colors.ink,
+            title, style = PriorityTheme.type.body, color = if (muted) colors.mutedText else colors.ink,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
         if (count != null && count > 0) MonoText(count.toString(), color = colors.dimText)

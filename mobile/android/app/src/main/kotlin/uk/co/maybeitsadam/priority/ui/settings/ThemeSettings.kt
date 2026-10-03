@@ -1,0 +1,250 @@
+package uk.co.maybeitsadam.priority.ui.settings
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import uk.co.maybeitsadam.priority.app.StoredThemeFile
+import uk.co.maybeitsadam.priority.app.ThemeLibraryState
+import uk.co.maybeitsadam.priority.core.theme.ThemeAppearance
+import uk.co.maybeitsadam.priority.core.theme.ThemeFileIssue
+import uk.co.maybeitsadam.priority.core.theme.ThemeFileOutcome
+import uk.co.maybeitsadam.priority.core.theme.ThemeIssueSeverity
+import uk.co.maybeitsadam.priority.core.theme.ThemeSpecification
+import uk.co.maybeitsadam.priority.ui.components.Hairline
+import uk.co.maybeitsadam.priority.ui.components.PButton
+import uk.co.maybeitsadam.priority.ui.components.Tag
+import uk.co.maybeitsadam.priority.ui.inspector.SwitchRow
+import uk.co.maybeitsadam.priority.ui.review.Segmented
+import uk.co.maybeitsadam.priority.ui.theme.Metrics
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
+import uk.co.maybeitsadam.priority.ui.theme.ThemeColors
+import uk.co.maybeitsadam.priority.ui.theme.ThemeMode
+
+/**
+ * Settings → Theme: the appearance, every theme with a swatch of its
+ * palette, what each imported file reported, import and remove, and this
+ * device's opt-out from the shared choice.
+ */
+@Composable
+internal fun ThemeSection(model: SettingsViewModel) {
+    val state by model.themes.collectAsStateWithLifecycle()
+    val error by model.themeError.collectAsStateWithLifecycle()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(model::import) }
+    val locked = state.specification.lockedAppearance
+
+    Column(verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+        Text("Appearance", style = PriorityTheme.type.label, color = PriorityTheme.colors.mutedText)
+        Segmented(
+            options = ThemeMode.entries,
+            selected = state.mode,
+            label = { it.title },
+            tag = { "settings_mode_${it.raw}" },
+            onSelect = model::setMode,
+        )
+        if (locked != null) {
+            Text(
+                "${state.specification.name} is always ${locked.raw}, whatever this is set to.",
+                style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText,
+            )
+        }
+    }
+
+    Section(
+        "Theme",
+        footer = "A theme is a JSON file: colours for light and dark, and sizes. Anything it leaves out comes from Chalk. See docs/themes.md.",
+    ) {
+        val outcomes = state.library.outcomes.associateBy { it.source }
+        state.builtIns.forEachIndexed { index, theme ->
+            if (index > 0) Hairline(color = PriorityTheme.colors.borderMuted)
+            ThemeRow(theme, state, onSelect = model::selectTheme, tag = "settings_theme_${theme.identifier}")
+        }
+        for (file in state.files) {
+            Hairline(color = PriorityTheme.colors.borderMuted)
+            UserThemeRow(file, outcomes[file.name], state, model)
+        }
+        Hairline(color = PriorityTheme.colors.borderMuted)
+        SwitchRow(
+            label = "Use a different theme on this device",
+            detail = "Your choice of theme and appearance follows you to your other devices unless this is on.",
+            checked = state.useDeviceChoice,
+            onCheckedChange = model::setUseDeviceTheme,
+            modifier = Modifier.padding(horizontal = Metrics.md).testTag("settings_theme_device"),
+        )
+        Hairline(color = PriorityTheme.colors.borderMuted)
+        Row(Modifier.padding(Metrics.md), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
+            PButton("Import theme…", modifier = Modifier.testTag("settings_import_theme")) {
+                picker.launch(arrayOf("application/json", "text/*"))
+            }
+        }
+        error?.let {
+            Text(
+                it, style = PriorityTheme.type.small, color = PriorityTheme.colors.danger,
+                modifier = Modifier.padding(start = Metrics.md, end = Metrics.md, bottom = Metrics.md),
+            )
+        }
+    }
+}
+
+/** A user file: its theme when it loaded, otherwise its name and why not; then its issues and a remove button. */
+@Composable
+private fun UserThemeRow(file: StoredThemeFile, outcome: ThemeFileOutcome?, state: ThemeLibraryState, model: SettingsViewModel) {
+    val theme = outcome?.specification
+    Column {
+        if (theme != null) {
+            ThemeRow(theme, state, onSelect = model::selectTheme, tag = "settings_theme_${theme.identifier}", detail = file.name)
+        } else {
+            Column(Modifier.fillMaxWidth().padding(horizontal = Metrics.md, vertical = Metrics.sm)) {
+                Text(file.name, style = PriorityTheme.type.body, color = PriorityTheme.colors.ink)
+                Text(
+                    "Not loaded: ${outcome?.skippedReason ?: "it could not be read"}",
+                    style = PriorityTheme.type.small, color = PriorityTheme.colors.danger,
+                )
+            }
+        }
+        val issues = outcome?.issues.orEmpty().filterNot { theme == null && it.message.startsWith("not loaded:") }
+        if (issues.isNotEmpty()) ThemeIssues(issues)
+        Row(
+            Modifier.fillMaxWidth().padding(start = Metrics.md, end = Metrics.md, bottom = Metrics.sm),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            PButton("Remove", destructive = true, modifier = Modifier.testTag("settings_theme_remove_${file.name}")) {
+                model.removeTheme(file.name)
+            }
+        }
+    }
+}
+
+/** Errors, then warnings, then audit notes, each tagged by severity in its status hue. */
+@Composable
+private fun ThemeIssues(issues: List<ThemeFileIssue>) {
+    val colors = PriorityTheme.colors
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = Metrics.md, vertical = Metrics.xs),
+        verticalArrangement = Arrangement.spacedBy(Metrics.xs),
+    ) {
+        for (issue in issues) {
+            val (label, hue) = when (issue.severity) {
+                ThemeIssueSeverity.ERROR -> "Error" to colors.danger
+                ThemeIssueSeverity.WARNING -> "Warning" to colors.warning
+                ThemeIssueSeverity.NOTE -> "Audit" to colors.primary
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm), verticalAlignment = Alignment.Top) {
+                Tag(label, color = hue)
+                Text(issue.message, style = PriorityTheme.type.small, color = colors.mutedText, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/** A selectable theme: a swatch of its palette, its name and summary, and a radio ring. */
+@Composable
+private fun ThemeRow(
+    theme: ThemeSpecification,
+    state: ThemeLibraryState,
+    onSelect: (String) -> Unit,
+    tag: String,
+    detail: String? = null,
+) {
+    val selected = state.selection.selected == theme.identifier
+    val colors = PriorityTheme.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Metrics.touchTarget)
+            .clickable(role = Role.RadioButton) { onSelect(theme.identifier) }
+            .semantics { this.selected = selected }
+            .testTag(tag)
+            .padding(horizontal = Metrics.md, vertical = Metrics.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Metrics.md),
+    ) {
+        PaletteSwatch(theme)
+        Column(Modifier.weight(1f)) {
+            Text(theme.name, style = PriorityTheme.type.body, color = colors.ink)
+            val caption = listOfNotNull(
+                theme.lockedAppearance?.let { if (it == ThemeAppearance.DARK) "Always dark" else "Always light" },
+                detail,
+            ).joinToString(" · ")
+            if (caption.isNotEmpty()) Text(caption, style = PriorityTheme.type.small, color = colors.mutedText)
+        }
+        RadioRing(selected)
+    }
+}
+
+/**
+ * The theme's paper with its ink and four status hues on it, in each
+ * appearance it can be drawn in: both halves for a theme that follows the
+ * system, one for a locked theme.
+ */
+@Composable
+private fun PaletteSwatch(theme: ThemeSpecification) {
+    val appearances = theme.lockedAppearance?.let { listOf(it) } ?: ThemeAppearance.entries
+    Row(
+        Modifier
+            .clip(PriorityTheme.radii.controlShape)
+            .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.border), PriorityTheme.radii.controlShape),
+    ) {
+        for (appearance in appearances) {
+            val c = ThemeColors.of(theme, appearance)
+            Column(
+                Modifier.background(c.paper).padding(Metrics.xs).width(SWATCH_HALF_WIDTH * 2 / appearances.size),
+                verticalArrangement = Arrangement.spacedBy(Metrics.xxs),
+            ) {
+                Box(Modifier.fillMaxWidth().heightIn(min = Metrics.xs).background(c.ink, PriorityTheme.radii.controlShape))
+                Row(horizontalArrangement = Arrangement.spacedBy(Metrics.xxs)) {
+                    for (hue in listOf(c.primary, c.success, c.danger, c.warning)) Dot(hue)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Dot(color: Color) {
+    Box(Modifier.size(Metrics.sm).background(color, CircleShape))
+}
+
+/** A ring that fills with primary when chosen. */
+@Composable
+internal fun RadioRing(selected: Boolean) {
+    val colors = PriorityTheme.colors
+    Box(
+        Modifier.size(RADIO_SIZE).border(
+            BorderStroke(RADIO_STROKE, if (selected) colors.primary else colors.inputBorder), CircleShape,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) Box(Modifier.size(RADIO_SIZE / 2).background(colors.primary, CircleShape))
+    }
+}
+
+// Layout constants, not theme values: the swatch's width and the radio's glyph.
+private val SWATCH_HALF_WIDTH = 22.dp
+private val RADIO_SIZE = 20.dp
+private val RADIO_STROKE = 1.5.dp

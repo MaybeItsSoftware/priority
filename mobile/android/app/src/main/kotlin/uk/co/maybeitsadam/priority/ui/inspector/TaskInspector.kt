@@ -50,7 +50,7 @@ import uk.co.maybeitsadam.priority.ui.components.IconAction
 import uk.co.maybeitsadam.priority.ui.components.PButton
 import uk.co.maybeitsadam.priority.ui.components.PriorityTopBar
 import uk.co.maybeitsadam.priority.ui.navigation.LocalShell
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /**
@@ -84,7 +84,7 @@ fun TaskInspector(taskId: String, asSheet: Boolean, onClose: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(Chalk.colors.paper)
+            .background(PriorityTheme.colors.paper)
             .then(if (asSheet) Modifier.imePadding() else Modifier)
             .testTag("inspector"),
     ) {
@@ -94,7 +94,7 @@ fun TaskInspector(taskId: String, asSheet: Boolean, onClose: () -> Unit) {
             showHistory = false,
             insetStatusBar = !asSheet,
         ) {
-            IconAction(Icons.Filled.Close, "Close inspector", tint = Chalk.colors.mutedText, onClick = requestClose)
+            IconAction(Icons.Filled.Close, "Close inspector", tint = PriorityTheme.colors.mutedText, onClick = requestClose)
         }
         val task = around.task?.takeIf { it.id == taskId }
         if (draft == null || task == null) {
@@ -137,7 +137,7 @@ private fun UnsavedBar(
     onDiscard: () -> Unit,
     onKeepEditing: () -> Unit,
 ) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val blocked = draft.conflicts.isNotEmpty() || draft.isUnavailable
     Column(Modifier.fillMaxWidth().background(colors.paper).testTag("inspector_unsaved")) {
         Hairline()
@@ -153,7 +153,7 @@ private fun UnsavedBar(
             }
             Text(
                 message,
-                style = Chalk.type.small,
+                style = PriorityTheme.type.small,
                 color = if (save.error != null) colors.danger else colors.mutedText,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
@@ -180,7 +180,7 @@ private fun UnsavedBar(
 /** One banner per field changed both here and in the saved task. */
 @Composable
 internal fun ConflictBanners(vm: TaskInspectorViewModel, draft: TaskEditorDraft, around: InspectorSurroundings) {
-    val colors = Chalk.colors
+    val colors = PriorityTheme.colors
     val zone = remember { ZoneId.systemDefault() }
     val fields by remember(draft) { derivedStateOf { TaskEditorField.entries.filter { it in draft.conflicts } } }
     for (field in fields) {
@@ -194,10 +194,10 @@ internal fun ConflictBanners(vm: TaskInspectorViewModel, draft: TaskEditorDraft,
                 .testTag("inspector_conflict_${field.name}"),
             verticalArrangement = Arrangement.spacedBy(Metrics.xs),
         ) {
-            Text("${field.label} changed in the saved task", style = Chalk.type.bodyStrong, color = colors.ink)
-            Text("Saved: ${display(field, draft.baseline.values, around, zone)}", style = Chalk.type.small, color = colors.mutedText, maxLines = 3)
-            Text("Yours: ${display(field, draft.values, around, zone)}", style = Chalk.type.small, color = colors.mutedText, maxLines = 3)
-            Spacer(Modifier.height(2.dp))
+            Text("${field.label} changed in the saved task", style = PriorityTheme.type.bodyStrong, color = colors.ink)
+            Text("Saved: ${display(field, draft.baseline.values, around, zone)}", style = PriorityTheme.type.small, color = colors.mutedText, maxLines = 3)
+            Text("Yours: ${display(field, draft.values, around, zone)}", style = PriorityTheme.type.small, color = colors.mutedText, maxLines = 3)
+            Spacer(Modifier.height(Metrics.xxs))
             Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
                 PButton("Keep mine", onClick = { vm.resolve(field, useSaved = false) })
                 PButton("Use saved", onClick = { vm.resolve(field, useSaved = true) })

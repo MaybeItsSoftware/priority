@@ -10,7 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import uk.co.maybeitsadam.priority.ui.theme.Chalk
+import uk.co.maybeitsadam.priority.ui.theme.PriorityTheme
 import uk.co.maybeitsadam.priority.ui.theme.Metrics
 
 /** A flat dropdown: raised, a hairline border, 8dp corners, no shadow or tonal tint. */
@@ -20,10 +20,10 @@ fun ChalkMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Col
         expanded = expanded,
         onDismissRequest = onDismiss,
         shape = Metrics.card,
-        containerColor = Chalk.colors.raised,
+        containerColor = PriorityTheme.colors.raised,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
-        border = BorderStroke(Metrics.hairline, Chalk.colors.border),
+        border = BorderStroke(Metrics.hairline, PriorityTheme.colors.border),
         content = content,
     )
 }
@@ -32,13 +32,13 @@ fun ChalkMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Col
 @Composable
 fun ChalkMenuItem(text: String, destructive: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
     DropdownMenuItem(
-        text = { Text(text, style = Chalk.type.body) },
+        text = { Text(text, style = PriorityTheme.type.body) },
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier.heightIn(min = Metrics.touchTarget),
         colors = MenuDefaults.itemColors(
-            textColor = if (destructive) Chalk.colors.danger else Chalk.colors.ink,
-            disabledTextColor = Chalk.colors.dimText,
+            textColor = if (destructive) PriorityTheme.colors.danger else PriorityTheme.colors.ink,
+            disabledTextColor = PriorityTheme.colors.dimText,
         ),
     )
 }

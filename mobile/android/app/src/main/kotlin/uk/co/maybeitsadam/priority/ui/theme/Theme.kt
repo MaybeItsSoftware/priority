@@ -2,6 +2,8 @@ package uk.co.maybeitsadam.priority.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -10,6 +12,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -19,11 +22,36 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import uk.co.maybeitsadam.priority.R
+import uk.co.maybeitsadam.priority.core.theme.BuiltInThemeSpecifications
+import uk.co.maybeitsadam.priority.core.theme.ThemeAppearance
+import uk.co.maybeitsadam.priority.core.theme.ThemeColorRole
+import uk.co.maybeitsadam.priority.core.theme.ThemeFontDesign
+import uk.co.maybeitsadam.priority.core.theme.ThemeFontFace
+import uk.co.maybeitsadam.priority.core.theme.ThemeFontWeight
+import uk.co.maybeitsadam.priority.core.theme.ThemePlatform
+import uk.co.maybeitsadam.priority.core.theme.ThemeSpecification
+import uk.co.maybeitsadam.priority.core.theme.ThemeTypeScale
 
-/** IBM Plex Sans for everything read, Lilex for numbers and code: Zed's pair. */
+/** Whether the app follows the system, or holds one appearance. Stored as `theme.appearance`. */
+enum class ThemeMode(val raw: String, val title: String) {
+    SYSTEM("system", "System"),
+    LIGHT("light", "Light"),
+    DARK("dark", "Dark");
+
+    companion object {
+        fun of(raw: String?): ThemeMode = entries.firstOrNull { it.raw == raw } ?: SYSTEM
+    }
+}
+
+/**
+ * The faces Priority bundles: IBM Plex Sans and Lilex, Zed's pair. A theme
+ * names families; these are the ones that resolve to bundled files.
+ */
 object Fonts {
     val sans = FontFamily(
         Font(R.font.ibmplexsans_regular, FontWeight.Normal),
@@ -37,143 +65,342 @@ object Fonts {
         Font(R.font.lilex_medium, FontWeight.Medium),
         Font(R.font.lilex_bold, FontWeight.Bold),
     )
+
+    private val bundled = mapOf("ibm plex sans" to sans, "lilex" to mono)
+
+    /** Android's own family aliases, which a theme may name directly. */
+    private val system = mapOf(
+        "sans-serif" to FontFamily.SansSerif, "serif" to FontFamily.Serif, "monospace" to FontFamily.Monospace,
+        "cursive" to FontFamily.Cursive, "roboto" to FontFamily.SansSerif,
+    )
+
+    /**
+     * The first family that resolves, bundled or an Android alias, then the
+     * design's system face. An app cannot see arbitrary installed fonts on
+     * Android, so "Arvo" without a bundled file is its design's face.
+     */
+    fun resolve(face: ThemeFontFace): FontFamily = face.families.firstNotNullOfOrNull {
+        val key = it.trim().lowercase()
+        bundled[key] ?: system[key]
+    } ?: when (face.design) {
+        ThemeFontDesign.SERIF -> FontFamily.Serif
+        ThemeFontDesign.SANS, ThemeFontDesign.ROUNDED -> FontFamily.SansSerif
+        ThemeFontDesign.MONOSPACED -> FontFamily.Monospace
+    }
 }
 
-/** Spacing, radii and hairlines. Square-ish Zed proportions with the house radius scale. */
+/** The radius scale, in dp. `docs/themes.md`: panel, row, control, pill, shell. */
+@Immutable
+data class ThemeRadii(val panel: Dp, val row: Dp, val control: Dp, val pill: Dp, val shell: Dp) {
+    val panelShape = RoundedCornerShape(panel)
+    val rowShape = RoundedCornerShape(row)
+    val controlShape = RoundedCornerShape(control)
+    val pillShape = RoundedCornerShape(pill)
+}
+
+@Immutable
+data class ThemeBorders(val hairline: Dp, val emphasis: Dp, val focusRing: Dp)
+
+/** The six-step spacing scale every padding comes from. */
+@Immutable
+data class ThemeSpacing(val xxs: Dp, val xs: Dp, val sm: Dp, val md: Dp, val lg: Dp, val xl: Dp)
+
+/** The families a theme resolved to. */
+@Immutable
+data class ThemeFonts(val display: FontFamily, val body: FontFamily, val mono: FontFamily)
+
+/** The micro-label: its style, its colour role and whether its text is uppercased. */
+@Immutable
+data class ThemeMicroLabelStyle(val style: TextStyle, val role: ThemeColorRole, val uppercase: Boolean)
+
+/**
+ * The text styles the app uses, by role rather than Material's size names,
+ * every one derived from the theme's scale and faces.
+ */
+@Immutable
+data class PriorityType(
+    val scale: ThemeTypeScale,
+    /** `scale.title`, display face. Pane and sheet headings. */
+    val title: TextStyle,
+    /** `scale.body`, medium. Section headings, row titles that lead. */
+    val heading: TextStyle,
+    val body: TextStyle,
+    val bodyStrong: TextStyle,
+    /** `scale.caption`. Secondary lines and captions. */
+    val small: TextStyle,
+    /** The theme's micro-label, minus its colour: section headers, column heads, tabs. */
+    val label: TextStyle,
+    /** Lilex at caption size: times, counts and keys beside body text. */
+    val mono: TextStyle,
+    /** Lilex a step under caption, for the tightest numerals. */
+    val monoSmall: TextStyle,
+    /** Lilex at `scale.display`: the large numerals. */
+    val monoLarge: TextStyle,
+    /** Lilex at `scale.hero`: the focus timer. */
+    val hero: TextStyle,
+    /** A fifth over `scale.title`, display face: the one heading a screen is about (the focused task). */
+    val headline: TextStyle,
+    /** Lilex at `scale.body`: a value read on its own, like a time. */
+    val monoBody: TextStyle,
+    /** Lilex a tenth over `scale.title`: a value being adjusted. */
+    val monoTitle: TextStyle,
+    /**
+     * Body text in an editable field, never under 16sp: smaller and some
+     * keyboards zoom, which the house style rules out on touch.
+     */
+    val field: TextStyle,
+)
+
+/**
+ * A theme resolved for this device: one appearance of one
+ * [ThemeSpecification], in Compose units. Everything the UI draws comes from
+ * here, through [PriorityTheme].
+ */
+@Immutable
+class ResolvedTheme(
+    val specification: ThemeSpecification,
+    val appearance: ThemeAppearance,
+) {
+    private val structure = specification.structure
+
+    val colors: ThemeColors = ThemeColors.of(specification, appearance)
+
+    val radii = structure.radius.let { ThemeRadii(it.panel.dp, it.row.dp, it.control.dp, it.pill.dp, it.shell.dp) }
+
+    val borders = structure.border.let { ThemeBorders(it.hairline.dp, it.emphasis.dp, it.focusRing.dp) }
+
+    val spacing = structure.spacing.let { ThemeSpacing(it.xxs.dp, it.xs.dp, it.sm.dp, it.md.dp, it.lg.dp, it.xl.dp) }
+
+    /** The minimum hit area a control is grown to; 0 for none. */
+    val touchTarget: Dp = structure.touchTarget.dp
+
+    val fonts = structure.typography.let {
+        ThemeFonts(display = Fonts.resolve(it.display), body = Fonts.resolve(it.body), mono = Fonts.resolve(it.mono))
+    }
+
+    val microLabel: ThemeMicroLabelStyle = structure.typography.microLabel.let { label ->
+        ThemeMicroLabelStyle(
+            style = TextStyle(
+                fontFamily = fonts.body,
+                fontWeight = label.weight.compose,
+                fontSize = label.size.sp,
+                lineHeight = lineHeight(label.size),
+                letterSpacing = label.tracking.em,
+            ),
+            role = label.role,
+            uppercase = label.isUppercased,
+        )
+    }
+
+    val type: PriorityType = structure.typography.scale.let { scale ->
+        fun style(family: FontFamily, weight: FontWeight, size: Double, display: Boolean = false) = TextStyle(
+            fontFamily = family, fontWeight = weight, fontSize = size.sp,
+            lineHeight = if (display) (size * DISPLAY_LEADING).sp else lineHeight(size),
+        )
+        PriorityType(
+            scale = scale,
+            title = style(fonts.display, FontWeight.SemiBold, scale.title),
+            heading = style(fonts.body, FontWeight.Medium, scale.body),
+            body = style(fonts.body, FontWeight.Normal, scale.body),
+            bodyStrong = style(fonts.body, FontWeight.Medium, scale.body),
+            small = style(fonts.body, FontWeight.Normal, scale.caption),
+            label = microLabel.style,
+            mono = style(fonts.mono, FontWeight.Normal, scale.caption),
+            monoSmall = style(fonts.mono, FontWeight.Normal, kotlin.math.round(scale.caption * MONO_SMALL_RATIO)),
+            monoLarge = style(fonts.mono, FontWeight.Medium, scale.display, display = true),
+            hero = style(fonts.mono, FontWeight.Medium, scale.hero, display = true),
+            headline = style(fonts.display, FontWeight.SemiBold, kotlin.math.round(scale.title * HEADLINE_RATIO), display = true),
+            monoBody = style(fonts.mono, FontWeight.Normal, scale.body),
+            monoTitle = style(fonts.mono, FontWeight.Normal, kotlin.math.round(scale.title * MONO_TITLE_RATIO)),
+            field = style(fonts.body, FontWeight.Normal, maxOf(scale.body, MINIMUM_FIELD_SIZE)),
+        )
+    }
+
+    val colorScheme: ColorScheme = colors.toColorScheme()
+
+    val shapes = Shapes(
+        extraSmall = radii.controlShape,
+        small = radii.controlShape,
+        medium = radii.panelShape,
+        large = radii.panelShape,
+        extraLarge = radii.panelShape,
+    )
+
+    val materialTypography: Typography = Typography().let { base ->
+        fun TextStyle.themed() = copy(fontFamily = fonts.display)
+        Typography(
+            displayLarge = base.displayLarge.themed(), displayMedium = base.displayMedium.themed(),
+            displaySmall = base.displaySmall.themed(), headlineLarge = base.headlineLarge.themed(),
+            headlineMedium = base.headlineMedium.themed(), headlineSmall = base.headlineSmall.themed(),
+            titleLarge = type.title, titleMedium = type.heading, titleSmall = type.bodyStrong,
+            bodyLarge = type.body, bodyMedium = type.body, bodySmall = type.small,
+            labelLarge = type.bodyStrong, labelMedium = type.small.copy(fontWeight = FontWeight.Medium),
+            labelSmall = type.monoSmall.copy(fontFamily = fonts.body),
+        )
+    }
+
+    companion object {
+        private const val LEADING = 1.35
+        private const val DISPLAY_LEADING = 1.18
+        private const val MONO_SMALL_RATIO = 0.9
+        private const val HEADLINE_RATIO = 1.2
+        private const val MONO_TITLE_RATIO = 1.1
+        private const val MINIMUM_FIELD_SIZE = 16.0
+
+        private fun lineHeight(size: Double): TextUnit = kotlin.math.round(size * LEADING).sp
+
+        /** The appearance a theme is drawn in: its lock, else the setting, else the system. */
+        fun appearance(spec: ThemeSpecification, mode: ThemeMode, systemDark: Boolean): ThemeAppearance =
+            spec.lockedAppearance ?: when (mode) {
+                ThemeMode.LIGHT -> ThemeAppearance.LIGHT
+                ThemeMode.DARK -> ThemeAppearance.DARK
+                ThemeMode.SYSTEM -> if (systemDark) ThemeAppearance.DARK else ThemeAppearance.LIGHT
+            }
+
+        val chalkLight by lazy { ResolvedTheme(BuiltInThemeSpecifications.chalk(ThemePlatform.ANDROID), ThemeAppearance.LIGHT) }
+    }
+}
+
+private val ThemeFontWeight.compose: FontWeight
+    get() = when (this) {
+        ThemeFontWeight.REGULAR -> FontWeight.Normal
+        ThemeFontWeight.MEDIUM -> FontWeight.Medium
+        ThemeFontWeight.SEMIBOLD -> FontWeight.SemiBold
+        ThemeFontWeight.BOLD -> FontWeight.Bold
+        ThemeFontWeight.BLACK -> FontWeight.Black
+    }
+
+val LocalPriorityTheme = staticCompositionLocalOf { ResolvedTheme.chalkLight }
+
+/**
+ * The theme in force. `PriorityTheme.colors.ink`, `PriorityTheme.type.body`,
+ * `PriorityTheme.spacing.md`, `PriorityTheme.radii.controlShape`.
+ */
+object PriorityTheme {
+    val current: ResolvedTheme
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current
+    val colors: ThemeColors
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.colors
+    val type: PriorityType
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.type
+    val spacing: ThemeSpacing
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.spacing
+    val radii: ThemeRadii
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.radii
+    val borders: ThemeBorders
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.borders
+    val fonts: ThemeFonts
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.fonts
+    val microLabel: ThemeMicroLabelStyle
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.microLabel
+    val touchTarget: Dp
+        @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.touchTarget
+}
+
+/**
+ * Spacing, radii and hairlines by the names the screens already use, read
+ * from the theme in force, plus the few layout constants that are not the
+ * theme's to set.
+ */
 object Metrics {
-    val xxs: Dp = 2.dp
-    val xs: Dp = 4.dp
-    val sm: Dp = 8.dp
-    val md: Dp = 12.dp
-    val lg: Dp = 16.dp
-    val xl: Dp = 24.dp
-    val hairline: Dp = 1.dp
-    val cardRadius: Dp = 8.dp
-    val controlRadius: Dp = 6.dp
-    val touchTarget: Dp = 48.dp
+    val xxs: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.spacing.xxs
+    val xs: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.spacing.xs
+    val sm: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.spacing.sm
+    val md: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.spacing.md
+    val lg: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.spacing.lg
+    val xl: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.spacing.xl
+    val hairline: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.borders.hairline
+    val emphasis: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.borders.emphasis
+    val focusRing: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.borders.focusRing
+
+    /** `radius.panel`: cards, panels, sheets and popovers. */
+    val cardRadius: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.radii.panel
+
+    /** `radius.control`: buttons, inputs, chips. */
+    val controlRadius: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.radii.control
+    val card: RoundedCornerShape @Composable @ReadOnlyComposable get() = PriorityTheme.radii.panelShape
+    val control: RoundedCornerShape @Composable @ReadOnlyComposable get() = PriorityTheme.radii.controlShape
+
+    /** `radius.row`: a list row's selection and hover. */
+    val row: RoundedCornerShape @Composable @ReadOnlyComposable get() = PriorityTheme.radii.rowShape
+
+    /** `radius.pill`: genuinely round things only. */
+    val pill: RoundedCornerShape @Composable @ReadOnlyComposable get() = PriorityTheme.radii.pillShape
+
+    /** The theme's minimum hit area. */
+    val touchTarget: Dp @Composable @ReadOnlyComposable get() = PriorityTheme.touchTarget
+
+    // Layout, not theme.
     val rowHeight: Dp = 48.dp
+
     /** Indent per outline level; a phone runs out of width four levels down. */
     val indent: Dp = 18.dp
     val headerHeight: Dp = 52.dp
     val inspectorWidth: Dp = 380.dp
-
-    val card = RoundedCornerShape(cardRadius)
-    val control = RoundedCornerShape(controlRadius)
-}
-
-/** The text styles the app uses, by role rather than by Material's size names. */
-@Immutable
-data class PriorityType(
-    val title: TextStyle,
-    val heading: TextStyle,
-    val body: TextStyle,
-    val bodyStrong: TextStyle,
-    val small: TextStyle,
-    /** Sentence-case muted label: section headers, captions. Never uppercase. */
-    val label: TextStyle,
-    val mono: TextStyle,
-    val monoSmall: TextStyle,
-    val monoLarge: TextStyle,
-)
-
-private val priorityType = PriorityType(
-    title = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp),
-    heading = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp),
-    body = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 21.sp),
-    bodyStrong = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 21.sp),
-    small = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp),
-    label = TextStyle(fontFamily = Fonts.sans, fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp),
-    mono = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp),
-    monoSmall = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 14.sp),
-    monoLarge = TextStyle(fontFamily = Fonts.mono, fontWeight = FontWeight.Medium, fontSize = 34.sp, lineHeight = 40.sp),
-)
-
-val LocalPalette = staticCompositionLocalOf { ChalkPalette.ChalkLight }
-val LocalPriorityType = staticCompositionLocalOf { priorityType }
-
-/** Shorthand: `Chalk.colors.ink`, `Chalk.type.label`. */
-object Chalk {
-    val colors: ChalkPalette
-        @Composable get() = LocalPalette.current
-    val type: PriorityType
-        @Composable get() = LocalPriorityType.current
-}
-
-/** The palette a spec and a mode resolve to. */
-fun ThemeSpec.palette(mode: ThemeMode, systemDark: Boolean): ChalkPalette = when (lockedAppearance) {
-    "dark" -> dark
-    "light" -> light
-    else -> when (mode) {
-        ThemeMode.LIGHT -> light
-        ThemeMode.DARK -> dark
-        ThemeMode.SYSTEM -> if (systemDark) dark else light
-    }
 }
 
 /**
- * Material 3, themed down to Chalk: every surface tone is paper or raised (no
- * tonal elevation), the outline is the hairline border, and the shapes are the
- * 6dp / 8dp scale. Components still read [Chalk] for anything Material lacks.
+ * Material 3 themed down to the resolved theme: every surface tone is paper
+ * or raised (no tonal elevation), the outline is the hairline border, the
+ * shapes are the radius scale and the type is the theme's, so stock
+ * components follow a theme the way Priority's own do.
  */
 @Composable
 fun PriorityTheme(
-    spec: ThemeSpec = ThemeSpec.Chalk,
+    spec: ThemeSpecification = BuiltInThemeSpecifications.chalk(ThemePlatform.ANDROID),
     mode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit,
 ) {
-    val systemDark = isSystemInDarkTheme()
-    val palette = spec.palette(mode, systemDark)
-    val scheme = remember(palette) { palette.toColorScheme() }
-    val typography = remember { materialTypography() }
-    CompositionLocalProvider(LocalPalette provides palette, LocalPriorityType provides priorityType) {
-        MaterialTheme(colorScheme = scheme, typography = typography, shapes = shapes, content = content)
+    val appearance = ResolvedTheme.appearance(spec, mode, isSystemInDarkTheme())
+    val theme = remember(spec, appearance) { ResolvedTheme(spec, appearance) }
+    PriorityTheme(theme, content)
+}
+
+/** The same, for an already-resolved theme (previews, tests). */
+@Composable
+fun PriorityTheme(theme: ResolvedTheme, content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalPriorityTheme provides theme,
+        LocalMinimumInteractiveComponentSize provides if (theme.touchTarget > 0.dp) theme.touchTarget else Dp.Unspecified,
+    ) {
+        MaterialTheme(
+            colorScheme = theme.colorScheme,
+            typography = theme.materialTypography,
+            shapes = theme.shapes,
+            content = content,
+        )
     }
 }
 
-private val shapes = Shapes(
-    extraSmall = RoundedCornerShape(Metrics.controlRadius),
-    small = RoundedCornerShape(Metrics.controlRadius),
-    medium = RoundedCornerShape(Metrics.cardRadius),
-    large = RoundedCornerShape(Metrics.cardRadius),
-    extraLarge = RoundedCornerShape(Metrics.cardRadius),
-)
-
-private fun ChalkPalette.toColorScheme() = if (isDark) {
-    darkColorScheme(
-        primary = primary, onPrimary = onAccent, primaryContainer = primary.copy(alpha = 0.16f), onPrimaryContainer = ink,
-        secondary = mutedText, onSecondary = paper, secondaryContainer = well, onSecondaryContainer = ink,
-        tertiary = categoricalPurple, onTertiary = onAccent, tertiaryContainer = well, onTertiaryContainer = ink,
-        background = paper, onBackground = ink, surface = paper, onSurface = ink, surfaceVariant = well,
-        onSurfaceVariant = mutedText, surfaceTint = Color.Transparent, inverseSurface = ink, inverseOnSurface = paper,
-        inversePrimary = primary, error = danger, onError = onAccent, errorContainer = danger.copy(alpha = 0.16f),
-        onErrorContainer = ink, outline = inputBorder, outlineVariant = border, scrim = Color(0x99000000),
-        surfaceBright = raised, surfaceDim = paper, surfaceContainer = raised, surfaceContainerHigh = raised,
-        surfaceContainerHighest = raised, surfaceContainerLow = raised, surfaceContainerLowest = raised,
-    )
-} else {
-    lightColorScheme(
-        primary = primary, onPrimary = onAccent, primaryContainer = primary.copy(alpha = 0.12f), onPrimaryContainer = ink,
-        secondary = mutedText, onSecondary = raised, secondaryContainer = well, onSecondaryContainer = ink,
-        tertiary = categoricalPurple, onTertiary = onAccent, tertiaryContainer = well, onTertiaryContainer = ink,
-        background = paper, onBackground = ink, surface = paper, onSurface = ink, surfaceVariant = well,
-        onSurfaceVariant = mutedText, surfaceTint = Color.Transparent, inverseSurface = ink, inverseOnSurface = paper,
-        inversePrimary = primary, error = danger, onError = onAccent, errorContainer = danger.copy(alpha = 0.12f),
-        onErrorContainer = ink, outline = inputBorder, outlineVariant = border, scrim = Color(0x66000000),
-        surfaceBright = raised, surfaceDim = paper, surfaceContainer = raised, surfaceContainerHigh = raised,
-        surfaceContainerHighest = raised, surfaceContainerLow = raised, surfaceContainerLowest = raised,
-    )
-}
-
-private fun materialTypography(): Typography {
-    val base = Typography()
-    fun TextStyle.plex() = copy(fontFamily = Fonts.sans)
-    return Typography(
-        displayLarge = base.displayLarge.plex(), displayMedium = base.displayMedium.plex(),
-        displaySmall = base.displaySmall.plex(), headlineLarge = base.headlineLarge.plex(),
-        headlineMedium = base.headlineMedium.plex(), headlineSmall = base.headlineSmall.plex(),
-        titleLarge = priorityType.title, titleMedium = priorityType.heading, titleSmall = priorityType.bodyStrong,
-        bodyLarge = priorityType.body, bodyMedium = priorityType.body, bodySmall = priorityType.small,
-        labelLarge = priorityType.bodyStrong.copy(fontSize = 14.sp), labelMedium = priorityType.label,
-        labelSmall = priorityType.small.copy(fontSize = 11.sp),
-    )
+private fun ThemeColors.toColorScheme(): ColorScheme {
+    // Selection and status containers are made from the accent at low alpha
+    // where they are drawn, a touch stronger in the dark.
+    val tint = if (isDark) 0.16f else 0.12f
+    val scrim = mediaLetterbox.copy(alpha = if (isDark) 0.6f else 0.4f)
+    val onSecondary = if (isDark) paper else raised
+    return if (isDark) {
+        darkColorScheme(
+            primary = primary, onPrimary = onAccent, primaryContainer = primary.copy(alpha = tint), onPrimaryContainer = ink,
+            secondary = mutedText, onSecondary = onSecondary, secondaryContainer = well, onSecondaryContainer = ink,
+            tertiary = categoricalPurple, onTertiary = onAccent, tertiaryContainer = well, onTertiaryContainer = ink,
+            background = paper, onBackground = ink, surface = paper, onSurface = ink, surfaceVariant = well,
+            onSurfaceVariant = mutedText, surfaceTint = Color.Transparent, inverseSurface = ink, inverseOnSurface = paper,
+            inversePrimary = primary, error = danger, onError = onAccent, errorContainer = danger.copy(alpha = tint),
+            onErrorContainer = ink, outline = inputBorder, outlineVariant = border, scrim = scrim,
+            surfaceBright = raised, surfaceDim = paper, surfaceContainer = raised, surfaceContainerHigh = raised,
+            surfaceContainerHighest = raised, surfaceContainerLow = raised, surfaceContainerLowest = raised,
+        )
+    } else {
+        lightColorScheme(
+            primary = primary, onPrimary = onAccent, primaryContainer = primary.copy(alpha = tint), onPrimaryContainer = ink,
+            secondary = mutedText, onSecondary = onSecondary, secondaryContainer = well, onSecondaryContainer = ink,
+            tertiary = categoricalPurple, onTertiary = onAccent, tertiaryContainer = well, onTertiaryContainer = ink,
+            background = paper, onBackground = ink, surface = paper, onSurface = ink, surfaceVariant = well,
+            onSurfaceVariant = mutedText, surfaceTint = Color.Transparent, inverseSurface = ink, inverseOnSurface = paper,
+            inversePrimary = primary, error = danger, onError = onAccent, errorContainer = danger.copy(alpha = tint),
+            onErrorContainer = ink, outline = inputBorder, outlineVariant = border, scrim = scrim,
+            surfaceBright = raised, surfaceDim = paper, surfaceContainer = raised, surfaceContainerHigh = raised,
+            surfaceContainerHighest = raised, surfaceContainerLow = raised, surfaceContainerLowest = raised,
+        )
+    }
 }
