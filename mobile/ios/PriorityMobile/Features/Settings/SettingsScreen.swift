@@ -37,6 +37,7 @@ struct SettingsScreen: View {
           }
           .pickerStyle(.inline)
           .labelsHidden()
+          CelebrationPreview(style: celebration)
           Toggle("Haptic on complete", isOn: $haptics)
             .toggleStyle(ThemedToggleStyle())
             .font(Typeface.body)
@@ -105,5 +106,37 @@ struct SettingsScreen: View {
     let short = info?["CFBundleShortVersionString"] as? String ?? "?"
     let build = info?["CFBundleVersion"] as? String ?? "?"
     return "\(short) (\(build))"
+  }
+}
+
+/// A sample row that plays the chosen celebration when tapped, so a style
+/// can be judged before a real task is spent on it. Plays even with Reduce
+/// Motion on — shortened, as it would be for real.
+private struct CelebrationPreview: View {
+  @Environment(WorkspaceModel.self) private var model
+  let style: CelebrationStyle
+  private static let id = "settings.celebration.preview"
+
+  var body: some View {
+    Button {
+      guard !model.celebration.isPlaying else { return }
+      Task { await model.celebration.play(style, on: Self.id) }
+    } label: {
+      HStack(spacing: Metrics.sm) {
+        TaskCheckbox(status: model.celebration.phase(for: Self.id) == .celebrating ? .completed : .open)
+          .celebrationIcon(Self.id)
+          .frame(width: 32, height: 40)
+        Text("Tap to preview")
+          .font(Typeface.body)
+          .foregroundStyle(Palette.ink)
+          .celebrationStrike(Self.id)
+        Spacer(minLength: 0)
+      }
+      .celebrationRow(Self.id)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(style == .none)
+    .accessibilityIdentifier("settings.celebrationPreview")
   }
 }

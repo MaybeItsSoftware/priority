@@ -39,6 +39,9 @@ struct RootView: View {
     .sheet(isPresented: $navigation.isSettingsPresented) {
       SettingsScreen().environment(model)
     }
+    .sheet(item: pendingBlock) { pending in
+      BlockQualityPrompt(pending: pending).environment(model)
+    }
     .modifier(ListsPresenters())
     .overlay(alignment: .bottom) { ToastView() }
     .sensoryFeedback(trigger: model.completionCount) { _, _ in
@@ -55,6 +58,13 @@ struct RootView: View {
 
   private var errorBinding: Binding<Bool> {
     Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })
+  }
+
+  /// The one quality prompt, for whichever surface ended the block.
+  private var pendingBlock: Binding<PendingBlockCompletion?> {
+    Binding(
+      get: { model.pendingBlock },
+      set: { if $0 == nil, model.pendingBlock != nil { model.cancelBlockCompletion() } })
   }
 
   private var movingTask: Binding<IdentifiedString?> {

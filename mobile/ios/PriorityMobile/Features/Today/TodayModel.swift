@@ -136,29 +136,12 @@ struct DaySnapshot: Equatable, Sendable {
   }
 }
 
-/// A finished block waiting to be told how it went. The seconds are captured
-/// the instant Done is pressed: the clock stops when the work stops, not when
-/// the judgement arrives.
-struct PendingBlockCompletion: Identifiable, Equatable {
-  let sessionID: String
-  let taskID: String
-  let title: String
-  let seconds: Int
-  let completeTask: Bool
-  let blockID: String?
-  let wasPaused: Bool
-
-  var id: String { "\(sessionID)/\(taskID)/\(completeTask)" }
-}
-
-/// The Today screen's state: the day as last read, and the block awaiting a
-/// score.
+/// The Today screen's state: the day as last read.
 @MainActor
 @Observable
 final class TodayModel {
   private(set) var day = DaySnapshot.empty
   private(set) var isLoaded = false
-  var pendingCompletion: PendingBlockCompletion?
   @ObservationIgnored private var generation = 0
 
   /// Reads the day off the main actor and lands it if nothing newer was
@@ -227,9 +210,11 @@ final class TodayModel {
     }
     if let dailyID = card.dailyID {
       guard !card.isDailyDoneToday else { return }
-      if model.perform({ _ = try $0.logContribution(dailyId: dailyID) }) { model.noteCompletion() }
+      model.celebrate(card.id) {
+        if model.perform({ _ = try $0.logContribution(dailyId: dailyID) }) { model.noteCompletion() }
+      }
     } else {
-      model.toggleComplete(card.id)
+      model.completeCelebrating(card.id)
     }
   }
 
@@ -292,51 +277,13 @@ final class TodayModel {
     }
   }
 
-  /// Stops the clock and asks how the block went. Done closes the task;
-  /// Log and Skip credit the time and leave it open — Skip because logging
-  /// the block is what moves the queue on.
+  /// Stops the clock and asks how the block went — through the one prompt
+  /// the root presents for every surface. Done closes the task; Log and Skip
+  /// credit the time and leave it open — Skip because logging the block is
+  /// what moves the queue on.
   func requestCompletion(completeTask: Bool, model: WorkspaceModel, now: Date = .now) {
-    guard pendingCompletion == nil, let session = day.session, let taskID = session.activeTaskId,
-      let card = day.cards.first(where: { $0.id == taskID }) ?? model.task(taskID).map({ task in
-        DayCard(
-          id: task.id, title: task.title, listName: nil, listColorHex: nil, reason: nil,
-          estimateSeconds: task.estimateSeconds, loggedSeconds: 0, dueAt: task.dueAt, isList: task.isList,
-          dailyID: nil, isDailyDoneToday: false, isRunning: true)
-      })
-    else { return }
-    pendingCompletion = PendingBlockCompletion(
-      sessionID: session.id, taskID: taskID, title: card.title, seconds: session.elapsedSeconds(now: now),
-      completeTask: completeTask, blockID: session.activeBlockId, wasPaused: session.pausedAt != nil)
-    if session.pausedAt == nil {
-      model.perform { try $0.pauseFocusSession(id: session.id, now: now) }
-    }
-  }
-
-  /// Credits the time the block took and scores it.
-  func confirmCompletion(multiplier: Double?, model: WorkspaceModel) {
-    guard let pending = pendingCompletion else { return }
-    pendingCompletion = nil
-    var outcome: WorkspaceStore.FocusCompletionOutcome?
-    model.perform { store in
-      outcome = try store.completeActiveFocusTask(
-        sessionId: pending.sessionID, elapsedSeconds: pending.seconds, qualityMultiplier: multiplier,
-        completeTask: pending.completeTask, expectedBlockId: pending.blockID, context: FocusContext()
-      ).outcome
-    }
-    switch outcome {
-    case .taskCompleted: model.noteCompletion()
-    case .contributionLogged(let seconds): model.noteCompletion(); model.showToast("Logged \(Format.duration(seconds)) to the daily")
-    case .progressLogged(let seconds): model.showToast("Logged \(Format.duration(seconds))")
-    case nil: break
-    }
-  }
-
-  /// Drops the question and resumes a block that was running.
-  func cancelCompletion(model: WorkspaceModel) {
-    guard let pending = pendingCompletion else { return }
-    pendingCompletion = nil
-    if !pending.wasPaused {
-      model.perform { try $0.resumeFocusSession(id: pending.sessionID) }
-    }
+    guard let session = day.session, let taskID = session.activeTaskId else { return }
+    let title = day.cards.first(where: { $0.id == taskID })?.title ?? model.task(taskID)?.title ?? ""
+    model.requestBlockCompletion(session: session, title: title, completeTask: completeTask, now: now)
   }
 }

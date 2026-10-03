@@ -46,6 +46,7 @@ struct FocusSnapshot: Sendable {
   var queue: [FocusQueueTask] = []
   var points: FocusPointsSummary = .zero
   var dailyTaskIDs: Set<String> = []
+  var nextEvaluationAt: Date?
 
   static func load(store: WorkspaceStore, workspaceID: String, context: FocusContext, now: Date = .now) throws -> FocusSnapshot {
     let session = try store.activeFocusSession()
@@ -56,6 +57,7 @@ struct FocusSnapshot: Sendable {
     snapshot.blocked = next.ranking.blocked
     snapshot.conditions = next.conditions
     snapshot.hasManualOrder = next.hasManualFocusOrder
+    snapshot.nextEvaluationAt = next.ranking.nextEvaluationAt
     snapshot.session = session
     if let session {
       snapshot.activeTask = try session.activeTaskId.flatMap { try store.task(id: $0) }
@@ -65,21 +67,6 @@ struct FocusSnapshot: Sendable {
     snapshot.dailyTaskIDs = Set(try store.dailies(on: now).filter { !$0.isDoneToday }.map(\.task.id))
     return snapshot
   }
-}
-
-/// A finished block held between pressing Done and saying how it went. The
-/// seconds are captured at the press: what counts is the time spent working,
-/// not the time spent deciding what it was worth.
-struct PendingFocusCompletion: Identifiable, Equatable {
-  let sessionID: String
-  let taskID: String
-  let title: String
-  let seconds: Int
-  let completeTask: Bool
-  let blockID: String?
-  let wasPaused: Bool
-
-  var id: String { "\(sessionID)/\(taskID)" }
 }
 
 /// A start the ranking would not have chosen, held for the user to confirm.
@@ -111,25 +98,40 @@ final class FocusModel {
   }
   /// The end of the time you have, or nil for no limit.
   var availableUntil: Date? { didSet { if availableUntil != oldValue { contextVersion &+= 1 } } }
+  /// When the conditions you said were true stop being trusted — "at the
+  /// office until 5". Past it, the context is set aside and the last one is
+  /// offered back rather than assumed. The Mac's `contextExpiresAt`.
+  var contextExpiresAt: Date? { didSet { if contextExpiresAt != oldValue { contextVersion &+= 1 } } }
+  /// The conditions an expired context held, offered back with "Use again".
+  var suggestedContextIDs: Set<String> = []
   var mode: FocusTimeMode = .progress { didSet { if mode != oldValue { contextVersion &+= 1 } } }
   /// Moves when the context does, so the ladder is ranked again.
   private(set) var contextVersion = 0
 
+  /// The context the ranking sees. The time you have runs to whichever
+  /// comes first, your stated end or the context's expiry: a context that
+  /// lapses mid-block should not be trusted past it.
   var context: FocusContext {
-    FocusContext(conditionIDs: conditionIDs, endsAt: availableUntil, mode: mode)
+    let ends = [availableUntil, contextExpiresAt].compactMap { $0 }.min()
+    return FocusContext(conditionIDs: conditionIDs, endsAt: ends, mode: mode)
   }
 
   // MARK: Ladder
 
   private(set) var stagedTaskID: String?
   var estimateMinutes: Double = 25
-  var pendingCompletion: PendingFocusCompletion?
   var startOverride: FocusStartOverride?
-  private(set) var lastAward: FocusAward?
-  private(set) var lastOutcome: WorkspaceStore.FocusCompletionOutcome?
   @ObservationIgnored private var generation = 0
   @ObservationIgnored private var expiryPromptedBlockID: String?
   @ObservationIgnored private var lastCheckpointAt = Date.distantPast
+  /// When the ranking next changes on its own — a start time arriving, a
+  /// window closing — so the ladder is ranked again then without a write.
+  @ObservationIgnored private(set) var nextEvaluationAt: Date?
+  /// The wall clock and uptime at the last tick: a gap between how far each
+  /// moved is the device clock being changed under a running block.
+  @ObservationIgnored private var lastClockAt = Date.now
+  @ObservationIgnored private var lastUptime = ProcessInfo.processInfo.systemUptime
+  @ObservationIgnored private var lastTimeZone = TimeZone.current.identifier
 
   private var contextKey: String { "focus-context-\(model.workspace.id)" }
 
@@ -137,6 +139,10 @@ final class FocusModel {
     self.model = model
     conditionIDs = Set(AppGroup.defaults.stringArray(forKey: "focus-context-\(model.workspace.id)") ?? [])
   }
+
+  var lastAward: FocusAward? { model.lastBlockResult?.award }
+  var lastOutcome: WorkspaceStore.FocusCompletionOutcome? { model.lastBlockResult?.outcome }
+  var pendingCompletion: PendingBlockCompletion? { model.pendingBlock }
 
   var ladder: [ScoredNextUp] { snapshot.ladder }
   var session: FocusSession? { snapshot.session }
@@ -181,6 +187,7 @@ final class FocusModel {
 
   private func apply(_ result: FocusSnapshot) {
     snapshot = result
+    nextEvaluationAt = result.nextEvaluationAt
     isLoaded = true
     if let stagedTaskID, result.session?.activeTaskId == stagedTaskID { self.stagedTaskID = nil }
   }
@@ -188,6 +195,7 @@ final class FocusModel {
   // MARK: - Context
 
   func toggleCondition(_ condition: TaskCondition) {
+    suggestedContextIDs = []
     if conditionIDs.contains(condition.id) {
       conditionIDs.remove(condition.id)
     } else {
@@ -203,9 +211,34 @@ final class FocusModel {
     availableUntil = minutes.map { now.addingTimeInterval(Double($0 * 60)) }
   }
 
+  /// Turns the context's expiry on (an hour from now) or off.
+  func setContextExpires(_ expires: Bool, now: Date = .now) {
+    contextExpiresAt = expires ? now.addingTimeInterval(3_600) : nil
+  }
+
+  /// The context has lapsed: its conditions are set aside, and offered back
+  /// with "Use again" rather than assumed still true. The Mac does the same
+  /// in `monitorFocus`.
+  func expireContextIfDue(now: Date = .now) {
+    guard let expires = contextExpiresAt, expires <= now else { return }
+    if !conditionIDs.isEmpty { suggestedContextIDs = conditionIDs }
+    contextExpiresAt = nil
+    conditionIDs = []
+    model.showToast("Your context expired")
+  }
+
+  /// Puts back the conditions an expired context held.
+  func confirmSuggestedContext() {
+    conditionIDs = suggestedContextIDs
+    suggestedContextIDs = []
+  }
+
+  func dismissSuggestedContext() {
+    suggestedContextIDs = []
+  }
+
   func createCondition(named name: String, isLocation: Bool) {
-    let workspaceID = model.workspace.id
-    model.perform { try $0.createCondition(workspaceId: workspaceID, name: name, isLocation: isLocation) }
+    model.createCondition(named: name, isLocation: isLocation)
   }
 
   var visibleConditions: [TaskCondition] {
@@ -285,8 +318,7 @@ final class FocusModel {
     }
     if started {
       stagedTaskID = nil
-      lastAward = nil
-      lastOutcome = nil
+      model.lastBlockResult = nil
       loadNow()
     }
   }
@@ -365,43 +397,13 @@ final class FocusModel {
     loadNow()
   }
 
-  /// Stops the clock and asks how the block went. `completeTask` false is
-  /// "log and keep": the time is credited and the task stays open.
+  /// Stops the clock and asks how the block went, through the one prompt
+  /// the root presents. `completeTask` false is "log and keep": the time is
+  /// credited and the task stays open.
   func requestCompletion(completeTask: Bool = true, now: Date = .now) {
-    guard pendingCompletion == nil, let session, let task = activeTask else { return }
-    pendingCompletion = PendingFocusCompletion(
-      sessionID: session.id, taskID: task.id, title: task.title, seconds: session.elapsedSeconds(now: now),
-      completeTask: completeTask, blockID: session.activeBlockId, wasPaused: session.pausedAt != nil)
-    model.perform { try $0.pauseFocusSession(id: session.id, now: now) }
-    loadNow()
-  }
-
-  /// Drops the prompt and resumes a block that was running when asked.
-  func cancelCompletion() {
-    if let pending = pendingCompletion, !pending.wasPaused {
-      model.perform { try $0.resumeFocusSession(id: pending.sessionID) }
-    }
-    pendingCompletion = nil
-    loadNow()
-  }
-
-  /// Credits the time spent and scores it by the multiplier given.
-  func confirmCompletion(multiplier: Double) {
-    guard let pending = pendingCompletion else { return }
-    let context = context
-    let multiplier = FocusPoints.clamped(multiplier: multiplier)
-    var completion: WorkspaceStore.FocusCompletion?
-    let done = model.perform { store in
-      completion = try store.completeActiveFocusTask(
-        sessionId: pending.sessionID, elapsedSeconds: pending.seconds, qualityMultiplier: multiplier,
-        completeTask: pending.completeTask, expectedBlockId: pending.blockID, context: context)
-    }
-    pendingCompletion = nil
-    if done, let completion {
-      lastAward = completion.award
-      lastOutcome = completion.outcome
-      if pending.completeTask { model.noteCompletion() }
-    }
+    guard let session, let task = activeTask else { return }
+    model.requestBlockCompletion(
+      session: session, title: task.title, completeTask: completeTask, context: context, now: now)
     loadNow()
   }
 
@@ -417,14 +419,26 @@ final class FocusModel {
       }
       try store.finishFocusSession(id: session.id, now: now)
     }
-    pendingCompletion = nil
+    model.pendingBlock = nil
     loadNow()
   }
 
-  /// Called each second while the block runs: checkpoints the clock every
-  /// thirty seconds, so a crash keeps the time, and asks how it went once the
-  /// planned block is up.
-  func tick(now: Date = .now) {
+  /// Called each second while the screen is up. Lapses an expired context,
+  /// rebases a running block's clock after the device clock jumps, ranks
+  /// again when the ranking's next boundary passes or the time zone changes,
+  /// checkpoints the clock every thirty seconds so a crash keeps the time,
+  /// and asks how it went once the planned block is up. The Mac's
+  /// `monitorFocus`.
+  func tick(now: Date = .now, uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) {
+    expireContextIfDue(now: now)
+    let jumped = synchroniseClock(now: now, uptime: uptime)
+    let zone = TimeZone.current.identifier
+    let zoneChanged = zone != lastTimeZone
+    lastTimeZone = zone
+    if jumped || zoneChanged || (nextEvaluationAt.map { $0 <= now } ?? false) {
+      nextEvaluationAt = nil
+      contextVersion &+= 1
+    }
     guard let session, session.pausedAt == nil, session.activeTaskId != nil else { return }
     if now.timeIntervalSince(lastCheckpointAt) >= 30 {
       lastCheckpointAt = now
@@ -437,8 +451,27 @@ final class FocusModel {
     }
   }
 
+  /// Notices the wall clock moving by more than the time that passed — the
+  /// user changing the clock, a manual time-zone fix — and rebases the
+  /// running block so it counts the time actually worked rather than the
+  /// jump. Returns whether the clock jumped.
+  @discardableResult
+  func synchroniseClock(now: Date, uptime: TimeInterval) -> Bool {
+    let wallDelta = now.timeIntervalSince(lastClockAt)
+    let uptimeDelta = uptime - lastUptime
+    let jumped = abs(wallDelta - uptimeDelta) > 3
+    if let session, session.pausedAt == nil, session.activeTaskId != nil,
+      let elapsed = FocusClockPolicy.adjustedElapsed(
+        previousElapsed: session.elapsedSeconds(now: lastClockAt), wallDelta: wallDelta, uptimeDelta: uptimeDelta) {
+      model.perform { try $0.rebaseFocusClock(id: session.id, elapsedSeconds: elapsed, now: now) }
+      loadNow()
+    }
+    lastClockAt = now
+    lastUptime = uptime
+    return jumped
+  }
+
   func dismissAward() {
-    lastAward = nil
-    lastOutcome = nil
+    model.lastBlockResult = nil
   }
 }

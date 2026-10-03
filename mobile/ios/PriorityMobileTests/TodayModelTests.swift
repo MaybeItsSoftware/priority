@@ -81,9 +81,9 @@ final class TodayModelTests: XCTestCase {
     XCTAssertNotNil(today.day.session?.pausedAt)
 
     today.requestCompletion(completeTask: true, model: model)
-    XCTAssertNotNil(today.pendingCompletion)
-    today.confirmCompletion(multiplier: 1.5, model: model)
-    XCTAssertNil(today.pendingCompletion)
+    XCTAssertNotNil(model.pendingBlock)
+    model.confirmBlockCompletion(multiplier: 1.5)
+    XCTAssertNil(model.pendingBlock)
     XCTAssertEqual(try model.store.task(id: task.id)?.status, .completed)
   }
 
@@ -93,7 +93,7 @@ final class TodayModelTests: XCTestCase {
     today.start(try XCTUnwrap(today.day.cards.first), model: model)
     await today.load(model)
     today.requestCompletion(completeTask: false, model: model)
-    today.confirmCompletion(multiplier: nil, model: model)
+    model.confirmBlockCompletion(multiplier: nil)
     XCTAssertEqual(try model.store.task(id: task.id)?.status, .open)
     XCTAssertEqual(try model.store.workBlocks(for: task.id).count, 1)
   }
@@ -106,7 +106,7 @@ final class TodayModelTests: XCTestCase {
     today.requestCompletion(completeTask: true, model: model)
     await today.load(model)
     XCTAssertNotNil(today.day.session?.pausedAt)
-    today.cancelCompletion(model: model)
+    model.cancelBlockCompletion()
     await today.load(model)
     XCTAssertNil(today.day.session?.pausedAt)
   }

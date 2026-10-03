@@ -99,8 +99,15 @@ final class WorkspaceModel {
   /// A task someone asked to focus on from elsewhere — a context menu, a day
   /// card. The Focus screen stages it and clears this.
   var focusRequestTaskID: String?
+  /// A block that has been ended and is waiting to be scored. Whoever ended
+  /// it, the root presents the one `BlockQualityPrompt` for it.
+  var pendingBlock: PendingBlockCompletion?
+  /// What the last scored block earned, until someone dismisses it.
+  var lastBlockResult: BlockCompletionResult?
 
   let navigation = AppNavigation()
+  /// The row being celebrated, if any. See `CelebrationStage`.
+  let celebration = CelebrationStage()
 
   /// Called after every change, on the main actor. The widget bridge and the
   /// Live Activity hang off this.

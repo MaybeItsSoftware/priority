@@ -246,8 +246,9 @@ struct BoardCardView: View {
         Text(parentTitle).font(Typeface.footnote).foregroundStyle(Palette.muted).lineLimit(1)
       }
       HStack(alignment: .top, spacing: Metrics.sm) {
-        Button { model.toggleComplete(card.id) } label: {
+        Button { model.completeCelebrating(card.id) } label: {
           TaskCheckbox(status: card.status, isList: card.isList)
+            .celebrationIcon(card.id)
             .frame(width: 28, height: 28)
             .contentShape(Rectangle())
         }
@@ -257,6 +258,7 @@ struct BoardCardView: View {
           .font(card.isList ? Typeface.bodyMedium : Typeface.body)
           .foregroundStyle(card.status == .open ? Palette.ink : Palette.muted)
           .strikethrough(card.status != .open, color: Palette.dim)
+          .celebrationStrike(card.id)
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.top, 3)
         if !card.subtasks.isEmpty {
@@ -267,6 +269,7 @@ struct BoardCardView: View {
       subtasks
     }
     .padding(Metrics.sm)
+    .celebrationRow(card.id)
     .background(
       RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
         .fill(isSelected ? Palette.primary.opacity(0.08) : Palette.raised))

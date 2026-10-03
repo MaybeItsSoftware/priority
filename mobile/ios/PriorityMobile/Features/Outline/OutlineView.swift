@@ -89,7 +89,7 @@ struct OutlineView: View {
     .listRowBackground(isSelected ? Palette.primary.opacity(0.10) : Palette.paper)
     .listRowSeparatorTint(Palette.borderMuted)
     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-      Button { model.toggleComplete(row.id) } label: {
+      Button { model.completeCelebrating(row.id) } label: {
         Label(row.status == .open ? "Complete" : "Reopen", systemImage: row.status == .open ? "checkmark" : "arrow.uturn.backward")
       }
       .tint(Palette.success)
@@ -253,9 +253,10 @@ struct OutlineRowView: View, Equatable {
       Color.clear.frame(width: CGFloat(row.depth) * Metrics.indent, height: 1)
       disclosure
       Button {
-        model.toggleComplete(row.id)
+        model.completeCelebrating(row.id)
       } label: {
         TaskCheckbox(status: row.status, isList: row.isList)
+          .celebrationIcon(row.id)
           .frame(width: 32, height: 40)
           .contentShape(Rectangle())
       }
@@ -268,6 +269,7 @@ struct OutlineRowView: View, Equatable {
           .foregroundStyle(row.status == .open ? Palette.ink : Palette.muted)
           .strikethrough(row.status != .open, color: Palette.dim)
           .lineLimit(3)
+          .celebrationStrike(row.id)
         if let listName = row.listName {
           Text(listName).font(Typeface.footnote).foregroundStyle(Palette.muted).lineLimit(1)
         }
@@ -289,6 +291,7 @@ struct OutlineRowView: View, Equatable {
         .accessibilityIdentifier("outline.details")
       }
     }
+    .celebrationRow(row.id)
   }
 
   @ViewBuilder

@@ -14,6 +14,7 @@ struct TaskInspector: View {
   @Environment(\.dismiss) private var dismiss
   @State private var inspector: InspectorModel
   @FocusState private var focused: Field?
+  @State private var showsConditions = false
 
   enum Field: Hashable { case title, notes, estimate, tags, recurrence, links, minimumBlock }
 
@@ -74,6 +75,7 @@ struct TaskInspector: View {
       if previous != nil { inspector.save(model) }
     }
     .onDisappear { inspector.save(model) }
+    .sheet(isPresented: $showsConditions) { ConditionsSheet().environment(model) }
     .accessibilityIdentifier("inspector")
   }
 
@@ -314,35 +316,57 @@ struct TaskInspector: View {
     return line
   }
 
+  /// The requirement groups: every group must hold (AND), and any one
+  /// condition within a group will do (OR) — the Mac's
+  /// `WorkspaceTaskPlanningEditor`. Each group is a row of chips with an
+  /// "or…" to widen it; "And requires…" adds a group.
   @ViewBuilder
   private func conditions(_ values: TaskEditorValues) -> some View {
     let groups = values.requirementGroups ?? []
-    VStack(alignment: .leading, spacing: Metrics.xs) {
-      Text("Conditions").font(Typeface.callout).foregroundStyle(Palette.muted)
+    VStack(alignment: .leading, spacing: Metrics.sm) {
+      HStack {
+        Text("Conditions").font(Typeface.callout).foregroundStyle(Palette.muted)
+        Spacer()
+        Button("Manage") { showsConditions = true }
+          .font(Typeface.caption)
+          .foregroundStyle(Palette.primary)
+          .accessibilityIdentifier("inspector.manageConditions")
+      }
       if groups.isEmpty {
         Text("Anytime, anywhere").font(Typeface.caption).foregroundStyle(Palette.dim)
       }
       ForEach(Array(groups.enumerated()), id: \.offset) { index, group in
-        HStack(spacing: Metrics.xs) {
-          Text(index == 0 ? "Needs" : "and").font(Typeface.caption).foregroundStyle(Palette.muted)
-          ForEach(Array(group.enumerated()), id: \.element) { position, id in
-            if position > 0 { Text("or").font(Typeface.caption).foregroundStyle(Palette.muted) }
-            Button {
-              inspector.removeRequirement(id, fromGroup: index, model: model)
-            } label: {
-              Tag(text: inspector.conditionName(id), tint: Palette.purple, systemImage: "xmark")
+        VStack(alignment: .leading, spacing: Metrics.xs) {
+          Text(index == 0 ? "Requires" : "And requires")
+            .font(Typeface.caption).foregroundStyle(Palette.muted)
+          FlowLayout(spacing: Metrics.xs) {
+            ForEach(Array(group.enumerated()), id: \.element) { position, id in
+              if position > 0 { Text("or").font(Typeface.caption).foregroundStyle(Palette.muted) }
+              Button {
+                inspector.removeRequirement(id, fromGroup: index, model: model)
+              } label: {
+                Tag(text: inspector.conditionName(id), tint: Palette.purple, systemImage: "xmark")
+              }
+              .buttonStyle(.plain)
+              .frame(minHeight: 30)
+              .accessibilityLabel("Remove \(inspector.conditionName(id))")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Remove \(inspector.conditionName(id))")
-          }
-          Menu {
-            ForEach(inspector.conditions.filter { !$0.isArchived && !group.contains($0.id) }) { condition in
-              Button(condition.name) { inspector.addRequirement(condition.id, toGroup: index, model: model) }
+            let others = inspector.conditions.filter { !$0.isArchived && !group.contains($0.id) }
+            if !others.isEmpty {
+              Menu {
+                ForEach(others) { condition in
+                  Button(condition.name) { inspector.addRequirement(condition.id, toGroup: index, model: model) }
+                }
+              } label: {
+                Text("or…").font(Typeface.caption).foregroundStyle(Palette.primary).frame(minHeight: 30)
+              }
+              .accessibilityIdentifier("inspector.orCondition.\(index)")
             }
-          } label: {
-            Text("or…").font(Typeface.caption).foregroundStyle(Palette.primary)
           }
         }
+        .padding(Metrics.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(RoundedRectangle(cornerRadius: Metrics.controlRadius).strokeBorder(Palette.borderMuted, lineWidth: 1))
       }
       Menu {
         ForEach(inspector.conditions.filter { condition in
@@ -350,10 +374,16 @@ struct TaskInspector: View {
         }) { condition in
           Button(condition.name) { inspector.addRequirement(condition.id, model: model) }
         }
+        Divider()
+        Button { showsConditions = true } label: { Label("New condition…", systemImage: "plus") }
       } label: {
-        ThemedMenuLabel(title: "Add a required condition", systemImage: "plus")
+        ThemedMenuLabel(title: groups.isEmpty ? "Add a required condition" : "And requires…", systemImage: "plus")
       }
       .accessibilityIdentifier("inspector.addCondition")
+      if groups.count > 1 || groups.contains(where: { $0.count > 1 }) {
+        Text("Every group must hold; any one condition within a group will do.")
+          .font(Typeface.footnote).foregroundStyle(Palette.dim)
+      }
     }
   }
 

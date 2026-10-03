@@ -61,14 +61,6 @@ struct TodayScreen: View {
     .toolbar { WorkspaceToolbar() }
     .task(id: model.revision) { await today.load(model) }
     .task(id: today.day.session?.id) { await refreshWhileRunning() }
-    .sheet(item: $today.pendingCompletion) { pending in
-      BlockQualityPrompt(pending: pending) { multiplier in
-        today.confirmCompletion(multiplier: multiplier, model: model)
-      } onCancel: {
-        today.cancelCompletion(model: model)
-      }
-      .presentationDetents([.medium, .large])
-    }
     .accessibilityIdentifier("today.list")
   }
 
@@ -257,6 +249,7 @@ struct DayCardRow: View, Equatable {
         .frame(minWidth: 16, alignment: .trailing)
       Button(action: onTick) {
         TaskCheckbox(status: card.isDailyDoneToday ? .completed : .open, isList: card.isList)
+          .celebrationIcon(card.id)
           .frame(width: 32, height: 44)
           .contentShape(Rectangle())
       }
@@ -269,6 +262,7 @@ struct DayCardRow: View, Equatable {
             .font(Typeface.body)
             .foregroundStyle(Palette.ink)
             .lineLimit(2)
+            .celebrationStrike(card.id)
             .frame(maxWidth: .infinity, alignment: .leading)
           HStack(spacing: Metrics.xs) {
             if let reason = card.reason, reason != .planned {
@@ -302,6 +296,7 @@ struct DayCardRow: View, Equatable {
       .accessibilityLabel("Start \(card.title)")
       .accessibilityIdentifier("today.start.\(card.title)")
     }
+    .celebrationRow(card.id)
   }
 
   @ViewBuilder
@@ -429,71 +424,5 @@ struct DailyRow: View {
     let logged = Format.duration(daily.secondsToday)
     guard let target = daily.targetSeconds else { return logged }
     return "\(daily.secondsToday > 0 ? logged : "0m")/\(Format.duration(target))"
-  }
-}
-
-// MARK: - Quality prompt
-
-/// How did that block go? The answer multiplies the minutes into points.
-/// "Skip scoring" credits the minutes without a score.
-struct BlockQualityPrompt: View {
-  let pending: PendingBlockCompletion
-  let onScore: (Double?) -> Void
-  let onCancel: () -> Void
-  @Environment(\.dismiss) private var dismiss
-
-  var body: some View {
-    NavigationStack {
-      List {
-        Section {
-          VStack(alignment: .leading, spacing: Metrics.xs) {
-            Text(pending.title).font(Typeface.title).foregroundStyle(Palette.ink)
-            Text("\(Format.duration(pending.seconds)) · \(pending.completeTask ? "done" : "logged, still open")")
-              .font(Typeface.numeral).foregroundStyle(Palette.muted)
-          }
-          .listRowBackground(Palette.paper)
-        }
-        Section {
-          ForEach(FocusQuality.allCases) { quality in
-            Button {
-              onScore(quality.multiplier)
-              dismiss()
-            } label: {
-              HStack {
-                VStack(alignment: .leading, spacing: 1) {
-                  Text(quality.title).font(Typeface.body).foregroundStyle(Palette.ink)
-                  Text(quality.detail).font(Typeface.footnote).foregroundStyle(Palette.muted)
-                }
-                Spacer()
-                Text("×\(quality.multiplier.formatted())").font(Typeface.numeral).foregroundStyle(Palette.primary)
-              }
-            }
-            .accessibilityIdentifier("quality.\(quality.rawValue)")
-          }
-        } header: {
-          Text("How did it go?").font(Typeface.caption).foregroundStyle(Palette.muted).textCase(nil)
-        }
-        Section {
-          Button("Skip scoring") {
-            onScore(nil)
-            dismiss()
-          }
-          .font(Typeface.body)
-        }
-      }
-      .scrollContentBackground(.hidden)
-      .background(Palette.paper)
-      .navigationTitle(pending.completeTask ? "Block done" : "Block logged")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Keep going") {
-            onCancel()
-            dismiss()
-          }
-        }
-      }
-    }
-    .interactiveDismissDisabled()
   }
 }

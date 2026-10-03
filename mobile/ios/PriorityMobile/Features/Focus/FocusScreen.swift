@@ -44,10 +44,13 @@ private struct FocusContent: View {
     }
     .onAppear { focus.takeRequest() }
     .onChange(of: model.focusRequestTaskID) { _, _ in focus.takeRequest() }
-    .sheet(item: $focus.pendingCompletion) { pending in
-      FocusQualityPrompt(focus: focus, pending: pending)
-        .presentationDetents([.medium, .large])
-        .interactiveDismissDisabled()
+    .task {
+      // The screen's heartbeat: context expiry, the clock-jump rebase, the
+      // ranking's own boundaries, checkpoints and the end of the block.
+      while !Task.isCancelled {
+        focus.tick()
+        try? await Task.sleep(for: .seconds(1))
+      }
     }
     .confirmationDialog(
       "Start anyway?", isPresented: overrideBinding, titleVisibility: .visible, presenting: focus.startOverride
@@ -204,7 +207,7 @@ private struct FocusContextControls: View {
   @State private var isAddingCondition = false
   @State private var newCondition = ""
   @State private var newIsLocation = false
-  @State private var customMinutes = 45
+  @State private var showsConditions = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: Metrics.md) {
@@ -242,8 +245,22 @@ private struct FocusContextControls: View {
           }
           .buttonStyle(.plain)
           .accessibilityLabel("New condition")
+          Button {
+            showsConditions = true
+          } label: {
+            Image(systemName: "slider.horizontal.3")
+              .foregroundStyle(Palette.muted)
+              .frame(width: 34, height: 34)
+              .overlay(RoundedRectangle(cornerRadius: Metrics.controlRadius).strokeBorder(Palette.border, lineWidth: 1))
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Manage conditions")
+          .accessibilityIdentifier("focus.manageConditions")
         }
         .padding(.vertical, 1)
+      }
+      if !focus.suggestedContextIDs.isEmpty {
+        suggestedContext
       }
       HStack(spacing: Metrics.sm) {
         Menu {
@@ -272,6 +289,7 @@ private struct FocusContextControls: View {
         }
         Spacer(minLength: 0)
       }
+      contextExpiry
       Picker("Mode", selection: $focus.mode) {
         Text("Make progress").tag(FocusTimeMode.progress)
         Text("Finish something").tag(FocusTimeMode.finish)
@@ -286,6 +304,48 @@ private struct FocusContextControls: View {
       Button("Add") { add(location: false) }
     } message: {
       Text("A place, a tool or a state you need to be in for some tasks.")
+    }
+    .sheet(isPresented: $showsConditions) { ConditionsSheet() }
+  }
+
+  /// "Last context: Office, Laptop — Use again". What an expired context
+  /// leaves behind: offered back, not assumed.
+  private var suggestedContext: some View {
+    HStack(spacing: Metrics.sm) {
+      Text("Last context: " + focus.suggestedContextIDs.compactMap { id in
+        focus.snapshot.conditions.first { $0.id == id }?.name
+      }.sorted().joined(separator: ", "))
+        .font(Typeface.caption)
+        .foregroundStyle(Palette.muted)
+        .lineLimit(2)
+      Spacer(minLength: 0)
+      Button("Use again") { focus.confirmSuggestedContext() }
+        .font(Typeface.caption)
+        .foregroundStyle(Palette.primary)
+        .accessibilityIdentifier("focus.useContextAgain")
+      Button("Dismiss") { focus.dismissSuggestedContext() }
+        .font(Typeface.caption)
+        .foregroundStyle(Palette.muted)
+    }
+    .buttonStyle(.plain)
+  }
+
+  /// "These conditions hold until…": past it the context lapses and is
+  /// offered back. The available time also stops there.
+  private var contextExpiry: some View {
+    HStack(spacing: Metrics.sm) {
+      Toggle("Context expires", isOn: Binding(
+        get: { focus.contextExpiresAt != nil }, set: { focus.setContextExpires($0) }))
+        .toggleStyle(ThemedToggleStyle())
+        .fixedSize()
+        .accessibilityIdentifier("focus.contextExpires")
+      Spacer(minLength: 0)
+      if let expires = focus.contextExpiresAt {
+        DatePicker("Expires", selection: Binding(get: { expires }, set: { focus.contextExpiresAt = $0 }),
+                   in: Date.now..., displayedComponents: .hourAndMinute)
+          .labelsHidden()
+          .accessibilityIdentifier("focus.contextExpiresAt")
+      }
     }
   }
 
@@ -351,9 +411,15 @@ private struct FocusStagedCard: View {
 }
 
 private struct FocusRungRow: View {
+  @Environment(WorkspaceModel.self) private var model
   @Bindable var focus: FocusModel
   let rung: ScoredNextUp
   let index: Int
+
+  private func tickOff() {
+    let id = rung.id
+    model.celebrate(id) { [focus] in focus.completeWithoutSession(id) }
+  }
 
   var body: some View {
     let isStaged = focus.stagedTaskID == rung.id
@@ -370,6 +436,7 @@ private struct FocusRungRow: View {
             .font(index == 0 ? Typeface.bodyMedium : Typeface.body)
             .foregroundStyle(Palette.ink)
             .lineLimit(2)
+            .celebrationStrike(rung.id)
           Text(focus.explanation(for: rung).capitalizedFirst)
             .font(Typeface.footnote)
             .foregroundStyle(Palette.muted)
@@ -386,13 +453,14 @@ private struct FocusRungRow: View {
       }
       .padding(.vertical, 6)
       .contentShape(Rectangle())
+      .celebrationRow(rung.id)
     }
     .buttonStyle(.plain)
     .listRowBackground(isStaged ? Palette.primary.opacity(0.10) : Palette.paper)
     .listRowSeparatorTint(Palette.borderMuted)
     .accessibilityIdentifier("focus.rung.\(rung.candidate.title)")
     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-      Button { focus.completeWithoutSession(rung.id) } label: { Label("Tick off", systemImage: "checkmark") }
+      Button { tickOff() } label: { Label("Tick off", systemImage: "checkmark") }
         .tint(Palette.success)
     }
     .swipeActions(edge: .trailing) {
@@ -403,7 +471,7 @@ private struct FocusRungRow: View {
     }
     .contextMenu {
       Button { focus.stage(rung.id) } label: { Label("Stage this", systemImage: "target") }
-      Button { focus.completeWithoutSession(rung.id) } label: { Label("Tick off", systemImage: "checkmark") }
+      Button { tickOff() } label: { Label("Tick off", systemImage: "checkmark") }
       Menu {
         ForEach(FocusDeferral.allCases) { deferral in
           Button(deferral.title) { focus.deferTask(rung.id, deferral) }
@@ -455,12 +523,6 @@ private struct FocusRunningView: View {
       .padding(Metrics.lg)
       .frame(maxWidth: 640, alignment: .leading)
       .frame(maxWidth: .infinity)
-    }
-    .task(id: focus.session?.activeBlockId) {
-      while !Task.isCancelled {
-        focus.tick()
-        try? await Task.sleep(for: .seconds(1))
-      }
     }
   }
 
@@ -539,83 +601,6 @@ private struct FocusRunningView: View {
         Hairline(color: Palette.borderMuted)
       }
     }
-  }
-}
-
-// MARK: - Quality
-
-/// How did that go? The answer scales the block's points, ×0.5 to ×5.
-struct FocusQualityPrompt: View {
-  @Bindable var focus: FocusModel
-  let pending: PendingFocusCompletion
-  @State private var multiplier: Double = 1
-
-  var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: Metrics.lg) {
-          VStack(alignment: .leading, spacing: Metrics.xs) {
-            Text(pending.title).font(Typeface.title).foregroundStyle(Palette.ink)
-            Text("\(Format.duration(pending.seconds)) \(pending.completeTask ? "· finishes the task" : "· task stays open")")
-              .font(Typeface.caption).foregroundStyle(Palette.muted)
-          }
-          VStack(spacing: 0) {
-            ForEach(FocusQuality.allCases) { quality in
-              Button {
-                multiplier = quality.multiplier
-              } label: {
-                HStack {
-                  VStack(alignment: .leading, spacing: 1) {
-                    Text(quality.title).font(Typeface.body).foregroundStyle(Palette.ink)
-                    Text(quality.detail).font(Typeface.footnote).foregroundStyle(Palette.muted)
-                  }
-                  Spacer()
-                  Text("×\(Self.format(quality.multiplier))").font(Typeface.numeral)
-                    .foregroundStyle(multiplier == quality.multiplier ? Palette.primary : Palette.muted)
-                  Image(systemName: multiplier == quality.multiplier ? "largecircle.fill.circle" : "circle")
-                    .foregroundStyle(multiplier == quality.multiplier ? Palette.primary : Palette.dim)
-                }
-                .padding(.vertical, Metrics.sm + 2)
-                .padding(.horizontal, Metrics.md)
-                .contentShape(Rectangle())
-              }
-              .buttonStyle(.plain)
-              .accessibilityIdentifier("focus.quality.\(quality.rawValue)")
-              Hairline(color: Palette.borderMuted)
-            }
-          }
-          .cardSurface()
-          VStack(alignment: .leading, spacing: Metrics.xs) {
-            HStack {
-              Text("Multiplier").font(Typeface.caption).foregroundStyle(Palette.muted)
-              Spacer()
-              Text("×\(Self.format(multiplier))").font(Typeface.numeralBody).foregroundStyle(Palette.ink)
-            }
-            Slider(value: $multiplier, in: 0.5...5, step: 0.25)
-              .tint(Palette.primary)
-            Text("\(FocusPoints.formatted(FocusPoints.score(seconds: pending.seconds, multiplier: multiplier))) points")
-              .font(Typeface.numeral).foregroundStyle(Palette.muted)
-          }
-        }
-        .padding(Metrics.lg)
-      }
-      .background(Palette.paper)
-      .navigationTitle("How did that go?")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Keep working") { focus.cancelCompletion() }
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Log it") { focus.confirmCompletion(multiplier: multiplier) }
-            .accessibilityIdentifier("focus.logIt")
-        }
-      }
-    }
-  }
-
-  static func format(_ value: Double) -> String {
-    value == value.rounded() ? String(Int(value)) : String(format: "%g", value)
   }
 }
 

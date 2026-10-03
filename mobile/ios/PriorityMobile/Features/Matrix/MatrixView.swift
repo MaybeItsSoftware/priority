@@ -131,8 +131,9 @@ struct MatrixRow: View {
 
   var body: some View {
     HStack(spacing: Metrics.xs) {
-      Button { model.toggleComplete(card.id) } label: {
+      Button { model.completeCelebrating(card.id) } label: {
         TaskCheckbox(status: card.status, isList: card.isList, size: 16)
+          .celebrationIcon(card.id)
           .frame(width: 28, height: 36)
           .contentShape(Rectangle())
       }
@@ -143,6 +144,7 @@ struct MatrixRow: View {
         .foregroundStyle(card.status == .open ? Palette.ink : Palette.muted)
         .strikethrough(card.status != .open, color: Palette.dim)
         .lineLimit(2)
+        .celebrationStrike(card.id)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     .contentShape(Rectangle())

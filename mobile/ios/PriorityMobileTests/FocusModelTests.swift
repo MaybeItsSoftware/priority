@@ -52,7 +52,8 @@ final class FocusModelTests: XCTestCase {
     let pending = try XCTUnwrap(focus.pendingCompletion)
     XCTAssertGreaterThanOrEqual(pending.seconds, 600)
 
-    focus.confirmCompletion(multiplier: 1.5)
+    model.confirmBlockCompletion(multiplier: 1.5)
+    focus.loadNow()
     XCTAssertNil(focus.pendingCompletion)
     XCTAssertEqual(try model.store.task(id: task.id)?.status, .completed)
     XCTAssertEqual(focus.lastAward?.multiplier, 1.5)
@@ -68,7 +69,7 @@ final class FocusModelTests: XCTestCase {
     try model.store.rebaseFocusClock(id: session.id, elapsedSeconds: 300, now: .now)
     focus.loadNow()
     focus.requestCompletion(completeTask: false)
-    focus.confirmCompletion(multiplier: 1)
+    model.confirmBlockCompletion(multiplier: 1)
     XCTAssertEqual(try model.store.task(id: task.id)?.status, .open)
     if case .progressLogged(let seconds) = focus.lastOutcome {
       XCTAssertGreaterThanOrEqual(seconds, 300)
@@ -83,9 +84,62 @@ final class FocusModelTests: XCTestCase {
     focus.begin(task.id, plannedSeconds: 1_500)
     focus.requestCompletion()
     XCTAssertNotNil(focus.session?.pausedAt)
-    focus.cancelCompletion()
+    model.cancelBlockCompletion()
+    focus.loadNow()
     XCTAssertNil(focus.pendingCompletion)
     XCTAssertNil(focus.session?.pausedAt)
+  }
+
+  func testAnExpiredContextIsSetAsideAndOfferedBack() throws {
+    let office = try XCTUnwrap(model.createCondition(named: "Office", isLocation: true))
+    focus.loadNow()
+    focus.toggleCondition(office)
+    let now = Date.now
+    focus.setContextExpires(true, now: now)
+    XCTAssertEqual(focus.context.endsAt, now.addingTimeInterval(3_600))
+    focus.availableUntil = now.addingTimeInterval(600)
+    XCTAssertEqual(focus.context.endsAt, now.addingTimeInterval(600), "the earlier of the two ends wins")
+
+    focus.tick(now: now.addingTimeInterval(3_601))
+    XCTAssertNil(focus.contextExpiresAt)
+    XCTAssertTrue(focus.conditionIDs.isEmpty)
+    XCTAssertEqual(focus.suggestedContextIDs, [office.id])
+    focus.confirmSuggestedContext()
+    XCTAssertEqual(focus.conditionIDs, [office.id])
+    XCTAssertTrue(focus.suggestedContextIDs.isEmpty)
+  }
+
+  func testAClockJumpRebasesTheRunningBlockToTheTimeActuallyWorked() throws {
+    let task = try add("Draft")
+    focus.loadNow()
+    focus.begin(task.id, plannedSeconds: 3_600)
+    let start = Date.now
+    let uptime = ProcessInfo.processInfo.systemUptime
+    focus.synchroniseClock(now: start, uptime: uptime)
+    let before = try XCTUnwrap(focus.session).elapsedSeconds(now: start)
+    // The wall clock leaps an hour while ten seconds pass.
+    let later = start.addingTimeInterval(3_600)
+    XCTAssertTrue(focus.synchroniseClock(now: later, uptime: uptime + 10))
+    let elapsed = try XCTUnwrap(focus.session).elapsedSeconds(now: later)
+    XCTAssertGreaterThanOrEqual(elapsed, before + 10)
+    XCTAssertLessThan(elapsed, before + 30, "the jump is not counted as work")
+    XCTAssertFalse(focus.synchroniseClock(now: later.addingTimeInterval(1), uptime: uptime + 11))
+  }
+
+  func testTheSharedPromptRecordsTheAwardForEverySurface() throws {
+    let task = try add("Draft")
+    focus.loadNow()
+    focus.begin(task.id, plannedSeconds: 1_500)
+    let session = try XCTUnwrap(focus.session)
+    try model.store.rebaseFocusClock(id: session.id, elapsedSeconds: 300, now: .now)
+    focus.loadNow()
+    focus.requestCompletion(completeTask: true)
+    XCTAssertNotNil(model.pendingBlock)
+    XCTAssertEqual(focus.pendingCompletion, model.pendingBlock)
+    model.confirmBlockCompletion(multiplier: 2)
+    XCTAssertEqual(focus.lastAward?.multiplier, 2)
+    focus.dismissAward()
+    XCTAssertNil(model.lastBlockResult)
   }
 
   func testPauseAndResume() throws {
