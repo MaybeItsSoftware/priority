@@ -10,10 +10,89 @@ public enum BuiltInThemeSpecifications {
   public static let chalkIdentifier = "native.theme.chalk"
   public static let chalkDarkIdentifier = "native.theme.chalk.dark"
 
+  /// The built-ins as the Mac resolves them.
   public static var all: [ThemeSpecification] { [chalk, chalkDark] }
+
+  /// The built-ins as `platform` resolves them: the same palettes, with
+  /// Chalk's per-platform structure.
+  public static func all(for platform: ThemePlatform) -> [ThemeSpecification] {
+    [chalk(for: platform), chalkDark(for: platform)]
+  }
 
   public static func specification(withIdentifier identifier: String) -> ThemeSpecification? {
     all.first { $0.identifier == identifier }
+  }
+
+  public static func specification(
+    withIdentifier identifier: String, for platform: ThemePlatform
+  ) -> ThemeSpecification? {
+    all(for: platform).first { $0.identifier == identifier }
+  }
+
+  /// Chalk, resolved for `platform`. `chalk` is the macOS one.
+  public static func chalk(for platform: ThemePlatform) -> ThemeSpecification {
+    chalkByPlatform[platform] ?? chalk
+  }
+
+  /// Chalk Dark, resolved for `platform`. It extends Chalk, so it takes the
+  /// same per-platform structure.
+  public static func chalkDark(for platform: ThemePlatform) -> ThemeSpecification {
+    chalkDarkByPlatform[platform] ?? chalkDark
+  }
+
+  // MARK: - Per platform
+
+  /// What Chalk lays over its own structure on each platform: the table in
+  /// `docs/themes.md`, "Chalk's defaults per platform". macOS has no entry,
+  /// because Chalk's `structure` already *is* the Mac's — so the Mac renders
+  /// exactly what it did before platforms existed.
+  ///
+  /// 13pt is right at a desk and too small in the hand: the phones take the
+  /// platform's own body size (iOS's 17, Material's 16), round their panels
+  /// and controls a little, and grow hit areas to the platform minimum.
+  public static let chalkPlatformStructures: [ThemePlatform: ThemeFile.Structure] = [
+    .ios: ThemeFile.Structure(
+      radius: .init(panel: 8, row: 0, control: 6),
+      spacing: .init(xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24),
+      typography: .init(
+        bodySize: 17,
+        scale: .init(caption: 13, body: 17, title: 20, display: 34, hero: 72),
+        microLabel: .init(size: 13)),
+      touchTarget: 44),
+    .android: ThemeFile.Structure(
+      radius: .init(panel: 8, row: 0, control: 6),
+      spacing: .init(xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24),
+      typography: .init(
+        bodySize: 16,
+        scale: .init(caption: 12, body: 16, title: 20, display: 32, hero: 72),
+        microLabel: .init(size: 12)),
+      touchTarget: 48),
+  ]
+
+  private static let chalkByPlatform: [ThemePlatform: ThemeSpecification] = Dictionary(
+    uniqueKeysWithValues: ThemePlatform.allCases.map { platform in
+      (platform, withStructure(chalk, for: platform))
+    })
+
+  private static let chalkDarkByPlatform: [ThemePlatform: ThemeSpecification] = Dictionary(
+    uniqueKeysWithValues: ThemePlatform.allCases.map { platform in
+      (platform, withStructure(chalkDark, for: platform))
+    })
+
+  /// `specification` with Chalk's entry for `platform` laid over its
+  /// structure, through the same merge a theme file's `platforms` goes
+  /// through.
+  private static func withStructure(
+    _ specification: ThemeSpecification, for platform: ThemePlatform
+  ) -> ThemeSpecification {
+    ThemeSpecification(
+      identifier: specification.identifier,
+      name: specification.name,
+      summary: specification.summary,
+      lockedAppearance: specification.lockedAppearance,
+      palette: specification.palette,
+      structure: ThemeFileLoader.merge(
+        chalkPlatformStructures[platform], over: specification.structure))
   }
 
   // MARK: - Chalk — the house style

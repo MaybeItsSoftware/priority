@@ -1,0 +1,558 @@
+{
+  "expected" : {
+    "android" : {
+      "dark" : {
+        "appearance" : "dark",
+        "colors" : {
+          "altRow" : "#211f29",
+          "border" : "#34313f",
+          "borderMuted" : "#2d2b38",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#d62246",
+          "dimText" : "#6e6b7c",
+          "hover" : "#2d2b38",
+          "ink" : "#f5f4f7",
+          "inputBorder" : "#403d4d",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#b6b3bf",
+          "paper" : "#1c1a23",
+          "primary" : "#007fff",
+          "raised" : "#25232f",
+          "success" : "#4cc38e",
+          "warning" : "#ffbf00",
+          "well" : "#2d2b38"
+        },
+        "identifier" : "user.tinted",
+        "lockedAppearance" : null,
+        "name" : "tinted",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 6,
+            "panel" : 8,
+            "pill" : 9999,
+            "row" : 4,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 48,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 16,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 12,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 16,
+              "caption" : 12,
+              "display" : 32,
+              "hero" : 72,
+              "title" : 20
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      },
+      "light" : {
+        "appearance" : "light",
+        "colors" : {
+          "altRow" : "#f5f3f1",
+          "border" : "#e6e4ea",
+          "borderMuted" : "#efedf2",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#d62246",
+          "dimText" : "#b6b3bf",
+          "hover" : "#f1eff1",
+          "ink" : "#444054",
+          "inputBorder" : "#d8d5dd",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#6e6b7c",
+          "paper" : "#faf8f4",
+          "primary" : "#007fff",
+          "raised" : "#ffffff",
+          "success" : "#4cc38e",
+          "warning" : "#ffbf00",
+          "well" : "#edebef"
+        },
+        "identifier" : "user.tinted",
+        "lockedAppearance" : null,
+        "name" : "tinted",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 6,
+            "panel" : 8,
+            "pill" : 9999,
+            "row" : 4,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 48,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 16,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 12,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 16,
+              "caption" : 12,
+              "display" : 32,
+              "hero" : 72,
+              "title" : 20
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      }
+    },
+    "ios" : {
+      "dark" : {
+        "appearance" : "dark",
+        "colors" : {
+          "altRow" : "#211f29",
+          "border" : "#34313f",
+          "borderMuted" : "#2d2b38",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#d62246",
+          "dimText" : "#6e6b7c",
+          "hover" : "#2d2b38",
+          "ink" : "#f5f4f7",
+          "inputBorder" : "#403d4d",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#b6b3bf",
+          "paper" : "#1c1a23",
+          "primary" : "#007fff",
+          "raised" : "#25232f",
+          "success" : "#4cc38e",
+          "warning" : "#ffbf00",
+          "well" : "#2d2b38"
+        },
+        "identifier" : "user.tinted",
+        "lockedAppearance" : null,
+        "name" : "tinted",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 6,
+            "panel" : 8,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 44,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 17,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 13,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 17,
+              "caption" : 13,
+              "display" : 34,
+              "hero" : 72,
+              "title" : 20
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      },
+      "light" : {
+        "appearance" : "light",
+        "colors" : {
+          "altRow" : "#f5f3f1",
+          "border" : "#e6e4ea",
+          "borderMuted" : "#efedf2",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#d62246",
+          "dimText" : "#b6b3bf",
+          "hover" : "#f1eff1",
+          "ink" : "#444054",
+          "inputBorder" : "#d8d5dd",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#6e6b7c",
+          "paper" : "#faf8f4",
+          "primary" : "#007fff",
+          "raised" : "#ffffff",
+          "success" : "#4cc38e",
+          "warning" : "#ffbf00",
+          "well" : "#edebef"
+        },
+        "identifier" : "user.tinted",
+        "lockedAppearance" : null,
+        "name" : "tinted",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 6,
+            "panel" : 8,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 44,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 17,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 13,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 17,
+              "caption" : 13,
+              "display" : 34,
+              "hero" : 72,
+              "title" : 20
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      }
+    },
+    "macos" : {
+      "dark" : {
+        "appearance" : "dark",
+        "colors" : {
+          "altRow" : "#211f29",
+          "border" : "#34313f",
+          "borderMuted" : "#2d2b38",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#d62246",
+          "dimText" : "#6e6b7c",
+          "hover" : "#2d2b38",
+          "ink" : "#f5f4f7",
+          "inputBorder" : "#403d4d",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#b6b3bf",
+          "paper" : "#1c1a23",
+          "primary" : "#007fff",
+          "raised" : "#25232f",
+          "success" : "#4cc38e",
+          "warning" : "#ffbf00",
+          "well" : "#2d2b38"
+        },
+        "identifier" : "user.tinted",
+        "lockedAppearance" : null,
+        "name" : "tinted",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 4,
+            "panel" : 0,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 0,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 13,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 12,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 13,
+              "caption" : 12,
+              "display" : 28,
+              "hero" : 64,
+              "title" : 15
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      },
+      "light" : {
+        "appearance" : "light",
+        "colors" : {
+          "altRow" : "#f5f3f1",
+          "border" : "#e6e4ea",
+          "borderMuted" : "#efedf2",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#d62246",
+          "dimText" : "#b6b3bf",
+          "hover" : "#f1eff1",
+          "ink" : "#444054",
+          "inputBorder" : "#d8d5dd",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#6e6b7c",
+          "paper" : "#faf8f4",
+          "primary" : "#007fff",
+          "raised" : "#ffffff",
+          "success" : "#4cc38e",
+          "warning" : "#ffbf00",
+          "well" : "#edebef"
+        },
+        "identifier" : "user.tinted",
+        "lockedAppearance" : null,
+        "name" : "tinted",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 4,
+            "panel" : 0,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 0,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 13,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 12,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 13,
+              "caption" : 12,
+              "display" : 28,
+              "hero" : 64,
+              "title" : 15
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      }
+    }
+  },
+  "files" : [
+    {
+      "json" : "{ \"platforms\": { \"android\": { \"palette\": { \"light\": { \"paper\": \"#000000\" } }, \"structure\": { \"radius\": { \"row\": 4 } } } } }",
+      "name" : "tinted.json"
+    }
+  ],
+  "issues" : [
+    {
+      "message" : "platforms.android.palette is not allowed: colour is the same on every platform; ignored",
+      "severity" : "warning",
+      "source" : "tinted.json"
+    }
+  ],
+  "selected" : "user.tinted"
+}

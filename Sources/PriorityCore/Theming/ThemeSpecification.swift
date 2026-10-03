@@ -96,13 +96,16 @@ public enum ThemeIssue: Equatable, Sendable {
   /// not zero (a theme with no rounded shell at all).
   case shellRadiusOffScale(value: Double)
   case hairlineTooHeavy(value: Double)
+  /// A touch target set, but under the 44pt that iOS and Material both treat
+  /// as the least a finger can reliably hit. Zero (a pointer platform) is fine.
+  case touchTargetTooSmall(value: Double)
 
   public var severity: ThemeIssueSeverity {
     switch self {
     case .missingRole, .radiusScaleOutOfOrder:
       return .error
     case .bodyTextBelowAA, .accentBelowUIMinimum, .raisedIndistinctFromPaper,
-      .shadowsUsed, .gradientsOnChrome, .shellRadiusOffScale, .hairlineTooHeavy:
+      .shadowsUsed, .gradientsOnChrome, .shellRadiusOffScale, .hairlineTooHeavy, .touchTargetTooSmall:
       return .warning
     case .largeTextOnly:
       return .note
@@ -135,6 +138,9 @@ public enum ThemeIssue: Equatable, Sendable {
       return "shell radius \(Self.format(value)) is outside the 18–22 reserved for the app shell"
     case .hairlineTooHeavy(let value):
       return "a \(Self.format(value))pt hairline is a border, not a hairline"
+    case .touchTargetTooSmall(let value):
+      return
+        "a \(Self.format(value))pt touch target is under the \(Self.format(ThemeStructureAudit.smallestTouchTarget))pt a finger needs"
     }
   }
 
@@ -213,6 +219,8 @@ public enum ThemeContrastAudit {
 public enum ThemeStructureAudit {
   public static let shellRadiusRange: ClosedRange<Double> = 18...22
   public static let heaviestHairline = 2.0
+  /// The smallest non-zero `touchTarget` that passes.
+  public static let smallestTouchTarget = 44.0
 
   public static func findings(for structure: ThemeStructure) -> [ThemeIssue] {
     var issues: [ThemeIssue] = []
@@ -229,6 +237,9 @@ public enum ThemeStructureAudit {
     }
     if structure.border.hairline > heaviestHairline {
       issues.append(.hairlineTooHeavy(value: structure.border.hairline))
+    }
+    if structure.touchTarget != 0, structure.touchTarget < smallestTouchTarget {
+      issues.append(.touchTargetTooSmall(value: structure.touchTarget))
     }
     if structure.usesShadows { issues.append(.shadowsUsed) }
     if structure.usesGradientsOnChrome { issues.append(.gradientsOnChrome) }

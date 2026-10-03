@@ -1,0 +1,642 @@
+{
+  "expected" : {
+    "android" : {
+      "dark" : {
+        "appearance" : "dark",
+        "colors" : {
+          "altRow" : "#f7f7f7",
+          "border" : "#dddddd",
+          "borderMuted" : "#eeeeee",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#cc2233",
+          "dimText" : "#999999",
+          "hover" : "#f0f0f0",
+          "ink" : "#eeeeee",
+          "inputBorder" : "#cccccc",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#555555",
+          "paper" : "#101010",
+          "primary" : "#0055cc",
+          "raised" : "#ffffff",
+          "success" : "#118844",
+          "warning" : "#aa7700",
+          "well" : "#eeeeee"
+        },
+        "identifier" : "user.bare",
+        "lockedAppearance" : null,
+        "name" : "bare",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 6,
+            "panel" : 8,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 48,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 16,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 12,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 16,
+              "caption" : 12,
+              "display" : 32,
+              "hero" : 72,
+              "title" : 20
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      },
+      "light" : {
+        "appearance" : "light",
+        "colors" : {
+          "altRow" : "#f7f7f7",
+          "border" : "#dddddd",
+          "borderMuted" : "#eeeeee",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#cc2233",
+          "dimText" : "#999999",
+          "hover" : "#f0f0f0",
+          "ink" : "#111111",
+          "inputBorder" : "#cccccc",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#555555",
+          "paper" : "#ffffff",
+          "primary" : "#0055cc",
+          "raised" : "#ffffff",
+          "success" : "#118844",
+          "warning" : "#aa7700",
+          "well" : "#eeeeee"
+        },
+        "identifier" : "user.bare",
+        "lockedAppearance" : null,
+        "name" : "bare",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 6,
+            "panel" : 8,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 48,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 16,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 12,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 16,
+              "caption" : 12,
+              "display" : 32,
+              "hero" : 72,
+              "title" : 20
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      }
+    },
+    "ios" : {
+      "dark" : {
+        "appearance" : "dark",
+        "colors" : {
+          "altRow" : "#f7f7f7",
+          "border" : "#dddddd",
+          "borderMuted" : "#eeeeee",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#cc2233",
+          "dimText" : "#999999",
+          "hover" : "#f0f0f0",
+          "ink" : "#eeeeee",
+          "inputBorder" : "#cccccc",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#555555",
+          "paper" : "#101010",
+          "primary" : "#0055cc",
+          "raised" : "#ffffff",
+          "success" : "#118844",
+          "warning" : "#aa7700",
+          "well" : "#eeeeee"
+        },
+        "identifier" : "user.bare",
+        "lockedAppearance" : null,
+        "name" : "bare",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 6,
+            "panel" : 8,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 44,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 17,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 13,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 17,
+              "caption" : 13,
+              "display" : 34,
+              "hero" : 72,
+              "title" : 20
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      },
+      "light" : {
+        "appearance" : "light",
+        "colors" : {
+          "altRow" : "#f7f7f7",
+          "border" : "#dddddd",
+          "borderMuted" : "#eeeeee",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#cc2233",
+          "dimText" : "#999999",
+          "hover" : "#f0f0f0",
+          "ink" : "#111111",
+          "inputBorder" : "#cccccc",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#555555",
+          "paper" : "#ffffff",
+          "primary" : "#0055cc",
+          "raised" : "#ffffff",
+          "success" : "#118844",
+          "warning" : "#aa7700",
+          "well" : "#eeeeee"
+        },
+        "identifier" : "user.bare",
+        "lockedAppearance" : null,
+        "name" : "bare",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 6,
+            "panel" : 8,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 44,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 17,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 13,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 17,
+              "caption" : 13,
+              "display" : 34,
+              "hero" : 72,
+              "title" : 20
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      }
+    },
+    "macos" : {
+      "dark" : {
+        "appearance" : "dark",
+        "colors" : {
+          "altRow" : "#f7f7f7",
+          "border" : "#dddddd",
+          "borderMuted" : "#eeeeee",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#cc2233",
+          "dimText" : "#999999",
+          "hover" : "#f0f0f0",
+          "ink" : "#eeeeee",
+          "inputBorder" : "#cccccc",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#555555",
+          "paper" : "#101010",
+          "primary" : "#0055cc",
+          "raised" : "#ffffff",
+          "success" : "#118844",
+          "warning" : "#aa7700",
+          "well" : "#eeeeee"
+        },
+        "identifier" : "user.bare",
+        "lockedAppearance" : null,
+        "name" : "bare",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 4,
+            "panel" : 0,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 0,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 13,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 12,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 13,
+              "caption" : 12,
+              "display" : 28,
+              "hero" : 64,
+              "title" : 15
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      },
+      "light" : {
+        "appearance" : "light",
+        "colors" : {
+          "altRow" : "#f7f7f7",
+          "border" : "#dddddd",
+          "borderMuted" : "#eeeeee",
+          "categoricalOrange" : "#ff6b2b",
+          "categoricalPink" : "#ff88dc",
+          "categoricalPurple" : "#7a4de8",
+          "danger" : "#cc2233",
+          "dimText" : "#999999",
+          "hover" : "#f0f0f0",
+          "ink" : "#111111",
+          "inputBorder" : "#cccccc",
+          "mediaLetterbox" : "#000000",
+          "mediaScrim" : "#000000b3",
+          "mediaScrimInk" : "#ffffff",
+          "mutedText" : "#555555",
+          "paper" : "#ffffff",
+          "primary" : "#0055cc",
+          "raised" : "#ffffff",
+          "success" : "#118844",
+          "warning" : "#aa7700",
+          "well" : "#eeeeee"
+        },
+        "identifier" : "user.bare",
+        "lockedAppearance" : null,
+        "name" : "bare",
+        "structure" : {
+          "border" : {
+            "emphasis" : 2,
+            "focusRing" : 2,
+            "hairline" : 1
+          },
+          "radius" : {
+            "control" : 4,
+            "panel" : 0,
+            "pill" : 9999,
+            "row" : 0,
+            "shell" : 20
+          },
+          "spacing" : {
+            "lg" : 16,
+            "md" : 12,
+            "sm" : 8,
+            "xl" : 24,
+            "xs" : 4,
+            "xxs" : 2
+          },
+          "touchTarget" : 0,
+          "typography" : {
+            "body" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "bodySize" : 13,
+            "display" : {
+              "design" : "sans",
+              "families" : [
+                "IBM Plex Sans"
+              ]
+            },
+            "microLabel" : {
+              "role" : "mutedText",
+              "size" : 12,
+              "tracking" : 0,
+              "uppercase" : false,
+              "weight" : "regular"
+            },
+            "mono" : {
+              "design" : "monospaced",
+              "families" : [
+                "Lilex"
+              ]
+            },
+            "scale" : {
+              "body" : 13,
+              "caption" : 12,
+              "display" : 28,
+              "hero" : 64,
+              "title" : 15
+            }
+          },
+          "usesGradientsOnChrome" : false,
+          "usesShadows" : false
+        }
+      }
+    }
+  },
+  "files" : [
+    {
+      "json" : "{ \"extends\": null, \"palette\": { \"light\": {\n  \"paper\": \"#ffffff\", \"raised\": \"#ffffff\", \"altRow\": \"#f7f7f7\", \"hover\": \"#f0f0f0\", \"well\": \"#eeeeee\",\n  \"border\": \"#dddddd\", \"borderMuted\": \"#eeeeee\", \"inputBorder\": \"#cccccc\", \"ink\": \"#111111\",\n  \"mutedText\": \"#555555\", \"dimText\": \"#999999\", \"primary\": \"#0055cc\", \"success\": \"#118844\",\n  \"danger\": \"#cc2233\", \"warning\": \"#aa7700\", \"categoricalPurple\": \"#7a4de8\",\n  \"categoricalPink\": \"#ff88dc\", \"categoricalOrange\": \"#ff6b2b\", \"mediaLetterbox\": \"#000\",\n  \"mediaScrim\": \"#000000b3\", \"mediaScrimInk\": \"#fff\"\n}, \"dark\": { \"paper\": \"#101010\", \"ink\": \"#eeeeee\" } } }",
+      "name" : "bare.json"
+    },
+    {
+      "json" : "{ \"extends\": null, \"palette\": { \"light\": { \"paper\": \"#ffffff\" } } }",
+      "name" : "hollow.json"
+    }
+  ],
+  "issues" : [
+    {
+      "message" : "altRow has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "border has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "borderMuted has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "categoricalOrange has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "categoricalPink has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "categoricalPurple has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "danger has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "dimText has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "hover has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "inputBorder has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "mutedText has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "primary has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "raised has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "success has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "warning has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "well has no dark value",
+      "severity" : "error",
+      "source" : "bare.json"
+    },
+    {
+      "message" : "not loaded: no colour for raised, altRow, hover, well, border, borderMuted, inputBorder, ink, mutedText, dimText, primary, success, danger, warning, categoricalPurple, categoricalPink, categoricalOrange, mediaLetterbox, mediaScrim, mediaScrimInk",
+      "severity" : "error",
+      "source" : "hollow.json"
+    }
+  ],
+  "selected" : "user.bare"
+}

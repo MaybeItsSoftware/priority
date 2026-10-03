@@ -211,6 +211,10 @@ public struct ThemeStructure: Equatable, Sendable {
   public let border: ThemeBorderScale
   public let spacing: ThemeSpacingScale
   public let typography: ThemeTypography
+  /// The minimum hit area a control is grown to, invisibly, so the painted
+  /// control keeps its size. 0 is a pointer platform with no minimum; the
+  /// built-ins set 44 on iOS and 48 on Android.
+  public let touchTarget: Double
   /// Rule 1. A theme may declare otherwise, and `validate()` will say so.
   public let usesShadows: Bool
   /// Rule 2. Full-bleed backdrops are not chrome and are exempt.
@@ -221,6 +225,7 @@ public struct ThemeStructure: Equatable, Sendable {
     border: ThemeBorderScale,
     spacing: ThemeSpacingScale,
     typography: ThemeTypography,
+    touchTarget: Double = 0,
     usesShadows: Bool = false,
     usesGradientsOnChrome: Bool = false
   ) {
@@ -228,6 +233,7 @@ public struct ThemeStructure: Equatable, Sendable {
     self.border = border
     self.spacing = spacing
     self.typography = typography
+    self.touchTarget = touchTarget
     self.usesShadows = usesShadows
     self.usesGradientsOnChrome = usesGradientsOnChrome
   }

@@ -1,0 +1,93 @@
+# Shared themes
+
+Generated from Swift. Do not edit by hand: change
+`Sources/PriorityCore/Theming/` and run
+
+```bash
+PRIORITY_REGENERATE_THEMES=1 swift test --filter PriorityCoreTests.ThemeConformanceTests
+```
+
+`ThemeConformanceTests` fails whenever these files differ from what Swift
+produces. The theme format itself is in [`docs/themes.md`](../../docs/themes.md).
+
+## `chalk.json`, `chalk-dark.json`
+
+The built-ins as complete theme files. Every colour and every structural value
+is stated, `extends` is `null`, `structure` holds the Mac's values, and
+`platforms.ios` / `platforms.android` hold the phones' differences from them.
+They resolve like any other file, so a reader needs no Chalk of its own. It
+loads these as its built-ins. The Android app copies them into its assets.
+
+## `conformance/*.json`
+
+One resolution case per file:
+
+```json
+{
+  "files": [ { "name": "dusk.json", "json": "<the file's text>" } ],
+  "selected": "user.dusk",
+  "expected": {
+    "macos":   { "light": <resolved>, "dark": <resolved> },
+    "ios":     { "light": <resolved>, "dark": <resolved> },
+    "android": { "light": <resolved>, "dark": <resolved> }
+  },
+  "issues": [ { "source": "dusk.json", "severity": "error", "message": "…" } ]
+}
+```
+
+To run a case, load every entry of `files` together as one themes folder, with
+the built-ins being Chalk and Chalk Dark resolved for the platform. A file's
+`json` is its text, which may be invalid JSON on purpose. Then pick `selected`:
+the user theme with that identifier if it loaded, otherwise the built-in with
+that identifier, otherwise Chalk (the stand-in for a theme that did not load).
+Resolve it for each platform. For each requested appearance, it must equal
+`expected[platform][appearance]`.
+
+`issues` is everything the load reports **except the audit** (contrast, radius
+order, touch target and the rest of `validate()`), in order. That covers decoding
+errors, unknown-key and platform-palette warnings, bad values, missing roles
+and skipped files. It is the same on every platform, because a bad value in any
+`platforms` entry is reported everywhere. A port must match `source` and
+`severity` in order. `message` is the reference wording, and matching it exactly is
+encouraged but not required.
+
+### `<resolved>`: the canonical resolved theme
+
+```json
+{
+  "identifier": "user.dusk",
+  "name": "Dusk",
+  "lockedAppearance": null,
+  "appearance": "dark",
+  "colors": { "paper": "#15131c", "mediaScrim": "#000000b3", "…": "…" },
+  "structure": {
+    "radius": { "panel": 0, "row": 0, "control": 2, "pill": 9999, "shell": 20 },
+    "border": { "hairline": 1, "emphasis": 2, "focusRing": 2 },
+    "spacing": { "xxs": 2, "xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24 },
+    "typography": {
+      "display": { "families": ["IBM Plex Sans"], "design": "sans" },
+      "body": { "families": ["IBM Plex Sans"], "design": "sans" },
+      "mono": { "families": ["Lilex"], "design": "monospaced" },
+      "bodySize": 13,
+      "scale": { "caption": 12, "body": 13, "title": 15, "display": 28, "hero": 64 },
+      "microLabel": { "size": 12, "weight": "regular", "tracking": 0, "uppercase": false, "role": "mutedText" }
+    },
+    "touchTarget": 0,
+    "usesShadows": false,
+    "usesGradientsOnChrome": false
+  }
+}
+```
+
+- `lockedAppearance` is always present: `"light"`, `"dark"` or `null`.
+- `appearance` is the appearance actually drawn: the lock if there is one,
+  otherwise the appearance requested.
+- `colors` has every role, resolved in `appearance` the way the app draws it.
+  `mediaLetterbox`, `mediaScrim` and `mediaScrimInk` always come from the
+  light table. A role missing from the appearance's table is borrowed from
+  the other one. Values are lowercase `#rrggbb`, or `#rrggbbaa` when alpha is
+  not 1, with alpha rounded to the nearest of 255 steps.
+- Every structural value is stated. Numbers are JSON numbers, and integral values are
+  written without a fraction (`13`, not `13.0`), so compare them numerically.
+- Keys are sorted and the files are pretty-printed with a trailing newline,
+  but compare parsed JSON, not bytes.

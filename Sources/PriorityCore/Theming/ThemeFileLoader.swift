@@ -8,11 +8,17 @@ public struct ThemeFileIssue: Equatable, Sendable, CustomStringConvertible {
   public let source: String
   public let severity: ThemeIssueSeverity
   public let message: String
+  /// True for a finding of the `validate()` audit of the theme the file
+  /// produced (contrast, the radius scale), as opposed to a problem with what
+  /// the file says. Audit findings depend on the platform the theme was
+  /// resolved for; the rest do not.
+  public let isAudit: Bool
 
-  public init(source: String, severity: ThemeIssueSeverity, message: String) {
+  public init(source: String, severity: ThemeIssueSeverity, message: String, isAudit: Bool = false) {
     self.source = source
     self.severity = severity
     self.message = message
+    self.isAudit = isAudit
   }
 
   public var description: String { "\(source): \(message)" }
@@ -89,22 +95,35 @@ public enum ThemeFileLoader {
     } catch {
       return (nil, [.init(source: source, severity: .error, message: reason(error))])
     }
-    let unknown = ThemeFileSchema.unknownKeys(in: data).map {
-      ThemeFileIssue(source: source, severity: .warning, message: "\($0) is not a theme setting; ignored")
+    let unknown = ThemeFileSchema.unknownKeys(in: data).map { path in
+      ThemeFileIssue(
+        source: source, severity: .warning,
+        message: ThemeFileSchema.isPlatformPalette(path)
+          ? "\(path) is not allowed: colour is the same on every platform; ignored"
+          : "\(path) is not a theme setting; ignored")
     }
     return (file, unknown)
   }
 
   // MARK: - Loading a folder
 
-  /// Loads every source, resolving `extends` against `builtIns` and against
-  /// each other. Sources are taken in name order; an identifier that is
-  /// already a built-in, or already taken by an earlier file, is skipped.
+  /// Loads every source for `platform`, resolving `extends` against
+  /// `builtIns` and against each other. Sources are taken in name order; an
+  /// identifier that is already a built-in, or already taken by an earlier
+  /// file, is skipped.
+  ///
+  /// `builtIns` and `defaultBase` default to the built-in themes as resolved
+  /// for `platform`. Each theme's structure is, latest winning: the theme it
+  /// extends (resolved for this platform), its own `structure`, then its
+  /// `platforms.<platform>.structure`.
   public static func load(
     _ sources: [ThemeFileSource],
-    builtIns: [ThemeSpecification] = BuiltInThemeSpecifications.all,
-    defaultBase: ThemeSpecification = BuiltInThemeSpecifications.chalk
+    platform: ThemePlatform = .macos,
+    builtIns: [ThemeSpecification]? = nil,
+    defaultBase: ThemeSpecification? = nil
   ) -> ThemeFileLibrary {
+    let builtIns = builtIns ?? BuiltInThemeSpecifications.all(for: platform)
+    let defaultBase = defaultBase ?? BuiltInThemeSpecifications.chalk(for: platform)
     let ordered = sources.sorted { $0.name < $1.name }
     let builtInsByIdentifier = Dictionary(
       builtIns.map { ($0.identifier, $0) }, uniquingKeysWith: { first, _ in first })
@@ -181,7 +200,7 @@ public enum ThemeFileLoader {
 
       let outcome = ThemeFileMerger.merge(
         candidate.file, identifier: identifier, source: candidate.source, base: base,
-        structureFallback: defaultBase.structure)
+        structureFallback: defaultBase.structure, platform: platform)
       outcomes[candidate.source] = ThemeFileOutcome(
         source: outcome.source, specification: outcome.specification,
         skippedReason: outcome.skippedReason, issues: sorted(candidate.issues + outcome.issues))
@@ -197,11 +216,21 @@ public enum ThemeFileLoader {
   /// Resolves one already-decoded file against a base — `nil` for a file that
   /// inherits no colours. The single-file path, for tests and tooling.
   public static func resolve(
-    _ file: ThemeFile, source: String, base: ThemeSpecification?
+    _ file: ThemeFile, source: String, base: ThemeSpecification?, platform: ThemePlatform = .macos
   ) -> ThemeFileOutcome {
     ThemeFileMerger.merge(
       file, identifier: identifier(of: file, source: source), source: source, base: base,
-      structureFallback: BuiltInThemeSpecifications.chalk.structure)
+      structureFallback: BuiltInThemeSpecifications.chalk(for: platform).structure, platform: platform)
+  }
+
+  /// Lays a partial structure over a whole one, the way a theme file's
+  /// `structure` is laid over the theme it extends. Problems go to `report`
+  /// with `path` (e.g. `structure`) in front of each key.
+  public static func merge(
+    _ overrides: ThemeFile.Structure?, over base: ThemeStructure, path: String = "structure",
+    report: (ThemeIssueSeverity, String) -> Void = { _, _ in }
+  ) -> ThemeStructure {
+    ThemeFileMerger.mergeStructure(overrides, over: base, prefix: path, report: report)
   }
 
   /// The file's own identifier, or one derived from its name.
@@ -284,7 +313,8 @@ enum ThemeFileMerger {
     identifier: String,
     source: String,
     base: ThemeSpecification?,
-    structureFallback: ThemeStructure
+    structureFallback: ThemeStructure,
+    platform: ThemePlatform
   ) -> ThemeFileOutcome {
     var issues: [ThemeFileIssue] = []
     func report(_ severity: ThemeIssueSeverity, _ message: String) {
@@ -342,8 +372,19 @@ enum ThemeFileMerger {
       }
     }
 
-    let structure = mergeStructure(
-      file.structure, over: base?.structure ?? structureFallback, report: report)
+    // Structure: the base as resolved for this platform, then the file's own
+    // structure, then its entry for this platform. Every platform's entry is
+    // checked, so a bad value for the phone is reported on the Mac too, but
+    // only this platform's is used.
+    var structure = mergeStructure(
+      file.structure, over: base?.structure ?? structureFallback, prefix: "structure", report: report)
+    for candidate in ThemePlatform.allCases {
+      guard let entry = file.platforms?[candidate]?.structure else { continue }
+      let merged = mergeStructure(
+        entry, over: structure, prefix: "platforms.\(candidate.rawValue).structure",
+        report: report)
+      if candidate == platform { structure = merged }
+    }
 
     let specification = ThemeSpecification(
       identifier: identifier,
@@ -354,7 +395,11 @@ enum ThemeFileMerger {
       structure: structure
     )
     for finding in specification.validate() {
-      report(finding.severity, finding.message)
+      // A missing role is a fact about the file; the rest is the audit.
+      var isAudit = true
+      if case .missingRole = finding { isAudit = false }
+      issues.append(
+        .init(source: source, severity: finding.severity, message: finding.message, isAudit: isAudit))
     }
     return ThemeFileOutcome(
       source: source, specification: specification, skippedReason: nil,
@@ -365,15 +410,15 @@ enum ThemeFileMerger {
 
   typealias Report = (ThemeIssueSeverity, String) -> Void
 
-  private static func mergeStructure(
-    _ overrides: ThemeFile.Structure?, over base: ThemeStructure, report: Report
+  static func mergeStructure(
+    _ overrides: ThemeFile.Structure?, over base: ThemeStructure, prefix: String, report: Report
   ) -> ThemeStructure {
     guard let overrides else { return base }
 
     func length(_ value: Double?, _ fallback: Double, _ path: String, positive: Bool = false) -> Double {
       guard let value else { return fallback }
       guard value.isFinite, positive ? value > 0 : value >= 0 else {
-        report(.error, "structure.\(path) \(value) should be \(positive ? "above zero" : "zero or more")")
+        report(.error, "\(prefix).\(path) \(number(value)) should be \(positive ? "above zero" : "zero or more")")
         return fallback
       }
       return value
@@ -406,7 +451,7 @@ enum ThemeFileMerger {
     } ?? base.spacing
 
     let typography = overrides.typography.map {
-      mergeTypography($0, over: base.typography, length: length, report: report)
+      mergeTypography($0, over: base.typography, prefix: prefix, length: length, report: report)
     } ?? base.typography
 
     return ThemeStructure(
@@ -414,6 +459,7 @@ enum ThemeFileMerger {
       border: border,
       spacing: spacing,
       typography: typography,
+      touchTarget: length(overrides.touchTarget, base.touchTarget, "touchTarget"),
       usesShadows: overrides.usesShadows ?? base.usesShadows,
       usesGradientsOnChrome: overrides.usesGradientsOnChrome ?? base.usesGradientsOnChrome)
   }
@@ -421,6 +467,7 @@ enum ThemeFileMerger {
   private static func mergeTypography(
     _ file: ThemeFile.Typography,
     over base: ThemeTypography,
+    prefix: String,
     length: (Double?, Double, String, Bool) -> Double,
     report: Report
   ) -> ThemeTypography {
@@ -433,7 +480,7 @@ enum ThemeFileMerger {
         } else {
           report(
             .error,
-            "structure.typography.\(path).design \"\(raw)\" should be serif, sans, monospaced or rounded")
+            "\(prefix).typography.\(path).design \"\(raw)\" should be serif, sans, monospaced or rounded")
         }
       }
       return ThemeFontFace(families: file.families ?? base.families, design: design)
@@ -462,7 +509,7 @@ enum ThemeFileMerger {
         } else {
           report(
             .error,
-            "structure.typography.microLabel.weight \"\(raw)\" should be regular, medium, semibold, bold or black")
+            "\(prefix).typography.microLabel.weight \"\(raw)\" should be regular, medium, semibold, bold or black")
         }
       }
       var role = base.microLabel.role
@@ -470,7 +517,7 @@ enum ThemeFileMerger {
         if let parsed = ThemeColorRole(rawValue: raw) {
           role = parsed
         } else {
-          report(.error, "structure.typography.microLabel.role \"\(raw)\" is not a colour role")
+          report(.error, "\(prefix).typography.microLabel.role \"\(raw)\" is not a colour role")
         }
       }
       return ThemeMicroLabel(
@@ -488,6 +535,13 @@ enum ThemeFileMerger {
       bodySize: bodySize,
       scale: scale,
       microLabel: microLabel)
+  }
+
+  /// `-2` rather than `-2.0`, so a message reads the way the file was
+  /// written — and the same on every platform that reproduces it.
+  static func number(_ value: Double) -> String {
+    value.isFinite && value == value.rounded() && abs(value) < 1e15
+      ? String(Int64(value)) : String(value)
   }
 
   private static func nonEmpty(_ value: String?) -> String? {
@@ -512,29 +566,43 @@ enum ThemeFileSchema {
 
   static let root: Node = {
     let face: Node = .object(["families": .any, "design": .any])
+    let structure: Node = .object([
+      "radius": .object(["panel": .any, "row": .any, "control": .any, "pill": .any, "shell": .any]),
+      "border": .object(["hairline": .any, "emphasis": .any, "focusRing": .any]),
+      "spacing": .object([
+        "xxs": .any, "xs": .any, "sm": .any, "md": .any, "lg": .any, "xl": .any,
+      ]),
+      "typography": .object([
+        "display": face, "body": face, "mono": face, "bodySize": .any,
+        "scale": .object([
+          "caption": .any, "body": .any, "title": .any, "display": .any, "hero": .any,
+        ]),
+        "microLabel": .object([
+          "size": .any, "weight": .any, "tracking": .any, "uppercase": .any, "role": .any,
+        ]),
+      ]),
+      "touchTarget": .any, "usesShadows": .any, "usesGradientsOnChrome": .any,
+    ])
+    // A platform's entry is structure only. `palette` is left out on purpose,
+    // so one there is reported (and Codable never reads it).
+    let platform: Node = .object(["structure": structure])
     return .object([
       "identifier": .any, "name": .any, "summary": .any, "lockedAppearance": .any, "extends": .any,
       // Role names are checked by the merger, which can say which role.
       "palette": .object(["light": .any, "dark": .any]),
-      "structure": .object([
-        "radius": .object(["panel": .any, "row": .any, "control": .any, "pill": .any, "shell": .any]),
-        "border": .object(["hairline": .any, "emphasis": .any, "focusRing": .any]),
-        "spacing": .object([
-          "xxs": .any, "xs": .any, "sm": .any, "md": .any, "lg": .any, "xl": .any,
-        ]),
-        "typography": .object([
-          "display": face, "body": face, "mono": face, "bodySize": .any,
-          "scale": .object([
-            "caption": .any, "body": .any, "title": .any, "display": .any, "hero": .any,
-          ]),
-          "microLabel": .object([
-            "size": .any, "weight": .any, "tracking": .any, "uppercase": .any, "role": .any,
-          ]),
-        ]),
-        "usesShadows": .any, "usesGradientsOnChrome": .any,
-      ]),
+      "structure": structure,
+      "platforms": .object(
+        Dictionary(uniqueKeysWithValues: ThemePlatform.allCases.map { ($0.rawValue, platform) })),
     ])
   }()
+
+  /// `platforms.ios.palette`, which gets its own warning: it is not a typo, it
+  /// is a thing the format refuses.
+  static func isPlatformPalette(_ path: String) -> Bool {
+    let parts = path.split(separator: ".")
+    return parts.count == 3 && parts[0] == "platforms" && parts[2] == "palette"
+      && ThemePlatform(rawValue: String(parts[1])) != nil
+  }
 
   /// Dotted paths of keys the format does not have, sorted.
   static func unknownKeys(in data: Data) -> [String] {
