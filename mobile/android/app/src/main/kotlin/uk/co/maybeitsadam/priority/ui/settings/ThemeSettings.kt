@@ -29,7 +29,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import uk.co.maybeitsadam.priority.app.StoredThemeFile
+import uk.co.maybeitsadam.priority.app.UserThemeFile
 import uk.co.maybeitsadam.priority.app.ThemeLibraryState
 import uk.co.maybeitsadam.priority.core.theme.ThemeAppearance
 import uk.co.maybeitsadam.priority.core.theme.ThemeFileIssue
@@ -113,7 +113,7 @@ internal fun ThemeSection(model: SettingsViewModel) {
 
 /** A user file: its theme when it loaded, otherwise its name and why not; then its issues and a remove button. */
 @Composable
-private fun UserThemeRow(file: StoredThemeFile, outcome: ThemeFileOutcome?, state: ThemeLibraryState, model: SettingsViewModel) {
+private fun UserThemeRow(file: UserThemeFile, outcome: ThemeFileOutcome?, state: ThemeLibraryState, model: SettingsViewModel) {
     val theme = outcome?.specification
     Column {
         if (theme != null) {
@@ -134,7 +134,7 @@ private fun UserThemeRow(file: StoredThemeFile, outcome: ThemeFileOutcome?, stat
             horizontalArrangement = Arrangement.End,
         ) {
             PButton("Remove", destructive = true, modifier = Modifier.testTag("settings_theme_remove_${file.name}")) {
-                model.removeTheme(file.name)
+                model.removeTheme(file.id)
             }
         }
     }

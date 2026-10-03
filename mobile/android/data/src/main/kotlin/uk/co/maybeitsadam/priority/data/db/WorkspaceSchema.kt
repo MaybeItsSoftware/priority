@@ -4,14 +4,16 @@ package uk.co.maybeitsadam.priority.data.db
  * The workspace schema, owned by the Swift app.
  *
  * A fresh database runs `cli/src/fixtures/workspace_schema.sql` (copied into
- * this module's resources at build time), then `v17_sync` exactly as
- * docs/sync.md and `WorkspaceStore+Sync.swift` specify. Every step is keyed on
- * `grdb_migrations`, so once the fixture itself carries v17 it is not applied
- * twice.
+ * this module's resources at build time), then `v17_sync` and
+ * `v18_themes_and_preferences` exactly as docs/sync.md and the Swift
+ * `WorkspaceStore` specify. Every step is keyed on `grdb_migrations`, so a
+ * step the fixture already carries is not applied twice; an older Android
+ * database takes the steps it is missing.
  */
 object WorkspaceSchema {
     const val FIXTURE_RESOURCE = "uk/co/maybeitsadam/priority/data/workspace_schema.sql"
     const val V17_SYNC = "v17_sync"
+    const val V18_THEMES_AND_PREFERENCES = "v18_themes_and_preferences"
 
     /** Tables whose rows are the user's work, keyed by column (undo journal). Same order as Swift. */
     val journalledTables: List<Pair<String, String>> = listOf(
@@ -40,6 +42,9 @@ object WorkspaceSchema {
         "focus_queue_items" to "id",
         "focus_work_blocks" to "id",
         "focus_awards" to "id",
+        // `v18_themes_and_preferences`. No foreign keys, so their place is free.
+        "themes" to "id",
+        "preferences" to "key",
     )
 
     fun syncKey(table: String): String? = syncedTables.firstOrNull { it.first == table }?.second
@@ -61,6 +66,32 @@ object WorkspaceSchema {
             applyV17Sync(db)
             db.execute("INSERT INTO grdb_migrations (identifier) VALUES (?)", V17_SYNC)
         }
+        if (!db.exists("SELECT 1 FROM grdb_migrations WHERE identifier = ?", V18_THEMES_AND_PREFERENCES)) {
+            applyV18ThemesAndPreferences(db)
+            db.execute("INSERT INTO grdb_migrations (identifier) VALUES (?)", V18_THEMES_AND_PREFERENCES)
+        }
+    }
+
+    /**
+     * `v18_themes_and_preferences`, as `WorkspaceStore+Themes.swift` writes it,
+     * to the character, since the schema test compares SQL text. Synced, so
+     * the outbox triggers are reinstalled to cover the two tables; not
+     * journalled for undo.
+     */
+    fun applyV18ThemesAndPreferences(db: Db) {
+        db.execute(
+            "CREATE TABLE themes (\n" +
+                "  id TEXT PRIMARY KEY,\n" +
+                "  json TEXT NOT NULL,\n" +
+                "  updatedAt DATETIME NOT NULL)",
+        )
+        db.execute(
+            "CREATE TABLE preferences (\n" +
+                "  key TEXT PRIMARY KEY,\n" +
+                "  value TEXT,\n" +
+                "  updatedAt DATETIME NOT NULL)",
+        )
+        installSyncTriggers(db)
     }
 
     /** `v17_sync`: the sync tables and the outbox triggers, as `WorkspaceStore+Sync.swift` writes them. */

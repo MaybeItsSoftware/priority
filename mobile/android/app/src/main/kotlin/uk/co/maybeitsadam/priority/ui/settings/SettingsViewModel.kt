@@ -94,9 +94,9 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun removeTheme(fileName: String) = viewModelScope.launch {
+    fun removeTheme(id: String) = viewModelScope.launch {
         _themeError.value = null
-        container.themes.remove(fileName)
+        container.themes.remove(id)
     }
 
     fun versionName(): String = runCatching {

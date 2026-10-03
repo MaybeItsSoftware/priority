@@ -16,7 +16,19 @@ import uk.co.maybeitsadam.priority.core.SyncValue
 import uk.co.maybeitsadam.priority.data.TestClock
 import uk.co.maybeitsadam.priority.data.db.Db
 import uk.co.maybeitsadam.priority.data.db.WorkspaceDatabase
+import uk.co.maybeitsadam.priority.data.workspace.StoredTheme
+import uk.co.maybeitsadam.priority.data.workspace.WorkspacePreferenceKey
 import uk.co.maybeitsadam.priority.data.workspace.WorkspaceRepository
+import uk.co.maybeitsadam.priority.data.workspace.deleteTheme
+import uk.co.maybeitsadam.priority.data.workspace.preference
+import uk.co.maybeitsadam.priority.data.workspace.setPreference
+import uk.co.maybeitsadam.priority.data.workspace.themes
+import uk.co.maybeitsadam.priority.data.workspace.upsertTheme
+import uk.co.maybeitsadam.priority.core.theme.ThemeAppearance
+import uk.co.maybeitsadam.priority.core.theme.ThemeColorRole
+import uk.co.maybeitsadam.priority.core.theme.ThemeFileLoader
+import uk.co.maybeitsadam.priority.core.theme.ThemeRows
+import uk.co.maybeitsadam.priority.core.theme.ThemePlatform
 
 /** Two simulated devices, two database files, one in-memory server (mirrors sync-tests/SyncEngineTests.swift). */
 class SyncEngineTest {
@@ -302,5 +314,45 @@ class SyncEngineTest {
             assertEquals(0, device.foreignKeyViolations())
         }
         assertEquals(ticks(mac).first().id, ticks(phone).first().id)
+    }
+
+    /** A theme file saved on one device and the choice of it reach the other, and a deletion follows them. */
+    @Test
+    fun aThemeAndTheChoiceOfItReachTheOtherDevice(): Unit = runBlocking {
+        val selected = WorkspacePreferenceKey.THEME_SELECTED
+        val appearance = WorkspacePreferenceKey.THEME_APPEARANCE
+        val dusk = """{ "name": "Dusk", "palette": { "dark": { "paper": "#15131c" } } }"""
+        val mac = Device("mac")
+        mac.repository.upsertTheme("user.dusk", dusk)
+        mac.repository.setPreference(selected, "user.dusk")
+        mac.repository.setPreference(appearance, "dark")
+        mac.sync()
+        val phone = Device("phone")
+        phone.sync()
+
+        assertEquals(listOf(dusk), phone.repository.themes().map { it.json })
+        assertEquals("user.dusk", phone.repository.preference(selected))
+        assertEquals("dark", phone.repository.preference(appearance))
+
+        // The phone resolves what arrived into the theme the Mac chose.
+        val library = ThemeFileLoader.load(
+            ThemeRows.sources(phone.repository.themes().associate { it.id to it.json }), ThemePlatform.ANDROID,
+        )
+        val chosen = library.themes.first { it.identifier == phone.repository.preference(selected) }
+        assertEquals("Dusk", chosen.name)
+        assertEquals("#15131C", chosen.color(ThemeColorRole.PAPER, ThemeAppearance.DARK).hexString)
+
+        // The phone changes its mind; the Mac hears of it.
+        phone.repository.setPreference(appearance, "system")
+        phone.repository.setPreference(selected, null)
+        phone.sync()
+        mac.sync()
+        assertEquals("system", mac.repository.preference(appearance))
+        assertNull(mac.repository.preference(selected))
+
+        mac.repository.deleteTheme("user.dusk")
+        mac.sync()
+        phone.sync()
+        assertEquals(emptyList<StoredTheme>(), phone.repository.themes())
     }
 }

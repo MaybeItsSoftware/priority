@@ -74,7 +74,7 @@ class AppContainer(
         session.filterNotNull().flatMapLatest { block(it) }
 
     val settings = SettingsStore(context)
-    val themes = ThemeStore(settings)
+    val themes = ThemeStore(settings, this)
 
     /**
      * The theme library, kept current for the surfaces outside Compose (the

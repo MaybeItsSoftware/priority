@@ -2,9 +2,10 @@ package uk.co.maybeitsadam.priority.app
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -13,14 +14,22 @@ import uk.co.maybeitsadam.priority.core.theme.BuiltInThemeSpecifications
 import uk.co.maybeitsadam.priority.core.theme.ThemeFileLibrary
 import uk.co.maybeitsadam.priority.core.theme.ThemeFileLoader
 import uk.co.maybeitsadam.priority.core.theme.ThemeFileOutcome
-import uk.co.maybeitsadam.priority.core.theme.ThemeFileSource
 import uk.co.maybeitsadam.priority.core.theme.ThemePlatform
+import uk.co.maybeitsadam.priority.core.theme.ThemeRows
 import uk.co.maybeitsadam.priority.core.theme.ThemeSpecification
+import uk.co.maybeitsadam.priority.data.workspace.WorkspacePreferenceKey
+import uk.co.maybeitsadam.priority.data.workspace.WorkspaceRepository
+import uk.co.maybeitsadam.priority.data.workspace.deleteTheme
+import uk.co.maybeitsadam.priority.data.workspace.observePreferences
+import uk.co.maybeitsadam.priority.data.workspace.observeThemes
+import uk.co.maybeitsadam.priority.data.workspace.preferences
+import uk.co.maybeitsadam.priority.data.workspace.setPreference
+import uk.co.maybeitsadam.priority.data.workspace.themes
+import uk.co.maybeitsadam.priority.data.workspace.upsertTheme
 import uk.co.maybeitsadam.priority.ui.theme.ThemeMode
 
-/** One imported theme file, as the synced `themes` table will hold it. */
-@Serializable
-data class StoredThemeFile(val name: String, val json: String)
+/** One user theme: its row in the synced `themes` table, and the file name it loads under. */
+data class UserThemeFile(val id: String, val name: String, val json: String)
 
 /** A theme and appearance choice: `theme.selected` and `theme.appearance`. */
 data class ThemeSelection(
@@ -30,9 +39,9 @@ data class ThemeSelection(
 
 /** Everything the theme settings and the app's root need, resolved for Android. */
 data class ThemeLibraryState(
-    val files: List<StoredThemeFile> = emptyList(),
+    val files: List<UserThemeFile> = emptyList(),
     val library: ThemeFileLibrary = ThemeFileLibrary.EMPTY,
-    /** The choice every device shares (synced once the `preferences` table is in). */
+    /** The choice every device shares, from the synced `preferences` table. */
     val shared: ThemeSelection = ThemeSelection(),
     /** This device's own choice, used when [useDeviceChoice] is on. Never synced. */
     val device: ThemeSelection = ThemeSelection(),
@@ -51,118 +60,180 @@ data class ThemeLibraryState(
             ?: BuiltInThemeSpecifications.chalk(ThemePlatform.ANDROID)
 
     val mode: ThemeMode get() = selection.appearance
+
+    companion object {
+        /** The state for these table rows and DataStore values. */
+        fun of(
+            rows: Map<String, String>,
+            preferences: Map<String, String?>,
+            device: ThemeSelection,
+            useDeviceChoice: Boolean,
+        ): ThemeLibraryState {
+            val files = rows.map { (id, json) -> UserThemeFile(id, ThemeRows.fileName(id, json), json) }.sortedBy { it.name }
+            return ThemeLibraryState(
+                files = files,
+                library = ThemeFileLoader.load(ThemeRows.sources(rows), ThemePlatform.ANDROID),
+                shared = ThemeSelection(
+                    preferences[WorkspacePreferenceKey.THEME_SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER,
+                    ThemeMode.of(preferences[WorkspacePreferenceKey.THEME_APPEARANCE]),
+                ),
+                device = device,
+                useDeviceChoice = useDeviceChoice,
+            )
+        }
+    }
 }
 
 /**
- * Themes and the choice of theme, in DataStore for now. The file list and
- * [ThemeLibraryState.shared] are what move to the synced `themes` and
- * `preferences` tables; the device opt-out stays here.
+ * Themes and the choice of theme. User themes are rows in the synced
+ * `themes` table and the shared choice is `theme.selected` and
+ * `theme.appearance` in `preferences` (docs/themes.md, "The chosen theme
+ * follows you"). Only the device opt-out and this device's own choice stay in
+ * DataStore.
  */
-class ThemeStore(private val settings: SettingsStore) {
-    private val json = Json { ignoreUnknownKeys = true }
-    private val listSerializer = ListSerializer(StoredThemeFile.serializer())
+class ThemeStore(private val settings: SettingsStore, private val container: AppContainer) {
+    private suspend fun repository(): WorkspaceRepository = container.repository()
 
-    val state: Flow<ThemeLibraryState> = settings.data
-        .onStart { migrateLegacy() }
-        .map { prefs ->
-            val files = prefs[FILES]?.let { runCatching { json.decodeFromString(listSerializer, it) }.getOrNull() }.orEmpty()
-            ThemeLibraryState(
-                files = files,
-                library = ThemeFileLoader.load(files.map { ThemeFileSource(it.name, it.json) }, ThemePlatform.ANDROID),
-                shared = ThemeSelection(
-                    prefs[SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER, ThemeMode.of(prefs[APPEARANCE]),
+    val state: Flow<ThemeLibraryState> = container.withSession { session ->
+        val repo = session.repository
+        combine(repo.observeThemes(), repo.observePreferences(), settings.data) { rows, preferences, prefs ->
+            ThemeLibraryState.of(
+                rows.associate { it.id to it.json },
+                preferences,
+                ThemeSelection(
+                    prefs[DEVICE_SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER,
+                    ThemeMode.of(prefs[DEVICE_APPEARANCE]),
                 ),
-                device = ThemeSelection(
-                    prefs[DEVICE_SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER, ThemeMode.of(prefs[DEVICE_APPEARANCE]),
-                ),
-                useDeviceChoice = prefs[USE_DEVICE] == "true",
+                prefs[USE_DEVICE] == "true",
             )
-        }
+        }.onStart { migrateLocal(repo) }
+    }
         .distinctUntilChanged()
         .flowOn(Dispatchers.Default)
 
     /**
-     * Adds a theme file, replacing one of the same name, and returns what
-     * loading it gave so the importer can say so.
+     * Adds a theme file as a row under the identifier it loads as, replacing
+     * any row with that identifier, and returns what loading it gave.
      */
     suspend fun import(fileName: String, text: String): ThemeFileOutcome? {
-        val name = fileName.trim().ifEmpty { "theme" }.let {
-            if (it.endsWith(".${ThemeFileLoader.FILE_EXTENSION}")) it else "$it.${ThemeFileLoader.FILE_EXTENSION}"
+        val repo = repository()
+        val id = ThemeRows.identifier(fileName, text)
+        repo.upsertTheme(id, text)
+        val rows = repo.themes().associate { it.id to it.json }
+        val name = ThemeRows.fileName(id, text)
+        return ThemeFileLoader.load(ThemeRows.sources(rows), ThemePlatform.ANDROID).outcomes.firstOrNull { it.source == name }
+    }
+
+    suspend fun remove(id: String) {
+        repository().deleteTheme(id)
+    }
+
+    /** Chooses a theme: for every device, or this one alone when it has opted out. */
+    suspend fun select(identifier: String) {
+        if (useDevice()) {
+            settings.edit { it[DEVICE_SELECTED] = identifier }
+        } else {
+            repository().setPreference(WorkspacePreferenceKey.THEME_SELECTED, identifier)
         }
-        var outcome: ThemeFileOutcome? = null
+    }
+
+    suspend fun setAppearance(mode: ThemeMode) {
+        if (useDevice()) {
+            settings.edit { it[DEVICE_APPEARANCE] = mode.raw }
+        } else {
+            repository().setPreference(WorkspacePreferenceKey.THEME_APPEARANCE, mode.raw)
+        }
+    }
+
+    /** Opting out starts this device's choice from the shared one, so nothing changes until it is changed. */
+    suspend fun setUseDeviceChoice(enabled: Boolean) {
+        val shared = repository().preferences()
         settings.edit { prefs ->
-            val files = decode(prefs[FILES]).filterNot { it.name == name } + StoredThemeFile(name, text)
-            prefs[FILES] = json.encodeToString(listSerializer, files)
-            outcome = ThemeFileLoader.load(files.map { ThemeFileSource(it.name, it.json) }, ThemePlatform.ANDROID)
-                .outcomes.firstOrNull { it.source == name }
+            if (enabled && prefs[USE_DEVICE] != "true") {
+                prefs[DEVICE_SELECTED] = shared[WorkspacePreferenceKey.THEME_SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER
+                prefs[DEVICE_APPEARANCE] = shared[WorkspacePreferenceKey.THEME_APPEARANCE] ?: ThemeMode.SYSTEM.raw
+            }
+            prefs[USE_DEVICE] = enabled.toString()
         }
-        return outcome
     }
 
-    suspend fun remove(fileName: String) = settings.edit { prefs ->
-        prefs[FILES] = json.encodeToString(listSerializer, decode(prefs[FILES]).filterNot { it.name == fileName })
-    }
-
-    /** Chooses a theme, on this device alone when it has opted out of the shared choice. */
-    suspend fun select(identifier: String) = settings.edit { prefs ->
-        prefs[if (prefs[USE_DEVICE] == "true") DEVICE_SELECTED else SELECTED] = identifier
-    }
-
-    suspend fun setAppearance(mode: ThemeMode) = settings.edit { prefs ->
-        prefs[if (prefs[USE_DEVICE] == "true") DEVICE_APPEARANCE else APPEARANCE] = mode.raw
-    }
-
-    /** Opting in starts the device's choice from the shared one, so nothing changes until it is changed. */
-    suspend fun setUseDeviceChoice(enabled: Boolean) = settings.edit { prefs ->
-        if (enabled && prefs[USE_DEVICE] != "true") {
-            prefs[DEVICE_SELECTED] = prefs[SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER
-            prefs[DEVICE_APPEARANCE] = prefs[APPEARANCE] ?: ThemeMode.SYSTEM.raw
-        }
-        prefs[USE_DEVICE] = enabled.toString()
-    }
-
-    private fun decode(text: String?): List<StoredThemeFile> =
-        text?.let { runCatching { json.decodeFromString(listSerializer, it) }.getOrNull() }.orEmpty()
+    private suspend fun useDevice(): Boolean = settings.data.first()[USE_DEVICE] == "true"
 
     /**
-     * The first theme settings kept one imported file and the active JSON
-     * under two keys. They become a file in the list and a selection.
+     * Before themes synced, they and the choice lived in DataStore (and,
+     * earlier still, as one imported JSON). Their files become rows; the
+     * choice becomes the shared one only if no device has set it yet.
      */
-    private suspend fun migrateLegacy() = settings.edit { prefs ->
-        val legacyMode = prefs[LEGACY_MODE]
-        val legacyActive = prefs[LEGACY_ACTIVE]
-        val legacyLibrary = prefs[LEGACY_LIBRARY]
-        if (legacyMode == null && legacyActive == null && legacyLibrary == null) return@edit
-        if (legacyMode != null && prefs[APPEARANCE] == null) prefs[APPEARANCE] = legacyMode
-        val imported = legacyLibrary ?: legacyActive?.takeIf { !it.contains(BuiltInThemeSpecifications.CHALK_DARK_IDENTIFIER) }
-        if (imported != null) {
-            val name = "imported.${ThemeFileLoader.FILE_EXTENSION}"
-            prefs[FILES] = json.encodeToString(listSerializer, decode(prefs[FILES]) + StoredThemeFile(name, imported))
+    private suspend fun migrateLocal(repo: WorkspaceRepository) {
+        var plan: LocalThemeMigration? = null
+        settings.edit { prefs ->
+            val values = MIGRATED_KEYS.associate { it.name to prefs[it] }
+            if (values.values.all { it == null }) return@edit
+            plan = LocalThemeMigration.of(values)
         }
-        if (prefs[SELECTED] == null && legacyActive != null) {
-            prefs[SELECTED] = if (legacyActive.contains(BuiltInThemeSpecifications.CHALK_DARK_IDENTIFIER)) {
-                BuiltInThemeSpecifications.CHALK_DARK_IDENTIFIER
-            } else {
-                ThemeFileLoader.decode(legacyActive, "imported.json").first
-                    ?.let { ThemeFileLoader.identifier(it, "imported.json") }
-                    ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER
-            }
+        val migration = plan ?: return
+        for ((id, json) in migration.rows) repo.upsertTheme(id, json)
+        val shared = repo.preferences()
+        if (!shared.containsKey(WorkspacePreferenceKey.THEME_SELECTED)) {
+            migration.selected?.let { repo.setPreference(WorkspacePreferenceKey.THEME_SELECTED, it) }
+            migration.appearance?.let { repo.setPreference(WorkspacePreferenceKey.THEME_APPEARANCE, it) }
         }
-        prefs.remove(LEGACY_MODE)
-        prefs.remove(LEGACY_ACTIVE)
-        prefs.remove(LEGACY_LIBRARY)
+        settings.edit { prefs -> MIGRATED_KEYS.forEach { prefs.remove(it) } }
     }
 
     companion object {
-        val FILES = SettingsStore.key("theme.files")
-        val SELECTED = SettingsStore.key("theme.selected")
-        val APPEARANCE = SettingsStore.key("theme.appearance")
         val USE_DEVICE = SettingsStore.key("theme.device.enabled")
         val DEVICE_SELECTED = SettingsStore.key("theme.device.selected")
         val DEVICE_APPEARANCE = SettingsStore.key("theme.device.appearance")
 
-        private val LEGACY_MODE = SettingsStore.key("themeMode")
-        private val LEGACY_ACTIVE = SettingsStore.key("themeJSON")
-        private val LEGACY_LIBRARY = SettingsStore.key("importedThemeLibrary")
+        // Before the synced tables: the file list and the choice in DataStore,
+        // and before that one imported JSON under two keys.
+        private val LOCAL_FILES = SettingsStore.key(LocalThemeMigration.FILES)
+        private val LOCAL_SELECTED = SettingsStore.key(LocalThemeMigration.SELECTED)
+        private val LOCAL_APPEARANCE = SettingsStore.key(LocalThemeMigration.APPEARANCE)
+        private val LEGACY_MODE = SettingsStore.key(LocalThemeMigration.LEGACY_MODE)
+        private val LEGACY_ACTIVE = SettingsStore.key(LocalThemeMigration.LEGACY_ACTIVE)
+        private val LEGACY_LIBRARY = SettingsStore.key(LocalThemeMigration.LEGACY_LIBRARY)
+        private val MIGRATED_KEYS =
+            listOf(LOCAL_FILES, LOCAL_SELECTED, LOCAL_APPEARANCE, LEGACY_MODE, LEGACY_ACTIVE, LEGACY_LIBRARY)
+    }
+}
+
+/** What the DataStore-era theme keys become in the synced tables. Pure, so it is tested on its own. */
+data class LocalThemeMigration(
+    val rows: Map<String, String>,
+    val selected: String?,
+    val appearance: String?,
+) {
+    @Serializable
+    private data class LocalFile(val name: String, val json: String)
+
+    companion object {
+        const val FILES = "theme.files"
+        const val SELECTED = "theme.selected"
+        const val APPEARANCE = "theme.appearance"
+        const val LEGACY_MODE = "themeMode"
+        const val LEGACY_ACTIVE = "themeJSON"
+        const val LEGACY_LIBRARY = "importedThemeLibrary"
+
+        private const val LEGACY_FILE_NAME = "imported.json"
+        private val json = Json { ignoreUnknownKeys = true }
+
+        fun of(values: Map<String, String?>): LocalThemeMigration {
+            val rows = LinkedHashMap<String, String>()
+            values[FILES]?.let { text ->
+                runCatching { json.decodeFromString(ListSerializer(LocalFile.serializer()), text) }.getOrNull()
+                    ?.forEach { rows[ThemeRows.identifier(it.name, it.json)] = it.json }
+            }
+            val legacyActive = values[LEGACY_ACTIVE]
+            val activeIsChalkDark = legacyActive?.contains(BuiltInThemeSpecifications.CHALK_DARK_IDENTIFIER) == true
+            val legacyImported = values[LEGACY_LIBRARY] ?: legacyActive?.takeUnless { activeIsChalkDark }
+            legacyImported?.let { rows.putIfAbsent(ThemeRows.identifier(LEGACY_FILE_NAME, it), it) }
+
+            val selected = values[SELECTED] ?: legacyActive?.let {
+                if (activeIsChalkDark) BuiltInThemeSpecifications.CHALK_DARK_IDENTIFIER else ThemeRows.identifier(LEGACY_FILE_NAME, it)
+            }
+            return LocalThemeMigration(rows, selected, values[APPEARANCE] ?: values[LEGACY_MODE])
+        }
     }
 }
