@@ -340,7 +340,7 @@ private fun CardMenu(card: DayCard, vm: TodayViewModel, dismiss: () -> Unit, onS
     ChalkMenuItem("Open inspector") { dismiss(); vm.inspect(card) }
 }
 
-/** The card you are on, grown: a live Lilex clock and the controls that only apply to it. */
+/** The card you are on, grown: a live mono clock and the controls that only apply to it. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RunningDayCard(

@@ -58,7 +58,7 @@ internal fun axisNumber(value: Double): String =
 
 /**
  * A chart in a card: a muted title, an optional legend, and the plot drawn on
- * a Canvas — hairline grid and baseline, Lilex numbers, flat marks. No chart
+ * a Canvas — hairline grid and baseline, mono numbers, flat marks. No chart
  * library. [description] is what TalkBack reads instead of the marks.
  */
 @Composable
@@ -188,7 +188,7 @@ private fun DrawScope.drawLabel(
     drawText(layout, topLeft = Offset(x, y.coerceIn(0f, maxOf(0f, size.height - layout.size.height))))
 }
 
-/** A row of figures: a Lilex value over a muted caption. */
+/** A row of figures: a mono value over a muted caption. */
 @Composable
 fun StatRow(stats: List<Pair<String, String>>, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Metrics.xl)) {

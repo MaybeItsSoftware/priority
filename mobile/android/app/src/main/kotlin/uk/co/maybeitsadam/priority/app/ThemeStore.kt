@@ -33,7 +33,7 @@ data class UserThemeFile(val id: String, val name: String, val json: String)
 
 /** A theme and appearance choice: `theme.selected` and `theme.appearance`. */
 data class ThemeSelection(
-    val selected: String = BuiltInThemeSpecifications.CHALK_IDENTIFIER,
+    val selected: String = BuiltInThemeSpecifications.DEFAULT_IDENTIFIER,
     val appearance: ThemeMode = ThemeMode.SYSTEM,
 )
 
@@ -54,10 +54,10 @@ data class ThemeLibraryState(
 
     val selection: ThemeSelection get() = if (useDeviceChoice) device else shared
 
-    /** The theme in force. A choice this device does not know (yet) is Chalk until it does. */
+    /** The theme in force. A choice this device does not know (yet) is the default until it does. */
     val specification: ThemeSpecification
         get() = available.firstOrNull { it.identifier == selection.selected }
-            ?: BuiltInThemeSpecifications.chalk(ThemePlatform.ANDROID)
+            ?: BuiltInThemeSpecifications.defaultTheme(ThemePlatform.ANDROID)
 
     val mode: ThemeMode get() = selection.appearance
 
@@ -74,7 +74,7 @@ data class ThemeLibraryState(
                 files = files,
                 library = ThemeFileLoader.load(ThemeRows.sources(rows), ThemePlatform.ANDROID),
                 shared = ThemeSelection(
-                    preferences[WorkspacePreferenceKey.THEME_SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER,
+                    preferences[WorkspacePreferenceKey.THEME_SELECTED] ?: BuiltInThemeSpecifications.DEFAULT_IDENTIFIER,
                     ThemeMode.of(preferences[WorkspacePreferenceKey.THEME_APPEARANCE]),
                 ),
                 device = device,
@@ -101,7 +101,7 @@ class ThemeStore(private val settings: SettingsStore, private val container: App
                 rows.associate { it.id to it.json },
                 preferences,
                 ThemeSelection(
-                    prefs[DEVICE_SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER,
+                    prefs[DEVICE_SELECTED] ?: BuiltInThemeSpecifications.DEFAULT_IDENTIFIER,
                     ThemeMode.of(prefs[DEVICE_APPEARANCE]),
                 ),
                 prefs[USE_DEVICE] == "true",
@@ -150,7 +150,7 @@ class ThemeStore(private val settings: SettingsStore, private val container: App
         val shared = repository().preferences()
         settings.edit { prefs ->
             if (enabled && prefs[USE_DEVICE] != "true") {
-                prefs[DEVICE_SELECTED] = shared[WorkspacePreferenceKey.THEME_SELECTED] ?: BuiltInThemeSpecifications.CHALK_IDENTIFIER
+                prefs[DEVICE_SELECTED] = shared[WorkspacePreferenceKey.THEME_SELECTED] ?: BuiltInThemeSpecifications.DEFAULT_IDENTIFIER
                 prefs[DEVICE_APPEARANCE] = shared[WorkspacePreferenceKey.THEME_APPEARANCE] ?: ThemeMode.SYSTEM.raw
             }
             prefs[USE_DEVICE] = enabled.toString()

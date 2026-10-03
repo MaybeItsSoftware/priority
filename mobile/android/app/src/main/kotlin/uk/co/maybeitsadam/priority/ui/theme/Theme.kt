@@ -130,19 +130,19 @@ data class PriorityType(
     val small: TextStyle,
     /** The theme's micro-label, minus its colour: section headers, column heads, tabs. */
     val label: TextStyle,
-    /** Lilex at caption size: times, counts and keys beside body text. */
+    /** The theme's mono face at caption size: times, counts and keys beside body text. */
     val mono: TextStyle,
-    /** Lilex a step under caption, for the tightest numerals. */
+    /** The mono face a step under caption, for the tightest numerals. */
     val monoSmall: TextStyle,
-    /** Lilex at `scale.display`: the large numerals. */
+    /** The mono face at `scale.display`: the large numerals. */
     val monoLarge: TextStyle,
-    /** Lilex at `scale.hero`: the focus timer. */
+    /** The mono face at `scale.hero`: the focus timer. */
     val hero: TextStyle,
     /** A fifth over `scale.title`, display face: the one heading a screen is about (the focused task). */
     val headline: TextStyle,
-    /** Lilex at `scale.body`: a value read on its own, like a time. */
+    /** The mono face at `scale.body`: a value read on its own, like a time. */
     val monoBody: TextStyle,
-    /** Lilex a tenth over `scale.title`: a value being adjusted. */
+    /** The mono face a tenth over `scale.title`: a value being adjusted. */
     val monoTitle: TextStyle,
     /**
      * Body text in an editable field, never under 16sp: smaller and some
@@ -257,7 +257,7 @@ class ResolvedTheme(
                 ThemeMode.SYSTEM -> if (systemDark) ThemeAppearance.DARK else ThemeAppearance.LIGHT
             }
 
-        val chalkLight by lazy { ResolvedTheme(BuiltInThemeSpecifications.chalk(ThemePlatform.ANDROID), ThemeAppearance.LIGHT) }
+        val defaultLight by lazy { ResolvedTheme(BuiltInThemeSpecifications.defaultTheme(ThemePlatform.ANDROID), ThemeAppearance.LIGHT) }
     }
 }
 
@@ -270,7 +270,7 @@ private val ThemeFontWeight.compose: FontWeight
         ThemeFontWeight.BLACK -> FontWeight.Black
     }
 
-val LocalPriorityTheme = staticCompositionLocalOf { ResolvedTheme.chalkLight }
+val LocalPriorityTheme = staticCompositionLocalOf { ResolvedTheme.defaultLight }
 
 /**
  * The theme in force. `PriorityTheme.colors.ink`, `PriorityTheme.type.body`,
@@ -347,7 +347,7 @@ object Metrics {
  */
 @Composable
 fun PriorityTheme(
-    spec: ThemeSpecification = BuiltInThemeSpecifications.chalk(ThemePlatform.ANDROID),
+    spec: ThemeSpecification = BuiltInThemeSpecifications.defaultTheme(ThemePlatform.ANDROID),
     mode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit,
 ) {

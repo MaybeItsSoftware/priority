@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 // Counterpart of Sources/PriorityCore/Theming/BuiltInThemeSpecifications.swift.
 
 /**
- * Chalk and Chalk Dark, resolved per platform.
+ * Priority (the default), then Zed and Zed Dark, resolved per platform.
  *
  * They are defined once, in Swift, and exported as complete JSON to
  * `shared/themes/`. The `copySharedThemes` Gradle task puts those files on
@@ -14,21 +14,44 @@ import java.util.concurrent.ConcurrentHashMap
  * value. There is no Kotlin copy to fall back on: a build without them fails.
  */
 object BuiltInThemeSpecifications {
+    /**
+     * Priority, the default: what a fresh install shows, what a theme file
+     * extends unless it says otherwise, and what stands in for a theme that
+     * will not load.
+     */
+    const val PRIORITY_IDENTIFIER = "native.theme.priority"
+
+    /**
+     * The Zed look. The identifiers still say Chalk, its old name, because
+     * they are stored as people's choice and synced between devices.
+     */
     const val CHALK_IDENTIFIER = "native.theme.chalk"
     const val CHALK_DARK_IDENTIFIER = "native.theme.chalk.dark"
 
+    /** The identifier a device uses when nothing has been chosen. */
+    const val DEFAULT_IDENTIFIER = PRIORITY_IDENTIFIER
+
+    private val IDENTIFIERS = listOf(PRIORITY_IDENTIFIER, CHALK_IDENTIFIER, CHALK_DARK_IDENTIFIER)
+
     /** Where the shared files land on the classpath. */
     const val RESOURCE_DIRECTORY = "uk/co/maybeitsadam/priority/core/theme/builtin"
-    val RESOURCE_FILES = listOf("chalk.json", "chalk-dark.json")
+    val RESOURCE_FILES = listOf("priority.json", "chalk.json", "chalk-dark.json")
 
     private val cache = ConcurrentHashMap<ThemePlatform, List<ThemeSpecification>>()
 
-    /** Chalk, then Chalk Dark. */
+    /** Priority, then Zed, then Zed Dark: the default first. */
     fun all(platform: ThemePlatform): List<ThemeSpecification> = cache.getOrPut(platform) { load(platform) }
 
-    fun chalk(platform: ThemePlatform): ThemeSpecification = all(platform)[0]
+    /** The default theme, resolved for [platform]. */
+    fun defaultTheme(platform: ThemePlatform): ThemeSpecification = priority(platform)
 
-    fun chalkDark(platform: ThemePlatform): ThemeSpecification = all(platform)[1]
+    fun priority(platform: ThemePlatform): ThemeSpecification = all(platform)[0]
+
+    /** Zed, under its old identifier. */
+    fun chalk(platform: ThemePlatform): ThemeSpecification = all(platform)[1]
+
+    /** Zed Dark, under its old identifier. */
+    fun chalkDark(platform: ThemePlatform): ThemeSpecification = all(platform)[2]
 
     fun specification(identifier: String, platform: ThemePlatform): ThemeSpecification? =
         all(platform).firstOrNull { it.identifier == identifier }
@@ -46,14 +69,14 @@ object BuiltInThemeSpecifications {
 
     private fun load(platform: ThemePlatform): List<ThemeSpecification> {
         val library = library(platform)
-        return listOf(CHALK_IDENTIFIER, CHALK_DARK_IDENTIFIER).map { identifier ->
+        return IDENTIFIERS.map { identifier ->
             library.themes.firstOrNull { it.identifier == identifier }
                 ?: error("$identifier did not load from shared/themes: ${library.issues}")
         }
     }
 
     /**
-     * The base the shared files are laid over. Both say `"extends": null` and
+     * The base the shared files are laid over. All say `"extends": null` and
      * state every value, so none of this survives into a built-in; it exists
      * because a merge needs something underneath. A test checks the files
      * really do state everything.

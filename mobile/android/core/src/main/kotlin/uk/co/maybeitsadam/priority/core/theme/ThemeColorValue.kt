@@ -86,5 +86,11 @@ class ThemeColorValue(red: Double, green: Double, blue: Double, alpha: Double = 
 }
 
 /** Swift's `rounded()`: half away from zero, not Kotlin's half-to-even `round`. */
-internal fun schoolbookRound(value: Double): Double =
-    if (value < 0) -floor(-value + 0.5) else floor(value + 0.5)
+internal fun schoolbookRound(value: Double): Double {
+    if (!value.isFinite()) return value
+    // `floor(x + 0.5)` misrounds the double just under a half, whose sum rounds up; the remainder is exact.
+    val magnitude = kotlin.math.abs(value)
+    val whole = floor(magnitude)
+    val rounded = if (magnitude - whole >= 0.5) whole + 1 else whole
+    return if (value < 0) -rounded else rounded
+}

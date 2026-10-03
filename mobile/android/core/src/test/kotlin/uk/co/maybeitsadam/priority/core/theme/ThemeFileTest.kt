@@ -11,6 +11,7 @@ import org.junit.Test
 class ThemeFileTest {
     private val android = ThemePlatform.ANDROID
     private val chalk get() = BuiltInThemeSpecifications.chalk(android)
+    private val priority get() = BuiltInThemeSpecifications.priority(android)
     private val light = ThemeAppearance.LIGHT
     private val dark = ThemeAppearance.DARK
 
@@ -69,7 +70,7 @@ class ThemeFileTest {
     // extends and merging
 
     @Test
-    fun aFewOverridesInheritEverythingElseFromChalk() {
+    fun aFewOverridesInheritEverythingElseFromTheDefault() {
         val library = load(
             source(
                 "dusk.json",
@@ -87,12 +88,12 @@ class ThemeFileTest {
         assertEquals("no identifier: named after the file", "user.dusk", dusk.identifier)
         assertEquals("Dusk", dusk.name)
         assertEquals("#7A4DE8", dusk.color(ThemeColorRole.PRIMARY, light).hexString)
-        assertEquals(chalk.color(ThemeColorRole.PRIMARY, dark), dusk.color(ThemeColorRole.PRIMARY, dark))
+        assertEquals(priority.color(ThemeColorRole.PRIMARY, dark), dusk.color(ThemeColorRole.PRIMARY, dark))
         assertEquals("#101014", dusk.color(ThemeColorRole.PAPER, dark).hexString)
-        assertEquals(chalk.color(ThemeColorRole.INK, light), dusk.color(ThemeColorRole.INK, light))
+        assertEquals(priority.color(ThemeColorRole.INK, light), dusk.color(ThemeColorRole.INK, light))
         assertEquals(10.0, dusk.structure.radius.panel, 0.0)
-        assertEquals(chalk.structure.radius.control, dusk.structure.radius.control, 0.0)
-        assertEquals(chalk.structure.border, dusk.structure.border)
+        assertEquals(priority.structure.radius.control, dusk.structure.radius.control, 0.0)
+        assertEquals(priority.structure.border, dusk.structure.border)
         assertEquals(15.0, dusk.structure.typography.bodySize, 0.0)
         assertEquals(
             "a new body size with no scale re-proportions the scale",
@@ -117,7 +118,7 @@ class ThemeFileTest {
         )
         val type = library.themes.first().structure.typography
         assertEquals(ThemeFontFace(listOf("Arvo", "Rockwell"), ThemeFontDesign.SERIF), type.body)
-        assertEquals(chalk.structure.typography.mono, type.mono)
+        assertEquals(priority.structure.typography.mono, type.mono)
         assertEquals(
             ThemeMicroLabel(10.0, ThemeFontWeight.BOLD, 0.15, true, ThemeColorRole.MUTED_TEXT),
             type.microLabel,
@@ -177,7 +178,7 @@ class ThemeFileTest {
         val library = load(source("bad.json", """{ "palette": { "light": { "paper": "#nothex", "ink": "#222" } } }"""))
         val outcome = library.outcomes.first()
         val theme = outcome.specification!!
-        assertEquals(chalk.color(ThemeColorRole.PAPER, light), theme.color(ThemeColorRole.PAPER, light))
+        assertEquals(priority.color(ThemeColorRole.PAPER, light), theme.color(ThemeColorRole.PAPER, light))
         assertEquals("#222222", theme.color(ThemeColorRole.INK, light).hexString)
         assertEquals(ThemeIssueSeverity.ERROR, outcome.issues.first().severity)
         assertTrue(messages(outcome).any { it.contains("palette.light.paper \"#nothex\"") })
@@ -273,7 +274,158 @@ class ThemeFileTest {
     // Platforms (docs/themes.md, "Across the Mac, iPhone and Android")
 
     @Test
-    fun chalkCarriesEachPlatformsDefaults() {
+    fun prioritysPerPlatformStructureIsTheDocumentedTable() {
+        val table = mapOf(
+            ThemePlatform.MACOS to Triple(13.0, listOf(8.0, 6.0, 6.0), 0.0),
+            ThemePlatform.IOS to Triple(17.0, listOf(10.0, 8.0, 8.0), 44.0),
+            ThemePlatform.ANDROID to Triple(16.0, listOf(12.0, 8.0, 8.0), 48.0),
+        )
+        for ((platform, row) in table) {
+            val structure = BuiltInThemeSpecifications.priority(platform).structure
+            assertEquals(platform.raw, row.first, structure.typography.bodySize, 0.0)
+            assertEquals(platform.raw, row.second, structure.radius.let { listOf(it.panel, it.row, it.control) })
+            assertEquals(platform.raw, row.third, structure.touchTarget, 0.0)
+            assertEquals(
+                BuiltInThemeSpecifications.priority(ThemePlatform.MACOS).palette,
+                BuiltInThemeSpecifications.priority(platform).palette,
+            )
+            val issues = BuiltInThemeSpecifications.priority(platform).validate()
+            assertFalse("$platform: $issues", issues.any { it.severity == ThemeIssueSeverity.ERROR })
+        }
+        val droid = priority.structure.typography
+        assertEquals(ThemeTypeScale(12.0, 16.0, 20.0, 32.0, 72.0), droid.scale)
+        assertEquals(12.0, droid.microLabel.size, 0.0)
+    }
+
+    @Test
+    fun priorityIsTheDefaultFirstAndNamesNoFamilies() {
+        for (platform in ThemePlatform.entries) {
+            val all = BuiltInThemeSpecifications.all(platform)
+            assertEquals(
+                listOf("native.theme.priority", "native.theme.chalk", "native.theme.chalk.dark"),
+                all.map { it.identifier },
+            )
+            assertEquals(listOf("Priority", "Zed", "Zed Dark"), all.map { it.name })
+            assertEquals(BuiltInThemeSpecifications.DEFAULT_IDENTIFIER, BuiltInThemeSpecifications.defaultTheme(platform).identifier)
+        }
+        val type = priority.structure.typography
+        assertEquals(ThemeFontFace(emptyList(), ThemeFontDesign.SANS), type.body)
+        assertEquals(ThemeFontFace(emptyList(), ThemeFontDesign.SANS), type.display)
+        assertEquals(ThemeFontFace(emptyList(), ThemeFontDesign.MONOSPACED), type.mono)
+        // A file that names no base extends Priority.
+        val bare = load(source("bare.json", "{}")).themes.first()
+        assertEquals(priority.palette, bare.palette)
+        assertEquals(priority.structure, bare.structure)
+    }
+
+    @Test
+    fun prioritysPaletteIsWhatItsSeedsGrow() {
+        for (appearance in ThemeAppearance.entries) {
+            val seeds = ThemeSeeds.implicitIn(priority.palette.table(appearance))
+            val grown = seeds.roles(appearance)!!
+            for ((role, value) in grown) {
+                assertEquals("${appearance.raw} ${role.raw}", value, priority.color(role, appearance))
+            }
+        }
+    }
+
+    // Seeds
+
+    @Test
+    fun mixRoundsOnWholeChannelStepsHalfAwayFromZero() {
+        val black = ThemeColorValue.hex("#000000")!!
+        val white = ThemeColorValue.hex("#ffffff")!!
+        assertEquals("#808080", ThemeSeeds.mix(black, white, 0.5).hexString) // 127.5 rounds up
+        assertEquals("#000000", ThemeSeeds.mix(black, white, 0.0).hexString)
+        assertEquals("#FFFFFF", ThemeSeeds.mix(black, white, 1.0).hexString)
+        assertEquals("255 - 127.5 rounds up too", "#808080", ThemeSeeds.mix(white, black, 0.5).hexString)
+    }
+
+    @Test
+    fun seedsGrowEveryNeutralAndTheirStatedRoles() {
+        val seeds = ThemeSeeds(
+            background = ThemeColorValue.hex("#f7f7f8"),
+            foreground = ThemeColorValue.hex("#1f2026"),
+            accent = ThemeColorValue.hex("#3d63dd"),
+        )
+        val light = seeds.roles(ThemeAppearance.LIGHT)!!
+        assertEquals("#F7F7F8", light[ThemeColorRole.PAPER]!!.hexString)
+        assertEquals("#1F2026", light[ThemeColorRole.INK]!!.hexString)
+        assertEquals("#3D63DD", light[ThemeColorRole.PRIMARY]!!.hexString)
+        assertEquals("#DDDDDF", light[ThemeColorRole.BORDER]!!.hexString)
+        assertEquals("#FCFCFC", light[ThemeColorRole.RAISED]!!.hexString)
+        assertNull("no success seed, no success role", light[ThemeColorRole.SUCCESS])
+        assertNull("nothing to mix between", ThemeSeeds(background = seeds.background).roles(ThemeAppearance.LIGHT))
+        val over = seeds.overlaid(ThemeSeeds(accent = ThemeColorValue.hex("#ff0000")))
+        assertEquals(seeds.background, over.background)
+        assertEquals("#FF0000", over.accent!!.hexString)
+    }
+
+    @Test
+    fun aFileCanGiveSeedsAndPaletteStillWins() {
+        val library = load(
+            source(
+                "sea.json",
+                """
+                { "seeds": { "light": { "background": "#f4f8f9", "foreground": "#14303a", "accent": "#0b7a8c" } },
+                  "palette": { "light": { "border": "#c9d9dd" } } }
+                """,
+            ),
+        )
+        val sea = library.themes.first()
+        assertEquals("#F4F8F9", sea.color(ThemeColorRole.PAPER, light).hexString)
+        assertEquals("#14303A", sea.color(ThemeColorRole.INK, light).hexString)
+        assertEquals("#0B7A8C", sea.color(ThemeColorRole.PRIMARY, light).hexString)
+        assertEquals("palette beats seeds", "#C9D9DD", sea.color(ThemeColorRole.BORDER, light).hexString)
+        assertEquals(
+            ThemeSeeds.mix(ThemeColorValue.hex("#f4f8f9")!!, ThemeColorValue.hex("#14303a")!!, 0.07),
+            sea.color(ThemeColorRole.WELL, light),
+        )
+        assertEquals("status seeds come from the base", priority.color(ThemeColorRole.DANGER, light), sea.color(ThemeColorRole.DANGER, light))
+        assertEquals("no dark seeds: the base's dark table", priority.palette.dark, sea.palette.dark)
+        assertTrue(library.issues.none { it.message.startsWith("seeds") })
+    }
+
+    @Test
+    fun aBadSeedIsReportedAndAMissingOneComesFromTheBase() {
+        val library = load(
+            source("half.json", """{ "seeds": { "light": { "background": "#ffffff", "glow": "#00ff00", "accent": "#zz" } } }"""),
+        )
+        val outcome = library.outcomes.first()
+        val half = outcome.specification!!
+        assertEquals(priority.color(ThemeColorRole.INK, light), half.color(ThemeColorRole.INK, light))
+        assertEquals(priority.color(ThemeColorRole.PRIMARY, light), half.color(ThemeColorRole.PRIMARY, light))
+        assertEquals("#FFFFFF", half.color(ThemeColorRole.PAPER, light).hexString)
+        assertTrue(
+            messages(outcome).contains(
+                "seeds.light.glow is not a seed (background, foreground, accent, success, danger or warning); ignored",
+            ),
+        )
+        assertTrue(messages(outcome).contains("seeds.light.accent \"#zz\" is not a hex colour (#rgb, #rrggbb or #rrggbbaa)"))
+        assertEquals(ThemeIssueSeverity.ERROR, outcome.issues.first { it.message.startsWith("seeds.light.accent") }.severity)
+        assertEquals(ThemeIssueSeverity.WARNING, outcome.issues.first { it.message.startsWith("seeds.light.glow") }.severity)
+    }
+
+    @Test
+    fun seedsWithNothingToMixBetweenAreAnError() {
+        val library = ThemeFileLoader.load(
+            listOf(source("x.json", """{ "extends": null, "seeds": { "light": { "accent": "#ff0000" } } }""")),
+            android,
+        )
+        assertTrue(library.issues.any { it.message == "seeds.light needs a background and a foreground; ignored" })
+    }
+
+    @Test
+    fun seedsSurviveEncoding() {
+        val text = """{ "seeds": { "dark": { "background": "#000000", "foreground": "#ffffff" } } }"""
+        val (file, issues) = ThemeFileLoader.decode(text, "x.json")
+        assertEquals(emptyList<ThemeFileIssue>(), issues)
+        assertEquals(mapOf("background" to "#000000", "foreground" to "#ffffff"), file!!.seeds?.dark)
+        assertEquals(file, ThemeFileLoader.decode(file.encoded(), "x.json").first)
+    }
+
+    @Test
+    fun zedCarriesEachPlatformsDefaults() {
         val mac = BuiltInThemeSpecifications.chalk(ThemePlatform.MACOS).structure
         val ios = BuiltInThemeSpecifications.chalk(ThemePlatform.IOS).structure
         val droid = chalk.structure
@@ -342,7 +494,7 @@ class ThemeFileTest {
         val child = library.themes.first { it.identifier == "user.child" }
         assertEquals(56.0, child.structure.touchTarget, 0.0)
         assertEquals(12.0, child.structure.radius.panel, 0.0)
-        assertEquals(6.0, child.structure.radius.control, 0.0)
+        assertEquals(priority.structure.radius.control, child.structure.radius.control, 0.0)
     }
 
     @Test
@@ -351,7 +503,7 @@ class ThemeFileTest {
             source("x.json", """{ "platforms": { "android": { "palette": { "light": { "paper": "#000000" } } } } }"""),
         )
         val theme = library.themes.first()
-        assertEquals(chalk.color(ThemeColorRole.PAPER, light), theme.color(ThemeColorRole.PAPER, light))
+        assertEquals(priority.color(ThemeColorRole.PAPER, light), theme.color(ThemeColorRole.PAPER, light))
         val issue = library.issues.first { it.message.contains("platforms.android.palette") }
         assertEquals(ThemeIssueSeverity.WARNING, issue.severity)
         assertEquals("platforms.android.palette is not allowed: colour is the same on every platform; ignored", issue.message)
@@ -363,14 +515,14 @@ class ThemeFileTest {
         for (platform in ThemePlatform.entries) {
             val library = ThemeFileLoader.load(listOf(source("x.json", text)), platform)
             assertTrue(platform.raw, library.issues.any { it.message == "platforms.ios.structure.spacing.md -2 should be zero or more" })
-            val expectedRow = if (platform == ThemePlatform.IOS) 3.0 else 0.0
+            val expectedRow = if (platform == ThemePlatform.IOS) 3.0 else BuiltInThemeSpecifications.priority(platform).structure.radius.row
             assertEquals(platform.raw, expectedRow, library.themes.first().structure.radius.row, 0.0)
         }
     }
 
     @Test
     fun auditFindingsAreMarkedAndMissingRolesAreNot() {
-        val library = load(source("x.json", """{ "structure": { "touchTarget": 30, "border": { "hairline": -1 } } }"""))
+        val library = load(source("x.json", """{ "extends": "native.theme.chalk", "structure": { "touchTarget": 30, "border": { "hairline": -1 } } }"""))
         val issues = library.issues
         assertTrue(issues.first { it.message == "a 30.00pt touch target is under the 44.00pt a finger needs" }.isAudit)
         assertFalse(issues.first { it.message.startsWith("structure.border.hairline") }.isAudit)
@@ -440,7 +592,7 @@ class ThemeFileTest {
     }
 
     @Test
-    fun chalksAuditHasTheAzureNoteAndNothingWorse() {
+    fun zedsAuditHasTheAzureNoteAndNothingWorse() {
         val issues = chalk.validate()
         assertTrue(issues.any { it is ThemeIssue.LargeTextOnly && it.role == ThemeColorRole.PRIMARY })
         assertTrue(issues.none { it.severity == ThemeIssueSeverity.ERROR })

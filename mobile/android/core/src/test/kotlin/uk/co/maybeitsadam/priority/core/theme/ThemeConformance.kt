@@ -34,7 +34,7 @@ object ThemeConformance {
             val library = ThemeFileLoader.load(sources, platform)
             val chosen = library.themes.firstOrNull { it.identifier == selected }
                 ?: BuiltInThemeSpecifications.all(platform).firstOrNull { it.identifier == selected }
-                ?: BuiltInThemeSpecifications.chalk(platform)
+                ?: BuiltInThemeSpecifications.defaultTheme(platform)
 
             // The file's own issues, the audit left out, the same on every platform.
             val issues = library.issues.filterNot { it.isAudit }

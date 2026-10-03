@@ -25,6 +25,11 @@ data class ThemeFile(
     val summary: String? = null,
     val lockedAppearance: Lock = Lock.Inherit,
     val extends: Base = Base.DefaultTheme,
+    /**
+     * A few colours per appearance the palette is grown from; see
+     * [ThemeSeeds]. Laid under [palette], which still wins role by role.
+     */
+    val seeds: Palette? = null,
     val palette: Palette? = null,
     val structure: Structure? = null,
     /** Per-platform structure, laid over [structure] on that platform only. */
@@ -32,13 +37,13 @@ data class ThemeFile(
 ) {
     /** What the file inherits every value it does not state from. */
     sealed interface Base {
-        /** Key absent: Chalk. */
+        /** Key absent: the default theme, Priority. */
         data object DefaultTheme : Base
 
         /** `"extends": "<identifier>"`. */
         data class Theme(val identifier: String) : Base
 
-        /** `"extends": null`: no colours inherited. Structure still falls back to Chalk's. */
+        /** `"extends": null`: no colours inherited. Structure still falls back to the default's. */
         data object Nothing : Base
     }
 
@@ -49,8 +54,14 @@ data class ThemeFile(
         data class Locked(val raw: String) : Lock
     }
 
-    /** Role name → hex, per appearance. */
-    data class Palette(val light: Map<String, String>? = null, val dark: Map<String, String>? = null)
+    /**
+     * Name → hex, per appearance: a role name under `palette`, a seed name
+     * under `seeds`.
+     */
+    data class Palette(val light: Map<String, String>? = null, val dark: Map<String, String>? = null) {
+        fun of(appearance: ThemeAppearance): Map<String, String>? =
+            if (appearance == ThemeAppearance.LIGHT) light else dark
+    }
 
     data class Radius(
         val panel: Double? = null,
@@ -130,6 +141,9 @@ data class ThemeFile(
         "identifier" to identifier?.let(::JsonPrimitive),
         "name" to name?.let(::JsonPrimitive),
         "summary" to summary?.let(::JsonPrimitive),
+        "seeds" to seeds?.let { p ->
+            obj("light" to p.light?.let(::stringTable), "dark" to p.dark?.let(::stringTable))
+        },
         "palette" to palette?.let { p ->
             obj("light" to p.light?.let(::stringTable), "dark" to p.dark?.let(::stringTable))
         },
@@ -255,6 +269,9 @@ internal object ThemeFileReader {
             identifier = string(o, "identifier", ""),
             name = string(o, "name", ""),
             summary = string(o, "summary", ""),
+            seeds = child(o, "seeds", "")?.let { (p, path) ->
+                ThemeFile.Palette(light = stringMap(p, "light", path), dark = stringMap(p, "dark", path))
+            },
             palette = child(o, "palette", "")?.let { (p, path) ->
                 ThemeFile.Palette(light = stringMap(p, "light", path), dark = stringMap(p, "dark", path))
             },

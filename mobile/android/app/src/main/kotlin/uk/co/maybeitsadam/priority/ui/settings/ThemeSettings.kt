@@ -77,7 +77,7 @@ internal fun ThemeSection(model: SettingsViewModel) {
 
     Section(
         "Theme",
-        footer = "A theme is a JSON file: colours for light and dark, and sizes. Anything it leaves out comes from Chalk. See docs/themes.md.",
+        footer = "A theme is a JSON file: colours for light and dark, and sizes. Anything it leaves out comes from Priority, the default. See docs/themes.md.",
     ) {
         val outcomes = state.library.outcomes.associateBy { it.source }
         state.builtIns.forEachIndexed { index, theme ->

@@ -97,8 +97,8 @@ object ThemeFileLoader {
         platform: ThemePlatform,
         builtIns: List<ThemeSpecification> = BuiltInThemeSpecifications.all(platform),
         defaultBase: ThemeSpecification = builtIns.firstOrNull {
-            it.identifier == BuiltInThemeSpecifications.CHALK_IDENTIFIER
-        } ?: BuiltInThemeSpecifications.chalk(platform),
+            it.identifier == BuiltInThemeSpecifications.DEFAULT_IDENTIFIER
+        } ?: BuiltInThemeSpecifications.defaultTheme(platform),
     ): ThemeFileLibrary {
         val ordered = sources.sortedBy { it.name }
         val builtInsByIdentifier = LinkedHashMap<String, ThemeSpecification>()
@@ -198,7 +198,8 @@ object ThemeFileLoader {
         base: ThemeSpecification?,
         platform: ThemePlatform,
     ): ThemeFileOutcome = ThemeFileMerger.merge(
-        file, identifier(file, source), source, base, BuiltInThemeSpecifications.chalk(platform).structure, platform,
+        file, identifier(file, source), source, base, BuiltInThemeSpecifications.defaultTheme(platform).structure,
+        platform,
     )
 
     /** The file's own identifier, or one derived from its name. */
@@ -235,8 +236,47 @@ internal object ThemeFileMerger {
         val issues = mutableListOf<ThemeFileIssue>()
         val report: Report = { severity, message -> issues += ThemeFileIssue(source, severity, message) }
 
+        // Seeds, then palette: the base's table, the roles grown from the
+        // seeds this file gives for the appearance (over the seeds the base
+        // implies), then the roles the file states outright.
+        fun seeded(
+            appearance: ThemeAppearance,
+            table: Map<ThemeColorRole, ThemeColorValue>,
+        ): Map<ThemeColorRole, ThemeColorValue> {
+            val raw = file.seeds?.of(appearance) ?: return table
+            var stated = ThemeSeeds()
+            for (key in raw.keys.sorted()) {
+                val value = raw[key] ?: ""
+                val seed = ThemeSeeds.Key.of(key)
+                if (seed == null) {
+                    report(
+                        ThemeIssueSeverity.WARNING,
+                        "seeds.${appearance.raw}.$key is not a seed " +
+                            "(background, foreground, accent, success, danger or warning); ignored",
+                    )
+                    continue
+                }
+                val color = ThemeColorValue.hex(value)
+                if (color == null) {
+                    report(
+                        ThemeIssueSeverity.ERROR,
+                        "seeds.${appearance.raw}.$key \"$value\" is not a hex colour (#rgb, #rrggbb or #rrggbbaa)",
+                    )
+                    continue
+                }
+                stated = stated.with(seed, color)
+            }
+            val seeds = ThemeSeeds.implicitIn(table).overlaid(stated)
+            val roles = seeds.roles(appearance)
+            if (roles == null) {
+                report(ThemeIssueSeverity.ERROR, "seeds.${appearance.raw} needs a background and a foreground; ignored")
+                return table
+            }
+            return LinkedHashMap(table).apply { putAll(roles) }
+        }
+
         fun table(appearance: ThemeAppearance, overrides: Map<String, String>?): Map<ThemeColorRole, ThemeColorValue> {
-            val table = LinkedHashMap(base?.palette?.table(appearance) ?: emptyMap())
+            val table = LinkedHashMap(seeded(appearance, base?.palette?.table(appearance) ?: emptyMap()))
             for (key in (overrides ?: emptyMap()).keys.sorted()) {
                 val raw = overrides?.get(key) ?: ""
                 val role = ThemeColorRole.of(key)
@@ -500,6 +540,8 @@ internal object ThemeFileSchema {
                 "identifier" to any, "name" to any, "summary" to any, "lockedAppearance" to any, "extends" to any,
                 // Role names are checked by the merger, which can say which role.
                 "palette" to Node.Obj(mapOf("light" to any, "dark" to any)),
+                // So are seed names.
+                "seeds" to Node.Obj(mapOf("light" to any, "dark" to any)),
                 "structure" to structure,
                 "platforms" to Node.Obj(ThemePlatform.entries.associate { it.raw to platform }),
             ),

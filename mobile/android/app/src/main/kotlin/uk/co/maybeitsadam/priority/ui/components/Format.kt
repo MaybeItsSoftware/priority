@@ -6,7 +6,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/** The app's ways of writing times, durations and dates. Lilex renders the results. */
+/** The app's ways of writing times, durations and dates. The theme's mono face renders the results. */
 object Format {
     private val time = DateTimeFormatter.ofPattern("HH:mm", Locale.UK)
     private val dayThisYear = DateTimeFormatter.ofPattern("EEE d MMM", Locale.UK)

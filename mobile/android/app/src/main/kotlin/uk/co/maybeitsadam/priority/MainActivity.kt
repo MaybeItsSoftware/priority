@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
             val themes by container.themes.state.collectAsStateWithLifecycle(ThemeLibraryState())
             val spec = themes.specification
             val mode = themes.mode
-            // A locked theme (Chalk Dark) wins over both the setting and the system.
+            // A locked theme (Zed Dark) wins over both the setting and the system.
             val dark = ResolvedTheme.appearance(spec, mode, isSystemInDarkTheme()) == ThemeAppearance.DARK
             // Status and navigation bar icons follow the app's appearance, not the system's.
             DisposableEffect(dark) {

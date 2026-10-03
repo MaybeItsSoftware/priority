@@ -26,15 +26,28 @@ class ThemeLibraryStateTest {
         assertEquals("Dusk", s.specification.name)
         assertEquals(16.0, s.specification.structure.typography.bodySize, 0.0)
         assertEquals(listOf(UserThemeFile("user.dusk", "dusk.json", duskJson)), s.files)
-        assertEquals(listOf("native.theme.chalk", "native.theme.chalk.dark", "user.dusk"), s.available.map { it.identifier })
+        assertEquals(
+            listOf("native.theme.priority", "native.theme.chalk", "native.theme.chalk.dark", "user.dusk"),
+            s.available.map { it.identifier },
+        )
+        assertEquals(listOf("Priority", "Zed", "Zed Dark"), s.builtIns.map { it.name })
     }
 
     @Test
-    fun anUnknownOrClearedChoiceShowsChalkUntilItArrives() {
+    fun anUnknownOrClearedChoiceShowsTheDefaultUntilItArrives() {
         val s = state(mapOf(WorkspacePreferenceKey.THEME_SELECTED to "user.not-here", WorkspacePreferenceKey.THEME_APPEARANCE to "dark"))
-        assertEquals(BuiltInThemeSpecifications.CHALK_IDENTIFIER, s.specification.identifier)
+        assertEquals(BuiltInThemeSpecifications.PRIORITY_IDENTIFIER, s.specification.identifier)
         assertEquals(ThemeMode.DARK, s.mode)
-        assertEquals(BuiltInThemeSpecifications.CHALK_IDENTIFIER, state(mapOf(WorkspacePreferenceKey.THEME_SELECTED to null)).specification.identifier)
+        assertEquals(BuiltInThemeSpecifications.PRIORITY_IDENTIFIER, state(mapOf(WorkspacePreferenceKey.THEME_SELECTED to null)).specification.identifier)
+    }
+
+    @Test
+    fun nothingChosenIsPriorityAndAChosenZedIsKept() {
+        assertEquals(BuiltInThemeSpecifications.PRIORITY_IDENTIFIER, ThemeLibraryState().specification.identifier)
+        assertEquals(BuiltInThemeSpecifications.PRIORITY_IDENTIFIER, state(emptyMap()).specification.identifier)
+        val zed = state(mapOf(WorkspacePreferenceKey.THEME_SELECTED to BuiltInThemeSpecifications.CHALK_IDENTIFIER))
+        assertEquals(BuiltInThemeSpecifications.CHALK_IDENTIFIER, zed.specification.identifier)
+        assertEquals("Zed", zed.specification.name)
     }
 
     @Test

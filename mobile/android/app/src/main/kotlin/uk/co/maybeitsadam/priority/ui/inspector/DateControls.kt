@@ -63,7 +63,7 @@ private fun monthAt(index: Int): YearMonth = YearMonth.of(Math.floorDiv(index, 1
 
 /**
  * The themed date (and optionally time) field: a field-shaped button showing
- * the value in Lilex, which opens an inline panel beneath it with quick chips,
+ * the value in the mono face, which opens an inline panel beneath it with quick chips,
  * a month grid and an hour:minute stepper. Never the stock Material dialog.
  *
  * [time] non-null shows the time stepper; [onDate] with null clears.
