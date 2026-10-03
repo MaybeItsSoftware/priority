@@ -1,29 +1,29 @@
 # CLI Guide
 
-`priority` is a Rust command-line tool for the same data the app works with:
+`takt` is a Rust command-line tool for the same data the app works with:
 your local workspace (folders, lists and tasks), your Checkvist lists, your
 dailies, and your day log.
 
 It is a peer of the app rather than a remote control for it. It talks to the
-Checkvist API directly and reads and writes Priority's local files off disk, so
+Checkvist API directly and reads and writes Takt's local files off disk, so
 every command works whether or not the app is running. The writes take the same
 locks the app does, so both can be open at once.
 
 ```bash
-./scripts/install_cli.sh     # builds release and links `priority` onto your PATH
-priority --help
+./scripts/install_cli.sh     # builds release and links `takt` onto your PATH
+takt --help
 ```
 
 Or without installing:
 
 ```bash
 cargo build --release --manifest-path cli/Cargo.toml
-cli/target/release/priority dailies
+cli/target/release/takt dailies
 ```
 
 ## The terminal UI
 
-Run `priority` with no arguments and it opens a terminal UI with the same tabs
+Run `takt` with no arguments and it opens a terminal UI with the same tabs
 as the menu bar app, and the same keys to reach them.
 
 ```
@@ -88,26 +88,28 @@ Every key that changes something dispatches the same tool call an assistant
 would make over MCP, so the terminal cannot do anything the other front ends
 can't, or do it differently.
 
-It needs an interactive terminal: `priority | cat`, or a cron job, gets a clear
+It needs an interactive terminal: `takt | cat`, or a cron job, gets a clear
 error pointing at `--help` rather than a UI nobody can quit.
 
 ## Signing in
 
 ```bash
-priority auth login
+takt auth login
 ```
 
 It prompts for your Checkvist email and your remote key (from
 [checkvist.com/auth/profile](https://checkvist.com/auth/profile), read without
 echo), checks them against the API, and only then writes them to
-`~/.config/priority/config.json` with mode 0600. A mistyped key fails at this
-point rather than as a puzzling 401 on some later command.
+`~/.config/takt/config.json` with mode 0600. A mistyped key fails at this
+point rather than as a puzzling 401 on some later command. Until that file
+exists, the CLI reads the old `~/.config/priority/config.json` from before the
+rename to Takt.
 
 ```
-priority auth status        where the config lives and what is in effect
-priority auth set-list ID   the default list, used when --list-id is omitted
-priority auth logout        forget the key; --all deletes the file
-priority auth path          just the path, for scripts
+takt auth status        where the config lives and what is in effect
+takt auth set-list ID   the default list, used when --list-id is omitted
+takt auth logout        forget the key; --all deletes the file
+takt auth path          just the path, for scripts
 ```
 
 `auth status` never prints the remote key — only its length, which is enough to
@@ -115,7 +117,7 @@ spot a truncated paste.
 
 ### These credentials are the CLI's own
 
-Signing in here does not sign you in to the Priority app. The invariant runs
+Signing in here does not sign you in to the Takt app. The invariant runs
 one way: the CLI never reads the app's keychain. That is deliberate. The app
 keeps its remote key in the login keychain, where it is reachable only by
 something carrying the app's code signature; a CLI that depended on it would
@@ -146,7 +148,7 @@ which it is world-readable.
   lives
 
 Any of these set in the environment beats the file, so an MCP client config that
-passes credentials keeps working untouched, and `CHECKVIST_LIST_ID=999 priority
+passes credentials keeps working untouched, and `CHECKVIST_LIST_ID=999 takt
 tasks` is a one-off override. `auth status` says which source each value came
 from, and the auth commands warn you when a variable is shadowing what they just
 wrote.
@@ -162,15 +164,16 @@ credentials at all, so they work before you have signed in to anything.
   "remote_key": "...",
   "list_id": "945183",
   "base_url": "https://checkvist.com",
-  "store_directory": "~/Library/Application Support/Priority"
+  "store_directory": "~/Library/Application Support/Takt"
 }
 ```
 
 Every key is optional. `~` is expanded in the path keys. A missing or malformed
-file is treated as an empty config rather than an error — `priority dailies`
+file is treated as an empty config rather than an error — `takt dailies`
 has no business failing over a credential file it never consults.
 
-`store_directory` defaults to the app's own location, and that default is the
+`store_directory` defaults to the app's own location (`Takt/`, or the old
+`Priority/` folder while `Takt/` does not exist yet), and that default is the
 one place the CLI and the app are deliberately joined: reading the dailies and
 day log the app writes is the whole reason those commands exist. Point it
 elsewhere for a CLI-only setup.
@@ -194,7 +197,7 @@ elsewhere for a CLI-only setup.
   log         What actually happened on recent days
   dailies     Show your dailies with today's schedule and tick state
   daily       Create, change or tick a daily
-  metadata    Priority's own state: ranks, recurrence, start dates, matrix, board
+  metadata    Takt's own state: ranks, recurrence, start dates, matrix, board
   ws          The app's local workspace: folders, lists and tasks (alias: workspace)
   focus       What the focus timer is doing
   focused     Focused time already recorded
@@ -211,27 +214,27 @@ returns — useful for `jq`, and for checking what an assistant would have seen.
 ### Examples
 
 ```bash
-priority lists
-priority tasks                             # the default list, open tasks, as a tree
-priority tasks --all                       # include closed and "won't do"
-priority search -q report --due-before 2026-09-01
-priority search -t work --limit 10
+takt lists
+takt tasks                             # the default list, open tasks, as a tree
+takt tasks --all                       # include closed and "won't do"
+takt search -q report --due-before 2026-09-01
+takt search -t work --limit 10
 
-priority add Draft the release notes --due friday
-priority add Check the numbers --parent 12345
-priority note 12345 Waiting on the design review
-priority done 12345
+takt add Draft the release notes --due friday
+takt add Check the numbers --parent 12345
+takt note 12345 Waiting on the design review
+takt done 12345
 
-priority log --days 7
-priority dailies
-priority daily add Read for twenty minutes --weekdays mon,wed,fri
-priority daily add Water the plants --every-days 3
-priority daily tick 5F385C47-E2A6-488E-B3E1-84B0511FFAD4
-priority daily update <id> --every-days 4
-priority daily update <id> --weekdays weekdays   # back off the cycle
-priority daily update <id> --archive
+takt log --days 7
+takt dailies
+takt daily add Read for twenty minutes --weekdays mon,wed,fri
+takt daily add Water the plants --every-days 3
+takt daily tick 5F385C47-E2A6-488E-B3E1-84B0511FFAD4
+takt daily update <id> --every-days 4
+takt daily update <id> --weekdays weekdays   # back off the cycle
+takt daily update <id> --archive
 
-priority --json dailies | jq '.dailies[] | select(.done | not)'
+takt --json dailies | jq '.dailies[] | select(.done | not)'
 ```
 
 `--weekdays` takes what you would actually type: `mon,wed,fri`, `weekdays`,
@@ -245,30 +248,30 @@ are alternatives — passing both is refused rather than silently resolved — a
 
 ### The local workspace
 
-`priority ws` works on the tree the app shows, in
-`~/Library/Application Support/Priority/priority.sqlite`, not on Checkvist. Its
+`takt ws` works on the tree the app shows, in
+`~/Library/Application Support/Takt/priority.sqlite`, not on Checkvist. Its
 ids are the workspace's UUIDs, and `ws tree` / `ws tasks` print them beside
 every row. The global `--list-id` is a Checkvist id and is ignored here.
 
 ```bash
-priority ws tree                                   # folders, lists, nested lists
-priority ws tasks <LIST_ID>                        # a list's open tasks as a tree
-priority ws tasks <LIST_ID> --all --parent <TASK_ID>
+takt ws tree                                   # folders, lists, nested lists
+takt ws tasks <LIST_ID>                        # a list's open tasks as a tree
+takt ws tasks <LIST_ID> --all --parent <TASK_ID>
 
-priority ws add Read the paper --list <LIST_ID> \
+takt ws add Read the paper --list <LIST_ID> \
   --link 'obsidian://open?vault=Studies&file=Paper' -c this-week
-priority ws add Section 3 --parent <TASK_ID> -n "Start with the proofs"
-priority ws update <TASK_ID> --title "Read the paper twice" --link https://example.com
-priority ws update <TASK_ID> --no-links
-priority ws update <TASK_ID> --kind list --pin      # nested list, pinned to the sidebar
-priority ws done <TASK_ID>
-priority ws move <TASK_ID> --parent <TASK_ID>       # the subtree comes too
-priority ws move <TASK_ID> --list <LIST_ID> --position 1
-priority ws to-list <TASK_ID> --folder <FOLDER_ID>  # promote to its own list
-priority ws new-folder Computer Science
-priority ws new-list Revision --folder <FOLDER_ID>
-priority ws move-list <LIST_ID> --folder <FOLDER_ID>
-priority ws rm <TASK_ID>
+takt ws add Section 3 --parent <TASK_ID> -n "Start with the proofs"
+takt ws update <TASK_ID> --title "Read the paper twice" --link https://example.com
+takt ws update <TASK_ID> --no-links
+takt ws update <TASK_ID> --kind list --pin      # nested list, pinned to the sidebar
+takt ws done <TASK_ID>
+takt ws move <TASK_ID> --parent <TASK_ID>       # the subtree comes too
+takt ws move <TASK_ID> --list <LIST_ID> --position 1
+takt ws to-list <TASK_ID> --folder <FOLDER_ID>  # promote to its own list
+takt ws new-folder Computer Science
+takt ws new-list Revision --folder <FOLDER_ID>
+takt ws move-list <LIST_ID> --folder <FOLDER_ID>
+takt ws rm <TASK_ID>
 ```
 
 These write while the app is open. Each command is one step in the app's Undo
@@ -283,31 +286,32 @@ Every command is one of the MCP tools under a friendlier name. If you want the
 tool directly:
 
 ```bash
-priority tools
-priority call daily_add '{"title": "Stretch", "active_weekdays": [2,4,6]}'
-priority call task_search '{"query": "invoice", "include_closed": true}'
+takt tools
+takt call daily_add '{"title": "Stretch", "active_weekdays": [2,4,6]}'
+takt call task_search '{"query": "invoice", "include_closed": true}'
 ```
 
 This is not a fallback for missing features — it is the same dispatch table the
 subcommands go through. It exists so that a tool argument the CLI has no flag
-for is still reachable, and so `priority call` can be used to reproduce exactly
+for is still reachable, and so `takt call` can be used to reproduce exactly
 what an assistant did.
 
 ## As an MCP server
 
-This binary *is* Priority's MCP server. There is no other — the app ships a copy
-at `Priority.app/Contents/Helpers/priority` and `Priority --mcp-server` hands
+This binary *is* Takt's MCP server. There is no other — the app ships a copy
+at `Takt.app/Contents/Helpers/takt` and `Takt --mcp-server` hands
 the process over to it (`Priority/MCPServerShim.swift`).
 
 ```bash
-priority mcp
-priority --mcp-server     # accepted too, so a config written for the app works unchanged
+takt mcp
+takt --mcp-server     # accepted too, so a config written for the app works unchanged
 ```
 
 That second spelling is load-bearing rather than a convenience: MCP client
 configurations written before the app bundled this binary say
-`/Applications/Priority.app/Contents/MacOS/Priority --mcp-server`, and they
-keep working because both the flag and the environment-first credential rule
+`/Applications/Priority.app/Contents/MacOS/Priority --mcp-server` (the app's
+name before Takt), and they keep working, for as long as that binary is there,
+because both the flag and the environment-first credential rule
 below were already here.
 
 If you have run `auth login`, no `env` block is needed at all:
@@ -315,8 +319,8 @@ If you have run `auth login`, no `env` block is needed at all:
 ```json
 {
   "mcpServers": {
-    "priority": {
-      "command": "/Users/you/.local/bin/priority",
+    "takt": {
+      "command": "/Users/you/.local/bin/takt",
       "args": ["mcp"]
     }
   }
@@ -356,7 +360,7 @@ cli/
     cli.rs        subcommands, the auth commands, and the renderings
     tools.rs      the tools, implemented once
     checkvist.rs  the API client
-    config.rs     ~/.config/priority/config.json, and the environment-first rule
+    config.rs     ~/.config/takt/config.json, and the environment-first rule
     local.rs      dailies, day log, and preferences, off disk
     lock.rs       flock(2), on the same lock files the app takes
     workspace.rs  the app's database, read-only: the focus timer and its history
@@ -390,5 +394,5 @@ python3 scripts/mcp_smoke_check.py       # needs a Debug app build
 
 `cargo test` is what covers the server's behaviour, now that there is only one
 implementation of it. The smoke check covers the seam instead: that
-`Priority --mcp-server` still reaches this binary, and that a configuration
+`Takt --mcp-server` still reaches this binary, and that a configuration
 written before the migration still gets a working server. CI runs all four.

@@ -119,7 +119,7 @@ are GRDB's `"yyyy-MM-dd HH:mm:ss.SSS"` text in UTC, and booleans are `0`/`1`.
 
 `Sources/PrioritySync` holds both apps' half. `SyncServer` names the
 Supabase project (its URL and publishable key) and the redirect,
-`priority://auth-callback`, which has to be on the project's allowed
+`takt://auth-callback`, which has to be on the project's allowed
 redirect URLs.
 
 - **Email and password**: sign in, or create an account. When the project
@@ -127,7 +127,7 @@ redirect URLs.
   password?" calls Supabase's `recover`. The emailed link opens the app, which
   signs in and asks for a new password.
 - **Google**: Supabase's web flow in `ASWebAuthenticationSession`, coming back
-  on `priority://auth-callback`.
+  on `takt://auth-callback`.
 - **Apple**: on the iPhone, the native sheet. The ID token and a hashed nonce
   go to Supabase's `id_token` grant. The Mac is signed without a provisioning
   profile, so it can't hold the Sign in with Apple entitlement and uses the

@@ -30,7 +30,7 @@ that meant macOS re-prompting for keychain access after every reinstall, which
 is the reason `ignoreKeychainInDebug` exists.
 
 Signing with the team certificate makes the designated requirement
-`identifier "uk.co.maybeitsadam.priority" and ... certificate leaf[subject.OU] = "6NQNU5YSC2"`,
+`identifier "uk.co.maybeitssoftware.takt" and ... certificate leaf[subject.OU] = "6NQNU5YSC2"`,
 which is stable across rebuilds. The keychain entry survives.
 
 > The switch from ad-hoc to the team certificate changes the identity **once**.
@@ -94,14 +94,14 @@ network round trip.
 
 ```bash
 # Which identity signed it, and is the signature intact?
-codesign -dv --verbose=4 "/Applications/Priority.app" 2>&1 | grep -E 'Authority|Identifier|flags'
-codesign --verify --deep --strict "/Applications/Priority.app"
+codesign -dv --verbose=4 "/Applications/Takt.app" 2>&1 | grep -E 'Authority|Identifier|flags'
+codesign --verify --deep --strict "/Applications/Takt.app"
 
 # Entitlements actually baked into the bundle
-codesign -d --entitlements - --xml "/Applications/Priority.app" | plutil -p -
+codesign -d --entitlements - --xml "/Applications/Takt.app" | plutil -p -
 
 # Would Gatekeeper let this run on someone else's Mac?
-spctl --assess --type execute --verbose "/Applications/Priority.app"
+spctl --assess --type execute --verbose "/Applications/Takt.app"
 ```
 
 `spctl` reporting `rejected` or `source=Unnotarized Developer ID` means the

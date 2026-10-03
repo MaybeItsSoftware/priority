@@ -4,7 +4,7 @@ The left dock's **Agent** tab (`Cmd+Shift+A` as in Zed, or `Cmd+Ctrl+A`, or the 
 of the status bar) is a conversation with an assistant about your tasks, laid
 out like Zed's agent panel. The assistant is the user's own **Claude Code**,
 run headless, the way Zed runs its external agents: no API key, no account of
-Priority's own, just the `claude` login already on the machine.
+Takt's own, just the `claude` login already on the machine.
 
 The rule it is built around is the one chosen when it was added:
 
@@ -44,25 +44,25 @@ alias — so the binary is looked for directly, first match wins
 If none is executable the panel says so, lists the paths it tried, and takes a
 path.
 
-Priority's MCP server is found the way `Priority --mcp-server` finds it
+Takt's MCP server is found the way `Takt --mcp-server` finds it
 (`MCPHelperLocator`): `$PRIORITY_MCP_EXECUTABLE_PATH`, then the bundled helper
-at `Contents/Helpers/priority`, then an installed CLI. A build made with
+at `Contents/Helpers/takt`, then an installed CLI. A build made with
 `PRIORITY_SKIP_CLI_BUNDLE=1` and no installed CLI has no tools to give the
 assistant, and the panel says that instead of starting.
 
 ## The invocation
 
 One process per thread, started on the first message, in an empty working
-directory of the app's own (`~/Library/Application Support/Priority/Agent`) so
+directory of the app's own (`~/Library/Application Support/Takt/Agent`) so
 no project's `CLAUDE.md` or `.mcp.json` is picked up:
 
 ```text
 claude -p
   --input-format stream-json --output-format stream-json --verbose
-  --mcp-config '{"mcpServers":{"priority":{"args":["--mcp-server"],"command":"<helper>","type":"stdio"}}}'
+  --mcp-config '{"mcpServers":{"takt":{"args":["--mcp-server"],"command":"<helper>","type":"stdio"}}}'
   --strict-mcp-config
   --tools ""
-  --allowedTools mcp__priority__task_lists,mcp__priority__task_fetch,…   (the read-only set below)
+  --allowedTools mcp__takt__task_lists,mcp__takt__task_fetch,…   (the read-only set below)
   --permission-mode manual
   --permission-prompt-tool stdio
   --setting-sources ""
@@ -74,7 +74,7 @@ Each flag is there for the rule:
 
 - **`--tools ""`** removes every built-in tool — Bash, Read, Edit, Write,
   WebFetch, WebSearch, Task and the rest. Verified on Claude Code 2.1.283: the
-  session's `init` line lists the 33 `mcp__priority__*` tools and nothing else.
+  session's `init` line lists the 33 `mcp__takt__*` tools and nothing else.
 - **`--strict-mcp-config`** loads only the server named in `--mcp-config`, so
   the user's other MCP servers are not there.
 - **`--setting-sources ""`** skips the user's, project's and local settings
@@ -97,7 +97,7 @@ Each flag is there for the rule:
 The environment is the app's, with a usable `PATH` and without the variables
 that mark a nested Claude Code session. The MCP helper inherits it, so it
 reads the same database and CLI credentials as any other MCP client of
-Priority's.
+Takt's.
 
 Each message is prefixed with one line saying what is on screen — the list and
 the selected task, by name and id — so "this task" means something. It is sent
@@ -125,7 +125,7 @@ From `cli/src/tools.rs`, which is the whole tool table (33 tools):
 `AgentToolPolicyTests` holds the two lists to the table: disjoint, and 33
 between them. A tool added to the CLI is therefore a write until someone
 classifies it — the safe default — and the count in that test is the reminder.
-A permission request for anything that is not a Priority tool is refused
+A permission request for anything that is not a Takt tool is refused
 outright rather than put to the user.
 
 ## The approval flow
@@ -135,7 +135,7 @@ a control request to stdout and waits:
 
 ```json
 {"type":"control_request","request_id":"8f11…","request":{"subtype":"can_use_tool",
- "tool_name":"mcp__priority__workspace_task_add","input":{"title":"Milk","list_id":"94EA…"},
+ "tool_name":"mcp__takt__workspace_task_add","input":{"title":"Milk","list_id":"94EA…"},
  "tool_use_id":"toolu_01…", …}}
 ```
 

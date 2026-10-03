@@ -1,6 +1,6 @@
 # AFFiNE Integration
 
-Priority keeps a **two-way checklist** in an [AFFiNE](https://affine.pro)
+Takt keeps a **two-way checklist** in an [AFFiNE](https://affine.pro)
 workspace: your list's open tasks appear as todo blocks under a `## Tasks`
 heading in that list's document, you tick them in AFFiNE, and the next sync
 closes them in Checkvist. Days are written too — a `## Log` block in that day's
@@ -21,7 +21,7 @@ correct against a moving target.
 So the plugin does not talk to AFFiNE. It talks to
 [`affine-mcp-server`](https://github.com/DAWNCR0W/affine-mcp-server), a node MCP
 server that already does the Yjs work, and calls its tools over stdio — the same
-protocol Priority *serves* on the other side of the app. Priority is an MCP
+protocol Takt *serves* on the other side of the app. Takt is an MCP
 server for its own data (`docs/mcp-server.md`) and, here, an MCP client for
 someone else's.
 
@@ -29,7 +29,7 @@ Two consequences worth knowing:
 
 - **The helper is not bundled and is not ours.** It is installed by the user,
   and the plugin does nothing until it is found.
-- **Priority never sees an AFFiNE password.** Credentials live in
+- **Takt never sees an AFFiNE password.** Credentials live in
   `~/.config/affine-mcp/config`, written by `affine-mcp login`. The plugin
   inherits that session by launching the helper; it has no way to read it and no
   reason to.
@@ -89,7 +89,7 @@ tick against it does nothing.
 
 ## What is left alone
 
-Priority owns the `## Tasks` heading and the blocks under it, up to the next
+Takt owns the `## Tasks` heading and the blocks under it, up to the next
 heading of the same level or shallower. Everything else in that document is
 yours. A line typed into the section by hand — `- [ ] buy milk`, or a note
 between the items — is read out and put back rather than deleted; it just does

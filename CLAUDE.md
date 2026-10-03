@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Priority is a keyboard-first macOS desktop app (macOS 15.6+, Xcode 17+) with a menu bar surface beside it. Its own local workspace is the source of truth; Checkvist is an optional import/integration edge. `DESKTOP_WORKSPACE_ROADMAP.md` is authoritative for where that transition has got to. It is an Xcode app with a Swift Package layered on top — `Package.swift` exposes `PriorityCore` (pure logic), `PriorityPlugins` (integration plugins), and `PriorityAppLogic` (the headless-but-app-bound state machines) as SPM library targets that share source with the Xcode project.
+Takt (formerly Priority) is a keyboard-first macOS desktop app (macOS 15.6+, Xcode 17+) with a menu bar surface beside it. Only the product was renamed: the code still says Priority — the Xcode project, scheme and targets, the `Priority/` source folder, the Swift modules and the `priority-cli` crate all keep the old name, while the bundle (`Takt.app`, `uk.co.maybeitssoftware.takt`), the CLI binary and every user-visible path say Takt. Its own local workspace is the source of truth; Checkvist is an optional import/integration edge. `DESKTOP_WORKSPACE_ROADMAP.md` is authoritative for where that transition has got to. It is an Xcode app with a Swift Package layered on top — `Package.swift` exposes `PriorityCore` (pure logic), `PriorityPlugins` (integration plugins), and `PriorityAppLogic` (the headless-but-app-bound state machines) as SPM library targets that share source with the Xcode project.
 
-`cli/` is a separate Rust crate producing `priority`. Bare `priority` opens a ratatui terminal UI whose tabs mirror the app's root views; `cli.rs`, `tui/` and `mcp.rs` are three front ends onto the single tool table in `tools.rs`, so none of them can implement behaviour the others lack. It is a command-line peer of the app that talks to the Checkvist API directly and reads the same local files. It also **writes the app's workspace database** (folders, lists, tasks: `cli/src/workspace_tasks.rs`) while the app is running. Each write copies a named `WorkspaceStore` method row for row, and runs under the same `undo_control`/`change_log` journal as an "MCP: …" undo step. The app sees these writes because `WorkspaceViewModel+ExternalWrites.swift` polls `PRAGMA data_version`. So **changing a `WorkspaceStore` write method, or adding a migration, means checking its Rust counterpart** and re-running `scripts/dump_workspace_schema.sh`, which regenerates the tests' schema fixture. See `docs/mcp-server.md`. It shares no source with the Swift side, and the only thing in `Priority/` that may reference it is `MCPServerShim.swift`: the app bundles the CLI as a signed helper at `Contents/Helpers/priority` (see `scripts/bundle_cli.sh`) and `Priority --mcp-server` `execv`s it. That is the app's MCP server — there is no other. Consequently **an app build needs cargo**; set `PRIORITY_SKIP_CLI_BUNDLE=1` to skip it, at the cost of an app with no MCP server. Its credentials are deliberately its own (`~/.config/priority/config.json`, see `cli/src/config.rs`) rather than the app's keychain item, which is reachable only by something carrying the app's code signature. See `docs/cli.md`.
+`cli/` is a separate Rust crate producing `takt`. Bare `takt` opens a ratatui terminal UI whose tabs mirror the app's root views; `cli.rs`, `tui/` and `mcp.rs` are three front ends onto the single tool table in `tools.rs`, so none of them can implement behaviour the others lack. It is a command-line peer of the app that talks to the Checkvist API directly and reads the same local files. It also **writes the app's workspace database** (folders, lists, tasks: `cli/src/workspace_tasks.rs`) while the app is running. Each write copies a named `WorkspaceStore` method row for row, and runs under the same `undo_control`/`change_log` journal as an "MCP: …" undo step. The app sees these writes because `WorkspaceViewModel+ExternalWrites.swift` polls `PRAGMA data_version`. So **changing a `WorkspaceStore` write method, or adding a migration, means checking its Rust counterpart** and re-running `scripts/dump_workspace_schema.sh`, which regenerates the tests' schema fixture. See `docs/mcp-server.md`. It shares no source with the Swift side, and the only thing in `Priority/` that may reference it is `MCPServerShim.swift`: the app bundles the CLI as a signed helper at `Contents/Helpers/takt` (see `scripts/bundle_cli.sh`) and `Takt --mcp-server` `execv`s it. That is the app's MCP server — there is no other. Consequently **an app build needs cargo**; set `PRIORITY_SKIP_CLI_BUNDLE=1` to skip it, at the cost of an app with no MCP server. Its credentials are deliberately its own (`~/.config/takt/config.json`, falling back to the old `~/.config/priority/config.json`; see `cli/src/config.rs`) rather than the app's keychain item, which is reachable only by something carrying the app's code signature. See `docs/cli.md`.
 
 ## Build, Run, Test
 
@@ -30,7 +30,7 @@ swift test --filter PriorityCoreTests.CommandEngineCommandParsingTests/testParse
 cargo test --manifest-path cli/Cargo.toml
 cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
 cargo fmt --manifest-path cli/Cargo.toml --check
-./scripts/install_cli.sh            # release build + a symlink onto PATH
+./scripts/install_cli.sh            # release build + a `takt` symlink onto PATH
 ```
 
 `README.md` is authoritative for keybindings and command palette syntax — consult it when editing `KeyboardShortcutRouter.swift` or `CommandEngine.swift` so behaviour stays in sync.
@@ -57,7 +57,7 @@ Consequences when editing:
 
 - `MainApp.swift` is a near-empty `@main` that installs `AppDelegate` via `NSApplicationDelegateAdaptor`. The activation policy is **not** fixed: `applicationDidFinishLaunching` sets `.regular` because the desktop window is the launch surface, and `applyActivationPolicy(hasOrdinaryWindow:)` drops back to `.accessory` once the last ordinary window closes, so a menu-bar-only session keeps no Dock icon. `INFOPLIST_KEY_LSUIElement` is `NO` accordingly. Anything that assumes "menu bar only" — including where the app icon is visible — is reading a policy the app left behind.
 - `AppDelegate` is the composition root: it owns the singleton `AppCoordinator` (constructed with `PluginRegistry.nativeFirst()`), the `MenuBarController` (the status item and its menu — the popover it used to host is gone), and the `GlobalShortcutManager` (Carbon hotkeys for show-window, focus-panel and quick-add).
-- **MCP launch mode**: `PriorityEntryPoint.main()` in `MainApp.swift` checks for `--mcp-server` and hands the process to `MCPServerShim.run()`, which `execv`s the bundled CLI. This runs *before* `MainApp.main()`, so a process that only speaks JSON-RPC on stdio never initialises AppKit. Preserve that ordering when refactoring startup. See `docs/mcp-server.md`.
+- **MCP launch mode**: `PriorityEntryPoint.main()` in `MainApp.swift` checks for `--mcp-server` and hands the process to `MCPServerShim.run()`, which `execv`s the bundled CLI. This runs *before* `MainApp.main()`, so a process that only speaks JSON-RPC on stdio never initialises AppKit. Preserve that ordering when refactoring startup. See `docs/mcp-server.md`. Straight after that check, and before anything reads preferences or Application Support, `LegacyNameMigration.runIfNeeded()` (`Priority/LegacyNameMigration.swift`) copies — never moves — whatever the old `Application Support/Priority` (and `Bar Tasker`) folder holds that `Takt/` lacks, and the old preferences domain's keys; the MCP server skips it because the CLI falls back to the old locations itself.
 - `AppCoordinator` is a known "god object" — it forwards many properties to `TaskRepository`, `NavigationState`, and `TaskListViewModel`, and its responsibilities are split across `AppCoordinator+*.swift` extensions (Navigation, QuickAdd, ReorderingAndTiming, StateAndLifecycle, TaskMutations, TaskScoping, TaskSync, Undo). `ARCHITECTURE_IMPROVEMENT_PLAN.md` describes the intended decomposition; align new work with it rather than entrenching the forwarding pattern.
 - `TaskRepository` is the source of truth for tasks/auth/lists. Cache invalidation fans out through `CacheInvalidationBus`: a cache-relevant `var`'s `didSet` calls `bus.invalidate()`, and the single subscriber marks `TaskListViewModel`'s cache dirty. The rebuild is lazy — it happens on the next read of `TaskListViewModel.cache`. Adding cache-relevant state means adding a `bus.invalidate()` to its `didSet`, or the UI goes stale. See `docs/state-ownership.md`.
 
@@ -80,7 +80,7 @@ Conventions enforced by `docs/plugins.md`:
 - SwiftLint config (`.swiftlint.yml`) is intentionally permissive: many style-only rules disabled, `file_length` warning at 800 / error at 1500, `function_body_length` warning at 150, `cyclomatic_complexity` warning at 25. Don't gratuitously split files just to satisfy stricter defaults. CI runs `swiftlint lint` (not `--strict`), so **warnings are advisory and errors block**; there is a standing backlog of ~13 warnings on the large files, tracked in `ARCHITECTURE_IMPROVEMENT_PLAN.md` rather than suppressed. Don't add to it.
 - `check_braces.py` and `check_indent.py` are throwaway diagnostic scripts hard-coded to `Priority/KanbanBoardView.swift`. Not part of CI; ignore unless debugging that file.
 - `FocusCore/` is a separate Swift package (sibling, not consumed by the main package) — leave it alone unless explicitly asked.
-- Logging uses `os.Logger` with subsystem `uk.co.maybeitsadam.priority`; reuse this subsystem with a category that matches the type.
+- Logging uses `os.Logger` with subsystem `uk.co.maybeitssoftware.takt`; reuse this subsystem with a category that matches the type. `AppIdentity.bundleIdentifier` in `Sources/PriorityCore/AppIdentity.swift` holds it, alongside `AppIdentity.applicationSupportDirectory()`, which every Application Support path should go through rather than spelling out `Takt/`. Keychain service names deliberately keep the old `uk.co.maybeitsadam.priority` prefix: they are storage keys, not identity.
 
 ## Verifying Changes
 
@@ -108,7 +108,7 @@ After changing the MCP server (`cli/src/`) or the handover (`Priority/MCPServerS
 python3 scripts/mcp_smoke_check.py
 ```
 
-There used to be two implementations of the same MCP server — one in Swift inside the app, one in the CLI — held equal from the outside by `scripts/mcp_parity_check.py`, because neither could import the other. The Swift one is gone: the app bundles the CLI and `--mcp-server` execs it, so there is one implementation to be right instead of two to keep equal. `cargo test` covers the server; the smoke check covers the seam, and specifically that a client configuration written before that change — naming `Priority --mcp-server`, with credentials in `env` — still reaches a working server. Needs a Debug app build; reads no real data and needs no credentials.
+There used to be two implementations of the same MCP server — one in Swift inside the app, one in the CLI — held equal from the outside by `scripts/mcp_parity_check.py`, because neither could import the other. The Swift one is gone: the app bundles the CLI and `--mcp-server` execs it, so there is one implementation to be right instead of two to keep equal. `cargo test` covers the server; the smoke check covers the seam, and specifically that a client configuration written before that change — naming the app's executable with `--mcp-server` and credentials in `env` — still reaches a working server. It checks `Takt --mcp-server`; a configuration naming the pre-rename `Priority.app` works only while that bundle exists, and the app's MCP setup replaces such an entry with a `takt` one. Needs a Debug app build; reads no real data and needs no credentials.
 
 ### Phones and sync
 
@@ -167,7 +167,8 @@ working tree.
 
 This is already the standing instruction in `AGENTS.md`, repeated here because
 that file is not always loaded. It builds Release, backs up the existing
-`/Applications/Priority.app`, replaces it and relaunches — and it is part of
+`/Applications/Takt.app`, replaces it and relaunches (an old
+`/Applications/Priority.app` is moved into `build/backup.noindex/`) — and it is part of
 finishing the work, not a step to hand back. A passing `xcodebuild` is not
 completion: what the user actually runs is the installed bundle, and until it
 is replaced every fix is still only a claim. Check the output for
@@ -180,13 +181,13 @@ rather than a summary. The workflow is authorised; do not ask first.
 ./scripts/install_cli.sh
 ```
 
-The installed command is a *symlink* at `~/.local/bin/priority` pointing into
+The installed command is a *symlink* at `~/.local/bin/takt` pointing into
 `cli/target/release/`, so what actually matters is that a **release** build is
 current — the symlink then updates for free. Two consequences:
 
 - `cargo build` (debug) refreshes neither the installed command nor the helper
   the app ships: `scripts/bundle_cli.sh` copies the *release* binary into
-  `Contents/Helpers/priority`. A debug-only build leaves both stale while every
+  `Contents/Helpers/takt`. A debug-only build leaves both stale while every
   test still passes, which is exactly how a stale MCP server goes unnoticed.
 - `rm -rf cli/target` breaks the installed command rather than leaving an old
   copy behind.

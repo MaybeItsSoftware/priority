@@ -1,6 +1,6 @@
 # Themes
 
-Priority's look is a theme: a colour palette and a set of structural values
+Takt's look is a theme: a colour palette and a set of structural values
 (radii, borders, spacing, type) under a name. Three ship with every app — the
 Mac, the iPhone and Android:
 
@@ -16,7 +16,7 @@ Mac, the iPhone and Android:
 You can add your own the way Zed does: as JSON files in a folder.
 
 ```
-~/Library/Application Support/Priority/themes/*.json
+~/Library/Application Support/Takt/themes/*.json
 ```
 
 Every `.json` file there is a theme. It appears in **Settings → Theme** beside
@@ -249,7 +249,7 @@ All sizes are in points. Each group can be given in part.
 | `border.emphasis` | A selected or active edge. |
 | `border.focusRing` | The focus ring, drawn in `primary`. |
 | `spacing.xxs` … `spacing.xl` | The six-step spacing scale every padding comes from. Shrink them all for a denser app. |
-| `typography.display`, `.body`, `.mono` | A face: `families`, tried in order, and `design` — `serif`, `sans`, `monospaced` or `rounded` — used when none of the families is installed. A family is a request: Priority bundles IBM Plex Sans and Lilex (the faces Zed ships), and anything else has to be installed on the Mac. Each weight uses the family's own face where it has one. |
+| `typography.display`, `.body`, `.mono` | A face: `families`, tried in order, and `design` — `serif`, `sans`, `monospaced` or `rounded` — used when none of the families is installed. A family is a request: Takt bundles IBM Plex Sans and Lilex (the faces Zed ships), and anything else has to be installed on the Mac. Each weight uses the family's own face where it has one. |
 | `typography.bodySize` | The base text size. Changing it without giving a `scale` re-proportions the whole scale from it, so one number makes everything bigger. |
 | `typography.scale` | The named sizes views ask for: `caption`, `body`, `title`, `display` (large numerals) and `hero` (the focus timer). Any you state win over the proportioned ones. |
 | `typography.microLabel` | The small label on section headers, column heads, tabs and chips: `size`, `weight` (`regular`, `medium`, `semibold`, `bold`, `black`), `tracking` in em, `uppercase`, and the colour `role` it is set in. The built-ins set it the way Zed does — caption size, regular, untracked, as written. |

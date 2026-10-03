@@ -18,11 +18,11 @@ of the file you rebind keys in.
 
 ## Zed's keys
 
-Where Zed has a key for something Priority does, Priority uses Zed's key, so
+Where Zed has a key for something Takt does, Takt uses Zed's key, so
 the two apps share muscle memory. A list is treated as Zed treats a file, and
 a task as Zed treats a line:
 
-| Zed | Key | In Priority |
+| Zed | Key | In Takt |
 | --- | --- | --- |
 | Command palette | `Cmd+Shift+P` | The command palette (`Cmd+K` still works) |
 | File finder | `Cmd+P` | Find or create a list |
@@ -44,7 +44,7 @@ a task as Zed treats a line:
 The sidebar is Zed's project panel, with a list as a file and a folder as a
 directory. Its keys act on the sidebar row, never on a task behind it:
 
-| Zed project panel | Key | In Priority's sidebar |
+| Zed project panel | Key | In Takt's sidebar |
 | --- | --- | --- |
 | New file | `Cmd+N`, `%` (vim) | New list, beside the row you are on |
 | New directory | `Cmd+Alt+N`, `d` (vim) | New folder, beside the row you are on |
@@ -64,7 +64,7 @@ binds on its own runs at once there. And Shift on a letter is a key of its
 own — `Shift+D` is not `d` — though a `Shift` letter nothing binds still runs
 the plain letter, so `Shift+X` remains the way to skip a sequence's wait.
 
-Taking those keys moved what Priority had on them: archiving a list is
+Taking those keys moved what Takt had on them: archiving a list is
 `Cmd+Alt+A` (was `Cmd+Shift+A`), promoting a nested list `Cmd+Alt+P` (was
 `Cmd+Shift+P`), renaming a task by chord `Cmd+Ctrl+E` (was `Cmd+Shift+E`), and
 moving a task or sidebar row `Alt+↑`/`Alt+↓` (was `Cmd+↑`/`Cmd+↓`).
@@ -77,9 +77,9 @@ multi-cursor, toggle comment, the terminal — are left unbound.
 ## Your own keys: `keymap.json`
 
 The window's keys can be rebound in
-`~/Library/Application Support/Priority/keymap.json`. **Open the keymap
+`~/Library/Application Support/Takt/keymap.json`. **Open the keymap
 file** in the command palette creates it (as `[]`, an empty keymap) and opens
-it in your editor. It is re-read when you save it and whenever Priority comes
+it in your editor. It is re-read when you save it and whenever Takt comes
 to the front; **Reload the keymap** forces it. The palette, the reference, the
 tooltips and the menu bar all show the keys in force, so a rebound key's key
 cap moves with it.

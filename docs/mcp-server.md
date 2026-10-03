@@ -1,14 +1,14 @@
 # MCP Server Guide
 
-Priority ships an MCP stdio server so an AI assistant can work directly with your Checkvist data.
+Takt ships an MCP stdio server so an AI assistant can work directly with your Checkvist data.
 
-- Server command: `priority mcp` — the CLI, which the app ships at
-  `Contents/Helpers/priority`. `Priority --mcp-server` also works and hands over
+- Server command: `takt mcp` — the CLI, which the app ships at
+  `Contents/Helpers/takt`. `Takt --mcp-server` also works and hands over
   to it; see [One server, two ways to name it](#one-server-two-ways-to-name-it)
 - Transport: stdio, newline-delimited JSON — one JSON-RPC object per line, as the
   MCP stdio transport specifies. LSP-style `Content-Length` framing is also
   accepted, and replies mirror whichever framing the client used.
-- Dependencies: none beyond Priority itself — the server ships inside the app
+- Dependencies: none beyond Takt itself — the server ships inside the app
 
 ## What It Can Do
 
@@ -34,7 +34,7 @@ whether or not the app is running:
 | `task_invalidate` | Mark "won't do" |
 | `task_delete` | Delete a task |
 
-**Local tools** — these reach the state Priority keeps on this machine, which
+**Local tools** — these reach the state Takt keeps on this machine, which
 Checkvist has no representation for:
 
 | Tool | What it does | |
@@ -48,7 +48,8 @@ Checkvist has no representation for:
 | `daily_tick` | Tick or un-tick a daily for today | write |
 
 **Workspace tools** — these reach the app's own database,
-`~/Library/Application Support/Priority/priority.sqlite`, which is the app's
+`~/Library/Application Support/Takt/priority.sqlite` (the old `Priority/` one
+while `Takt/` does not exist yet), which is the app's
 source of truth. It is the tree the app actually shows, not the Checkvist edge of
 it, and the only part of the server that touches it. Ids here are the
 workspace's uppercase UUIDs, not Checkvist's integers:
@@ -142,9 +143,10 @@ tool refuses rather than ending the series. Complete those in the app.
   that would let an external write survive. Setting those has to go through the
   app.
 - `task_matrix_set` is the one narrow exception, and it does not disprove the
-  rule above so much as work around it. It refuses outright while Priority is
-  running (`pgrep -x Priority`), and writes through `defaults write` rather than
-  the plist file, so `cfprefsd` stays the single owner of the store. Both halves
+  rule above so much as work around it. It refuses outright while Takt is
+  running (`pgrep -x Takt`, or `Priority` for an older build), and writes through
+  `defaults write` rather than the plist file, so `cfprefsd` stays the single
+  owner of the store. Both halves
   are load-bearing: a direct file write is invisible to `cfprefsd` and gets
   overwritten by its cached copy, and a write of any kind made while the app is
   running is discarded the moment the user places one task by hand.
@@ -192,16 +194,16 @@ passing `active_weekdays` to `daily_update` clears an existing cycle.
 
 ### One server, two ways to name it
 
-There is one implementation: the `priority` CLI (`cli/src/mcp.rs`). The app
-**ships** it, at `Contents/Helpers/priority`, installed during the build by
+There is one implementation: the `takt` CLI (`cli/src/mcp.rs`). The app
+**ships** it, at `Contents/Helpers/takt`, installed during the build by
 `scripts/bundle_cli.sh` and signed with the app.
 
 | Command | What happens |
 |---|---|
-| `priority mcp` | The server, directly. What newly written configurations use. |
-| `Priority --mcp-server` | `MCPServerShim` `execv`s the bundled helper. What configurations written before this change say. |
+| `takt mcp` | The server, directly. What newly written configurations use. |
+| `Takt --mcp-server` | `MCPServerShim` `execv`s the bundled helper. What configurations written before this change say (as `Priority --mcp-server`, from before the rename). |
 
-Because the app bundles the CLI, `Priority --mcp-server` works on a machine
+Because the app bundles the CLI, `Takt --mcp-server` works on a machine
 where the CLI was never installed separately — which is what made retiring the
 old server safe.
 
@@ -257,7 +259,7 @@ walks three steps:
    Press Refresh after moving the app.
 3. **Add to an AI client** — one button per client detected on this machine.
 
-Priority detects Claude Code, Claude Desktop, Cursor, Windsurf, VS Code, and
+Takt detects Claude Code, Claude Desktop, Cursor, Windsurf, VS Code, and
 Zed. What the button does depends on the client, because the wrong route is worse
 than no route:
 
@@ -268,17 +270,18 @@ than no route:
 | Zed | Copies a snippet to paste | `settings.json` carries comments that a JSON rewrite would delete |
 
 Direct writes **merge**: your other MCP servers and every unrelated key survive.
-If the existing file isn't valid JSON, Priority refuses rather than replacing
+If the existing file isn't valid JSON, Takt refuses rather than replacing
 it. Keys come back sorted, so expect the file to be reformatted once.
 
 Config writes go straight to the client's file — release builds are not
 sandboxed (see `Priority.release.entitlements` for why), so no folder-access
-prompt is involved. A client config Priority creates from scratch is tightened
+prompt is involved. A client config Takt creates from scratch is tightened
 to mode 0600; one that already existed keeps the mode its owner chose.
 
 Before it writes or copies anything, setup seeds the CLI's credential store: it
-merges your username and remote key into `~/.config/priority/config.json`,
-creating `~/.config/priority` at mode 0700 and the file at 0600. It merges
+merges your username and remote key into `~/.config/takt/config.json`,
+creating `~/.config/takt` at mode 0700 and the file at 0600 (starting from the
+old `~/.config/priority/config.json` if only that exists). It merges
 rather than replaces, so a `base_url` you set by hand for a self-hosted
 Checkvist survives, and it only fills `list_id` when that key is absent — the
 generated MCP entry already names the default list per client, so the CLI's own
@@ -298,12 +301,12 @@ environment means the file is not consulted for that value at all**
 
 ### Credentials in the CLI's own store (recommended)
 
-Keep them in `~/.config/priority/config.json` and leave the client config
+Keep them in `~/.config/takt/config.json` and leave the client config
 credential-free. Two ways to put them there, and they write the same file:
 
-- **From Priority.** Setting up a client, or pressing **Copy Client Config**,
+- **From Takt.** Setting up a client, or pressing **Copy Client Config**,
   seeds the file first and then hands the client an entry with no secret in it.
-- **From the terminal.** `priority auth login` prompts for both, checks them
+- **From the terminal.** `takt auth login` prompts for both, checks them
   against the API before writing, and creates the file at mode 0600. See
   `docs/cli.md` for that command and its `auth status` / `auth set-list`
   siblings.
@@ -334,19 +337,19 @@ the key: see below.
 
 A remote key baked into a client's `env` block is a second copy of it, and the
 client goes on presenting the old one until someone edits that file by hand —
-as a 401 from inside the AI client, with nothing in Priority saying why.
+as a 401 from inside the AI client, with nothing in Takt saying why.
 
 With credentials in the CLI's store there is one copy, so rotation is: change
-the key in Priority and set the client up once more (which re-seeds the file),
-or run `priority auth login` again. Every configured client follows, because
+the key in Takt and set the client up once more (which re-seeds the file),
+or run `takt auth login` again. Every configured client follows, because
 they all read the one file. If any client config still carries the key in
 `env`, that entry keeps using the pinned value until you replace it — setting
-that client up again from Priority rewrites the entry into the credential-free
+that client up again from Takt rewrites the entry into the credential-free
 form.
 
 ### Choosing a list
 
-If `CHECKVIST_LIST_ID` is not set — by the client entry Priority generates, by
+If `CHECKVIST_LIST_ID` is not set — by the client entry Takt generates, by
 your own `env` block, or by `list_id` in the config file — pass `list_id` in
 tool calls that need a list.
 
@@ -357,13 +360,13 @@ config and by `MCPServerShim` when `--mcp-server` looks for something to run:
 
 1. `PRIORITY_MCP_EXECUTABLE_PATH` (explicit override — point a development build
    at a freshly built CLI without reinstalling the app)
-2. The bundled helper: `/Applications/Priority.app/Contents/Helpers/priority`,
+2. The bundled helper: `/Applications/Takt.app/Contents/Helpers/takt`,
    then the same path relative to the running bundle
 3. A separately installed CLI: `~/.local/bin`, `~/bin`, `/usr/local/bin`,
    `/opt/homebrew/bin`
 
 If none resolves, a generated config points at
-`/Applications/Priority.app/Contents/Helpers/priority` so it is obvious what to
+`/Applications/Takt.app/Contents/Helpers/takt` so it is obvious what to
 fix, and `--mcp-server` exits with the list of paths it tried on stderr, where
 the client will log it.
 
@@ -373,11 +376,11 @@ Extra control env vars:
 
 ## Run Manually
 
-Once credentials are in place — `priority auth login`, or any client set up from
-Priority's settings:
+Once credentials are in place — `takt auth login`, or any client set up from
+Takt's settings:
 
 ```bash
-'/Applications/Priority.app/Contents/Helpers/priority' mcp
+'/Applications/Takt.app/Contents/Helpers/takt' mcp
 ```
 
 To override them for one run, without touching the stored ones:
@@ -386,21 +389,21 @@ To override them for one run, without touching the stored ones:
 CHECKVIST_USERNAME="you@example.com" \
 CHECKVIST_REMOTE_KEY="your-remote-key" \
 CHECKVIST_LIST_ID="123456" \
-'/Applications/Priority.app/Contents/Helpers/priority' mcp
+'/Applications/Takt.app/Contents/Helpers/takt' mcp
 ```
 
 It will wait for an MCP client to connect over stdio.
 
 ## Client Config Example
 
-Most MCP clients accept a JSON config similar to this — which is what Priority
+Most MCP clients accept a JSON config similar to this — which is what Takt
 generates now, carrying a default list and no credentials:
 
 ```json
 {
   "mcpServers": {
-    "priority": {
-      "command": "/Applications/Priority.app/Contents/Helpers/priority",
+    "takt": {
+      "command": "/Applications/Takt.app/Contents/Helpers/takt",
       "args": ["mcp"],
       "env": {
         "CHECKVIST_LIST_ID": "123456"
@@ -416,8 +419,8 @@ written empty:
 ```json
 {
   "mcpServers": {
-    "priority": {
-      "command": "/Applications/Priority.app/Contents/Helpers/priority",
+    "takt": {
+      "command": "/Applications/Takt.app/Contents/Helpers/takt",
       "args": ["mcp"]
     }
   }
@@ -425,12 +428,12 @@ written empty:
 ```
 
 Use your own app path. If you are writing this by hand rather than letting
-Priority write it, run `priority auth login` first — there is nothing in the
+Takt write it, run `takt auth login` first — there is nothing in the
 config that would sign the server in.
 
 A configuration written before the CLI was bundled names the app binary
-instead, and one written before credentials moved out of `env` carries them
-inline:
+instead (under its pre-Takt name), and one written before credentials moved
+out of `env` carries them inline:
 
 ```json
 {
@@ -448,17 +451,24 @@ inline:
 }
 ```
 
-That still works in both respects, so there is nothing you have to change: the
-app hands the process to the bundled helper, and the environment still beats the
-file, so those inline credentials are the ones the server uses. The one thing to
-know is that they are pinned — rotating your remote key means editing this file
-too, or setting the client up again from Priority, which regenerates the whole
-entry in the credential-free form above.
+That still works in both respects for as long as the binary it names is on
+disk: the app hands the process to the bundled helper, and the environment
+still beats the file, so those inline credentials are the ones the server uses.
+After the rename, though, that binary is the old `Priority.app`, and
+`scripts/install_local.sh` moves it aside into `build/backup.noindex/` — so set
+the client up again from Takt. That regenerates the whole entry in the
+credential-free form above under the name `takt`, and removes the old
+`priority` entry, which the installer recognises as its own by its command
+(ending in `/Contents/Helpers/priority`, `/Contents/MacOS/Priority` or
+`/bin/priority`), so a client never ends up with both. The inline credentials
+are also pinned: rotating your remote key means editing this file too, or
+setting the client up again.
 
-A separately installed CLI works too, if you have run `scripts/install_cli.sh`:
+A separately installed CLI works too, if you have run `scripts/install_cli.sh`
+(it links `~/.local/bin/takt`):
 
 ```json
-{ "mcpServers": { "priority": { "command": "/usr/local/bin/priority", "args": ["mcp"] } } }
+{ "mcpServers": { "takt": { "command": "/Users/you/.local/bin/takt", "args": ["mcp"] } } }
 ```
 
 ## Suggested First Calls

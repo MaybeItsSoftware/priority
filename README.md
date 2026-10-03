@@ -1,6 +1,6 @@
 <img src="Priority/Assets.xcassets/AppIcon.appiconset/ios-1024.png" alt="" width="72" align="left" />
 
-# Priority
+# Takt
 
 **A keyboard-first macOS desktop app for working your task lists fast.**
 Quick navigation, priority and due workflows, focus timers, a kanban board, an honest daily log, and a command line that reaches the same data.
@@ -9,7 +9,7 @@ Quick navigation, priority and due workflows, focus timers, a kanban board, an h
 
 ---
 
-Priority opens as a desktop window, keeps a menu bar surface for quick capture, and is built to be driven without the mouse. Its own local workspace owns your tasks; Checkvist is an optional import. Priority adds the things a plain list has no representation for — priority ranking, start dates, recurrence, focus sessions, daily habits, and a record of what actually happened each day.
+Takt opens as a desktop window, keeps a menu bar surface for quick capture, and is built to be driven without the mouse. Its own local workspace owns your tasks; Checkvist is an optional import. Takt adds the things a plain list has no representation for — priority ranking, start dates, recurrence, focus sessions, daily habits, and a record of what actually happened each day.
 
 It works offline. It works from the terminal. And it exposes the whole surface to an AI assistant over MCP.
 
@@ -28,13 +28,13 @@ It works offline. It works from the terminal. And it exposes the whole surface t
 ## Install
 
 1. Download the latest `.dmg` from [Releases](https://github.com/MaybeItsSoftware/priority/releases).
-2. Drag `Priority.app` into `Applications`.
+2. Drag `Takt.app` into `Applications`.
 3. Right-click it once and choose **Open**.
 
 The build is signed with a development certificate rather than a Developer ID, so Gatekeeper will ask the first time. If it refuses outright:
 
 ```bash
-xattr -cr /Applications/Priority.app
+xattr -cr /Applications/Takt.app
 ```
 
 Or build it yourself — see [Build from source](#build-from-source).
@@ -130,7 +130,7 @@ key router dispatches through — so a key, a palette row and a reference row
 cannot disagree about what happens. [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md)
 covers the behaviour a table cannot: sequence timing, which keys survive a text
 field, which surfaces take the keyboard outright, and how to rebind any of it
-in `~/Library/Application Support/Priority/keymap.json` (**Open the keymap
+in `~/Library/Application Support/Takt/keymap.json` (**Open the keymap
 file** in the palette).
 
 ### Typing a task
@@ -340,7 +340,7 @@ while working it, so pressing play on a row is the whole gesture.
 
 Everything a block needs it can do on its own — pick the task, run the clock,
 pause it, log progress, and score the block when it ends. Nothing in it reaches
-for the main window, so **Priority needs no Dock icon** for any of it: close
+for the main window, so **Takt needs no Dock icon** for any of it: close
 the main window and the app drops to the menu bar, and the panel keeps working
 exactly as before, keyboard included. Closing the window while the panel is up
 hands the caret straight back to it.
@@ -486,7 +486,7 @@ whatever is running.
 
 It also **outlives the window**. `⌘Q` closes the windows and leaves the status
 item behind, because a reminder you can dismiss with a keystroke is not a
-reminder. The only quit that actually quits is **Quit Priority** in the status
+reminder. The only quit that actually quits is **Quit Takt** in the status
 item's own menu.
 
 ## The window
@@ -519,7 +519,7 @@ the bottom.
     undo/redo — rather than a bar along its foot; hover one for its name and
     key.
   - **Agent** (`Cmd+Shift+A`) is an assistant panel in the manner of Zed's: your
-    own Claude Code, run headless, with Priority's MCP server as its only
+    own Claude Code, run headless, with Takt's MCP server as its only
     tools — no shell, no files, no web, and no API key (it uses your Claude
     Code login). It **reads freely** — the lists, tasks, dailies, the day log
     and the focus timer — and each read shows as one muted line in the
@@ -532,7 +532,7 @@ the bottom.
     change never happens. Return sends, Shift+Return is a new line, Esc hands
     the keyboard back to the tasks; the glyphs on the tab bar start a new
     thread and stop the current one. Approved changes are ordinary "MCP: …"
-    steps in the Undo menu. If Claude Code is not installed where Priority
+    steps in the Undo menu. If Claude Code is not installed where Takt
     looks (`~/.local/bin`, `~/.claude/local`, Homebrew, `/usr/local/bin`), the
     panel says so and takes a path. See
     [`docs/agent-panel.md`](docs/agent-panel.md).
@@ -573,7 +573,7 @@ views had somewhere to live that survived being clicked away. That panel is
 gone; what is left of the menu bar is a standing reminder and a way in.
 
 Open it from **the status item's menu → Open Main Window**, from **Window →
-Priority** in the menu bar, or with the global hotkey. It is resizable, remembers its
+Takt** in the menu bar, or with the global hotkey. It is resizable, remembers its
 frame, and `Esc` leaves it alone.
 
 **A Dock icon appears while the window is open** and goes again when you close
@@ -589,7 +589,7 @@ with every window closed.
 
 Pick a look in **Settings → Theme**: **Chalk**, the house style, which follows
 your Light/Dark setting, or **Chalk Dark**. Your own themes are JSON files in
-`~/Library/Application Support/Priority/themes/`, and they appear in the same
+`~/Library/Application Support/Takt/themes/`, and they appear in the same
 picker. A file can extend a built-in and change only a few colours or sizes,
 and the app reloads it as you save, so the easiest start is **Export the
 current theme as JSON** in the command palette — it writes a complete copy,
@@ -607,7 +607,7 @@ a sheet on the main window and answers "why does this look wrong?":
 - **Status** — connection, current list, network, sync age, open task count, and whether anything is queued offline.
 - **Health** — a green tick or an orange triangle per integration, with the detail underneath. The AFFiNE row lists every path it searched for the helper; the MCP row shows the resolved command; the Google Calendar and Google Tasks rows show whether the shared Google sign-in covers them.
 - **Recent problems** — every failure this session, timestamped. Worth having because nothing else keeps one: the error line is overwritten by the next thing that fails, the status message erases itself after three seconds, and integration errors were not retained at all. Not written to disk — it covers this run of the app, not last fortnight's.
-- **Data** — where everything lives, with a Reveal button each, including `~/.config/priority/config.json`, which belongs to the CLI rather than the app and is a recurring source of confusion.
+- **Data** — where everything lives, with a Reveal button each, including `~/.config/takt/config.json`, which belongs to the CLI rather than the app and is a recurring source of confusion.
 
 **Copy Report** and **Export Report…** produce plain text you can paste into an
 issue. Both run it through a redactor first: anything labelled like a
@@ -626,7 +626,7 @@ day's contribution, without starting a block.
 Recurring things you intend to do — habits, not tasks — sitting at the top of the view as a checklist.
 
 - **They reset at every rollover and never go overdue.** Miss one and it's a gap in the history: nothing to clear, nothing to reschedule. That's the whole reason they aren't Checkvist tasks with a `repeat daily` rule — a recurring *task* goes overdue and starts competing with real deadlines.
-- **They're local.** Stored in `~/Library/Application Support/Priority/dailies.json`, so "brush teeth" never clutters your project lists or syncs to other Checkvist clients. Ticking one is instant and works offline.
+- **They're local.** Stored in `~/Library/Application Support/Takt/dailies.json`, so "brush teeth" never clutters your project lists or syncs to other Checkvist clients. Ticking one is instant and works offline.
 - **Ticks land in the same log as task completions**, so they appear in the Obsidian note alongside them. The chart plots the ticks alone: a day's task count is whatever happened to be on the list, and summing the two in let it swamp the routine the chart sits under.
 - **Two kinds of schedule.** Fixed weekdays (`Mon Wed Fri`, weekdays, weekends, every day) or a rotating cycle — every other day, every three days — counted from the day you set it. A cycle walks through the week, so it's the one for "water the plants", not "standup".
 - **Set the schedule as you type** from the menu in the add field, or edit any daily in full — day-by-day toggles, cycle length — in `Preferences → Plugins → Daily Log`.
@@ -634,7 +634,7 @@ Recurring things you intend to do — habits, not tasks — sitting at the top o
 
 ### What the day records
 
-- **Recording is always on and always local.** Completions, reopens, invalidations, finished focus sessions and the day's plan are appended to `~/Library/Application Support/Priority/daylog.jsonl` — one JSON object per line, so it stays readable with `tail`, and a torn write costs one event rather than the file.
+- **Recording is always on and always local.** Completions, reopens, invalidations, finished focus sessions and the day's plan are appended to `~/Library/Application Support/Takt/daylog.jsonl` — one JSON object per line, so it stays readable with `tail`, and a torn write costs one event rather than the file.
 - **Checkvist owns current state, the log owns history, Obsidian owns the archive.** Nothing syncs backwards, so there is no conflict resolution anywhere in this.
 - **The day's plan is derived, not authored.** The first time you open the app after your rollover hour, whatever is due, overdue or starting that day is snapshotted. That's what the day's note measures its "N of M planned left" against — you never plan a day by hand.
 - **Deferring is not slipping.** Pushing a due date forward is recorded distinctly from letting a task rot, so the view doesn't nag about a decision you made deliberately.
@@ -643,7 +643,7 @@ Recurring things you intend to do — habits, not tasks — sitting at the top o
 
 ## Obsidian daily notes
 
-In `Preferences → Plugins → Daily Log`, point Priority at your dailies folder and set the note naming to match your vault (`yyyy-MM-dd` by default; a subfolder pattern like `yyyy/MM` nests them). The preview line shows exactly which note today's block would land in. Then switch on "Write days into Obsidian daily notes", which stays disabled until a folder is chosen.
+In `Preferences → Plugins → Daily Log`, point Takt at your dailies folder and set the note naming to match your vault (`yyyy-MM-dd` by default; a subfolder pattern like `yyyy/MM` nests them). The preview line shows exactly which note today's block would land in. Then switch on "Write days into Obsidian daily notes", which stays disabled until a folder is chosen.
 
 Once a day closes, its block is spliced into that day's note:
 
@@ -670,7 +670,7 @@ Only the text between the markers is ever touched, and rewriting a day replaces 
 
 ## AFFiNE
 
-Priority keeps a two-way checklist in an [AFFiNE](https://affine.pro) workspace. `sync affine` writes your list's open tasks as real todo blocks under a `## Tasks` heading in that list's document — and reads back what you ticked in AFFiNE, closing those tasks in Checkvist before it writes:
+Takt keeps a two-way checklist in an [AFFiNE](https://affine.pro) workspace. `sync affine` writes your list's open tasks as real todo blocks under a `## Tasks` heading in that list's document — and reads back what you ticked in AFFiNE, closing those tasks in Checkvist before it writes:
 
 ```markdown
 ## Tasks
@@ -682,20 +682,20 @@ Priority keeps a two-way checklist in an [AFFiNE](https://affine.pro) workspace.
 
 `affine daily` writes the day's log into that day's document, the same block the Obsidian writer produces.
 
-AFFiNE documents are CRDT block trees rather than text, so the writing is done by [`affine-mcp-server`](https://github.com/DAWNCR0W/affine-mcp-server), which Priority launches and drives over MCP:
+AFFiNE documents are CRDT block trees rather than text, so the writing is done by [`affine-mcp-server`](https://github.com/DAWNCR0W/affine-mcp-server), which Takt launches and drives over MCP:
 
 ```bash
 npm install -g affine-mcp-server
 affine-mcp login
 ```
 
-Then switch the plugin on in `Preferences → Plugins → AFFiNE` and click **Load Workspaces**. Your AFFiNE credentials stay in that helper's own config — Priority never handles them. Priority owns the `## Tasks` heading and what sits under it; everything else in the document is yours, and an item you typed in by hand is put back rather than deleted.
+Then switch the plugin on in `Preferences → Plugins → AFFiNE` and click **Load Workspaces**. Your AFFiNE credentials stay in that helper's own config — Takt never handles them. Takt owns the `## Tasks` heading and what sits under it; everything else in the document is yours, and an item you typed in by hand is put back rather than deleted.
 
 **Details: [docs/affine.md](docs/affine.md)**
 
 ## Command line
 
-`priority` is a Rust CLI covering the same ground: your lists, your dailies, your day log. It talks to the Checkvist API directly and reads Priority's local files off disk, so it works whether or not the app is running — and its writes take the same `flock(2)` the app does, so both can be open at once.
+`takt` is a Rust CLI covering the same ground: your lists, your dailies, your day log. It talks to the Checkvist API directly and reads Takt's local files off disk, so it works whether or not the app is running — and its writes take the same `flock(2)` the app does, so both can be open at once.
 
 Run it with no arguments and it opens a **terminal UI with the same tabs as the app**, and the same keys to reach them:
 
@@ -713,34 +713,34 @@ Run it with no arguments and it opens a **terminal UI with the same tabs as the 
 Or drive it by subcommand:
 
 ```bash
-./scripts/install_cli.sh     # release build + a symlink onto your PATH
-priority auth login
+./scripts/install_cli.sh     # release build + a `takt` symlink onto your PATH
+takt auth login
 
-priority                     # the terminal UI
-priority tasks
-priority add Draft the release notes --due friday
-priority search -q report --due-before 2026-09-01
-priority daily add Read for twenty minutes --weekdays mon,wed,fri
-priority daily add Water the plants --every-days 3
-priority log --days 7
-priority --json dailies | jq '.dailies[] | select(.done | not)'
+takt                         # the terminal UI
+takt tasks
+takt add Draft the release notes --due friday
+takt search -q report --due-before 2026-09-01
+takt daily add Read for twenty minutes --weekdays mon,wed,fri
+takt daily add Water the plants --every-days 3
+takt log --days 7
+takt --json dailies | jq '.dailies[] | select(.done | not)'
 ```
 
-Its credentials are its own, in `~/.config/priority/config.json` at mode 0600 — separate from the app's login-keychain item, so neither depends on how the other was built or signed. The dailies, log and metadata commands need no credentials at all.
+Its credentials are its own, in `~/.config/takt/config.json` at mode 0600 — separate from the app's login-keychain item, so neither depends on how the other was built or signed. The dailies, log and metadata commands need no credentials at all.
 
-Every command is one of the MCP tools under a friendlier name, and the same binary serves them over MCP with `priority mcp`. It is also the app's MCP server: Priority.app ships this binary at `Contents/Helpers/priority`.
+Every command is one of the MCP tools under a friendlier name, and the same binary serves them over MCP with `takt mcp`. It is also the app's MCP server: Takt.app ships this binary at `Contents/Helpers/takt`.
 
 **Full guide: [docs/cli.md](docs/cli.md)**
 
 ## MCP server
 
-Priority exposes **21 MCP tools** so an AI assistant can work with your lists directly — fourteen that reach the Checkvist API, and seven for the local state Checkvist has no representation for (day log, dailies, priority ranks, recurrence, and the matrix).
+Takt exposes **21 MCP tools** so an AI assistant can work with your lists directly — fourteen that reach the Checkvist API, and seven for the local state Checkvist has no representation for (day log, dailies, priority ranks, recurrence, and the matrix).
 
-All but one are reads or Checkvist writes. `task_matrix_set` places tasks on the Eisenhower matrix in bulk (`priority matrix <id>:<urgency>:<importance> …` from a terminal), and refuses while Priority is running — the app holds those coordinates in memory and would overwrite them. Quit Priority, let the assistant do a first pass over the whole list, then reopen and correct it by dragging.
+All but one are reads or Checkvist writes. `task_matrix_set` places tasks on the Eisenhower matrix in bulk (`takt matrix <id>:<urgency>:<importance> …` from a terminal), and refuses while Takt is running — the app holds those coordinates in memory and would overwrite them. Quit Takt, let the assistant do a first pass over the whole list, then reopen and correct it by dragging.
 
-Set it up from `Preferences → Plugins → Native MCP Integration`. It detects Claude Code, Claude Desktop, Cursor, Windsurf, VS Code and Zed, and adds Priority to the one you pick in a single click, preserving any servers already in that client's config.
+Set it up from `Preferences → Plugins → Native MCP Integration`. It detects Claude Code, Claude Desktop, Cursor, Windsurf, VS Code and Zed, and adds Takt to the one you pick in a single click, preserving any servers already in that client's config.
 
-There is one implementation — the Rust CLI — and the app ships it at `Contents/Helpers/priority`, so it works whether or not you installed the CLI separately. `Priority --mcp-server` hands the process over to it, which keeps configurations written for older versions working unchanged. There were three implementations once; `scripts/mcp_smoke_check.py` is what remains of holding them together, and it now only checks that handover.
+There is one implementation — the Rust CLI — and the app ships it at `Contents/Helpers/takt`, so it works whether or not you installed the CLI separately. `Takt --mcp-server` hands the process over to it, which keeps configurations written for older versions working; one written before the rename names `Priority.app`, and setting that client up again replaces its `priority` entry with a `takt` one. There were three implementations once; `scripts/mcp_smoke_check.py` is what remains of holding them together, and it now only checks that handover.
 
 **Full guide: [docs/mcp-server.md](docs/mcp-server.md)**
 
@@ -750,7 +750,7 @@ Every external integration is a plugin behind a protocol.
 
 Built in: `NativeCheckvistSyncPlugin`, `NativeObsidianIntegrationPlugin`, `NativeAFFiNEIntegrationPlugin`, `NativeGoogleCalendarIntegrationPlugin`, `NativeMCPIntegrationPlugin`, `NativeDailyLogPlugin`, `OfflineTaskSyncPlugin`.
 
-To install your own, open `Preferences → Plugins` and click **Install Plugin** (folder, `.zip`, or `.priority-plugin`), or drop a plugin folder into `~/Library/Application Support/Priority/Plugins` and hit **Reload**.
+To install your own, open `Preferences → Plugins` and click **Install Plugin** (folder, `.zip`, or `.priority-plugin`), or drop a plugin folder into `~/Library/Application Support/Takt/Plugins` and hit **Reload**.
 
 Built-in plugins are fully functional; user-installed plugins are manifest-driven (settings, metadata, lifecycle) and prepared for runtime capability wiring.
 
@@ -773,7 +773,7 @@ swift test
 # The CLI (92 tests) — also the app's MCP server, bundled during the app build
 cargo test --manifest-path cli/Cargo.toml
 
-# `Priority --mcp-server` still reaches it
+# `Takt --mcp-server` still reaches it
 python3 scripts/mcp_smoke_check.py
 
 # Build + launch Debug, or produce a release DMG
@@ -798,16 +798,16 @@ The same source tree is compiled by two build systems: the Xcode project builds 
 
 | Path | What |
 | --- | --- |
-| `~/Library/Application Support/Priority/` | Dailies, day log, task cache, installed plugins |
-| `~/Library/Preferences/uk.co.maybeitsadam.priority.plist` | Settings, priority ranks, recurrence rules, start dates |
-| Login keychain, service `uk.co.maybeitsadam.priority` | The app's Checkvist remote key |
-| `~/.config/priority/config.json` | The CLI's own credentials, mode 0600 |
+| `~/Library/Application Support/Takt/` | Dailies, day log, task cache, installed plugins |
+| `~/Library/Preferences/uk.co.maybeitssoftware.takt.plist` | Settings, priority ranks, recurrence rules, start dates |
+| Login keychain, service `uk.co.maybeitsadam.priority` | The app's Checkvist remote key (the service keeps its pre-Takt name) |
+| `~/.config/takt/config.json` | The CLI's own credentials, mode 0600 |
 
 Nothing is sent anywhere except Checkvist, and Google Calendar, Google Tasks or Obsidian if you enable them.
 
-Google Tasks, when enabled, is a **mirror**: each list becomes a Google Tasks list of the same name, and Priority is the source of authority. Ticking a task off on your phone completes it here, notes you add there are kept, and a task you type there is adopted — but an edit that overwrites what Priority holds is replaced and written to a conflict log. `docs/google-tasks.md` has the full table.
+Google Tasks, when enabled, is a **mirror**: each list becomes a Google Tasks list of the same name, and Takt is the source of authority. Ticking a task off on your phone completes it here, notes you add there are kept, and a task you type there is adopted — but an edit that overwrites what Takt holds is replaced and written to a conflict log. `docs/google-tasks.md` has the full table.
 
-> Upgrading from **Bar Tasker**? Everything is carried across automatically on first launch — preferences, dailies, the day log and your keychain item. The old locations are copied rather than moved, so they stay on disk until you delete them.
+> Upgrading from **Priority** (or **Bar Tasker** before it)? Everything is carried across automatically on first launch — preferences, dailies, the day log, the workspace database and your keychain item. The old locations are copied rather than moved, so they stay on disk until you delete them.
 
 ## License
 

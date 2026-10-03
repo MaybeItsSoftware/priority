@@ -1,6 +1,6 @@
 # Plugin Development Guide
 
-Priority ships with native plugins only. Plugins are self-contained and live under:
+Takt ships with native plugins only. Plugins are self-contained and live under:
 
 - `Priority/Plugins/Native/Checkvist/`
 - `Priority/Plugins/Native/Obsidian/`
@@ -66,7 +66,7 @@ applies them through the mutation service, then feeds the refreshed list back
 so the write reflects the closes.
 
 The plugin is an MCP *client*: AFFiNE documents are Yjs block trees rather than
-text, so the writing is done by `affine-mcp-server` over stdio and Priority never
+text, so the writing is done by `affine-mcp-server` over stdio and Takt never
 handles an AFFiNE credential. See `docs/affine.md`.
 
 ### Google Calendar (`GoogleCalendarIntegrationPlugin`)
@@ -80,7 +80,7 @@ Transport for the Google Tasks mirror: lists, tasks, create, patch, delete and
 paging. It decides nothing — what the mirror *should* do is `GoogleTasksMirror`
 in `PriorityCore`, and when it should happen is `GoogleTasksMirrorService`.
 
-One Google Tasks list per Priority list, with Priority as the source of
+One Google Tasks list per Takt list, with Takt as the source of
 authority: local edits win and are logged when they overwrite something, while
 completions, added notes and tasks created on the Google side are kept. See
 `docs/google-tasks.md` for the full table and the reasoning.
@@ -119,7 +119,7 @@ a 403, which is worth knowing before debugging the mirror.
 
 - Append-only event log (completions, reopens, invalidations, finished focus
   sessions, the day's plan snapshot) under
-  `~/Library/Application Support/Priority/daylog.jsonl`.
+  `~/Library/Application Support/Takt/daylog.jsonl`.
 - Logical-day keying against a configurable rollover hour.
 - Projections for the Daily view and the note writer, so both render a day the
   same way.
@@ -278,7 +278,7 @@ SPM target. Everything worth testing is therefore in `PriorityCore`:
 (role resolution and the flip), and `ThemeSpecification.validate()`.
 
 **User themes.** Themes can also come from JSON files in
-`~/Library/Application Support/Priority/themes/` — the format is in
+`~/Library/Application Support/Takt/themes/` — the format is in
 [`themes.md`](themes.md). They are not registered with `PluginRegistry`,
 because they come and go while the app runs: `UserThemeLibrary` (in
 `Native/Theme/`) watches the folder, decodes and merges each file through

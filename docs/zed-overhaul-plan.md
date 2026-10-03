@@ -1,6 +1,6 @@
 # Zed overhaul plan
 
-The aim is for Priority to feel the way Zed feels: a utilitarian layout, an
+The aim is for Takt to feel the way Zed feels: a utilitarian layout, an
 interface you can work out without memorising it, and every keystroke answered
 within a frame. It stays what it is — a Blitzit-style task app with focus
 sessions and time tracking, and a right-hand rail of what you actually finished.
@@ -76,7 +76,7 @@ on 2026-09-27. Phases are ordered so each one lands green on its own.
 
 ## Phase 5 — keymap, menus and docs
 
-- A user keymap at `~/Library/Application Support/Priority/keymap.json`,
+- A user keymap at `~/Library/Application Support/Takt/keymap.json`,
   overlaying the catalogue's defaults per surface. Invalid entries are
   reported, not fatal. A palette command opens the keymap file. The unused
   remapping stack (`ConfigurableShortcutAction`, `ShortcutResolver`,
@@ -95,5 +95,5 @@ on 2026-09-27. Phases are ordered so each one lands green on its own.
 
 ## Out of scope
 
-Tabs and split panes. Priority shows one scope at a time, and the docks cover
+Tabs and split panes. Takt shows one scope at a time, and the docks cover
 the need for a second surface.
