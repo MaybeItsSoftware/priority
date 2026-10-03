@@ -34,6 +34,15 @@ final class WidgetSnapshotTests: XCTestCase {
     XCTAssertNil(snapshot.running)
   }
 
+  func testTheRankingFallbackSaysWhyEachTaskIsUpNext() throws {
+    _ = try store.createTask(listId: listID, title: "Urgent", dueAt: Date.now.addingTimeInterval(-86_400 * 2))
+    let snapshot = try WidgetSnapshotBuilder.make(store: store, workspaceID: workspaceID)
+    XCTAssertEqual(snapshot.items.first?.title, "Urgent")
+    XCTAssertEqual(snapshot.items.first?.reason, "Overdue")
+    XCTAssertEqual(WidgetSnapshotBuilder.why(.priority), "High priority")
+    XCTAssertNil(WidgetSnapshotBuilder.why(.order))
+  }
+
   func testAnUnplannedDayFallsBackToTheRankingWithoutReasons() throws {
     _ = try store.createTask(listId: listID, title: "Something")
     let snapshot = try WidgetSnapshotBuilder.make(store: store, workspaceID: workspaceID)

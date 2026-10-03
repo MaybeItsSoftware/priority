@@ -169,6 +169,32 @@ targets:
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Priority.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Priority
         BUNDLE_LOADER: $(TEST_HOST)
 
+  # The widget views and the Live Activity's lock-screen view, rendered from
+  # the extension's own sources (all but the @main bundle) and the shared
+  # snapshot types. Hosted by the app so the bundled fonts are registered.
+  PriorityWidgetsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PriorityWidgetsTests
+      - path: Shared
+      - path: PriorityWidgets
+        excludes:
+          - PriorityWidgetsBundle.swift
+          - Info.plist
+          - "*.entitlements"
+    dependencies:
+      - target: PriorityMobile
+      - sdk: WidgetKit.framework
+      - sdk: ActivityKit.framework
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitsadam.priority.ios.widgettests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Priority.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Priority
+        BUNDLE_LOADER: $(TEST_HOST)
+
   PriorityMobileUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -195,6 +221,7 @@ schemes:
       gatherCoverageData: false
       targets:
         - PriorityMobileTests
+        - PriorityWidgetsTests
         - PriorityMobileUITests
     archive:
       config: Release

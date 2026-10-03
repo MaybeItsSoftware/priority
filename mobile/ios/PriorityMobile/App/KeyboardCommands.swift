@@ -19,8 +19,9 @@ struct KeyboardCommands: View {
     .taskNew, .taskNewAbove, .taskNewChild, .taskComplete, .taskInvalidate, .taskDelete,
     .taskDueToday, .taskDueTomorrow, .taskToggleDaily, .taskTogglePlannedToday, .taskMove,
     .taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown, .taskMoveToPreviousList, .taskMoveToNextList,
-    .taskToggleInspector, .taskOpenLink, .planEnterTask, .planLeaveTask, .planFoldAll, .planUnfoldAll,
-    .listNew, .folderNew, .windowUndo, .windowRedo,
+    .taskConvertToList, .taskPromoteList, .taskToggleInspector, .taskOpenLink,
+    .planEnterTask, .planLeaveTask, .planFoldAll, .planUnfoldAll,
+    .listNew, .folderNew, .listComplete, .listRestore, .windowUndo, .windowRedo,
   ]
 
   var body: some View {
@@ -35,6 +36,20 @@ struct KeyboardCommands: View {
         .keyboardShortcut(.downArrow, modifiers: [])
       Button("Select previous task") { model.navigation.outlineCommand = .selectPrevious }
         .keyboardShortcut(.upArrow, modifiers: [])
+      // The Mac reaches these by two-letter sequences (`hc`, `za`, `pc`),
+      // which a key-command chain cannot express; they get chords here.
+      Button(WorkspaceCommandCatalog[.planHideCompleted].title) { model.navigation.outlineCommand = .toggleHideCompleted }
+        .keyboardShortcut("h", modifiers: [.command, .option])
+      Button(WorkspaceCommandCatalog[.planToggleFold].title) { model.navigation.outlineCommand = .toggleFold }
+        .keyboardShortcut("f", modifiers: [.command, .option])
+      Button(WorkspaceCommandCatalog[.taskShowProgress].title) {
+        if let selected = model.navigation.selectedTaskID { model.showProgress(selected) }
+      }
+      .keyboardShortcut("i", modifiers: [.command, .option])
+      Button(WorkspaceCommandCatalog[.taskExtractBranch].title) {
+        if let selected = model.navigation.selectedTaskID { model.extractBranch(selected) }
+      }
+      .keyboardShortcut("e", modifiers: [.command, .option])
     }
     .frame(width: 0, height: 0)
     .opacity(0)
@@ -140,6 +155,9 @@ struct KeyboardCommands: View {
     case .planFoldAll: navigation.outlineCommand = .foldAll
     case .planUnfoldAll: navigation.outlineCommand = .unfoldAll
     case .listNew: navigation.namePrompt = .newList(folderID: nil)
+    case .listRestore: model.restoreLastArchivedList()
+    case .listComplete:
+      if let listID = navigation.currentScope?.listID { model.toggleCompleted(list: listID) }
     case .folderNew: navigation.namePrompt = .newFolder(parentID: nil)
     case .windowUndo: model.undo()
     case .windowRedo: model.redo()
@@ -182,11 +200,9 @@ struct KeyboardCommands: View {
     case .taskMoveToPreviousList: model.moveToAdjacentList(taskID, by: -1)
     case .taskMoveToNextList: model.moveToAdjacentList(taskID, by: 1)
     case .taskToggleInspector: model.navigation.inspect(taskID, isPad: isPad)
-    case .taskOpenLink:
-      if let link = (try? model.store.taskEditorSnapshot(for: taskID))?.metadata.externalLinks.first,
-        let url = URL(string: link) {
-        UIApplication.shared.open(url)
-      }
+    case .taskOpenLink: model.openFirstLink(taskID)
+    case .taskConvertToList: model.toggleListKind(taskID)
+    case .taskPromoteList: model.togglePromoted(taskID)
     default: break
     }
   }

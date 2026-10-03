@@ -84,7 +84,7 @@ struct TaskContextMenu: View {
     case .taskPromoteList: return context.isPromoted ? "Unpin from lists" : "Pin to lists"
     case .taskNewChild: return "New subtask"
     case .taskNewAbove: return "New task above"
-    case .taskShowProgress: return "Show details"
+    case .taskShowProgress: return "Show progress"
     default:
       // The catalogue's titles are written for a menu bar ("Move Task Up");
       // sentence case reads better in a context menu.
@@ -106,7 +106,7 @@ struct TaskContextMenu: View {
     case .taskRename:
       if let onRename { onRename() } else { model.navigation.inspect(taskID, isPad: isPad) }
     case .taskEditDue, .taskEditStart, .taskEditEstimate, .taskEditNotes, .taskEditTags,
-      .taskEditRecurrence, .taskShowProgress, .taskToggleInspector:
+      .taskEditRecurrence, .taskToggleInspector:
       model.navigation.inspect(taskID, isPad: isPad)
     case .taskDueToday: model.setDue(taskID, daysFromToday: 0)
     case .taskDueTomorrow: model.setDue(taskID, daysFromToday: 1)
@@ -125,20 +125,11 @@ struct TaskContextMenu: View {
     case .taskExtractBranch: model.extractBranch(taskID)
     case .taskTogglePlannedToday: model.togglePlannedToday(taskID)
     case .taskToggleDaily: model.toggleDaily(taskID)
-    case .taskOpenLink: openFirstLink()
+    case .taskOpenLink: model.openFirstLink(taskID)
+    case .taskShowProgress: model.showProgress(taskID)
+    case .taskClearPriority: model.clearPriority(taskID)
     default: break
     }
-  }
-
-  private func openFirstLink() {
-    guard let snapshot = try? model.store.taskEditorSnapshot(for: context.taskID),
-      let link = snapshot.metadata.externalLinks.first, let url = URL(string: link),
-      ["https", "http", "obsidian"].contains(url.scheme?.lowercased() ?? "")
-    else {
-      model.showToast("This task has no link")
-      return
-    }
-    UIApplication.shared.open(url)
   }
 
   static func symbol(for id: WorkspaceCommandID) -> String {
@@ -174,7 +165,8 @@ struct TaskContextMenu: View {
     case .taskTogglePlannedToday: "sun.max.circle"
     case .taskToggleDaily: "repeat.circle"
     case .taskOpenLink: "link"
-    case .taskShowProgress: "info.circle"
+    case .taskShowProgress: "chart.bar"
+    case .taskClearPriority: "flag.slash"
     default: "circle"
     }
   }

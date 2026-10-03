@@ -32,6 +32,7 @@ final class InspectorModel {
   private(set) var matrix = TaskMatrixPosition(urgency: nil, importance: nil)
   private(set) var isPlanned = false
   private(set) var loggedSeconds = 0
+  private(set) var progress = TaskProgress()
   private(set) var listName = ""
 
   /// How long after the last keystroke a text field saves.
@@ -98,7 +99,8 @@ final class InspectorModel {
     kanbanColumn = metadata?.columns[taskID]
     matrix = metadata?.positions[taskID] ?? TaskMatrixPosition(urgency: nil, importance: nil)
     isPlanned = kanbanColumn == NextUpSelector.todayColumnID
-    loggedSeconds = ((try? store.workBlocks(for: taskID)) ?? []).reduce(0) { $0 + $1.seconds }
+    progress = (try? TaskProgress.load(store: store, taskID: taskID)) ?? TaskProgress()
+    loggedSeconds = progress.loggedSeconds
     let key = "\(task.listId)/\(task.parentTaskId ?? "root")"
     if let configurations = try? store.kanbanBoardConfigurations(legacy: [:], currentKey: key) {
       let scoped = configurations[key] ?? configurations["\(task.listId)/root"]

@@ -280,6 +280,9 @@ struct TaskInspector: View {
           Text("min").font(Typeface.caption).foregroundStyle(Palette.muted)
         }
       }
+      if inspector.progress.subtasks > 0 {
+        ProgressLine(done: inspector.progress.subtasksDone, total: inspector.progress.subtasks)
+      }
       if inspector.loggedSeconds > 0 {
         Text(loggedLine(task))
           .font(Typeface.numeral)
@@ -502,5 +505,28 @@ struct TaskInspector: View {
     Binding(
       get: { inspector.values?[keyPath: keyPath] ?? "" },
       set: { value in inspector.edit(model) { $0[keyPath: keyPath] = value } })
+  }
+}
+
+/// "3 of 5 subtasks done", with a hairline bar under it — the task's progress
+/// as the Mac's inspector shows it.
+private struct ProgressLine: View {
+  let done: Int
+  let total: Int
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Metrics.xs) {
+      Text("\(done) of \(total) subtasks done").font(Typeface.numeral).foregroundStyle(Palette.muted)
+      GeometryReader { proxy in
+        ZStack(alignment: .leading) {
+          Rectangle().fill(Palette.border)
+          Rectangle().fill(Palette.success)
+            .frame(width: proxy.size.width * CGFloat(done) / CGFloat(max(1, total)))
+        }
+      }
+      .frame(height: 2)
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityIdentifier("inspector.progress")
   }
 }

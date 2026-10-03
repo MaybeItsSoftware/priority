@@ -54,8 +54,12 @@ struct TodayCountWidget: Widget {
 }
 
 struct NextUpWidgetView: View {
-  @Environment(\.widgetFamily) private var family
+  @Environment(\.widgetFamily) private var environmentFamily
   let snapshot: WidgetSnapshot
+  /// Set by the render tests, which have no widget host to say the size.
+  var familyOverride: WidgetFamily?
+
+  private var family: WidgetFamily { familyOverride ?? environmentFamily }
 
   var body: some View {
     switch family {

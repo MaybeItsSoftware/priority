@@ -50,6 +50,19 @@ struct ListsTreeToolbar: ToolbarContent {
         Button { model.navigation.namePrompt = .newFolder(parentID: nil) } label: {
           Label("New folder", systemImage: "folder.badge.plus")
         }
+        Divider()
+        Button { model.setAllFoldersExpanded(false) } label: {
+          Label("Collapse every folder", systemImage: "chevron.up.chevron.down")
+        }
+        .disabled(model.structure.folders.isEmpty)
+        Button { model.setAllFoldersExpanded(true) } label: {
+          Label("Expand every folder", systemImage: "chevron.down")
+        }
+        .disabled(model.structure.folders.isEmpty)
+        Button { model.restoreLastArchivedList() } label: {
+          Label("Restore the last archived list", systemImage: "tray.and.arrow.up")
+        }
+        .disabled(model.structure.archivedLists.isEmpty)
         #if DEBUG
         Divider()
         Button { model.seedTasks() } label: { Label("Seed 5,000 tasks", systemImage: "hammer") }
@@ -318,7 +331,7 @@ struct AnyFolderBranch: View {
     self.folder = folder
     self.depth = depth
     self.rows = rows
-    _isExpanded = AppStorage(wrappedValue: true, "folderExpanded.\(folder.id)")
+    _isExpanded = AppStorage(wrappedValue: true, WorkspaceModel.folderExpandedKey(folder.id))
   }
 
   var body: some View {

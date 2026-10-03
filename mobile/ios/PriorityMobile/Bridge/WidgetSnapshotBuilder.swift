@@ -7,7 +7,9 @@ import PriorityWorkspace
 ///
 /// The day is resolved the way the Mac's `rebuildDayItems()` resolves it:
 /// the planned day in order, or — when nothing has a claim on today — the
-/// head of the focus ranking, listed without a reason because nothing chose it.
+/// head of the focus ranking, each with the ranking's short "why" (Overdue,
+/// High priority…). A task that is only next in order carries no reason,
+/// because nothing chose it.
 enum WidgetSnapshotBuilder {
   static let itemLimit = 6
 
@@ -20,18 +22,18 @@ enum WidgetSnapshotBuilder {
       try store.lists(in: workspaceID, includingArchived: true).map { ($0.id, $0.name) },
       uniquingKeysWith: { first, _ in first })
 
-    func item(_ task: WorkspaceTask, reason: DayPlanReason?) -> WidgetSnapshot.Item {
+    func item(_ task: WorkspaceTask, reason: String?) -> WidgetSnapshot.Item {
       WidgetSnapshot.Item(
-        id: task.id, title: task.title, reason: reason?.label, estimateSeconds: task.estimateSeconds,
+        id: task.id, title: task.title, reason: reason, estimateSeconds: task.estimateSeconds,
         listName: listNames[task.listId])
     }
 
     let planned = snapshot.todayPlan.compactMap { entry in
-      snapshot.dayTasks[entry.id].map { item($0, reason: entry.reason) }
+      snapshot.dayTasks[entry.id].map { item($0, reason: entry.reason.label) }
     }
     let items = planned.isEmpty
       ? snapshot.ranking.ranked.prefix(WorkspaceNextUpSnapshot.fallbackDayLength)
-        .compactMap { snapshot.dayTasks[$0.candidate.id] }.map { item($0, reason: nil) }
+        .compactMap { rung in snapshot.dayTasks[rung.candidate.id].map { item($0, reason: Self.why(rung.reason)) } }
       : planned
 
     let remaining = snapshot.todayPlan.reduce(0) { total, entry in
@@ -51,6 +53,24 @@ enum WidgetSnapshotBuilder {
       generatedAt: now, items: Array(items.prefix(itemLimit)), todayCount: snapshot.todayPlan.count,
       remainingSeconds: remaining, completedToday: snapshot.workProgress.today.completed,
       loggedTodaySeconds: snapshot.workProgress.today.seconds, running: running)
+  }
+
+  /// The ranking's reason in a widget's few characters. The Focus ladder
+  /// spells the same reasons out in full.
+  static func why(_ reason: NextUpReason) -> String? {
+    switch reason {
+    case .daily: "Daily"
+    case .overdue: "Overdue"
+    case .dueToday: "Due today"
+    case .dueSoon: "Due soon"
+    case .today: "Planned"
+    case .importance: "Important"
+    case .priority: "High priority"
+    case .condition: "Conditions met"
+    case .started: "Started"
+    case .deadlineRisk: "Deadline at risk"
+    case .order: nil
+    }
   }
 
   /// The Live Activity's state for the running block, or nil when nothing is
