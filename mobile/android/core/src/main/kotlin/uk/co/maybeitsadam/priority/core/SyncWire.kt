@@ -86,20 +86,68 @@ data class SyncIncomingRow(
 @Serializable
 data class SyncChangesResponse(val rows: List<SyncIncomingRow>, val cursor: Long, val hasMore: Boolean)
 
+/** `POST /v1/accounts` (sign up) and `POST /v1/sessions` (sign in). */
 @Serializable
-data class SyncPairRequest(
+data class SyncAccountRequest(
+    val email: String,
+    val password: String,
     val deviceName: String,
     val platform: String,
-    val code: String? = null,
-    val adminToken: String? = null,
 )
 
+/** `POST /v1/pair`: a one-time code minted by a device already signed in. */
 @Serializable
-data class SyncPairing(val deviceId: String, val token: String)
+data class SyncPairRequest(
+    val code: String,
+    val deviceName: String,
+    val platform: String,
+)
+
+/** What signing up, signing in and pairing all answer. `email` is null only for an account from before accounts existed. */
+@Serializable
+data class SyncSignedIn(
+    val accountId: String,
+    val email: String? = null,
+    val deviceId: String,
+    val token: String,
+)
 
 @Serializable
 data class SyncPairingCode(val code: String, val expiresAt: String)
 
-/** What a device needs to talk to the server, kept outside the database. */
+/** One device signed in to the account, as `GET /v1/account` lists it. */
 @Serializable
-data class SyncCredentials(val serverURL: String, val deviceId: String, val token: String)
+data class SyncDeviceInfo(
+    val id: String,
+    val name: String? = null,
+    val platform: String? = null,
+    val createdAt: String,
+    val lastSeenAt: String? = null,
+    /** The device asking. */
+    val current: Boolean = false,
+)
+
+/** `GET /v1/account`. */
+@Serializable
+data class SyncAccountInfo(val accountId: String, val email: String? = null, val devices: List<SyncDeviceInfo> = emptyList())
+
+/** `POST /v1/account/delete`. */
+@Serializable
+data class SyncDeleteAccountRequest(val password: String)
+
+/** Every error the server sends: `{"error": "..."}`. */
+@Serializable
+data class SyncErrorBody(val error: String)
+
+/**
+ * What a device needs to talk to the server, kept outside the database.
+ * [email] and [accountId] are null for credentials saved before accounts.
+ */
+@Serializable
+data class SyncCredentials(
+    val serverURL: String,
+    val deviceId: String,
+    val token: String,
+    val email: String? = null,
+    val accountId: String? = null,
+)

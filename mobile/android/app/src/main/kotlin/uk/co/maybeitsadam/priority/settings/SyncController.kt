@@ -161,26 +161,17 @@ class SyncController(private val container: AppContainer) {
         }
     }
 
-    suspend fun pair(link: SyncPairingLink): Boolean = pairWith(link.serverURL, code = link.code, adminToken = null)
-
-    /** The first device on a server pairs with its admin token. */
-    suspend fun pair(serverURL: String, adminToken: String): Boolean {
-        if (!SyncPairingLink.isHttpURL(serverURL.trim())) {
-            _pairingError.value = "Enter the server's full address, starting with https://."
-            return false
-        }
-        return pairWith(serverURL.trim(), code = null, adminToken = adminToken.trim())
-    }
+    suspend fun pair(link: SyncPairingLink): Boolean = pairWith(link.serverURL, code = link.code)
 
     fun clearPairingError() {
         _pairingError.value = null
     }
 
-    private suspend fun pairWith(serverURL: String, code: String?, adminToken: String?): Boolean {
+    private suspend fun pairWith(serverURL: String, code: String): Boolean {
         _isPairing.value = true
         _pairingError.value = null
         return try {
-            val credentials = OkHttpSyncTransport.pair(serverURL, deviceName(container.context), "android", code = code, adminToken = adminToken)
+            val credentials = OkHttpSyncTransport.pair(serverURL, code, deviceName(container.context))
             lock.withLock {
                 deactivate()
                 SyncStore(container.repository().database).beginSync(credentials.deviceId, credentials.serverURL)

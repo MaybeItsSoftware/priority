@@ -33,6 +33,11 @@ class SyncScheduler(
     private var watcher: Job? = null
     private var failures = 0
 
+    /** Set by a 401: the token is gone, so nothing here runs again until a new scheduler is made after signing in. */
+    @Volatile
+    var isSignedOut = false
+        private set
+
     private val _lastOutcome = MutableStateFlow<SyncEngine.Outcome?>(null)
 
     /** The most recent successful cycle's outcome; the engine's [SyncEngine.status] carries the rest. */
@@ -41,7 +46,7 @@ class SyncScheduler(
     /** Syncs now and keeps a long-poll open until [stop]. */
     @Synchronized
     fun start() {
-        if (loop != null) return
+        if (loop != null || isSignedOut) return
         loop = scope.launch {
             while (isActive) {
                 val backoff = runOnce(wait = 25)
@@ -60,6 +65,7 @@ class SyncScheduler(
     /** A local write happened: sync once things go quiet. */
     @Synchronized
     fun noteLocalChange() {
+        if (isSignedOut) return
         pending?.cancel()
         pending = scope.launch {
             delay(debounce)
@@ -101,7 +107,7 @@ class SyncScheduler(
     }
 
     /** Runs a cycle; returns how long to back off before the next, or null to go straight on. */
-    private suspend fun runOnce(wait: Int): Duration? = try {
+    private suspend fun runOnce(wait: Int): Duration? = if (isSignedOut) SIGNED_OUT_PAUSE else try {
         _lastOutcome.value = engine.sync(wait)
         failures = 0
         null
@@ -109,8 +115,16 @@ class SyncScheduler(
         throw cancelled
     } catch (error: Exception) {
         failures += 1
+        if (error is SyncException.Unauthorized) {
+            isSignedOut = true
+            pending?.cancel()
+        }
         if (error is SyncException.Unauthorized || error is SyncException.NotPaired) stop()
         // 2, 4, 8 … seconds, capped at five minutes, so an outage costs nothing.
         minOf(300, 1 shl minOf(failures, 8)).seconds
+    }
+
+    private companion object {
+        val SIGNED_OUT_PAUSE = 300.seconds
     }
 }

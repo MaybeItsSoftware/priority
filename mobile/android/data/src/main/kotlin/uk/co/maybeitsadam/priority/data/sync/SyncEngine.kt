@@ -31,6 +31,9 @@ class SyncEngine(
         data object Syncing : Status
         data class Synced(val at: Instant) : Status
         data class Failed(val message: String) : Status
+
+        /** The server no longer knows this device's token. Retrying cannot help; the user has to sign in again. */
+        data object SignedOut : Status
     }
 
     private val cycle = Mutex()
@@ -59,6 +62,9 @@ class SyncEngine(
             }
             _status.value = Status.Synced(wallClock.instant())
             outcome
+        } catch (error: SyncException.Unauthorized) {
+            _status.value = Status.SignedOut
+            throw error
         } catch (error: Throwable) {
             _status.value = Status.Failed(error.message ?: error.toString())
             throw error

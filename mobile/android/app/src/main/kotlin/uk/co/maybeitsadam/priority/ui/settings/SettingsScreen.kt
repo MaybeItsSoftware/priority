@@ -286,8 +286,6 @@ private fun UnpairedSync(sync: SyncController, pairing: Boolean) {
     val scope = rememberCoroutineScope()
     var scanning by remember { mutableStateOf(false) }
     var pasted by rememberSaveable { mutableStateOf("") }
-    var server by rememberSaveable { mutableStateOf("") }
-    var token by remember { mutableStateOf("") }
     Section("Sync", footer = "On a paired device, open Settings, then Add a device.") {
         Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             Text(if (pairing) "Pairing…" else "Not set up", style = PriorityTheme.type.small, color = PriorityTheme.colors.mutedText, modifier = Modifier.testTag("sync_status"))
@@ -301,15 +299,6 @@ private fun UnpairedSync(sync: SyncController, pairing: Boolean) {
                     sync.clearPairingError()
                     scope.launch { if (sync.pair(link)) pasted = "" }
                 }
-            }
-        }
-    }
-    Section("Advanced", footer = "For the first device on a new server: its address and the admin token it was started with.") {
-        Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-            Field(server, { server = it }, "Server URL", Modifier.testTag("sync_server_field"), KeyboardType.Uri)
-            Field(token, { token = it }, "Admin token", Modifier.testTag("sync_token_field"), KeyboardType.Password, secret = true)
-            PButton("Pair with server", enabled = !pairing && server.isNotBlank() && token.isNotBlank(), modifier = Modifier.testTag("sync_server_pair")) {
-                scope.launch { if (sync.pair(server, token)) token = "" }
             }
         }
     }
