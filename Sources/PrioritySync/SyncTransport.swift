@@ -324,6 +324,18 @@ public struct HTTPSyncTransport: SyncTransport {
     return SyncCredentials(serverURL: serverURL, signedIn: signedIn)
   }
 
+  /// Asks the server to email a link for setting a new password. It answers
+  /// the same whether or not there is an account for `email`, so the reply
+  /// says nothing about who has one. Setting the new password (on the web
+  /// page the link opens) signs every device out.
+  public static func requestPasswordReset(
+    serverURL: URL, email: String, session: URLSession = .shared
+  ) async throws {
+    let _: SyncOK = try await send(
+      post(serverURL.appending(path: "v1/password-reset"), body: ["email": email]), session: session,
+      authenticated: false)
+  }
+
   private static func post(_ url: URL, body: some Encodable) throws -> URLRequest {
     var request = URLRequest(url: url)
     request.httpMethod = "POST"

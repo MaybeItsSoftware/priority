@@ -167,6 +167,23 @@ public final class SyncSession {
         session: urlSession))
   }
 
+  /// Asks for a password-reset email for `email` on `serverURL`, and returns
+  /// the email as sent, trimmed. The server answers alike whether or not the
+  /// account exists; see `passwordResetSentMessage(for:)`.
+  @discardableResult
+  public func requestPasswordReset(email: String, serverURL: URL = SyncServer.defaultURL) async throws -> String {
+    let email = email.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !email.isEmpty else { throw SyncError.invalid("Enter your email first.") }
+    try await HTTPSyncTransport.requestPasswordReset(serverURL: serverURL, email: email, session: urlSession)
+    return email
+  }
+
+  /// What to show once a reset was asked for. It can't say the account
+  /// exists, because the server doesn't say.
+  public static func passwordResetSentMessage(for email: String) -> String {
+    "If there's an account for \(email), we've sent a link to reset its password. It works for an hour."
+  }
+
   /// Joins with a link minted by a signed-in device.
   public func pair(with link: SyncPairingLink) async throws {
     try await pair(code: link.code, serverURL: link.serverURL)

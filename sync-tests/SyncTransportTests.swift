@@ -166,6 +166,58 @@ final class SyncTransportTests: XCTestCase {
     XCTAssertEqual(StubURLProtocol.requests.last?.method, "POST")
   }
 
+  func testPasswordResetPostsOnlyTheEmailWithoutAToken() async throws {
+    StubURLProtocol.respond(to: "/v1/password-reset", status: 200, body: #"{"ok":true}"#)
+    try await HTTPSyncTransport.requestPasswordReset(serverURL: server, email: "me@example.com", session: urlSession)
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "POST")
+    XCTAssertEqual(request.path, "/v1/password-reset")
+    XCTAssertNil(request.authorization)
+    XCTAssertEqual(request.json, ["email": "me@example.com"])
+  }
+
+  func testPasswordResetRefusalsCarryTheServersOwnMessage() async throws {
+    let refusals = [
+      (400, "that isn't an email address", "That isn't an email address."),
+      (429, "too many password resets; try again later", "Too many password resets; try again later."),
+      (503, "password reset isn't set up on this server", "Password reset isn't set up on this server."),
+    ]
+    for (status, message, shown) in refusals {
+      StubURLProtocol.respond(to: "/v1/password-reset", status: status, body: #"{"error":"\#(message)"}"#)
+      do {
+        try await HTTPSyncTransport.requestPasswordReset(
+          serverURL: server, email: "me@example.com", session: urlSession)
+        XCTFail("a \(status) asked for a reset")
+      } catch {
+        XCTAssertEqual(error as? SyncError, .server(status: status, message: message))
+        XCTAssertEqual(error.localizedDescription, shown)
+      }
+    }
+  }
+
+  @MainActor
+  func testAPasswordResetNeedsAnEmailAndUsesTheChosenServer() async throws {
+    StubURLProtocol.respond(to: "/v1/password-reset", status: 200, body: #"{"ok":true}"#)
+    let session = SyncSession(
+      store: try store(), credentialStore: InMemorySyncCredentialStore(), deviceName: "Mac", platform: "macos",
+      urlSession: urlSession)
+    do {
+      try await session.requestPasswordReset(email: "  ", serverURL: server)
+      XCTFail("asked for a reset without an email")
+    } catch {
+      XCTAssertEqual(error.localizedDescription, "Enter your email first.")
+    }
+    XCTAssertTrue(StubURLProtocol.requests.isEmpty)
+
+    let sent = try await session.requestPasswordReset(email: " me@example.com ", serverURL: server)
+    XCTAssertEqual(sent, "me@example.com")
+    XCTAssertEqual(StubURLProtocol.requests.first?.host, "sync.example.com")
+    XCTAssertEqual(StubURLProtocol.requests.first?.json, ["email": "me@example.com"])
+    XCTAssertEqual(
+      SyncSession.passwordResetSentMessage(for: sent),
+      "If there's an account for me@example.com, we've sent a link to reset its password. It works for an hour.")
+  }
+
   func testCredentialsSavedBeforeAccountsStillLoad() throws {
     let old = #"{"serverURL":"https://sync.example.com","deviceId":"dev-1","token":"tok-1"}"#
     let decoded = try JSONDecoder().decode(SyncCredentials.self, from: Data(old.utf8))
