@@ -97,6 +97,14 @@ class SyncController(private val container: AppContainer) {
     private val _signInError = MutableStateFlow<String?>(null)
     val signInError: StateFlow<String?> = _signInError.asStateFlow()
 
+    private val _isRequestingReset = MutableStateFlow(false)
+    val isRequestingReset: StateFlow<Boolean> = _isRequestingReset.asStateFlow()
+
+    private val _passwordResetNotice = MutableStateFlow<String?>(null)
+
+    /** Set once the server has taken a password-reset request; cleared by any edit to the form. */
+    val passwordResetNotice: StateFlow<String?> = _passwordResetNotice.asStateFlow()
+
     private val _signedOut = MutableStateFlow<SignedOutHint?>(null)
 
     /** Set while signed out: the last email and server, and whether the server signed the device out. */
@@ -197,6 +205,37 @@ class SyncController(private val container: AppContainer) {
         return null
     }
 
+    /**
+     * Asks the server to email a link to its own page where a new password is
+     * set (`POST /v1/password-reset`); nothing more happens in the app. The
+     * server answers the same whether or not the account exists, so the notice
+     * says "if". Errors land in [signInError].
+     */
+    suspend fun requestPasswordReset(serverURL: String, email: String): Boolean {
+        val server = serverURL.trim().ifEmpty { BuildConfig.SYNC_SERVER }
+        val address = email.trim()
+        _passwordResetNotice.value = null
+        _signInError.value = when {
+            address.isEmpty() -> "Enter your email first."
+            !SyncPairingLink.isHttpURL(server) -> "Enter the server's full address, starting with https://."
+            else -> null
+        }
+        if (_signInError.value != null) return false
+        _isRequestingReset.value = true
+        return try {
+            OkHttpSyncTransport.requestPasswordReset(server, address)
+            _passwordResetNotice.value = passwordResetNotice(address)
+            true
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            _signInError.value = message(error, "Couldn't send a reset link.")
+            false
+        } finally {
+            _isRequestingReset.value = false
+        }
+    }
+
     /** Signs in with a link from a device already signed in; deep links, scans and pastes all land here. */
     fun pairFromLink(link: String) {
         val parsed = SyncPairingLink.parse(link)
@@ -219,11 +258,13 @@ class SyncController(private val container: AppContainer) {
 
     fun clearSignInError() {
         _signInError.value = null
+        _passwordResetNotice.value = null
     }
 
     private suspend fun signInWith(request: suspend () -> SyncCredentials): Boolean {
         _isSigningIn.value = true
         _signInError.value = null
+        _passwordResetNotice.value = null
         return try {
             val credentials = request()
             lock.withLock {
@@ -388,6 +429,9 @@ class SyncController(private val container: AppContainer) {
             is IllegalArgumentException -> "That server address isn't valid."
             else -> error.message ?: fallback
         }
+
+        fun passwordResetNotice(email: String): String =
+            "If there's an account for $email, we've sent a link to reset its password. It works for an hour."
 
         fun parseExpiry(text: String): Instant? =
             runCatching { Instant.parse(text) }.getOrNull() ?: runCatching { OffsetDateTime.parse(text).toInstant() }.getOrNull()

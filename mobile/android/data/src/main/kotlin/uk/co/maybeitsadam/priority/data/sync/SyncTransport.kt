@@ -24,6 +24,7 @@ import uk.co.maybeitsadam.priority.core.SyncDeleteAccountRequest
 import uk.co.maybeitsadam.priority.core.SyncErrorBody
 import uk.co.maybeitsadam.priority.core.SyncPairRequest
 import uk.co.maybeitsadam.priority.core.SyncPairingCode
+import uk.co.maybeitsadam.priority.core.SyncPasswordResetRequest
 import uk.co.maybeitsadam.priority.core.SyncPushChange
 import uk.co.maybeitsadam.priority.core.SyncPushRequest
 import uk.co.maybeitsadam.priority.core.SyncPushResponse
@@ -152,6 +153,22 @@ class OkHttpSyncTransport(
             platform: String = "android",
             client: OkHttpClient = defaultClient,
         ): SyncCredentials = postSignIn(client, serverURL, "v1/pair", SyncPairRequest(code.trim(), deviceName, platform))
+
+        /**
+         * Asks the server to email a password-reset link (`POST /v1/password-reset`).
+         * It answers the same whether or not there is an account for [email], so
+         * success says nothing about the account. No device is involved, so a
+         * 401 here is the server's message, not a sign-out.
+         */
+        suspend fun requestPasswordReset(
+            serverURL: String,
+            email: String,
+            client: OkHttpClient = defaultClient,
+        ) {
+            val body = json.encodeToString(SyncPasswordResetRequest(email.trim())).toRequestBody(JSON)
+            val request = Request.Builder().url(endpoint(serverURL.trim(), "v1/password-reset")).post(body).build()
+            send<JsonObject>(client, request, unauthorizedIsSignedOut = false)
+        }
 
         private suspend inline fun <reified B> postSignIn(client: OkHttpClient, serverURL: String, path: String, body: B): SyncCredentials {
             val server = serverURL.trim()

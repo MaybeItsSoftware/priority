@@ -146,6 +146,35 @@ class OkHttpSyncTransportTest {
         assertEquals("That pairing code is wrong, used or expired.", error.message)
     }
 
+    @Test
+    fun passwordResetPostsTheTrimmedEmailWithNoBearer(): Unit = runBlocking {
+        server.answer(200, """{"ok":true}""")
+        OkHttpSyncTransport.requestPasswordReset(" $base ", " me@example.com ", client = server.client)
+
+        val request = server.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("$base/v1/password-reset", request.url)
+        assertNull("a reset sends no bearer", request.authorization)
+        assertEquals("me@example.com", request.body!!.text("email"))
+    }
+
+    @Test
+    fun passwordResetFailuresSayWhatTheServerSaidAndA401IsNotASignOut(): Unit = runBlocking {
+        server.answer(400, """{"error":"that isn't an email address"}""")
+            .answer(429, """{"error":"too many reset requests; try again later"}""")
+            .answer(503, """{"error":"password reset isn't set up on this server"}""")
+            .answer(401, """{"error":"no"}""")
+        val errors = List(4) {
+            expect<SyncException.Server> {
+                runBlocking { OkHttpSyncTransport.requestPasswordReset(base, "me@example.com", client = server.client) }
+            }
+        }
+        assertEquals(listOf(400, 429, 503, 401), errors.map { it.status })
+        assertEquals("That isn't an email address.", errors[0].message)
+        assertEquals("Too many reset requests; try again later.", errors[1].message)
+        assertEquals("Password reset isn't set up on this server.", errors[2].message)
+    }
+
     private fun device() = OkHttpSyncTransport(SyncCredentials(base, "dev-1", "tok-1", "me@example.com", "acc-1"), server.client)
 
     @Test

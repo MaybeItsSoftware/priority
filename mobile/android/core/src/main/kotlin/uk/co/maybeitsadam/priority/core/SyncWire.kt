@@ -135,6 +135,13 @@ data class SyncAccountInfo(val accountId: String, val email: String? = null, val
 @Serializable
 data class SyncDeleteAccountRequest(val password: String)
 
+/**
+ * `POST /v1/password-reset`: mails a link to a page on the server where a new
+ * password is set. The server answers the same whether or not the account exists.
+ */
+@Serializable
+data class SyncPasswordResetRequest(val email: String)
+
 /** Every error the server sends: `{"error": "..."}`. */
 @Serializable
 data class SyncErrorBody(val error: String)

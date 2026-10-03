@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -429,7 +430,9 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
     }
     var scanning by remember { mutableStateOf(false) }
     var pasted by rememberSaveable { mutableStateOf("") }
-    val ready = !signingIn && email.isNotBlank() && password.isNotEmpty()
+    val requestingReset by sync.isRequestingReset.collectAsStateWithLifecycle()
+    val resetNotice by sync.passwordResetNotice.collectAsStateWithLifecycle()
+    val ready =!signingIn && email.isNotBlank() && password.isNotEmpty()
     val target = if (otherServer) server else SyncController.defaultServer
 
     Section("Sync", footer = "One account keeps your tasks the same on every device. The password needs at least 8 characters.") {
@@ -455,6 +458,29 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
                 PButton("Create account", enabled = ready, modifier = Modifier.testTag("sync_sign_up")) {
                     scope.launch { if (sync.signUp(target, email, password)) password = "" }
                 }
+            }
+            Text(
+                if (requestingReset) "Sending link…" else "Forgot password?",
+                style = PriorityTheme.type.small,
+                color = if (signingIn || requestingReset) PriorityTheme.colors.dimText else PriorityTheme.colors.mutedText,
+                modifier = Modifier
+                    .heightIn(min = Metrics.touchTarget)
+                    .clickable(enabled = !signingIn && !requestingReset, role = Role.Button) {
+                        scope.launch { sync.requestPasswordReset(target, email) }
+                    }
+                    .wrapContentHeight(Alignment.CenterVertically)
+                    .testTag("sync_forgot_password"),
+            )
+            resetNotice?.let {
+                Text(
+                    it, style = PriorityTheme.type.small, color = PriorityTheme.colors.ink,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PriorityTheme.colors.primary.copy(alpha = 0.08f), Metrics.control)
+                        .border(BorderStroke(Metrics.hairline, PriorityTheme.colors.primary.copy(alpha = 0.4f)), Metrics.control)
+                        .padding(Metrics.md)
+                        .testTag("sync_reset_notice"),
+                )
             }
         }
         Hairline(color = PriorityTheme.colors.borderMuted)

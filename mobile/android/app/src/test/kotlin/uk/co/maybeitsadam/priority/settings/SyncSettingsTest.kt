@@ -155,4 +155,12 @@ class SyncStatusTest {
         assertEquals(Instant.parse("2026-10-02T15:00:00Z"), SyncController.parseExpiry("2026-10-02T16:00:00+01:00"))
         assertNull(SyncController.parseExpiry("soon"))
     }
+
+    @Test
+    fun thePasswordResetNoticeNamesTheEmailWithoutSayingTheAccountExists() {
+        assertEquals(
+            "If there's an account for me@example.com, we've sent a link to reset its password. It works for an hour.",
+            SyncController.passwordResetNotice("me@example.com"),
+        )
+    }
 }
