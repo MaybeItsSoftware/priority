@@ -133,7 +133,7 @@ enum DeepLink {
       }
       Task {
         if await sync.pair(with: link) {
-          model.showToast("Paired")
+          model.showToast("Signed in to sync")
         } else {
           model.showToast("Couldn't pair")
         }
