@@ -16,6 +16,7 @@ RUN mkdir src \
 # `sqlx::migrate!` embeds the migrations at compile time, so they are build
 # input, not something the runtime image needs to carry.
 COPY migrations ./migrations
+COPY static ./static
 COPY src ./src
 # Make the real sources newer than the stub build's fingerprints.
 RUN touch src/main.rs src/lib.rs \

@@ -15,6 +15,7 @@ pub mod devices;
 pub mod error;
 pub mod merge;
 pub mod notify;
+pub mod pages;
 pub mod push;
 
 use axum::extract::DefaultBodyLimit;
@@ -63,6 +64,7 @@ pub fn router(state: AppState) -> Router {
         ));
     Router::new()
         .route("/health", get(health))
+        .route("/privacy", get(pages::privacy))
         .merge(user_routes)
         .layer(DefaultBodyLimit::max(BODY_LIMIT))
         .layer(CompressionLayer::new().gzip(true))
