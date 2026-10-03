@@ -1,13 +1,17 @@
+import Auth
 import Foundation
-import PrioritySync
+@testable import PrioritySync
 import PriorityWorkspace
 import XCTest
 
-/// The account routes from `docs/sync.md` ("Accounts", "POST /v1/pair") as
-/// the transport sends and reads them, and what the session does with the
-/// answers — above all, that a refused token stops sync rather than retrying.
+/// The account routes from `docs/sync.md` ("Wire protocol", "Devices and the
+/// account") as the transport sends them, and what the session does with the
+/// answers: the Supabase token on every request, one refresh-and-retry on a
+/// 401, and a refused refresh stopping sync rather than retrying. Supabase
+/// itself is a fake (`FakeAuth`), so nothing reaches the network.
 final class SyncTransportTests: XCTestCase {
   private let server = URL(string: "https://sync.example.com")!
+  private let deviceID = "5b0c2f0e-8a0e-4c1e-9d5e-0a1b2c3d4e5f"
   private var urlSession: URLSession!
   private var directory: URL!
 
@@ -25,83 +29,84 @@ final class SyncTransportTests: XCTestCase {
     try? FileManager.default.removeItem(at: directory)
   }
 
-  private let signedIn = #"{"accountId":"acc-1","email":"me@example.com","deviceId":"dev-1","token":"tok-1"}"#
+  private func credentials() -> SyncCredentials {
+    SyncCredentials(serverURL: server, deviceId: deviceID, accountId: "acc-1", email: "me@example.com")
+  }
 
-  private func credentials(token: String = "tok-1") -> SyncCredentials {
-    SyncCredentials(serverURL: server, deviceId: "dev-1", token: token, accountId: "acc-1", email: "me@example.com")
+  private func transport(_ auth: FakeAuth) -> HTTPSyncTransport {
+    HTTPSyncTransport(serverURL: server, deviceId: deviceID, tokens: auth, session: urlSession)
   }
 
   // MARK: - Transport
 
-  func testSignUpPostsTheFormAndKeepsTheAccountWithTheToken() async throws {
-    StubURLProtocol.respond(to: "/v1/accounts", status: 200, body: signedIn)
-    let result = try await HTTPSyncTransport.signUp(
-      serverURL: server, email: "me@example.com", password: "correct horse", deviceName: "Mac", platform: "macos",
-      session: urlSession)
+  func testEveryRequestCarriesTheAccessTokenAndTheDevice() async throws {
+    let auth = FakeAuth(token: "jwt-1")
+    _ = try await transport(auth).push([])
+    _ = try await transport(auth).changes(since: 0, limit: 10, wait: 0)
+    try await transport(auth).registerDevice(name: "Mac", platform: "macos")
 
-    XCTAssertEqual(result, credentials())
-    let request = try XCTUnwrap(StubURLProtocol.requests.first)
-    XCTAssertEqual(request.method, "POST")
-    XCTAssertNil(request.authorization)
+    XCTAssertEqual(StubURLProtocol.requests.map(\.path), ["/v1/push", "/v1/changes", "/v1/devices"])
+    for request in StubURLProtocol.requests {
+      XCTAssertEqual(request.authorization, "Bearer jwt-1")
+      XCTAssertEqual(request.device, deviceID)
+    }
     XCTAssertEqual(
-      request.json,
-      ["email": "me@example.com", "password": "correct horse", "deviceName": "Mac", "platform": "macos"])
+      StubURLProtocol.requests.last?.json, ["id": deviceID, "name": "Mac", "platform": "macos"])
+    XCTAssertEqual(auth.refreshes, 0)
   }
 
-  func testSignInGoesToSessions() async throws {
-    StubURLProtocol.respond(to: "/v1/sessions", status: 200, body: signedIn)
-    _ = try await HTTPSyncTransport.signIn(
-      serverURL: server, email: "me@example.com", password: "pw123456", deviceName: "Mac", platform: "macos",
-      session: urlSession)
-    XCTAssertEqual(StubURLProtocol.requests.map(\.path), ["/v1/sessions"])
+  func testA401IsRefreshedOnceAndRetried() async throws {
+    StubURLProtocol.respondOnce(to: "/v1/push", status: 401, body: #"{"error":"unauthorized"}"#)
+    let auth = FakeAuth(token: "stale", refreshed: "fresh")
+
+    let response = try await transport(auth).push([])
+    XCTAssertEqual(response.accepted, 0)
+    XCTAssertEqual(auth.refreshes, 1)
+    XCTAssertEqual(StubURLProtocol.requests.map(\.authorization), ["Bearer stale", "Bearer fresh"])
+    XCTAssertEqual(StubURLProtocol.requests.map(\.device), [deviceID, deviceID])
+  }
+
+  func testA401AfterTheRefreshIsSignedOut() async throws {
+    StubURLProtocol.respond(to: "/v1/push", status: 401, body: #"{"error":"unauthorized"}"#)
+    let auth = FakeAuth(token: "stale", refreshed: "fresh")
+    do {
+      _ = try await transport(auth).push([])
+      XCTFail("pushed with a token the server refuses")
+    } catch {
+      XCTAssertEqual(error as? SyncError, .unauthorized)
+    }
+    XCTAssertEqual(auth.refreshes, 1)
+    XCTAssertEqual(StubURLProtocol.requests.count, 2, "one retry, not a loop")
+  }
+
+  func testARefusedRefreshIsSignedOutWithoutARetry() async throws {
+    StubURLProtocol.respond(to: "/v1/push", status: 401, body: #"{"error":"unauthorized"}"#)
+    let auth = FakeAuth(token: "stale", refreshFails: SyncError.unauthorized)
+    do {
+      _ = try await transport(auth).push([])
+      XCTFail("pushed after the refresh was refused")
+    } catch {
+      XCTAssertEqual(error as? SyncError, .unauthorized)
+    }
+    XCTAssertEqual(StubURLProtocol.requests.count, 1)
   }
 
   func testRefusalsCarryTheServersOwnMessage() async throws {
-    StubURLProtocol.respond(to: "/v1/sessions", status: 401, body: #"{"error":"wrong email or password"}"#)
     StubURLProtocol.respond(
-      to: "/v1/accounts", status: 409, body: #"{"error":"there is already an account with that email; sign in instead"}"#)
-
+      to: "/v1/account/delete", status: 503, body: #"{"error":"deleting accounts isn't set up on this server"}"#)
     do {
-      _ = try await HTTPSyncTransport.signIn(
-        serverURL: server, email: "me@example.com", password: "nope nope", deviceName: "Mac", platform: "macos",
-        session: urlSession)
-      XCTFail("a wrong password signed in")
+      try await transport(FakeAuth()).deleteAccount()
+      XCTFail("a 503 deleted the account")
     } catch {
-      // A wrong password at sign-in is a message to show, not a dead token.
-      XCTAssertEqual(error as? SyncError, .server(status: 401, message: "wrong email or password"))
-      XCTAssertEqual(error.localizedDescription, "Wrong email or password.")
+      XCTAssertEqual(error.localizedDescription, "Deleting accounts isn't set up on this server.")
     }
-
+    StubURLProtocol.respond(to: "/v1/account", status: 502, body: "<html>bad gateway</html>")
     do {
-      _ = try await HTTPSyncTransport.signUp(
-        serverURL: server, email: "me@example.com", password: "pw123456", deviceName: "Mac", platform: "macos",
-        session: urlSession)
-      XCTFail("a taken email signed up")
-    } catch {
-      XCTAssertEqual(error.localizedDescription, "There is already an account with that email; sign in instead.")
-    }
-  }
-
-  func testABodyWithoutAMessageStillSaysWhatHappened() async throws {
-    StubURLProtocol.respond(to: "/v1/sessions", status: 502, body: "<html>bad gateway</html>")
-    do {
-      _ = try await HTTPSyncTransport.signIn(
-        serverURL: server, email: "a@b.co", password: "pw123456", deviceName: "Mac", platform: "macos",
-        session: urlSession)
-      XCTFail("a 502 signed in")
+      _ = try await transport(FakeAuth()).account()
+      XCTFail("a 502 read the account")
     } catch {
       XCTAssertEqual(error.localizedDescription, "The sync server answered 502.")
     }
-  }
-
-  func testPairingSendsOnlyTheCodeAndAnswersLikeSigningIn() async throws {
-    StubURLProtocol.respond(to: "/v1/pair", status: 200, body: signedIn)
-    let result = try await HTTPSyncTransport.pair(
-      serverURL: server, code: "ABCD-EFGH", deviceName: "Adam's iPhone", platform: "ios", session: urlSession)
-    XCTAssertEqual(result.email, "me@example.com")
-    XCTAssertEqual(result.accountId, "acc-1")
-    XCTAssertEqual(
-      StubURLProtocol.requests.first?.json, ["code": "ABCD-EFGH", "deviceName": "Adam's iPhone", "platform": "ios"])
   }
 
   func testAccountListsDevicesWithTheServersTimestamps() async throws {
@@ -114,10 +119,9 @@ final class SyncTransportTests: XCTestCase {
           {"id":"dev-2","name":null,"platform":"android","createdAt":"2026-10-03T09:30:00.5Z",
            "lastSeenAt":null,"current":false}]}
         """)
-    let account = try await HTTPSyncTransport(credentials: credentials(), session: urlSession).account()
+    let account = try await transport(FakeAuth()).account()
 
     XCTAssertEqual(StubURLProtocol.requests.first?.method, "GET")
-    XCTAssertEqual(StubURLProtocol.requests.first?.authorization, "Bearer tok-1")
     XCTAssertEqual(account.email, "me@example.com")
     XCTAssertEqual(account.devices.map(\.current), [true, false])
     XCTAssertEqual(account.devices[1].displayName, "Android")
@@ -128,102 +132,34 @@ final class SyncTransportTests: XCTestCase {
     XCTAssertNil(account.devices[1].lastSeenDate)
   }
 
-  func testPairingCodeExpiryParses() async throws {
-    StubURLProtocol.respond(
-      to: "/v1/pairing-codes", status: 200, body: #"{"code":"ABCD-EFGH","expiresAt":"2026-10-03T09:10:00.987654Z"}"#)
-    let code = try await HTTPSyncTransport(credentials: credentials(), session: urlSession).createPairingCode()
-    XCTAssertEqual(code.code, "ABCD-EFGH")
-    XCTAssertNotNil(code.expiryDate)
-    XCTAssertEqual(StubURLProtocol.requests.first?.authorization, "Bearer tok-1")
-  }
-
-  func testA401OnADeviceRouteMeansTheTokenIsGone() async throws {
-    StubURLProtocol.respond(to: "/v1/push", status: 401, body: #"{"error":"missing or unknown bearer token"}"#)
-    do {
-      _ = try await HTTPSyncTransport(credentials: credentials(), session: urlSession).push([])
-      XCTFail("pushed with a dead token")
-    } catch {
-      XCTAssertEqual(error as? SyncError, .unauthorized)
-    }
-  }
-
-  func testDeletingWithTheWrongPasswordIsNotASignOut() async throws {
-    StubURLProtocol.respond(to: "/v1/account/delete", status: 401, body: #"{"error":"wrong email or password"}"#)
-    let transport = HTTPSyncTransport(credentials: credentials(), session: urlSession)
-    do {
-      try await transport.deleteAccount(password: "nope nope")
-      XCTFail("deleted with a wrong password")
-    } catch {
-      XCTAssertEqual(error as? SyncError, .server(status: 401, message: "wrong email or password"))
-    }
-    XCTAssertEqual(StubURLProtocol.requests.first?.json, ["password": "nope nope"])
-
-    StubURLProtocol.respond(to: "/v1/account/delete", status: 200, body: #"{"ok":true}"#)
-    try await transport.deleteAccount(password: "correct horse")
-    StubURLProtocol.respond(to: "/v1/sign-out", status: 200, body: #"{"ok":true}"#)
+  func testDeletingAndSigningOutPostNothingButTheToken() async throws {
+    let transport = transport(FakeAuth())
+    try await transport.deleteAccount()
     try await transport.signOut()
-    XCTAssertEqual(StubURLProtocol.requests.last?.path, "/v1/sign-out")
-    XCTAssertEqual(StubURLProtocol.requests.last?.method, "POST")
+    XCTAssertEqual(StubURLProtocol.requests.map(\.path), ["/v1/account/delete", "/v1/sign-out"])
+    XCTAssertEqual(StubURLProtocol.requests.map(\.method), ["POST", "POST"])
+    XCTAssertEqual(StubURLProtocol.requests.first?.json, [:])
   }
 
-  func testPasswordResetPostsOnlyTheEmailWithoutAToken() async throws {
-    StubURLProtocol.respond(to: "/v1/password-reset", status: 200, body: #"{"ok":true}"#)
-    try await HTTPSyncTransport.requestPasswordReset(serverURL: server, email: "me@example.com", session: urlSession)
-    let request = try XCTUnwrap(StubURLProtocol.requests.first)
-    XCTAssertEqual(request.method, "POST")
-    XCTAssertEqual(request.path, "/v1/password-reset")
-    XCTAssertNil(request.authorization)
-    XCTAssertEqual(request.json, ["email": "me@example.com"])
+  func testSupabaseRefusingARefreshIsSignedOutButBeingOfflineIsNot() {
+    XCTAssertEqual(SupabaseSyncAuth.refreshError(AuthError.sessionMissing) as? SyncError, .unauthorized)
+    let refused = HTTPURLResponse(url: server, statusCode: 400, httpVersion: nil, headerFields: nil)!
+    let invalid = AuthError.api(
+      message: "Invalid Refresh Token", errorCode: .refreshTokenNotFound, underlyingData: Data(),
+      underlyingResponse: refused)
+    XCTAssertEqual(SupabaseSyncAuth.refreshError(invalid) as? SyncError, .unauthorized)
+    let offline = URLError(.notConnectedToInternet)
+    XCTAssertEqual(SupabaseSyncAuth.refreshError(offline) as? URLError, offline)
   }
 
-  func testPasswordResetRefusalsCarryTheServersOwnMessage() async throws {
-    let refusals = [
-      (400, "that isn't an email address", "That isn't an email address."),
-      (429, "too many password resets; try again later", "Too many password resets; try again later."),
-      (503, "password reset isn't set up on this server", "Password reset isn't set up on this server."),
-    ]
-    for (status, message, shown) in refusals {
-      StubURLProtocol.respond(to: "/v1/password-reset", status: status, body: #"{"error":"\#(message)"}"#)
-      do {
-        try await HTTPSyncTransport.requestPasswordReset(
-          serverURL: server, email: "me@example.com", session: urlSession)
-        XCTFail("a \(status) asked for a reset")
-      } catch {
-        XCTAssertEqual(error as? SyncError, .server(status: status, message: message))
-        XCTAssertEqual(error.localizedDescription, shown)
-      }
-    }
-  }
-
-  @MainActor
-  func testAPasswordResetNeedsAnEmailAndUsesTheChosenServer() async throws {
-    StubURLProtocol.respond(to: "/v1/password-reset", status: 200, body: #"{"ok":true}"#)
-    let session = SyncSession(
-      store: try store(), credentialStore: InMemorySyncCredentialStore(), deviceName: "Mac", platform: "macos",
-      urlSession: urlSession)
-    do {
-      try await session.requestPasswordReset(email: "  ", serverURL: server)
-      XCTFail("asked for a reset without an email")
-    } catch {
-      XCTAssertEqual(error.localizedDescription, "Enter your email first.")
-    }
-    XCTAssertTrue(StubURLProtocol.requests.isEmpty)
-
-    let sent = try await session.requestPasswordReset(email: " me@example.com ", serverURL: server)
-    XCTAssertEqual(sent, "me@example.com")
-    XCTAssertEqual(StubURLProtocol.requests.first?.host, "sync.example.com")
-    XCTAssertEqual(StubURLProtocol.requests.first?.json, ["email": "me@example.com"])
-    XCTAssertEqual(
-      SyncSession.passwordResetSentMessage(for: sent),
-      "If there's an account for me@example.com, we've sent a link to reset its password. It works for an hour.")
-  }
-
-  func testCredentialsSavedBeforeAccountsStillLoad() throws {
-    let old = #"{"serverURL":"https://sync.example.com","deviceId":"dev-1","token":"tok-1"}"#
+  func testCredentialsFromTheOldServerLoseTheirToken() throws {
+    let old = #"{"serverURL":"https://sync.example.com","deviceId":"dev-1","token":"tok-1","email":"me@example.com"}"#
     let decoded = try JSONDecoder().decode(SyncCredentials.self, from: Data(old.utf8))
-    XCTAssertEqual(decoded, SyncCredentials(serverURL: server, deviceId: "dev-1", token: "tok-1"))
+    XCTAssertTrue(decoded.hasLegacyToken)
+    XCTAssertEqual(decoded.email, "me@example.com")
     XCTAssertFalse(decoded.isSignedOut)
-    XCTAssertNil(decoded.email)
+    let saved = try XCTUnwrap(String(bytes: try JSONEncoder().encode(decoded), encoding: .utf8))
+    XCTAssertFalse(saved.contains("tok-1"))
   }
 
   func testATypedServerAddressGetsAScheme() {
@@ -232,6 +168,15 @@ final class SyncTransportTests: XCTestCase {
     XCTAssertNil(SyncServer.url(from: ""))
     XCTAssertNil(SyncServer.url(from: "ftp://example.com"))
     XCTAssertEqual(SyncServer.defaultURL.absoluteString, "https://priority-sync.up.railway.app")
+    XCTAssertTrue(SyncServer.isAuthCallback(URL(string: "priority://auth-callback?code=abc")!))
+    XCTAssertFalse(SyncServer.isAuthCallback(URL(string: "priority://today")!))
+  }
+
+  func testTheAppleNonceIsHashedAsSupabaseChecksIt() {
+    XCTAssertEqual(
+      SyncAppleNonce.sha256("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+    XCTAssertEqual(SyncAppleNonce.make().count, 32)
+    XCTAssertNotEqual(SyncAppleNonce.make(), SyncAppleNonce.make())
   }
 
   // MARK: - Session
@@ -243,52 +188,118 @@ final class SyncTransportTests: XCTestCase {
   }
 
   @MainActor
-  func testSigningInPairsTheStoreAndSigningOutForgetsIt() async throws {
-    StubURLProtocol.respond(to: "/v1/sessions", status: 200, body: signedIn)
-    StubURLProtocol.respond(to: "/v1/sign-out", status: 200, body: #"{"ok":true}"#)
+  private func session(
+    _ store: WorkspaceStore, _ keychain: InMemorySyncCredentialStore, _ auth: FakeAuth
+  ) -> SyncSession {
+    SyncSession(
+      store: store, credentialStore: keychain, auth: auth, deviceName: "Mac", platform: "macos",
+      urlSession: urlSession)
+  }
+
+  @MainActor
+  func testSigningInRegistersTheDeviceAndSigningOutForgetsIt() async throws {
     let store = try store()
-    let keychain = InMemorySyncCredentialStore()
-    let session = SyncSession(
-      store: store, credentialStore: keychain, deviceName: "Mac", platform: "macos", urlSession: urlSession)
+    let keychain = InMemorySyncCredentialStore(deviceId: deviceID)
+    let auth = FakeAuth(user: SyncAuthUser(id: "acc-1", email: "me@example.com"))
+    let session = session(store, keychain, auth)
 
     try await session.signIn(email: "  me@example.com ", password: "correct horse", serverURL: server)
     session.deactivate()
+    XCTAssertEqual(auth.signIns, ["me@example.com"])
     XCTAssertTrue(session.isSignedIn)
     XCTAssertEqual(session.email, "me@example.com")
     XCTAssertEqual(keychain.load(), credentials())
-    XCTAssertEqual(try store.syncState()?.deviceId, "dev-1")
-    XCTAssertEqual(StubURLProtocol.requests.first { $0.path == "/v1/sessions" }?.json?["email"], "me@example.com")
+    XCTAssertEqual(try store.syncState()?.deviceId, deviceID)
+    let register = try XCTUnwrap(StubURLProtocol.requests.first { $0.path == "/v1/devices" })
+    XCTAssertEqual(register.json, ["id": deviceID, "name": "Mac", "platform": "macos"])
 
     await session.signOut()
     XCTAssertEqual(session.phase, .unpaired)
     XCTAssertNil(keychain.load())
     XCTAssertNil(try store.syncState())
-    XCTAssertEqual(StubURLProtocol.requests.last { $0.path == "/v1/sign-out" }?.authorization, "Bearer tok-1")
+    XCTAssertEqual(auth.signOuts, 1)
+    XCTAssertNotNil(StubURLProtocol.requests.last { $0.path == "/v1/sign-out" })
+    // The device keeps its id for next time.
+    XCTAssertEqual(keychain.loadDeviceId(), deviceID)
   }
 
   @MainActor
-  func testEmptyFieldsAreCaughtBeforeTheServer() async throws {
-    let session = SyncSession(
-      store: try store(), credentialStore: InMemorySyncCredentialStore(), deviceName: "Mac", platform: "macos",
-      urlSession: urlSession)
+  func testAServerThatCantRegisterTheDeviceLeavesItSignedOut() async throws {
+    StubURLProtocol.respond(to: "/v1/devices", status: 500, body: #"{"error":"internal error"}"#)
+    let keychain = InMemorySyncCredentialStore(deviceId: deviceID)
+    let auth = FakeAuth(user: SyncAuthUser(id: "acc-1", email: "me@example.com"))
+    let session = session(try store(), keychain, auth)
     do {
-      try await session.signUp(email: " ", password: "x", serverURL: server)
-      XCTFail("signed up without an email")
+      try await session.signIn(email: "me@example.com", password: "pw", serverURL: server)
+      XCTFail("signed in without the server")
     } catch {
-      XCTAssertEqual(error.localizedDescription, "Enter your email address.")
+      XCTAssertEqual(error.localizedDescription, "Internal error.")
     }
+    XCTAssertFalse(session.isSignedIn)
+    XCTAssertEqual(auth.signOuts, 1, "the Supabase session doesn't outlive the failure")
+    XCTAssertNil(keychain.load())
+  }
+
+  @MainActor
+  func testASignUpWaitingOnConfirmationSaysSoAndRegistersNothing() async throws {
+    let auth = FakeAuth(user: nil)
+    let session = session(try store(), InMemorySyncCredentialStore(), auth)
+    let outcome = try await session.signUp(email: " new@example.com", password: "correct horse", serverURL: server)
+    XCTAssertEqual(outcome, .confirmEmail("new@example.com"))
+    XCTAssertFalse(session.isSignedIn)
+    XCTAssertEqual(session.rememberedEmail, "new@example.com")
     XCTAssertTrue(StubURLProtocol.requests.isEmpty)
   }
 
   @MainActor
-  func testARefusedTokenStopsSyncAndAsksForSignInAgain() async throws {
-    StubURLProtocol.respond(to: "/v1/push", status: 401, body: #"{"error":"missing or unknown bearer token"}"#)
-    StubURLProtocol.respond(to: "/v1/changes", status: 401, body: #"{"error":"missing or unknown bearer token"}"#)
+  func testEmptyFieldsAreCaughtBeforeSupabase() async throws {
+    let auth = FakeAuth()
+    let session = session(try store(), InMemorySyncCredentialStore(), auth)
+    do {
+      _ = try await session.signUp(email: " ", password: "x", serverURL: server)
+      XCTFail("signed up without an email")
+    } catch {
+      XCTAssertEqual(error.localizedDescription, "Enter your email address.")
+    }
+    do {
+      try await session.requestPasswordReset(email: "  ")
+      XCTFail("asked for a reset without an email")
+    } catch {
+      XCTAssertEqual(error.localizedDescription, "Enter your email first.")
+    }
+    XCTAssertTrue(auth.signIns.isEmpty)
+    XCTAssertTrue(auth.resets.isEmpty)
+  }
+
+  @MainActor
+  func testAResetLinkSignsInAndAsksForTheNewPassword() async throws {
+    let auth = FakeAuth(user: SyncAuthUser(id: "acc-1", email: "me@example.com"))
+    let session = session(try store(), InMemorySyncCredentialStore(deviceId: deviceID), auth)
+
+    let sent = try await session.requestPasswordReset(email: " me@example.com ")
+    XCTAssertEqual(auth.resets, ["me@example.com"])
+    XCTAssertEqual(
+      SyncSession.passwordResetSentMessage(for: sent),
+      "If there's an account for me@example.com, we've sent it a link to reset the password. Open it on this device.")
+
+    try await session.completeSignIn(from: URL(string: "priority://auth-callback?code=abc")!)
+    session.deactivate()
+    XCTAssertTrue(session.isSignedIn)
+    XCTAssertTrue(session.needsNewPassword)
+    try await session.setNewPassword("new password")
+    XCTAssertEqual(auth.passwords, ["new password"])
+    XCTAssertFalse(session.needsNewPassword)
+  }
+
+  @MainActor
+  func testARefusedRefreshStopsSyncAndAsksForSignInAgain() async throws {
+    StubURLProtocol.respond(to: "/v1/push", status: 401, body: #"{"error":"unauthorized"}"#)
+    StubURLProtocol.respond(to: "/v1/changes", status: 401, body: #"{"error":"unauthorized"}"#)
     let store = try store()
-    try store.beginSync(deviceId: "dev-1", serverURL: server.absoluteString)
-    let keychain = InMemorySyncCredentialStore(credentials())
-    let session = SyncSession(
-      store: store, credentialStore: keychain, deviceName: "Mac", platform: "macos", urlSession: urlSession)
+    try store.beginSync(deviceId: deviceID, serverURL: server.absoluteString)
+    let keychain = InMemorySyncCredentialStore(credentials(), deviceId: deviceID)
+    let auth = FakeAuth(refreshFails: SyncError.unauthorized)
+    let session = session(store, keychain, auth)
     XCTAssertTrue(session.isSignedIn)
 
     let synced = await session.syncNow()
@@ -301,7 +312,7 @@ final class SyncTransportTests: XCTestCase {
     // The outbox keeps recording, so what changes meanwhile goes up later.
     XCTAssertNotNil(try store.syncState())
 
-    // No further attempts: there is no token to try.
+    // No further attempts: there is no session to try.
     let attempts = StubURLProtocol.requests.count
     session.activate()
     let retried = await session.syncNow()
@@ -309,23 +320,37 @@ final class SyncTransportTests: XCTestCase {
     XCTAssertEqual(StubURLProtocol.requests.count, attempts)
 
     // And it is still signed out after a relaunch.
-    let relaunched = SyncSession(
-      store: store, credentialStore: keychain, deviceName: "Mac", platform: "macos", urlSession: urlSession)
+    let relaunched = self.session(store, keychain, FakeAuth())
     XCTAssertEqual(relaunched.phase, .needsSignIn)
     XCTAssertEqual(relaunched.rememberedEmail, "me@example.com")
   }
 
   @MainActor
-  func testAnAccountCallThatFindsTheTokenGoneSignsOutToo() async throws {
-    StubURLProtocol.respond(to: "/v1/account", status: 401, body: #"{"error":"missing or unknown bearer token"}"#)
+  func testARefreshThatFailsOfflineIsNotASignOut() async throws {
+    StubURLProtocol.respond(to: "/v1/account", status: 401, body: #"{"error":"unauthorized"}"#)
     let store = try store()
-    try store.beginSync(deviceId: "dev-1", serverURL: server.absoluteString)
-    let session = SyncSession(
-      store: store, credentialStore: InMemorySyncCredentialStore(credentials()), deviceName: "Mac",
-      platform: "macos", urlSession: urlSession)
+    try store.beginSync(deviceId: deviceID, serverURL: server.absoluteString)
+    let auth = FakeAuth(refreshFails: URLError(.notConnectedToInternet))
+    let session = session(store, InMemorySyncCredentialStore(credentials(), deviceId: deviceID), auth)
     do {
       try await session.refreshAccount()
-      XCTFail("read the account with a dead token")
+      XCTFail("read the account without a token")
+    } catch {
+      XCTAssertEqual((error as? URLError)?.code, .notConnectedToInternet)
+    }
+    XCTAssertTrue(session.isSignedIn)
+  }
+
+  @MainActor
+  func testAnAccountCallThatFindsTheSessionGoneSignsOutToo() async throws {
+    StubURLProtocol.respond(to: "/v1/account", status: 401, body: #"{"error":"unauthorized"}"#)
+    let store = try store()
+    try store.beginSync(deviceId: deviceID, serverURL: server.absoluteString)
+    let auth = FakeAuth(refreshFails: SyncError.unauthorized)
+    let session = session(store, InMemorySyncCredentialStore(credentials(), deviceId: deviceID), auth)
+    do {
+      try await session.refreshAccount()
+      XCTFail("read the account with a dead session")
     } catch {
       XCTAssertEqual(error as? SyncError, .unauthorized)
     }
@@ -334,37 +359,45 @@ final class SyncTransportTests: XCTestCase {
 
   @MainActor
   func testDeletingTheAccountKeepsTheWorkspaceAndLeavesSync() async throws {
-    StubURLProtocol.respond(to: "/v1/account/delete", status: 200, body: #"{"ok":true}"#)
     let store = try store()
     let workspaces = try store.workspaces()
-    try store.beginSync(deviceId: "dev-1", serverURL: server.absoluteString)
-    let keychain = InMemorySyncCredentialStore(credentials())
-    let session = SyncSession(
-      store: store, credentialStore: keychain, deviceName: "Mac", platform: "macos", urlSession: urlSession)
+    try store.beginSync(deviceId: deviceID, serverURL: server.absoluteString)
+    let keychain = InMemorySyncCredentialStore(credentials(), deviceId: deviceID)
+    let auth = FakeAuth()
+    let session = session(store, keychain, auth)
 
-    try await session.deleteAccount(password: "correct horse")
+    try await session.deleteAccount()
+    XCTAssertEqual(StubURLProtocol.requests.map(\.path), ["/v1/account/delete"])
     XCTAssertEqual(session.phase, .unpaired)
+    XCTAssertEqual(auth.signOuts, 1)
     XCTAssertNil(keychain.load())
     XCTAssertNil(try store.syncState())
     XCTAssertEqual(try store.workspaces(), workspaces)
   }
 
   @MainActor
-  func testATypedCodeUsesTheChosenServerAndAPastedLinkItsOwn() async throws {
-    StubURLProtocol.respond(to: "/v1/pair", status: 200, body: signedIn)
-    let session = SyncSession(
-      store: try store(), credentialStore: InMemorySyncCredentialStore(), deviceName: "Mac", platform: "macos",
-      urlSession: urlSession)
-    try await session.pair(codeOrLink: " abcd-efgh ", serverURL: server)
-    session.deactivate()
-    XCTAssertEqual(StubURLProtocol.requests.first?.host, "sync.example.com")
-    XCTAssertEqual(StubURLProtocol.requests.first?.json?["code"], "abcd-efgh")
+  func testADeviceSignedInToTheOldServerAsksToSignInAgainAndKeepsItsId() throws {
+    let store = try store()
+    try store.beginSync(deviceId: deviceID, serverURL: server.absoluteString)
+    let old = #"{"serverURL":"https://sync.example.com","deviceId":"\#(deviceID)","token":"tok-1","email":"me@example.com"}"#
+    let keychain = InMemorySyncCredentialStore(try JSONDecoder().decode(SyncCredentials.self, from: Data(old.utf8)))
 
-    let other = URL(string: "https://other.example.com")!
-    try await session.pair(codeOrLink: SyncPairingLink(serverURL: other, code: "WXYZ-2345").url.absoluteString)
-    session.deactivate()
-    XCTAssertEqual(StubURLProtocol.requests.last { $0.path == "/v1/pair" }?.host, "other.example.com")
-    XCTAssertEqual(session.credentials?.serverURL, other)
+    let session = session(store, keychain, FakeAuth())
+    XCTAssertEqual(session.phase, .needsSignIn)
+    XCTAssertEqual(session.rememberedEmail, "me@example.com")
+    XCTAssertEqual(session.deviceId, deviceID)
+    XCTAssertEqual(keychain.loadDeviceId(), deviceID)
+    XCTAssertEqual(keychain.load()?.hasLegacyToken, false, "the token is gone from the keychain")
+    XCTAssertEqual(keychain.load()?.isSignedOut, true)
+  }
+
+  @MainActor
+  func testANewDeviceMakesAnIdOnceAndKeepsIt() throws {
+    let keychain = InMemorySyncCredentialStore()
+    let first = session(try store(), keychain, FakeAuth()).deviceId
+    let second = session(try store(), keychain, FakeAuth()).deviceId
+    XCTAssertNotNil(UUID(uuidString: first))
+    XCTAssertEqual(first, second)
   }
 
   func testTheSchedulerStopsAfterARefusedToken() async throws {
@@ -388,6 +421,80 @@ final class SyncTransportTests: XCTestCase {
     let engineStatus = await engine.status
     XCTAssertEqual(engineStatus, .signedOut)
   }
+}
+
+/// Supabase, as far as the session needs it, without the network.
+final class FakeAuth: SyncAuthenticating, @unchecked Sendable {
+  private let lock = NSLock()
+  private let token: String
+  private let refreshed: String
+  private let refreshFails: (any Error)?
+  private var user: SyncAuthUser?
+  private var refreshCount = 0
+  private var signInLog: [String] = []
+  private var resetLog: [String] = []
+  private var passwordLog: [String] = []
+  private var signOutCount = 0
+
+  init(
+    token: String = "jwt", refreshed: String = "jwt-refreshed", refreshFails: (any Error)? = nil,
+    user: SyncAuthUser? = SyncAuthUser(id: "acc-1", email: "me@example.com")
+  ) {
+    self.token = token
+    self.refreshed = refreshed
+    self.refreshFails = refreshFails
+    self.user = user
+  }
+
+  var refreshes: Int { lock.withLock { refreshCount } }
+  var signIns: [String] { lock.withLock { signInLog } }
+  var resets: [String] { lock.withLock { resetLog } }
+  var passwords: [String] { lock.withLock { passwordLog } }
+  var signOuts: Int { lock.withLock { signOutCount } }
+
+  var currentUser: SyncAuthUser? { lock.withLock { user } }
+
+  func accessToken() async throws -> String { token }
+
+  func refreshedAccessToken() async throws -> String {
+    lock.withLock { refreshCount += 1 }
+    if let refreshFails { throw refreshFails }
+    return refreshed
+  }
+
+  func signIn(email: String, password: String) async throws -> SyncAuthUser {
+    try lock.withLock {
+      signInLog.append(email)
+      guard let user else { throw SyncError.invalid("Invalid login credentials") }
+      return user
+    }
+  }
+
+  func signUp(email: String, password: String) async throws -> SyncAuthUser? {
+    lock.withLock {
+      signInLog.append(email)
+      return user
+    }
+  }
+
+  func resetPassword(email: String) async throws { lock.withLock { resetLog.append(email) } }
+
+  func signIn(with provider: SyncOAuthProvider) async throws -> SyncAuthUser {
+    guard let user = currentUser else { throw SyncError.cancelled }
+    return user
+  }
+
+  func signInWithApple(idToken: String, nonce: String) async throws -> SyncAuthUser {
+    try await signIn(with: .apple)
+  }
+
+  func signIn(fromCallback url: URL) async throws -> SyncAuthUser {
+    try await signIn(with: .google)
+  }
+
+  func updatePassword(_ password: String) async throws { lock.withLock { passwordLog.append(password) } }
+
+  func signOut() async { lock.withLock { signOutCount += 1 } }
 }
 
 private actor StatusLog {
@@ -414,14 +521,16 @@ private final class RefusingTransport: SyncTransport, @unchecked Sendable {
 }
 
 /// Answers requests from a table of canned responses keyed by path, and
-/// records what was asked. Paths without an answer get an empty sync page, so
-/// a session that starts its rhythm in a test has something to talk to.
+/// records what was asked. A one-off answer goes first; paths without an
+/// answer get an empty sync page or `{"ok":true}`, so a session that starts
+/// its rhythm in a test has something to talk to.
 final class StubURLProtocol: URLProtocol, @unchecked Sendable {
   struct Recorded {
     var method: String
     var host: String?
     var path: String
     var authorization: String?
+    var device: String?
     var body: Data?
     var json: [String: String]? {
       body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: String] }
@@ -430,6 +539,7 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
 
   private static let lock = NSLock()
   nonisolated(unsafe) private static var responses: [String: (Int, String)] = [:]
+  nonisolated(unsafe) private static var onceResponses: [String: [(Int, String)]] = [:]
   nonisolated(unsafe) private static var recorded: [Recorded] = []
 
   static var requests: [Recorded] { lock.withLock { recorded } }
@@ -438,9 +548,14 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     lock.withLock { responses[path] = (status, body) }
   }
 
+  static func respondOnce(to path: String, status: Int, body: String) {
+    lock.withLock { onceResponses[path, default: []].append((status, body)) }
+  }
+
   static func reset() {
     lock.withLock {
       responses = [:]
+      onceResponses = [:]
       recorded = []
     }
   }
@@ -456,7 +571,13 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
       Self.recorded.append(
         Recorded(
           method: request.httpMethod ?? "GET", host: url.host(), path: path,
-          authorization: request.value(forHTTPHeaderField: "Authorization"), body: body))
+          authorization: request.value(forHTTPHeaderField: "Authorization"),
+          device: request.value(forHTTPHeaderField: "X-Priority-Device"), body: body))
+      if var once = Self.onceResponses[path], !once.isEmpty {
+        let first = once.removeFirst()
+        Self.onceResponses[path] = once
+        return first
+      }
       return Self.responses[path]
     }
     let (status, text) = canned ?? Self.fallback(for: path)
@@ -476,6 +597,7 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     switch path {
     case "/v1/push": (200, #"{"accepted":0,"cursor":0}"#)
     case "/v1/changes": (200, #"{"rows":[],"cursor":0,"hasMore":false}"#)
+    case "/v1/devices", "/v1/sign-out", "/v1/account/delete": (200, #"{"ok":true}"#)
     default: (404, #"{"error":"not found"}"#)
     }
   }

@@ -33,6 +33,7 @@ let pluginTargetExcludes = [
   "Priority/Fonts",
   "Priority/Priority.entitlements",
   "Priority/Priority.release.entitlements",
+  "Priority/Info.plist",
   "Priority/WorkspaceDesktopView.swift",
   "Priority/WorkspaceViewModel.swift",
 
@@ -171,6 +172,7 @@ let appLogicTargetExcludes = [
   "Priority/Fonts",
   "Priority/Priority.entitlements",
   "Priority/Priority.release.entitlements",
+  "Priority/Info.plist",
   "Priority/WorkspaceDesktopView.swift",
   "Priority/WorkspaceViewModel.swift",
 
@@ -273,6 +275,9 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.8.0"),
+    // Supabase Auth: accounts for sync (`docs/sync.md`). Only the `Auth`
+    // product is linked, by `PrioritySync`.
+    .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.55.0"),
   ],
   targets: [
     .target(
@@ -291,7 +296,10 @@ let package = Package(
     // and iOS apps. Android has its own in `mobile/android/data`.
     .target(
       name: "PrioritySync",
-      dependencies: ["PriorityWorkspace"],
+      dependencies: [
+        "PriorityWorkspace",
+        .product(name: "Auth", package: "supabase-swift"),
+      ],
       path: "Sources/PrioritySync"
     ),
     .target(
@@ -410,7 +418,10 @@ let package = Package(
     ),
     .testTarget(
       name: "PrioritySyncTests",
-      dependencies: ["PrioritySync", "PriorityWorkspace", .product(name: "GRDB", package: "GRDB.swift")],
+      dependencies: [
+        "PrioritySync", "PriorityWorkspace", .product(name: "GRDB", package: "GRDB.swift"),
+        .product(name: "Auth", package: "supabase-swift"),
+      ],
       path: "sync-tests"
     ),
   ]

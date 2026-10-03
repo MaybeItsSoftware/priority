@@ -1,18 +1,15 @@
-import CoreImage.CIFilterBuiltins
+import AuthenticationServices
 import PrioritySync
 import SwiftUI
-import UIKit
-import VisionKit
 
 /// Signing in to sync, and the state of sync once signed in.
 ///
-/// Signed out: an email and password, to sign in or make an account; or a
-/// code from a device already signed in, scanned, pasted or typed. Signed
-/// in: the account, the status, Sync now, the account's devices, "Add a
-/// device" (a QR code another device scans, or a link to send it), signing
-/// out, and deleting the account — which the App Store requires be possible
-/// in the app. The server is Priority's unless "Use a different server" says
-/// otherwise.
+/// Signed out: Sign in with Apple (the native sheet), Google (Supabase's web
+/// flow), or an email and password to sign in or make an account. All three
+/// are Supabase accounts. Signed in: the account, the status, Sync now, the
+/// account's devices, signing out, and deleting the account — which the App
+/// Store requires be possible in the app (5.1.1(v)). The server is
+/// Priority's unless "Use a different server" says otherwise.
 struct SyncSettingsView: View {
   @Environment(\.theme) private var theme
   var body: some View {
@@ -32,31 +29,31 @@ struct SyncSettingsView: View {
 
 private struct SyncSettingsForm: View {
   @Environment(\.theme) private var theme
+  @Environment(\.colorScheme) private var colorScheme
   @Bindable var controller: SyncController
   @State private var email = ""
   @State private var password = ""
+  @State private var newPassword = ""
   @State private var serverURL = SyncServer.defaultURL.absoluteString
   @State private var usesOtherServer = false
-  @State private var codeOrLink = ""
-  @State private var isScanning = false
   @State private var isConfirmingSignOut = false
-  @State private var isDeletingAccount = false
-  @State private var isMakingCode = false
-  @State private var codeError: String?
-  /// What "Forgot password?" sent.
-  @State private var resetNotice: String?
+  @State private var isConfirmingDelete = false
+  /// The nonce whose hash went into the Apple request, kept for Supabase.
+  @State private var appleNonce = ""
+  /// What "Forgot password?" or "Create account" sent.
+  @State private var notice: String?
 
   private var session: SyncSession { controller.session }
 
   var body: some View {
     Form {
-      // First, so a refused password or code says so without scrolling.
-      if let error = controller.pairingError {
+      // First, so a refused password says so without scrolling.
+      if let error = controller.signInError {
         Section {
           Label(error, systemImage: "exclamationmark.triangle")
             .font(theme.type.caption)
             .foregroundStyle(theme.danger)
-            .accessibilityIdentifier("sync.pairingError")
+            .accessibilityIdentifier("sync.signInError")
         }
         .listRowBackground(theme.danger.opacity(0.08))
       }
@@ -69,26 +66,13 @@ private struct SyncSettingsForm: View {
     .scrollContentBackground(.hidden)
     .background(theme.paper)
     .font(theme.type.body)
-    .disabled(controller.isPairing)
+    .disabled(controller.isSigningIn)
     .overlay {
-      if controller.isPairing {
+      if controller.isSigningIn {
         ProgressView("Signing in…").padding(theme.space.lg)
           .background(theme.raised, in: RoundedRectangle(cornerRadius: theme.radius.panel))
           .overlay(RoundedRectangle(cornerRadius: theme.radius.panel).strokeBorder(theme.border, lineWidth: theme.stroke))
       }
-    }
-    .sheet(isPresented: $isScanning) {
-      QRScannerSheet { scanned in
-        isScanning = false
-        if let link = SyncPairingLink(scanned) {
-          Task { await controller.pair(with: link) }
-        } else {
-          controller.pairingError = "That code isn't a Priority pairing code."
-        }
-      }
-    }
-    .sheet(isPresented: $isDeletingAccount) {
-      DeleteAccountSheet(controller: controller)
     }
   }
 
@@ -122,8 +106,33 @@ private struct SyncSettingsForm: View {
       header("Account")
     }
     .listRowBackground(theme.raised)
-    .task(id: session.credentials?.token) {
+    .task(id: session.credentials?.accountId) {
       try? await session.refreshAccount()
+    }
+
+    if session.needsNewPassword {
+      Section {
+        SecureField("New password", text: $newPassword)
+          .textContentType(.newPassword)
+          .accessibilityIdentifier("sync.newPassword")
+        Button("Save password") {
+          Task {
+            if await controller.setNewPassword(newPassword) {
+              newPassword = ""
+              notice = "Password changed."
+            }
+          }
+        }
+        .disabled(newPassword.isEmpty)
+        Button("Not now") { session.skipNewPassword() }
+          .foregroundStyle(theme.muted)
+      } header: {
+        header("Choose a new password")
+      } footer: {
+        Text("You signed in from a password-reset email. Set the password to use from now on.")
+          .font(theme.type.footnote).foregroundStyle(theme.muted)
+      }
+      .listRowBackground(theme.raised)
     }
 
     Section {
@@ -153,28 +162,8 @@ private struct SyncSettingsForm: View {
       }
     } header: {
       header("Devices")
-    }
-    .listRowBackground(theme.raised)
-
-    Section {
-      if let link = session.pairingLink, !isExpired {
-        pairingCode(link)
-      } else {
-        Button {
-          Task { await makeCode() }
-        } label: {
-          Label(isMakingCode ? "Making a code…" : "Add a device", systemImage: "qrcode")
-        }
-        .disabled(isMakingCode)
-        .accessibilityIdentifier("sync.addDevice")
-        if let codeError {
-          Text(codeError).font(theme.type.caption).foregroundStyle(theme.danger)
-        }
-      }
-    } header: {
-      header("Add a device")
     } footer: {
-      Text("A one-time code. The other device scans it, types it, or opens the link. Signing in there works too.")
+      Text("To add a device, sign in to the same account on it.")
         .font(theme.type.footnote).foregroundStyle(theme.muted)
     }
     .listRowBackground(theme.raised)
@@ -187,66 +176,22 @@ private struct SyncSettingsForm: View {
         } message: {
           Text("Your tasks stay on this device. They stop syncing with your other devices.")
         }
-      Button("Delete account…", role: .destructive) { isDeletingAccount = true }
+      Button("Delete account…", role: .destructive) { isConfirmingDelete = true }
         .accessibilityIdentifier("sync.deleteAccount")
+        .confirmationDialog("Delete your sync account?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+          Button("Delete account", role: .destructive) { Task { await controller.deleteAccount() } }
+            .accessibilityIdentifier("sync.confirmDelete")
+        } message: {
+          Text(
+            "This deletes \(session.email ?? "your account") and everything synced to it, and signs out every device. "
+              + "Each device keeps its own copy of the workspace, and this iPhone keeps its tasks. It can't be undone."
+          )
+        }
     } footer: {
       Text("Deleting the account removes everything synced to the server and signs out every device. Each device keeps its own copy.")
         .font(theme.type.footnote).foregroundStyle(theme.muted)
     }
     .listRowBackground(theme.raised)
-  }
-
-  private func pairingCode(_ link: SyncPairingLink) -> some View {
-    VStack(spacing: theme.space.md) {
-      QRCodeImage(text: link.url.absoluteString)
-        .frame(width: 200, height: 200)
-        .padding(theme.space.md)
-        // A QR code is read by a camera, not a person: always dark on white,
-        // whatever the theme, the way a photo’s letterbox is fixed.
-        .background(Color.white, in: RoundedRectangle(cornerRadius: theme.radius.panel))
-        .overlay(RoundedRectangle(cornerRadius: theme.radius.panel).strokeBorder(theme.border, lineWidth: theme.stroke))
-        .accessibilityLabel("Pairing code")
-      Text(link.code)
-        .font(theme.type.numeral)
-        .textSelection(.enabled)
-        .accessibilityIdentifier("sync.pairingCode")
-      if let expires = session.pairingCodeExpiresAt {
-        Text("Scan it or type it on the other device. Expires \(expires, style: .relative).")
-          .font(theme.type.caption)
-          .foregroundStyle(theme.muted)
-          .multilineTextAlignment(.center)
-      }
-      HStack(spacing: theme.space.sm) {
-        Button {
-          UIPasteboard.general.string = link.url.absoluteString
-        } label: {
-          Label("Copy link", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
-        }
-        .buttonStyle(ThemedButtonStyle(kind: .quiet))
-        ShareLink(item: link.url) {
-          Label("Share", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
-        }
-        .buttonStyle(ThemedButtonStyle(kind: .quiet))
-      }
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, theme.space.sm)
-  }
-
-  private var isExpired: Bool {
-    guard let expires = session.pairingCodeExpiresAt else { return false }
-    return expires < .now
-  }
-
-  private func makeCode() async {
-    isMakingCode = true
-    codeError = nil
-    defer { isMakingCode = false }
-    do {
-      try await session.makePairingLink()
-    } catch {
-      codeError = error.localizedDescription
-    }
   }
 
   // MARK: - Signed out
@@ -261,6 +206,34 @@ private struct SyncSettingsForm: View {
       }
       .listRowBackground(theme.raised)
     }
+
+    Section {
+      SignInWithAppleButton(.signIn) { request in
+        appleNonce = SyncAppleNonce.make()
+        request.requestedScopes = [.email]
+        request.nonce = SyncAppleNonce.sha256(appleNonce)
+      } onCompletion: { result in
+        signInWithApple(result)
+      }
+      .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+      .frame(height: 44)
+      .clipShape(RoundedRectangle(cornerRadius: theme.radius.control))
+      .accessibilityIdentifier("sync.apple")
+      Button {
+        guard let server = chosenServer() else { return }
+        Task { await controller.signIn(with: .google, serverURL: server) }
+      } label: {
+        SyncProviderButtonLabel(.google, font: theme.type.body.weight(.medium), height: 44)
+      }
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("sync.google")
+    } header: {
+      header("Sign in")
+    } footer: {
+      Text("Keep this iPhone, your Mac and your other devices on one workspace. Every device keeps a full copy and works offline.")
+        .font(theme.type.footnote).foregroundStyle(theme.muted)
+    }
+    .listRowBackground(theme.raised)
 
     Section {
       TextField("Email", text: $email)
@@ -279,8 +252,10 @@ private struct SyncSettingsForm: View {
         .accessibilityIdentifier("sync.signIn")
       Button("Create account") {
         guard let server = chosenServer() else { return }
+        notice = nil
         Task {
-          if await controller.signUp(email: email, password: password, serverURL: server) { password = "" }
+          notice = await controller.signUp(email: email, password: password, serverURL: server)
+          if controller.signInError == nil { password = "" }
         }
       }
       .disabled(!canSubmit)
@@ -289,45 +264,16 @@ private struct SyncSettingsForm: View {
         .font(theme.type.callout)
         .foregroundStyle(theme.muted)
         .accessibilityIdentifier("sync.forgotPassword")
-      if let resetNotice {
-        Text(resetNotice)
+      if let notice {
+        Text(notice)
           .font(theme.type.caption)
           .foregroundStyle(theme.muted)
-          .accessibilityIdentifier("sync.resetNotice")
+          .accessibilityIdentifier("sync.notice")
       }
     } header: {
-      header("Sign in")
+      header("Or with email")
     } footer: {
-      Text("Keep this iPhone, your Mac and your other devices on one workspace. Every device keeps a full copy and works offline. A new password needs 8 characters.")
-        .font(theme.type.footnote).foregroundStyle(theme.muted)
-    }
-    .listRowBackground(theme.raised)
-
-    Section {
-      Button {
-        isScanning = true
-      } label: {
-        Label("Scan code", systemImage: "qrcode.viewfinder")
-      }
-      .accessibilityIdentifier("sync.scan")
-      HStack {
-        TextField("Or type the code or paste the link", text: $codeOrLink)
-          .textInputAutocapitalization(.characters)
-          .autocorrectionDisabled()
-          .font(theme.type.callout)
-          .accessibilityIdentifier("sync.pasteField")
-        Button("Join") {
-          guard let server = chosenServer() else { return }
-          Task {
-            if await controller.pair(codeOrLink: codeOrLink, serverURL: server) { codeOrLink = "" }
-          }
-        }
-        .disabled(codeOrLink.trimmingCharacters(in: .whitespaces).isEmpty)
-      }
-    } header: {
-      header("Use a pairing code")
-    } footer: {
-      Text("On a device that is already signed in, open Settings → Sync → Add a device.")
+      Text("A new password needs 8 characters.")
         .font(theme.type.footnote).foregroundStyle(theme.muted)
     }
     .listRowBackground(theme.raised)
@@ -360,23 +306,42 @@ private struct SyncSettingsForm: View {
     }
   }
 
-  /// Emails a reset link for the typed address, on the chosen server.
+  /// The native sheet answered: hand Apple's identity token to Supabase.
+  private func signInWithApple(_ result: Result<ASAuthorization, any Error>) {
+    switch result {
+    case .success(let authorization):
+      guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+        let data = credential.identityToken, let idToken = String(data: data, encoding: .utf8)
+      else {
+        controller.signInError = "Apple didn't send a sign-in token. Try again."
+        return
+      }
+      guard let server = chosenServer() else { return }
+      let nonce = appleNonce
+      Task { await controller.signInWithApple(idToken: idToken, nonce: nonce, serverURL: server) }
+    case .failure(let error):
+      // Closing the sheet is an answer, not a failure.
+      if (error as? ASAuthorizationError)?.code == .canceled { return }
+      controller.signInError = error.localizedDescription
+    }
+  }
+
+  /// Emails a reset link for the typed address.
   private func requestPasswordReset() {
-    resetNotice = nil
-    guard let server = chosenServer() else { return }
-    Task { resetNotice = await controller.requestPasswordReset(email: email, serverURL: server) }
+    notice = nil
+    Task { notice = await controller.requestPasswordReset(email: email) }
   }
 
   /// The hosted server, unless the disclosure names another.
   private func chosenServer() -> URL? {
     guard let url = SyncServer.url(from: serverURL) else {
-      controller.pairingError = "That server address isn't a web address."
+      controller.signInError = "That server address isn't a web address."
       return nil
     }
     return url
   }
 
-  /// After a refused token, the same email and server again.
+  /// After a refused session, the same email and server again.
   private func prefill() {
     if email.isEmpty, let remembered = session.rememberedEmail { email = remembered }
     if let server = session.rememberedServerURL, server != SyncServer.defaultURL {
@@ -387,166 +352,5 @@ private struct SyncSettingsForm: View {
 
   private func header(_ text: String) -> some View {
     Text(text).font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
-  }
-}
-
-/// Deleting the account, behind the password. The account is gone from the
-/// server for every device; each device keeps its own copy of the workspace.
-private struct DeleteAccountSheet: View {
-  @Environment(\.theme) private var theme
-  @Environment(\.dismiss) private var dismiss
-  @Bindable var controller: SyncController
-  @State private var password = ""
-
-  var body: some View {
-    NavigationStack {
-      Form {
-        Section {
-          Text(
-            "This deletes \(controller.session.email ?? "your account") and everything synced to it, and signs out every device. "
-              + "Each device keeps its own copy of the workspace, and this iPhone keeps its tasks."
-          )
-          .font(theme.type.callout)
-          .foregroundStyle(theme.muted)
-        }
-        .listRowBackground(theme.raised)
-        Section {
-          SecureField("Password", text: $password)
-            .textContentType(.password)
-            .accessibilityIdentifier("sync.deletePassword")
-          if let error = controller.pairingError {
-            Text(error).font(theme.type.caption).foregroundStyle(theme.danger)
-          }
-        } header: {
-          Text("Enter your password to confirm").font(theme.type.caption).foregroundStyle(theme.muted).textCase(nil)
-        }
-        .listRowBackground(theme.raised)
-        Section {
-          Button("Delete account", role: .destructive) {
-            Task {
-              if await controller.deleteAccount(password: password) { dismiss() }
-            }
-          }
-          .disabled(password.isEmpty || controller.isPairing)
-          .accessibilityIdentifier("sync.confirmDelete")
-        }
-        .listRowBackground(theme.raised)
-      }
-      .scrollContentBackground(.hidden)
-      .background(theme.paper)
-      .font(theme.type.body)
-      .navigationTitle("Delete account")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-      }
-    }
-    .onAppear { controller.pairingError = nil }
-  }
-}
-
-/// A QR code for `text`, drawn crisp at any size.
-struct QRCodeImage: View {
-  @Environment(\.theme) private var theme
-  let text: String
-
-  var body: some View {
-    if let image = Self.render(text) {
-      Image(uiImage: image).interpolation(.none).resizable().scaledToFit()
-    } else {
-      Image(systemName: "qrcode").resizable().scaledToFit().foregroundStyle(theme.dim)
-    }
-  }
-
-  static func render(_ text: String) -> UIImage? {
-    let filter = CIFilter.qrCodeGenerator()
-    filter.message = Data(text.utf8)
-    filter.correctionLevel = "M"
-    guard let output = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: 10, y: 10)),
-      let cgImage = CIContext().createCGImage(output, from: output.extent)
-    else { return nil }
-    return UIImage(cgImage: cgImage)
-  }
-}
-
-/// A camera sheet that reads the first QR code it sees. Where the camera or
-/// the scanner is unavailable — the simulator, a device without the Neural
-/// Engine, camera access refused — it says so and offers the clipboard
-/// instead, so pairing never dead-ends on a missing camera.
-struct QRScannerSheet: View {
-  @Environment(\.theme) private var theme
-  @Environment(\.dismiss) private var dismiss
-  let onScan: (String) -> Void
-
-  var body: some View {
-    NavigationStack {
-      Group {
-        if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
-          QRScanner(onScan: onScan).ignoresSafeArea()
-        } else {
-          VStack(spacing: theme.space.lg) {
-            EmptyState(
-              title: "Camera unavailable",
-              message: "Copy the pairing link on the other device, then paste it here.",
-              systemImage: "camera")
-            Button {
-              if let text = UIPasteboard.general.string { onScan(text) } else { dismiss() }
-            } label: {
-              Label("Paste pairing link", systemImage: "doc.on.clipboard")
-            }
-            .buttonStyle(ThemedButtonStyle(kind: .primary))
-            .accessibilityIdentifier("sync.scanner.paste")
-          }
-          .padding(theme.space.lg)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .background(theme.paper)
-        }
-      }
-      .navigationTitle("Scan code")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-      }
-    }
-  }
-}
-
-private struct QRScanner: UIViewControllerRepresentable {
-  let onScan: (String) -> Void
-
-  func makeUIViewController(context: Context) -> DataScannerViewController {
-    let scanner = DataScannerViewController(
-      recognizedDataTypes: [.barcode(symbologies: [.qr])], qualityLevel: .balanced,
-      recognizesMultipleItems: false, isHighFrameRateTrackingEnabled: false, isHighlightingEnabled: true)
-    scanner.delegate = context.coordinator
-    try? scanner.startScanning()
-    return scanner
-  }
-
-  func updateUIViewController(_ scanner: DataScannerViewController, context: Context) {}
-
-  static func dismantleUIViewController(_ scanner: DataScannerViewController, coordinator: Coordinator) {
-    scanner.stopScanning()
-  }
-
-  func makeCoordinator() -> Coordinator { Coordinator(onScan: onScan) }
-
-  final class Coordinator: NSObject, DataScannerViewControllerDelegate {
-    let onScan: (String) -> Void
-    private var didScan = false
-
-    init(onScan: @escaping (String) -> Void) { self.onScan = onScan }
-
-    func dataScanner(_ scanner: DataScannerViewController, didAdd items: [RecognizedItem], allItems: [RecognizedItem]) {
-      guard !didScan else { return }
-      for item in items {
-        if case .barcode(let barcode) = item, let payload = barcode.payloadStringValue {
-          didScan = true
-          scanner.stopScanning()
-          onScan(payload)
-          return
-        }
-      }
-    }
   }
 }

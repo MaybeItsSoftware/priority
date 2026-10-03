@@ -14,10 +14,9 @@ final class SyncPhaseTextTests: XCTestCase {
     XCTAssertEqual(SyncPhaseText.short(.failed("x")), "Error")
   }
 
-  func testPairingLinkRoundTripsThroughTheURLTheQRCodeCarries() throws {
-    let link = SyncPairingLink(serverURL: try XCTUnwrap(URL(string: "https://sync.example.com")), code: "ABC123")
-    XCTAssertEqual(SyncPairingLink(link.url.absoluteString), link)
-    XCTAssertNil(SyncPairingLink("priority://add"))
-    XCTAssertNotNil(QRCodeImage.render(link.url.absoluteString))
+  func testSupabaseComesBackOnTheAppsOwnScheme() throws {
+    let callback = try XCTUnwrap(URL(string: "priority://auth-callback?code=abc"))
+    XCTAssertTrue(SyncServer.isAuthCallback(callback))
+    XCTAssertFalse(SyncServer.isAuthCallback(try XCTUnwrap(URL(string: "priority://add"))))
   }
 }

@@ -3,6 +3,7 @@ import Combine
 import OSLog
 import Observation
 import PriorityCore
+import PrioritySync
 import SwiftUI
 
 @MainActor
@@ -422,6 +423,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private func triggerQuickAddFromHotkey() {
     showMainWindow()
     workspace.beginQuickCapture()
+  }
+
+  /// `priority://auth-callback`, from the links in Supabase's emails:
+  /// confirming a new account's address, or resetting the password. Settings
+  /// opens on Sync, which shows how it went.
+  func application(_ application: NSApplication, open urls: [URL]) {
+    for url in urls where SyncServer.isAuthCallback(url) {
+      menuSettings(pane: .sync)
+      guard let session = workspace?.syncSession else { continue }
+      Task { await session.openAuthLink(url) }
+    }
   }
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

@@ -1,30 +1,32 @@
-import CoreImage.CIFilterBuiltins
 import PriorityCore
 import PrioritySync
 import SwiftUI
 
-/// Signing this Mac in to sync, and letting a phone join it.
+/// Signing this Mac in to sync, and the account once it is.
 ///
-/// Signed out: an email and password, to sign in or make an account, or a
-/// code from a device already signed in. Signed in: the account, its devices,
-/// a QR code for a phone (`SyncPairingLink`), signing out and deleting the
-/// account. The server is the hosted one unless "Use a different server"
-/// says otherwise. See `docs/sync.md`.
+/// Signed out: Apple, Google, or an email and password, to sign in or make an
+/// account. All three are Supabase accounts (`docs/sync.md`). Signed in: the
+/// account, its devices, signing out and deleting the account. The server is
+/// the hosted one unless "Use a different server" says otherwise.
+///
+/// Sign in with Apple goes through Supabase's web flow here rather than the
+/// native sheet the iPhone uses: the native one needs the Sign in with Apple
+/// entitlement, which needs a provisioning profile, and this app is signed
+/// without one (see `Priority.release.entitlements`).
 struct SettingsSyncPane: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   @State private var email = ""
   @State private var password = ""
+  @State private var newPassword = ""
   @State private var serverURL = SyncServer.defaultURL.absoluteString
   @State private var usesOtherServer = false
-  @State private var usesPairingCode = false
-  @State private var pairingCode = ""
   @State private var isWorking = false
   @State private var message: String?
-  /// What "Forgot password?" sent, shown where an error would be.
+  /// What "Forgot password?" or "Create account" sent, shown where an error
+  /// would be.
   @State private var notice: String?
   @State private var isConfirmingDelete = false
-  @State private var deletePassword = ""
 
   var body: some View {
     if let session = model.syncSession {
@@ -57,6 +59,17 @@ struct SettingsSyncPane: View {
       .foregroundStyle(theme.muted)
 
       VStack(alignment: .leading, spacing: theme.space.sm) {
+        HStack(spacing: theme.space.sm) {
+          Button { signIn(session, with: .apple) } label: { SyncProviderButtonLabel(.apple, font: providerFont) }
+            .buttonStyle(.plain)
+          Button { signIn(session, with: .google) } label: { SyncProviderButtonLabel(.google, font: providerFont) }
+            .buttonStyle(.plain)
+        }
+        .disabled(isWorking)
+        .frame(maxWidth: 460)
+
+        Divider().padding(.vertical, theme.space.xs)
+
         field("Email") {
           TextField("", text: $email, prompt: Text("you@example.com"))
             .textContentType(.username)
@@ -73,46 +86,20 @@ struct SettingsSyncPane: View {
             .buttonStyle(FocusActionButtonStyle(prominent: true))
             .keyboardShortcut(.defaultAction)
             .disabled(isWorking || email.isEmpty || password.isEmpty)
-          Button("Create account") {
-            run { [email, password] in
-              try await session.signUp(email: email, password: password, serverURL: try chosenServer())
-              self.password = ""
-            }
-          }
-          .buttonStyle(FocusActionButtonStyle())
-          .disabled(isWorking || email.isEmpty || password.isEmpty)
+          Button("Create account") { signUp(session) }
+            .buttonStyle(FocusActionButtonStyle())
+            .disabled(isWorking || email.isEmpty || password.isEmpty)
           if isWorking { ProgressView().controlSize(.small) }
           Spacer()
           Button("Forgot password?") { requestPasswordReset(session) }
             .buttonStyle(.plain)
             .font(theme.captionFont)
             .foregroundStyle(theme.muted)
-            .help("Email a link for setting a new password. Setting one signs out every device.")
+            .help("Email a link that opens Priority on this Mac, signed in, to choose a new password.")
             .disabled(isWorking)
         }
       }
       .padding(.vertical, theme.space.xs)
-
-      DisclosureGroup("Use a pairing code", isExpanded: $usesPairingCode) {
-        VStack(alignment: .leading, spacing: theme.space.sm) {
-          Text("On a device that is already signed in, choose Add a phone, then type the code here.")
-            .font(theme.captionFont)
-            .foregroundStyle(theme.muted)
-          HStack(spacing: theme.space.sm) {
-            TextField("", text: $pairingCode, prompt: Text("ABCD-EFGH, or a pairing link"))
-              .themedTextField()
-            Button("Join") {
-              run { [pairingCode] in
-                try await session.pair(codeOrLink: pairingCode, serverURL: try chosenServer())
-                self.pairingCode = ""
-              }
-            }
-            .buttonStyle(FocusActionButtonStyle())
-            .disabled(isWorking || pairingCode.trimmingCharacters(in: .whitespaces).isEmpty)
-          }
-        }
-        .padding(.top, theme.space.xs)
-      }
 
       DisclosureGroup("Use a different server", isExpanded: $usesOtherServer) {
         VStack(alignment: .leading, spacing: theme.space.xs) {
@@ -124,10 +111,12 @@ struct SettingsSyncPane: View {
         }
         .padding(.top, theme.space.xs)
       }
-      feedback
+      feedback(session)
     }
     .onAppear { prefill(from: session) }
   }
+
+  private var providerFont: Font { theme.bodyFont(weight: .medium) }
 
   private func field(_ title: String, @ViewBuilder control: () -> some View) -> some View {
     VStack(alignment: .leading, spacing: theme.space.xs) {
@@ -144,11 +133,26 @@ struct SettingsSyncPane: View {
     }
   }
 
-  /// Emails a reset link for the typed address, on the chosen server.
+  private func signIn(_ session: SyncSession, with provider: SyncOAuthProvider) {
+    guard !isWorking else { return }
+    run { try await session.signIn(with: provider, serverURL: try chosenServer()) }
+  }
+
+  private func signUp(_ session: SyncSession) {
+    run { [email, password] in
+      let outcome = try await session.signUp(email: email, password: password, serverURL: try chosenServer())
+      self.password = ""
+      if case .confirmEmail(let address) = outcome {
+        notice = SyncSession.confirmEmailMessage(for: address)
+      }
+    }
+  }
+
+  /// Emails a reset link for the typed address.
   private func requestPasswordReset(_ session: SyncSession) {
     guard !isWorking else { return }
     run { [email] in
-      let sent = try await session.requestPasswordReset(email: email, serverURL: try chosenServer())
+      let sent = try await session.requestPasswordReset(email: email)
       notice = SyncSession.passwordResetSentMessage(for: sent)
     }
   }
@@ -161,7 +165,7 @@ struct SettingsSyncPane: View {
     return url
   }
 
-  /// After a refused token, the same email and server again.
+  /// After a refused session, the same email and server again.
   private func prefill(from session: SyncSession) {
     if email.isEmpty, let remembered = session.rememberedEmail { email = remembered }
     if let server = session.rememberedServerURL, server != SyncServer.defaultURL {
@@ -188,9 +192,6 @@ struct SettingsSyncPane: View {
         Button("Sync now") { run { await session.syncNow() } }
           .buttonStyle(FocusActionButtonStyle())
           .disabled(isWorking || session.phase == .syncing)
-        Button("Add a phone") { run { try await session.makePairingLink() } }
-          .buttonStyle(FocusActionButtonStyle())
-          .disabled(isWorking)
         Spacer()
         Button("Sign out") {
           run {
@@ -201,13 +202,29 @@ struct SettingsSyncPane: View {
         .buttonStyle(FocusActionButtonStyle())
         .disabled(isWorking)
       }
-      if let link = session.pairingLink {
-        pairingCode(link, expiresAt: session.pairingCodeExpiresAt)
-      }
-      feedback
+      feedback(session)
     }
-    .task(id: session.credentials?.token) {
+    .task(id: session.credentials?.accountId) {
       try? await session.refreshAccount()
+    }
+
+    if session.needsNewPassword {
+      Section(header: Text("Choose a new password")) {
+        Text("You signed in from a password-reset email. Set the password to use from now on.")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+        HStack(spacing: theme.space.sm) {
+          SecureField("", text: $newPassword, prompt: Text("New password"))
+            .textContentType(.newPassword)
+            .themedTextField()
+            .onSubmit { setNewPassword(session) }
+          Button("Save") { setNewPassword(session) }
+            .buttonStyle(FocusActionButtonStyle(prominent: true))
+            .disabled(isWorking || newPassword.isEmpty)
+          Button("Not now") { session.skipNewPassword() }
+            .buttonStyle(FocusActionButtonStyle())
+        }
+      }
     }
 
     Section(header: Text("Devices")) {
@@ -227,28 +244,30 @@ struct SettingsSyncPane: View {
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
         Spacer()
-        Button("Delete account…", role: .destructive) {
-          deletePassword = ""
-          isConfirmingDelete = true
-        }
-        .buttonStyle(FocusActionButtonStyle())
-        .disabled(isWorking)
+        Button("Delete account…", role: .destructive) { isConfirmingDelete = true }
+          .buttonStyle(FocusActionButtonStyle())
+          .disabled(isWorking)
       }
     }
-    .alert("Delete your sync account?", isPresented: $isConfirmingDelete) {
-      SecureField("Password", text: $deletePassword)
+    .confirmationDialog("Delete your sync account?", isPresented: $isConfirmingDelete) {
       Button("Delete account", role: .destructive) {
-        run { [deletePassword] in
-          try await session.deleteAccount(password: deletePassword)
-          self.deletePassword = ""
-        }
+        run { try await session.deleteAccount() }
       }
-      Button("Cancel", role: .cancel) { deletePassword = "" }
+      Button("Cancel", role: .cancel) {}
     } message: {
       Text(
-        "Enter your password to delete \(session.email ?? "this account") and everything synced to it. "
-          + "Every device is signed out. Each one keeps its own copy of the workspace, and this Mac keeps its tasks."
+        "This deletes \(session.email ?? "this account") and everything synced to it, and signs out every device. "
+          + "Each one keeps its own copy of the workspace, and this Mac keeps its tasks. It can't be undone."
       )
+    }
+  }
+
+  private func setNewPassword(_ session: SyncSession) {
+    guard !newPassword.isEmpty else { return }
+    run { [newPassword] in
+      try await session.setNewPassword(newPassword)
+      self.newPassword = ""
+      notice = "Password changed."
     }
   }
 
@@ -273,45 +292,10 @@ struct SettingsSyncPane: View {
     }
   }
 
-  private func pairingCode(_ link: SyncPairingLink, expiresAt: Date?) -> some View {
-    HStack(alignment: .top, spacing: 16) {
-      if let image = Self.qrImage(for: link.url.absoluteString) {
-        Image(nsImage: image)
-          .interpolation(.none)
-          .resizable()
-          .frame(width: 168, height: 168)
-          .padding(8)
-          .background(Color.white)
-          .overlay(RoundedRectangle(cornerRadius: 8).stroke(theme.border))
-      }
-      VStack(alignment: .leading, spacing: 8) {
-        Text("Scan this in Priority on the phone: Settings → Sync → Scan code. Or type the code.")
-        Text(link.code)
-          .font(theme.monoFont(size: 20))
-          .textSelection(.enabled)
-        Text(link.url.absoluteString)
-          .font(theme.monoFont(size: 11))
-          .textSelection(.enabled)
-          .foregroundStyle(theme.muted)
-        if let expiresAt {
-          Text("Works once, until \(expiresAt.formatted(date: .omitted, time: .shortened)).")
-            .font(theme.captionFont)
-            .foregroundStyle(theme.muted)
-        }
-        Button("Copy link") {
-          NSPasteboard.general.clearContents()
-          NSPasteboard.general.setString(link.url.absoluteString, forType: .string)
-        }
-        .buttonStyle(FocusActionButtonStyle())
-      }
-    }
-    .padding(.vertical, 4)
-  }
-
   @ViewBuilder
-  private var feedback: some View {
-    if let message {
-      Text(message)
+  private func feedback(_ session: SyncSession) -> some View {
+    if let problem = message ?? session.linkProblem {
+      Text(problem)
         .font(theme.captionFont)
         .foregroundStyle(theme.danger)
     } else if let notice {
@@ -326,22 +310,17 @@ struct SettingsSyncPane: View {
     isWorking = true
     message = nil
     notice = nil
+    model.syncSession?.linkProblem = nil
     Task { @MainActor in
       defer { isWorking = false }
-      do { try await work() } catch { message = error.localizedDescription }
+      do {
+        try await work()
+      } catch SyncError.cancelled {
+        // Closing the sign-in window is an answer, not a failure.
+      } catch {
+        message = error.localizedDescription
+      }
     }
-  }
-
-  private static func qrImage(for string: String) -> NSImage? {
-    let filter = CIFilter.qrCodeGenerator()
-    filter.message = Data(string.utf8)
-    filter.correctionLevel = "M"
-    guard let output = filter.outputImage else { return nil }
-    let scaled = output.transformed(by: CGAffineTransform(scaleX: 8, y: 8))
-    let rep = NSCIImageRep(ciImage: scaled)
-    let image = NSImage(size: rep.size)
-    image.addRepresentation(rep)
-    return image
   }
 }
 
@@ -357,7 +336,7 @@ struct SyncPhaseText: View {
     case .needsSignIn:
       Label("Signed out — sign in again", systemImage: "exclamationmark.icloud")
         .foregroundStyle(theme.danger)
-        .help("The sync server no longer recognises this Mac. Sign in again in Settings → Sync.")
+        .help("Your sync sign-in has ended on this Mac. Sign in again in Settings → Sync.")
     case .syncing:
       Label("Syncing", systemImage: "arrow.triangle.2.circlepath")
     case .failed(let reason):

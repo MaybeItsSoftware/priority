@@ -57,6 +57,9 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.uk.co.maybeitsadam.priority
+        # Sign in with Apple, natively, for sync accounts (Supabase).
+        com.apple.developer.applesignin:
+          - Default
     info:
       path: PriorityMobile/Info.plist
       properties:
@@ -79,14 +82,13 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         NSSupportsLiveActivities: true
+        # `priority://`: the widgets' links, and `priority://auth-callback`,
+        # where Supabase's emails (confirming an address, resetting a
+        # password) open the app.
         CFBundleURLTypes:
           - CFBundleURLName: uk.co.maybeitsadam.priority.ios
             CFBundleURLSchemes:
               - priority
-          - CFBundleURLName: uk.co.maybeitsadam.priority.ios.sync
-            CFBundleURLSchemes:
-              - priority-sync
-        NSCameraUsageDescription: Priority uses the camera to scan the pairing code shown on your other device.
         BGTaskSchedulerPermittedIdentifiers:
           - uk.co.maybeitsadam.priority.ios.sync
         UIBackgroundModes:

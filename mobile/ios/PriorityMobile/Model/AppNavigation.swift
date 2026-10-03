@@ -130,7 +130,7 @@ final class AppNavigation {
   var outlineCommand: OutlineCommand?
   var isHistoryPresented = false
   var isSettingsPresented = false
-  /// Settings opened on its Sync page — where a pairing link lands.
+  /// Settings opened on its Sync page — where a link from a Supabase email lands.
   var isSyncSettingsPresented = false
   /// Bumped to ask the search field for the keyboard.
   var searchFocusRequest = 0

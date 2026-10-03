@@ -10,7 +10,8 @@ import UIKit
 /// reported back into the workspace when a pull changes it.
 ///
 /// All of the protocol lives in `PrioritySync`; this is only the iOS rhythm
-/// around it — scene phases, the background refresh task, pairing links.
+/// around it — scene phases, the background refresh task, the links from
+/// Supabase's emails.
 @MainActor
 @Observable
 final class SyncController {
@@ -21,9 +22,9 @@ final class SyncController {
   static let refreshTaskID = "uk.co.maybeitsadam.priority.ios.sync"
 
   let session: SyncSession
-  /// The last pairing attempt's failure, for the settings screen.
-  var pairingError: String?
-  var isPairing = false
+  /// The last sign-in attempt's failure, for the settings screen.
+  var signInError: String?
+  var isSigningIn = false
 
   @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "SyncController")
 
@@ -83,30 +84,50 @@ final class SyncController {
     await attempt { try await self.session.signIn(email: email, password: password, serverURL: serverURL) }
   }
 
-  /// Makes an account and signs in to it. True when signed in.
-  @discardableResult
-  func signUp(email: String, password: String, serverURL: URL) async -> Bool {
-    await attempt { try await self.session.signUp(email: email, password: password, serverURL: serverURL) }
+  /// Makes an account. What to tell the person when it has to be confirmed
+  /// by email first; nil when it signed straight in, or failed (with
+  /// `signInError` set).
+  func signUp(email: String, password: String, serverURL: URL) async -> String? {
+    var outcome: SyncSession.SignUpOutcome?
+    await attempt { outcome = try await self.session.signUp(email: email, password: password, serverURL: serverURL) }
+    if case .confirmEmail(let address) = outcome { return SyncSession.confirmEmailMessage(for: address) }
+    return nil
   }
 
-  /// Joins with a link scanned, pasted or opened. True when signed in.
+  /// Google (or Apple) in Supabase's web flow. True when signed in.
   @discardableResult
-  func pair(with link: SyncPairingLink) async -> Bool {
-    await attempt { try await self.session.pair(with: link) }
+  func signIn(with provider: SyncOAuthProvider, serverURL: URL) async -> Bool {
+    await attempt { try await self.session.signIn(with: provider, serverURL: serverURL) }
   }
 
-  /// Joins with a typed code (or a pasted link). True when signed in.
+  /// Sign in with Apple from the native sheet. True when signed in.
   @discardableResult
-  func pair(codeOrLink: String, serverURL: URL) async -> Bool {
-    await attempt { try await self.session.pair(codeOrLink: codeOrLink, serverURL: serverURL) }
+  func signInWithApple(idToken: String, nonce: String, serverURL: URL) async -> Bool {
+    await attempt { try await self.session.signInWithApple(idToken: idToken, nonce: nonce, serverURL: serverURL) }
   }
 
-  /// Emails a link for setting a new password. The confirmation to show when
-  /// it was sent; nil, with `pairingError` set, when it wasn't.
-  func requestPasswordReset(email: String, serverURL: URL) async -> String? {
+  /// `priority://auth-callback` from a Supabase email: confirming the
+  /// address, or resetting the password.
+  func openAuthLink(_ url: URL) async {
+    isSigningIn = true
+    signInError = nil
+    defer { isSigningIn = false }
+    await session.openAuthLink(url)
+    signInError = session.linkProblem
+  }
+
+  /// Emails a link for choosing a new password. The confirmation to show when
+  /// it was sent; nil, with `signInError` set, when it wasn't.
+  func requestPasswordReset(email: String) async -> String? {
     var sent: String?
-    await attempt { sent = try await self.session.requestPasswordReset(email: email, serverURL: serverURL) }
+    await attempt { sent = try await self.session.requestPasswordReset(email: email) }
     return sent.map(SyncSession.passwordResetSentMessage(for:))
+  }
+
+  /// Sets the password after signing in from a reset email.
+  @discardableResult
+  func setNewPassword(_ password: String) async -> Bool {
+    await attempt { try await self.session.setNewPassword(password) }
   }
 
   /// Signs this device out. Its tasks stay.
@@ -116,19 +137,23 @@ final class SyncController {
 
   /// Deletes the account on the server. True when it is gone.
   @discardableResult
-  func deleteAccount(password: String) async -> Bool {
-    await attempt { try await self.session.deleteAccount(password: password) }
+  func deleteAccount() async -> Bool {
+    await attempt { try await self.session.deleteAccount() }
   }
 
+  @discardableResult
   private func attempt(_ work: () async throws -> Void) async -> Bool {
-    isPairing = true
-    pairingError = nil
-    defer { isPairing = false }
+    isSigningIn = true
+    signInError = nil
+    defer { isSigningIn = false }
     do {
       try await work()
       return true
+    } catch SyncError.cancelled {
+      // Closing the sign-in sheet is an answer, not a failure.
+      return false
     } catch {
-      pairingError = error.localizedDescription
+      signInError = error.localizedDescription
       return false
     }
   }

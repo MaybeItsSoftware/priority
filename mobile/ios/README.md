@@ -25,8 +25,7 @@ over a throwaway workspace), the widget render tests (`PriorityWidgetsTests`,
 which render the widgets and the Live Activity's lock-screen view from the
 extension's sources and leave PNGs in `/tmp/iosshots` when that directory
 exists) and the UI tests (`PriorityMobileUITests`): an add → subtask → fold →
-complete → undo smoke, a `priority-sync://pair` link to a closed port that
-must end in a clean error, and a scroll measurement over a 5,000-task outline
+complete → undo smoke, and a scroll measurement over a 5,000-task outline
 (it seeds the list first, so it takes a couple of minutes).
 
 DEBUG launch arguments: `-uiTesting` (a fresh workspace in a temp directory),

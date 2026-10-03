@@ -118,25 +118,18 @@ enum DeepLink {
   }
 
   static func handle(_ url: URL, model: WorkspaceModel) {
-    if url.scheme == SyncPairingLink.scheme {
-      // Settings shows the attempt and, if it fails, why — a bad link or an
-      // unreachable server is a message there, never a crash or a no-op.
+    if SyncServer.isAuthCallback(url) {
+      // Supabase's emails (confirming an address, resetting a password) come
+      // back here. Settings shows the attempt and, if it fails, why.
       guard let sync = SyncController.shared else {
         model.errorMessage = "Sync isn't available in this build."
         return
       }
       model.navigation.isSettingsPresented = true
       model.navigation.isSyncSettingsPresented = true
-      guard let link = SyncPairingLink(url.absoluteString) else {
-        sync.pairingError = "That isn't a Priority pairing link."
-        return
-      }
       Task {
-        if await sync.pair(with: link) {
-          model.showToast("Signed in to sync")
-        } else {
-          model.showToast("Couldn't pair")
-        }
+        await sync.openAuthLink(url)
+        if sync.session.isSignedIn { model.showToast("Signed in to sync") }
       }
       return
     }

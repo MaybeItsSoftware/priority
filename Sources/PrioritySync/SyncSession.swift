@@ -2,101 +2,95 @@ import Foundation
 import Observation
 import PriorityWorkspace
 
-/// What a signed-in device shows another to let it join: the server and a
-/// one-time code, as a link a phone can scan from a QR code or open from a
-/// pasted message. `priority-sync://pair?server=<url>&code=<code>`.
-///
-/// The Android app parses the same link (`mobile/android`), so the format is
-/// part of the protocol rather than a detail of either app.
-public struct SyncPairingLink: Equatable, Sendable {
-  public static let scheme = "priority-sync"
-  public var serverURL: URL
-  public var code: String
-
-  public init(serverURL: URL, code: String) {
-    self.serverURL = serverURL
-    self.code = code
-  }
-
-  public init?(_ string: String) {
-    guard let components = URLComponents(string: string.trimmingCharacters(in: .whitespacesAndNewlines)),
-      components.scheme == Self.scheme, components.host == "pair",
-      let server = components.queryItems?.first(where: { $0.name == "server" })?.value,
-      let serverURL = URL(string: server), serverURL.scheme?.hasPrefix("http") == true,
-      let code = components.queryItems?.first(where: { $0.name == "code" })?.value, !code.isEmpty
-    else { return nil }
-    self.init(serverURL: serverURL, code: code)
-  }
-
-  public var url: URL {
-    var components = URLComponents()
-    components.scheme = Self.scheme
-    components.host = "pair"
-    components.queryItems = [
-      URLQueryItem(name: "server", value: serverURL.absoluteString),
-      URLQueryItem(name: "code", value: code),
-    ]
-    return components.url!
-  }
-}
-
 /// Sync as the apps see it: signed in or not, what it is doing, and the
 /// handful of things a settings screen does. The Mac and iOS apps both hold
 /// one, so signing in, the rhythm and the status read the same on each.
+///
+/// Accounts are Supabase's (`SyncAuthenticating`). Signing in happens there,
+/// with an email and password, Google or Apple; then the device registers
+/// itself with the sync server, and every request carries the Supabase access
+/// token. See `docs/sync.md`.
 @MainActor
 @Observable
 public final class SyncSession {
   public enum Phase: Equatable {
     /// Never signed in, or signed out on purpose.
     case unpaired
-    /// The server refused this device's token (signed out from another
-    /// device, or the account deleted). Nothing syncs until it signs in again.
+    /// Supabase refused to refresh the session (signed out elsewhere, the
+    /// password changed, or the account deleted), or the device was signed
+    /// in with the old server's tokens. Nothing syncs until it signs in again.
     case needsSignIn
     case idle(lastSyncedAt: Date?)
     case syncing
     case failed(String)
   }
 
+  /// What making an account came to.
+  public enum SignUpOutcome: Equatable, Sendable {
+    case signedIn
+    /// Supabase sent a confirmation email; the link in it signs in.
+    case confirmEmail(String)
+  }
+
   public private(set) var phase: Phase = .unpaired
-  /// Set only while the device holds a token the server accepts.
+  /// Set only while the device holds a session.
   public private(set) var credentials: SyncCredentials?
   /// The email and server last used here, to fill in the sign-in form.
   public private(set) var rememberedEmail: String?
   public private(set) var rememberedServerURL: URL?
   /// The account and its devices, from `refreshAccount()`.
   public private(set) var account: SyncAccount?
-  /// The latest code this device minted for another to join with.
-  public private(set) var pairingLink: SyncPairingLink?
-  public private(set) var pairingCodeExpiresAt: Date?
+  /// Signed in from a password-reset email: the settings screen asks for the
+  /// new password.
+  public private(set) var needsNewPassword = false
+  /// Why the last link from a Supabase email didn't sign in. The settings
+  /// screen shows it, and clears it.
+  public var linkProblem: String?
 
+  /// This device's id on the server, made once and kept.
+  @ObservationIgnored public let deviceId: String
   @ObservationIgnored private let store: WorkspaceStore
   @ObservationIgnored private let credentialStore: any SyncCredentialStore
+  @ObservationIgnored private let auth: any SyncAuthenticating
   @ObservationIgnored private let urlSession: URLSession
   @ObservationIgnored private let deviceName: String
   @ObservationIgnored private let platform: String
   @ObservationIgnored private var scheduler: SyncScheduler?
   @ObservationIgnored private var outboxWatch: Task<Void, Never>?
+  /// A reset email was asked for here, so the link coming back is one.
+  @ObservationIgnored private var isResettingPassword = false
   /// Called on the main actor after a pull has changed the workspace.
   @ObservationIgnored public var onRemoteChanges: (() -> Void)?
 
   public init(
     store: WorkspaceStore, credentialStore: any SyncCredentialStore = KeychainSyncCredentialStore(),
-    deviceName: String, platform: String, urlSession: URLSession = .shared
+    auth: (any SyncAuthenticating)? = nil, deviceName: String, platform: String, urlSession: URLSession = .shared
   ) {
     self.store = store
     self.credentialStore = credentialStore
+    self.auth = auth ?? SupabaseSyncAuth()
     self.urlSession = urlSession
     self.deviceName = deviceName
     self.platform = platform
-    if let saved = credentialStore.load(), (try? store.syncState()) != nil {
-      rememberedEmail = saved.email
-      rememberedServerURL = saved.serverURL
-      if saved.isSignedOut {
-        phase = .needsSignIn
-      } else {
-        credentials = saved
-        phase = .idle(lastSyncedAt: try? store.syncState()?.lastSyncedAt)
-      }
+    // Before anything rewrites the item: a device signed in by an older
+    // build keeps the id it had.
+    self.deviceId = credentialStore.deviceId()
+
+    guard var saved = credentialStore.load() else { return }
+    // The old server's token opens nothing now. Drop it, and keep the email
+    // and server for signing in again.
+    if saved.hasLegacyToken || (!saved.isSignedOut && self.auth.currentUser == nil) {
+      saved.isSignedOut = true
+      try? credentialStore.save(saved)
+    }
+    guard (try? store.syncState()) != nil else { return }
+    rememberedEmail = saved.email
+    rememberedServerURL = saved.serverURL
+    if saved.isSignedOut {
+      phase = .needsSignIn
+    } else {
+      credentials = saved
+      phase = .idle(lastSyncedAt: try? store.syncState()?.lastSyncedAt)
     }
   }
 
@@ -139,7 +133,7 @@ public final class SyncSession {
       report(.idle(lastSyncedAt: Date()), outcome)
       return true
     } catch SyncError.unauthorized {
-      tokenWasRefused()
+      sessionWasRefused()
       return false
     } catch {
       report(.failed(error.localizedDescription), nil)
@@ -149,68 +143,104 @@ public final class SyncSession {
 
   // MARK: - Signing in
 
-  /// Makes an account and signs this device in to it.
-  public func signUp(email: String, password: String, serverURL: URL = SyncServer.defaultURL) async throws {
-    let email = try Self.checked(email: email, password: password)
-    try adopt(
-      await HTTPSyncTransport.signUp(
-        serverURL: serverURL, email: email, password: password, deviceName: deviceName, platform: platform,
-        session: urlSession))
-  }
-
   /// Signs this device in to an existing account.
   public func signIn(email: String, password: String, serverURL: URL = SyncServer.defaultURL) async throws {
     let email = try Self.checked(email: email, password: password)
-    try adopt(
-      await HTTPSyncTransport.signIn(
-        serverURL: serverURL, email: email, password: password, deviceName: deviceName, platform: platform,
-        session: urlSession))
+    try await finishSignIn(auth.signIn(email: email, password: password), serverURL: serverURL)
   }
 
-  /// Asks for a password-reset email for `email` on `serverURL`, and returns
-  /// the email as sent, trimmed. The server answers alike whether or not the
-  /// account exists; see `passwordResetSentMessage(for:)`.
+  /// Makes an account and, unless Supabase wants the address confirmed
+  /// first, signs this device in to it.
+  public func signUp(
+    email: String, password: String, serverURL: URL = SyncServer.defaultURL
+  ) async throws -> SignUpOutcome {
+    let email = try Self.checked(email: email, password: password)
+    guard let user = try await auth.signUp(email: email, password: password) else {
+      // The link in the email comes back to `completeSignIn(from:)`.
+      rememberedEmail = email
+      rememberedServerURL = serverURL
+      return .confirmEmail(email)
+    }
+    try await finishSignIn(user, serverURL: serverURL)
+    return .signedIn
+  }
+
+  /// Google or Apple, in a browser sheet. Throws `SyncError.cancelled` when
+  /// the sheet is closed.
+  public func signIn(with provider: SyncOAuthProvider, serverURL: URL = SyncServer.defaultURL) async throws {
+    try await finishSignIn(auth.signIn(with: provider), serverURL: serverURL)
+  }
+
+  /// Sign in with Apple, done natively by the app (`SyncAppleNonce`).
+  public func signInWithApple(
+    idToken: String, nonce: String, serverURL: URL = SyncServer.defaultURL
+  ) async throws {
+    try await finishSignIn(auth.signInWithApple(idToken: idToken, nonce: nonce), serverURL: serverURL)
+  }
+
+  /// A link from a Supabase email (confirming the address, or resetting the
+  /// password) opened in the app. It only works on the device that asked for
+  /// it, which holds the other half of the exchange.
+  public func completeSignIn(from url: URL) async throws {
+    let user: SyncAuthUser
+    do {
+      user = try await auth.signIn(fromCallback: url)
+    } catch {
+      throw SyncError.invalid(
+        "That link didn't sign you in here. If it confirmed your email, sign in with your password.")
+    }
+    try await finishSignIn(user, serverURL: rememberedServerURL ?? SyncServer.defaultURL)
+    if isResettingPassword {
+      isResettingPassword = false
+      needsNewPassword = true
+    }
+  }
+
+  /// For the apps' URL handlers: `completeSignIn(from:)`, keeping a failure
+  /// in `linkProblem` for the settings screen to show.
+  public func openAuthLink(_ url: URL) async {
+    linkProblem = nil
+    do {
+      try await completeSignIn(from: url)
+    } catch {
+      linkProblem = error.localizedDescription
+    }
+  }
+
+  /// Emails a link for choosing a new password, and returns the email as
+  /// sent, trimmed. Supabase answers alike whether or not the account
+  /// exists; see `passwordResetSentMessage(for:)`.
   @discardableResult
-  public func requestPasswordReset(email: String, serverURL: URL = SyncServer.defaultURL) async throws -> String {
+  public func requestPasswordReset(email: String) async throws -> String {
     let email = email.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !email.isEmpty else { throw SyncError.invalid("Enter your email first.") }
-    try await HTTPSyncTransport.requestPasswordReset(serverURL: serverURL, email: email, session: urlSession)
+    try await auth.resetPassword(email: email)
+    isResettingPassword = true
+    rememberedEmail = email
     return email
   }
 
   /// What to show once a reset was asked for. It can't say the account
-  /// exists, because the server doesn't say.
+  /// exists, because Supabase doesn't say.
   public static func passwordResetSentMessage(for email: String) -> String {
-    "If there's an account for \(email), we've sent a link to reset its password. It works for an hour."
+    "If there's an account for \(email), we've sent it a link to reset the password. Open it on this device."
   }
 
-  /// Joins with a link minted by a signed-in device.
-  public func pair(with link: SyncPairingLink) async throws {
-    try await pair(code: link.code, serverURL: link.serverURL)
+  /// What to show when a new account has to be confirmed first.
+  public static func confirmEmailMessage(for email: String) -> String {
+    "Check your email to confirm. We've sent a link to \(email); open it on this device to finish signing in."
   }
 
-  /// Joins with a code typed from a signed-in device's screen. A whole
-  /// pairing link pasted into the same field works too, and names its own
-  /// server.
-  public func pair(codeOrLink typed: String, serverURL: URL = SyncServer.defaultURL) async throws {
-    if let link = SyncPairingLink(typed) { return try await pair(with: link) }
-    let code = typed.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !code.isEmpty else { throw SyncError.invalid("Enter the code shown on your other device.") }
-    try await pair(code: code, serverURL: serverURL)
+  /// Sets the password after signing in from a reset email.
+  public func setNewPassword(_ password: String) async throws {
+    guard !password.isEmpty else { throw SyncError.invalid("Enter a new password.") }
+    try await auth.updatePassword(password)
+    needsNewPassword = false
   }
 
-  private func pair(code: String, serverURL: URL) async throws {
-    try adopt(
-      await HTTPSyncTransport.pair(
-        serverURL: serverURL, code: code, deviceName: deviceName, platform: platform, session: urlSession))
-  }
-
-  /// Mints a one-time code another device can join with.
-  public func makePairingLink() async throws {
-    let code = try await signedInCall { try await $0.createPairingCode() }
-    guard let credentials else { return }
-    pairingLink = SyncPairingLink(serverURL: credentials.serverURL, code: code.code)
-    pairingCodeExpiresAt = code.expiryDate
+  /// Leaves the password as it was.
+  public func skipNewPassword() {
+    needsNewPassword = false
   }
 
   /// Fetches the account's email and devices.
@@ -218,21 +248,23 @@ public final class SyncSession {
     account = try await signedInCall { try await $0.account() }
   }
 
-  /// Signs this device out. The server forgets its token (if it can be
-  /// reached; signing out offline still works here), and the workspace stays
-  /// on this device as it is.
+  /// Signs this device out: off the server's device list (if it can be
+  /// reached; signing out offline still works here), and out of Supabase on
+  /// this device only. The workspace stays as it is.
   public func signOut() async {
     if let credentials {
-      _ = try? await HTTPSyncTransport(credentials: credentials, session: urlSession).signOut()
+      _ = try? await transport(for: credentials).signOut()
     }
+    await auth.signOut()
     try? forget()
   }
 
-  /// Deletes the account: its rows on the server and every device's sign-in.
-  /// Each device keeps its own copy of the workspace.
-  public func deleteAccount(password: String) async throws {
-    guard !password.isEmpty else { throw SyncError.invalid("Enter your password to delete the account.") }
-    try await signedInCall { try await $0.deleteAccount(password: password) }
+  /// Deletes the account: its rows on the server, its devices and the
+  /// Supabase user. Each device keeps its own copy of the workspace. The
+  /// apps ask the person to confirm first.
+  public func deleteAccount() async throws {
+    try await signedInCall { try await $0.deleteAccount() }
+    await auth.signOut()
     try forget()
     rememberedEmail = nil
     rememberedServerURL = nil
@@ -240,20 +272,22 @@ public final class SyncSession {
 
   // MARK: - Internals
 
-  private func engine(for credentials: SyncCredentials) -> SyncEngine {
-    SyncEngine(
-      store: store, transport: HTTPSyncTransport(credentials: credentials, session: urlSession),
-      deviceId: credentials.deviceId)
+  private func transport(for credentials: SyncCredentials) -> HTTPSyncTransport {
+    HTTPSyncTransport(serverURL: credentials.serverURL, deviceId: deviceId, tokens: auth, session: urlSession)
   }
 
-  /// Runs an account call with this device's token, noticing a refusal.
+  private func engine(for credentials: SyncCredentials) -> SyncEngine {
+    SyncEngine(store: store, transport: transport(for: credentials), deviceId: deviceId)
+  }
+
+  /// Runs an account call with this device's session, noticing a refusal.
   @discardableResult
   private func signedInCall<T>(_ call: (HTTPSyncTransport) async throws -> T) async throws -> T {
     guard let credentials else { throw SyncError.notPaired }
     do {
-      return try await call(HTTPSyncTransport(credentials: credentials, session: urlSession))
+      return try await call(transport(for: credentials))
     } catch SyncError.unauthorized {
-      tokenWasRefused()
+      sessionWasRefused()
       throw SyncError.unauthorized
     }
   }
@@ -265,6 +299,21 @@ public final class SyncSession {
     return email
   }
 
+  /// Signed in with Supabase: the device introduces itself to the sync
+  /// server, and only then counts as signed in. If the server can't be
+  /// reached the Supabase session is dropped again, so the two never
+  /// disagree about whether this device is signed in.
+  private func finishSignIn(_ user: SyncAuthUser, serverURL: URL) async throws {
+    let credentials = SyncCredentials(serverURL: serverURL, deviceId: deviceId, accountId: user.id, email: user.email)
+    do {
+      try await transport(for: credentials).registerDevice(name: deviceName, platform: platform)
+    } catch {
+      await auth.signOut()
+      throw error
+    }
+    try adopt(credentials)
+  }
+
   private func adopt(_ credentials: SyncCredentials) throws {
     deactivate()
     try store.beginSync(deviceId: credentials.deviceId, serverURL: credentials.serverURL.absoluteString)
@@ -273,38 +322,33 @@ public final class SyncSession {
     rememberedEmail = credentials.email
     rememberedServerURL = credentials.serverURL
     account = nil
-    pairingLink = nil
-    pairingCodeExpiresAt = nil
     phase = .idle(lastSyncedAt: nil)
     activate()
   }
 
-  /// Leaves sync on this device: no token, no outbox, the triggers off.
+  /// Leaves sync on this device: no session, no outbox, the triggers off.
   private func forget() throws {
     deactivate()
     credentialStore.clear()
     credentials = nil
     account = nil
-    pairingLink = nil
-    pairingCodeExpiresAt = nil
+    needsNewPassword = false
     phase = .unpaired
     try store.endSync()
   }
 
-  /// The server no longer knows this token. Syncing stops instead of
+  /// Supabase refused to refresh the session. Syncing stops instead of
   /// retrying a request that can only fail, and the keychain item is kept,
   /// marked, so the email and server survive a relaunch for the sign-in
   /// form. The outbox keeps recording, so edits made meanwhile (deletes
   /// included) still go up after signing back in.
-  private func tokenWasRefused() {
+  private func sessionWasRefused() {
     guard var refused = credentials else { return }
     deactivate()
     refused.isSignedOut = true
     try? credentialStore.save(refused)
     credentials = nil
     account = nil
-    pairingLink = nil
-    pairingCodeExpiresAt = nil
     phase = .needsSignIn
   }
 
@@ -314,7 +358,7 @@ public final class SyncSession {
     case .idle(let last): phase = .idle(lastSyncedAt: last)
     case .syncing: phase = .syncing
     case .failed(let message): phase = .failed(message)
-    case .signedOut: tokenWasRefused()
+    case .signedOut: sessionWasRefused()
     }
     if outcome?.changedWorkspace == true { onRemoteChanges?() }
   }

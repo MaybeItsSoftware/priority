@@ -64,19 +64,19 @@ struct SettingsScreen: View {
             }
           }
           .accessibilityIdentifier("settings.sync")
-          // A pairing link opened from outside lands here: say what happened
-          // without making anyone dig into the Sync page to find out.
+          // A link from a Supabase email opened from outside lands here: say
+          // what happened without making anyone dig into the Sync page.
           if let sync = SyncController.shared {
-            if sync.isPairing {
+            if sync.isSigningIn {
               HStack(spacing: theme.space.sm) {
                 ProgressView()
-                Text("Pairing…").font(theme.type.caption).foregroundStyle(theme.muted)
+                Text("Signing in…").font(theme.type.caption).foregroundStyle(theme.muted)
               }
-            } else if let error = sync.pairingError {
+            } else if let error = sync.signInError {
               Label(error, systemImage: "exclamationmark.triangle")
                 .font(theme.type.caption)
                 .foregroundStyle(theme.danger)
-                .accessibilityIdentifier("settings.pairingError")
+                .accessibilityIdentifier("settings.signInError")
             }
           }
         } header: {

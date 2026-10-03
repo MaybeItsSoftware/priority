@@ -39,10 +39,29 @@ public struct SyncChangesResponse: Codable, Equatable, Sendable {
   }
 }
 
-/// Where both apps sync unless told otherwise: the hosted server on Railway.
-/// A self-hosted server goes in the field under "Use a different server".
+/// Where both apps sync unless told otherwise: the hosted server on Railway,
+/// and the Supabase project whose accounts it trusts. A self-hosted server
+/// goes in the field under "Use a different server"; it has to trust the same
+/// Supabase project, since that is who the apps sign in with.
 public enum SyncServer {
   public static let defaultURL = URL(string: "https://priority-sync.up.railway.app")!
+
+  /// The Supabase project accounts live in. The publishable key is meant to
+  /// ship in apps: it names the project and grants nothing a signed-out
+  /// visitor couldn't already do.
+  public static let supabaseURL = URL(string: "https://rsckzmldfpfjdrvulwke.supabase.co")!
+  public static let supabasePublishableKey = "sb_publishable_htC171zOquUGx7bBi8MrIQ_ZuIdqL5U"
+
+  /// Where Supabase sends the browser back to after Google or Apple on the
+  /// web, and where the links in its emails (confirming an address, resetting
+  /// a password) open the app. It must be on the project's allowed redirect
+  /// URLs.
+  public static let authCallbackURL = URL(string: "priority://auth-callback")!
+
+  /// Whether `url` is Supabase coming back to the app.
+  public static func isAuthCallback(_ url: URL) -> Bool {
+    url.scheme == authCallbackURL.scheme && url.host() == authCallbackURL.host()
+  }
 
   /// A server address as typed: trimmed, and given `https://` when it has no
   /// scheme. Nil when it still isn't an http(s) URL with a host.
@@ -54,33 +73,6 @@ public enum SyncServer {
     else { return nil }
     return url
   }
-}
-
-/// What signing up, signing in and pairing all answer with.
-public struct SyncSignedIn: Codable, Equatable, Sendable {
-  public var accountId: String
-  /// Nil only for an account carried over from before accounts existed.
-  public var email: String?
-  public var deviceId: String
-  public var token: String
-  public init(accountId: String, email: String?, deviceId: String, token: String) {
-    self.accountId = accountId
-    self.email = email
-    self.deviceId = deviceId
-    self.token = token
-  }
-}
-
-public struct SyncPairingCode: Codable, Equatable, Sendable {
-  public var code: String
-  public var expiresAt: String
-
-  public init(code: String, expiresAt: String) {
-    self.code = code
-    self.expiresAt = expiresAt
-  }
-
-  public var expiryDate: Date? { SyncDate.parse(expiresAt) }
 }
 
 /// `GET /v1/account`: who this device is signed in as, and every device on
@@ -154,46 +146,55 @@ public enum SyncDate {
   }
 }
 
-/// What a device needs to talk to the server, kept outside the database: in
-/// the Keychain on Apple platforms.
+/// What a device remembers about its sync sign-in, kept outside the database:
+/// in the Keychain on Apple platforms. The secret itself, the Supabase
+/// session, is kept by the Supabase client in an item of its own.
 public struct SyncCredentials: Codable, Equatable, Sendable {
   public var serverURL: URL
   public var deviceId: String
-  public var token: String
   public var accountId: String?
   public var email: String?
-  /// The server refused the token: signed out from another device, or the
-  /// account deleted. Kept rather than cleared, so the sign-in form can offer
-  /// the same email and server again.
+  /// Supabase refused to refresh the session: signed out from elsewhere, the
+  /// password changed, or the account deleted. Kept rather than cleared, so
+  /// the sign-in form can offer the same email and server again.
   public var isSignedOut: Bool
+  /// Saved before accounts moved to Supabase, with a token from the old
+  /// server that no server accepts now. Read, never written.
+  public private(set) var hasLegacyToken = false
 
   public init(
-    serverURL: URL, deviceId: String, token: String, accountId: String? = nil, email: String? = nil,
-    isSignedOut: Bool = false
+    serverURL: URL, deviceId: String, accountId: String? = nil, email: String? = nil, isSignedOut: Bool = false
   ) {
     self.serverURL = serverURL
     self.deviceId = deviceId
-    self.token = token
     self.accountId = accountId
     self.email = email
     self.isSignedOut = isSignedOut
   }
 
-  public init(serverURL: URL, signedIn: SyncSignedIn) {
-    self.init(
-      serverURL: serverURL, deviceId: signedIn.deviceId, token: signedIn.token,
-      accountId: signedIn.accountId, email: signedIn.email)
+  private enum CodingKeys: String, CodingKey {
+    case serverURL, deviceId, accountId, email, isSignedOut, token
   }
 
-  // An item saved before accounts has no account, email or signed-out flag.
+  // An item saved by an older build may hold a token, and may lack the
+  // account, the email and the signed-out flag.
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     serverURL = try container.decode(URL.self, forKey: .serverURL)
     deviceId = try container.decode(String.self, forKey: .deviceId)
-    token = try container.decode(String.self, forKey: .token)
     accountId = try container.decodeIfPresent(String.self, forKey: .accountId)
     email = try container.decodeIfPresent(String.self, forKey: .email)
     isSignedOut = try container.decodeIfPresent(Bool.self, forKey: .isSignedOut) ?? false
+    hasLegacyToken = try container.decodeIfPresent(String.self, forKey: .token) != nil
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(serverURL, forKey: .serverURL)
+    try container.encode(deviceId, forKey: .deviceId)
+    try container.encodeIfPresent(accountId, forKey: .accountId)
+    try container.encodeIfPresent(email, forKey: .email)
+    try container.encode(isSignedOut, forKey: .isSignedOut)
   }
 }
 
@@ -202,17 +203,28 @@ public protocol SyncTransport: Sendable {
   func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> SyncChangesResponse
 }
 
+/// Where the transport gets the access token every request carries: the
+/// Supabase client in the apps (`SupabaseSyncAuth`), a fake in tests.
+public protocol SyncAccessTokenProvider: Sendable {
+  /// A token good for now: the stored one, or a refreshed one if it has
+  /// expired. Throws `SyncError.unauthorized` when there is no session left.
+  func accessToken() async throws -> String
+  /// A new token, whether or not the old one looked expired, because the
+  /// server refused it. Throws `SyncError.unauthorized` when Supabase refuses
+  /// the refresh, and anything else (offline, say) as it is.
+  func refreshedAccessToken() async throws -> String
+}
+
 public enum SyncError: LocalizedError, Equatable {
   /// The server said no; `message` is its `{"error": "..."}` text.
   case server(status: Int, message: String)
-  /// The device's token is gone: signed out elsewhere, or the account deleted.
+  /// The session is gone: signed out elsewhere, or the account deleted.
   case unauthorized
   case notPaired
-  /// Something the app caught before asking the server.
+  /// Something the app caught before asking anyone.
   case invalid(String)
-
-  /// The one 401 that is about a password rather than the token.
-  static let wrongPasswordMessage = "wrong email or password"
+  /// The person closed the sign-in window. Not worth a message.
+  case cancelled
 
   public var errorDescription: String? {
     switch self {
@@ -221,11 +233,11 @@ public enum SyncError: LocalizedError, Equatable {
     case .unauthorized: return "Signed out. Sign in again to keep syncing."
     case .notPaired: return "This device isn't signed in to sync."
     case .invalid(let message): return message
+    case .cancelled: return "Sign-in was cancelled."
     }
   }
 
-  /// The server writes lowercase fragments ("wrong email or password"); the
-  /// apps show sentences.
+  /// The server writes lowercase fragments; the apps show sentences.
   static func sentence(_ message: String) -> String {
     let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
     guard let first = trimmed.first else { return trimmed }
@@ -235,150 +247,99 @@ public enum SyncError: LocalizedError, Equatable {
 }
 
 /// The transport over HTTPS, and the account routes beside it.
+///
+/// Every request carries `Authorization: Bearer <Supabase access token>` and
+/// `X-Priority-Device: <device id>`. The token is asked for before each
+/// request, so an expired one is refreshed first. A `401` all the same means
+/// the server disagrees, so the token is refreshed once and the request sent
+/// again. Only a refused refresh, or a second `401`, is
+/// `SyncError.unauthorized`.
 public struct HTTPSyncTransport: SyncTransport {
-  public let credentials: SyncCredentials
+  public static let deviceHeader = "X-Priority-Device"
+
+  public let serverURL: URL
+  public let deviceId: String
+  let tokens: any SyncAccessTokenProvider
   let session: URLSession
 
-  public init(credentials: SyncCredentials, session: URLSession = .shared) {
-    self.credentials = credentials
+  public init(
+    serverURL: URL, deviceId: String, tokens: any SyncAccessTokenProvider, session: URLSession = .shared
+  ) {
+    self.serverURL = serverURL
+    self.deviceId = deviceId
+    self.tokens = tokens
     self.session = session
   }
 
   public func push(_ changes: [SyncPushChange]) async throws -> SyncPushResponse {
-    try await send(authorized("v1/push", body: ["changes": changes]))
+    try await send(post("v1/push", body: ["changes": changes]))
   }
 
   public func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> SyncChangesResponse {
-    var components = URLComponents(
-      url: credentials.serverURL.appending(path: "v1/changes"), resolvingAgainstBaseURL: false)!
+    var components = URLComponents(url: serverURL.appending(path: "v1/changes"), resolvingAgainstBaseURL: false)!
     components.queryItems = [
       URLQueryItem(name: "since", value: String(cursor)),
       URLQueryItem(name: "limit", value: String(limit)),
       URLQueryItem(name: "wait", value: String(wait)),
     ]
     var request = URLRequest(url: components.url!)
-    request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
     // A long-poll holds the request open on purpose.
     request.timeoutInterval = TimeInterval(wait + 30)
     return try await send(request)
   }
 
-  /// Asks the server for a one-time code another device can pair with.
-  public func createPairingCode() async throws -> SyncPairingCode {
-    try await send(authorized("v1/pairing-codes", body: [String: String]()))
+  /// Records this device on the account. Sent after every sign-in.
+  public func registerDevice(name: String, platform: String) async throws {
+    let body = ["id": deviceId, "name": name, "platform": platform]
+    let _: SyncOK = try await send(post("v1/devices", body: body))
   }
 
-  /// Forgets this device's token on the server.
+  /// Takes this device off the account's list.
   public func signOut() async throws {
-    let _: SyncOK = try await send(authorized("v1/sign-out", body: [String: String]()))
+    let _: SyncOK = try await send(post("v1/sign-out", body: [String: String]()))
   }
 
   /// Who this device is signed in as, and the account's devices.
   public func account() async throws -> SyncAccount {
-    try await send(authorized("v1/account"))
+    try await send(URLRequest(url: serverURL.appending(path: "v1/account")))
   }
 
-  /// Deletes the account, its rows and its devices. The password is asked
-  /// for again so a device left unlocked can't wipe the account.
-  public func deleteAccount(password: String) async throws {
-    let _: SyncOK = try await send(authorized("v1/account/delete", body: ["password": password]))
+  /// Deletes the account: its rows, its devices and the Supabase user. The
+  /// apps ask the person to confirm first.
+  public func deleteAccount() async throws {
+    let _: SyncOK = try await send(post("v1/account/delete", body: [String: String]()))
   }
 
-  /// Makes an account and signs this device in to it.
-  public static func signUp(
-    serverURL: URL, email: String, password: String, deviceName: String, platform: String,
-    session: URLSession = .shared
-  ) async throws -> SyncCredentials {
-    try await signIn(
-      path: "v1/accounts", serverURL: serverURL, email: email, password: password,
-      deviceName: deviceName, platform: platform, session: session)
-  }
-
-  /// Signs this device in to an existing account.
-  public static func signIn(
-    serverURL: URL, email: String, password: String, deviceName: String, platform: String,
-    session: URLSession = .shared
-  ) async throws -> SyncCredentials {
-    try await signIn(
-      path: "v1/sessions", serverURL: serverURL, email: email, password: password,
-      deviceName: deviceName, platform: platform, session: session)
-  }
-
-  private static func signIn(
-    path: String, serverURL: URL, email: String, password: String, deviceName: String, platform: String,
-    session: URLSession
-  ) async throws -> SyncCredentials {
-    let body = ["email": email, "password": password, "deviceName": deviceName, "platform": platform]
-    let signedIn: SyncSignedIn = try await send(
-      post(serverURL.appending(path: path), body: body), session: session, authenticated: false)
-    return SyncCredentials(serverURL: serverURL, signedIn: signedIn)
-  }
-
-  /// Joins the account of the device that minted `code`.
-  public static func pair(
-    serverURL: URL, code: String, deviceName: String, platform: String, session: URLSession = .shared
-  ) async throws -> SyncCredentials {
-    let body = ["code": code, "deviceName": deviceName, "platform": platform]
-    let signedIn: SyncSignedIn = try await send(
-      post(serverURL.appending(path: "v1/pair"), body: body), session: session, authenticated: false)
-    return SyncCredentials(serverURL: serverURL, signedIn: signedIn)
-  }
-
-  /// Asks the server to email a link for setting a new password. It answers
-  /// the same whether or not there is an account for `email`, so the reply
-  /// says nothing about who has one. Setting the new password (on the web
-  /// page the link opens) signs every device out.
-  public static func requestPasswordReset(
-    serverURL: URL, email: String, session: URLSession = .shared
-  ) async throws {
-    let _: SyncOK = try await send(
-      post(serverURL.appending(path: "v1/password-reset"), body: ["email": email]), session: session,
-      authenticated: false)
-  }
-
-  private static func post(_ url: URL, body: some Encodable) throws -> URLRequest {
-    var request = URLRequest(url: url)
+  private func post(_ path: String, body: some Encodable) throws -> URLRequest {
+    var request = URLRequest(url: serverURL.appending(path: path))
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.httpBody = try JSONEncoder().encode(body)
     return request
   }
 
-  private func authorized(_ path: String) -> URLRequest {
-    var request = URLRequest(url: credentials.serverURL.appending(path: path))
-    request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    return request
-  }
-
-  private func authorized(_ path: String, body: some Encodable) throws -> URLRequest {
-    var request = authorized(path)
-    request.httpMethod = "POST"
-    request.httpBody = try JSONEncoder().encode(body)
-    return request
-  }
-
+  /// Sends `request` with a token, and once more with a refreshed one if the
+  /// server refuses the first. A refusal carries the server's own
+  /// `{"error": "..."}` message.
   private func send<T: Decodable>(_ request: URLRequest) async throws -> T {
-    try await Self.send(request, session: session, authenticated: true)
-  }
-
-  /// Sends a request and decodes the answer. A refusal carries the server's
-  /// own `{"error": "..."}` message. A 401 on a device route means the token
-  /// is gone, except the one saying the password was wrong (deleting an
-  /// account asks for it again).
-  private static func send<T: Decodable>(
-    _ request: URLRequest, session: URLSession, authenticated: Bool
-  ) async throws -> T {
-    let (data, response) = try await session.data(for: request)
-    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+    var (data, status) = try await send(request, token: tokens.accessToken())
+    if status == 401 {
+      (data, status) = try await send(request, token: tokens.refreshedAccessToken())
+      if status == 401 { throw SyncError.unauthorized }
+    }
     guard (200..<300).contains(status) else {
       let message = (try? JSONDecoder().decode(SyncErrorBody.self, from: data))?.error ?? ""
-      if status == 401, authenticated, message != SyncError.wrongPasswordMessage {
-        throw SyncError.unauthorized
-      }
       throw SyncError.server(status: status, message: message)
     }
     return try JSONDecoder().decode(T.self, from: data)
+  }
+
+  private func send(_ request: URLRequest, token: String) async throws -> (Data, Int) {
+    var request = request
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.setValue(deviceId, forHTTPHeaderField: Self.deviceHeader)
+    let (data, response) = try await session.data(for: request)
+    return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
   }
 }
 

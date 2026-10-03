@@ -1,13 +1,29 @@
 import Foundation
 import Security
 
-/// Where a device keeps its sync token. The token is a password in all but
-/// name, so on Apple platforms it lives in the Keychain, not in the database
-/// or in defaults.
+/// Where a device keeps what it knows about its sync sign-in, and its own
+/// device id. On Apple platforms that is the Keychain, beside the Supabase
+/// session, rather than the database or defaults.
 public protocol SyncCredentialStore: Sendable {
   func load() -> SyncCredentials?
   func save(_ credentials: SyncCredentials) throws
   func clear()
+  /// This device's id, made once and kept: through signing out, and through
+  /// signing in to another account.
+  func loadDeviceId() -> String?
+  func saveDeviceId(_ id: String)
+}
+
+extension SyncCredentialStore {
+  /// The device id, made and saved the first time it is asked for. A device
+  /// signed in before the id had its own item keeps the id it had.
+  public func deviceId() -> String {
+    if let id = loadDeviceId() { return id }
+    let legacy = load().flatMap { UUID(uuidString: $0.deviceId) }
+    let id = (legacy ?? UUID()).uuidString.lowercased()
+    saveDeviceId(id)
+    return id
+  }
 }
 
 public struct KeychainSyncCredentialStore: SyncCredentialStore {
@@ -21,30 +37,28 @@ public struct KeychainSyncCredentialStore: SyncCredentialStore {
     self.accessGroup = accessGroup
   }
 
-  private var query: [String: Any] {
+  private func query(_ account: String) -> [String: Any] {
     var query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
-      kSecAttrAccount as String: "device",
+      kSecAttrAccount as String: account,
     ]
     if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
     return query
   }
 
-  public func load() -> SyncCredentials? {
-    var query = self.query
+  private func read(_ account: String) -> Data? {
+    var query = query(account)
     query[kSecReturnData as String] = true
     query[kSecMatchLimit as String] = kSecMatchLimitOne
     var item: CFTypeRef?
-    guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess, let data = item as? Data
-    else { return nil }
-    return try? JSONDecoder().decode(SyncCredentials.self, from: data)
+    guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess else { return nil }
+    return item as? Data
   }
 
-  public func save(_ credentials: SyncCredentials) throws {
-    let data = try JSONEncoder().encode(credentials)
-    SecItemDelete(query as CFDictionary)
-    var item = query
+  private func write(_ data: Data, to account: String) throws {
+    SecItemDelete(query(account) as CFDictionary)
+    var item = query(account)
     item[kSecValueData as String] = data
     // Readable after first unlock, so background refresh can sync.
     item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
@@ -54,8 +68,24 @@ public struct KeychainSyncCredentialStore: SyncCredentialStore {
     }
   }
 
+  public func load() -> SyncCredentials? {
+    read("device").flatMap { try? JSONDecoder().decode(SyncCredentials.self, from: $0) }
+  }
+
+  public func save(_ credentials: SyncCredentials) throws {
+    try write(JSONEncoder().encode(credentials), to: "device")
+  }
+
   public func clear() {
-    SecItemDelete(query as CFDictionary)
+    SecItemDelete(query("device") as CFDictionary)
+  }
+
+  public func loadDeviceId() -> String? {
+    read("device-id").flatMap { String(data: $0, encoding: .utf8) }
+  }
+
+  public func saveDeviceId(_ id: String) {
+    try? write(Data(id.utf8), to: "device-id")
   }
 }
 
@@ -63,8 +93,18 @@ public struct KeychainSyncCredentialStore: SyncCredentialStore {
 public final class InMemorySyncCredentialStore: SyncCredentialStore, @unchecked Sendable {
   private let lock = NSLock()
   private var credentials: SyncCredentials?
-  public init(_ credentials: SyncCredentials? = nil) { self.credentials = credentials }
+  private var device: String?
+  public init(_ credentials: SyncCredentials? = nil, deviceId: String? = nil) {
+    self.credentials = credentials
+    self.device = deviceId
+  }
   public func load() -> SyncCredentials? { lock.withLock { credentials } }
-  public func save(_ credentials: SyncCredentials) throws { lock.withLock { self.credentials = credentials } }
+  /// Through JSON, as the Keychain item is, so what isn't saved is lost.
+  public func save(_ credentials: SyncCredentials) throws {
+    let copy = try JSONDecoder().decode(SyncCredentials.self, from: JSONEncoder().encode(credentials))
+    lock.withLock { self.credentials = copy }
+  }
   public func clear() { lock.withLock { credentials = nil } }
+  public func loadDeviceId() -> String? { lock.withLock { device } }
+  public func saveDeviceId(_ id: String) { lock.withLock { device = id } }
 }

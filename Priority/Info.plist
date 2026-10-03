@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE), for the
+     keys that have no INFOPLIST_KEY_ build setting. -->
+<dict>
+	<!-- `priority://auth-callback`: the links in Supabase's emails, confirming
+	     an address or resetting a password, open the app here. Google and
+	     Apple on the web don't need it: the sign-in sheet catches its own
+	     redirect. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>uk.co.maybeitsadam.priority</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>priority</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
