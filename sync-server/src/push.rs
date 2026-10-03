@@ -21,9 +21,15 @@ use uuid::Uuid;
 /// order: a reader that saw seq 6 commit before seq 5 would move its cursor
 /// past 5 and never see it. Holding one transaction-scoped lock from before
 /// the first `nextval` until commit makes `seq` order commit order, which is
-/// the property the cursor depends on. One user's handful of devices never
-/// push hard enough for the serialisation to cost anything.
-const PUSH_LOCK: i64 = 0x5052_494f_5359_4e43; // "PRIOSYNC"
+/// the property the cursor depends on.
+///
+/// The lock is per account, because a device only reads its own account's
+/// rows: an account's pushes are in commit order among themselves, which is
+/// all its readers can see, while different accounts push side by side. One
+/// person's handful of devices never pushes hard enough for the serialisation
+/// to cost anything.
+const PUSH_LOCK_SQL: &str =
+    "SELECT pg_advisory_xact_lock(hashtextextended('push:' || $1::text, 0))";
 
 /// Longest table name or row id accepted. Generous for uuids and SQLite table
 /// names; only there to stop a broken client storing megabyte keys.
@@ -107,7 +113,10 @@ fn validate(change: WireChange) -> Result<Change> {
 
 pub async fn push(
     State(state): State<AppState>,
-    Extension(Device(device)): Extension<Device>,
+    Extension(Device {
+        id: device,
+        account,
+    }): Extension<Device>,
     Json(request): Json<PushRequest>,
 ) -> Result<Json<PushResponse>> {
     let changes = request
@@ -117,16 +126,16 @@ pub async fn push(
         .collect::<Result<Vec<_>>>()?;
 
     let mut tx = state.pool.begin().await?;
-    sqlx::query("SELECT pg_advisory_xact_lock($1)")
-        .bind(PUSH_LOCK)
+    sqlx::query(PUSH_LOCK_SQL)
+        .bind(account)
         .execute(&mut *tx)
         .await?;
 
     let mut written = 0usize;
     for change in &changes {
-        let stored = load(&mut tx, &change.table, &change.id).await?;
+        let stored = load(&mut tx, account, &change.table, &change.id).await?;
         if let Outcome::Changed(row) = merge::merge(stored.as_ref(), change, device) {
-            store(&mut tx, &change.table, &change.id, &row).await?;
+            store(&mut tx, account, &change.table, &change.id, &row).await?;
             written += 1;
         }
     }
@@ -140,12 +149,15 @@ pub async fn push(
             .execute(&mut *tx)
             .await?;
     }
-    let cursor = sqlx::query_scalar::<_, i64>("SELECT COALESCE(MAX(seq), 0) FROM rows")
-        .fetch_one(&mut *tx)
-        .await?;
+    let cursor = sqlx::query_scalar::<_, i64>(
+        "SELECT COALESCE(MAX(seq), 0) FROM rows WHERE account_id = $1",
+    )
+    .bind(account)
+    .fetch_one(&mut *tx)
+    .await?;
     tx.commit().await?;
 
-    tracing::info!(%device, received = changes.len(), written, cursor, "push");
+    tracing::info!(%device, %account, received = changes.len(), written, cursor, "push");
     Ok(Json(PushResponse {
         accepted: changes.len(),
         cursor,
@@ -162,13 +174,15 @@ type RowTuple = (
 
 async fn load(
     tx: &mut Transaction<'_, Postgres>,
+    account: Uuid,
     table: &str,
     id: &str,
 ) -> Result<Option<StoredRow>> {
     let row = sqlx::query_as::<_, RowTuple>(
         "SELECT data, col_hlc, deleted, deleted_hlc, last_device_id FROM rows \
-         WHERE table_name = $1 AND row_id = $2 FOR UPDATE",
+         WHERE account_id = $1 AND table_name = $2 AND row_id = $3 FOR UPDATE",
     )
+    .bind(account)
     .bind(table)
     .bind(id)
     .fetch_optional(&mut **tx)
@@ -186,18 +200,20 @@ async fn load(
 
 async fn store(
     tx: &mut Transaction<'_, Postgres>,
+    account: Uuid,
     table: &str,
     id: &str,
     row: &StoredRow,
 ) -> Result<()> {
     sqlx::query(
-        "INSERT INTO rows (table_name, row_id, data, col_hlc, deleted, deleted_hlc, seq, last_device_id) \
-         VALUES ($1, $2, $3, $4, $5, $6, nextval('row_seq'), $7) \
-         ON CONFLICT (table_name, row_id) DO UPDATE SET \
+        "INSERT INTO rows (account_id, table_name, row_id, data, col_hlc, deleted, deleted_hlc, seq, last_device_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, nextval('row_seq'), $8) \
+         ON CONFLICT (account_id, table_name, row_id) DO UPDATE SET \
            data = EXCLUDED.data, col_hlc = EXCLUDED.col_hlc, deleted = EXCLUDED.deleted, \
            deleted_hlc = EXCLUDED.deleted_hlc, seq = EXCLUDED.seq, \
            last_device_id = EXCLUDED.last_device_id",
     )
+    .bind(account)
     .bind(table)
     .bind(id)
     .bind(Jsonb(&row.data))

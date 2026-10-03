@@ -1,10 +1,11 @@
 //! `GET /v1/changes`: the feed a device pulls other devices' rows from.
 
 use crate::AppState;
+use crate::auth::Device;
 use crate::error::Result;
 use crate::merge::row_hlc;
-use axum::Json;
 use axum::extract::{Query, State};
+use axum::{Extension, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sqlx::types::Json as Jsonb;
@@ -44,6 +45,7 @@ pub struct ChangedRow {
 
 pub async fn changes(
     State(state): State<AppState>,
+    Extension(device): Extension<Device>,
     Query(query): Query<ChangesQuery>,
 ) -> Result<Json<ChangesResponse>> {
     let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
@@ -57,7 +59,7 @@ pub async fn changes(
         // Marked seen before reading, so a push that commits between the read
         // and the wait below still wakes it.
         woken.borrow_and_update();
-        let page = scan(&state, since, limit).await?;
+        let page = scan(&state, device.account, since, limit).await?;
         if !page.rows.is_empty() || page.has_more || Instant::now() >= deadline {
             return Ok(Json(page));
         }
@@ -79,18 +81,28 @@ type ScanTuple = (
     Option<String>,
 );
 
-/// One page of the feed after `since`.
+/// One page of the account's feed after `since`.
+///
+/// `seq` comes from one sequence shared by every account, so an account's
+/// rows have gaps between their numbers. That's fine: a cursor only has to
+/// rise, never to count.
 ///
 /// Every row is sent, the caller's own pushes included. Leaving those out
 /// looks free but loses data: a row the caller last wrote can still carry
 /// another device's earlier edit to a column the caller never received, and
 /// re-applying its own row is harmless. One more row is read than asked for,
 /// so `hasMore` is exact rather than a guess from a full page.
-async fn scan(state: &AppState, since: i64, limit: i64) -> Result<ChangesResponse> {
+async fn scan(
+    state: &AppState,
+    account: uuid::Uuid,
+    since: i64,
+    limit: i64,
+) -> Result<ChangesResponse> {
     let mut scanned = sqlx::query_as::<_, ScanTuple>(
         "SELECT seq, table_name, row_id, data, col_hlc, deleted, deleted_hlc \
-         FROM rows WHERE seq > $1 ORDER BY seq LIMIT $2",
+         FROM rows WHERE account_id = $1 AND seq > $2 ORDER BY seq LIMIT $3",
     )
+    .bind(account)
     .bind(since)
     .bind(limit + 1)
     .fetch_all(&state.pool)

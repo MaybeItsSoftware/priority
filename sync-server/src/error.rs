@@ -7,7 +7,8 @@ use serde_json::json;
 ///
 /// One type, because every failure ends the same way: a status and an
 /// `{"error": "..."}` body. Clients branch on the status alone (401 means
-/// re-pair, 400 means a bug in the client, 5xx means retry later), so the
+/// sign in again, 400 means a bug in the client or a bad form field, 5xx
+/// means retry later), so the
 /// variants are cut along those lines rather than along where they came from.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
@@ -15,8 +16,16 @@ pub enum AppError {
     BadRequest(String),
     #[error("missing or unknown bearer token")]
     Unauthorized,
+    #[error("wrong email or password")]
+    BadCredentials,
     #[error("{0}")]
     Forbidden(String),
+    #[error("{0}")]
+    Conflict(String),
+    #[error("{0}")]
+    TooManyRequests(String),
+    #[error("internal error: {0}")]
+    Internal(String),
     /// Logged in full, reported vaguely: a database message can carry row
     /// contents, and the client can do nothing with it but retry.
     #[error("database error: {0}")]
@@ -28,12 +37,20 @@ impl IntoResponse for AppError {
         let status = match &self {
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppError::BadCredentials => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
+            AppError::Conflict(_) => StatusCode::CONFLICT,
+            AppError::TooManyRequests(_) => StatusCode::TOO_MANY_REQUESTS,
+            AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let message = match &self {
             AppError::Database(error) => {
                 tracing::error!(%error, "request failed in the database");
+                "internal error".to_owned()
+            }
+            AppError::Internal(error) => {
+                tracing::error!(%error, "request failed");
                 "internal error".to_owned()
             }
             other => other.to_string(),

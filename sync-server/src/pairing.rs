@@ -1,15 +1,17 @@
-//! Adding a device: `POST /v1/pairing-codes` and `POST /v1/pair`.
+//! Adding a device without a password: `POST /v1/pairing-codes` and
+//! `POST /v1/pair`.
 //!
-//! The first device (the Mac) pairs with the admin token, which only its owner
-//! has. Every later device pairs with a short code minted by one already
-//! paired, so nobody types a 64-character secret on a phone.
+//! A signed-in device mints a short code, shown as text and as a QR code, and
+//! the new device trades it for a token on the same account. Signing in with
+//! the email and password does the same job (see `accounts.rs`); this is the
+//! quicker way when one device is already in hand.
 
 use crate::AppState;
-use crate::auth::{self, bearer, hash_token, is_admin_token};
+use crate::accounts::SignedIn;
+use crate::auth::{self, Device};
 use crate::error::{AppError, Result};
-use axum::Json;
 use axum::extract::State;
-use axum::http::HeaderMap;
+use axum::{Extension, Json};
 use chrono::{DateTime, Duration, Utc};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -29,26 +31,22 @@ pub struct PairingCode {
     pub expires_at: DateTime<Utc>,
 }
 
-/// Mints a code. Either the admin token or any paired device's token will do.
+/// Mints a code for the calling device's account.
 pub async fn create_code(
     State(state): State<AppState>,
-    headers: HeaderMap,
+    Extension(device): Extension<Device>,
 ) -> Result<Json<PairingCode>> {
-    let token = bearer(&headers).ok_or(AppError::Unauthorized)?;
-    if !is_admin_token(&state, token) && auth::device_for_token(&state, token).await?.is_none() {
-        return Err(AppError::Unauthorized);
-    }
-
     let expires_at = Utc::now() + CODE_LIFETIME;
     // Retried on the off chance of a collision with a live code; 30^8 makes
     // that rare enough that three attempts is plenty.
     for _ in 0..3 {
         let code = new_code();
         let inserted = sqlx::query(
-            "INSERT INTO pairing_codes (code, expires_at) VALUES ($1, $2) \
+            "INSERT INTO pairing_codes (code, account_id, expires_at) VALUES ($1, $2, $3) \
              ON CONFLICT (code) DO NOTHING",
         )
         .bind(&code)
+        .bind(device.account)
         .bind(expires_at)
         .execute(&state.pool)
         .await?
@@ -95,68 +93,46 @@ fn normalise_code(typed: &str) -> String {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PairRequest {
-    pub code: Option<String>,
-    pub admin_token: Option<String>,
+    pub code: String,
     pub device_name: Option<String>,
     pub platform: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PairResponse {
-    pub device_id: Uuid,
-    pub token: String,
 }
 
 pub async fn pair(
     State(state): State<AppState>,
     Json(request): Json<PairRequest>,
-) -> Result<Json<PairResponse>> {
-    if let Some(admin_token) = request.admin_token.as_deref() {
-        if state.admin_token.is_none() {
-            return Err(AppError::Forbidden(
-                "admin pairing is disabled: SYNC_ADMIN_TOKEN is not set".into(),
-            ));
-        }
-        if !is_admin_token(&state, admin_token) {
-            return Err(AppError::Unauthorized);
-        }
-    } else if let Some(code) = request.code.as_deref() {
-        // Claimed in one statement, so two devices racing the same code
-        // cannot both win it.
-        let claimed = sqlx::query(
-            "UPDATE pairing_codes SET used_at = now() \
-             WHERE code = $1 AND used_at IS NULL AND expires_at > now()",
-        )
-        .bind(normalise_code(code))
-        .execute(&state.pool)
-        .await?
-        .rows_affected();
-        if claimed == 0 {
-            return Err(AppError::Forbidden(
-                "that pairing code is wrong, used or expired".into(),
-            ));
-        }
-    } else {
-        return Err(AppError::BadRequest(
-            "send either a pairing code or the admin token".into(),
-        ));
-    }
-
-    let device_id = Uuid::new_v4();
-    let token = auth::new_token();
-    sqlx::query(
-        "INSERT INTO devices (id, name, platform, token_hash, created_at, last_seen_at) \
-         VALUES ($1, $2, $3, $4, now(), now())",
+) -> Result<Json<SignedIn>> {
+    // Claimed in one statement, so two devices racing the same code cannot
+    // both win it.
+    let claimed = sqlx::query_as::<_, (Uuid, Option<String>)>(
+        "UPDATE pairing_codes SET used_at = now() FROM accounts \
+         WHERE pairing_codes.code = $1 AND pairing_codes.used_at IS NULL \
+           AND pairing_codes.expires_at > now() AND accounts.id = pairing_codes.account_id \
+         RETURNING accounts.id, accounts.email",
     )
-    .bind(device_id)
-    .bind(request.device_name)
-    .bind(request.platform)
-    .bind(hash_token(&token))
-    .execute(&state.pool)
+    .bind(normalise_code(&request.code))
+    .fetch_optional(&state.pool)
     .await?;
-    tracing::info!(%device_id, "paired a device");
-    Ok(Json(PairResponse { device_id, token }))
+    let Some((account, email)) = claimed else {
+        return Err(AppError::Forbidden(
+            "that pairing code is wrong, used or expired".into(),
+        ));
+    };
+
+    let (device_id, token) = auth::add_device(
+        &state.pool,
+        account,
+        request.device_name.as_deref(),
+        request.platform.as_deref(),
+    )
+    .await?;
+    tracing::info!(%device_id, %account, "paired a device");
+    Ok(Json(SignedIn {
+        account_id: account,
+        email,
+        device_id,
+        token,
+    }))
 }
 
 #[cfg(test)]

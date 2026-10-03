@@ -14,19 +14,19 @@ use std::time::{Duration, Instant};
 use tokio::sync::watch;
 use tower::ServiceExt;
 
-const ADMIN: &str = "test-admin-token";
+const PASSWORD: &str = "correct horse battery";
 
 struct Server {
     app: Router,
     _stop: watch::Sender<bool>,
 }
 
-async fn server(pool: PgPool, admin: Option<&str>) -> Server {
+async fn server(pool: PgPool) -> Server {
     let changes = notify::spawn_listener(&pool).await.expect("listen");
     let (stop, shutdown) = watch::channel(false);
     let state = AppState {
         pool,
-        admin_token: admin.map(Arc::from),
+        sign_ins: Arc::default(),
         changes,
         shutdown,
     };
@@ -67,13 +67,13 @@ impl Server {
         (status, value)
     }
 
-    async fn pair_admin(&self, name: &str) -> (String, String) {
+    async fn sign_up(&self, email: &str, name: &str) -> (String, String) {
         let (status, body) = self
             .call(
                 "POST",
-                "/v1/pair",
+                "/v1/accounts",
                 None,
-                Some(json!({"adminToken": ADMIN, "deviceName": name, "platform": "macos"})),
+                Some(json!({"email": email, "password": PASSWORD, "deviceName": name, "platform": "macos"})),
             )
             .await;
         assert_eq!(status, StatusCode::OK, "{body}");
@@ -138,44 +138,29 @@ fn ids(page: &Value) -> Vec<String> {
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn health_answers_ok(pool: PgPool) {
-    let server = server(pool, Some(ADMIN)).await;
+    let server = server(pool).await;
     let (status, body) = server.call("GET", "/health", None, None).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, json!({"ok": true}));
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
-async fn pairing_codes_work_once_and_admin_is_checked(pool: PgPool) {
-    let server = server(pool, Some(ADMIN)).await;
-    let (_, mac) = server.pair_admin("Mac").await;
-
-    let (status, _) = server
-        .call(
-            "POST",
-            "/v1/pair",
-            None,
-            Some(json!({"adminToken": "wrong", "deviceName": "x", "platform": "x"})),
-        )
-        .await;
-    assert_eq!(status, StatusCode::UNAUTHORIZED);
-
-    // The admin token itself can mint a code too.
-    let (status, body) = server
-        .call("POST", "/v1/pairing-codes", Some(ADMIN), None)
-        .await;
-    assert_eq!(status, StatusCode::OK);
-    assert!(body["expiresAt"].is_string());
+async fn pairing_codes_work_once(pool: PgPool) {
+    let server = server(pool).await;
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
 
     let (status, body) = server
         .call("POST", "/v1/pairing-codes", Some(&mac), None)
         .await;
     assert_eq!(status, StatusCode::OK);
+    assert!(body["expiresAt"].is_string());
     let code = body["code"].as_str().expect("code").to_lowercase();
     let pair = json!({"code": code, "deviceName": "Phone", "platform": "ios"});
-    let (status, _) = server
+    let (status, body) = server
         .call("POST", "/v1/pair", None, Some(pair.clone()))
         .await;
     assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["email"], "me@example.com", "the code's account");
     let (status, _) = server.call("POST", "/v1/pair", None, Some(pair)).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "a code works once");
 
@@ -183,46 +168,255 @@ async fn pairing_codes_work_once_and_admin_is_checked(pool: PgPool) {
         .call("POST", "/v1/pairing-codes", Some("nobody"), None)
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
-}
-
-#[sqlx::test(migrator = "MIGRATOR")]
-async fn admin_pairing_is_disabled_without_the_token(pool: PgPool) {
-    let server = server(pool, None).await;
-    let (status, _) = server
-        .call(
-            "POST",
-            "/v1/pair",
-            None,
-            Some(json!({"adminToken": "", "deviceName": "Mac", "platform": "macos"})),
-        )
-        .await;
-    assert_eq!(status, StatusCode::FORBIDDEN);
-    let (status, _) = server
-        .call("POST", "/v1/pairing-codes", Some(""), None)
-        .await;
+    let (status, _) = server.call("POST", "/v1/pairing-codes", None, None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
-async fn device_routes_need_a_paired_token(pool: PgPool) {
-    let server = server(pool, Some(ADMIN)).await;
+async fn anyone_can_sign_up_once_per_email_and_sign_in_again(pool: PgPool) {
+    let server = server(pool).await;
+    let sign_up = |email: &str, password: &str| json!({"email": email, "password": password, "deviceName": "Mac", "platform": "macos"});
+
+    let (status, body) = server
+        .call(
+            "POST",
+            "/v1/accounts",
+            None,
+            Some(sign_up(" Me@Example.com ", PASSWORD)),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["email"], "me@example.com");
+    let account = body["accountId"].clone();
+
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/accounts",
+            None,
+            Some(sign_up("ME@example.com", PASSWORD)),
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "one account per email, any case"
+    );
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/accounts",
+            None,
+            Some(sign_up("you@example.com", "short")),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/accounts",
+            None,
+            Some(sign_up("not an email", PASSWORD)),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let (status, body) = server
+        .call(
+            "POST",
+            "/v1/sessions",
+            None,
+            Some(sign_up("me@EXAMPLE.com", PASSWORD)),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["accountId"], account);
+    assert!(body["token"].is_string());
+
+    let (status, body) = server
+        .call(
+            "POST",
+            "/v1/sessions",
+            None,
+            Some(sign_up("me@example.com", "wrong password")),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(body["error"], "wrong email or password");
+    let (status, body) = server
+        .call(
+            "POST",
+            "/v1/sessions",
+            None,
+            Some(sign_up("nobody@example.com", PASSWORD)),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        body["error"], "wrong email or password",
+        "no hint who has an account"
+    );
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn too_many_wrong_passwords_lock_the_email(pool: PgPool) {
+    let server = server(pool).await;
+    server.sign_up("me@example.com", "Mac").await;
+    let attempt = |password: &str| json!({"email": "me@example.com", "password": password, "deviceName": "x", "platform": "x"});
+    for _ in 0..10 {
+        let (status, _) = server
+            .call("POST", "/v1/sessions", None, Some(attempt("guess guess")))
+            .await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+    }
+    let (status, _) = server
+        .call("POST", "/v1/sessions", None, Some(attempt(PASSWORD)))
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::TOO_MANY_REQUESTS,
+        "even the right one, for a while"
+    );
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn accounts_never_see_each_others_rows(pool: PgPool) {
+    let server = server(pool).await;
+    let (_, mine) = server.sign_up("me@example.com", "Mac").await;
+    let (_, yours) = server.sign_up("you@example.com", "Mac").await;
+
+    // The same row id in both accounts: two separate rows.
+    server
+        .push(
+            &mine,
+            json!([{"table": "tasks", "id": "T1", "op": "upsert", "hlc": hlc(1000, "a"),
+                    "values": {"title": "mine"}}]),
+        )
+        .await;
+    server
+        .push(
+            &yours,
+            json!([{"table": "tasks", "id": "T1", "op": "upsert", "hlc": hlc(500, "b"),
+                    "values": {"title": "yours"}},
+                   {"table": "tasks", "id": "T2", "op": "upsert", "hlc": hlc(500, "b"),
+                    "values": {"title": "also yours"}}]),
+        )
+        .await;
+
+    let page = server.changes(&mine, "since=0").await;
+    assert_eq!(ids(&page), vec!["T1"]);
+    assert_eq!(page["rows"][0]["values"]["title"], "mine");
+    let page = server.changes(&yours, "since=0").await;
+    assert_eq!(ids(&page), vec!["T1", "T2"]);
+    assert_eq!(
+        page["rows"][0]["values"]["title"], "yours",
+        "an older hlc, but not a rival"
+    );
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn signing_out_revokes_only_that_device(pool: PgPool) {
+    let server = server(pool).await;
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
+    let phone = server.pair_with_code(&mac, "Phone").await;
+
+    let (status, body) = server.call("GET", "/v1/account", Some(&mac), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["email"], "me@example.com");
+    let devices = body["devices"].as_array().expect("devices");
+    assert_eq!(devices.len(), 2);
+    assert_eq!(devices[0]["name"], "Mac");
+    assert_eq!(devices[0]["current"], true);
+    assert_eq!(devices[1]["current"], false);
+
+    let (status, _) = server
+        .call("POST", "/v1/sign-out", Some(&phone), None)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = server.call("GET", "/v1/changes", Some(&phone), None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, _) = server.call("GET", "/v1/changes", Some(&mac), None).await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn deleting_an_account_takes_its_rows_and_devices(pool: PgPool) {
+    let server = server(pool.clone()).await;
+    let (_, mine) = server.sign_up("me@example.com", "Mac").await;
+    let (_, yours) = server.sign_up("you@example.com", "Mac").await;
+    for token in [&mine, &yours] {
+        server
+            .push(
+                token,
+                json!([{"table": "tasks", "id": "T1", "op": "upsert", "hlc": hlc(1000, "a"),
+                        "values": {"title": "x"}}]),
+            )
+            .await;
+    }
+
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/account/delete",
+            Some(&mine),
+            Some(json!({"password": "wrong"})),
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::UNAUTHORIZED,
+        "the password is asked for again"
+    );
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/account/delete",
+            Some(&mine),
+            Some(json!({"password": PASSWORD})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = server.call("GET", "/v1/changes", Some(&mine), None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let left: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rows")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(left, 1, "only the other account's row");
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/accounts",
+            None,
+            Some(json!({"email": "me@example.com", "password": PASSWORD})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "the email is free again");
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
+async fn device_routes_need_a_signed_in_token(pool: PgPool) {
+    let server = server(pool).await;
     let (status, _) = server.call("GET", "/v1/changes", None, None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     let (status, _) = server
         .call(
             "POST",
             "/v1/push",
-            Some(ADMIN),
+            Some("nobody"),
             Some(json!({"changes": []})),
         )
         .await;
-    assert_eq!(status, StatusCode::UNAUTHORIZED, "admin is not a device");
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, _) = server.call("GET", "/v1/account", None, None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn pair_push_and_pull_round_trip(pool: PgPool) {
-    let server = server(pool.clone(), Some(ADMIN)).await;
-    let (mac_id, mac) = server.pair_admin("Mac").await;
+    let server = server(pool.clone()).await;
+    let (mac_id, mac) = server.sign_up("me@example.com", "Mac").await;
     let phone = server.pair_with_code(&mac, "Phone").await;
 
     let pushed = server
@@ -314,8 +508,8 @@ async fn pair_push_and_pull_round_trip(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn the_caller_receives_its_own_rows(pool: PgPool) {
-    let server = server(pool, Some(ADMIN)).await;
-    let (_, mac) = server.pair_admin("Mac").await;
+    let server = server(pool).await;
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
     server
         .push(
             &mac,
@@ -331,8 +525,8 @@ async fn the_caller_receives_its_own_rows(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn pages_resume_from_the_cursor_without_gaps(pool: PgPool) {
-    let server = server(pool, Some(ADMIN)).await;
-    let (_, mac) = server.pair_admin("Mac").await;
+    let server = server(pool).await;
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
     let phone = server.pair_with_code(&mac, "Phone").await;
     let changes: Vec<Value> = (0..5)
         .map(|n| {
@@ -365,8 +559,8 @@ async fn pages_resume_from_the_cursor_without_gaps(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn re_pushing_a_batch_changes_nothing(pool: PgPool) {
-    let server = server(pool, Some(ADMIN)).await;
-    let (_, mac) = server.pair_admin("Mac").await;
+    let server = server(pool).await;
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
     let batch = json!([
         {"table": "tasks", "id": "T1", "op": "upsert", "hlc": hlc(1000, "mac"), "values": {"title": "a"}},
         {"table": "tasks", "id": "T2", "op": "delete", "hlc": hlc(1000, "mac")},
@@ -380,8 +574,8 @@ async fn re_pushing_a_batch_changes_nothing(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn malformed_changes_are_refused_whole(pool: PgPool) {
-    let server = server(pool, Some(ADMIN)).await;
-    let (_, mac) = server.pair_admin("Mac").await;
+    let server = server(pool).await;
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
     let (status, _) = server
         .call(
             "POST",
@@ -415,8 +609,8 @@ async fn malformed_changes_are_refused_whole(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn a_long_poll_wakes_when_another_device_pushes(pool: PgPool) {
-    let server = Arc::new(server(pool, Some(ADMIN)).await);
-    let (_, mac) = server.pair_admin("Mac").await;
+    let server = Arc::new(server(pool).await);
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
     let phone = server.pair_with_code(&mac, "Phone").await;
 
     let started = Instant::now();
@@ -443,8 +637,8 @@ async fn a_long_poll_wakes_when_another_device_pushes(pool: PgPool) {
 
 #[sqlx::test(migrator = "MIGRATOR")]
 async fn an_idle_long_poll_returns_empty_when_its_wait_runs_out(pool: PgPool) {
-    let server = server(pool, Some(ADMIN)).await;
-    let (_, mac) = server.pair_admin("Mac").await;
+    let server = server(pool).await;
+    let (_, mac) = server.sign_up("me@example.com", "Mac").await;
     let started = Instant::now();
     let page = server.changes(&mac, "since=0&wait=1").await;
     assert!(started.elapsed() >= Duration::from_millis(900));

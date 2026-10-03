@@ -17,13 +17,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let config = Config::from_env()?;
-    if config.admin_token.is_none() {
-        tracing::warn!(
-            "SYNC_ADMIN_TOKEN is not set: admin pairing is DISABLED. No first device can pair, \
-             and pairing codes can only be minted by an already paired device. Set it with \
-             `openssl rand -hex 32`."
-        );
-    }
 
     // Long-polls hold no connection while they wait, so a small pool serves
     // many devices.
@@ -39,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (stop, shutdown) = watch::channel(false);
     let state = AppState {
         pool,
-        admin_token: config.admin_token.map(Arc::from),
+        sign_ins: Arc::default(),
         changes,
         shutdown,
     };

@@ -87,19 +87,43 @@ the row's HLC in the same way.
 
 ## Wire protocol (JSON over HTTPS)
 
-Every request except `/health` and `/v1/pair` sends `Authorization: Bearer <deviceToken>`.
+Every request except `/health`, `/v1/accounts`, `/v1/sessions` and `/v1/pair`
+sends `Authorization: Bearer <deviceToken>`. A token belongs to one device on
+one account, and every route reads and writes only that account's rows.
 A value is a JSON `null`, number or string, exactly as SQLite stores it. Dates
 are GRDB's `"yyyy-MM-dd HH:mm:ss.SSS"` text in UTC, and booleans are `0`/`1`.
 
+### Accounts
+
+Anyone can make an account. Signing up, signing in and pairing all answer
+`{ "accountId", "email", "deviceId", "token" }`; the device keeps the token
+and forgets the password.
+
+- `POST /v1/accounts` `{ "email", "password", "deviceName", "platform" }` makes
+  an account and signs the device in. The email is trimmed and lowercased; the
+  password needs 8 characters. `409` if the email is taken, `400` for a bad
+  field.
+- `POST /v1/sessions` takes the same body and signs in. `401 {"error":"wrong
+  email or password"}` for either mistake; `429` after 10 wrong passwords for
+  one email in 15 minutes.
+- `POST /v1/sign-out` forgets the calling device's token. The device keeps its
+  workspace.
+- `GET /v1/account` returns `{ "accountId", "email", "devices": [{ "id",
+  "name", "platform", "createdAt", "lastSeenAt", "current" }] }`.
+- `POST /v1/account/delete` `{ "password" }` deletes the account, its rows and
+  its devices. Every device keeps its local copy.
+
+A `401` on any device route means the token is gone (signed out, or the
+account deleted): the client stops syncing and asks the user to sign in again.
+
 ### `POST /v1/pair`
 Request: `{ "code": "ABCD-EFGH", "deviceName": "Adam's iPhone", "platform": "ios" }`
-Response: `{ "deviceId": "<uuid>", "token": "<opaque>" }`
+Response: as signing in, on the code's account.
 
-The code comes from `POST /v1/pairing-codes`. That endpoint accepts either an
-`Authorization: Bearer <SYNC_ADMIN_TOKEN>` or any already-paired device's
-token, and returns `{ "code": "...", "expiresAt": "<RFC3339>" }`. A code lasts
-10 minutes and works once. The first device (the Mac) pairs with the admin
-token directly: `POST /v1/pair` with `{ "adminToken": ..., "deviceName", "platform" }`.
+A signed-in device mints the code with `POST /v1/pairing-codes`, which returns
+`{ "code": "...", "expiresAt": "<RFC3339>" }`. A code lasts 10 minutes and
+works once. It's the quick way to add a phone when the Mac is already signed
+in; signing in with the email and password does the same.
 
 ### `POST /v1/push`
 Request:
@@ -197,13 +221,21 @@ in a long-poll loop while the app is in front, and in background refresh.
 ## Server storage (Postgres)
 
 ```sql
-CREATE TABLE devices (id UUID PRIMARY KEY, name TEXT, platform TEXT,
-  token_hash TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ, last_seen_at TIMESTAMPTZ);
-CREATE TABLE pairing_codes (code TEXT PRIMARY KEY, expires_at TIMESTAMPTZ NOT NULL, used_at TIMESTAMPTZ);
+CREATE TABLE accounts (id UUID PRIMARY KEY, email TEXT UNIQUE,
+  password_hash TEXT /* argon2id */, created_at TIMESTAMPTZ);
+CREATE TABLE devices (id UUID PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
+  name TEXT, platform TEXT, token_hash TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ, last_seen_at TIMESTAMPTZ);
+CREATE TABLE pairing_codes (code TEXT PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL, used_at TIMESTAMPTZ);
 CREATE SEQUENCE row_seq;
-CREATE TABLE rows (table_name TEXT, row_id TEXT, data JSONB NOT NULL DEFAULT '{}',
+CREATE TABLE rows (account_id UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
+  table_name TEXT, row_id TEXT, data JSONB NOT NULL DEFAULT '{}',
   col_hlc JSONB NOT NULL DEFAULT '{}', deleted BOOLEAN NOT NULL DEFAULT false,
   deleted_hlc TEXT, seq BIGINT NOT NULL, last_device_id UUID,
-  PRIMARY KEY (table_name, row_id));
-CREATE INDEX rows_seq ON rows(seq);
+  PRIMARY KEY (account_id, table_name, row_id));
+CREATE INDEX rows_account_seq ON rows(account_id, seq);
 ```
+
+`seq` is one sequence across all accounts, so an account's cursor has gaps;
+it only has to rise. Pushes are serialised per account by an advisory lock,
+which keeps each account's `seq` order its commit order.

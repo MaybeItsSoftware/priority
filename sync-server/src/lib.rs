@@ -3,7 +3,12 @@
 //! docs/sync.md is the protocol; this is its server half. The server stores
 //! rows and merges them by per-column last-write-wins. It knows nothing about
 //! tasks, so a schema change on the clients needs no change here.
+//!
+//! Anyone can make an account (`accounts.rs`). Every row, device and pairing
+//! code belongs to one account, and a device only ever sees its own account's
+//! rows.
 
+pub mod accounts;
 pub mod auth;
 pub mod changes;
 pub mod config;
@@ -33,7 +38,8 @@ pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
-    pub admin_token: Option<Arc<str>>,
+    /// Failed sign-ins per email, to stop password guessing.
+    pub sign_ins: Arc<accounts::SignInLimiter>,
     /// Bumped whenever any process commits a push. See `notify.rs`.
     pub changes: watch::Receiver<u64>,
     /// Flips to true on SIGTERM so long-polls answer at once rather than
@@ -45,13 +51,18 @@ pub fn router(state: AppState) -> Router {
     let device_routes = Router::new()
         .route("/v1/push", post(push::push))
         .route("/v1/changes", get(changes::changes))
+        .route("/v1/pairing-codes", post(pairing::create_code))
+        .route("/v1/account", get(accounts::account))
+        .route("/v1/account/delete", post(accounts::delete_account))
+        .route("/v1/sign-out", post(accounts::sign_out))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_device,
         ));
     Router::new()
         .route("/health", get(health))
-        .route("/v1/pairing-codes", post(pairing::create_code))
+        .route("/v1/accounts", post(accounts::sign_up))
+        .route("/v1/sessions", post(accounts::sign_in))
         .route("/v1/pair", post(pairing::pair))
         .merge(device_routes)
         .layer(DefaultBodyLimit::max(BODY_LIMIT))

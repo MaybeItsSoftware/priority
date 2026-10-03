@@ -5,11 +5,6 @@ use std::env;
 pub struct Config {
     pub database_url: String,
     pub port: u16,
-    /// `None` disables everything the admin token unlocks: pairing the first
-    /// device, and minting pairing codes without a paired device. Already
-    /// paired devices keep working, so a deploy that loses the variable
-    /// degrades rather than locks everyone out.
-    pub admin_token: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -33,14 +28,6 @@ impl Config {
                 .map_err(|_| ConfigError::BadPort(value))?,
             Err(_) => 8080,
         };
-        let admin_token = env::var("SYNC_ADMIN_TOKEN")
-            .ok()
-            .map(|value| value.trim().to_owned())
-            .filter(|value| !value.is_empty());
-        Ok(Config {
-            database_url,
-            port,
-            admin_token,
-        })
+        Ok(Config { database_url, port })
     }
 }

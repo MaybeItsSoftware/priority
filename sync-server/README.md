@@ -13,6 +13,7 @@ nothing about tasks.
 | `src/push.rs` | `POST /v1/push`: one transaction per push, serialised by an advisory lock |
 | `src/changes.rs` | `GET /v1/changes`: the paged feed and its long-poll |
 | `src/notify.rs` | `LISTEN rows_changed`, fanned out to waiting long-polls |
+| `src/accounts.rs` | Sign up, sign in and out, the account's devices, deleting an account |
 | `src/pairing.rs` | `POST /v1/pairing-codes` and `POST /v1/pair` |
 | `src/auth.rs` | Bearer tokens, stored as sha256 |
 | `migrations/` | The Postgres schema, applied at boot |
@@ -23,13 +24,12 @@ nothing about tasks.
 | --- | --- |
 | `DATABASE_URL` | Required. |
 | `PORT` | Default 8080. |
-| `SYNC_ADMIN_TOKEN` | Pairs the first device and can mint pairing codes. Without it the server logs a warning and admin pairing is disabled. Generate with `openssl rand -hex 32`. |
 | `RUST_LOG` | Log filter, default `info`. Logs are JSON lines. |
 
 ## Running locally
 
 ```bash
-DATABASE_URL=postgres://localhost/priority_sync SYNC_ADMIN_TOKEN=dev cargo run
+DATABASE_URL=postgres://localhost/priority_sync cargo run
 ```
 
 ## Tests
