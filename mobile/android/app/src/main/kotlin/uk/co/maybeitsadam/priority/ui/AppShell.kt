@@ -109,7 +109,7 @@ import uk.co.maybeitsadam.priority.ui.undo.SnackAction
 
 /**
  * Intents the shell understands: quick add (tile, launcher shortcut), a tab
- * to open, and the browser coming back from a sign-in (`priority://auth-callback`).
+ * to open, and the browser coming back from a sign-in (`takt://auth-callback`).
  */
 object ShellIntents {
     const val ACTION_QUICK_ADD = "uk.co.maybeitsadam.priority.QUICK_ADD"

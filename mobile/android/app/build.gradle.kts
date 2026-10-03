@@ -20,7 +20,7 @@ val keystoreProperties = Properties().apply {
 // same key in gradle.properties) builds an app that points somewhere else;
 // Settings can still be told another server at run time.
 val prioritySyncServer = (findProperty("prioritySyncServer") as String?)?.trim()?.takeIf { it.isNotEmpty() }
-    ?: "https://priority-sync.up.railway.app"
+    ?: "https://takt-sync.up.railway.app"
 
 // Accounts are Supabase Auth users (docs/sync.md). The publishable key is made
 // to ship in apps. Each can be pointed elsewhere with a gradle property.
@@ -37,7 +37,7 @@ android {
     namespace = "uk.co.maybeitsadam.priority"
     compileSdk = 36
     defaultConfig {
-        applicationId = "uk.co.maybeitsadam.priority"
+        applicationId = "uk.co.maybeitssoftware.takt"
         minSdk = 29
         targetSdk = 36
         // scripts/build_play_bundle.sh passes the commit count, which only grows,

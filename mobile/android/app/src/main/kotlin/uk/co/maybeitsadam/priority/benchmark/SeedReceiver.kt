@@ -12,7 +12,7 @@ import uk.co.maybeitsadam.priority.data.workspace.seedBenchmarkList
  * scroll. Guarded in the manifest by `android.permission.DUMP`, which only the
  * shell (`adb shell am broadcast`) holds, so no other app can trigger it.
  *
- *   adb shell am broadcast -a uk.co.maybeitsadam.priority.SEED_BENCHMARK -n uk.co.maybeitsadam.priority/.benchmark.SeedReceiver
+ *   adb shell am broadcast -a uk.co.maybeitsadam.priority.SEED_BENCHMARK -n uk.co.maybeitssoftware.takt/uk.co.maybeitsadam.priority.benchmark.SeedReceiver
  */
 class SeedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

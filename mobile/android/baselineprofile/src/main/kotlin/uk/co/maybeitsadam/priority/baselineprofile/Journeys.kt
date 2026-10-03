@@ -5,7 +5,11 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.Until
 
-const val PACKAGE = "uk.co.maybeitsadam.priority"
+/** The installed application id. */
+const val PACKAGE = "uk.co.maybeitssoftware.takt"
+
+/** The app's Kotlin namespace, which names its classes and intent actions. */
+private const val NAMESPACE = "uk.co.maybeitsadam.priority"
 private const val TIMEOUT = 10_000L
 
 /**
@@ -14,7 +18,7 @@ private const val TIMEOUT = 10_000L
  */
 fun MacrobenchmarkScope.seedBenchmarkList() {
     device.executeShellCommand(
-        "am broadcast -a $PACKAGE.SEED_BENCHMARK -n $PACKAGE/.benchmark.SeedReceiver --ei count 5000",
+        "am broadcast -a $NAMESPACE.SEED_BENCHMARK -n $PACKAGE/$NAMESPACE.benchmark.SeedReceiver --ei count 5000",
     )
 }
 

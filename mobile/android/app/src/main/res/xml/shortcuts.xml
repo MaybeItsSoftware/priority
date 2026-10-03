@@ -8,7 +8,7 @@
         android:shortcutLongLabel="@string/quick_add_long">
         <intent
             android:action="uk.co.maybeitsadam.priority.QUICK_ADD"
-            android:targetPackage="uk.co.maybeitsadam.priority"
+            android:targetPackage="uk.co.maybeitssoftware.takt"
             android:targetClass="uk.co.maybeitsadam.priority.MainActivity" />
     </shortcut>
 </shortcuts>

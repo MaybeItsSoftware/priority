@@ -22,7 +22,7 @@ if [[ ! -f "$android/keystore.properties" ]]; then
   exit 1
 fi
 
-echo "Building Priority $version_name ($version_code)"
+echo "Building Takt $version_name ($version_code)"
 cd "$android"
 ./gradlew --no-daemon -q \
   -PversionCode="$version_code" -PversionName="$version_name" \
@@ -31,7 +31,7 @@ cd "$android"
 bundle="$android/app/build/outputs/bundle/release/app-release.aab"
 out_dir="$root/build/play"
 mkdir -p "$out_dir"
-out="$out_dir/priority-$version_name-$version_code.aab"
+out="$out_dir/takt-$version_name-$version_code.aab"
 cp "$bundle" "$out"
 
 # A debug-signed bundle is the one mistake Play reports only after the upload.

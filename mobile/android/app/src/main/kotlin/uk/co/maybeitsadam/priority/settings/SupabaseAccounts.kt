@@ -160,7 +160,7 @@ class SupabaseAccounts(private val store: SyncCredentialStore) {
         fragment?.split('&')?.firstOrNull { it.startsWith("$name=") }?.substringAfter('=')?.let(Uri::decode)
 
     companion object {
-        const val REDIRECT_SCHEME = "priority"
+        const val REDIRECT_SCHEME = "takt"
         const val REDIRECT_HOST = "auth-callback"
         const val REDIRECT_URL = "$REDIRECT_SCHEME://$REDIRECT_HOST"
 

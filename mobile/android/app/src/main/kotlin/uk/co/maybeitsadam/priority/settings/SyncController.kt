@@ -262,7 +262,7 @@ class SyncController(private val container: AppContainer) {
     }
 
     /**
-     * The browser came back to `priority://auth-callback` (Apple, a confirmed
+     * The browser came back to `takt://auth-callback` (Apple, a confirmed
      * email, or a password-reset link): exchange its code and sign in.
      */
     fun handleAuthRedirect(uri: Uri) {

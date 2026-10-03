@@ -37,8 +37,8 @@ echo "Installing on $ANDROID_SERIAL"
 if ! "$adb" install -r "$apk"; then
   # A debug build signed with a different key blocks an in-place update.
   echo "In-place install failed; uninstalling the existing build and retrying." >&2
-  "$adb" uninstall uk.co.maybeitsadam.priority >/dev/null || true
+  "$adb" uninstall uk.co.maybeitssoftware.takt >/dev/null || true
   "$adb" install "$apk"
 fi
-"$adb" shell am start -n uk.co.maybeitsadam.priority/.MainActivity >/dev/null
+"$adb" shell am start -n uk.co.maybeitssoftware.takt/uk.co.maybeitsadam.priority.MainActivity >/dev/null
 echo "Installed."
