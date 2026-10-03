@@ -1,4 +1,4 @@
-//! The row-sync server Priority's apps replicate their workspace through.
+//! The row-sync server Takt's apps replicate their workspace through.
 //!
 //! docs/sync.md is the protocol; this is its server half. The server stores
 //! rows and merges them by per-column last-write-wins. It knows nothing about

@@ -4,15 +4,14 @@ What to paste into App Store Connect and the Play Console. Field limits are in
 brackets. Answers to the privacy forms follow from what the apps actually do;
 if sync or analytics change, change these.
 
-- **Privacy policy URL:** https://priority-sync.up.railway.app/privacy
-- **Bundle / package id:** `uk.co.maybeitsadam.priority.ios` ·
-  `uk.co.maybeitsadam.priority`
+- **Privacy policy URL:** https://takt-sync.up.railway.app/privacy
+- **Bundle / package id:** `uk.co.maybeitssoftware.takt` on both stores
 - **Category:** Productivity
 - **Price:** free, no in-app purchases, no ads
 
 ## Shared text
 
-**Name** [30]: `Priority: tasks and focus`
+**Name** [30]: `Takt: tasks and focus`
 
 **Subtitle** (App Store) [30]: `Plan the day, then do it`
 
@@ -25,8 +24,8 @@ if sync or analytics change, change these.
 **Description** [4000]:
 
 ```
-Priority is a task manager that helps you decide what to do next — and then
-do it.
+Takt is a task manager that helps you decide what to do next — and then
+do it, at a steady beat.
 
 PLAN
 • Lists and folders, with tasks nested as deep as you like
@@ -49,7 +48,7 @@ REVIEW
 
 EVERYWHERE
 • Works fully offline; nothing leaves your phone unless you sign in
-• Sign in with Apple, Google or email to sync with Priority on your other
+• Sign in with Apple, Google or email to sync with Takt on your other
   devices, including the Mac app
 • Undo for everything, with a history of every step
 • Themes: three built in, or make your own from three colours
@@ -59,7 +58,7 @@ No ads, no tracking, no analytics.
 ```
 
 **Keywords** (App Store) [100]:
-`tasks,to-do,todo,planner,focus,timer,pomodoro,lists,outline,kanban,habits,daily,gtd,productivity`
+`tasks,to-do,todo,planner,priority,focus,timer,pomodoro,lists,outline,kanban,habits,daily,gtd`
 
 **Support URL:** a page or mailto you're happy to publish — the privacy page
 says "use the support link" until `CONTACT_EMAIL` is set on Railway.
@@ -125,7 +124,7 @@ review account as Apple's, noting that the app works without signing in.
 **Graphics:** icon 512×512 (from `mobile/android/app/src/main/res`), feature
 graphic 1024×500, and at least two phone screenshots.
 
-**Release:** internal testing first, with `build/play/priority-<v>-<n>.aab`
+**Release:** internal testing first, with `build/play/takt-<v>-<n>.aab`
 from `scripts/build_play_bundle.sh`. Opt in to Play App Signing on the first
 upload; then copy Play's app-signing SHA-1 into its own Google OAuth Android
 client, or Google sign-in fails for store installs.

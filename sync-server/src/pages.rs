@@ -37,7 +37,7 @@ fn contact_line(email: Option<&str>) -> String {
         Some(email) => format!(
             "Questions, or a request about your data: <a href=\"mailto:{email}\">{email}</a>."
         ),
-        None => "Questions, or a request about your data: use the support link on Priority's \
+        None => "Questions, or a request about your data: use the support link on Takt's \
                  App Store or Google Play page."
             .to_owned(),
     }
