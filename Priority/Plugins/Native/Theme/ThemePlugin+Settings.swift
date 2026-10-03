@@ -68,7 +68,7 @@ struct ThemeSettingsPage: View {
 
         if themeManager.isFallingBack {
           Text(
-            "Your theme \"\(themeManager.activeThemeIdentifier)\" did not load, so Priority is standing in until its file is fixed. Why is under Your themes."
+            "Your theme \"\(themeManager.activeThemeIdentifier)\" did not load, so the Priority theme is standing in until its file is fixed. Why is under Your themes."
           )
           .font(theme.captionFont)
           .foregroundStyle(theme.warning)

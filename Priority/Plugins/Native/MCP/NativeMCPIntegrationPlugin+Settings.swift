@@ -57,7 +57,7 @@ private struct MCPIntegrationPluginSettingsView: View {
         ok: true,
         title: "Checkvist connected",
         detail: manager.repository.activeCredentials.normalizedUsername
-          + " — setting up a client copies this login into ~/.config/priority/config.json, "
+          + " — setting up a client copies this login into ~/.config/takt/config.json, "
           + "where the server reads it. Nothing below carries your key."
       )
     } else {
@@ -86,7 +86,7 @@ private struct MCPIntegrationPluginSettingsView: View {
         stepRow(
           ok: false,
           title: "Server command not found",
-          detail: "Move Priority to /Applications, or set PRIORITY_MCP_EXECUTABLE_PATH."
+          detail: "Move Takt to /Applications, or set PRIORITY_MCP_EXECUTABLE_PATH."
         )
       }
 
@@ -193,8 +193,8 @@ private struct MCPIntegrationPluginSettingsView: View {
         // which is worth saying, since the old copy promised the opposite.
         Text(
           "This is exactly what gets copied and installed. No credentials in it: "
-            + "the server reads those from the priority CLI's own config, which Priority writes "
-            + "when you set up a client. Rotate your remote key in Priority and set up again."
+            + "the server reads those from the takt CLI's own config, which Takt writes "
+            + "when you set up a client. Rotate your remote key in Takt and set up again."
         )
         .foregroundStyle(theme.muted)
         .font(theme.captionFont)

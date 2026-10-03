@@ -6,7 +6,7 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
   let displayName = "Native Checkvist Sync"
   let pluginDescription = "Connect to Checkvist, load remote workspaces, and upload offline tasks."
 
-  private static let userAgent = "Priority/1.0 (Macintosh; Mac OS X)"
+  private static let userAgent = "Takt/1.0 (Macintosh; Mac OS X)"
   private let session: CheckvistSession
   private let taskRepository: CheckvistTaskRepository
   private let credentialStore: CheckvistCredentialStore

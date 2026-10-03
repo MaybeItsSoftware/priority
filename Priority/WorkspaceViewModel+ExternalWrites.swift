@@ -25,7 +25,7 @@ import os
 /// Undo menu once they have been reloaded.
 extension WorkspaceViewModel {
   private static let externalWriteLog = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "WorkspaceExternalWrites")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "WorkspaceExternalWrites")
 
   /// A second is quick enough that a change an assistant reports having made
   /// is already on screen by the time the user looks.

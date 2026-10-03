@@ -6,7 +6,7 @@ import PriorityCore
 
 @MainActor
 @Observable class TimerManager {
-  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "timer")
+  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "timer")
   @ObservationIgnored private let preferencesStore: PreferencesStore
   @ObservationIgnored private let cacheInvalidationBus: CacheInvalidationBus
   @ObservationIgnored private var sleepObserver: NSObjectProtocol?

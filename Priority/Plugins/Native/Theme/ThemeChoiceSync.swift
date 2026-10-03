@@ -27,7 +27,7 @@ final class ThemeChoiceSync {
   @ObservationIgnored private let store: WorkspaceStore
   @ObservationIgnored private var applying = false
   @ObservationIgnored private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "ThemeChoiceSync")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "ThemeChoiceSync")
 
   /// "Use a different theme on this Mac".
   var usesDeviceChoice: Bool {

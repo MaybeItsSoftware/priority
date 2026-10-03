@@ -21,7 +21,7 @@ import os
 /// asked about can never run.
 @MainActor
 @Observable final class WorkspaceAgentSession {
-  private static let log = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "WorkspaceAgentSession")
+  private static let log = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "WorkspaceAgentSession")
 
   enum ApprovalState: Equatable {
     case pending
@@ -163,7 +163,7 @@ import os
       items.append(
         Item(
           entry: .notice(
-            "Priority's MCP server is missing from this build (Contents/Helpers/takt), so the "
+            "Takt's MCP server is missing from this build (Contents/Helpers/takt), so the "
               + "assistant would have no tools. Build without PRIORITY_SKIP_CLI_BUNDLE, or install the "
               + "CLI with scripts/install_cli.sh.",
             isError: true)))
@@ -340,8 +340,8 @@ import os
       case .refuse:
         write(
           AgentStreamEncoder.deny(
-            requestID: request.requestID, message: "Only Priority's own tools are available here."))
-        items.append(Item(entry: .notice("Refused \(request.toolName): not one of Priority's tools.", isError: true)))
+            requestID: request.requestID, message: "Only Takt's own tools are available here."))
+        items.append(Item(entry: .notice("Refused \(request.toolName): not one of Takt's tools.", isError: true)))
       case .askUser:
         let item = Item(entry: .write(Approval(request: request, state: .pending, outcome: nil)))
         if let toolUseID = request.toolUseID { toolItems[toolUseID] = item.id }
@@ -349,7 +349,7 @@ import os
       }
 
     case .unsupportedControlRequest(let requestID, let subtype):
-      write(AgentStreamEncoder.error(requestID: requestID, message: "Priority does not handle \(subtype)."))
+      write(AgentStreamEncoder.error(requestID: requestID, message: "Takt does not handle \(subtype)."))
 
     case .controlRequestCancelled(let requestID):
       for index in items.indices {
@@ -386,8 +386,8 @@ import os
   /// An empty directory of the app's own, so no project's `CLAUDE.md` or
   /// `.mcp.json` is picked up from wherever the app happened to launch.
   private static func workingDirectory() -> URL {
-    let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("Priority/Agent", isDirectory: true)
+    let directory = AppIdentity.applicationSupportDirectory()
+      .appendingPathComponent("Agent", isDirectory: true)
     try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     return directory
   }

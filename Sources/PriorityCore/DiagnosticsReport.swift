@@ -122,7 +122,7 @@ public enum DiagnosticsReport {
   public static func text(from snapshot: DiagnosticsSnapshot) -> String {
     var lines: [String] = []
 
-    lines.append("Priority diagnostics")
+    lines.append("Takt diagnostics")
     lines.append("====================")
     lines.append("Generated: \(timestamp(snapshot.generatedAt))")
     lines.append("Version:   \(snapshot.appVersion) (\(snapshot.buildNumber))")

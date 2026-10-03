@@ -90,7 +90,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       backing: .buffered,
       defer: false
     )
-    window.title = "Priority"
+    window.title = "Takt"
     window.contentViewController = hostingController
     // Deliberately *not* `backgroundColor = .clear` the way the panel is: that
     // is what lets the panel's SwiftUI-drawn rounded background be the only

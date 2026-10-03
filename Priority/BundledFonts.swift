@@ -13,7 +13,7 @@ import OSLog
 /// `Theme.font` checks what is installed at the moment it is asked, and a view
 /// built before this ran would be set in the fallback design until it redrew.
 enum BundledFonts {
-  private static let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "BundledFonts")
+  private static let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "BundledFonts")
 
   /// Registers every `.ttf` in the app bundle. Idempotent: a face that is
   /// already registered reports `alreadyRegistered`, which is not a failure.

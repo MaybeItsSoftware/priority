@@ -4,7 +4,7 @@ import Observation
 import PriorityCore
 import os
 
-/// Loads `~/Library/Application Support/Priority/keymap.json`, lays it over
+/// Loads `~/Library/Application Support/Takt/keymap.json`, lays it over
 /// the catalogue's keys and keeps it in force as the file changes.
 ///
 /// The parsing and merging are `WorkspaceKeymap`'s, in `PriorityCore`, where
@@ -32,7 +32,7 @@ final class WorkspaceKeymapStore {
   @ObservationIgnored private var watcher: DispatchSourceFileSystemObject?
   @ObservationIgnored private var activationObserver: NSObjectProtocol?
   @ObservationIgnored private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "WorkspaceKeymapStore")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "WorkspaceKeymapStore")
 
   let fileURL: URL
 
@@ -42,9 +42,8 @@ final class WorkspaceKeymapStore {
 
   /// Beside the workspace database, in the same Application Support folder.
   nonisolated static func defaultFileURL() -> URL {
-    let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-      ?? URL(fileURLWithPath: NSTemporaryDirectory())
-    return base.appending(path: "Priority/keymap.json", directoryHint: .notDirectory)
+    AppIdentity.applicationSupportDirectory()
+      .appending(path: "keymap.json", directoryHint: .notDirectory)
   }
 
   /// Loads the file and starts following it. Called once, at launch.

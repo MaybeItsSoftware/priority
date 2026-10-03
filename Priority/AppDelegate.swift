@@ -40,7 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private var cancellables = Set<AnyCancellable>()
   private var explicitQuitRequested = false
   private var lastAutoRefreshTime: Date = Date.distantPast
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "appdelegate")
+  private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "appdelegate")
 
   #if DEBUG
     private var isRunningFromXcode: Bool {
@@ -50,12 +50,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   #endif
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    // Before anything reads preferences or the day log — including the MCP
-    // server, which reads both and would otherwise answer from an empty store
-    // for any client that launched it before the app had ever been opened.
-    LegacyNameMigration.runIfNeeded()
+    // `LegacyNameMigration` has already run, in `PriorityEntryPoint.main()`.
 
-    // Priority is a desktop app first. The status item remains available as a
+    // Takt is a desktop app first. The status item remains available as a
     // compact utility surface, but it no longer owns the initial experience.
     NSApp.setActivationPolicy(.regular)
     applyAppTheme()
@@ -425,7 +422,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.beginQuickCapture()
   }
 
-  /// `priority://auth-callback`, from the links in Supabase's emails:
+  /// `takt://auth-callback`, from the links in Supabase's emails:
   /// confirming a new account's address, or resetting the password. Settings
   /// opens on Sync, which shows how it went.
   func application(_ application: NSApplication, open urls: [URL]) {
@@ -438,7 +435,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
-  /// Launching Priority while it is already running brings the window back.
+  /// Launching Takt while it is already running brings the window back.
   ///
   /// Required now that ⌘Q leaves the app alive as a status item: without it,
   /// opening the app from Spotlight or the Finder reaches a process that is

@@ -27,7 +27,7 @@ final class DailyLogService {
   private static let lastWrittenNoteDayKeyDefaultsKey = "dailyLogLastWrittenNoteDayKey"
 
   private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "dailylog")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "dailylog")
   private let defaults: UserDefaults
   private let store: DayLogFileStore
   private let dailiesStore: DailyDefinitionsStore
@@ -154,7 +154,7 @@ final class DailyLogService {
     onExternalChange?()
   }
 
-  /// `~/Library/Application Support/Priority/`, alongside the user plugins
+  /// `~/Library/Application Support/Takt/`, alongside the user plugins
   /// folder. Inside the app's own container it needs no security scope.
   ///
   /// Not private because `MCPServer` reads the same two files to answer
@@ -162,9 +162,7 @@ final class DailyLogService {
   /// separate process, so resolving the path twice would be two chances to
   /// disagree about where the history lives.
   static func defaultStoreDirectoryURL() -> URL {
-    let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-    return (base ?? URL(fileURLWithPath: NSTemporaryDirectory()))
-      .appendingPathComponent("Priority", isDirectory: true)
+    AppIdentity.applicationSupportDirectory()
   }
 
   // MARK: - Configuration

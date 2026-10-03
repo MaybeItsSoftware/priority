@@ -110,9 +110,9 @@ private struct DailyLogPluginSettingsView: View {
         .toggleStyle(.switch)
       Text(
         createsMissingNotesBinding.wrappedValue
-          ? "Priority will create the note if it doesn't exist yet. Turn this off if a "
+          ? "Takt will create the note if it doesn't exist yet. Turn this off if a "
             + "template builds your dailies — otherwise a bare stub can win the race."
-          : "Priority only writes into notes that already exist, so it can never beat your "
+          : "Takt only writes into notes that already exist, so it can never beat your "
             + "daily-note template to the file."
       )
       .font(theme.captionFont)

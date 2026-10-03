@@ -395,7 +395,7 @@ struct WorkspaceAgentSetup: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.md) {
-      Text("The agent panel runs Claude Code, which isn't installed where Priority looked.")
+      Text("The agent panel runs Claude Code, which isn't installed where Takt looked.")
         .font(theme.bodyFont())
         .foregroundStyle(theme.ink)
       Text("Install it from claude.com/claude-code and sign in once in a terminal (`claude`), or give the path to an existing `claude` binary below. No API key is needed; it uses your Claude Code login.")

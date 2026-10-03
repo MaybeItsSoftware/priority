@@ -1,7 +1,7 @@
 import Foundation
 
 /// A theme as a user writes one: a JSON document in
-/// `~/Library/Application Support/Priority/themes/`, every field optional.
+/// `~/Library/Application Support/Takt/themes/`, every field optional.
 ///
 /// This is the *file*, not the theme. Everything in it is a partial override
 /// of the theme it `extends` — Chalk unless it says otherwise — so a file that

@@ -3,6 +3,10 @@ import OSLog
 import Security
 
 final class CheckvistCredentialStore {
+  /// The product was Priority when this was chosen, and the name is kept on
+  /// purpose: it is a storage key, not a label, and changing it would sign
+  /// everyone out. The Takt rename left it — and every other keychain service
+  /// — exactly as it was.
   static let keychainService = "uk.co.maybeitsadam.priority"
 
   /// Service names this app has previously stored credentials under, newest
@@ -19,7 +23,7 @@ final class CheckvistCredentialStore {
   static let onboardingCompletedDefaultsKey = "onboardingCompleted"
 
   private let defaults: UserDefaults
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "keychain")
+  private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "keychain")
 
   init(defaults: UserDefaults = .standard) {
     self.defaults = defaults

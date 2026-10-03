@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import PriorityCore
 import Observation
 import OSLog
 import UniformTypeIdentifiers
@@ -106,7 +107,7 @@ import UniformTypeIdentifiers
     "custom",
   ]
 
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "plugins")
+  private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "plugins")
   private let builtInPluginIdentifiers: Set<String>
   private let currentAppVersion: String?
   private let defaults: UserDefaults
@@ -615,13 +616,7 @@ import UniformTypeIdentifiers
   }
 
   private static func defaultPluginsDirectoryURL(fileManager: FileManager) -> URL {
-    let appSupportDirectory =
-      fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-      ?? fileManager.homeDirectoryForCurrentUser
-      .appendingPathComponent("Library/Application Support", isDirectory: true)
-    return
-      appSupportDirectory
-      .appendingPathComponent("Priority", isDirectory: true)
+    AppIdentity.applicationSupportDirectory(fileManager: fileManager)
       .appendingPathComponent("Plugins", isDirectory: true)
   }
 

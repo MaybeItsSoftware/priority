@@ -1,4 +1,5 @@
 import Foundation
+import PriorityCore
 import OSLog
 
 // `CheckvistTaskCachePayload` moved to `CheckvistTaskCachePayload.swift` so it
@@ -7,8 +8,8 @@ import OSLog
 
 struct CheckvistTaskRepository {
   private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "task-repository")
-  private static let userAgent = "Priority/1.0 (Macintosh; Mac OS X)"
+    subsystem: "uk.co.maybeitssoftware.takt", category: "task-repository")
+  private static let userAgent = "Takt/1.0 (Macintosh; Mac OS X)"
   private static let cacheFreshnessInterval: TimeInterval = 15 * 60
 
   func fetchTasks(
@@ -75,15 +76,7 @@ struct CheckvistTaskRepository {
     guard !listId.isEmpty else { return nil }
 
     let fileManager = FileManager.default
-    guard
-      let appSupportDirectory = fileManager.urls(
-        for: .applicationSupportDirectory,
-        in: .userDomainMask
-      ).first
-    else { return nil }
-
-    let containerDirectory = appSupportDirectory.appendingPathComponent(
-      "Priority", isDirectory: true)
+    let containerDirectory = AppIdentity.applicationSupportDirectory(fileManager: fileManager)
 
     do {
       try fileManager.createDirectory(at: containerDirectory, withIntermediateDirectories: true)

@@ -42,7 +42,7 @@ import os
   private let storeProvider: () -> WorkspaceStore?
   private let isEnabled: () -> Bool
   private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "GoogleTasksMirrorService")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "GoogleTasksMirrorService")
 
   private var pendingSync: Task<Void, Never>?
   private var pollTask: Task<Void, Never>?

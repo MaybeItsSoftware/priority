@@ -36,7 +36,7 @@ enum KanbanMoveOutcome {
 
 @MainActor
 @Observable class KanbanManager {
-  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "kanban")
+  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "kanban")
   @ObservationIgnored private let preferencesStore: PreferencesStore
   @ObservationIgnored private let cacheInvalidationBus: CacheInvalidationBus
   @ObservationIgnored weak var dataSource: KanbanTaskDataSource?

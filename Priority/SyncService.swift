@@ -23,7 +23,7 @@ final class SyncService {
   /// comment at its top.
   private var isFlushingOfflineWork = false
   private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "sync")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "sync")
 
   init(host: any SyncHost, repository: TaskRepository) {
     self.host = host

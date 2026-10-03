@@ -28,8 +28,11 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public static func defaultDatabaseURL() -> URL {
-    let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    return root.appending(path: "Priority/priority.sqlite", directoryHint: .notDirectory)
+    // The file keeps the product's old name: it is the one thing every other
+    // reader (the CLI, `scripts/dump_workspace_schema.sh`) finds by name, and
+    // renaming it would buy nothing a user can see.
+    AppIdentity.applicationSupportDirectory()
+      .appending(path: "priority.sqlite", directoryHint: .notDirectory)
   }
 
   @discardableResult

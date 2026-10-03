@@ -19,7 +19,7 @@ protocol IntegrationDataSource: AnyObject {
 @MainActor
 @Observable class IntegrationCoordinator {
   @ObservationIgnored private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "integrations")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "integrations")
   @ObservationIgnored private let preferencesStore: PreferencesStore
 
   @ObservationIgnored weak var dataSource: IntegrationDataSource?
@@ -249,7 +249,7 @@ protocol IntegrationDataSource: AnyObject {
       throw WorkspaceGoogleCalendarError.integrationDisabled
     }
     let details = """
-      Created from Priority
+      Created from Takt
       List: \(listTitle)
       Task ID: \(taskID)
       """
@@ -395,7 +395,7 @@ protocol IntegrationDataSource: AnyObject {
     do {
       try seedPriorityCLICredentials(credentials: ds.activeCredentials, listId: ds.listId)
     } catch {
-      logger.error("Seeding the priority CLI's credentials failed: \(error)")
+      logger.error("Seeding the takt CLI's credentials failed: \(error)")
       onError?(error.localizedDescription)
       return
     }
@@ -476,7 +476,7 @@ protocol IntegrationDataSource: AnyObject {
     do {
       try seedPriorityCLICredentials(credentials: ds.activeCredentials, listId: ds.listId)
     } catch {
-      logger.error("Seeding the priority CLI's credentials failed: \(error)")
+      logger.error("Seeding the takt CLI's credentials failed: \(error)")
       setMCPSetupStatus(error.localizedDescription, isError: true)
       return
     }
@@ -530,7 +530,7 @@ protocol IntegrationDataSource: AnyObject {
     )
   }
 
-  /// Hands the app's Checkvist login down to the `priority` CLI, which is the
+  /// Hands the app's Checkvist login down to the `takt` CLI, which is the
   /// MCP server and cannot read the app's keychain item — that would depend on
   /// the app's code signature. Nothing in a generated client config carries a
   /// secret any more, so this file is where the server gets its credentials.
@@ -544,9 +544,13 @@ protocol IntegrationDataSource: AnyObject {
     let directoryURL = configURL.deletingLastPathComponent()
     let fileManager = FileManager.default
 
+    // The new file, or failing that the one the CLI kept under its old name,
+    // which is read but never written: the old file stays as it was.
     var existing: String?
-    if fileManager.fileExists(atPath: configURL.path) {
-      existing = try String(contentsOf: configURL, encoding: .utf8)
+    let readable = ([configPath] + PriorityCLIConfigWriter.legacyConfigPaths(inHomeDirectory: home))
+      .first { fileManager.fileExists(atPath: $0) }
+    if let readable {
+      existing = try String(contentsOf: URL(fileURLWithPath: readable), encoding: .utf8)
     }
 
     let seeded = try PriorityCLIConfigWriter.seeded(
@@ -587,7 +591,7 @@ protocol IntegrationDataSource: AnyObject {
     try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: configURL.path)
 
     logger.info(
-      "Seeded the priority CLI's credentials: \(String(describing: seeded.outcome), privacy: .public)"
+      "Seeded the takt CLI's credentials: \(String(describing: seeded.outcome), privacy: .public)"
     )
   }
 

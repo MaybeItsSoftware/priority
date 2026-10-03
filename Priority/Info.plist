@@ -4,7 +4,7 @@
 <!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE), for the
      keys that have no INFOPLIST_KEY_ build setting. -->
 <dict>
-	<!-- `priority://auth-callback`: the links in Supabase's emails, confirming
+	<!-- `takt://auth-callback`: the links in Supabase's emails, confirming
 	     an address or resetting a password, open the app here. Google and
 	     Apple on the web don't need it: the sign-in sheet catches its own
 	     redirect. -->
@@ -12,10 +12,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>uk.co.maybeitsadam.priority</string>
+			<string>uk.co.maybeitssoftware.takt</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>priority</string>
+				<string>takt</string>
 			</array>
 		</dict>
 	</array>

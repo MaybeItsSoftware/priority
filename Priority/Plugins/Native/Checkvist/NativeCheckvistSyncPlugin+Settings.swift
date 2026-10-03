@@ -54,7 +54,7 @@ private struct CheckvistSyncPluginSettingsView: View {
         )
           .toggleStyle(.switch)
         Text(
-          "When disabled, Priority runs offline and your Checkvist credentials and list selection are preserved for when you re-enable it."
+          "When disabled, Takt runs offline and your Checkvist credentials and list selection are preserved for when you re-enable it."
         )
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
@@ -296,9 +296,9 @@ private struct CheckvistSyncPluginSettingsView: View {
       return "Pick a Checkvist list above to start syncing."
     }
     if let active = manager.repository.availableLists.first(where: { String($0.id) == manager.repository.listId }) {
-      return "Priority is syncing with “\(active.name)”."
+      return "Takt is syncing with “\(active.name)”."
     }
-    return "Priority is syncing with list ID \(manager.repository.listId)."
+    return "Takt is syncing with list ID \(manager.repository.listId)."
   }
 
   private var offlineSyncAndConflictResolutionSection: some View {

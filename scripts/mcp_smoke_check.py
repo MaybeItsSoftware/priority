@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that `Priority --mcp-server` still reaches an MCP server.
+"""Check that `Takt --mcp-server` still reaches an MCP server.
 
 This replaces `mcp_parity_check.py`. That harness existed because Priority
 shipped two implementations of the same MCP server — one in Swift inside the
@@ -15,7 +15,8 @@ it (see `Priority/MCPServerShim.swift`). Correctness of the server itself is
 
 What is left to check is the seam — that the handover works, and in particular
 that a client configuration written *before* this change, naming
-`Priority --mcp-server` with credentials in `env`, still gets a working server.
+`Priority --mcp-server` with credentials in `env`, still gets a working server
+once that path names `Takt.app/Contents/MacOS/Takt` instead.
 That is the compatibility promise the migration was built on, and nothing else
 covers it.
 
@@ -37,12 +38,12 @@ PROTOCOL_VERSION = "2024-11-05"
 def find_app() -> pathlib.Path | None:
     """The most recently built Debug bundle, wherever DerivedData put it."""
     candidates = [
-        *(REPO / "build").rglob("Priority.app"),
+        *(REPO / "build").rglob("Takt.app"),
         *pathlib.Path.home().joinpath("Library/Developer/Xcode/DerivedData").glob(
-            "Priority-*/Build/Products/Debug/Priority.app"
+            "Priority-*/Build/Products/Debug/Takt.app"
         ),
     ]
-    binaries = [c for c in candidates if (c / "Contents/MacOS/Priority").exists()]
+    binaries = [c for c in candidates if (c / "Contents/MacOS/Takt").exists()]
     if not binaries:
         return None
     # Stale bundles from earlier builds linger — `scripts/run.sh` keeps its own
@@ -56,7 +57,7 @@ def find_app() -> pathlib.Path | None:
         # deeper inside — so keying on the bundle picked a months-old app over
         # the one just built and reported it as passing.
         helper = app / "Contents/Helpers/takt"
-        target = helper if helper.exists() else app / "Contents/MacOS/Priority"
+        target = helper if helper.exists() else app / "Contents/MacOS/Takt"
         return target.stat().st_mtime
 
     return max(with_helper or binaries, key=freshness)
@@ -98,7 +99,7 @@ def main() -> int:
     app = find_app()
     if app is None:
         print(
-            "error: no Debug Priority.app found. Build it first:\n"
+            "error: no Debug Takt.app found. Build it first:\n"
             "  xcodebuild -project Priority.xcodeproj -scheme Priority "
             "-configuration Debug -destination 'platform=macOS' build",
             file=sys.stderr,
@@ -127,7 +128,7 @@ def main() -> int:
 
     invocations = {
         # How configurations written before the migration name it.
-        "Priority --mcp-server": [str(app / "Contents/MacOS/Priority"), "--mcp-server"],
+        "Takt --mcp-server": [str(app / "Contents/MacOS/Takt"), "--mcp-server"],
         # How they are written now.
         "takt mcp": [str(helper), "mcp"],
     }

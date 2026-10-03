@@ -71,10 +71,10 @@ final class AFFiNEMCPSession: AFFiNEToolCalling, @unchecked Sendable {
     let extraEnvironment: [String: String]
   }
 
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "affine")
+  private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "affine")
   private let launch: Launch
   private let timeout: TimeInterval
-  private let queue = DispatchQueue(label: "uk.co.maybeitsadam.priority.affine-mcp")
+  private let queue = DispatchQueue(label: "uk.co.maybeitssoftware.takt.affine-mcp")
 
   /// Guards `process` alone, because the watchdog terminates it from off the
   /// serial queue — that being the whole point of a watchdog.
@@ -205,7 +205,7 @@ final class AFFiNEMCPSession: AFFiNEToolCalling, @unchecked Sendable {
     try send(
       MCPWire.initializeRequest(
         id: id,
-        clientName: "Priority",
+        clientName: "Takt",
         clientVersion: Bundle.main.shortVersionString
       ))
     _ = try readResult(id: id)

@@ -1,11 +1,11 @@
 import Foundation
 
-/// The credentials the `priority` CLI keeps in its own store.
+/// The credentials the `takt` CLI keeps in its own store.
 ///
 /// The CLI is a peer of the app rather than a front end for it, and it cannot
 /// read the app's keychain item — that would depend on the app's code
 /// signature. So the app hands its login down instead: it writes into
-/// `~/.config/priority/config.json`, which is the only credential source the
+/// `~/.config/takt/config.json`, which is the only credential source the
 /// MCP server has once the generated client entry stops carrying secrets in
 /// `env`. See the header of `cli/src/config.rs`.
 public struct PriorityCLICredentials: Equatable {
@@ -46,16 +46,16 @@ public enum PriorityCLIConfigError: LocalizedError, Equatable {
         "Connect Checkvist first — the MCP server signs in with your Checkvist credentials."
     case .unreadableConfig(let path):
       return
-        "The priority CLI's config isn't valid JSON, so it wasn't touched. Fix or move \(path) and try again."
+        "The takt CLI's config isn't valid JSON, so it wasn't touched. Fix or move \(path) and try again."
     case .encodingFailed:
-      return "Could not encode the priority CLI's configuration."
+      return "Could not encode the takt CLI's configuration."
     case .writeFailed(let path):
       return "Could not write \(path)."
     }
   }
 }
 
-/// Seeds the `priority` CLI's credential file from the app's own login.
+/// Seeds the `takt` CLI's credential file from the app's own login.
 ///
 /// Pure on purpose: the merge is the part worth testing, and the app layer owns
 /// the filesystem (it is the only side that knows the real home directory and
@@ -71,7 +71,14 @@ public enum PriorityCLIConfigWriter {
   /// those live in the *client's* environment when it launches the server, not
   /// in the app's, so guessing from here would be worse than using the default.
   public static func defaultConfigPath(inHomeDirectory home: String) -> String {
-    (home as NSString).appendingPathComponent(".config/priority/config.json")
+    (home as NSString).appendingPathComponent(".config/takt/config.json")
+  }
+
+  /// Where the CLI kept its config when it was called `priority`. The CLI
+  /// still reads it while the new one is missing, so the first seeding starts
+  /// from it — keeping a hand-set `base_url` — rather than from nothing.
+  public static func legacyConfigPaths(inHomeDirectory home: String) -> [String] {
+    [(home as NSString).appendingPathComponent(".config/priority/config.json")]
   }
 
   /// Merges `credentials` into the CLI's existing config.

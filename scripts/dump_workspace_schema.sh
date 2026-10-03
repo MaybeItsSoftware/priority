@@ -14,7 +14,12 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-database="${1:-$HOME/Library/Application Support/Priority/priority.sqlite}"
+# Takt's folder, or Priority's on a machine that hasn't run Takt yet.
+default_database="$HOME/Library/Application Support/Takt/priority.sqlite"
+if [[ ! -f "$default_database" ]]; then
+  default_database="$HOME/Library/Application Support/Priority/priority.sqlite"
+fi
+database="${1:-$default_database}"
 output="$root/cli/src/fixtures/workspace_schema.sql"
 
 mkdir -p "$(dirname "$output")"

@@ -102,7 +102,7 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
   private var conflicts: some View {
     // The authority rule occasionally discards something a person typed on
     // their phone. This is the page that admits it.
-    MicroLabel("Conflicts resolved in Priority's favour")
+    MicroLabel("Conflicts resolved in Takt's favour")
     ForEach(mirror.recentConflicts.prefix(8)) { record in
       VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text(record.summary).font(theme.captionFont)
@@ -111,7 +111,7 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
           .foregroundStyle(theme.muted)
       }
     }
-    Text("The full log is in google-tasks-conflicts.jsonl, in Priority's Application Support folder.")
+    Text("The full log is in google-tasks-conflicts.jsonl, in Takt's Application Support folder.")
       .font(theme.captionFont)
       .foregroundStyle(theme.muted)
   }

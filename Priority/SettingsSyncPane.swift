@@ -95,7 +95,7 @@ struct SettingsSyncPane: View {
             .buttonStyle(.plain)
             .font(theme.captionFont)
             .foregroundStyle(theme.muted)
-            .help("Email a link that opens Priority on this Mac, signed in, to choose a new password.")
+            .help("Email a link that opens Takt on this Mac, signed in, to choose a new password.")
             .disabled(isWorking)
         }
       }
@@ -105,7 +105,7 @@ struct SettingsSyncPane: View {
         VStack(alignment: .leading, spacing: theme.space.xs) {
           TextField("", text: $serverURL, prompt: Text(SyncServer.defaultURL.absoluteString))
             .themedTextField()
-          Text("For a server you run yourself. Leave it as it is to use Priority's.")
+          Text("For a server you run yourself. Leave it as it is to use Takt's.")
             .font(theme.captionFont)
             .foregroundStyle(theme.muted)
         }

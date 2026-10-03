@@ -28,7 +28,7 @@ extension WorkspaceViewModel {
       errorMessage = "Google Calendar is not available."
       return
     }
-    let listTitle = list(for: task)?.name ?? "Priority"
+    let listTitle = list(for: task)?.name ?? "Takt"
     let snapshot: TaskEditorSnapshot
     do {
       snapshot = try store.taskEditorSnapshot(for: task.id)

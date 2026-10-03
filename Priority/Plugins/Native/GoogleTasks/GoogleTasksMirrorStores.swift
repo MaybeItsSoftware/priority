@@ -43,13 +43,13 @@ struct GoogleTasksConflictRecord: Codable, Identifiable, Equatable {
   var summary: String {
     switch field {
     case .existence:
-      return "\(taskTitle) — deleted in Google Tasks, restored from Priority"
+      return "\(taskTitle) — deleted in Google Tasks, restored from Takt"
     case .title:
-      return "\(taskTitle) — kept the Priority title over “\(discardedValue)”"
+      return "\(taskTitle) — kept the Takt title over “\(discardedValue)”"
     case .notes:
-      return "\(taskTitle) — kept the Priority notes; Google's were “\(truncated(discardedValue))”"
+      return "\(taskTitle) — kept the Takt notes; Google's were “\(truncated(discardedValue))”"
     case .due:
-      return "\(taskTitle) — kept the Priority due date over \(discardedValue)"
+      return "\(taskTitle) — kept the Takt due date over \(discardedValue)"
     }
   }
 

@@ -24,7 +24,7 @@ enum GoogleOAuthLoopbackError: LocalizedError {
 final class GoogleOAuthLoopbackReceiver: @unchecked Sendable {
   private let callbackPath: String
   private let maxConnections = 10
-  private let queue = DispatchQueue(label: "uk.co.maybeitsadam.priority.google-oauth-loopback")
+  private let queue = DispatchQueue(label: "uk.co.maybeitssoftware.takt.google-oauth-loopback")
   private var listener: NWListener?
   private var readyContinuation: CheckedContinuation<NWEndpoint.Port, Error>?
   private var callbackContinuation: CheckedContinuation<URL, Error>?
@@ -153,7 +153,7 @@ final class GoogleOAuthLoopbackReceiver: @unchecked Sendable {
       self.sendResponse(
         connection: connection,
         status: "200 OK",
-        body: "Google sign-in complete. You can close this tab and return to Priority."
+        body: "Google sign-in complete. You can close this tab and return to Takt."
       )
       self.resolveCallback(with: callbackURL)
       // Stop accepting further connections after a successful callback.

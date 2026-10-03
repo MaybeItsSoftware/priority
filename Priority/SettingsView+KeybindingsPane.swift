@@ -14,7 +14,7 @@ extension SettingsView {
   var keybindingsPane: some View {
     Group {
       Section(header: MicroLabel("Configurable hotkeys")) {
-        Text("These shortcuts work globally, even when Priority is not focused.")
+        Text("These shortcuts work globally, even when Takt is not focused.")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
 

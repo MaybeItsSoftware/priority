@@ -343,7 +343,7 @@ struct DiagnosticsView: View {
     // Named because it is a recurring confusion: the CLI keeps its own
     // credentials rather than reaching into the app's keychain item, which is
     // only readable by something carrying the app's signature.
-    entries.append(("CLI config", home.appendingPathComponent(".config/priority/config.json")))
+    entries.append(("CLI config", home.appendingPathComponent(".config/takt/config.json")))
     return entries
   }
 
@@ -415,7 +415,7 @@ struct DiagnosticsView: View {
   private static let buildNumber =
     Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
   private static let bundleIdentifier =
-    Bundle.main.bundleIdentifier ?? "uk.co.maybeitsadam.priority"
+    Bundle.main.bundleIdentifier ?? "uk.co.maybeitssoftware.takt"
 
   private static let timeFormatter: DateFormatter = {
     let formatter = DateFormatter()

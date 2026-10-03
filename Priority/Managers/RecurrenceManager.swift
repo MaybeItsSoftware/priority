@@ -4,7 +4,7 @@ import OSLog
 
 @MainActor
 @Observable class RecurrenceManager {
-  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "recurrence")
+  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "recurrence")
   @ObservationIgnored private let preferencesStore: PreferencesStore
 
   /// Maps task ID → raw recurrence rule string (e.g. "daily", "every 3 days").

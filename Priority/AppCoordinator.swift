@@ -10,7 +10,7 @@ import SwiftUI
 @MainActor
 @Observable class AppCoordinator {
   @ObservationIgnored let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "manager")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "manager")
 
   /// How the Google Tasks mirror reaches the workspace. Set by `AppDelegate`
   /// once the workspace exists — the coordinator is built first, and the

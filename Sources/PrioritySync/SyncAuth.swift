@@ -54,6 +54,8 @@ public protocol SyncAuthenticating: SyncAccessTokenProvider {
 public final class SupabaseSyncAuth: SyncAuthenticating {
   let client: AuthClient
 
+  /// `keychainService` keeps the product's old name, Priority, for the same
+  /// reason `KeychainSyncCredentialStore`'s does.
   public init(
     projectURL: URL = SyncServer.supabaseURL, publishableKey: String = SyncServer.supabasePublishableKey,
     keychainService: String = "uk.co.maybeitsadam.priority.supabase"
@@ -109,7 +111,7 @@ public final class SupabaseSyncAuth: SyncAuthenticating {
     let session = try await client.signInWithOAuth(
       provider: provider == .google ? .google : .apple, redirectTo: SyncServer.authCallbackURL
     ) { @MainActor url in
-      try await WebSignIn.run(url, callbackScheme: SyncServer.authCallbackURL.scheme ?? "priority")
+      try await WebSignIn.run(url, callbackScheme: SyncServer.authCallbackURL.scheme ?? "takt")
     }
     return Self.user(session.user)
   }

@@ -17,14 +17,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 XCODEPROJ="$ROOT_DIR/Priority.xcodeproj"
+# The scheme keeps the code's name; the product it builds is Takt.
 SCHEME="Priority"
-APP_NAME="Priority.app"
+APP_NAME="Takt.app"
+PROCESS_NAME="Takt"
 INSTALL_PATH="/Applications/$APP_NAME"
+# The app was called Priority until it became Takt. An install of it is
+# quit and moved into the backup folder below, so there are never two apps
+# sharing one workspace in /Applications.
+LEGACY_INSTALL_PATH="/Applications/Priority.app"
+LEGACY_PROCESS_NAME="Priority"
 
 BUILD_DIR="$ROOT_DIR/build"
-DERIVED_DIR="/tmp/priority-derived-install"
+DERIVED_DIR="/tmp/takt-derived-install"
 # `.noindex`, so Spotlight and Launch Services never offer the backup as a
-# second "Priority" beside the installed one.
+# second "Takt" beside the installed one.
 BACKUP_DIR="$BUILD_DIR/backup.noindex"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 BACKUP_PATH="$BACKUP_DIR/$APP_NAME.$(date +%Y%m%d-%H%M%S)"
@@ -48,9 +55,11 @@ if [[ ! -d "$APP_PATH" ]]; then
 fi
 
 echo "==> Quitting any running instance…"
-osascript -e 'tell application "Priority" to quit' 2>/dev/null || true
+for name in "$PROCESS_NAME" "$LEGACY_PROCESS_NAME"; do
+  osascript -e "tell application \"$name\" to quit" 2>/dev/null || true
+done
 sleep 1
-killall "Priority" 2>/dev/null || true
+killall "$PROCESS_NAME" "$LEGACY_PROCESS_NAME" 2>/dev/null || true
 
 if [[ -d "$INSTALL_PATH" ]]; then
   echo "==> Backing up the installed app to $BACKUP_PATH"
@@ -62,6 +71,20 @@ if [[ -d "$INSTALL_PATH" ]]; then
   # Everything older than the backup just taken.
   find "$BACKUP_DIR" -maxdepth 1 -name "$APP_NAME.*" ! -name "$(basename "$BACKUP_PATH")" \
     -exec rm -rf {} +
+fi
+
+if [[ -d "$LEGACY_INSTALL_PATH" ]]; then
+  # Moved, not deleted, and kept apart from the Takt backups so the prune
+  # above never takes it: it is the way back if the rename went wrong. Its
+  # data is untouched — Takt copies it on first launch and leaves the
+  # original where it was.
+  LEGACY_BACKUP_PATH="$BACKUP_DIR/Priority.app.$(date +%Y%m%d-%H%M%S)"
+  echo "==> Moving the old Priority.app to $LEGACY_BACKUP_PATH"
+  mkdir -p "$BACKUP_DIR"
+  ditto "$LEGACY_INSTALL_PATH" "$LEGACY_BACKUP_PATH"
+  "$LSREGISTER" -u "$LEGACY_INSTALL_PATH" 2>/dev/null || true
+  "$LSREGISTER" -u "$LEGACY_BACKUP_PATH" 2>/dev/null || true
+  rm -rf "$LEGACY_INSTALL_PATH"
 fi
 
 echo "==> Installing to $INSTALL_PATH"
@@ -79,4 +102,4 @@ echo "Installed. Previous version kept at:"
 echo "  $BACKUP_PATH"
 echo
 echo "To roll back:"
-echo "  killall 'Priority'; rm -rf '$INSTALL_PATH' && ditto '$BACKUP_PATH' '$INSTALL_PATH' && open '$INSTALL_PATH'"
+echo "  killall '$PROCESS_NAME'; rm -rf '$INSTALL_PATH' && ditto '$BACKUP_PATH' '$INSTALL_PATH' && open '$INSTALL_PATH'"

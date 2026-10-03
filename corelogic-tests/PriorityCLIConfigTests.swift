@@ -151,7 +151,7 @@ final class PriorityCLIConfigTests: XCTestCase {
   func testDefaultConfigPathMatchesTheCLIsOwn() {
     XCTAssertEqual(
       PriorityCLIConfigWriter.defaultConfigPath(inHomeDirectory: "/Users/example"),
-      "/Users/example/.config/priority/config.json"
+      "/Users/example/.config/takt/config.json"
     )
   }
 }

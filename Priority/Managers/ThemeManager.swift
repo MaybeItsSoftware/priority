@@ -19,7 +19,7 @@ import os
   @ObservationIgnored private let preferencesStore: PreferencesStore
   @ObservationIgnored private let registry: PluginRegistry
   @ObservationIgnored private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "ThemeManager")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "ThemeManager")
 
   /// The user's own theme files. Observed, so an edit to the file in force
   /// redraws everything that reads `specification`.

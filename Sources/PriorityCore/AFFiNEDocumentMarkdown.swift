@@ -46,7 +46,7 @@ public enum AFFiNEDocumentMarkdown {
       lines.append("Task ID: \(taskId)")
     }
     lines.append("")
-    lines.append("_Synced from Priority · \(timestamp(syncDate, calendar: calendar))_")
+    lines.append("_Synced from Takt · \(timestamp(syncDate, calendar: calendar))_")
     lines.append("")
     lines.append("## Notes")
     lines.append("")

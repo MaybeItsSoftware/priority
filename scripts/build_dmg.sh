@@ -4,15 +4,16 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_DIR="$ROOT_DIR"
 XCODEPROJ="$PROJECT_DIR/Priority.xcodeproj"
+# The scheme keeps the code's name; the product it builds is Takt.
 SCHEME="Priority"
-APP_NAME="Priority.app"
-VOL_NAME="Priority"
+APP_NAME="Takt.app"
+VOL_NAME="Takt"
 
 VERSION="${1:-}"
 if [[ -n "$VERSION" ]]; then
-  DMG_BASENAME="priority-v${VERSION}"
+  DMG_BASENAME="takt-v${VERSION}"
 else
-  DMG_BASENAME="priority-$(date +%Y%m%d-%H%M%S)"
+  DMG_BASENAME="takt-$(date +%Y%m%d-%H%M%S)"
 fi
 
 # Distributing outside the Mac App Store needs a "Developer ID Application"
@@ -61,7 +62,7 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
-# The MCP server is the bundled `priority` CLI (scripts/bundle_cli.sh, run from
+# The MCP server is the bundled `takt` CLI (scripts/bundle_cli.sh, run from
 # a build phase). Shipping without it would produce a DMG whose --mcp-server
 # does nothing, breaking every MCP client configuration on the user's machine —
 # worth failing the release for rather than discovering later.

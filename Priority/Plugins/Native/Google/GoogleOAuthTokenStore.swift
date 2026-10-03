@@ -25,6 +25,10 @@ struct GoogleOAuthTokenPayload: Codable, Sendable {
 /// first Google token under a Calendar-specific name, and the migration out of
 /// that name has to be able to read both.
 final class GoogleOAuthTokenStore {
+  /// The product was Priority when this was chosen, and the name is kept on
+  /// purpose: it is a storage key, not a label, and changing it would sign
+  /// everyone out. The Takt rename left it — and every other keychain service
+  /// — exactly as it was.
   private static let service = "uk.co.maybeitsadam.priority"
   /// Where a shared sign-in lives now: one account, however many Google APIs
   /// are switched on.

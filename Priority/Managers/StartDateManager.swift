@@ -4,7 +4,7 @@ import OSLog
 
 @MainActor
 @Observable class StartDateManager {
-  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "startdate")
+  @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "startdate")
   @ObservationIgnored private let preferencesStore: PreferencesStore
   @ObservationIgnored private let cacheInvalidationBus: CacheInvalidationBus
 

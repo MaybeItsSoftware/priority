@@ -5,7 +5,7 @@ import PriorityCore
 import PriorityWorkspace
 import os
 
-/// Loads the user's themes from `~/Library/Application Support/Priority/themes/`
+/// Loads the user's themes from `~/Library/Application Support/Takt/themes/`
 /// and keeps them current as the files change.
 ///
 /// The one provider of user themes: it turns each `*.json` in the folder into
@@ -61,7 +61,7 @@ final class UserThemeLibrary {
   @ObservationIgnored private var store: WorkspaceStore?
   @ObservationIgnored private let preferencesStore = PreferencesStore()
   @ObservationIgnored private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "UserThemeLibrary")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "UserThemeLibrary")
 
   let folderURL: URL
 

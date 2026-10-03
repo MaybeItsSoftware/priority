@@ -15,7 +15,7 @@ import PriorityCore
   let pluginIdentifier = "native.google.tasks.integration"
   let displayName = "Native Google Tasks Integration"
   let pluginDescription =
-    "Mirror your lists into Google Tasks, with Priority as the source of authority."
+    "Mirror your lists into Google Tasks, with Takt as the source of authority."
 
   let account: GoogleAccount
 

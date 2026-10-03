@@ -54,7 +54,7 @@ import Observation
   private static let targetCalendarIDDefaultsKey = "googleCalendarTargetCalendarID"
   private static let openCreatedEventInBrowserDefaultsKey =
     "googleCalendarOpenCreatedEventInBrowser"
-  private static let eventDescriptionSourceName = "Priority"
+  private static let eventDescriptionSourceName = "Takt"
 
   private let defaultEventDurationMinutes: Int
   private let calendar: Calendar

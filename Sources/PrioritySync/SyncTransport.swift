@@ -44,7 +44,18 @@ public struct SyncChangesResponse: Codable, Equatable, Sendable {
 /// goes in the field under "Use a different server"; it has to trust the same
 /// Supabase project, since that is who the apps sign in with.
 public enum SyncServer {
-  public static let defaultURL = URL(string: "https://priority-sync.up.railway.app")!
+  public static let defaultURL = URL(string: "https://takt-sync.up.railway.app")!
+
+  /// Where the default was before the product was renamed from Priority to
+  /// Takt: the same server under its old address. A device signed in there is
+  /// signed in to the default, not to a server of its own, so it is moved
+  /// along with it rather than left on an address that may not last.
+  public static let legacyDefaultURLs = [URL(string: "https://priority-sync.up.railway.app")!]
+
+  /// `url`, or the default if `url` is one of its old addresses.
+  public static func current(_ url: URL) -> URL {
+    legacyDefaultURLs.contains(url) ? defaultURL : url
+  }
 
   /// The Supabase project accounts live in. The publishable key is meant to
   /// ship in apps: it names the project and grants nothing a signed-out
@@ -56,7 +67,7 @@ public enum SyncServer {
   /// web, and where the links in its emails (confirming an address, resetting
   /// a password) open the app. It must be on the project's allowed redirect
   /// URLs.
-  public static let authCallbackURL = URL(string: "priority://auth-callback")!
+  public static let authCallbackURL = URL(string: "takt://auth-callback")!
 
   /// Whether `url` is Supabase coming back to the app.
   public static func isAuthCallback(_ url: URL) -> Bool {
@@ -180,7 +191,7 @@ public struct SyncCredentials: Codable, Equatable, Sendable {
   // account, the email and the signed-out flag.
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    serverURL = try container.decode(URL.self, forKey: .serverURL)
+    serverURL = SyncServer.current(try container.decode(URL.self, forKey: .serverURL))
     deviceId = try container.decode(String.self, forKey: .deviceId)
     accountId = try container.decodeIfPresent(String.self, forKey: .accountId)
     email = try container.decodeIfPresent(String.self, forKey: .email)

@@ -25,7 +25,7 @@ import os
   private let storeProvider: () -> WorkspaceStore?
   private let isEnabled: () -> Bool
   private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "GoogleCalendarCompletionWatcher")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "GoogleCalendarCompletionWatcher")
 
   private var pollTask: Task<Void, Never>?
   private var isRunning = false

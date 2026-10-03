@@ -21,7 +21,7 @@ import os
   @ObservationIgnored private let preferencesStore: PreferencesStore
   @ObservationIgnored private let registry: PluginRegistry
   @ObservationIgnored private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "CompletionCelebrationManager")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "CompletionCelebrationManager")
 
   /// Fallback when nothing is stored, or when a stored identifier no longer
   /// resolves (a preset removed between releases).

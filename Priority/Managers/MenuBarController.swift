@@ -55,18 +55,18 @@ class MenuBarController: NSObject {
     if showFocusSessionTitle() { return }
     stopFocusTicker()
     if showDayTitle() { return }
-    // A launcher still needs an icon, but spelling out "Priority" turns it into
+    // A launcher still needs an icon, but spelling out "Takt" turns it into
     // a conspicuously wide status item. Keep it at the standard menu-bar icon
     // footprint instead.
     statusItem?.button?.title = ""
     statusItem?.button?.attributedTitle = NSAttributedString(string: "")
     let image = NSImage(
       systemSymbolName: "checkmark.circle",
-      accessibilityDescription: "Open Priority")
+      accessibilityDescription: "Open Takt")
     image?.isTemplate = true
     statusItem?.button?.image = image
     statusItem?.button?.imagePosition = .imageOnly
-    statusItem?.button?.toolTip = "Open Priority"
+    statusItem?.button?.toolTip = "Open Takt"
     statusItem?.length = NSStatusItem.squareLength
     statusItem?.button?.layer?.mask = nil
   }
@@ -99,7 +99,7 @@ class MenuBarController: NSObject {
     menu.addItem(withTitle: "Preferences…", action: #selector(menuSettings), keyEquivalent: "")
       .target = self
     menu.addItem(.separator())
-    menu.addItem(withTitle: "Quit Priority", action: #selector(menuQuit), keyEquivalent: "")
+    menu.addItem(withTitle: "Quit Takt", action: #selector(menuQuit), keyEquivalent: "")
       .target = self
     statusItem.menu = menu
     statusItem.button?.performClick(nil)

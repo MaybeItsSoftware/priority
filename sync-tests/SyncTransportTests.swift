@@ -162,14 +162,26 @@ final class SyncTransportTests: XCTestCase {
     XCTAssertFalse(saved.contains("tok-1"))
   }
 
+  func testCredentialsSavedAgainstTheOldDefaultMoveToTheNewOne() throws {
+    let saved = #"{"serverURL":"https://priority-sync.up.railway.app","deviceId":"dev-1"}"#
+    let decoded = try JSONDecoder().decode(SyncCredentials.self, from: Data(saved.utf8))
+    XCTAssertEqual(decoded.serverURL, SyncServer.defaultURL)
+    // A server of the user's own stays theirs.
+    let own = #"{"serverURL":"https://sync.example.com","deviceId":"dev-1"}"#
+    let kept = try JSONDecoder().decode(SyncCredentials.self, from: Data(own.utf8))
+    XCTAssertEqual(kept.serverURL.absoluteString, "https://sync.example.com")
+  }
+
   func testATypedServerAddressGetsAScheme() {
     XCTAssertEqual(SyncServer.url(from: " sync.example.com "), URL(string: "https://sync.example.com"))
     XCTAssertEqual(SyncServer.url(from: "http://localhost:8080"), URL(string: "http://localhost:8080"))
     XCTAssertNil(SyncServer.url(from: ""))
     XCTAssertNil(SyncServer.url(from: "ftp://example.com"))
-    XCTAssertEqual(SyncServer.defaultURL.absoluteString, "https://priority-sync.up.railway.app")
-    XCTAssertTrue(SyncServer.isAuthCallback(URL(string: "priority://auth-callback?code=abc")!))
-    XCTAssertFalse(SyncServer.isAuthCallback(URL(string: "priority://today")!))
+    XCTAssertEqual(SyncServer.defaultURL.absoluteString, "https://takt-sync.up.railway.app")
+    XCTAssertTrue(SyncServer.isAuthCallback(URL(string: "takt://auth-callback?code=abc")!))
+    XCTAssertFalse(SyncServer.isAuthCallback(URL(string: "takt://today")!))
+    // The scheme from before the rename is no longer the app's.
+    XCTAssertFalse(SyncServer.isAuthCallback(URL(string: "priority://auth-callback?code=abc")!))
   }
 
   func testTheAppleNonceIsHashedAsSupabaseChecksIt() {
@@ -282,7 +294,7 @@ final class SyncTransportTests: XCTestCase {
       SyncSession.passwordResetSentMessage(for: sent),
       "If there's an account for me@example.com, we've sent it a link to reset the password. Open it on this device.")
 
-    try await session.completeSignIn(from: URL(string: "priority://auth-callback?code=abc")!)
+    try await session.completeSignIn(from: URL(string: "takt://auth-callback?code=abc")!)
     session.deactivate()
     XCTAssertTrue(session.isSignedIn)
     XCTAssertTrue(session.needsNewPassword)

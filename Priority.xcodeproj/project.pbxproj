@@ -13,7 +13,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		665C2D5D2F588A0A002ED852 /* Priority.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Priority.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		665C2D5D2F588A0A002ED852 /* Takt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Takt.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -80,7 +80,7 @@
 		665C2D5E2F588A0A002ED852 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				665C2D5D2F588A0A002ED852 /* Priority.app */,
+				665C2D5D2F588A0A002ED852 /* Takt.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -111,7 +111,7 @@
 				A11CE0042F588A0A002ED852 /* PrioritySync */,
 			);
 			productName = "Priority";
-			productReference = 665C2D5D2F588A0A002ED852 /* Priority.app */;
+			productReference = 665C2D5D2F588A0A002ED852 /* Takt.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -312,6 +312,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Priority/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Takt;
 				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSSupportsAutomaticTermination = NO;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -329,8 +330,8 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MARKETING_VERSION = 2.5.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "uk.co.maybeitsadam.priority";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "uk.co.maybeitssoftware.takt";
+				PRODUCT_NAME = Takt;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -372,6 +373,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Priority/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Takt;
 				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSSupportsAutomaticTermination = NO;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -389,8 +391,8 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MARKETING_VERSION = 2.5.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "uk.co.maybeitsadam.priority";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "uk.co.maybeitssoftware.takt";
+				PRODUCT_NAME = Takt;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

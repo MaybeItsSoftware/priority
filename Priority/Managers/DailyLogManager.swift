@@ -42,7 +42,7 @@ protocol DailyLogDataSource: AnyObject {
   static let fullChartHistoryDays = 14
 
   @ObservationIgnored private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "dailylog")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "dailylog")
   @ObservationIgnored private let preferencesStore: PreferencesStore
   @ObservationIgnored let plugin: any DailyLogPlugin
 

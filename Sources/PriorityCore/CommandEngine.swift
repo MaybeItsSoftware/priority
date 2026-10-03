@@ -280,7 +280,7 @@ public enum CommandEngine {
       submitImmediately: true),
     .init(
       label: "Open preferences", command: "preferences",
-      preview: "Open Priority preferences",
+      preview: "Open Takt preferences",
       keybind: "Cmd+,", submitImmediately: true),
     .init(
       label: "Open main window", command: "window",

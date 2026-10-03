@@ -13,7 +13,7 @@ final class LocalTaskStore {
   private let defaults: UserDefaults
   private let payloadKey = "offlineTaskStorePayload"
   private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "local-task-store")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "local-task-store")
 
   init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
@@ -67,7 +67,7 @@ final class PendingOfflineWorkStore {
   private let defaults: UserDefaults
   private let payloadKey = "pendingOfflineWorkPayload"
   private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "pending-offline-work")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "pending-offline-work")
 
   init(defaults: UserDefaults = .standard) {
     self.defaults = defaults

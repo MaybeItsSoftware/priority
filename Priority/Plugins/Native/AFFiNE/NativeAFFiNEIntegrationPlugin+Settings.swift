@@ -85,7 +85,7 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
       // Priority never handles the AFFiNE password: the helper keeps its own
       // credentials, and saying so is the only way the user knows where to put
       // them.
-      Text("Sign in once with `affine-mcp login`. Priority reuses that session.")
+      Text("Sign in once with `affine-mcp login`. Takt reuses that session.")
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
     }

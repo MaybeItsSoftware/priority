@@ -28,7 +28,7 @@ struct PendingTaskUpdate: Sendable, Codable {
 @MainActor
 @Observable class TaskRepository {
   @ObservationIgnored private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "repository")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "repository")
 
   // MARK: - Dependencies
 

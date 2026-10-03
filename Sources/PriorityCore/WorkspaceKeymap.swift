@@ -287,7 +287,7 @@ public struct WorkspaceKeymap: Sendable, Equatable {
     let isCharacter = base.count == 1
     let isSequence = WorkspaceCommandCatalog.isSequence(base)
     guard isNamed || isCharacter || isSequence else {
-      return reject("is not a key Priority can recognise")
+      return reject("is not a key Takt can recognise")
     }
     if isSequence && !modifiers.isEmpty {
       return reject("puts a modifier on a two-letter sequence, which is typed as two plain letters")

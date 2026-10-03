@@ -77,7 +77,7 @@ public enum AFFiNEHelperLocator {
   /// of error that costs an afternoon.
   public static func missingHelperMessage(candidates: [String]) -> String {
     """
-    Priority could not find `affine-mcp`.
+    Takt could not find `affine-mcp`.
 
     The AFFiNE integration talks to your workspace through the \
     `affine-mcp-server` npm package, which was not found. Looked in:

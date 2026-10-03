@@ -32,6 +32,9 @@ public struct KeychainSyncCredentialStore: SyncCredentialStore {
 
   /// `accessGroup` lets an app and its extensions share the item; nil keeps
   /// it to the calling app.
+  ///
+  /// The default service keeps the product's old name, Priority: it is a
+  /// storage key, and changing it would sign every device out of sync.
   public init(service: String = "uk.co.maybeitsadam.priority.sync", accessGroup: String? = nil) {
     self.service = service
     self.accessGroup = accessGroup

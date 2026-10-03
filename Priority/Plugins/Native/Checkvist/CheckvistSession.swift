@@ -4,9 +4,9 @@ import PriorityCore
 
 @MainActor
 final class CheckvistSession {
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "checkvist-session")
+  private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "checkvist-session")
   private let apiClient: CheckvistAPIClient
-  private let userAgent = "Priority/1.0 (Macintosh; Mac OS X)"
+  private let userAgent = "Takt/1.0 (Macintosh; Mac OS X)"
   private var token: String?
   /// In-flight login task. Concurrent callers await this instead of firing duplicates.
   private var activeLoginTask: Task<Bool, Never>?

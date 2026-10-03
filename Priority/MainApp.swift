@@ -4,7 +4,7 @@ import SwiftUI
 
 /// The real entry point, so `--mcp-server` is handled before AppKit starts.
 ///
-/// `MCPServerShim.run()` replaces the process image with the bundled `priority`
+/// `MCPServerShim.run()` replaces the process image with the bundled `takt`
 /// CLI, so nothing here gets as far as opening a window-server connection for a
 /// process that only ever speaks JSON-RPC on stdio.
 @main
@@ -13,6 +13,13 @@ enum PriorityEntryPoint {
     if MCPServerShim.isLaunchMode(arguments: CommandLine.arguments) {
       MCPServerShim.run()
     }
+    // Before anything reads preferences or Application Support. Here rather
+    // than in `applicationDidFinishLaunching` because `AppDelegate`'s stored
+    // properties are built before that runs, and one of them opening a file at
+    // the new location first would leave the old copy behind for good. The
+    // MCP server, exec'd above, needs no migration: the CLI falls back to the
+    // old locations itself until the app has created the new ones.
+    LegacyNameMigration.runIfNeeded()
     MainApp.main()
   }
 }
@@ -47,7 +54,7 @@ struct MainApp: App {
         // shadows the workspace's own handler whenever the window is up —
         // which is the only time this item is reachable at all, since a closed
         // window leaves the app an accessory with no menu bar.
-        Button("Priority") {
+        Button("Takt") {
           AppDelegate.shared.showMainWindow()
         }
       }

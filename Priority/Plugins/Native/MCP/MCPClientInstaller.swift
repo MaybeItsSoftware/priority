@@ -45,7 +45,7 @@ final class MCPClientInstaller {
   }
 
   private let logger = Logger(
-    subsystem: "uk.co.maybeitsadam.priority", category: "MCPClientInstaller")
+    subsystem: "uk.co.maybeitssoftware.takt", category: "MCPClientInstaller")
   private let defaults: UserDefaults
 
   init(defaults: UserDefaults = .standard) {
@@ -189,7 +189,7 @@ final class MCPClientInstaller {
     panel.directoryURL = directoryURL
     panel.prompt = "Grant Access"
     panel.message =
-      "Priority needs permission to edit \(client.displayName)'s MCP configuration. "
+      "Takt needs permission to edit \(client.displayName)'s MCP configuration. "
       + "The folder is already selected — click Grant Access."
 
     guard panel.runModal() == .OK, let selected = panel.url else { return nil }

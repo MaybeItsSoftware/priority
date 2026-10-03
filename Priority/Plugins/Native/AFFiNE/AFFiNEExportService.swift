@@ -52,7 +52,7 @@ final class AFFiNEExportService {
   private static let parentDocIdKey = "affineParentDocId"
   private static let docIdsKey = "affineChecklistDocIdsByListId"
 
-  private let logger = Logger(subsystem: "uk.co.maybeitsadam.priority", category: "affine")
+  private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "affine")
   private let defaults: UserDefaults
   private let makeCaller: (() throws -> AFFiNEToolCalling)?
 

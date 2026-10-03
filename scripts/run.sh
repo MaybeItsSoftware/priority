@@ -3,20 +3,23 @@ set -o pipefail
 
 # Configuration
 SCHEME="Priority"
+# The scheme keeps the code's name; the product, and so the bundle and its
+# executable, is Takt.
+PRODUCT="Takt"
 CONFIG="Debug"
 BUILD_DIR="$(pwd)/build"
 
 # `SYMROOT` puts products at $BUILD_DIR/$CONFIG, so the binary's location is
 # known up front. It used to be discovered with
-#     find "$BUILD_DIR" -name Priority -type f -perm +111 | head -n 1
+#     find "$BUILD_DIR" -name "$PRODUCT" -type f -perm +111 | head -n 1
 # which silently launched whatever `find` happened to walk into first — a stale
 # Release build under build/rel/ (left by build_dmg.sh) or a build/backup.noindex/
 # snapshot, both of which sort ahead of build/Debug/. The build would succeed
 # and the *old* app would start, which looks exactly like a change not working.
-APP_PATH="$BUILD_DIR/$CONFIG/$SCHEME.app"
-BINARY_PATH="$APP_PATH/Contents/MacOS/$SCHEME"
+APP_PATH="$BUILD_DIR/$CONFIG/$PRODUCT.app"
+BINARY_PATH="$APP_PATH/Contents/MacOS/$PRODUCT"
 
-echo "🚀 Building $SCHEME ($CONFIG)..."
+echo "🚀 Building $PRODUCT ($CONFIG)..."
 
 # Using -quiet to keep it clean since xcpretty is missing
 if ! xcodebuild build \
@@ -51,7 +54,9 @@ echo "   Built:  $(date -r "$BINARY_PATH" '+%Y-%m-%d %H:%M:%S')"
 
 # Kill any running instance, including one launched from a different path (a
 # previously-installed copy in /Applications, or an older build directory).
-pkill -f "$SCHEME.app/Contents/MacOS/$SCHEME" 2>/dev/null
+# The old name too, for an install of the app from before it was Takt.
+pkill -f "$PRODUCT.app/Contents/MacOS/$PRODUCT" 2>/dev/null
+pkill -f "Priority.app/Contents/MacOS/Priority" 2>/dev/null
 sleep 0.5
 
 echo "Running: $BINARY_PATH"
