@@ -225,6 +225,93 @@ Arvo is not bundled, so without it installed this is Rockwell, the slab macOS
 ships. The labels' text is written in sentence case and uppercased by the
 theme, so it comes out as it did.
 
+## Across the Mac, iPhone and Android
+
+One theme file works on all three apps. The palette is the same everywhere:
+a role is one colour whatever the device, so a theme you tuned on the Mac
+looks like itself on the phone. Structure (sizes, radii, spacing) is not the
+same everywhere, because 13pt body text is right at a desk and too small in the
+hand. So a theme can say what changes per platform.
+
+### `platforms`
+
+```json
+{
+  "name": "Dusk",
+  "palette": { "dark": { "paper": "#15131c" } },
+  "structure": { "radius": { "control": 2 } },
+  "platforms": {
+    "ios": { "structure": { "typography": { "bodySize": 18 } } },
+    "android": { "structure": { "spacing": { "md": 14 } } }
+  }
+}
+```
+
+`platforms.macos`, `platforms.ios` and `platforms.android` each hold a partial
+`structure`, laid over the theme's own `structure` on that platform only. The
+order a value is resolved in, latest winning:
+
+1. The theme it extends, fully resolved **for this platform** (which includes
+   that theme's own `platforms` block).
+2. This theme's `structure`.
+3. This theme's `platforms.<this platform>.structure`.
+
+So a theme that only changes colours inherits each platform's sensible sizes
+from Chalk, and a theme that sets `structure.typography.bodySize` sets it
+everywhere unless a `platforms` entry says otherwise. Palette is not allowed
+under `platforms`. A `palette` key there is a warning and is ignored, because
+the point is that colour stays consistent.
+
+### Chalk's defaults per platform
+
+| | macOS | iOS | Android |
+| --- | --- | --- | --- |
+| `typography.bodySize` | 13 | 17 | 16 |
+| `typography.scale` caption / body / title / display / hero | 12 / 13 / 15 / 28 / 64 | 13 / 17 / 20 / 34 / 72 | 12 / 16 / 20 / 32 / 72 |
+| `typography.microLabel.size` | 12 | 13 | 12 |
+| `radius` panel / row / control | 0 / 0 / 4 | 8 / 0 / 6 | 8 / 0 / 6 |
+| `spacing` xxs … xl | 2 4 8 12 16 24 | 2 4 8 12 16 24 | 2 4 8 12 16 24 |
+| `touchTarget` | 0 (pointer) | 44 | 48 |
+
+Chalk Dark extends Chalk and so takes the same per-platform structure.
+
+`touchTarget` is new in the structure: the minimum hit area a control is
+grown to, invisibly, so the painted control keeps its size. 0 means a pointer
+platform with no minimum.
+
+### Built-ins are shared files
+
+Chalk and Chalk Dark are defined once, in Swift
+(`BuiltInThemeSpecifications`), and exported as complete JSON to
+`shared/themes/chalk.json` and `shared/themes/chalk-dark.json`. A Swift test
+fails if those files and the Swift definitions disagree; run it with
+`PRIORITY_REGENERATE_THEMES=1` to rewrite them. The Android app reads those files
+from its assets (a Gradle task copies them in, the same way it copies the
+workspace schema), so the three apps cannot drift apart on a hex value.
+
+`shared/themes/conformance/` holds resolution cases: input files plus the
+expected resolved theme for each platform and appearance. They are written by
+the Swift tests, and the Kotlin resolver must reproduce them exactly.
+
+### The chosen theme follows you
+
+Your themes and your choice of theme sync with the rest of the workspace
+(see [sync](sync.md)):
+
+- Every user theme is a row in the synced `themes` table (`id` is its
+  identifier, `json` the file's text). On the Mac the themes folder stays the
+  place you edit. Saving a file updates its row, and deleting the file deletes the
+  row. A theme that arrives from another device is written into the folder as
+  `<identifier>.json`, unless a file already claims that identifier. On the
+  phones, **Settings → Theme → Import** adds a row from a `.json` file, and a
+  theme can be removed there.
+- The choice of theme and appearance (`theme.selected`, `theme.appearance`:
+  `system`, `light` or `dark`) are rows in the synced `preferences` table. Each
+  device can opt out with **Use a different theme on this device**, which is
+  stored locally and not synced.
+- A device that does not know the chosen theme (it failed to load there, or
+  has not arrived yet) shows Chalk until it does.
+
 ## When something is wrong
 
 A theme file is never all-or-nothing, and never stops the app starting.

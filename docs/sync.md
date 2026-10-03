@@ -31,6 +31,14 @@ Every row of these tables, keyed by the column shown:
 | `focus_queue_items` | `id` |
 | `focus_work_blocks` | `id` |
 | `focus_awards` | `id` |
+| `themes` | `id` |
+| `preferences` | `key` |
+
+`themes` and `preferences` arrive in `v18_themes_and_preferences`:
+`themes(id TEXT PRIMARY KEY, json TEXT NOT NULL, updatedAt DATETIME NOT NULL)`
+and `preferences(key TEXT PRIMARY KEY, value TEXT, updatedAt DATETIME NOT NULL)`.
+They hold the user's theme files and the cross-device choices described in
+[themes](themes.md#the-chosen-theme-follows-you). Neither is journalled for undo.
 
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
