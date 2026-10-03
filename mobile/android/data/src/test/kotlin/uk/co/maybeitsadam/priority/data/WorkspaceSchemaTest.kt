@@ -33,13 +33,17 @@ class WorkspaceSchemaTest {
     }
 
     @Test
-    fun freshDatabaseIsTheFixturePlusV17(): Unit = runBlocking {
+    fun freshDatabaseIsTheFixtureWithItsSyncObjects(): Unit = runBlocking {
         TestWorkspace().use { workspace ->
             val actual = workspace.database.read { schema(it) }
             val fixture = fixtureSchema()
             assertTrue("every fixture object is present unchanged", actual.containsAll(fixture))
 
-            val added = (actual - fixture).map { it.type to it.name }.toSet()
+            // The fixture is regenerated from the Mac app's database, which has
+            // run v17 itself, so nothing is left for Android to add — but every
+            // sync object must be there, from whichever side created it.
+            assertEquals(emptySet<Pair<String, String>>(), (actual - fixture).map { it.type to it.name }.toSet())
+            val present = actual.map { it.type to it.name }.toSet()
             val expected = buildSet {
                 add("table" to "sync_control")
                 add("table" to "sync_outbox")
@@ -49,7 +53,7 @@ class WorkspaceSchemaTest {
                     for (op in listOf("insert", "update", "delete")) add("trigger" to "sync_outbox_${table}_$op")
                 }
             }
-            assertEquals(expected, added)
+            assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
             assertEquals(17, migrations.size)
@@ -62,33 +66,20 @@ class WorkspaceSchemaTest {
     }
 
     @Test
-    fun reopeningAndAFixtureThatAlreadyCarriesV17DoNotApplyItTwice(): Unit = runBlocking {
+    fun reopeningDoesNotApplyV17Twice(): Unit = runBlocking {
         val dir = Files.createTempDirectory("priority-schema").toFile()
         val path = dir.resolve("priority.sqlite").path
         WorkspaceDatabase.open(path).close()
         val reopened = WorkspaceDatabase.open(path)
         val count = reopened.read { it.long("SELECT COUNT(*) FROM grdb_migrations WHERE identifier = 'v17_sync'") }
         assertEquals(1L, count)
+        // The fixture now carries v17 itself (regenerated from the Mac app's
+        // migrated database), so the Android step stands aside and the
+        // triggers are the fixture's, once each.
+        assertEquals(39L, reopened.read {
+            it.long("SELECT COUNT(*) FROM sqlite_master WHERE name LIKE 'sync_outbox_%' AND type = 'trigger'")
+        })
         reopened.close()
-
-        // A fixture regenerated after the Swift app gained v17 already holds
-        // its objects and its ledger row: the Android step must stand aside.
-        val withV17 = WorkspaceSchema.fixtureSQL() + "\n" + run {
-            val connection = BundledSQLiteDriver().open(":memory:")
-            val db = Db(connection)
-            for (statement in WorkspaceSchema.splitStatements(WorkspaceSchema.fixtureSQL())) connection.execSQL(statement)
-            val before = db.strings("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL").toSet()
-            WorkspaceSchema.applyV17Sync(db)
-            val after = db.strings("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL")
-            connection.close()
-            after.filter { it !in before }.joinToString("\n") { "$it;" } +
-                "\nINSERT INTO sync_control (id) VALUES (0);\nINSERT INTO grdb_migrations (identifier) VALUES ('v17_sync');"
-        }
-        val second = dir.resolve("second.sqlite").path
-        val opened = WorkspaceDatabase.open(second, fixture = withV17)
-        assertEquals(1L, opened.read { it.long("SELECT COUNT(*) FROM grdb_migrations WHERE identifier = 'v17_sync'") })
-        assertEquals(39L, opened.read { it.long("SELECT COUNT(*) FROM sqlite_master WHERE name LIKE 'sync_outbox_%' AND type = 'trigger'") })
-        opened.close()
         dir.deleteRecursively()
     }
 }

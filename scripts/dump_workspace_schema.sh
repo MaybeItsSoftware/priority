@@ -39,6 +39,11 @@ latest="$(sqlite3 -readonly "file:$database?mode=ro" \
     "SELECT 'INSERT INTO grdb_migrations (identifier) VALUES (''' || identifier || ''');'
      FROM grdb_migrations ORDER BY rowid;"
   echo "INSERT INTO undo_control (id, suppressed) VALUES (0, 1);"
+  # The sync triggers read their switches from this row; without it they
+  # compare against NULL and never fire. Created by v17_sync.
+  if sqlite3 -readonly "file:$database?mode=ro" "SELECT 1 FROM sqlite_master WHERE name = 'sync_control'" | grep -q 1; then
+    echo "INSERT INTO sync_control (id) VALUES (0);"
+  fi
 } > "$output"
 
 echo "Wrote $output (${latest})"
