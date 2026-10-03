@@ -286,6 +286,9 @@ because they come and go while the app runs: `UserThemeLibrary` (in
 `ThemeManager` lists those after the built-ins and keeps the user's pick even
 while its file is missing, rendering Chalk until it returns. Load problems go
 to Diagnostics and the window's error line, the way `keymap.json`'s do.
+The folder is also mirrored into the workspace's synced `themes` table, and
+the choice of theme follows the synced preferences (`ThemeChoiceSync`); see
+[`themes.md`](themes.md#for-developers).
 
 **`validate()` is the guard rail.** A role missing from both tables is an
 error; unreadable body text, an accent under 3:1 where it has to carry a focus

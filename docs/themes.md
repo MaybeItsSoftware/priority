@@ -302,13 +302,26 @@ Your themes and your choice of theme sync with the rest of the workspace
   identifier, `json` the file's text). On the Mac the themes folder stays the
   place you edit. Saving a file updates its row, and deleting the file deletes the
   row. A theme that arrives from another device is written into the folder as
-  `<identifier>.json`, unless a file already claims that identifier. On the
+  `<identifier>.json`, unless a file already claims that identifier. A theme
+  whose identifier comes from its file name (`user.dusk`, from a `dusk.json`
+  with no `identifier`) is written back under that name instead, `dusk.json`,
+  so it is the same theme on the Mac. An edit from another device is
+  written into the file if the file has not changed here since. If both
+  changed, the Mac's file wins. A theme removed on another device moves its
+  file to the Trash, unless the file has been edited here since. While any
+  file in the folder is not valid JSON, the Mac writes and removes nothing,
+  because a file half way through an edit does not say which theme it is. On the
   phones, **Settings → Theme → Import** adds a row from a `.json` file, and a
   theme can be removed there.
 - The choice of theme and appearance (`theme.selected`, `theme.appearance`:
   `system`, `light` or `dark`) are rows in the synced `preferences` table. Each
-  device can opt out with **Use a different theme on this device**, which is
-  stored locally and not synced.
+  device can opt out with **Use a different theme on this device** (on the
+  Mac, **Use a different theme on this Mac** in Settings → Theme), which is
+  stored locally and not synced. Turning it on keeps the theme the device is
+  showing, and from then on changes stay on that device. Turning it off
+  takes up the synced choice again. The first time a Mac with this feature opens
+  the workspace, its current theme and appearance become the synced choice,
+  unless another device has already set one.
 - A device that does not know the chosen theme (it failed to load there, or
   has not arrived yet) shows Chalk until it does.
 
@@ -351,7 +364,40 @@ missing: without a base it falls back to Chalk's.
 
 The format is decoded in `PriorityCore`
 (`Sources/PriorityCore/Theming/ThemeFile.swift` and `ThemeFileLoader.swift`)
-and tested in `corelogic-tests/ThemeFileTests.swift`. The app side is
-`UserThemeLibrary`, which watches the folder and vends a `UserThemePlugin` per
-file to `ThemeManager`. See the Theme section of
-[`docs/plugins.md`](plugins.md).
+and tested in `corelogic-tests/ThemeFileTests.swift`.
+
+- **Platforms.** `ThemeFileLoader.load(_:platform:)` resolves a folder for
+  one `ThemePlatform` (`.macos`, `.ios`, `.android`). The default is `.macos`,
+  so the Mac reads exactly as it did before platforms existed.
+  `BuiltInThemeSpecifications.chalk(for:)`, `chalkDark(for:)`, `all(for:)` and
+  `specification(withIdentifier:for:)` are the built-ins per platform. The
+  phones' differences from the Mac are `chalkPlatformStructures`, a partial
+  `ThemeFile.Structure` per platform. `chalk` and `chalkDark` without a
+  platform are the Mac's. `ThemeStructureAudit` warns about a `touchTarget`
+  between 0 and 44.
+- **Shared files.** `ThemeConformance` (in `PriorityCore`) builds the
+  complete built-in files and the canonical resolved form, and
+  `corelogic-tests/ThemeConformanceTests.swift` holds `shared/themes/` to it:
+  the cases are listed in that test. Add a case there, then regenerate with
+  `PRIORITY_REGENERATE_THEMES=1 swift test --filter PriorityCoreTests.ThemeConformanceTests`.
+  The format is in [`shared/themes/README.md`](../shared/themes/README.md).
+- **Sync.** The rows are `WorkspaceStore.themes()`, `upsertTheme(id:json:)`,
+  `deleteTheme(id:)`, `preference(_:)` and `setPreference(_:_:)`
+  (`Sources/PriorityWorkspace/WorkspaceStore+Themes.swift`, migration
+  `v18_themes_and_preferences`). Writes that change nothing are skipped, which
+  is what keeps a row and a file from echoing each other. The keys are
+  `WorkspacePreferenceKey.themeSelected` and `.themeAppearance`.
+- **The Mac.** `UserThemeLibrary` watches the folder and vends a
+  `UserThemePlugin` per file to `ThemeManager`. Once the workspace is open it
+  also mirrors the folder into the `themes` table on every load. What to do is
+  decided by `ThemeFolderMirror.plan` in `PriorityCore`, tested in
+  `corelogic-tests/ThemeFolderMirrorTests.swift`. That compares each side
+  with the digest of the text last mirrored, which is kept in `UserDefaults`.
+  `ThemeChoiceSync` keeps `ThemeManager`'s pick and the appearance setting in
+  step with the synced preferences, and owns the per-Mac opt-out.
+  `AppDelegate` builds it once the workspace store exists. After a sync pull or
+  a write from another process, `WorkspaceViewModel.reloadAfterExternalWrite`
+  calls `onWorkspaceChangedElsewhere`, which reloads the themes and the
+  choice.
+
+See the Theme section of [`docs/plugins.md`](plugins.md).

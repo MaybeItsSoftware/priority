@@ -42,7 +42,9 @@ They hold the user's theme files and the cross-device choices described in
 
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
-sync tables themselves. Day-log files and themes stay per device.
+sync tables themselves. Day-log files stay per device. Theme *files* do
+too, but their text travels as `themes` rows (the Mac mirrors its themes
+folder into the table, see [themes](themes.md#the-chosen-theme-follows-you)).
 
 ## Local schema (`v17_sync`)
 
