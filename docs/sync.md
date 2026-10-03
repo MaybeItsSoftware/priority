@@ -115,6 +115,35 @@ are GRDB's `"yyyy-MM-dd HH:mm:ss.SSS"` text in UTC, and booleans are `0`/`1`.
   Supabase user. The app asks the user to confirm first. Every device keeps
   its local copy.
 
+### Signing in on the Mac and iPhone
+
+`Sources/PrioritySync` holds both apps' half. `SyncServer` names the
+Supabase project (its URL and publishable key) and the redirect,
+`priority://auth-callback`, which has to be on the project's allowed
+redirect URLs.
+
+- **Email and password**: sign in, or create an account. When the project
+  asks for confirmed emails, signing up says "check your email". "Forgot
+  password?" calls Supabase's `recover`. The emailed link opens the app, which
+  signs in and asks for a new password.
+- **Google**: Supabase's web flow in `ASWebAuthenticationSession`, coming back
+  on `priority://auth-callback`.
+- **Apple**: on the iPhone, the native sheet. The ID token and a hashed nonce
+  go to Supabase's `id_token` grant. The Mac is signed without a provisioning
+  profile, so it can't hold the Sign in with Apple entitlement and uses the
+  web flow, as for Google.
+
+The Supabase session lives in the Keychain, through the SDK's own
+`KeychainLocalStorage`, readable after first unlock so a background refresh
+can sync. Before each request the transport asks the client for a token,
+which refreshes it first if it has expired. A `401` refreshes once and
+retries. A refresh Supabase refuses is "signed out". A refresh that fails
+because the device is offline is only a failed cycle.
+
+The device id is a UUID, made the first time and kept in the Keychain across
+sign-outs. A device signed in under the old server-issued accounts keeps its
+id, drops the old token, and asks to sign in again.
+
 ### `POST /v1/push`
 Request:
 ```json
