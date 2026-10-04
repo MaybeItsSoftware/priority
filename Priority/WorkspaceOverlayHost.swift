@@ -326,13 +326,15 @@ struct WorkspaceListNavigator: View {
                 }
                   .font(theme.bodyFont())
                   .overlayRow(isSelected: index == (selection ?? 0))
-                  .id(index)
+                  .id(destination.id)
                   .onTapGesture { open(destination) }
               }
             }
           }
           .frame(height: WorkspaceOverlayMetrics.listHeight)
-          .onChange(of: selection) { _, index in if let index { proxy.scrollTo(index) } }
+          .onChange(of: selection) { _, index in
+            if let index, items.indices.contains(index) { proxy.scrollTo(items[index].id) }
+          }
         }
       }
       WorkspaceOverlayFooter(hints: "↑↓ choose · ↩ open · ⌘↩ new list · esc close", trailing: "\(items.count)")
@@ -382,6 +384,8 @@ struct WorkspaceMoveOverlay: View {
   /// being moved, which is a store read, and a body is no place for one.
   @State private var all: [Destination] = []
 
+  private static let newListRowID = "new-list"
+
   struct Destination: Identifiable {
     let id: String
     let name: String
@@ -428,7 +432,7 @@ struct WorkspaceMoveOverlay: View {
                   .lineLimit(1)
                   .truncationMode(.middle)
                   .overlayRow(isSelected: index == (selection ?? 0))
-                  .id(index)
+                  .id(destination.id)
                   .onTapGesture { move(to: destination) }
               }
               if let newList {
@@ -438,13 +442,18 @@ struct WorkspaceMoveOverlay: View {
                   .lineLimit(1)
                   .truncationMode(.middle)
                   .overlayRow(isSelected: items.count == (selection ?? 0))
-                  .id(items.count)
+                  .id(Self.newListRowID)
                   .onTapGesture { moveToNewList(named: newList) }
               }
             }
           }
           .frame(height: WorkspaceOverlayMetrics.listHeight)
-          .onChange(of: selection) { _, index in if let index { proxy.scrollTo(index) } }
+          // Rows are keyed by destination, not position: keyed by position,
+          // a filtered list kept drawing the rows it had before you typed.
+          .onChange(of: selection) { _, index in
+            guard let index else { return }
+            proxy.scrollTo(items.indices.contains(index) ? items[index].id : Self.newListRowID)
+          }
         }
       }
       WorkspaceOverlayFooter(hints: "↑↓ choose · ↩ move · esc cancel", trailing: "\(items.count)")
