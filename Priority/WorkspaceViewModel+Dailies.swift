@@ -238,7 +238,7 @@ extension WorkspaceViewModel {
 
   /// Defers the task under the cursor. The default is tomorrow morning, which
   /// is what "not today" almost always means.
-  func deferFocusLadderSelection(_ deferral: WorkspaceDeferral = .tomorrow) {
+  func deferFocusLadderSelection(_ deferral: WorkspaceDeferral = .standard) {
     guard let task = focusLadderTask else { return }
     scheduleForLater(task, until: deferral.date(from: .now))
   }

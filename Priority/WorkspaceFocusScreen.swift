@@ -409,7 +409,8 @@ struct WorkspaceFocusScreen: View {
         tickOff()
       }
       HStack(spacing: 0) {
-        actionButton("Later", systemImage: "clock", key: "L") {
+        // Says when, so pressing L is never a guess about where the task went.
+        actionButton("Later: \(WorkspaceDeferral.standard.title.lowercased())", systemImage: "clock", key: "L") {
           model.deferFocusLadderSelection()
         }
         Menu {
@@ -520,6 +521,9 @@ enum WorkspaceDeferral: String, CaseIterable, Identifiable {
   case thisAfternoon
   case tomorrow
   case nextWeek
+
+  /// What Later means when you don't choose: the L key and the button itself.
+  static let standard = WorkspaceDeferral.tomorrow
 
   var id: String { rawValue }
 

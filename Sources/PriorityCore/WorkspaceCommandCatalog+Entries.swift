@@ -336,7 +336,7 @@ public enum WorkspaceCommandCatalog {
       id: .focusTickOff, title: "Tick the task off without starting", group: "Focus",
       keys: ["x"], surface: .focus),
     .init(
-      id: .focusDefer, title: "Schedule it for later", group: "Focus", keys: ["l"],
+      id: .focusDefer, title: "Schedule it for tomorrow morning", group: "Focus", keys: ["l"],
       surface: .focus, note: "So it stops being offered"),
     .init(
       id: .focusReorder, title: "Move the task up or down the ladder", group: "Focus",
