@@ -769,5 +769,15 @@ fn workspace_tool_definitions() -> Vec<Value> {
                 "additionalProperties": false,
             },
         }),
+        json!({
+            "name": "workspace_list_delete",
+            "description": "Delete a local list and every task in it. The Inbox cannot be deleted. Undoable from Takt's Undo menu.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "list_id": id("From workspace_tree.") },
+                "required": ["list_id"],
+                "additionalProperties": false,
+            },
+        }),
     ]
 }

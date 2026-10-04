@@ -12,7 +12,7 @@ Takt ships an MCP stdio server so an AI assistant can work directly with your Ch
 
 ## What It Can Do
 
-The server exposes 33 MCP tools, in three groups.
+The server exposes 34 MCP tools, in three groups.
 
 **Checkvist tools** — these reach the Checkvist API directly, so they work
 whether or not the app is running:
@@ -68,6 +68,7 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 | `workspace_folder_create` | Create a folder, optionally inside another | write |
 | `workspace_list_create` | Create a list, optionally in a folder | write |
 | `workspace_list_move` | Move a list into a folder, or to the top level | write |
+| `workspace_list_delete` | Delete a list and its tasks (not the Inbox) | write |
 
 Notes:
 

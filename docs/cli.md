@@ -272,6 +272,7 @@ takt ws new-folder Computer Science
 takt ws new-list Revision --folder <FOLDER_ID>
 takt ws move-list <LIST_ID> --folder <FOLDER_ID>
 takt ws rm <TASK_ID>
+takt ws rm-list <LIST_ID>                     # the list and its tasks
 ```
 
 These write while the app is open. Each command is one step in the app's Undo

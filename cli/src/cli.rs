@@ -404,6 +404,8 @@ pub enum WsCommand {
         #[arg(long, short = 'f', value_name = "FOLDER_ID")]
         folder: Option<String>,
     },
+    /// Delete a list and every task in it. Undoable from the app.
+    RmList { list_id: String },
 }
 
 #[derive(Args)]
@@ -818,6 +820,10 @@ fn resolve_workspace(command: &WsCommand, arguments: &mut Map<String, Value>) ->
             arguments.insert("list_id".into(), json!(list_id));
             insert_if_some(arguments, "folder_id", folder.as_deref());
             "workspace_list_move"
+        }
+        WsCommand::RmList { list_id } => {
+            arguments.insert("list_id".into(), json!(list_id));
+            "workspace_list_delete"
         }
     }
 }

@@ -474,6 +474,14 @@ impl Tools {
                 ))
             }
 
+            "workspace_list_delete" => {
+                let list_id = required_string(arguments, "list_id")?;
+                Ok(outcome(
+                    "List deleted",
+                    self.workspace.delete_list(&list_id)?,
+                ))
+            }
+
             _ => Err(ToolError::new(format!("Unknown tool: {name}"))),
         }
     }

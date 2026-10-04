@@ -893,6 +893,29 @@ impl Workspace {
         })
     }
 
+    /// `WorkspaceStore.deleteList`. Its tasks go with it, by the schema's
+    /// cascade, and all of it comes back on undo. The Inbox is refused.
+    pub fn delete_list(&self, list_id: &str) -> Result<Value> {
+        self.journalled("Delete List", |tx, _now| {
+            let list = list_row(tx, list_id)?;
+            if list.system_role.is_some() {
+                return Err(ToolError::new(
+                    "The Inbox cannot be archived or deleted. You can rename it instead.",
+                ));
+            }
+            let tasks: i64 = tx
+                .query_row(
+                    "SELECT COUNT(*) FROM tasks WHERE listId = ?1",
+                    [&list.id],
+                    |row| row.get(0),
+                )
+                .map_err(map_query_error)?;
+            tx.execute("DELETE FROM task_lists WHERE id = ?1", [&list.id])
+                .map_err(map_write_error)?;
+            Ok(json!({ "deleted": list.id, "name": list.name, "tasks_deleted": tasks }))
+        })
+    }
+
     // -- the journal ---------------------------------------------------------
 
     /// Runs one write as one undoable step: `journalledWrite` in

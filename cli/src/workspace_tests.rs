@@ -642,6 +642,34 @@ fn folders_and_lists_append_and_move_like_the_sidebar() {
 }
 
 #[test]
+fn deleting_a_list_takes_its_tasks_and_spares_the_inbox() {
+    let fixture = Fixture::new();
+    fixture.add(PROJECTS, "Goes with it", None);
+    let deleted = fixture.call("workspace_list_delete", json!({ "list_id": PROJECTS }));
+    assert_eq!(deleted["tasks_deleted"], json!(1));
+    assert!(
+        fixture
+            .try_call("workspace_tasks", json!({ "list_id": PROJECTS }))
+            .unwrap_err()
+            .contains("No list")
+    );
+
+    let inbox = fixture.call("workspace_tree", json!({}))["lists"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|list| list["system_role"] == json!("inbox"))
+        .map(|list| list["id"].as_str().unwrap().to_string())
+        .unwrap();
+    assert!(
+        fixture
+            .try_call("workspace_list_delete", json!({ "list_id": inbox }))
+            .unwrap_err()
+            .contains("Inbox")
+    );
+}
+
+#[test]
 fn the_task_tree_nests_children_and_hides_closed_work() {
     let fixture = Fixture::new();
     let parent = fixture.add(PROJECTS, "Parent", None);
