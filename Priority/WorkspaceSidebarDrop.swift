@@ -95,7 +95,11 @@ private struct WorkspaceSidebarDropDelegate: DropDelegate {
     report(nil)
     let providers = info.itemProviders(for: [WorkspaceTaskDrag.typeIdentifier])
     return WorkspaceTaskDrag.readItemID(from: providers) { payload in
-      drop(payload, placement)
+      // Placement is for lists and folders. A task has nowhere to go between
+      // two rows, so wherever on the row it lands it goes into it — it used
+      // to be dropped on the floor at the edges, which on the last row of a
+      // group, or a row not yet measured, was most of the row.
+      drop(payload, WorkspaceTaskDrag.sidebarItemID(from: payload) == nil ? .into : placement)
     }
   }
 
