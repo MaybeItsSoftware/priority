@@ -14,9 +14,6 @@ final class PreferencesStore {
     case globalHotkeyEnabled
     case globalHotkeyKeyCode
     case globalHotkeyModifiers
-    case maxTitleWidth
-    case timerBarLeading
-    case timerMode
     case timerByTaskId
     case onboardingCompleted
     case pluginSelectionOnboardingCompleted
@@ -53,14 +50,9 @@ final class PreferencesStore {
     case themeAccentPresetRawValue
     case themeCustomAccentHex
     case themeColorTokenHexOverrides
-    case customizableShortcutsByAction
     case dismissedOnboardingDialogs
     case kanbanColumns
     case taskStartDatesByTaskId
-    case namedTimeMorningHour
-    case namedTimeAfternoonHour
-    case namedTimeEveningHour
-    case namedTimeEodHour
     case recurrenceRulesByTaskId
     case rootTaskViewOrder
     /// Whether the window comes up on the focus screen rather than the lists.
@@ -74,13 +66,8 @@ final class PreferencesStore {
     case kanbanManualOrderByColumnId
     /// Whether the board groups into a row per top-level goal.
     case kanbanSwimlanesByGoal
-    case appFontName
     case dailyLogIntegrationEnabled
     case dailyLogChartRangeRawValue
-    /// Dragged panel heights, keyed by `RootTaskView.rawValue`. A view with no
-    /// entry sizes itself from its content.
-    case panelHeightOverridesByRootView
-    case popoverResizeHandleVisible
     case dailyChartVisible
     /// Whether the Daily view shows the "done today" list of completed tasks.
     /// Off by default — the Daily view is about dailies, and the task list is

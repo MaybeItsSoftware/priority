@@ -88,7 +88,6 @@ let pluginTargetExcludes = [
   "Takt/TaskOutlineBuilder.swift",
   "Takt/TaskTreeFormatter.swift",
   "Takt/TaskNavigationService.swift",
-  "Takt/Typography.swift",
   "Takt/UndoService.swift",
 
   // Plugin subtrees / files that are app-only or conflict with PluginModelStubs
@@ -236,7 +235,6 @@ let appLogicTargetExcludes = [
   "Takt/TaskNavigationService.swift",
   "Takt/TaskTreeFormatter.swift",
   "Takt/Theme.swift",
-  "Takt/Typography.swift",
 
   // Plugin subtrees (AppLogic pulls OfflineTaskSyncPlugin.swift and
   // PluginProtocols.swift as sources; everything else is app-only or lives in

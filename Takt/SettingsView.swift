@@ -477,36 +477,6 @@ struct SettingsView: View {
   }
 }
 
-struct NamedTimePickerRow: View {
-  let label: String
-  @Binding var hour: Int
-
-  private let hours = Array(0...23)
-
-  private func hourLabel(_ h: Int) -> String {
-    let components = DateComponents(hour: h, minute: 0)
-    let date = Calendar.current.date(from: components) ?? Date()
-    let formatter = DateFormatter()
-    formatter.dateFormat = "h a"
-    return formatter.string(from: date)
-  }
-
-  var body: some View {
-    HStack {
-      Text(label)
-        .frame(width: 80, alignment: .leading)
-      Picker("", selection: $hour) {
-        ForEach(hours, id: \.self) { h in
-          Text(hourLabel(h)).tag(h)
-        }
-      }
-      .labelsHidden()
-      .pickerStyle(.menu)
-      .frame(width: 100)
-    }
-  }
-}
-
 extension View {
   /// A status notice in the house convention: a tint of the status hue behind
   /// it, a border of the same hue, on the control radius. Settings drew these

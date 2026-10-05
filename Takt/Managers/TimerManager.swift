@@ -20,15 +20,6 @@ import TaktCore
     }
   }
   var timerRunning: Bool = false
-  var timerBarLeading: Bool {
-    didSet { preferencesStore.set(timerBarLeading, for: .timerBarLeading) }
-  }
-  var timerMode: TimerMode {
-    didSet {
-      preferencesStore.set(timerMode.rawValue, for: .timerMode)
-      if timerMode == .disabled { stopTimer() }
-    }
-  }
   @ObservationIgnored var timerTask: Task<Void, Never>?
 
   /// Called on the main actor after every per-second increment with
@@ -36,17 +27,12 @@ import TaktCore
   /// the focus block has ended.
   @ObservationIgnored var onTick: ((Int, TimeInterval) -> Void)?
 
-  var timerIsEnabled: Bool { timerMode != .disabled }
-  var timerIsVisible: Bool { timerMode == .visible }
-
   init(
     preferencesStore: PreferencesStore,
     cacheInvalidationBus: CacheInvalidationBus = CacheInvalidationBus()
   ) {
     self.preferencesStore = preferencesStore
     self.cacheInvalidationBus = cacheInvalidationBus
-    self.timerBarLeading = preferencesStore.bool(.timerBarLeading, default: false)
-    self.timerMode = TimerMode(rawValue: preferencesStore.int(.timerMode, default: 0)) ?? .visible
     self.timerByTaskId = Self.timerDictionaryFromDefaults(preferencesStore: preferencesStore)
     
     self.sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -69,7 +55,6 @@ import TaktCore
   // MARK: - Timer Operations
 
   func toggleTimer(forTaskId taskId: Int) {
-    guard timerIsEnabled else { return }
     if timedTaskId == taskId {
       if timerRunning {
         pauseTimer()
@@ -93,7 +78,7 @@ import TaktCore
   }
 
   func resumeTimer() {
-    guard timerIsEnabled, let activeTaskId = timedTaskId, !timerRunning else { return }
+    guard let activeTaskId = timedTaskId, !timerRunning else { return }
     timerRunning = true
     timerTask = Task { [weak self] in
       while !Task.isCancelled {
@@ -126,14 +111,6 @@ import TaktCore
     TimerStore.formatted(elapsed)
   }
 
-  func timerBarString(currentTaskId: Int?, totalElapsedForCurrentTask: TimeInterval) -> String? {
-    guard timerMode == .visible, let currentTaskId else { return nil }
-    let elapsed = totalElapsedForCurrentTask
-    let currentTaskHasActiveTimer = timedTaskId == currentTaskId
-    guard elapsed > 0 || currentTaskHasActiveTimer else { return nil }
-    return Self.formattedTimer(elapsed)
-  }
-
   // MARK: - Persistence Helpers
 
   static func timerDictionaryFromDefaults(
@@ -147,12 +124,4 @@ import TaktCore
     }
     return result
   }
-}
-
-// MARK: - TimerMode (moved from AppCoordinator+Types)
-
-enum TimerMode: Int, CaseIterable {
-  case visible
-  case hidden
-  case disabled
 }

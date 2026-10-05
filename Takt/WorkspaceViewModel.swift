@@ -577,21 +577,10 @@ enum WorkspaceSidebarItem: Identifiable {
   var focusEstimateMinutes: Double = 25
   var errorMessage: String?
 
-  /// How a role colour is resolved. Set by `AppDelegate` from the preferences
-  /// manager, so every workspace surface can reach the theme through the one
-  /// object it already has in the environment rather than each of them
-  /// reaching for `AppCoordinator` — or, as they did, for SwiftUI's stock
-  /// `.green` and `.orange`, which do not flip with the theme and are not the
-  /// colours the app is set in.
-  @ObservationIgnored var themeColorResolver: ((AppThemeColorToken) -> Color)?
   /// Told after rows changed under the app — a sync pull or another
   /// process's write — beside the reload of the task tree. The theme library
   /// and the synced choice of theme listen here.
   @ObservationIgnored var onWorkspaceChangedElsewhere: (() -> Void)?
-
-  func themeColor(_ token: AppThemeColorToken) -> Color {
-    themeColorResolver?(token) ?? token.fallback
-  }
 
   init(legacyStore: LocalTaskStore) {
     self.legacyStore = legacyStore

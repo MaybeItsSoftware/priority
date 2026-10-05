@@ -85,9 +85,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     workspace = WorkspaceViewModel(legacyStore: checkvistManager.repository.localTaskStore)
-    workspace.themeColorResolver = { [weak checkvistManager] token in
-      checkvistManager?.preferences.themeColor(for: token) ?? token.fallback
-    }
     workspace.googleCalendarEventCreator = { [weak checkvistManager] title, taskID, listTitle, date, isAllDay in
       guard let integrations = checkvistManager?.integrations else { return nil }
       return try await integrations.createGoogleCalendarEvent(

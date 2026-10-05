@@ -118,26 +118,8 @@ import SwiftUI
   var quickAddSpecificParentTaskId: String {
     didSet { preferencesStore.set(quickAddSpecificParentTaskId, for: .quickAddSpecificParentTaskId) }
   }
-  var maxTitleWidth: Double {
-    didSet { preferencesStore.set(maxTitleWidth, for: .maxTitleWidth) }
-  }
   var showTaskBreadcrumbContext: Bool {
     didSet { preferencesStore.set(showTaskBreadcrumbContext, for: .showTaskBreadcrumbContext) }
-  }
-  var namedTimeMorningHour: Int {
-    didSet { preferencesStore.set(namedTimeMorningHour, for: .namedTimeMorningHour) }
-  }
-  var namedTimeAfternoonHour: Int {
-    didSet { preferencesStore.set(namedTimeAfternoonHour, for: .namedTimeAfternoonHour) }
-  }
-  var namedTimeEveningHour: Int {
-    didSet { preferencesStore.set(namedTimeEveningHour, for: .namedTimeEveningHour) }
-  }
-  var namedTimeEodHour: Int {
-    didSet { preferencesStore.set(namedTimeEodHour, for: .namedTimeEodHour) }
-  }
-  var appFontName: String {
-    didSet { preferencesStore.set(appFontName, for: .appFontName) }
   }
 
   init(preferencesStore: PreferencesStore) {
@@ -200,13 +182,7 @@ import SwiftUI
         rawValue: preferencesStore.int(.quickAddLocationModeRawValue, default: 0)
       ) ?? .defaultRoot
     self.quickAddSpecificParentTaskId = preferencesStore.string(.quickAddSpecificParentTaskId)
-    self.maxTitleWidth = preferencesStore.double(.maxTitleWidth, default: 150.0)
     self.showTaskBreadcrumbContext = preferencesStore.bool(.showTaskBreadcrumbContext, default: false)
-    self.namedTimeMorningHour = preferencesStore.int(.namedTimeMorningHour, default: 9)
-    self.namedTimeAfternoonHour = preferencesStore.int(.namedTimeAfternoonHour, default: 14)
-    self.namedTimeEveningHour = preferencesStore.int(.namedTimeEveningHour, default: 18)
-    self.namedTimeEodHour = preferencesStore.int(.namedTimeEodHour, default: 17)
-    self.appFontName = preferencesStore.string(.appFontName, default: "System Font")
 
     // Move untouched installs from the old, opt-in Shift-Option-B capture to
     // the product default. A customised binding is never rewritten.
@@ -228,14 +204,12 @@ import SwiftUI
     return value
   }
 
+  /// The typed-command language's dates (`due tomorrow morning`), at the
+  /// parser's own hours for the named times. The hours used to be settings,
+  /// but nothing the window can reach parses a typed command any more (see
+  /// `TODO.md`, "The typed-command language"), so they changed nothing.
   func resolveDueDate(_ input: String) -> String {
-    let config = TaktDateParsingConfig(
-      morningHour: namedTimeMorningHour,
-      afternoonHour: namedTimeAfternoonHour,
-      eveningHour: namedTimeEveningHour,
-      eodHour: namedTimeEodHour
-    )
-    return CommandEngine.resolveDueDate(input, config: config)
+    CommandEngine.resolveDueDate(input, config: TaktDateParsingConfig())
   }
 
   var themeAccentColor: Color {

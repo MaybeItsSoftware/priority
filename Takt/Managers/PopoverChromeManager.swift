@@ -6,35 +6,13 @@ import TaktCore
 /// one view's content.
 ///
 /// Kept apart from the view managers because it is genuinely cross-cutting: the
-/// dock row renders in every root view, the height override applies to all of
-/// them, and `MenuBarController` has to observe the lot to resize the `NSWindow`
-/// underneath. Hanging it off `DailyLogManager` (where the first version of the
-/// resize handle lived) meant the Daily view owned a preference the All view
-/// also needed, which is exactly the coupling `ARCHITECTURE_IMPROVEMENT_PLAN.md`
-/// asks new work not to add to.
+/// dock row renders in every root view. Hanging it off `DailyLogManager` meant
+/// the Daily view owned a preference the All view also needed, which is
+/// exactly the coupling `ARCHITECTURE_IMPROVEMENT_PLAN.md` asks new work not
+/// to add to.
 @MainActor
 @Observable final class PopoverChromeManager {
-  /// Bounds for a dragged height.
-  ///
-  /// The floor matters more than it looks: the drag strip lives *inside* the
-  /// panel, so a height too short to render it would be unrecoverable without
-  /// editing defaults by hand. Clamped on write and again on read at launch, so
-  /// a value outside the range can't exist even if the stored data is edited.
-  static let minPanelHeight: CGFloat = 240
-  static let maxPanelHeight: CGFloat = 900
-
   @ObservationIgnored private let preferencesStore: PreferencesStore
-
-  /// Per root view, because these views want very different amounts of room —
-  /// the Daily view stacks four sections, the All view is one list. One shared
-  /// height would be wrong for at least one of them at all times.
-  private(set) var panelHeightOverrides: [RootTaskView: CGFloat] = [:]
-
-  /// Whether the drag strip is showing. Persisted: if you resize often enough to
-  /// turn it on, having it come back is the point.
-  var isResizeHandleVisible: Bool {
-    didSet { preferencesStore.set(isResizeHandleVisible, for: .popoverResizeHandleVisible) }
-  }
 
   /// Whether the Daily view draws its chart. Off makes the Daily view a compact
   /// checklist, which is what you want on a day you're just ticking things off.
@@ -98,50 +76,9 @@ import TaktCore
 
   init(preferencesStore: PreferencesStore) {
     self.preferencesStore = preferencesStore
-    self.isResizeHandleVisible = preferencesStore.bool(
-      .popoverResizeHandleVisible, default: false)
     self.showsDailyChart = preferencesStore.bool(.dailyChartVisible, default: true)
     self.showsDailyCompletions = preferencesStore.bool(
       .dailyCompletionsVisible, default: false)
     self.showsMatrixUnplaced = preferencesStore.bool(.matrixUnplacedVisible, default: false)
-
-    let stored = preferencesStore.doubleDictionary(.panelHeightOverridesByRootView)
-    var overrides: [RootTaskView: CGFloat] = [:]
-    for (rawKey, value) in stored {
-      guard let raw = Int(rawKey), let view = RootTaskView(rawValue: raw), value > 0 else {
-        continue
-      }
-      overrides[view] = Self.clamped(CGFloat(value))
-    }
-    self.panelHeightOverrides = overrides
-  }
-
-  // MARK: - Height
-
-  func height(for view: RootTaskView) -> CGFloat? {
-    panelHeightOverrides[view]
-  }
-
-  func setHeight(_ height: CGFloat, for view: RootTaskView) {
-    panelHeightOverrides[view] = Self.clamped(height)
-    persistHeights()
-  }
-
-  /// Back to sizing from content. Bound to a double-click on the strip, so there
-  /// is always a way out of a height that turned out to be wrong.
-  func resetHeight(for view: RootTaskView) {
-    guard panelHeightOverrides.removeValue(forKey: view) != nil else { return }
-    persistHeights()
-  }
-
-  private static func clamped(_ height: CGFloat) -> CGFloat {
-    min(maxPanelHeight, max(minPanelHeight, height))
-  }
-
-  private func persistHeights() {
-    let encoded = Dictionary(
-      uniqueKeysWithValues: panelHeightOverrides.map { (String($0.key.rawValue), Double($0.value)) }
-    )
-    preferencesStore.set(encoded, for: .panelHeightOverridesByRootView)
   }
 }
