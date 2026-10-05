@@ -47,6 +47,10 @@ final class PreferencesStore {
     /// Identifier → SHA-256 of the text last mirrored between a theme file and
     /// its `themes` row, so `UserThemeLibrary` can tell which side changed.
     case mirroredUserThemeDigests
+    /// JSON of the reader's `ThemeTypographyOverride` — interface, heading and
+    /// numeral families and a text size — laid over whichever theme is active.
+    /// This Mac's own, like the window it is read in: not synced.
+    case themeTypographyOverride
     case dismissedOnboardingDialogs
     case kanbanColumns
     case taskStartDatesByTaskId

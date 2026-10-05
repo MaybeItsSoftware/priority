@@ -79,7 +79,39 @@ import os
   /// load, so the default is standing in for it.
   var isFallingBack: Bool { plugin(withIdentifier: activeThemeIdentifier) == nil }
 
-  var specification: ThemeSpecification { activeThemePlugin.specification }
+  /// The theme as it ships, before the reader's type choices.
+  var themeSpecification: ThemeSpecification { activeThemePlugin.specification }
+
+  /// What everything renders through: the active theme with the reader's
+  /// fonts and text size laid over it. A theme switch keeps the choices,
+  /// because they live here rather than in the theme.
+  var specification: ThemeSpecification { typographyOverride.applied(to: themeSpecification) }
+
+  /// Interface, heading and numeral families and a text size, chosen in
+  /// Settings → Appearance. Empty means every role is the theme's.
+  var typographyOverride: ThemeTypographyOverride {
+    didSet {
+      guard typographyOverride != oldValue else { return }
+      if typographyOverride.isEmpty {
+        preferencesStore.remove(.themeTypographyOverride)
+      } else if let data = try? JSONEncoder().encode(typographyOverride),
+        let json = String(data: data, encoding: .utf8)
+      {
+        preferencesStore.set(json, for: .themeTypographyOverride)
+      }
+    }
+  }
+
+  /// "Reset to theme": every face and size back to what the theme names.
+  func resetTypographyToTheme() {
+    typographyOverride = ThemeTypographyOverride()
+  }
+
+  /// A specification for a theme other than the active one, with the same
+  /// type choices over it — what the gallery previews each theme as.
+  func previewSpecification(for plugin: any ThemePlugin) -> ThemeSpecification {
+    typographyOverride.applied(to: plugin.specification)
+  }
 
   /// What `validate()` says about the active theme, worst first. Surfaced in
   /// the settings page — a theme audit nobody can read is a test, and this is
@@ -94,6 +126,7 @@ import os
     self.preferencesStore = preferencesStore
     self.registry = registry
     self.userThemes = userThemes
+    self.typographyOverride = Self.storedTypographyOverride(in: preferencesStore)
     // Before resolving the stored pick, which may be one of these.
     userThemes.start()
 
@@ -115,11 +148,19 @@ import os
     registry.activateThemePlugin(identifier: known ? resolved : Self.defaultThemeIdentifier)
 
     userThemes.currentSpecification = { [weak self] in
-      self?.specification ?? BuiltInThemeSpecifications.priority
+      self?.themeSpecification ?? BuiltInThemeSpecifications.priority
     }
     userThemes.onExported = { [weak self] identifier in
       self?.activeThemeIdentifier = identifier
     }
+  }
+
+  private static func storedTypographyOverride(in store: PreferencesStore) -> ThemeTypographyOverride {
+    let json = store.string(.themeTypographyOverride)
+    guard !json.isEmpty,
+      let decoded = try? JSONDecoder().decode(ThemeTypographyOverride.self, from: Data(json.utf8))
+    else { return ThemeTypographyOverride() }
+    return decoded
   }
 
   func plugin(withIdentifier identifier: String) -> (any ThemePlugin)? {
