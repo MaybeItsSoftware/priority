@@ -13,6 +13,7 @@ struct WorkspaceSidebarPane: View {
   @Environment(\.theme) private var theme
   var focusedArea: FocusState<WorkspaceFocusArea?>.Binding
   private let everythingSidebarID = "priority:everything"
+  private let todaySidebarID = "priority:today"
   @State private var isTopLevelDropTargeted = false
 
   var body: some View {
@@ -59,6 +60,25 @@ struct WorkspaceSidebarPane: View {
               isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
               rowID: "row:everything"))
           .accessibilityLabel("Everything, all lists")
+          Button {
+            model.selectToday()
+            model.reportKeyboardFocus(.sidebar)
+          } label: {
+            HStack(spacing: theme.space.sm) {
+              Image(systemName: "sun.max")
+                .foregroundStyle(theme.muted)
+                .frame(width: WorkspaceSidebarMetrics.iconWidth)
+              Text("Today")
+            }
+            .sidebarRowPadding(theme)
+          }
+          .buttonStyle(.plain)
+          .id(todaySidebarID)
+          .background(
+            WorkspaceSidebarSelectionBackground(
+              isCurrent: model.isCurrentSidebarRow(todaySidebarID),
+              rowID: "row:today"))
+          .accessibilityLabel("Today, across all lists")
           if let inbox = model.inboxList {
             sidebarListRow(inbox)
             WorkspaceNestedListRows(list: inbox, depth: 1)

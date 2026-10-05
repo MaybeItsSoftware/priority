@@ -7,6 +7,9 @@ import Foundation
 /// and ⌘8/⌘9, and the sidebar is only lists again.
 public enum WorkspaceSidebarRowKind: Equatable, Hashable, Sendable {
   case everything
+  /// The day, from every list. A place like the others, beside Everything
+  /// and the inbox, rather than only a segment of the mode strip.
+  case today
   case list(String)
   /// A list nested inside a task, addressed by the task's id.
   case nestedList(String)
@@ -35,7 +38,7 @@ public struct WorkspaceSidebarRow: Identifiable, Equatable, Hashable, Sendable {
   /// The thing this row points at, which two rows can share.
   public var subjectID: String? {
     switch kind {
-    case .everything: nil
+    case .everything, .today: nil
     case .list(let id), .nestedList(let id), .folder(let id): id
     }
   }
@@ -94,6 +97,7 @@ public enum WorkspaceSidebarOutline {
   ) -> [WorkspaceSidebarRow] {
     var result: [WorkspaceSidebarRow] = [
       WorkspaceSidebarRow(id: "row:everything", kind: .everything, depth: 0),
+      WorkspaceSidebarRow(id: "row:today", kind: .today, depth: 0),
     ]
     var visitedFolders = Set<String>()
 
@@ -155,8 +159,9 @@ public enum WorkspaceSidebarOutline {
   /// selected. Used when the cursor has no stored row yet — on launch, or
   /// after a click, which selects a list without going through the arrows.
   public static func rowMatching(
-    subjectID: String?, isEverything: Bool, in rows: [WorkspaceSidebarRow]
+    subjectID: String?, isEverything: Bool, isToday: Bool = false, in rows: [WorkspaceSidebarRow]
   ) -> WorkspaceSidebarRow? {
+    if isToday { return rows.first { $0.kind == .today } }
     if isEverything { return rows.first { $0.kind == .everything } }
     guard let subjectID else { return nil }
     return rows.first { $0.subjectID == subjectID }

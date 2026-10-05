@@ -38,6 +38,7 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
       rows.map(\.kind),
       [
         .everything,
+        .today,
         .list("inbox"), .nestedList("pin"),
         .nestedList("pin"),
         .folder("work"), .list("filed"),
@@ -107,7 +108,7 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
         SidebarFolderDescriptor(id: "b", parentFolderID: "a"),
       ],
       expanded: ["a", "b"])
-    XCTAssertEqual(rows.map(\.kind), [.everything])
+    XCTAssertEqual(rows.map(\.kind), [.everything, .today])
   }
 
   func testTheCursorStopsAtEitherEndRatherThanWrapping() {

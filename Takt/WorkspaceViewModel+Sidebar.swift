@@ -131,6 +131,9 @@ extension WorkspaceViewModel {
   }
 
   var currentSidebarID: String? {
+    // Today draws from every list, so whichever list is selected behind it
+    // is not where you are: the Today row is.
+    if viewMode == .today { return "priority:today" }
     if isEverythingSelected { return "priority:everything" }
     if let scope = scopeTask, scope.isList { return scope.id }
     return selectedListID

@@ -58,6 +58,7 @@ extension WorkspaceViewModel {
     return WorkspaceSidebarOutline.rowMatching(
       subjectID: selectedFolderID ?? currentSidebarID,
       isEverything: selectedFolderID == nil && isEverythingSelected,
+      isToday: viewMode == .today,
       in: rows)
   }
 
@@ -77,6 +78,7 @@ extension WorkspaceViewModel {
     guard let row = sidebarCursorRow else { return nil }
     switch row.kind {
     case .everything: return "priority:everything"
+    case .today: return "priority:today"
     case .list(let id), .folder(let id): return id
     case .nestedList(let id): return row.id.hasPrefix("pinned:") ? "promoted:\(id)" : id
     }
@@ -104,6 +106,8 @@ extension WorkspaceViewModel {
     case .everything:
       selectedFolderID = nil
       selectEverything()
+    case .today:
+      selectToday()
     case .list(let id):
       selectedFolderID = nil
       selectList(id)
@@ -128,7 +132,7 @@ extension WorkspaceViewModel {
     case .folder(let id):
       guard let folder = folders.first(where: { $0.id == id }) else { return }
       if expandOnly { setFolderExpanded(folder, expanded: true) } else { toggleFolderExpansion(folder) }
-    case .everything, .list, .nestedList:
+    case .everything, .today, .list, .nestedList:
       enterTaskSurfaceFromSidebar()
     }
   }
@@ -146,7 +150,7 @@ extension WorkspaceViewModel {
   func reorderSidebarCursor(by offset: Int) -> Bool {
     guard let row = sidebarCursorRow else { return false }
     switch row.kind {
-    case .everything:
+    case .everything, .today:
       return false
     case .folder(let id):
       guard let folder = folders.first(where: { $0.id == id }) else { return false }

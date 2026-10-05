@@ -52,6 +52,12 @@ extension WorkspaceViewModel {
     reloadOutline(refreshSidebar: false)
   }
 
+  /// The sidebar's Today: the day across every list, so Everything behind it.
+  func selectToday() {
+    selectEverything()
+    selectViewMode(.today)
+  }
+
   func selectFolder(_ folder: ListFolder) {
     // Any other way of choosing a row moves the keyboard cursor there too,
     // by letting it fall back to whatever is now selected.
