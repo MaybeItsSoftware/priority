@@ -75,6 +75,10 @@ struct KeyHint: View {
         .font(theme.captionFont)
         .foregroundStyle(theme.dim)
     }
+    // A hint is read as one unit or not at all: never wrapped mid-word into
+    // two lines ("Choos / e"), which is what a crowded row used to do.
+    .lineLimit(1)
+    .fixedSize()
   }
 }
 

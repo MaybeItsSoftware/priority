@@ -107,14 +107,13 @@ struct DayView: View {
     // The same band as every other mode, so ⌘1 does not move the content down
     // by a different amount than ⌘2 does. The panel mounts this view too, and
     // gets its own two controls on the end of it.
+    // No subtitle: the day draws from every list whichever one the sidebar
+    // has selected, so naming that list here only misled.
     WorkspacePaneHeader(title: "Today") {
-      Text(scopeName)
-        .font(theme.captionFont)
-        .foregroundStyle(theme.muted)
-        .lineLimit(1)
+      EmptyView()
     } trailing: {
       if surface.isPanel {
-        if manager.preferences.scoresEachFocusBlock {
+        if manager.preferences.scoresEachFocusBlock && model.focusPoints.today > 0 {
           Text("\(FocusPoints.formatted(model.focusPoints.today)) pts")
             .font(theme.numeralFont(theme.scale.caption))
             .foregroundStyle(theme.dim)
@@ -166,71 +165,66 @@ struct DayView: View {
   private var dayTally: some View {
     TimelineView(.periodic(from: .now, by: model.isFocusBlockTicking ? 30 : 60)) { context in
       let forecast = model.dayForecast(for: dayTasks, now: context.date)
-      Text(forecast.tallyText)
-        .font(theme.monoFont(size: theme.type.microLabel.size))
-        .foregroundStyle(forecast.loggedSeconds > 0 || forecast.remainingSeconds > 0 ? theme.muted : theme.dim)
-        .monospacedDigit()
-        .lineLimit(1)
-        .help(forecast.helpText)
+      // Silent until there is something to tally: "0m logged" on a fresh
+      // morning is a figure that says nothing.
+      if forecast.loggedSeconds > 0 || forecast.remainingSeconds > 0 {
+        Text(forecast.tallyText)
+          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .foregroundStyle(theme.muted)
+          .monospacedDigit()
+          .lineLimit(1)
+          .help(forecast.helpText)
+      }
     }
   }
 
-  /// What the day is supposed to cost against what it has cost so far. A bar
-  /// rather than a second row of numbers: the question it answers is "how far
-  /// through", which is a length, not a figure to read.
-  private var summary: some View {
+  /// The day in one quiet line: how far through it is, and what it has cost.
+  ///
+  /// It was two rows of capitals and a bar — "No estimates yet", "Nothing
+  /// logged yet", a week line — over a list that had not started. Now each
+  /// half appears only once it has something to say, the bar only once there
+  /// are estimates to measure against, and the week is in the tooltip.
+  @ViewBuilder private var summary: some View {
     let estimated = dayTasks.reduce(0) { $0 + ($1.estimateSeconds ?? 0) }
     let logged = loggedToday
-    let fraction = estimated > 0 ? min(1, Double(logged) / Double(estimated)) : 0
-    return VStack(alignment: .leading, spacing: theme.space.xs) {
-      // The finish time rides on the estimate it came from, and ticks for the
-      // same reason the window's tally does.
-      TimelineView(.periodic(from: .now, by: model.isFocusBlockTicking ? 30 : 60)) { context in
-        let forecast = model.dayForecast(for: dayTasks, now: context.date)
-        HStack(spacing: 0) {
-          MicroLabel(forecast.panelLine)
-            .lineLimit(1)
-            .help(forecast.helpText)
-          Spacer(minLength: theme.space.sm)
-          MicroLabel(logged > 0 ? "\(duration(logged)) logged" : "Nothing logged yet")
-        }
-      }
-      // Square-ended: a bar is a length, and a rounded end makes the last
-      // few percent read as decoration rather than progress.
-      GeometryReader { proxy in
-        ZStack(alignment: .leading) {
-          Rectangle().fill(theme.well)
-          Rectangle()
-            .fill(theme.primary)
-            .frame(width: max(fraction > 0 ? theme.emphasisBorder : 0, proxy.size.width * fraction))
-        }
-      }
-      .frame(height: theme.space.xs)
-      weekLine
-    }
-    .padding(.horizontal, theme.space.lg)
-    .padding(.bottom, theme.space.md)
-  }
-
-  /// Today's finished work set against the week so far.
-  ///
-  /// The day's own bar answers "how far through today am I"; this answers the
-  /// question you only notice on a bad day — whether today is actually worse
-  /// than the rest of the week, or only feels it. The week is its own
-  /// denominator, so there is no target to set up before the line means
-  /// anything.
-  @ViewBuilder private var weekLine: some View {
     let progress = model.workProgress
-    if progress.week.seconds > 0 || progress.week.completed > 0 {
-      HStack(spacing: 0) {
-        MicroLabel(
-          progress.today.completed == 1
-            ? "1 done today" : "\(progress.today.completed) done today")
-        Spacer(minLength: theme.space.sm)
-        MicroLabel(
-          "\(duration(progress.week.seconds)) this week · \(duration(progress.averageSecondsPerDay))/day")
+    let done = progress.today.completed
+    if estimated > 0 || logged > 0 || done > 0 {
+      let fraction = estimated > 0 ? min(1, Double(logged) / Double(estimated)) : 0
+      let week = "\(duration(progress.week.seconds)) this week · \(duration(progress.averageSecondsPerDay))/day"
+      VStack(alignment: .leading, spacing: theme.space.xs) {
+        // The finish time rides on the estimate it came from, and ticks for
+        // the same reason the window's tally does.
+        TimelineView(.periodic(from: .now, by: model.isFocusBlockTicking ? 30 : 60)) { context in
+          let forecast = model.dayForecast(for: dayTasks, now: context.date)
+          HStack(spacing: 0) {
+            if estimated > 0 {
+              MicroLabel(forecast.panelLine).lineLimit(1).help(forecast.helpText)
+            } else if done > 0 {
+              MicroLabel(done == 1 ? "1 done" : "\(done) done").lineLimit(1)
+            }
+            Spacer(minLength: theme.space.sm)
+            if logged > 0 {
+              MicroLabel("\(duration(logged)) logged").lineLimit(1).help(week)
+            }
+          }
+        }
+        // Square-ended: a bar is a length, and a rounded end makes the last
+        // few percent read as decoration rather than progress.
+        if estimated > 0 {
+          GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+              Rectangle().fill(theme.well)
+              Rectangle()
+                .fill(theme.primary)
+                .frame(width: max(fraction > 0 ? theme.emphasisBorder : 0, proxy.size.width * fraction))
+            }
+          }
+          .frame(height: theme.space.xxs)
+        }
       }
-      .padding(.top, theme.space.xxs)
+      .padding(.horizontal, theme.space.lg)
+      .padding(.bottom, theme.space.md)
     }
   }
 
@@ -293,8 +287,9 @@ struct DayView: View {
   }
 
   private var hints: some View {
+    // No "↑ ↓ Choose": arrows moving through a list need no caption, and the
+    // row it took was what squeezed the others into two broken lines.
     HStack(spacing: theme.space.md) {
-      KeyHint("↑ ↓", "Choose")
       if !surface.isPanel || !query.trimmingCharacters(in: .whitespaces).isEmpty {
         KeyHint("↵", "Add")
       }
@@ -350,7 +345,6 @@ struct DayView: View {
                 .id("takt:draft")
             }
             if surface.isPanel {
-              if query.isEmpty { addHint }
               if !loggedBlocks.isEmpty { logged }
             }
           }
@@ -426,33 +420,40 @@ struct DayView: View {
           }
           Spacer(minLength: theme.space.sm)
           if let listName { MicroLabel(listName).lineLimit(1) }
-        }
-        HStack(spacing: theme.space.sm) {
-          // In the window the estimate opens its quick edit: the finish time is
-          // only as good as the estimates under it, and "No estimate" was a
-          // dead end for anyone not already using the key.
-          DayEstimateLabel(
-            text: task.estimateSeconds.map { duration($0) } ?? "No estimate",
-            help: "Set the time estimate (\(WorkspaceCommandHelpText.firstKey(for: .taskEditEstimate)))",
-            action: surface.isPanel ? nil : {
-              model.selectedTaskID = task.id
-              model.quickEdit(.estimate)
-            })
-          if let detail {
-            Text(detail)
-              .font(theme.captionFont)
-              .foregroundStyle(theme.dim)
-              .lineLimit(1)
+          // Time only once there is some: logged against the estimate, or
+          // either alone. A column of "No estimate" and 00:00 down a fresh
+          // day was the noisiest thing on the screen and said nothing.
+          if let cost = costText(for: task) {
+            DayEstimateLabel(
+              text: cost,
+              help: "Set the time estimate (\(WorkspaceCommandHelpText.firstKey(for: .taskEditEstimate)))",
+              action: surface.isPanel ? nil : {
+                model.selectedTaskID = task.id
+                model.quickEdit(.estimate)
+              })
           }
-          Spacer(minLength: theme.space.sm)
-          Text(clock(model.taskLoggedSeconds[task.id] ?? 0))
-            .font(theme.numeralFont(theme.scale.caption, weight: .regular))
-            .monospacedDigit()
+        }
+        if let detail {
+          Text(detail)
+            .font(theme.captionFont)
             .foregroundStyle(theme.dim)
+            .lineLimit(1)
+            .padding(.leading, 14 + theme.space.sm)
         }
       }
     } action: {
       start(task)
+    }
+  }
+
+  /// "12m / 25m", "12m" or "25m"; nil when the task has neither.
+  private func costText(for task: WorkspaceTask) -> String? {
+    let logged = model.taskLoggedSeconds[task.id] ?? 0
+    switch (logged > 0, task.estimateSeconds) {
+    case (true, let estimate?): return "\(duration(logged)) / \(duration(estimate))"
+    case (true, nil): return duration(logged)
+    case (false, let estimate?): return duration(estimate)
+    case (false, nil): return nil
     }
   }
 
@@ -633,22 +634,6 @@ struct DayView: View {
     }
   }
 
-  private var addHint: some View {
-    HStack(spacing: theme.space.sm) {
-      Image(systemName: "plus")
-        .font(theme.bodyFont(size: theme.scale.caption))
-      MicroLabel("Add task")
-      Spacer(minLength: 0)
-      Text("type a title, then ↵")
-        .font(theme.captionFont)
-    }
-    .foregroundStyle(theme.dim)
-    .padding(.horizontal, theme.space.lg)
-    .padding(.vertical, theme.space.sm)
-    .contentShape(Rectangle())
-    .onTapGesture { isFieldFocused = true }
-  }
-
   /// The side padding inside a row. In the window, the pane's gutter, so a
   /// task's title starts under the header's "Today" the way the outline's
   /// start under its list name; the panel keeps its own narrower figure,
@@ -785,10 +770,6 @@ struct DayView: View {
 
   // MARK: - What is in the list
 
-  private var scopeName: String {
-    model.isEverythingSelected ? "Everything" : (model.selectedList?.name ?? "Workspace")
-  }
-
   private var activeTaskID: String? { model.activeFocusTask?.id }
 
   /// The row under the cursor. The panel keeps its own, because its list can
@@ -842,8 +823,8 @@ struct DayView: View {
   /// under an empty field is in the day and saying so on each one is noise.
   private func detail(for task: WorkspaceTask, reason: DayPlanReason?) -> String? {
     switch reason {
-    case .overdue, .dueToday, .startsToday: return reason?.label
-    case .running, .planned, nil:
+    case .overdue, .dueToday: return reason?.label
+    case .startsToday, .running, .planned, nil:
       return task.dueAt.map { "Due \($0.formatted(.relative(presentation: .named)))" }
     }
   }
@@ -999,13 +980,6 @@ extension DayView {
   /// a precision nobody typed in.
   private func duration(_ seconds: Int) -> String {
     DayForecast.hoursAndMinutes(seconds)
-  }
-
-  /// A stopwatch reading for time already spent on a task, so the column of
-  /// them lines up whatever the numbers are.
-  private func clock(_ seconds: Int) -> String {
-    let total = max(0, seconds)
-    return String(format: "%02d:%02d", total / 3600, (total % 3600) / 60)
   }
 }
 
