@@ -250,6 +250,7 @@ final class PluginRegistry {
     registry.register(PriorityThemePlugin(), activate: true)
     registry.register(ChalkThemePlugin())
     registry.register(ChalkDarkThemePlugin())
+    registry.register(GrapeThemePlugin())
     return registry
   }
 }

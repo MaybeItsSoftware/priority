@@ -218,6 +218,7 @@ public enum ThemeConformance {
     switch identifier {
     case BuiltInThemeSpecifications.chalkIdentifier: return "chalk"
     case BuiltInThemeSpecifications.chalkDarkIdentifier: return "chalk-dark"
+    case BuiltInThemeSpecifications.grapeIdentifier: return "grape"
     default: return "priority"
     }
   }

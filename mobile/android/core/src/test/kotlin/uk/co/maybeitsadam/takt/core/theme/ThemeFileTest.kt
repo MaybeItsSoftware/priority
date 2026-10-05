@@ -302,10 +302,10 @@ class ThemeFileTest {
         for (platform in ThemePlatform.entries) {
             val all = BuiltInThemeSpecifications.all(platform)
             assertEquals(
-                listOf("native.theme.priority", "native.theme.chalk", "native.theme.chalk.dark"),
+                listOf("native.theme.priority", "native.theme.chalk", "native.theme.chalk.dark", "native.theme.grape"),
                 all.map { it.identifier },
             )
-            assertEquals(listOf("Priority", "Zed", "Zed Dark"), all.map { it.name })
+            assertEquals(listOf("Priority", "Zed", "Zed Dark", "Grape"), all.map { it.name })
             assertEquals(BuiltInThemeSpecifications.DEFAULT_IDENTIFIER, BuiltInThemeSpecifications.defaultTheme(platform).identifier)
         }
         val type = priority.structure.typography

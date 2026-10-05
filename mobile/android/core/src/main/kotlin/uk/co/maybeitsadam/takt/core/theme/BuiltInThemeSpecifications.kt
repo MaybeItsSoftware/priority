@@ -28,18 +28,21 @@ object BuiltInThemeSpecifications {
     const val CHALK_IDENTIFIER = "native.theme.chalk"
     const val CHALK_DARK_IDENTIFIER = "native.theme.chalk.dark"
 
+    /** Grape: the house design language — Zed's palette with Arvo, Geist Mono and small capitals. */
+    const val GRAPE_IDENTIFIER = "native.theme.grape"
+
     /** The identifier a device uses when nothing has been chosen. */
     const val DEFAULT_IDENTIFIER = PRIORITY_IDENTIFIER
 
-    private val IDENTIFIERS = listOf(PRIORITY_IDENTIFIER, CHALK_IDENTIFIER, CHALK_DARK_IDENTIFIER)
+    private val IDENTIFIERS = listOf(PRIORITY_IDENTIFIER, CHALK_IDENTIFIER, CHALK_DARK_IDENTIFIER, GRAPE_IDENTIFIER)
 
     /** Where the shared files land on the classpath. */
     const val RESOURCE_DIRECTORY = "uk/co/maybeitsadam/takt/core/theme/builtin"
-    val RESOURCE_FILES = listOf("priority.json", "chalk.json", "chalk-dark.json")
+    val RESOURCE_FILES = listOf("priority.json", "chalk.json", "chalk-dark.json", "grape.json")
 
     private val cache = ConcurrentHashMap<ThemePlatform, List<ThemeSpecification>>()
 
-    /** Priority, then Zed, then Zed Dark: the default first. */
+    /** Priority, then Zed, Zed Dark and Grape: the default first. */
     fun all(platform: ThemePlatform): List<ThemeSpecification> = cache.getOrPut(platform) { load(platform) }
 
     /** The default theme, resolved for [platform]. */
@@ -52,6 +55,8 @@ object BuiltInThemeSpecifications {
 
     /** Zed Dark, under its old identifier. */
     fun chalkDark(platform: ThemePlatform): ThemeSpecification = all(platform)[2]
+
+    fun grape(platform: ThemePlatform): ThemeSpecification = all(platform)[3]
 
     fun specification(identifier: String, platform: ThemePlatform): ThemeSpecification? =
         all(platform).firstOrNull { it.identifier == identifier }

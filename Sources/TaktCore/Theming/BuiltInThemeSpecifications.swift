@@ -15,17 +15,20 @@ public enum BuiltInThemeSpecifications {
   /// they are stored as people's choice and synced between devices.
   public static let chalkIdentifier = "native.theme.chalk"
   public static let chalkDarkIdentifier = "native.theme.chalk.dark"
+  /// Grape: the house design language, whole — Zed's palette with its own
+  /// type, radii and labels rather than Zed's.
+  public static let grapeIdentifier = "native.theme.grape"
 
   /// The identifier a device uses when nothing has been chosen.
   public static let defaultIdentifier = priorityIdentifier
 
   /// The built-ins as the Mac resolves them, the default first.
-  public static var all: [ThemeSpecification] { [priority, chalk, chalkDark] }
+  public static var all: [ThemeSpecification] { [priority, chalk, chalkDark, grape] }
 
   /// The built-ins as `platform` resolves them: the same palettes, with each
   /// theme's per-platform structure.
   public static func all(for platform: ThemePlatform) -> [ThemeSpecification] {
-    [priority(for: platform), chalk(for: platform), chalkDark(for: platform)]
+    [priority(for: platform), chalk(for: platform), chalkDark(for: platform), grape(for: platform)]
   }
 
   /// The default theme, resolved for `platform`.
@@ -57,6 +60,11 @@ public enum BuiltInThemeSpecifications {
   /// same per-platform structure.
   public static func chalkDark(for platform: ThemePlatform) -> ThemeSpecification {
     chalkDarkByPlatform[platform] ?? chalkDark
+  }
+
+  /// Grape, resolved for `platform`. `grape` is the macOS one.
+  public static func grape(for platform: ThemePlatform) -> ThemeSpecification {
+    grapeByPlatform[platform] ?? grape
   }
 
   // MARK: - Per platform
@@ -113,11 +121,29 @@ public enum BuiltInThemeSpecifications {
     priorityIdentifier: priorityPlatformStructures,
     chalkIdentifier: chalkPlatformStructures,
     chalkDarkIdentifier: chalkPlatformStructures,
+    grapeIdentifier: grapePlatformStructures,
+  ]
+
+  /// Grape on the phones: the platform body sizes, the same radius scale it
+  /// has on the Mac, and hit areas grown to each platform's minimum. The
+  /// micro-label stays 10pt — it is meant to be the smallest thing on screen.
+  public static let grapePlatformStructures: [ThemePlatform: ThemeFile.Structure] = [
+    .ios: ThemeFile.Structure(
+      typography: .init(
+        bodySize: 17,
+        scale: .init(caption: 13, body: 17, title: 20, display: 34, hero: 72)),
+      touchTarget: 44),
+    .android: ThemeFile.Structure(
+      typography: .init(
+        bodySize: 16,
+        scale: .init(caption: 12, body: 16, title: 20, display: 32, hero: 72)),
+      touchTarget: 48),
   ]
 
   private static let priorityByPlatform = byPlatform(priority, priorityPlatformStructures)
   private static let chalkByPlatform = byPlatform(chalk, chalkPlatformStructures)
   private static let chalkDarkByPlatform = byPlatform(chalkDark, chalkPlatformStructures)
+  private static let grapeByPlatform = byPlatform(grape, grapePlatformStructures)
 
   private static func byPlatform(
     _ specification: ThemeSpecification, _ structures: [ThemePlatform: ThemeFile.Structure]
@@ -315,6 +341,41 @@ public enum BuiltInThemeSpecifications {
     lockedAppearance: .dark,
     palette: chalk.palette,
     structure: chalk.structure
+  )
+
+  // MARK: - Grape — the house design language
+
+  /// Flat, bordered, editorial, and set like a printed timetable: Zed's warm
+  /// paper and grape ink, with Arvo — a slab serif — for everything read,
+  /// Geist Mono for numerals, code and key caps, the house radius scale
+  /// (8 for panels, 6 for anything pressed), and the micro-label as the
+  /// signature: 10pt bold capitals tracked 0.15em, in the muted ink.
+  ///
+  /// Zed shares its colours and dresses them in Zed's own type and square
+  /// panels; this is the same palette as the design language states it.
+  public static let grape = ThemeSpecification(
+    identifier: grapeIdentifier,
+    name: "Grape",
+    summary:
+      "The house style: warm paper, grape ink, Arvo and Geist Mono, hairlines and small capitals.",
+    palette: chalk.palette,
+    structure: ThemeStructure(
+      radius: ThemeRadiusScale(panel: 8, row: 6, control: 6, pill: 9999, shell: 20),
+      border: ThemeBorderScale(hairline: 1, emphasis: 2, focusRing: 2),
+      spacing: ThemeSpacingScale(xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24),
+      typography: ThemeTypography(
+        // The serif body against flat paper is most of the character, so the
+        // fallback is a serif too: if Arvo ever fails to register, New York
+        // stands in rather than a sans that would read as a different theme.
+        display: ThemeFontFace(families: ["Arvo"], design: .serif),
+        body: ThemeFontFace(families: ["Arvo"], design: .serif),
+        mono: ThemeFontFace(families: ["Geist Mono"], design: .monospaced),
+        bodySize: 13,
+        scale: ThemeTypeScale(caption: 11, body: 13, title: 16, display: 28, hero: 64),
+        microLabel: ThemeMicroLabel(
+          size: 10, weight: .bold, tracking: 0.15, isUppercased: true, role: .mutedText)
+      )
+    )
   )
 
   // MARK: - The palette layer

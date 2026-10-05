@@ -12,6 +12,9 @@ Mac, the iPhone and Android:
   warm paper and grape ink. It was called Chalk, and its identifier still is
   (`native.theme.chalk`).
 - **Zed Dark**, Zed with the appearance fixed to dark.
+- **Grape**, the house design language whole: Zed's paper and grape ink, set in
+  Arvo with Geist Mono for numerals and code, 8px panels and 6px controls, and
+  10pt bold tracked capitals for every label (`native.theme.grape`).
 
 You can add your own the way Zed does: as JSON files in a folder.
 

@@ -28,6 +28,7 @@ extension ThemePlugin where Self: PluginSettingsPageProviding {
 extension PriorityThemePlugin: PluginSettingsPageProviding {}
 extension ChalkThemePlugin: PluginSettingsPageProviding {}
 extension ChalkDarkThemePlugin: PluginSettingsPageProviding {}
+extension GrapeThemePlugin: PluginSettingsPageProviding {}
 extension UserThemePlugin: PluginSettingsPageProviding {}
 
 struct ThemeSettingsPage: View {
