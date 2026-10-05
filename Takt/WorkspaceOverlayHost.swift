@@ -529,13 +529,21 @@ struct WorkspaceKeyboardReference: View {
   let overlayID: String
   @State private var query = ""
 
+  /// What the typed text does as a key, ahead of every title it appears in:
+  /// `m` should answer "what does m do" before it lists "Move", "Mark"…
+  private var keyMatches: [WorkspaceCommand] {
+    WorkspaceCommandQuery.keyMatches(for: query)
+  }
+
   private var groups: [(name: String, commands: [WorkspaceCommand])] {
     var order: [String] = []
     var byGroup: [String: [WorkspaceCommand]] = [:]
     let needle = query.trimmingCharacters(in: .whitespaces)
+    let byKey = Set(keyMatches.map(\.id))
     for command in WorkspaceCommandCatalog.all
-    where needle.isEmpty || command.title.localizedCaseInsensitiveContains(needle)
-      || command.group.localizedCaseInsensitiveContains(needle) {
+    where !byKey.contains(command.id)
+      && (needle.isEmpty || command.title.localizedCaseInsensitiveContains(needle)
+        || command.group.localizedCaseInsensitiveContains(needle)) {
       if byGroup[command.group] == nil { order.append(command.group) }
       byGroup[command.group, default: []].append(command)
     }
@@ -548,6 +556,15 @@ struct WorkspaceKeyboardReference: View {
       FocusRule()
       ScrollView {
         LazyVStack(alignment: .leading, spacing: theme.space.md) {
+          let keyed = keyMatches
+          if !keyed.isEmpty {
+            VStack(alignment: .leading, spacing: theme.space.xs) {
+              MicroLabel("Pressing \(query.trimmingCharacters(in: .whitespaces))")
+              ForEach(keyed) { command in
+                row(command)
+              }
+            }
+          }
           ForEach(groups, id: \.name) { group in
             VStack(alignment: .leading, spacing: theme.space.xs) {
               MicroLabel(group.name)

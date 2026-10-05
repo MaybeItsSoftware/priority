@@ -350,3 +350,20 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "the set of keys a surface takes over from .anywhere changed")
   }
 }
+
+final class WorkspaceCommandKeyMatchTests: XCTestCase {
+  func testAKeyListsItselfThenItsSequencesThenItsChords() {
+    let matches = WorkspaceCommandQuery.keyMatches(for: "m")
+    XCTAssertFalse(matches.isEmpty)
+    let firstKeys = matches.first?.allKeys ?? []
+    XCTAssertTrue(
+      firstKeys.contains("m") || firstKeys.contains("mm"),
+      "m answers with what m (or a sequence starting with it) does, got \(firstKeys)")
+    XCTAssertTrue(matches.contains { $0.allKeys.contains("mm") }, "mm, move, is offered for m")
+  }
+
+  func testAWordIsNotAKey() {
+    XCTAssertTrue(WorkspaceCommandQuery.keyMatches(for: "move").isEmpty)
+    XCTAssertTrue(WorkspaceCommandQuery.keyMatches(for: "  ").isEmpty)
+  }
+}

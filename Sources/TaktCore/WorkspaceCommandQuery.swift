@@ -60,6 +60,36 @@ public enum WorkspaceCommandQuery {
     return stableSortedByScore(scored)
   }
 
+  /// The commands a typed key could be the start of, best first: the key
+  /// itself (`m`), then the sequences it opens (`mm`), then the chords that
+  /// end in it (`⌘M`). Empty for anything that is not a key — "move" is a
+  /// word to search titles with, not a shortcut.
+  ///
+  /// This is what the keyboard reference puts first, so typing `m` answers
+  /// "what does m do" before it lists every title with an m in it.
+  public static func keyMatches(
+    for query: String, in catalogue: [WorkspaceCommand] = WorkspaceCommandCatalog.all
+  ) -> [WorkspaceCommand] {
+    let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard !needle.isEmpty else { return [] }
+    func rank(_ key: String) -> Int? {
+      let key = key.lowercased()
+      if key == needle { return 0 }
+      if WorkspaceCommandCatalog.isSequence(key) && key.hasPrefix(needle) { return 1 }
+      if key.contains("+"), key.split(separator: "+").last.map(String.init) == needle { return 2 }
+      return nil
+    }
+    let ranked = catalogue.compactMap { command -> (WorkspaceCommand, Int)? in
+      let ranks = command.allKeys.compactMap(rank)
+        + command.displayKeys.compactMap { $0.lowercased() == needle ? 0 : nil }
+      return ranks.min().map { (command, $0) }
+    }
+    // Stable within a rank, so the catalogue's most-pressed-first order holds.
+    return ranked.enumerated()
+      .sorted { ($0.element.1, $0.offset) < ($1.element.1, $1.offset) }
+      .map(\.element.0)
+  }
+
   /// `recents` with `id` moved to the front and the list capped — what the
   /// app stores after running a command from the palette.
   public static func recording(
@@ -91,6 +121,9 @@ public enum WorkspaceCommandQuery {
     let tokens = command.allKeys.map { $0.lowercased() }
     let rendered = command.displayKeys.map { $0.lowercased() }
     if tokens.contains(needle) || rendered.contains(needle) { return 1_000 }
+    // One letter is also the start of the sequences it opens: `m` is half
+    // of `mm`, and that is what someone typing it is most likely asking about.
+    if tokens.contains(where: { WorkspaceCommandCatalog.isSequence($0) && $0.hasPrefix(needle) }) { return 900 }
 
     var best: Int?
     if let fuzzy = fuzzyScore(needle, in: command.title) {
