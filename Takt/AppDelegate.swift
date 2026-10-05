@@ -113,14 +113,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       guard let self, let workspace = self.workspace else { return }
       self.focusPanelController.show(model: workspace)
     }
-    // Starting a block deliberately puts the window away and leaves the tray.
-    // Hiding first, so `applyActivationPolicy` has already dropped the app to
-    // `.accessory` by the time the panel takes key — otherwise the Dock icon
-    // flickers back as the panel activates the app.
+    // Starting a block deliberately puts the window away and leaves the block
+    // running where the user said they want it: the panel, or the menu bar
+    // alone. Hiding first, so `applyActivationPolicy` has already dropped the
+    // app to `.accessory` by the time the panel takes key — otherwise the Dock
+    // icon flickers back as the panel activates the app.
     workspace.onFocusHandoffRequested = { [weak self] in
       guard let self, let workspace = self.workspace else { return }
       self.mainWindowController.hide()
-      self.focusPanelController.show(model: workspace)
+      switch self.checkvistManager.preferences.focusRunSurface {
+      case .panel:
+        self.focusPanelController.show(model: workspace)
+      case .menuBar:
+        // The status item already shows the task and its clock. A panel the
+        // block was started from goes too, handing the keyboard back to
+        // whatever the hotkey interrupted.
+        self.focusPanelController.dismiss(.back)
+      }
     }
     // Finishing something is finishing something, whichever surface it
     // happened on. Before this the flourish only ever played on the focus

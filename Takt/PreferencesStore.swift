@@ -67,6 +67,8 @@ final class PreferencesStore {
     case opensOnFocusScreen
     /// Whether finishing a block stops to ask how it went.
     case scoresEachFocusBlock
+    /// Where a deliberately started block runs: the floating panel or the menu bar.
+    case focusRunSurfaceRawValue
     case focusDurationMinutes
     case focusBreakDurationMinutes
     case kanbanManualOrderByColumnId

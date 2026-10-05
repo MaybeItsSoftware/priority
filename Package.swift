@@ -200,6 +200,7 @@ let appLogicTargetExcludes = [
   "Takt/Models/AppThemeModels.swift",
   "Takt/Models/CommandSuggestion.swift",
   "Takt/Models/DailyChartRange.swift",
+  "Takt/Models/FocusRunSurface.swift",
   "Takt/Models/QuickAddLocationMode.swift",
   "Takt/Models/QuickEntryMode.swift",
 

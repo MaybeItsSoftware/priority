@@ -117,6 +117,16 @@ extension SettingsView {
             .font(theme.captionFont)
             .foregroundStyle(theme.muted)
         }
+        VStack(alignment: .leading, spacing: theme.space.xxs) {
+          Picker("Run focus blocks in", selection: preferenceBinding(\.focusRunSurface)) {
+            Text("Floating panel").tag(FocusRunSurface.panel)
+            Text("Menu bar").tag(FocusRunSurface.menuBar)
+          }
+          .pickerStyle(.segmented)
+          Text("Starting a block puts the window away. The floating panel stays up over your work; the menu bar shows only the task and its clock, and hands the keyboard straight back.")
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
+        }
         if #available(macOS 13.0, *) {
           Toggle("Launch at login", isOn: preferenceBinding(\.launchAtLogin))
             .toggleStyle(.switch)

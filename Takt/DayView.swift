@@ -885,11 +885,15 @@ extension DayView {
     surface.isPanel ? .panel : .window
   }
 
+  /// In the panel, adding a task is deciding to do it: it goes into today and
+  /// starts at once, so summon, type and Return is the whole way into a block.
+  /// The window only files it.
   private func createFromQuery() {
     let title = query.trimmingCharacters(in: .whitespaces)
     guard !title.isEmpty else { return }
-    model.createBoardTask(named: title, in: model.boardColumns.first { $0.id == "today" })
+    let task = model.createBoardTask(named: title, in: model.boardColumns.first { $0.id == "today" })
     query = ""
+    if surface.isPanel, let task { start(task) }
   }
 
   private func openInWindow() {

@@ -106,6 +106,12 @@ import SwiftUI
   var scoresEachFocusBlock: Bool {
     didSet { preferencesStore.set(scoresEachFocusBlock, for: .scoresEachFocusBlock) }
   }
+  /// Where a block started on purpose runs once the window is put away. The
+  /// panel by default, because that is what the app always did; the menu bar
+  /// for someone who wants nothing on screen but the clock.
+  var focusRunSurface: FocusRunSurface {
+    didSet { preferencesStore.set(focusRunSurface.rawValue, for: .focusRunSurfaceRawValue) }
+  }
   var quickAddLocationMode: QuickAddLocationMode {
     didSet { preferencesStore.set(quickAddLocationMode.rawValue, for: .quickAddLocationModeRawValue) }
   }
@@ -187,6 +193,8 @@ import SwiftUI
     )
     self.opensOnFocusScreen = preferencesStore.bool(.opensOnFocusScreen, default: false)
     self.scoresEachFocusBlock = preferencesStore.bool(.scoresEachFocusBlock, default: true)
+    self.focusRunSurface =
+      FocusRunSurface(rawValue: preferencesStore.int(.focusRunSurfaceRawValue, default: 0)) ?? .panel
     self.quickAddLocationMode =
       QuickAddLocationMode(
         rawValue: preferencesStore.int(.quickAddLocationModeRawValue, default: 0)
