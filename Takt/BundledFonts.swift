@@ -2,9 +2,11 @@ import CoreText
 import Foundation
 import OSLog
 
-/// The faces Priority ships: IBM Plex Sans for the interface and Lilex for
-/// code and numerals — the pair Zed ships as `.ZedSans` and `.ZedMono`. Both
-/// are SIL OFL; the licences sit beside the files in `Takt/Fonts/`.
+/// The faces Takt ships: IBM Plex Sans and Lilex — the pair Zed ships as
+/// `.ZedSans` and `.ZedMono` — plus Inter, Geist, Geist Mono, JetBrains Mono
+/// and Arvo, so a theme or a font choice in Appearance looks the same on
+/// every Mac. All are SIL OFL; the licences sit beside the files in
+/// `Takt/Fonts/`.
 ///
 /// They are registered for this process only, rather than listed under
 /// `ATSApplicationFontsPath`, so that the Info.plist can stay generated and a

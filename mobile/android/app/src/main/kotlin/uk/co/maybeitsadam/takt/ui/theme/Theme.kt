@@ -49,8 +49,10 @@ enum class ThemeMode(val raw: String, val title: String) {
 }
 
 /**
- * The faces Priority bundles: IBM Plex Sans and Lilex, Zed's pair. A theme
- * names families; these are the ones that resolve to bundled files.
+ * The faces Takt bundles — IBM Plex Sans and Lilex (Zed's pair), Inter,
+ * Geist, Geist Mono, JetBrains Mono and Arvo — the same set as the Mac and
+ * iPhone. A theme names families; these are the ones that resolve to bundled
+ * files.
  */
 object Fonts {
     val sans = FontFamily(
@@ -66,7 +68,41 @@ object Fonts {
         Font(R.font.lilex_bold, FontWeight.Bold),
     )
 
-    private val bundled = mapOf("ibm plex sans" to sans, "lilex" to mono)
+    val inter = FontFamily(
+        Font(R.font.inter_regular, FontWeight.Normal),
+        Font(R.font.inter_italic, FontWeight.Normal, FontStyle.Italic),
+        Font(R.font.inter_medium, FontWeight.Medium),
+        Font(R.font.inter_semibold, FontWeight.SemiBold),
+        Font(R.font.inter_bold, FontWeight.Bold),
+    )
+    val geist = FontFamily(
+        Font(R.font.geist_regular, FontWeight.Normal),
+        Font(R.font.geist_italic, FontWeight.Normal, FontStyle.Italic),
+        Font(R.font.geist_medium, FontWeight.Medium),
+        Font(R.font.geist_semibold, FontWeight.SemiBold),
+        Font(R.font.geist_bold, FontWeight.Bold),
+    )
+    val geistMono = FontFamily(
+        Font(R.font.geistmono_regular, FontWeight.Normal),
+        Font(R.font.geistmono_medium, FontWeight.Medium),
+        Font(R.font.geistmono_bold, FontWeight.Bold),
+    )
+    val jetBrainsMono = FontFamily(
+        Font(R.font.jetbrainsmono_regular, FontWeight.Normal),
+        Font(R.font.jetbrainsmono_medium, FontWeight.Medium),
+        Font(R.font.jetbrainsmono_bold, FontWeight.Bold),
+    )
+    val arvo = FontFamily(
+        Font(R.font.arvo_regular, FontWeight.Normal),
+        Font(R.font.arvo_italic, FontWeight.Normal, FontStyle.Italic),
+        Font(R.font.arvo_bold, FontWeight.Bold),
+        Font(R.font.arvo_bolditalic, FontWeight.Bold, FontStyle.Italic),
+    )
+
+    private val bundled = mapOf(
+        "ibm plex sans" to sans, "lilex" to mono, "inter" to inter, "geist" to geist,
+        "geist mono" to geistMono, "jetbrains mono" to jetBrainsMono, "arvo" to arvo,
+    )
 
     /** Android's own family aliases, which a theme may name directly. */
     private val system = mapOf(

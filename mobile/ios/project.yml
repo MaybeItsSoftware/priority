@@ -102,6 +102,26 @@ targets:
           - Lilex-Regular.ttf
           - Lilex-Medium.ttf
           - Lilex-Bold.ttf
+          - Inter-Regular.ttf
+          - Inter-Italic.ttf
+          - Inter-Medium.ttf
+          - Inter-SemiBold.ttf
+          - Inter-Bold.ttf
+          - Geist-Regular.ttf
+          - Geist-Italic.ttf
+          - Geist-Medium.ttf
+          - Geist-SemiBold.ttf
+          - Geist-Bold.ttf
+          - GeistMono-Regular.ttf
+          - GeistMono-Medium.ttf
+          - GeistMono-Bold.ttf
+          - JetBrainsMono-Regular.ttf
+          - JetBrainsMono-Medium.ttf
+          - JetBrainsMono-Bold.ttf
+          - Arvo-Regular.ttf
+          - Arvo-Italic.ttf
+          - Arvo-Bold.ttf
+          - Arvo-BoldItalic.ttf
     settings:
       base:
         PRODUCT_NAME: Takt
