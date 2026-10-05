@@ -326,9 +326,12 @@ struct DayView: View {
 
   // MARK: - The list
 
+  /// The window's draft row; the panel has its own field to type into.
+  private var isDrafting: Bool { !surface.isPanel && model.draftsAtEnd }
+
   @ViewBuilder
   private var content: some View {
-    if rows.isEmpty {
+    if rows.isEmpty && !isDrafting {
       empty
     } else {
       ScrollViewReader { proxy in
@@ -340,6 +343,11 @@ struct DayView: View {
             ForEach(rows) { row in
               view(for: row)
                 .id(row.id)
+            }
+            if isDrafting {
+              // Where the new task will be: the foot of the day.
+              WorkspaceTaskDraftRow(namesDestination: true)
+                .id("takt:draft")
             }
             if surface.isPanel {
               if query.isEmpty { addHint }

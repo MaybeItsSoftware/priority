@@ -25,11 +25,35 @@ extension WorkspaceViewModel {
       quickCaptureStartDayOffset = nil
     }
     taskInsertionReference = nil
-    // Not `requestKeyboardFocus(.tasks)`: the field is in the title bar now,
-    // and asking SwiftUI to focus the task pane would race it for the key.
+    // Not `requestKeyboardFocus(.tasks)`: the draft row takes the key itself,
+    // and asking SwiftUI to focus the task pane would race it for it.
     desktopShortcutSequence.reset()
-    taskComposerFocusRequest += 1
+    if isQuickCaptureActive {
+      quickCaptureFocusRequest += 1
+    } else {
+      isDraftingTask = true
+      taskComposerFocusRequest += 1
+    }
   }
+
+  /// Closes the draft row and gives the keyboard back to the tasks.
+  func endTaskDraft() {
+    guard isDraftingTask else { return }
+    isDraftingTask = false
+    taskInsertionReference = nil
+    taskInsertionAbove = false
+    taskInsertionIsChild = false
+    requestKeyboardFocus(.tasks)
+  }
+
+  /// Whether the draft row belongs right before (`above`) or after the row
+  /// for `taskID`; with no reference it goes at the end of the pane.
+  func draftsBeside(_ taskID: String, above: Bool) -> Bool {
+    isDraftingTask && taskInsertionReference?.id == taskID && taskInsertionAbove == above
+      && !(above && taskInsertionIsChild)
+  }
+
+  var draftsAtEnd: Bool { isDraftingTask && taskInsertionReference == nil }
 
   func requestRelativeTaskComposerFocus(above: Bool = false, child: Bool = false) {
     let reference = selectedTask

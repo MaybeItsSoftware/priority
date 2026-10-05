@@ -496,6 +496,12 @@ enum WorkspaceSidebarItem: Identifiable {
   /// so a task that disappears meanwhile simply has nothing left to confirm.
   var pendingTaskDeletionID: String?
   var taskComposerFocusRequest = 0
+  /// Whether a draft row is open in the pane, at the place the task it
+  /// becomes will land (`taskInsertionReference` and its two flags say where).
+  var isDraftingTask = false
+  /// Quick capture's own field, in the title bar: the one add that is not
+  /// into the list on screen, so it is not drawn in it.
+  var quickCaptureFocusRequest = 0
   /// The normal composer is deliberately lightweight. These fields are only
   /// active for global capture, where destination and start day can be chosen
   /// without taking your hands off the keyboard.

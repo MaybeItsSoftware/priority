@@ -43,7 +43,9 @@ struct WorkspaceOutlinePane: View {
                     .outlineRowChrome()
                 } else {
                   ForEach(items) { item in
-                    row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard)
+                    drafted(item) {
+                      row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard)
+                    }
                   }
                 }
               } header: {
@@ -64,9 +66,14 @@ struct WorkspaceOutlinePane: View {
           } else {
             let parents = model.outlineParentIDs
             ForEach(model.outlineRows) { item in
-              row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard,
-                fold: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
+              drafted(item) {
+                row(item, selectedID: selectedID, tasksHaveKeyboard: tasksHaveKeyboard,
+                  fold: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
+              }
             }
+          }
+          if model.draftsAtEnd {
+            WorkspaceTaskDraftRow(namesDestination: model.isMultiListScope).outlineRowChrome()
           }
         }
         // Plain rather than inset: the inset style pulls every row in from the
@@ -87,6 +94,19 @@ struct WorkspaceOutlinePane: View {
       }
     } else {
       WorkspaceEmptyPane(title: "Outline", message: "Choose a list in the sidebar to see its tasks.")
+    }
+  }
+
+  /// The row, with the draft row before or after it when the new task is to
+  /// land there — one step further in when it goes inside.
+  @ViewBuilder
+  private func drafted(_ item: TaskOutlineItem, @ViewBuilder row: () -> some View) -> some View {
+    if model.draftsBeside(item.id, above: true) {
+      WorkspaceTaskDraftRow(depth: item.depth).outlineRowChrome()
+    }
+    row()
+    if model.draftsBeside(item.id, above: false) {
+      WorkspaceTaskDraftRow(depth: item.depth + (model.taskInsertionIsChild ? 1 : 0)).outlineRowChrome()
     }
   }
 

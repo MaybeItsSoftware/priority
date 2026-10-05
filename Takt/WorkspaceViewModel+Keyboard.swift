@@ -109,6 +109,8 @@ extension WorkspaceViewModel {
 
   /// Escape, which means "back out one step" from wherever the keyboard is.
   func dismissFromKeyboard() {
+    // A draft row left open after clicking away is the first thing to go.
+    if isDraftingTask { endTaskDraft(); return }
     switch keyboardFocusArea {
     case .sidebar:
       // Leaving a folder has to land somewhere. It used to fall back on

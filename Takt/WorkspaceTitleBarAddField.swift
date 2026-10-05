@@ -3,16 +3,13 @@ import TaktCore
 import TaktWorkspace
 import SwiftUI
 
-/// Add a task, from the title bar.
+/// Quick capture's field, in the title bar.
 ///
-/// The window's one place to type a new task, beside the mode strip in the
-/// bar you drag the window by. It names where the task will land — the list
-/// on screen, the task `a` was pressed on, or the inbox — so Return is never
-/// a guess. See `WorkspaceViewModel+AddTask` for the rule.
-///
-/// While quick capture is running the same field takes the arrows: up and
-/// down choose the list, left and right the day it starts. Outside it the
-/// arrows move the cursor as in any other field.
+/// Only while quick capture runs. Every other new task is typed in a draft
+/// row at the place it will land (`WorkspaceTaskDraftRow`); a capture is the
+/// one add that is not into the list on screen — the arrows send it
+/// elsewhere, up and down for the list and left and right for the day it
+/// starts — so it keeps a field that names its destination instead.
 struct WorkspaceTitleBarAddField: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -30,14 +27,18 @@ struct WorkspaceTitleBarAddField: View {
   static let compactDestinationWidth: CGFloat = 64
 
   var body: some View {
+    if model.isQuickCaptureActive { field }
+  }
+
+  private var field: some View {
     HStack(spacing: theme.space.xs) {
-      Image(systemName: model.isQuickCaptureActive ? "tray.and.arrow.down" : "plus")
+      Image(systemName: "tray.and.arrow.down")
         .font(theme.captionFont)
         .foregroundStyle(isEditing ? theme.primary : theme.muted)
       TitleBarAddTextField(
         text: $title,
         isEditing: $isEditing,
-        focusRequest: model.taskComposerFocusRequest,
+        focusRequest: model.quickCaptureFocusRequest,
         font: Self.fieldFont(theme),
         textColor: NSColor(theme.ink),
         placeholderColor: NSColor(theme.dim),
@@ -181,7 +182,9 @@ struct TitleBarAddTextField: NSViewRepresentable {
     field.cell?.usesSingleLineMode = true
     field.setContentHuggingPriority(.defaultLow, for: .horizontal)
     field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-    context.coordinator.lastFocusRequest = focusRequest
+    // One behind, so the first update takes the keyboard: the field is only
+    // built when quick capture starts, which is exactly when it should.
+    context.coordinator.lastFocusRequest = focusRequest - 1
     return field
   }
 

@@ -144,6 +144,12 @@ private struct WorkspaceKanbanColumnStrip: View {
 struct WorkspaceKanbanColumnView: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
+
+  /// The draft row, at a card's width rather than an outline row's.
+  private var draftRow: some View {
+    WorkspaceTaskDraftRow()
+      .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
+  }
   let column: WorkspaceKanbanColumn
   let width: CGFloat
   let height: CGFloat
@@ -245,13 +251,18 @@ struct WorkspaceKanbanColumnView: View {
           // gap between.
           LazyVStack(alignment: .leading, spacing: -theme.hairline) {
             ForEach(tasks) { task in
+              if model.draftsBeside(task.id, above: true) { draftRow }
               WorkspaceKanbanCard(
                 task: task, column: column,
                 selectedRowID: task.id == selectedCardID ? selectedRowID : nil,
                 hasKeyboard: tasksHaveKeyboard && task.id == selectedCardID)
                 .environment(model)
                 .id(task.id)
+              if model.draftsBeside(task.id, above: false) { draftRow }
             }
+            // A new card with no task to sit beside lands at the foot of the
+            // column you are in, so that is where it is typed.
+            if model.draftsAtEnd && column.id == model.activeBoardColumnID { draftRow }
 
             if tasks.isEmpty {
               VStack(spacing: theme.space.xs) {
@@ -272,11 +283,13 @@ struct WorkspaceKanbanColumnView: View {
               .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
             }
 
-            TaskComposer(focusRequest: 0) { title in
-              model.createBoardTask(named: title, in: column)
+            if !model.isDraftingTask {
+              TaskComposer(focusRequest: 0) { title in
+                model.createBoardTask(named: title, in: column)
+              }
+              .accessibilityLabel("Add task to \(column.title)")
+              .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
             }
-            .accessibilityLabel("Add task to \(column.title)")
-            .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
           }
           .scrollTargetLayout()
           .padding(.bottom, theme.space.xxs)

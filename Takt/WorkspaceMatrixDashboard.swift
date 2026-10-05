@@ -47,12 +47,17 @@ struct WorkspaceMatrixDashboard: View {
       }
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
-          if !unplaced.isEmpty {
+          if !unplaced.isEmpty || model.isDraftingTask {
             VStack(alignment: .leading, spacing: theme.space.xs) {
               MicroLabel("Unplaced")
               ForEach(unplaced) { task in
                 WorkspaceMatrixTaskRow(task: task)
                   .environment(model)
+              }
+              // A new task has no urgency or importance yet, so it is
+              // unplaced: it is typed where it will first appear.
+              if model.isDraftingTask {
+                WorkspaceTaskDraftRow(namesDestination: true)
               }
             }
             .padding(theme.space.md)

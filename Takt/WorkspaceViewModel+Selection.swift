@@ -7,6 +7,7 @@ import TaktWorkspace
 /// it is the same type.
 extension WorkspaceViewModel {
   func selectList(_ id: String) {
+    isDraftingTask = false
     // Any other way of choosing a row moves the keyboard cursor there too,
     // by letting it fall back to whatever is now selected.
     sidebarCursorID = nil
@@ -89,6 +90,7 @@ extension WorkspaceViewModel {
   }
 
   func selectViewMode(_ mode: WorkspaceViewMode) {
+    if mode != viewMode { isDraftingTask = false }
     if mode == .today { dayPresentationCount += 1 }
     let changed = viewMode != mode
     viewMode = mode
