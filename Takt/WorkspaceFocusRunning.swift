@@ -98,7 +98,7 @@ struct WorkspaceFocusRunning: View {
   private var actions: some View {
     VStack(spacing: theme.space.md) {
       HStack(spacing: theme.space.sm) {
-        action("Done", systemImage: "checkmark", key: "↵", prominent: true) {
+        action("Done", systemImage: "checkmark", key: "Space", prominent: true) {
           model.requestFocusCompletion()
         }
         action(

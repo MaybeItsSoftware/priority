@@ -316,46 +316,46 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       }
     }
     let expected: Set<String> = [
-      // The focus ladder replaces ordinary selection, and staging replaces both
-      // "new task" and "complete": there is no task list under the ladder for
-      // those to act on.
-      "focus:up", "focus:down", "focus:k", "focus:j", "focus:enter", "focus:space",
+      // The focus ladder replaces ordinary selection; f stages rather than
+      // starts, and Space ticks off the rung rather than a list row.
+      "focus:up", "focus:down", "focus:k", "focus:j", "focus:f", "focus:space",
       "focus:x", "focus:l", "focus:escape",
       // ⌥↑/⌥↓ move a task, and on the ladder the task they move is a rung.
       "focus:option+up", "focus:option+down",
       // A running block has exactly one task, so the list keys have nothing to
       // mean and the block's own controls take them.
-      "focusRunning:enter", "focusRunning:escape", "focusRunning:l", "focusRunning:f",
+      // Space and x complete it, which for a running block means finishing it.
+      "focusRunning:space", "focusRunning:x", "focusRunning:escape", "focusRunning:l", "focusRunning:f",
       // The timeline is a day at a time, so ←/→ and h/l step days rather than
       // entering and leaving a task.
       "timeline:left", "timeline:right", "timeline:h", "timeline:l", "timeline:escape",
       // In the sidebar the arrows walk rows and open folders, rename acts on the
       // row, ⌥↑/⌥↓ reorder the row rather than a task, and ⌘↑/⌘↓ go to the
       // sidebar's own ends.
-      "sidebar:up", "sidebar:down", "sidebar:left", "sidebar:right", "sidebar:enter",
+      "sidebar:up", "sidebar:down", "sidebar:left", "sidebar:right",
       "sidebar:k", "sidebar:j", "sidebar:f2", "sidebar:cmd+up", "sidebar:cmd+down",
       "sidebar:option+up", "sidebar:option+down",
       "sidebar:home", "sidebar:end", "sidebar:pageup", "sidebar:pagedown",
-      // The sidebar is Zed's project panel: ⌘N, ⌫ and Space act on the row,
+      // The sidebar is Zed's project panel: ⌘N and ⌫ act on the row,
       // and so do the vim panel's h, l and gg, never on a task behind it.
-      "sidebar:cmd+n", "sidebar:delete", "sidebar:cmd+delete", "sidebar:space", "sidebar:h", "sidebar:l",
+      "sidebar:cmd+n", "sidebar:delete", "sidebar:cmd+delete", "sidebar:h", "sidebar:l",
       "sidebar:gg",
       // On the board ←/→ change column instead of entering and leaving a task.
       "board:left", "board:right",
       // In the outline they fold and unfold a branch and step between a task
       // and its subtasks, as in Checkvist, so the subtasks can be walked
-      // without opening the task. Return, l and ] still open it.
+      // without opening the task. l and ] still open it.
       "outline:left", "outline:right",
-      // The done rail is a list of its own, so the list keys walk it, ⏎ opens
-      // the finished task where it lives, and escape gives the keyboard back to
+      // The done rail is a list of its own, so the list keys walk it, Space
+      // reopens the finished task, and escape gives the keyboard back to
       // the work rather than clearing a selection the rail does not hold.
-      "done:up", "done:down", "done:k", "done:j", "done:enter", "done:escape",
+      "done:up", "done:down", "done:k", "done:j", "done:space", "done:escape",
       "done:home", "done:end", "done:cmd+up", "done:cmd+down", "done:pageup", "done:pagedown",
       "done:left",
-      // Today is walked with the ordinary keys, but Return starts the task
-      // rather than opening it, and ← has no task to leave so goes to the
-      // sidebar.
-      "today:left", "today:enter",
+      // Today is walked with the ordinary keys, but f queues behind a running
+      // block rather than replacing it, and ← has no task to leave so goes to
+      // the sidebar.
+      "today:left", "today:f",
     ]
     XCTAssertEqual(
       overrides, expected,

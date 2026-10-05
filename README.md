@@ -81,13 +81,15 @@ something you already have to know.
 | `Shift+Alt+←` / `Shift+Alt+→` | Move the card a board column left / right |
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |
 | `Ctrl+T` | Plan the task for today, or take it off |
-| `Cmd+Shift+K` | Delete the task (Zed's delete line) |
-| `Return` | Open the task you are on — on Today, start its card (or finish the one running); elsewhere, open its subtasks. With nothing selected, add a task |
+| `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
+| `Return` | **Always** add a task, as in Checkvist — below the selection in the outline and the matrix, into the list you are in elsewhere |
+| `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
+| `f` | Start a focus block on the task — on Today, queue it behind a running block |
+| `l` / `]` | Open the task's subtasks |
 | `→` / `←` | In the outline, show a task's subtasks and step into them / hide them and step out — without opening the task. Elsewhere, open and leave it |
 | `za` / `Cmd+←` / `Cmd+→` | Fold or unfold the task you are on (outline or board) / fold / unfold the whole outline |
-| `Shift+Return` / `Space` | Tick the task off without running a block |
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
-| `Alt+Return` / `Alt+Shift+Return` | New task above the selection / new subtask |
+| `Shift+Return` / `Alt+Shift+Return` | New task above the selection (Checkvist's) / new subtask |
 | `Cmd+F` / `Cmd+Shift+F` | Search |
 | `Cmd+P` / `ll` | Go to a list — every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
@@ -103,7 +105,7 @@ something you already have to know.
 In the sidebar the keys are Zed's project panel's, lists standing in for files
 and folders for directories: `Cmd+N` new list and `Cmd+Alt+N` new folder beside
 the row you are on, `F2` rename, `Delete` delete (it asks), `Cmd+←` / `Cmd+→`
-collapse / expand every folder, `Space` opens the row. Its vim panel's netrw
+collapse / expand every folder, `→` opens the row. `Return` adds a task to the list you are in, as it does everywhere. Its vim panel's netrw
 keys work too: `d` new folder, `%` new list, `Shift+D` delete, `Shift+R`
 rename, `h` / `l` / `-` collapse, expand and go up, `gg` / `Shift+G` the ends,
 `{` / `}` the previous / next folder and `:` the palette.
@@ -164,8 +166,8 @@ The desktop workspace supports Checkvist-style two-letter commands, including
 `uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll` and `hc`, plus native undo/redo in the
 Edit menu. Board arrows navigate every column, including empty ones, and
 `Up`/`Down` step through the subtask rows drawn on each card as well as the
-cards (folded cards are skipped over); `Space` and `Return` act on the row you
-are on. The sidebar outlines the list you are navigating.
+cards (folded cards are skipped over); `Space` completes the row you are on and
+`Return` adds a task, as Checkvist's do. The sidebar outlines the list you are navigating.
 
 Subtasks fold where they stand, as they do in Checkvist, so you can look
 inside a task without opening it: in the outline `→` unfolds a task and steps
@@ -191,7 +193,7 @@ the hotkey summons over other apps. One component, two mounts — a day that rea
 differently depending on where you opened it would be two days.
 
 Each card carries what the task is, what it should cost, and what it has cost so
-far. `Return` on a card starts it; the card you are on grows a live clock and a
+far. `f` (or `Tab` in the panel) on a card starts it; the card you are on grows a live clock and a
 strip of pause, skip, log and done, so a whole block runs without the list ever
 going away.
 
@@ -213,7 +215,7 @@ the week, a list of the day's logged blocks, and a field that searches every
 task's title and notes and offers to add what you typed to today.
 
 Anything already done is ticked off from here rather than somewhere else: each
-card's number becomes a tick when the pointer is over it, and `Shift+Return`
+card's number becomes a tick when the pointer is over it, and `Space`
 does the same to the card you are on. Finishing plays whichever celebration is
 configured, wherever it was finished from.
 
@@ -240,8 +242,9 @@ of it is reachable only by a key you have to already know.
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
 | `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
 | `Up` / `Down` | Move between cards |
-| `Return` | Start the card you are on, or finish the one running |
-| `Shift+Return` / `Space` / `x` | Tick the card off without running a block |
+| `f` (window) / `Tab` (panel) | Start the card you are on, or queue it behind the one running |
+| `Space` / `x` | Tick the card off without running a block — on the running card, finish it |
+| `Return` | Add a task (in the panel, from what you typed) |
 | `Ctrl+T` | Plan the card for today, or take it off — an overdue or dated card becomes one you placed |
 | `Alt+↑` / `Alt+↓` | Arrange the day: move a planned card earlier or later, whichever lists they came from |
 | `Left` | Back to the list in the sidebar (the window) |
@@ -270,8 +273,8 @@ clock, and the four things you can do to it.
 | `↑` / `↓` | Climb the ladder. `k` / `j` do the same |
 | `⌥↑` / `⌥↓` | Reorder within the same urgency, rather than moving the cursor |
 | `O` | Drop your own order and go back to the computed one |
-| `Return` | Stage the task, then start it. `Space` does the same |
-| `X` | Tick it off without starting a block |
+| `F` | Stage the task, then start it |
+| `Space` / `X` | Tick it off without starting a block |
 | `L` | Put it off — the menu beside it chooses when |
 | `Esc` | Unstage, then leave |
 
@@ -279,7 +282,7 @@ While a block is running:
 
 | Key | Action |
 | --- | --- |
-| `Return` | Done — stops the clock and asks how it went |
+| `Space` / `X` | Done — stops the clock and asks how it went |
 | `P` | Pause / resume. Only active time is recorded |
 | `L` | Log progress and keep the task open |
 | `F` | Float it — a small always-on-top clock for working in another app |
@@ -353,8 +356,8 @@ So the hotkey, a task name and `Return` is the whole way from a thought to a
 running block, whichever you choose.
 
 While a block runs the panel is **a strip**: the task and its clock, one row
-high, and nothing else. `Space` pauses and resumes, `Return` finishes and asks
-how it went, `Cmd+Return` opens the main window, `↓` (or a double-click) brings
+high, and nothing else. `Space` finishes and asks how it went, `P` pauses and
+resumes, `Return` opens the day to add a task, `Cmd+Return` opens the main window, `↓` (or a double-click) brings
 the day back for queueing or switching, and `Esc` hides it. In the day, the running card's minimise button and `Esc` shrink it back to the strip, and clicking the running card only selects it — `Done` is the one way to finish. A break, the score
 at the end, or the next summon puts it back to the full day or the strip as the
 block calls for; the panel keeps the size you gave it for the day.
@@ -374,7 +377,9 @@ one.
 | Key | Action |
 | --- | --- |
 | `↑` / `↓` | Choose |
-| `Return` | Start it — or, with a block already running, queue it. On the running card, Done. On the add row, create it in Today and start it the same way |
+| `Return` | Add what you typed to Today and start it — or, with a block already running, queue it |
+| `Space` | With the field empty, tick off the card you are on — on the running card, Done |
+| `Tab` | Start the card you are on, or queue it behind a running block |
 | `Cmd+Return` | Open it in the main window instead |
 | `Esc` | Clear the field, then minimise to the running block's strip — or, with nothing running, hide the panel |
 | `Cmd+C` / `Cmd+V` | Copy and paste, sent straight to the field — an app with no Dock icon has no Edit menu to route them |

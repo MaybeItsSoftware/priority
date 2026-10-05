@@ -45,8 +45,8 @@ struct FocusPanelView: View {
 /// The running block as one row: what you are doing and how long it has had.
 ///
 /// Nothing else is drawn. The keys still reach everything a block needs —
-/// Space pauses, Return finishes and asks how it went, ↓ brings the day back,
-/// Esc hides — and the tooltip says so, rather than a row of hints taking up
+/// Space finishes and asks how it went, Return opens the day to add a task,
+/// P pauses, ↓ brings the day back, Esc hides — and the tooltip says so, rather than a row of hints taking up
 /// the height the strip exists to give back.
 private struct FocusPanelStrip: View {
   @Environment(WorkspaceViewModel.self) private var model
@@ -82,10 +82,16 @@ private struct FocusPanelStrip: View {
     .padding(.horizontal, theme.space.lg)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .contentShape(Rectangle())
-    .help("Space pauses · Return finishes · ↓ shows the day · Esc hides")
+    .help("Space finishes · Return adds a task · P pauses · ↓ shows the day · Esc hides")
     .focusable()
     .focused($hasKeyboard)
+    // The same two keys as everywhere else: Space completes the task, which
+    // here means finishing the block; Return adds one, from the day's field.
     .onKeyPress(.space) {
+      model.requestFocusCompletion(from: .panel)
+      return .handled
+    }
+    .onKeyPress(characters: ["p"]) { _ in
       model.toggleFocusPause()
       return .handled
     }
@@ -94,7 +100,7 @@ private struct FocusPanelStrip: View {
         onClose(.toWindow)
         AppDelegate.shared.showMainWindow()
       } else {
-        model.requestFocusCompletion(from: .panel)
+        onShowDay()
       }
       return .handled
     }

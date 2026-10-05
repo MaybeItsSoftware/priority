@@ -56,8 +56,9 @@ extension WorkspaceCommandCatalog {
   ]
 
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.
-  /// None of them acts on a task row: they open something, or leave.
-  static let regionBareKeys: Set<String> = ["/", "?", "i", "escape"]
+  /// None of them acts on a task row: they open something, or leave — and
+  /// Return adds a task, which it does from everywhere, row or no row.
+  static let regionBareKeys: Set<String> = ["/", "?", "i", "escape", "enter"]
 
   /// The command a key means on the surface on screen, or `nil` when it means
   /// nothing there.

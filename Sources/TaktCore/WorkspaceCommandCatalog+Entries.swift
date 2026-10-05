@@ -82,14 +82,17 @@ public enum WorkspaceCommandCatalog {
 
   private static let task: [WorkspaceCommand] = [
     .init(
-      id: .taskNew, title: "Add a task", group: "Task", keys: ["cmd+n"],
-      note: "Below the selected task in the outline and the matrix"),
-    .init(id: .taskNewAbove, title: "Add a task above", group: "Task", keys: ["option+enter"]),
+      id: .taskNew, title: "Add a task", group: "Task", keys: ["enter", "cmd+n"],
+      note: "Return always adds, as in Checkvist: below the selected task in the outline and the matrix"),
+    .init(
+      id: .taskNewAbove, title: "Add a task above", group: "Task", keys: ["shift+enter", "option+enter"],
+      note: "⇧↩ is Checkvist's"),
     .init(id: .taskNewChild, title: "Add a subtask", group: "Task", keys: ["option+shift+enter"]),
-    // ⇧↩ ticks off on every task surface, as it always did on Today.
+    // Space always completes, as in Checkvist; Return always adds. One
+    // meaning each, on every surface, so neither has to be looked up.
     .init(
       id: .taskComplete, title: "Complete or reopen the task", group: "Task",
-      keys: ["space", "x", "shift+enter"]),
+      keys: ["space", "x"]),
     .init(
       id: .taskInvalidate, title: "Cancel or reinstate the task", group: "Task",
       keys: ["shift+space"], note: "Cancelled, rather than done — it stopped mattering"),
@@ -172,8 +175,8 @@ public enum WorkspaceCommandCatalog {
   private static let plan: [WorkspaceCommand] = [
     .init(
       id: .planEnterTask, title: "Open the task", group: "Plan",
-      keys: ["enter", "right", "shift+right", "l", "]"],
-      note: "Its subtasks, as a board. Return with nothing selected adds a task"),
+      keys: ["right", "shift+right", "l", "]"],
+      note: "Its subtasks, as a board"),
     .init(
       id: .planLeaveTask, title: "Leave the task's subtasks", group: "Plan",
       keys: ["left", "shift+left", "h", "["],
@@ -327,14 +330,14 @@ public enum WorkspaceCommandCatalog {
       keys: ["down", "j"], surface: .focus),
     .init(
       id: .focusStage, title: "Stage the selected task", group: "Focus",
-      keys: ["enter", "space"], surface: .focus,
+      keys: ["f"], surface: .focus,
       note: "Press again to begin the block with the estimate shown"),
     .init(
       id: .focusBegin, title: "Begin the staged block", group: "Focus", keys: [],
-      surface: .focus, note: "The second Return or Space on a staged task"),
+      surface: .focus, note: "The second f on a staged task"),
     .init(
       id: .focusTickOff, title: "Tick the task off without starting", group: "Focus",
-      keys: ["x"], surface: .focus),
+      keys: ["space", "x"], surface: .focus),
     .init(
       id: .focusDefer, title: "Schedule it for tomorrow morning", group: "Focus", keys: ["l"],
       surface: .focus, note: "So it stops being offered"),
@@ -352,7 +355,7 @@ public enum WorkspaceCommandCatalog {
       id: .focusFloat, title: "Send the block to the tray", group: "Focus", keys: ["f"],
       surface: .focusRunning),
     .init(
-      id: .focusFinish, title: "Finish the block", group: "Focus", keys: ["enter"],
+      id: .focusFinish, title: "Finish the block", group: "Focus", keys: ["space", "x"],
       surface: .focusRunning, note: "Asks how it went"),
     .init(
       id: .focusLeave, title: "Leave the focus screen", group: "Focus", keys: ["escape"],
@@ -390,10 +393,10 @@ public enum WorkspaceCommandCatalog {
       surface: .done,
       kind: .motion),
     .init(
-      id: .doneReveal, title: "Open it where it lives", group: "Done", keys: ["enter"],
+      id: .doneReveal, title: "Open it where it lives", group: "Done", keys: ["o"],
       surface: .done, note: "Leaves the rail and selects the task in its own list"),
     .init(
-      id: .doneReopen, title: "Put it back on the list", group: "Done", keys: ["r"],
+      id: .doneReopen, title: "Put it back on the list", group: "Done", keys: ["space", "r"],
       surface: .done),
     .init(
       id: .doneClose, title: "Leave the rail", group: "Done", keys: ["escape", "left"],
@@ -426,7 +429,7 @@ public enum WorkspaceCommandCatalog {
       note: "Every row, including Focus and the timeline; Home and End, or gg and ⇧G, are the two ends"),
     .init(
       id: .motionSidebarExpand, title: "Open the row you are on",
-      group: "Moving around", keys: ["right", "enter", "space", "l"], surface: .sidebar,
+      group: "Moving around", keys: ["right", "l"], surface: .sidebar,
       kind: .motion,
       note: "Focus and the timeline open their screens, a folder expands, a list takes the keyboard"),
     .init(
@@ -439,7 +442,7 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .motionOutlineUnfold, title: "Show the subtasks, or step into them",
       group: "Moving around", keys: ["right"], surface: .outline, kind: .motion,
-      note: "Return, l or ] still opens the task"),
+      note: "l or ] still opens the task"),
     .init(
       id: .motionOutlineFold, title: "Hide the subtasks, or step out to the parent",
       group: "Moving around", keys: ["left"], surface: .outline, kind: .motion,
@@ -454,11 +457,12 @@ public enum WorkspaceCommandCatalog {
     // Today's list is walked with the ordinary selection keys, the way every
     // other pane's is — it used to keep a selection of its own behind a search
     // field, and these keys only handed that field the caret back. What is
-    // left of its own is Return, which starts the task rather than opening
-    // it, and ←, which has no hierarchy to leave and so goes to the sidebar.
+    // left of its own is f, which queues behind a running block rather than
+    // replacing it, and ←, which has no hierarchy to leave and so goes to the
+    // sidebar.
     .init(
       id: .todayStart, title: "Start the task, or finish the running one", group: "Today",
-      keys: ["enter"], surface: .today,
+      keys: ["f"], surface: .today,
       note: "Or add it to the queue behind a running block"),
     .init(
       id: .motionTodayLeave, title: "Back to the sidebar", group: "Moving around",

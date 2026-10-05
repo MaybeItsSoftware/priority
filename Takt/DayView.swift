@@ -250,16 +250,27 @@ struct DayView: View {
           guard press.modifiers.contains(.command), query.isEmpty else { return .ignored }
           return requestDeletion() ? .handled : .ignored
         }
+        // Return always adds, Space always completes, as in Checkvist and
+        // the window. Starting an existing task is Tab, which has nothing
+        // else to do in a one-field panel.
         .onKeyPress(keys: [.return], phases: .down) { press in
           if model.pendingTaskDeletionID != nil {
             confirmDeletion()
           } else if press.modifiers.contains(.command) {
             openInWindow()
-          } else if press.modifiers.contains(.shift) {
-            tickOffSelection()
           } else {
-            activateSelection()
+            createFromQuery()
           }
+          return .handled
+        }
+        // Only with the field empty: once you are typing, Space is a space.
+        .onKeyPress(.space) {
+          guard query.isEmpty, model.pendingTaskDeletionID == nil else { return .ignored }
+          tickOffSelection()
+          return .handled
+        }
+        .onKeyPress(.tab) {
+          activateSelection()
           return .handled
         }
     }
@@ -276,7 +287,13 @@ struct DayView: View {
   private var hints: some View {
     HStack(spacing: theme.space.md) {
       KeyHint("↑ ↓", "Choose")
-      KeyHint("↵", returnHint)
+      if !surface.isPanel || !query.trimmingCharacters(in: .whitespaces).isEmpty {
+        KeyHint("↵", "Add")
+      }
+      if !surface.isPanel || query.isEmpty {
+        KeyHint("space", "Done")
+      }
+      KeyHint("⇥", startHint)
       // Only while it does something: with a query in the field the caret
       // owns left, and advertising a key that is busy is worse than silence.
       if !surface.isPanel && query.isEmpty {
@@ -293,8 +310,8 @@ struct DayView: View {
     .padding(.vertical, theme.space.sm)
   }
 
-  private var returnHint: String {
-    if selectedID == Self.createRowID { return "Add to today" }
+  private var startHint: String {
+    if selectedID == Self.createRowID { return "Add and start" }
     if let id = selectedID, id == model.activeFocusTask?.id { return "Done" }
     return "Start it"
   }
@@ -456,7 +473,7 @@ struct DayView: View {
     }
     .buttonStyle(.plain)
     .focusable(false)
-    .help("Tick off without running a block (⇧↵)")
+    .help("Tick off without running a block (Space)")
     .accessibilityLabel("Tick off \(task.title)")
   }
 

@@ -404,7 +404,7 @@ struct WorkspaceFocusScreen: View {
   /// up is a shortcut nobody learns.
   private var unstagedActions: some View {
     HStack(spacing: theme.space.sm) {
-      actionButton("Stage this", systemImage: "target", key: "↵", prominent: true) {
+      actionButton("Stage this", systemImage: "target", key: "F", prominent: true) {
         model.stageFocusLadderSelection()
       }
       actionButton("Tick off", systemImage: "checkmark", key: "X") {
@@ -431,7 +431,7 @@ struct WorkspaceFocusScreen: View {
 
   private var stagedActions: some View {
     HStack(spacing: theme.space.sm) {
-      actionButton("Begin", systemImage: "play.fill", key: "↵", prominent: true) {
+      actionButton("Begin", systemImage: "play.fill", key: "F", prominent: true) {
         model.beginStagedFocus()
       }
       actionButton("Back", systemImage: "chevron.left", key: "esc") {

@@ -143,7 +143,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
       "shift+5": .listNew, "cmd+n": .listNew, "cmd+option+n": .folderNew,
       "shift+r": .listRename, "f2": .listRename,
       "h": .motionSidebarCollapse, "-": .motionSidebarCollapse,
-      "l": .motionSidebarExpand, "space": .motionSidebarExpand,
+      "l": .motionSidebarExpand,
       "gg": .motionSidebarSelect, "shift+g": .motionSidebarSelect,
       "{": .folderSelectPrevious, "}": .folderSelectNext, ":": .goCommandPalette,
       "cmd+left": .folderCollapseAll, "cmd+right": .folderExpandAll,
