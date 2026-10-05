@@ -65,15 +65,6 @@ import TaktCore
   var quickAddHotkeyModifiers: Int {
     didSet { preferencesStore.set(quickAddHotkeyModifiers, for: .quickAddHotkeyModifiers) }
   }
-  /// Whether opening the window lands on the focus screen rather than on
-  /// Today. Off by default now that Today exists: it answers the same question
-  /// — what to do next — without the ladder's conditions, time window and
-  /// estimate to commit to before anything may start. A restored session
-  /// overrides this either way, since a running clock is always what you came
-  /// back for.
-  var opensOnFocusScreen: Bool {
-    didSet { preferencesStore.set(opensOnFocusScreen, for: .opensOnFocusScreen) }
-  }
   /// Whether finishing a block stops to ask how it went. On by default,
   /// because the score is the thing that makes a logged hour mean something —
   /// but a day of eight blocks is eight interruptions, and someone who only
@@ -134,7 +125,6 @@ import TaktCore
       .quickAddHotkeyModifiers,
       default: AppCoordinator.CarbonModifier.hyper
     )
-    self.opensOnFocusScreen = preferencesStore.bool(.opensOnFocusScreen, default: false)
     self.scoresEachFocusBlock = preferencesStore.bool(.scoresEachFocusBlock, default: true)
     self.focusRunSurface =
       FocusRunSurface(rawValue: preferencesStore.int(.focusRunSurfaceRawValue, default: 0)) ?? .panel

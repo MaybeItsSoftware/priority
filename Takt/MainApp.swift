@@ -82,7 +82,7 @@ struct MainApp: App {
         }
         Divider()
         Button("Focus") {
-          AppDelegate.shared.workspace.presentFocusScreen()
+          AppDelegate.shared.workspace.openFocusPanel()
         }
         .commandShortcut(.goFocus)
         Button("Timeline") {

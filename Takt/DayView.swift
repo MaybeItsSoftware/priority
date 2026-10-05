@@ -123,6 +123,14 @@ struct DayView: View {
         }
       } else {
         dayTally
+        // The way into focus from the window: the panel, which is where a
+        // block is picked and where it runs. The day's cards are what it
+        // offers, so this sits on the day rather than in a pane of its own.
+        Button { model.openFocusPanel() } label: {
+          Label(model.activeFocusSession == nil ? "Focus" : "Back to the block", systemImage: "arrow.up.right")
+        }
+        .buttonStyle(FocusActionButtonStyle(prominent: model.activeFocusSession == nil))
+        .help("Open the focus panel to pick a task and start it (⌘8)")
       }
       if surface.isPanel {
         Button { openInWindow() } label: {

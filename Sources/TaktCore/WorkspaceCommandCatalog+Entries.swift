@@ -50,8 +50,8 @@ public enum WorkspaceCommandCatalog {
       id: .goEverything, title: "Open Everything", group: "Go", keys: ["cmd+0", "gh"],
       note: "Every task across all active lists"),
     .init(
-      id: .goFocus, title: "Enter focus mode", group: "Go", keys: ["cmd+8"],
-      note: "Or return to the block already running"),
+      id: .goFocus, title: "Open the focus panel", group: "Go", keys: ["cmd+8"],
+      note: "Pick a task and start it, or bring back the block already running"),
     .init(
       id: .goTimeline, title: "Show the day's timeline", group: "Go", keys: ["cmd+9"],
       note: "Press again to close it"),

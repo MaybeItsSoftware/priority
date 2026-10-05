@@ -174,10 +174,10 @@ private struct WorkspaceStatusTrailing: View {
     .lineLimit(1)
   }
 
-  /// The block and its clock. Click to go back to it.
+  /// The block and its clock. Click to bring its panel back.
   private func runningBlock(_ session: FocusSession, task: WorkspaceTask) -> some View {
     Button {
-      model.presentFocusScreen()
+      model.openFocusPanel()
     } label: {
       HStack(spacing: theme.space.xs) {
         Image(systemName: session.pausedAt == nil ? "timer" : "pause.fill")

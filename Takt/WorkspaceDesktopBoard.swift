@@ -511,7 +511,7 @@ struct WorkspaceKanbanCard: View {
         if model.activeFocusSession == nil {
           model.startFocus(on: task)
         } else if model.activeFocusSession?.activeTaskId == task.id {
-          model.presentFocusScreen()
+          model.openFocusPanel()
         } else {
           model.addToFocusQueue(task)
         }

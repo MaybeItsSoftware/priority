@@ -100,10 +100,7 @@ struct WorkspaceDesktopView: View {
     // screen exists to stop. The timeline is the same kind of surface and
     // takes the pane the same way — it is read at the scale of a day.
     Group {
-      if model.showsFocusScreen {
-        WorkspaceFocusScreen()
-          .environment(model)
-      } else if model.showsTimelineScreen {
+      if model.showsTimelineScreen {
         WorkspaceTimelineScreen()
           .environment(model)
       } else {

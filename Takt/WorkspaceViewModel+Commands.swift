@@ -93,7 +93,7 @@ extension WorkspaceViewModel {
       leaveFullPaneScreens()
       selectEverything()
       requestKeyboardFocus(.tasks)
-    case .goFocus: presentFocusScreen()
+    case .goFocus: openFocusPanel()
     case .goTimeline:
       if showsTimelineScreen { dismissTimelineScreen() } else { presentTimelineScreen() }
     case .goListNavigator: presentOverlay(.listNavigator)

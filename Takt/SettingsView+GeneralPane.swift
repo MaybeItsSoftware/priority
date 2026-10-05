@@ -32,16 +32,6 @@ extension SettingsView {
   @ViewBuilder
   var focusPane: some View {
     Section {
-      SettingsToggleRow(
-        "Open on the focus screen",
-        detail:
-          "The window comes up on Today. Turn this on to land on the focus ladder instead, with its conditions and available time. A running session is shown either way.",
-        isOn: preferenceBinding(\.opensOnFocusScreen))
-    } header: {
-      Text("Opening the window")
-    }
-
-    Section {
       SettingsRow(
         "Run focus blocks in",
         detail:

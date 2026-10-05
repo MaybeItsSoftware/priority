@@ -94,7 +94,7 @@ struct WorkspaceModeStrip: View {
   @Environment(\.theme) private var theme
 
   var body: some View {
-    let onScreen = !model.showsFocusScreen && !model.showsTimelineScreen
+    let onScreen = !model.showsTimelineScreen
     HStack(spacing: theme.space.xxs) {
       ForEach(WorkspaceViewMode.planningModes) { mode in
         segment(
@@ -106,14 +106,14 @@ struct WorkspaceModeStrip: View {
           model.requestKeyboardFocus(.tasks)
         }
       }
-      // The two full-pane screens, set apart by a rule: they take the pane
-      // over rather than projecting the tasks another way.
+      // Set apart by a rule: neither projects the tasks another way. Focus
+      // is not a pane at all — it raises the panel — so it is never current.
       Rectangle()
         .fill(theme.border)
         .frame(width: theme.hairline, height: theme.space.lg)
         .padding(.horizontal, theme.space.xs)
-      segment(title: "Focus", command: .goFocus, isCurrent: model.showsFocusScreen) {
-        if model.showsFocusScreen { model.dismissFocusScreen() } else { model.presentFocusScreen() }
+      segment(title: "Focus", command: .goFocus, isCurrent: false) {
+        model.openFocusPanel()
       }
       segment(
         title: "Timeline", command: .goTimeline,

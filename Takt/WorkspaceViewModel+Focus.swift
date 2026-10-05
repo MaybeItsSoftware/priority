@@ -47,25 +47,18 @@ extension WorkspaceViewModel {
       stagedTaskID = nil
       reloadFocus()
       reloadNextUp()
-      // Wherever the start came from — the board, a daily, the ladder — the
-      // pane it lands on is the session, so reopening the window comes back to
-      // the block rather than to the plan. Where the block actually *runs* is
-      // the tray: a deliberate start hands over to it and closes the window.
-      showsFocusScreen = true
+      // Where the block runs is the panel or the menu bar, never a pane of
+      // the window: a deliberate start hands over to it and closes the window.
       if !automatic { focusHandoffRequest += 1 }
     }
   }
 
-  /// Opens the focus screen, seeding the estimate from whatever the suggested
-  /// task already knows about itself — its daily target, then its estimate.
-  func presentFocusScreen() {
-    // Always open at the foot of the ladder. Where you climbed to last time was
-    // a judgement about that moment, not a preference to restore.
-    focusLadderIndex = 0
-    stagedTaskID = nil
-    reloadNextUp()
-    showsTimelineScreen = false
-    showsFocusScreen = true
+  /// Focus has one surface, the floating panel: the day to pick from while
+  /// nothing runs, the block's strip once something does. It used to have a
+  /// pane in the window as well, which took the keyboard over without saying
+  /// so; now ⌘8, the toolbar and Today's button all just raise the panel.
+  func openFocusPanel() {
+    focusFloatRequest += 1
   }
 
   /// Opens the timeline over the main pane, the way focus mode does.
@@ -128,7 +121,7 @@ extension WorkspaceViewModel {
   /// in Everything, while tasks retain their original lists and parents.
   func startFocusFromToday(plannedSeconds: Int? = nil) {
     guard let store else { return }
-    if activeFocusSession != nil { showsFocusScreen = true; return }
+    if activeFocusSession != nil { openFocusPanel(); return }
     // Read on the next line, so it cannot wait for the background ranking.
     reloadNextUpNow()
     let available = Set(focusLadder.map(\.id))
@@ -145,7 +138,6 @@ extension WorkspaceViewModel {
       activeFocusSession = session
       reloadFocus()
       reloadNextUp()
-      showsFocusScreen = true
       focusHandoffRequest += 1
     }
   }
