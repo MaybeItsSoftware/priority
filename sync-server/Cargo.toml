@@ -1,12 +1,12 @@
 [package]
-name = "priority-sync-server"
+name = "takt-sync-server"
 version = "0.1.0"
 edition = "2024"
-description = "The row-sync server Priority's Mac, iPhone and Android apps replicate their workspace through."
+description = "The row-sync server Takt's Mac, iPhone and Android apps replicate their workspace through."
 publish = false
 
 [[bin]]
-name = "priority-sync-server"
+name = "takt-sync-server"
 path = "src/main.rs"
 
 [dependencies]

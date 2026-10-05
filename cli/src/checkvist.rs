@@ -2,7 +2,7 @@
 //!
 //! Talks to the API rather than to the running app, so every command here works
 //! whether or not Priority is open. Mirrors `CheckvistClient`, the client
-//! embedded in `Priority/Plugins/MCP/MCPServer.swift`.
+//! embedded in `Takt/Plugins/MCP/MCPServer.swift`.
 
 use crate::config::Config;
 use crate::error::{Result, ToolError};
@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
 
-pub const USER_AGENT: &str = "PriorityMCP/0.3";
+pub const USER_AGENT: &str = "TaktMCP/0.3";
 pub const DEFAULT_BASE_URL: &str = "https://checkvist.com";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 

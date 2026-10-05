@@ -21,7 +21,7 @@
 //!
 //! What neither does is recompute policy. Which task is next, whether one is
 //! available in the current context, how a day is scored: those live in
-//! `PriorityCore` and would be a second implementation to keep in step, which
+//! `TaktCore` and would be a second implementation to keep in step, which
 //! is exactly what the app's MCP server stopped having. These are row reads,
 //! row writes, and arithmetic the schema already implies.
 

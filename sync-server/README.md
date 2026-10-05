@@ -1,4 +1,4 @@
-# priority-sync-server
+# takt-sync-server
 
 The row-sync server Takt's Mac, iPhone and Android apps replicate their
 workspace through. `../docs/sync.md` is the protocol; this crate is its server

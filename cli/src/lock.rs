@@ -16,7 +16,7 @@ const LOCK_UN: i32 = 8;
 /// A cross-process advisory lock, via `flock(2)`.
 ///
 /// The same protocol, and the same lock file, as Swift's `FileLock`
-/// (`Priority/CoreLogic/FileLock.swift`) and the Python server's
+/// (`Takt/CoreLogic/FileLock.swift`) and the Python server's
 /// `_exclusive_lock`, so all three writers genuinely exclude each other. Getting
 /// the path wrong here would not fail loudly — it would simply stop excluding
 /// anything, and show up much later as a daily that vanished.

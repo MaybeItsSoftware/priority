@@ -4,7 +4,7 @@
 //! Checkvist representation, so anything limited to the API cannot see them.
 //!
 //! This is a second reading of the same files the app writes — the Swift side
-//! (`Priority/CoreLogic/`) is the original. The two are not held together by a
+//! (`Takt/CoreLogic/`) is the original. The two are not held together by a
 //! shared type but by the serialised format, which `docs/mcp-server.md`
 //! describes and `DailyDefinitionsStoreFormatTests` pins on the Swift side.
 //! Change a rule here and that format is the contract to check it against.

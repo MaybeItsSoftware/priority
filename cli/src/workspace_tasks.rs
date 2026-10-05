@@ -33,7 +33,7 @@
 //!
 //! What stays out: anything that is policy rather than rows. Completing a
 //! repeating task has to schedule its next occurrence from a `PeriodicSchedule`
-//! that only `PriorityCore` can parse, so that is refused here rather than
+//! that only `TaktCore` can parse, so that is refused here rather than
 //! done half-way.
 
 use crate::error::{Result, ToolError};

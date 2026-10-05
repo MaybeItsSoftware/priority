@@ -1340,21 +1340,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
-name = "priority-cli"
-version = "0.3.0"
-dependencies = [
- "chrono",
- "clap",
- "plist",
- "ratatui",
- "rpassword",
- "rusqlite",
- "serde_json",
- "ureq",
- "uuid",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1879,6 +1864,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "takt-cli"
+version = "0.3.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "plist",
+ "ratatui",
+ "rpassword",
+ "rusqlite",
+ "serde_json",
+ "ureq",
+ "uuid",
 ]
 
 [[package]]

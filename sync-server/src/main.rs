@@ -1,10 +1,10 @@
-use priority_sync_server::auth::Verifier;
-use priority_sync_server::config::Config;
-use priority_sync_server::devices::{AccountAdmin, SupabaseAdmin};
-use priority_sync_server::{AppState, MIGRATOR, notify, router};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use std::time::Duration;
+use takt_sync_server::auth::Verifier;
+use takt_sync_server::config::Config;
+use takt_sync_server::devices::{AccountAdmin, SupabaseAdmin};
+use takt_sync_server::{AppState, MIGRATOR, notify, router};
 use tokio::sync::watch;
 use tracing_subscriber::EnvFilter;
 
