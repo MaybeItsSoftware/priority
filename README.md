@@ -345,6 +345,13 @@ the main window and the app drops to the menu bar, and the panel keeps working
 exactly as before, keyboard included. Closing the window while the panel is up
 hands the caret straight back to it.
 
+Where a started block runs is a preference — **Run focus blocks in** under
+Settings → Preferences. *Floating panel*, the default, keeps the panel up with
+the block on it. *Menu bar* puts the panel away too: the status item carries
+the task and its clock, and the keyboard goes back to the app you were in. So
+the hotkey, a task name and `Return` is the whole way from a thought to a
+running block, in either.
+
 Under the day's bar, a second line sets today against **the week it belongs
 to**: how many tasks you have finished today, how much time the week has taken
 so far, and what that comes to per day over the days that have actually
@@ -360,7 +367,7 @@ one.
 | Key | Action |
 | --- | --- |
 | `↑` / `↓` | Choose |
-| `Return` | Start it — or, with a block already running, queue it. On the running card, Done. On the add row, create it in Today |
+| `Return` | Start it — or, with a block already running, queue it. On the running card, Done. On the add row, create it in Today and start it the same way |
 | `Cmd+Return` | Open it in the main window instead |
 | `Esc` | Clear the field, then hide the panel |
 | `Cmd+C` / `Cmd+V` | Copy and paste, sent straight to the field — an app with no Dock icon has no Edit menu to route them |
