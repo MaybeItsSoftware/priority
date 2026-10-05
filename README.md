@@ -356,7 +356,7 @@ running block, whichever you choose.
 While a block runs the panel is **a strip**: the task and its clock, one row
 high, and nothing else. `Space` pauses and resumes, `Return` finishes and asks
 how it went, `Cmd+Return` opens the main window, `↓` (or a double-click) brings
-the day back for queueing or switching, and `Esc` hides it. A break, the score
+the day back for queueing or switching, and `Esc` hides it. In the day, the running card's minimise button and `Esc` shrink it back to the strip, and clicking the running card only selects it — `Done` is the one way to finish. A break, the score
 at the end, or the next summon puts it back to the full day or the strip as the
 block calls for; the panel keeps the size you gave it for the day.
 
@@ -377,7 +377,7 @@ one.
 | `↑` / `↓` | Choose |
 | `Return` | Start it — or, with a block already running, queue it. On the running card, Done. On the add row, create it in Today and start it the same way |
 | `Cmd+Return` | Open it in the main window instead |
-| `Esc` | Clear the field, then hide the panel |
+| `Esc` | Clear the field, then minimise to the running block's strip — or, with nothing running, hide the panel |
 | `Cmd+C` / `Cmd+V` | Copy and paste, sent straight to the field — an app with no Dock icon has no Edit menu to route them |
 
 Hiding it hands the keyboard back to the app it interrupted, so summoning it

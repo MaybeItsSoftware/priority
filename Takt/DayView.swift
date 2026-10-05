@@ -33,6 +33,9 @@ struct DayView: View {
   /// type rather than holding the last thing that was searched.
   let resetToken: Int
   var onClose: ((FocusPanelDismissal) -> Void)?
+  /// Shrinks the panel back to the running block's strip. Set only on the
+  /// panel, and only while a block runs.
+  var onMinimise: (() -> Void)?
 
   @State private var query = ""
   @State private var results: [TaskSearchResult] = []
@@ -259,7 +262,7 @@ struct DayView: View {
       }
       Spacer(minLength: 0)
       if surface.isPanel {
-        KeyHint("esc", query.isEmpty ? "Hide" : "Clear")
+        KeyHint("esc", !query.isEmpty ? "Clear" : onMinimise != nil ? "Minimise" : "Hide")
       } else if !query.isEmpty {
         KeyHint("esc", "Clear")
       }
@@ -495,7 +498,8 @@ struct DayView: View {
         controlStrip(session: session)
       }
     } action: {
-      finish()
+      // Clicking is choosing, never finishing: a stray click on the row you
+      // are working through closed the block. Done is its own button.
     }
   }
 
@@ -508,6 +512,9 @@ struct DayView: View {
       control("forward.end.fill", "Skip to the next task in the queue") { skip() }
         .disabled(!hasQueuedSuccessor)
       control("clock.arrow.circlepath", "Log the time so far and leave the task open") { logProgress() }
+      if let onMinimise {
+        control("arrow.down.right.and.arrow.up.left", "Minimise to the task and its clock (esc)") { onMinimise() }
+      }
       Spacer(minLength: 0)
       Button { finish() } label: {
         Label("Done", systemImage: "checkmark")
@@ -836,6 +843,9 @@ extension DayView {
       return .handled
     }
     guard surface.isPanel else { return .ignored }
+    // With a block running, the first Escape goes back to its strip rather
+    // than out of the panel; the strip's own Escape hides it.
+    if let onMinimise { onMinimise(); return .handled }
     onClose?(.back)
     return .handled
   }

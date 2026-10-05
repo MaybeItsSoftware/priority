@@ -18,6 +18,10 @@ struct FocusPanelView: View {
   let summons: FocusPanelSummons
   let onClose: (FocusPanelDismissal) -> Void
 
+  private var hasRunningBlock: Bool {
+    model.pendingFocusCompletion == nil && model.activeFocusSession?.phase == .running
+  }
+
   var body: some View {
     Group {
       if summons.isCompact(for: model), let task = model.activeFocusTask,
@@ -26,7 +30,9 @@ struct FocusPanelView: View {
           task: task, session: session, resetToken: summons.count,
           onShowDay: { summons.showsDay = true }, onClose: onClose)
       } else {
-        DayView(surface: .panel, resetToken: summons.count, onClose: onClose)
+        DayView(
+          surface: .panel, resetToken: summons.count, onClose: onClose,
+          onMinimise: hasRunningBlock ? { summons.showsDay = false } : nil)
       }
     }
     .environment(model)
