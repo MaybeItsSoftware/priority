@@ -112,7 +112,7 @@ extension WorkspaceViewModel {
     case .taskNewChild: requestRelativeTaskComposerFocus(child: true)
     case .taskComplete: if viewMode == .today { tickOffSelectedDayTask() } else { toggleSelectedTask() }
     case .taskInvalidate: if let task = selectedTask { invalidateTask(task) }
-    case .taskDelete: deleteSelectedTask()
+    case .taskDelete: requestSelectedTaskDeletion()
     case .taskRename: editSelectedTaskTitle()
     case .taskEditDue: quickEdit(.due)
     case .taskEditNotes: quickEdit(.notes)

@@ -35,6 +35,13 @@ extension WorkspaceViewModel {
   @discardableResult
   func handleDesktopKey(_ event: NSEvent) -> Bool {
     guard let key = event.workspaceCommandKey else { return false }
+    // A delete waiting to be confirmed owns the next key: Return deletes,
+    // anything else lets it go — and is swallowed, so a stray letter meant
+    // for the prompt does not also act on the list behind it.
+    if pendingTaskDeletionID != nil {
+      if key == "enter" { confirmPendingTaskDeletion() } else { cancelPendingTaskDeletion() }
+      return true
+    }
     // Sequences are bare letters. Anything chorded — Shift included, so `⇧X`
     // is the way to run `x` without waiting — releases a held key first, so
     // the two run in the order they were pressed.

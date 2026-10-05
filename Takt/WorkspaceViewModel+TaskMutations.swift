@@ -82,9 +82,29 @@ extension WorkspaceViewModel {
     }
   }
 
-  func deleteSelectedTask() {
+  /// The delete keys ask before they act: a task takes its subtasks with it,
+  /// and ⌫ sits right beside the keys you type with. Return confirms.
+  func requestSelectedTaskDeletion() {
     guard let task = selectedTask else { return }
-    deleteTask(task)
+    requestTaskDeletion(task)
+  }
+
+  func requestTaskDeletion(_ task: WorkspaceTask) {
+    pendingTaskDeletionID = task.id
+  }
+
+  var pendingTaskDeletion: WorkspaceTask? {
+    pendingTaskDeletionID.flatMap { task(withID: $0) }
+  }
+
+  func confirmPendingTaskDeletion() {
+    let task = pendingTaskDeletion
+    pendingTaskDeletionID = nil
+    if let task { deleteTask(task) }
+  }
+
+  func cancelPendingTaskDeletion() {
+    pendingTaskDeletionID = nil
   }
 
   func deleteTask(_ task: WorkspaceTask) {

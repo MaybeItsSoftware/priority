@@ -108,6 +108,10 @@ struct WorkspaceDesktopView: View {
           .environment(model)
       } else {
         taskPane
+          .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let pending = model.pendingTaskDeletion { TaskDeletionPrompt(task: pending) }
+          }
+          .onChange(of: model.selectedTaskID) { _, _ in model.cancelPendingTaskDeletion() }
       }
     }
     .animation(.easeInOut(duration: 0.15), value: model.showsFocusScreen)

@@ -492,6 +492,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// Lists and folders both carry UUIDs, so one field serves both.
   var renamingSidebarItemID: String?
   var pendingSidebarDeletion: WorkspaceSidebarItem?
+  /// A task a delete key has asked to remove, waiting for Return. Held by id
+  /// so a task that disappears meanwhile simply has nothing left to confirm.
+  var pendingTaskDeletionID: String?
   var taskComposerFocusRequest = 0
   /// The normal composer is deliberately lightweight. These fields are only
   /// active for global capture, where destination and start day can be chosen

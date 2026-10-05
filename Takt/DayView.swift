@@ -59,8 +59,12 @@ struct DayView: View {
         field
         FocusRule()
         content
-        FocusRule()
-        hints
+        if let pending = model.pendingTaskDeletion {
+          TaskDeletionPrompt(task: pending)
+        } else {
+          FocusRule()
+          hints
+        }
       } else {
         // The window's mount is the header band and the list, and nothing
         // else. The field, the two rows of tallies, the "add task" row, the
@@ -85,7 +89,11 @@ struct DayView: View {
     }
     .onAppear { reset() }
     .onChange(of: resetToken) { _, _ in reset() }
+    // A delete asked about one row is not a delete of whichever row the
+    // cursor moves to: moving on, or typing, lets the question go.
+    .onChange(of: selectedID) { _, _ in model.cancelPendingTaskDeletion() }
     .onChange(of: query) { _, new in
+      model.cancelPendingTaskDeletion()
       let trimmed = new.trimmingCharacters(in: .whitespaces)
       results = trimmed.isEmpty ? [] : model.searchResults(matching: trimmed)
       selectDefault()
@@ -231,16 +239,21 @@ struct DayView: View {
         .onKeyPress(.upArrow) { move(by: -1); return .handled }
         .onKeyPress(.downArrow) { move(by: 1); return .handled }
         .onKeyPress(.leftArrow) { leaveForSidebar() }
-        .onKeyPress(.escape) { dismissOrClear() }
+        .onKeyPress(.escape) {
+          if model.pendingTaskDeletionID != nil { model.cancelPendingTaskDeletion(); return .handled }
+          return dismissOrClear()
+        }
         // ⌘⌫ is the field's own "delete to the start of the line" while
         // there is text in it; with the field empty there is nothing to
-        // delete there, so it takes the task you are on instead.
+        // delete there, so it asks to delete the task you are on instead.
         .onKeyPress(keys: [.delete], phases: .down) { press in
           guard press.modifiers.contains(.command), query.isEmpty else { return .ignored }
-          return deleteSelection() ? .handled : .ignored
+          return requestDeletion() ? .handled : .ignored
         }
         .onKeyPress(keys: [.return], phases: .down) { press in
-          if press.modifiers.contains(.command) {
+          if model.pendingTaskDeletionID != nil {
+            confirmDeletion()
+          } else if press.modifiers.contains(.command) {
             openInWindow()
           } else if press.modifiers.contains(.shift) {
             tickOffSelection()
@@ -461,19 +474,24 @@ struct DayView: View {
     query = ""
   }
 
-  /// Deletes the selected task and lands on its neighbour, so a run of
-  /// ⌘⌫ clears a run of rows. Never the running block: that one ends
-  /// through its own finish, not by vanishing from under the clock.
-  private func deleteSelection() -> Bool {
+  /// Asks to delete the selected task; Return confirms. Never the running
+  /// block: that one ends through its own finish, not by vanishing from
+  /// under the clock.
+  private func requestDeletion() -> Bool {
     guard let id = selectedID, id != Self.createRowID, id != activeTaskID,
       let task = model.task(withID: id) else { return false }
+    model.requestTaskDeletion(task)
+    return true
+  }
+
+  /// Deletes and lands on the neighbour, so ⌘⌫ ↩ repeated clears a run of rows.
+  private func confirmDeletion() {
     let ids = rows.map(\.id)
-    let neighbour = ids.firstIndex(of: id).flatMap { index in
+    let neighbour = model.pendingTaskDeletionID.flatMap { ids.firstIndex(of: $0) }.flatMap { index in
       ids.indices.contains(index + 1) ? ids[index + 1] : (index > 0 ? ids[index - 1] : nil)
     }
-    model.deleteTask(task)
+    model.confirmPendingTaskDeletion()
     selectedID = neighbour
-    return true
   }
 
   private func tickOffSelection() {
