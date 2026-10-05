@@ -494,48 +494,22 @@ final class TaskMutationService {
 
   // MARK: - Quick Add
 
-  /// Returns true when QuickAdd was successfully primed (focus moved to the
-  /// entry field). Returns false when the user has chosen specific-parent
-  /// mode but hasn't configured a parent task ID yet — caller leaves focus
-  /// alone in that case.
-  func beginQuickAddEntry(preferSpecificLocation: Bool? = nil) -> Bool {
+  /// Returns true when QuickAdd was primed (focus moved to the entry field).
+  /// It captures to the list root: the parent-task-ID target it could also
+  /// aim at was a Checkvist-era setting typed by hand, and the workspace's own
+  /// quick capture chooses a destination list instead.
+  @discardableResult
+  func beginQuickAddEntry() -> Bool {
     guard let host else { return false }
-    let useSpecificLocation =
-      preferSpecificLocation ?? host.quickAddPrefersSpecificLocation
-    if useSpecificLocation && host.quickAddSpecificParentTaskId == nil {
-      repository.errorMessage = "Set a valid Quick Add parent task ID in Preferences first."
-      return false
-    }
-
-    host.beginQuickAddEntry(useSpecificLocation: useSpecificLocation)
+    host.beginQuickAddEntry()
     return true
   }
 
-  func setQuickAddSpecificLocationToCurrentTask() {
-    guard let host else { return }
-    guard let currentTask = host.currentTask else {
-      repository.errorMessage = "No task selected."
-      return
-    }
-    host.setQuickAddSpecificParentTask(id: currentTask.id)
-    repository.errorMessage = nil
-  }
-
-  func submitQuickAddTask(content: String, useSpecificLocation: Bool) async {
+  func submitQuickAddTask(content: String) async {
     guard let host else { return }
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalizedContent.isEmpty else { return }
-
-    let parentTaskId: Int?
-    if useSpecificLocation {
-      guard let specificTaskId = host.quickAddSpecificParentTaskId else {
-        repository.errorMessage = "Set a valid Quick Add parent task ID in Preferences first."
-        return
-      }
-      parentTaskId = specificTaskId
-    } else {
-      parentTaskId = nil
-    }
+    let parentTaskId: Int? = nil
 
     guard !repository.listId.isEmpty else {
       repository.errorMessage = "Choose a Checkvist list in Preferences to add tasks."

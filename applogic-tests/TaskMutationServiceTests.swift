@@ -413,31 +413,17 @@ final class TaskMutationServiceTests: XCTestCase {
 
   // MARK: - Quick Add
 
-  func testQuickAddRefusesSpecificModeUntilAParentTaskIsConfigured() {
-    host.quickAddSpecificParentTaskId = nil
-
-    XCTAssertFalse(service.beginQuickAddEntry(preferSpecificLocation: true))
-    XCTAssertTrue(host.beginQuickAddCalls.isEmpty, "focus must be left alone")
-    XCTAssertEqual(
-      repository.errorMessage, "Set a valid Quick Add parent task ID in Preferences first.")
-  }
-
-  func testQuickAddFollowsTheConfiguredLocationModeWhenNotOverridden() {
-    host.quickAddPrefersSpecificLocation = true
-    host.quickAddSpecificParentTaskId = 99
-
+  func testQuickAddPrimesTheEntryBar() {
     XCTAssertTrue(service.beginQuickAddEntry())
-    XCTAssertEqual(host.beginQuickAddCalls, [true])
+    XCTAssertEqual(host.beginQuickAddCallCount, 1)
   }
 
-  func testQuickAddSubmitCreatesUnderTheSpecificParentAndClosesTheEntryBar() async {
-    host.quickAddSpecificParentTaskId = 99
-
-    await service.submitQuickAddTask(content: "  inbox item  ", useSpecificLocation: true)
+  func testQuickAddSubmitCreatesAtTheListRootAndClosesTheEntryBar() async {
+    await service.submitQuickAddTask(content: "  inbox item  ")
 
     XCTAssertEqual(plugin.createTaskCalls.count, 1)
     XCTAssertEqual(plugin.createTaskCalls.first?.content, "inbox item")
-    XCTAssertEqual(plugin.createTaskCalls.first?.parentId, 99)
+    XCTAssertNil(plugin.createTaskCalls.first?.parentId)
     XCTAssertEqual(host.finishQuickAddCallCount, 1)
   }
 
@@ -448,7 +434,7 @@ final class TaskMutationServiceTests: XCTestCase {
     repository.isNetworkReachable = false
     plugin.createTaskError = CheckvistSessionError.requestFailed
 
-    await service.submitQuickAddTask(content: "inbox item", useSpecificLocation: false)
+    await service.submitQuickAddTask(content: "inbox item")
 
     XCTAssertEqual(repository.tasks.count, 1)
     XCTAssertEqual(repository.tasks.first?.content, "inbox item")

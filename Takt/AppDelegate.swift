@@ -103,6 +103,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       checkvistManager.theme.choiceSync = choiceSync
       workspace.onWorkspaceChangedElsewhere = { [weak choiceSync] in choiceSync?.workspaceDidChange() }
     }
+    workspace.preferredQuickCaptureListID = { [weak checkvistManager] in
+      checkvistManager?.preferences.quickCaptureListID ?? ""
+    }
     workspace.asksHowEachBlockWent = { [weak checkvistManager] in
       checkvistManager?.preferences.scoresEachFocusBlock ?? true
     }

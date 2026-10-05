@@ -200,7 +200,6 @@ let appLogicTargetExcludes = [
   "Takt/Models/CommandSuggestion.swift",
   "Takt/Models/DailyChartRange.swift",
   "Takt/Models/FocusRunSurface.swift",
-  "Takt/Models/QuickAddLocationMode.swift",
   "Takt/Models/QuickEntryMode.swift",
 
   // App-level source files at Takt/ root that AppLogic does not need.

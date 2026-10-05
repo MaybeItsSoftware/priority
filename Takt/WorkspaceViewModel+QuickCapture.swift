@@ -7,23 +7,31 @@ import TaktWorkspace
 /// self-contained piece of state nothing else reads.
 @MainActor
 extension WorkspaceViewModel {
-  /// Captures into the inbox from anywhere: the global hotkey, with no
-  /// assumption about what was on screen when it was pressed.
+  /// Captures into the inbox — or the list chosen in Settings → Keyboard —
+  /// from anywhere: the global hotkey, with no assumption about what was on
+  /// screen when it was pressed.
   ///
-  /// Selecting the inbox rather than typing into whatever list happened to be
-  /// open is the point — a thought caught mid-task belongs in the inbox, not
-  /// filed into the project the user was looking at by accident.
+  /// Selecting the capture list rather than typing into whatever list happened
+  /// to be open is the point — a thought caught mid-task belongs in the inbox,
+  /// not filed into the project the user was looking at by accident.
   func beginQuickCapture() {
     // Explicitly, rather than relying on `selectList` to do it: the focus
-    // screen can be up while the inbox is already the selected list.
+    // screen can be up while the capture list is already the selected list.
     leaveFullPaneScreens()
-    if let inbox = inboxList, selectedListID != inbox.id || isEverythingSelected {
-      selectList(inbox.id)
+    let target = quickCaptureHomeList
+    if let target, selectedListID != target.id || isEverythingSelected {
+      selectList(target.id)
     }
     isQuickCaptureActive = true
-    quickCaptureDestinationID = inboxList?.id ?? lists.first?.id
+    quickCaptureDestinationID = target?.id ?? lists.first?.id
     quickCaptureStartDayOffset = nil
     requestTaskComposerFocus()
+  }
+
+  /// Where capture starts: the preferred list while it exists, else the inbox.
+  var quickCaptureHomeList: TaskList? {
+    let preferred = preferredQuickCaptureListID()
+    return lists.first { !preferred.isEmpty && $0.id == preferred } ?? inboxList
   }
 
   var quickCaptureDestinations: [QuickCaptureDestination] {

@@ -151,6 +151,7 @@ struct SettingsView: View {
 
   @Environment(AppCoordinator.self) var checkvistManager
   @Environment(SettingsNavState.self) var navState
+  @Environment(WorkspaceViewModel.self) var workspace
   // Internal rather than private: the panes are extensions in files of their
   // own, and every one of them draws from it.
   @Environment(\.theme) var theme

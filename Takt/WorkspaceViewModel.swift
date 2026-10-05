@@ -464,6 +464,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// moment of asking rather than stored, so changing the preference takes
   /// effect on the next block rather than the next launch.
   @ObservationIgnored var asksHowEachBlockWent: () -> Bool = { true }
+  /// The list the quick-add hotkey captures into, by id. Empty, or a list
+  /// that no longer exists, is the inbox. Read at the moment of capture, like
+  /// the preference above.
+  @ObservationIgnored var preferredQuickCaptureListID: () -> String = { "" }
   /// Called when something is finished, wherever it was finished from. The
   /// celebration lives in the app shell, so the model reports the occasion
   /// rather than staging it.

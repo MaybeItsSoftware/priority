@@ -1,8 +1,9 @@
+import TaktWorkspace
 import TaktCore
 import SwiftUI
 
-/// Keybindings pane for `SettingsView`: the three global hotkeys, the Quick
-/// Add target they capture to, and the card builder they share.
+/// Keybindings pane for `SettingsView`: the three global hotkeys, the list
+/// Quick Add captures into, and the card builder they share.
 ///
 /// It used to carry two more sections — a per-action shortcut editor and a
 /// searchable reference — both of which configured a key router that went with
@@ -83,33 +84,18 @@ extension SettingsView {
         }
       }
 
-      Section(header: MicroLabel("Quick add target")) {
-        VStack(alignment: .leading, spacing: theme.space.xs) {
-          Text("Quick Add location")
-          Picker("", selection: preferenceBinding(\.quickAddLocationMode)) {
-            Text("Default (List root)").tag(QuickAddLocationMode.defaultRoot)
-            Text("Specific task ID").tag(QuickAddLocationMode.specificParentTask)
-          }
-          .labelsHidden()
-          .pickerStyle(.segmented)
-
-          if preferences.quickAddLocationMode == .specificParentTask {
-            HStack {
-              TextField("Parent task ID", text: preferenceBinding(\.quickAddSpecificParentTaskId))
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 180)
-              Button("Use selected task") {
-                checkvistManager.taskMutationService.setQuickAddSpecificLocationToCurrentTask()
-              }
-              .disabled(checkvistManager.taskListViewModel.currentTask == nil)
-            }
-            Text("Quick Add creates new tasks as children of this task ID.")
-              .font(theme.captionFont)
-              .foregroundStyle(theme.muted)
+      Section(header: MicroLabel("Quick capture")) {
+        Picker("Quick Add captures into", selection: preferenceBinding(\.quickCaptureListID)) {
+          Text("Inbox").tag("")
+          ForEach(workspace.lists.filter { $0.systemRole != .inbox }) { list in
+            Text(list.name).tag(list.id)
           }
         }
+        .pickerStyle(.menu)
+        Text("Where the Quick Add hotkey starts. ↑/↓ still picks another list as you type.")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
       }
-
     }
   }
 

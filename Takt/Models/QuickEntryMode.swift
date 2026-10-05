@@ -15,5 +15,4 @@ enum QuickEntryMode: Equatable {
   /// than making the user finish a textual `due …` command.
   case dueDatePicker
   case quickAddDefault
-  case quickAddSpecific
 }

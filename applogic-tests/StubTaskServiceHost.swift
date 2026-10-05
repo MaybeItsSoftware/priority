@@ -20,9 +20,8 @@ final class StubTaskServiceHost: TaskMutationHost, SyncHost {
 
   private(set) var fetchTopTaskCallCount = 0
   private(set) var clampSelectionCallCount = 0
-  private(set) var beginQuickAddCalls: [Bool] = []
+  private(set) var beginQuickAddCallCount = 0
   private(set) var finishQuickAddCallCount = 0
-  private(set) var quickAddParentAssignments: [Int] = []
   private(set) var obsidianReconcileCalls: [(openTaskIds: Set<Int>, listId: String)] = []
   private(set) var kanbanNudges: [(taskId: Int, direction: Int)] = []
   private(set) var clampKanbanSelectionCallCount = 0
@@ -121,17 +120,8 @@ final class StubTaskServiceHost: TaskMutationHost, SyncHost {
     dayLogTaskActions.append((taskId, title, action))
   }
 
-  var quickAddPrefersSpecificLocation = false
-  var quickAddSpecificParentTaskId: Int?
-
-  func setQuickAddSpecificParentTask(id: Int) {
-    quickAddParentAssignments.append(id)
-    quickAddSpecificParentTaskId = id
-    quickAddPrefersSpecificLocation = true
-  }
-
-  func beginQuickAddEntry(useSpecificLocation: Bool) {
-    beginQuickAddCalls.append(useSpecificLocation)
+  func beginQuickAddEntry() {
+    beginQuickAddCallCount += 1
   }
 
   func finishQuickAddEntry() {

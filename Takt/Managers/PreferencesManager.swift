@@ -112,11 +112,10 @@ import SwiftUI
   var focusRunSurface: FocusRunSurface {
     didSet { preferencesStore.set(focusRunSurface.rawValue, for: .focusRunSurfaceRawValue) }
   }
-  var quickAddLocationMode: QuickAddLocationMode {
-    didSet { preferencesStore.set(quickAddLocationMode.rawValue, for: .quickAddLocationModeRawValue) }
-  }
-  var quickAddSpecificParentTaskId: String {
-    didSet { preferencesStore.set(quickAddSpecificParentTaskId, for: .quickAddSpecificParentTaskId) }
+  /// The workspace list the quick-add hotkey captures into. Empty is the
+  /// inbox, and so is a list that has since been deleted.
+  var quickCaptureListID: String {
+    didSet { preferencesStore.set(quickCaptureListID, for: .quickCaptureListID) }
   }
   var showTaskBreadcrumbContext: Bool {
     didSet { preferencesStore.set(showTaskBreadcrumbContext, for: .showTaskBreadcrumbContext) }
@@ -177,11 +176,7 @@ import SwiftUI
     self.scoresEachFocusBlock = preferencesStore.bool(.scoresEachFocusBlock, default: true)
     self.focusRunSurface =
       FocusRunSurface(rawValue: preferencesStore.int(.focusRunSurfaceRawValue, default: 0)) ?? .panel
-    self.quickAddLocationMode =
-      QuickAddLocationMode(
-        rawValue: preferencesStore.int(.quickAddLocationModeRawValue, default: 0)
-      ) ?? .defaultRoot
-    self.quickAddSpecificParentTaskId = preferencesStore.string(.quickAddSpecificParentTaskId)
+    self.quickCaptureListID = preferencesStore.string(.quickCaptureListID)
     self.showTaskBreadcrumbContext = preferencesStore.bool(.showTaskBreadcrumbContext, default: false)
 
     // Move untouched installs from the old, opt-in Shift-Option-B capture to
@@ -196,12 +191,6 @@ import SwiftUI
       }
       preferencesStore.set(true, for: .quickAddHyperNMigrationCompleted)
     }
-  }
-
-  var quickAddSpecificParentTaskIdValue: Int? {
-    let raw = quickAddSpecificParentTaskId.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !raw.isEmpty, let value = Int(raw), value > 0 else { return nil }
-    return value
   }
 
   /// The typed-command language's dates (`due tomorrow morning`), at the

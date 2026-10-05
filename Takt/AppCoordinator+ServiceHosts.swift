@@ -73,23 +73,10 @@ extension AppCoordinator: TaskMutationHost {
 
   // MARK: Quick Add
 
-  var quickAddPrefersSpecificLocation: Bool {
-    preferences.quickAddLocationMode == .specificParentTask
-  }
-
-  var quickAddSpecificParentTaskId: Int? {
-    preferences.quickAddSpecificParentTaskIdValue
-  }
-
-  func setQuickAddSpecificParentTask(id: Int) {
-    preferences.quickAddSpecificParentTaskId = String(id)
-    preferences.quickAddLocationMode = .specificParentTask
-  }
-
-  func beginQuickAddEntry(useSpecificLocation: Bool) {
+  func beginQuickAddEntry() {
     quickEntry.pendingDeleteConfirmation = false
     quickEntry.commandSuggestionIndex = 0
-    quickEntry.quickEntryMode = useSpecificLocation ? .quickAddSpecific : .quickAddDefault
+    quickEntry.quickEntryMode = .quickAddDefault
     quickEntry.quickEntryText = ""
     quickEntry.isQuickEntryFocused = true
   }

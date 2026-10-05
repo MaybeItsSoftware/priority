@@ -81,10 +81,7 @@ protocol TaskMutationHost: TaskServiceHost {
 
   // Quick Add. The service decides *whether* entry can start; the host owns the
   // focus/mode/text fields that make it happen.
-  var quickAddPrefersSpecificLocation: Bool { get }
-  var quickAddSpecificParentTaskId: Int? { get }
-  func setQuickAddSpecificParentTask(id: Int)
-  func beginQuickAddEntry(useSpecificLocation: Bool)
+  func beginQuickAddEntry()
   func finishQuickAddEntry()
 
   // Recurrence. Rules are keyed by task id and stored by the host, so the

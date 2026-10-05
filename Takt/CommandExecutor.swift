@@ -116,7 +116,7 @@ final class CommandExecutor {
       manager.statusMessage = "Collapsed everything"
       return
     case .quickAdd:
-      _ = manager.taskMutationService.beginQuickAddEntry()
+      manager.taskMutationService.beginQuickAddEntry()
       return
     case .toggleContext:
       manager.preferences.showTaskBreadcrumbContext.toggle()

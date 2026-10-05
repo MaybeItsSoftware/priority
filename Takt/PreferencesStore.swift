@@ -32,8 +32,8 @@ final class PreferencesStore {
     case quickAddHotkeyKeyCode
     case quickAddHotkeyModifiers
     case quickAddHyperNMigrationCompleted
-    case quickAddLocationModeRawValue
-    case quickAddSpecificParentTaskId
+    /// The workspace list the quick-add hotkey captures into; empty is the inbox.
+    case quickCaptureListID
     case appThemeRawValue
     /// `pluginIdentifier` of the chosen `ThemePlugin` — the palette and
     /// structure the app renders through. Distinct from `appThemeRawValue`,
