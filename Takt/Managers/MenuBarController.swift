@@ -52,9 +52,12 @@ class MenuBarController: NSObject {
   /// search that fitted the text — has been unreachable since the desktop
   /// workspace became the app.
   func updateTitle() {
-    if showFocusSessionTitle() { return }
+    let clockInMenuBar = manager.preferences.focusRunSurface.showsMenuBarClock
+    if clockInMenuBar, showFocusSessionTitle() { return }
     stopFocusTicker()
-    if showDayTitle() { return }
+    // With the block on the panel alone, the status item goes quiet while it
+    // runs rather than naming the next task over the top of the one in hand.
+    if clockInMenuBar || !hasLiveFocusSession, showDayTitle() { return }
     // A launcher still needs an icon, but spelling out "Takt" turns it into
     // a conspicuously wide status item. Keep it at the standard menu-bar icon
     // footprint instead.
@@ -320,6 +323,11 @@ class MenuBarController: NSObject {
     return true
   }
 
+  private var hasLiveFocusSession: Bool {
+    guard let session = workspace?.activeFocusSession else { return false }
+    return session.phase != .finished
+  }
+
   /// Names the next thing on today, with how much is left behind it.
   /// Returns false when today is empty, leaving the launcher icon to the caller.
   ///
@@ -396,6 +404,8 @@ class MenuBarController: NSObject {
       // than whatever was next when the app launched.
       _ = self.workspace?.todayPlan
       _ = self.workspace?.focusLadder
+      // Whether the clock is the status item's to show at all.
+      _ = self.manager.preferences.focusRunSurface
     } onChange: {
       Task { @MainActor [weak self] in
         self?.updateTitle()

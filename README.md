@@ -346,11 +346,19 @@ exactly as before, keyboard included. Closing the window while the panel is up
 hands the caret straight back to it.
 
 Where a started block runs is a preference — **Run focus blocks in** under
-Settings → Preferences. *Floating panel*, the default, keeps the panel up with
-the block on it. *Menu bar* puts the panel away too: the status item carries
-the task and its clock, and the keyboard goes back to the app you were in. So
-the hotkey, a task name and `Return` is the whole way from a thought to a
-running block, in either.
+Settings → Preferences. *Floating panel*, the default, keeps the panel up.
+*Menu bar* puts the panel away too: the status item carries the task and its
+clock, and the keyboard goes back to the app you were in. *Both* does both.
+With the panel alone, the status item shows only its icon while a block runs.
+So the hotkey, a task name and `Return` is the whole way from a thought to a
+running block, whichever you choose.
+
+While a block runs the panel is **a strip**: the task and its clock, one row
+high, and nothing else. `Space` pauses and resumes, `Return` finishes and asks
+how it went, `Cmd+Return` opens the main window, `↓` (or a double-click) brings
+the day back for queueing or switching, and `Esc` hides it. A break, the score
+at the end, or the next summon puts it back to the full day or the strip as the
+block calls for; the panel keeps the size you gave it for the day.
 
 Under the day's bar, a second line sets today against **the week it belongs
 to**: how many tasks you have finished today, how much time the week has taken

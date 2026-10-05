@@ -121,10 +121,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.onFocusHandoffRequested = { [weak self] in
       guard let self, let workspace = self.workspace else { return }
       self.mainWindowController.hide()
-      switch self.checkvistManager.preferences.focusRunSurface {
-      case .panel:
+      if self.checkvistManager.preferences.focusRunSurface.showsPanel {
         self.focusPanelController.show(model: workspace)
-      case .menuBar:
+      } else {
         // The status item already shows the task and its clock. A panel the
         // block was started from goes too, handing the keyboard back to
         // whatever the hotkey interrupted.

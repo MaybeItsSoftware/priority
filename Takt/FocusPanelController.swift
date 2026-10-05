@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TaktWorkspace
 
 /// The focus panel: a floating window you leave up, summoned by a global
 /// hotkey and reachable without the app being in the Dock.
@@ -24,6 +25,8 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
   /// menu bar, on whichever screen the pointer is on.
   private static let verticalAnchor: CGFloat = 0.14
   private static let frameAutosaveName = "PriorityFocusPanelV2"
+  /// The strip a running block shrinks the panel to: one row, task and clock.
+  private static let compactHeight: CGFloat = 60
 
   private var panel: FocusPanelWindow?
   private var interruptedApp: NSRunningApplication?
@@ -31,6 +34,9 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
   /// later summon has to say so out loud for the field to take the caret back
   /// and the last search to be cleared.
   private let summons = FocusPanelSummons()
+  /// What the panel is sized for now, and the height to go back to after.
+  private var isCompact = false
+  private var expandedHeight: CGFloat?
 
   var isVisible: Bool { panel?.isVisible ?? false }
 
@@ -51,6 +57,7 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
     // leaves everything else of Priority's where it was.
     NSRunningApplication.current.activate()
     takeKey()
+    summons.showsDay = false
     summons.count += 1
     model.reloadNextUp()
   }
@@ -138,7 +145,53 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
       position(panel)
     }
     panel.setFrameAutosaveName(Self.frameAutosaveName)
+    applyLayout(model: model)
+    observeLayout(model: model)
     return panel
+  }
+
+  // MARK: - The strip
+
+  private func observeLayout(model: WorkspaceViewModel) {
+    withObservationTracking {
+      _ = summons.isCompact(for: model)
+    } onChange: {
+      Task { @MainActor [weak self, weak model] in
+        guard let self, let model else { return }
+        self.applyLayout(model: model)
+        self.observeLayout(model: model)
+      }
+    }
+  }
+
+  /// Shrinks the panel to the strip or grows it back, keeping its top edge
+  /// where it was so the task does not jump. The remembered frame is the full
+  /// one: autosave is off while it is a strip, or the next launch would open a
+  /// sixty-point panel with no room for the day.
+  private func applyLayout(model: WorkspaceViewModel) {
+    guard let panel else { return }
+    let compact = summons.isCompact(for: model)
+    guard compact != isCompact else { return }
+    isCompact = compact
+    var frame = panel.frame
+    let top = frame.maxY
+    if compact {
+      expandedHeight = frame.height
+      panel.setFrameAutosaveName("")
+      panel.minSize = NSSize(width: Self.minSize.width, height: Self.compactHeight)
+      panel.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: Self.compactHeight)
+      frame.size.height = Self.compactHeight
+    } else {
+      panel.minSize = Self.minSize
+      panel.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+      frame.size.height = max(Self.minSize.height, expandedHeight ?? Self.defaultSize.height)
+    }
+    frame.origin.y = top - frame.size.height
+    if let visible = panel.screen?.visibleFrame, frame.minY < visible.minY {
+      frame.origin.y = visible.minY
+    }
+    panel.setFrame(frame, display: true, animate: panel.isVisible)
+    if !compact { panel.setFrameAutosaveName(Self.frameAutosaveName) }
   }
 
   private func position(_ panel: NSPanel) {
@@ -164,10 +217,24 @@ final class FocusPanelController: NSObject, NSWindowDelegate {
   }
 }
 
-/// Counts summons, so the panel's content can reset itself on each one.
+/// Counts summons, so the panel's content can reset itself on each one, and
+/// holds whether a running block is shown as the strip or as the whole day.
 @Observable
 final class FocusPanelSummons {
   var count = 0
+  /// Asked for the day while a block runs. Every summon puts it back.
+  var showsDay = false
+
+  /// While a block is on the clock the panel is only the task and its clock:
+  /// the day is decided, and a list under the timer is something to read
+  /// instead of the work. A break, the score at the end, or asking for the
+  /// day brings the list back.
+  @MainActor func isCompact(for model: WorkspaceViewModel) -> Bool {
+    guard !showsDay, model.pendingFocusCompletion == nil,
+      let session = model.activeFocusSession, session.phase == .running
+    else { return false }
+    return model.activeFocusTask != nil
+  }
 }
 
 /// Where the keyboard goes when the panel closes.

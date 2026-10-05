@@ -8,4 +8,9 @@ enum FocusRunSurface: Int, CaseIterable {
   /// Only the menu bar: the status item carries the task and its clock, and
   /// the keyboard goes back to the app you were in.
   case menuBar
+  /// Both at once.
+  case both
+
+  var showsPanel: Bool { self != .menuBar }
+  var showsMenuBarClock: Bool { self != .panel }
 }

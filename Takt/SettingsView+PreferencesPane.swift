@@ -121,9 +121,10 @@ extension SettingsView {
           Picker("Run focus blocks in", selection: preferenceBinding(\.focusRunSurface)) {
             Text("Floating panel").tag(FocusRunSurface.panel)
             Text("Menu bar").tag(FocusRunSurface.menuBar)
+            Text("Both").tag(FocusRunSurface.both)
           }
           .pickerStyle(.segmented)
-          Text("Starting a block puts the window away. The floating panel stays up over your work; the menu bar shows only the task and its clock, and hands the keyboard straight back.")
+          Text("Starting a block puts the window away. The floating panel stays up over your work, shrunk to the task and its clock; the menu bar shows the same in the status item and hands the keyboard straight back. Both does both.")
             .font(theme.captionFont)
             .foregroundStyle(theme.muted)
         }
