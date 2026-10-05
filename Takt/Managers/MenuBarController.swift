@@ -53,11 +53,15 @@ class MenuBarController: NSObject {
   /// workspace became the app.
   func updateTitle() {
     let clockInMenuBar = manager.preferences.focusRunSurface.showsMenuBarClock
+    // With the block on the panel alone, the status item leaves the menu bar
+    // while it runs: the panel already says everything it could, and an icon
+    // beside it is one more thing on screen that means nothing.
+    let hidesWhileFocusing = !clockInMenuBar && hasLiveFocusSession
+    statusItem?.isVisible = !hidesWhileFocusing
     if clockInMenuBar, showFocusSessionTitle() { return }
     stopFocusTicker()
-    // With the block on the panel alone, the status item goes quiet while it
-    // runs rather than naming the next task over the top of the one in hand.
-    if clockInMenuBar || !hasLiveFocusSession, showDayTitle() { return }
+    if hidesWhileFocusing { return }
+    if showDayTitle() { return }
     // A launcher still needs an icon, but spelling out "Takt" turns it into
     // a conspicuously wide status item. Keep it at the standard menu-bar icon
     // footprint instead.

@@ -349,7 +349,7 @@ Where a started block runs is a preference — **Run focus blocks in** under
 Settings → Preferences. *Floating panel*, the default, keeps the panel up.
 *Menu bar* puts the panel away too: the status item carries the task and its
 clock, and the keyboard goes back to the app you were in. *Both* does both.
-With the panel alone, the status item shows only its icon while a block runs.
+With the panel alone, the status item leaves the menu bar while a block runs.
 So the hotkey, a task name and `Return` is the whole way from a thought to a
 running block, whichever you choose.
 
