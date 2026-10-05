@@ -4,10 +4,12 @@ import SwiftUI
 
 /// The one question asked at the end of a focus block: how did that go?
 ///
-/// It is deliberately the only thing on screen, and deliberately answerable
-/// with a single key. A block is worth the minutes it took multiplied by this
-/// answer, and the running total is shown while choosing, so the cost of
-/// flattering yourself is visible at the moment you would do it.
+/// It is deliberately the only thing on screen, and answered with the arrow
+/// keys. The block is worth the minutes it took times this multiplier, which
+/// starts at ×1.0 — an ordinary block — and moves a tenth at a time, so the
+/// answer is a small adjustment from "it was fine" rather than a pick from a
+/// menu of adjectives. The running total is shown while choosing, so the cost
+/// of flattering yourself is visible at the moment you would do it.
 struct WorkspaceFocusQualityPrompt: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -16,13 +18,17 @@ struct WorkspaceFocusQualityPrompt: View {
   /// summoned panel, where it is the whole of what is on screen.
   var fixedWidth: CGFloat? = 500
 
-  @State private var quality: FocusQuality = .solid
-  @State private var customMultiplier: Double = FocusQuality.solid.multiplier
-  @State private var isCustom = false
+  /// Tenths, so that ten presses of ↑ land on exactly ×2.0 rather than on
+  /// whatever ten additions of 0.1 come to in binary.
+  @State private var tenths = 10
+  @FocusState private var hasKeyboard: Bool
 
-  private var multiplier: Double {
-    isCustom ? FocusPoints.clamped(multiplier: customMultiplier) : quality.multiplier
+  private static let step = 1
+  private static var tenthsRange: ClosedRange<Int> {
+    Int(FocusPoints.multiplierRange.lowerBound * 10)...Int(FocusPoints.multiplierRange.upperBound * 10)
   }
+
+  private var multiplier: Double { Double(tenths) / 10 }
 
   private var points: Double {
     FocusPoints.score(seconds: pending.seconds, multiplier: multiplier)
@@ -31,8 +37,7 @@ struct WorkspaceFocusQualityPrompt: View {
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.lg) {
       header
-      qualityChoices
-      customRow
+      dial
       FocusRule()
       tally
       actions
@@ -43,7 +48,18 @@ struct WorkspaceFocusQualityPrompt: View {
     // panel: an overlay sits above the paper, a surface of its own does not.
     .background(fixedWidth == nil ? theme.paper : theme.raised)
     .interactiveDismissDisabled()
+    .focusable()
+    .focusEffectDisabled()
+    .focused($hasKeyboard)
+    .onKeyPress(.upArrow) { nudge(by: Self.step); return .handled }
+    .onKeyPress(.downArrow) { nudge(by: -Self.step); return .handled }
+    .onAppear { hasKeyboard = true }
     .onExitCommand { model.cancelFocusCompletion() }
+  }
+
+  private func nudge(by delta: Int) {
+    let range = Self.tenthsRange
+    tenths = min(max(tenths + delta, range.lowerBound), range.upperBound)
   }
 
   private var header: some View {
@@ -62,70 +78,53 @@ struct WorkspaceFocusQualityPrompt: View {
     }
   }
 
-  private var qualityChoices: some View {
-    VStack(spacing: theme.space.xxs) {
-      ForEach(Array(FocusQuality.allCases.enumerated()), id: \.element) { index, option in
-        let isChosen = !isCustom && quality == option
-        Button {
-          quality = option
-          isCustom = false
-        } label: {
-          HStack(spacing: theme.space.sm) {
-            // The key that picks it, drawn as a key.
-            KeyCap("\(index + 1)")
-            VStack(alignment: .leading, spacing: 0) {
-              Text(option.title)
-                .font(theme.bodyFont())
-                .foregroundStyle(theme.ink)
-              Text(option.detail)
-                .font(theme.captionFont)
-                .foregroundStyle(theme.muted)
-            }
-            Spacer()
-            Text("×\(FocusPoints.formatted(option.multiplier))")
-              .font(theme.numeralFont(theme.scale.body))
-              .monospacedDigit()
-              .foregroundStyle(isChosen ? theme.primary : theme.muted)
+  /// The multiplier, large, between the two buttons that move it. Always one
+  /// decimal place, so ×1.0 and ×1.1 read as neighbours rather than as a
+  /// whole number and a fraction.
+  private var dial: some View {
+    HStack(spacing: theme.space.md) {
+      stepButton("minus", help: "Less (↓)", enabled: tenths > Self.tenthsRange.lowerBound) {
+        nudge(by: -Self.step)
+      }
+      Text("×" + String(format: "%.1f", multiplier))
+        .font(theme.numeralFont(theme.scale.display, weight: .medium))
+        .monospacedDigit()
+        .foregroundStyle(tenths == 10 ? theme.ink : theme.primary)
+        .contentTransition(.numericText(value: multiplier))
+        .animation(.snappy, value: tenths)
+        .frame(minWidth: 120)
+        .accessibilityLabel("Multiplier \(String(format: "%.1f", multiplier))")
+        .accessibilityAdjustableAction { direction in
+          switch direction {
+          case .increment: nudge(by: Self.step)
+          case .decrement: nudge(by: -Self.step)
+          @unknown default: break
           }
-          .padding(.vertical, theme.space.xs)
-          .padding(.horizontal, theme.space.sm)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .contentShape(Rectangle())
-          .background(
-            isChosen ? theme.selectionFill : Color.clear,
-            in: RoundedRectangle(cornerRadius: theme.controlRadius))
         }
-        .buttonStyle(.plain)
-        .focusable()
-        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: [])
-        .accessibilityLabel("\(option.title), \(option.detail)")
+      stepButton("plus", help: "More (↑)", enabled: tenths < Self.tenthsRange.upperBound) {
+        nudge(by: Self.step)
+      }
+      Spacer(minLength: 0)
+      if tenths != 10 {
+        Button("Reset") { tenths = 10 }
+          .buttonStyle(FocusActionButtonStyle())
+          .focusable(false)
+          .help("Back to ×1.0")
       }
     }
   }
 
-  private var customRow: some View {
-    HStack(spacing: theme.space.sm) {
-      Toggle("Something else", isOn: $isCustom)
-        .toggleStyle(.switch)
-        .tint(theme.primary)
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.ink)
-        .focusable()
-      Stepper(
-        value: $customMultiplier,
-        in: FocusPoints.multiplierRange,
-        step: 0.25
-      ) {
-        Text("×\(FocusPoints.formatted(customMultiplier))")
-          .font(theme.numeralFont(theme.scale.body))
-          .monospacedDigit()
-          .foregroundStyle(isCustom ? theme.primary : theme.muted)
-      }
-      .focusable()
-      .disabled(!isCustom)
-      Spacer()
+  private func stepButton(
+    _ symbol: String, help: String, enabled: Bool, action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Image(systemName: symbol)
     }
-    .onChange(of: customMultiplier) { _, _ in isCustom = true }
+    .buttonStyle(FocusActionButtonStyle())
+    .focusable(false)
+    .disabled(!enabled)
+    .help(help)
+    .accessibilityLabel(help)
   }
 
   private var tally: some View {
@@ -152,17 +151,17 @@ struct WorkspaceFocusQualityPrompt: View {
 
   private var actions: some View {
     HStack(spacing: theme.space.sm) {
-      Text("1–5 choose · ↩ log it · esc keep working")
+      Text("↑ ↓ adjust by 0.1 · ↩ log it · esc keep working")
         .font(theme.captionFont)
         .foregroundStyle(theme.dim)
       Spacer()
       Button("Keep working") { model.cancelFocusCompletion() }
         .buttonStyle(FocusActionButtonStyle())
-        .focusable()
+        .focusable(false)
         .keyboardShortcut(.cancelAction)
       Button("Log it") { model.confirmFocusCompletion(multiplier: multiplier) }
         .buttonStyle(FocusActionButtonStyle(prominent: true))
-        .focusable()
+        .focusable(false)
         .keyboardShortcut(.defaultAction)
     }
   }
