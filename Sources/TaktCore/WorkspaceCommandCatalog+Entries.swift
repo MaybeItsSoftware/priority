@@ -94,7 +94,7 @@ public enum WorkspaceCommandCatalog {
       id: .taskInvalidate, title: "Cancel or reinstate the task", group: "Task",
       keys: ["shift+space"], note: "Cancelled, rather than done — it stopped mattering"),
     .init(
-      id: .taskDelete, title: "Delete the task", group: "Task", keys: ["delete", "cmd+shift+k"],
+      id: .taskDelete, title: "Delete the task", group: "Task", keys: ["delete", "cmd+delete", "cmd+shift+k"],
       note: "Takes its subtasks with it. ⇧⌘K is Zed's delete line"),
     .init(id: .taskRename, title: "Rename the task", group: "Task", keys: ["ee", "f2", "cmd+ctrl+e"]),
     .init(id: .taskEditDue, title: "Edit the due date", group: "Task", keys: ["dd", "cmd+d"]),

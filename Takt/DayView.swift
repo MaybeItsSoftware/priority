@@ -232,6 +232,13 @@ struct DayView: View {
         .onKeyPress(.downArrow) { move(by: 1); return .handled }
         .onKeyPress(.leftArrow) { leaveForSidebar() }
         .onKeyPress(.escape) { dismissOrClear() }
+        // ⌘⌫ is the field's own "delete to the start of the line" while
+        // there is text in it; with the field empty there is nothing to
+        // delete there, so it takes the task you are on instead.
+        .onKeyPress(keys: [.delete], phases: .down) { press in
+          guard press.modifiers.contains(.command), query.isEmpty else { return .ignored }
+          return deleteSelection() ? .handled : .ignored
+        }
         .onKeyPress(keys: [.return], phases: .down) { press in
           if press.modifiers.contains(.command) {
             openInWindow()
@@ -452,6 +459,21 @@ struct DayView: View {
       model.toggleTask(task)
     }
     query = ""
+  }
+
+  /// Deletes the selected task and lands on its neighbour, so a run of
+  /// ⌘⌫ clears a run of rows. Never the running block: that one ends
+  /// through its own finish, not by vanishing from under the clock.
+  private func deleteSelection() -> Bool {
+    guard let id = selectedID, id != Self.createRowID, id != activeTaskID,
+      let task = model.task(withID: id) else { return false }
+    let ids = rows.map(\.id)
+    let neighbour = ids.firstIndex(of: id).flatMap { index in
+      ids.indices.contains(index + 1) ? ids[index + 1] : (index > 0 ? ids[index - 1] : nil)
+    }
+    model.deleteTask(task)
+    selectedID = neighbour
+    return true
   }
 
   private func tickOffSelection() {

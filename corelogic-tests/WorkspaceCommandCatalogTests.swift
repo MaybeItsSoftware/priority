@@ -92,7 +92,7 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
     XCTAssertEqual(WorkspaceCommandCatalog[.goToday].displayKeys, ["⌘1"])
     XCTAssertEqual(WorkspaceCommandCatalog[.taskRename].displayKeys, ["E E", "F2", "⌘⌃E"])
     XCTAssertEqual(WorkspaceCommandCatalog[.motionSelectEnds].displayKeys, ["Home", "End", "⌘↑", "⌘↓"])
-    XCTAssertEqual(WorkspaceCommandCatalog[.taskDelete].displayKeys, ["⌫", "⌘⇧K"])
+    XCTAssertEqual(WorkspaceCommandCatalog[.taskDelete].displayKeys, ["⌫", "⌘⌫", "⌘⇧K"])
   }
 }
 
@@ -338,7 +338,7 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "sidebar:home", "sidebar:end", "sidebar:pageup", "sidebar:pagedown",
       // The sidebar is Zed's project panel: ⌘N, ⌫ and Space act on the row,
       // and so do the vim panel's h, l and gg, never on a task behind it.
-      "sidebar:cmd+n", "sidebar:delete", "sidebar:space", "sidebar:h", "sidebar:l",
+      "sidebar:cmd+n", "sidebar:delete", "sidebar:cmd+delete", "sidebar:space", "sidebar:h", "sidebar:l",
       "sidebar:gg",
       // On the board ←/→ change column instead of entering and leaving a task.
       "board:left", "board:right",

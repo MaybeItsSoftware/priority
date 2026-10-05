@@ -83,10 +83,15 @@ extension WorkspaceViewModel {
   }
 
   func deleteSelectedTask() {
-    guard let store, let task = selectedTask else { return }
+    guard let task = selectedTask else { return }
+    deleteTask(task)
+  }
+
+  func deleteTask(_ task: WorkspaceTask) {
+    guard let store else { return }
     perform {
       try store.deleteTask(id: task.id)
-      selectedTaskID = nil
+      if selectedTaskID == task.id { selectedTaskID = nil }
       if scopeTaskID == task.id { scopeTaskID = task.parentTaskId }
       reloadOutline()
       reloadFocus()
