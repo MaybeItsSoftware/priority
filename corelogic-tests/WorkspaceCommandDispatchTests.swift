@@ -51,7 +51,6 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   func testTheKeysTheOldRouterLeftDeadNowRun() {
     XCTAssertEqual(
       WorkspaceCommandCatalog.command(forKey: "cmd+ctrl+c", on: .board)?.id, .planBoardRemoveColumn)
-    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "o", on: .focus)?.id, .focusResetOrder)
     // Each the first letter of a sequence, and so swallowed by it.
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "x", on: .outline)?.id, .taskComplete)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "l", on: .outline)?.id, .planEnterTask)
@@ -79,11 +78,11 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
 
   // MARK: - Surfaces that own the keyboard
 
-  /// Keys the focus screen does not answer to used to fall through to the
+  /// Keys a full-pane screen does not answer to used to fall through to the
   /// task surface hidden behind it: `⌫` deleted the selected outline task, a
   /// digit changed its priority, `i` opened its inspector.
-  func testTheFocusScreenLetsNoTaskKeyThrough() {
-    for surface: WorkspaceCommandSurface in [.focus, .focusRunning, .timeline] {
+  func testTheTimelineLetsNoTaskKeyThrough() {
+    for surface: WorkspaceCommandSurface in [.timeline] {
       for key in ["delete", "1", "i", "tab", "shift+space", "cmd+n", "cmd+shift+delete", "ee"] {
         XCTAssertNil(
           WorkspaceCommandCatalog.command(forKey: key, on: surface),
@@ -96,7 +95,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   }
 
   func testTheWindowsOwnKeysStillWorkOnAScreenThatOwnsTheKeyboard() {
-    for surface: WorkspaceCommandSurface in [.focus, .focusRunning, .timeline] {
+    for surface: WorkspaceCommandSurface in [.timeline] {
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+1", on: surface)?.id, .goToday)
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+k", on: surface)?.id, .goCommandPalette)
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "?", on: surface)?.id, .goKeyboardReference)
@@ -191,7 +190,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   /// and none of them begins with a letter the screen uses on its own — that
   /// letter would wait out the hold on every press.
   func testFullPaneScreensHoldNoKeyTheyUseThemselves() {
-    for surface: WorkspaceCommandSurface in [.focus, .focusRunning, .timeline] {
+    for surface: WorkspaceCommandSurface in [.timeline] {
       let starters = Set(WorkspaceCommandCatalog.sequences(on: surface).compactMap(\.first).map(String.init))
       let own = Set(WorkspaceCommandCatalog.all.filter { $0.surface == surface }.flatMap(\.keys))
       XCTAssertTrue(

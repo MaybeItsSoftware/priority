@@ -56,7 +56,6 @@ final class PreferencesStore {
     case taskStartDatesByTaskId
     case recurrenceRulesByTaskId
     case rootTaskViewOrder
-    /// Whether the window comes up on the focus screen rather than the lists.
     /// Whether finishing a block stops to ask how it went.
     case scoresEachFocusBlock
     /// Where a deliberately started block runs: the floating panel or the menu bar.

@@ -47,7 +47,7 @@ to filter them, walk them with `↑`/`↓`, or jump with `⌘1`–`⌘9`:
 | Page | What |
 | --- | --- |
 | General | Launch at login, confirming deletes, and the completion celebration with a preview |
-| Focus | Open on the focus screen, where a started block runs, and whether each block is scored |
+| Focus | Where a started block runs, and whether each block is scored |
 | Appearance | The theme gallery, light/dark/system, the interface, heading and numeral fonts, and the text size |
 | Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘N`), the list Quick Add captures into, and `keymap.json` |
 | Integrations | One page per integration — Checkvist, Obsidian, AFFiNE, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
@@ -70,7 +70,7 @@ something you already have to know.
 | Key | Action |
 | --- | --- |
 | `Cmd+1`–`Cmd+4` | Today, Board, Outline, Matrix |
-| `Cmd+8` / `Cmd+9` | Focus / Timeline — both take the main pane |
+| `Cmd+8` / `Cmd+9` | The focus panel / the timeline, which takes the main pane |
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
 | `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
@@ -226,9 +226,9 @@ contribution without starting a block; the task itself stays open until it is
 genuinely finished, and ticking off such a task records the contribution rather
 than closing it.
 
-The window also carries a strip naming which of the four modes is up, and the
-two surfaces — Focus and Timeline — that take the pane away from them, so none
-of it is reachable only by a key you have to already know.
+The window also carries a strip naming which of the four modes is up, then
+Focus, which raises the focus panel, and Timeline, which takes the pane away
+from them — so none of it is reachable only by a key you have to already know.
 
 | Key | Action |
 | --- | --- |
@@ -236,7 +236,7 @@ of it is reachable only by a key you have to already know.
 | `Cmd+2` | Board |
 | `Cmd+3` | Outline |
 | `Cmd+4` | Matrix |
-| `Cmd+8` | Focus — the pane that picks what to do next, or the block that is running |
+| `Cmd+8` | Focus — raises the floating focus panel |
 | `Cmd+9` | The day's timeline |
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
@@ -256,37 +256,11 @@ moved to `Ctrl`.
 
 ## Focus
 
-Focus is the pane that answers what to do next when the day list is not enough
-— the ranked ladder, with the conditions and the time window that produced it.
-`Cmd+8` from anywhere in the window takes the main pane; `Esc` gives it back.
-The app opens on Today rather than here; the preference **Open on the focus
-screen** puts it back to opening here.
-
-The pane has two states and no third surface. With nothing running it is the
-**ladder**: one task at a time at full size, the ones you have climbed past
-stacked and shrunken above it, with the reason each was offered written under
-its title. Once a block starts, the same pane *is* the block — the task, a
-clock, and the four things you can do to it.
-
-| Key | Action |
-| --- | --- |
-| `↑` / `↓` | Climb the ladder. `k` / `j` do the same |
-| `⌥↑` / `⌥↓` | Reorder within the same urgency, rather than moving the cursor |
-| `O` | Drop your own order and go back to the computed one |
-| `F` | Stage the task, then start it |
-| `Space` / `X` | Tick it off without starting a block |
-| `L` | Put it off — the menu beside it chooses when |
-| `Esc` | Unstage, then leave |
-
-While a block is running:
-
-| Key | Action |
-| --- | --- |
-| `Space` / `X` | Done — stops the clock and asks how it went |
-| `P` | Pause / resume. Only active time is recorded |
-| `L` | Log progress and keep the task open |
-| `F` | Float it — a small always-on-top clock for working in another app |
-| `Esc` | Leave the pane. The block keeps running |
+Focus is the floating panel described [below](#the-focus-panel): the day to
+pick from while nothing runs, and the running block's strip once something
+does. There is no focus pane in the main window. `Cmd+8`, the toolbar's
+**Focus** button and Today's **Focus** button all raise the panel, and
+`⌃⌥⇧⌘F` summons it from any app.
 
 The quality question is what turns minutes into points, so it is asked by
 default — but **Ask how each focus block went** in Settings turns it off, and
@@ -298,8 +272,8 @@ carries pause, log and done, so closing the main window while a block is running
 leaves the clock up rather than taking it away. It appears on its own whenever
 the last window closes on a running block.
 
-`Cmd+9` gives the same pane to the day's **timeline**: every block drawn against
-an hour ruler, with the running one growing live.
+`Cmd+9` gives the main pane to the day's **timeline**: every block drawn against
+an hour ruler, with the running one growing live. `Esc` gives it back.
 
 ### The focus panel
 
@@ -335,10 +309,10 @@ controls — pause, skip, log, done — while the rest of the list stays visible
 underneath. Finished work collects at the bottom, one line per task rather than
 one per sitting.
 
-It deliberately does **not** put you through the focus screen's questions.
-Conditions, an available-time window and an estimate to commit to before you may
-begin are how you decide what a day should be; this is the panel you keep open
-while working it, so pressing play on a row is the whole gesture.
+It deliberately does **not** put you through questions before you may begin —
+conditions, an available-time window, an estimate to commit to. Those are how
+you decide what a day should be; this is the panel you keep open while working
+it, so pressing play on a row is the whole gesture.
 
 Everything a block needs it can do on its own — pick the task, run the clock,
 pause it, log progress, and score the block when it ends. Nothing in it reaches
@@ -452,10 +426,10 @@ migrating, reachable by nothing.
 
 ## Views
 
-Four planning modes, one focus screen, one timeline. The mode strip in the title
-bar names the one you are in — in ink, on a quiet fill, the others muted — and
-its tooltips give every key that reaches the others; Focus and Timeline sit at
-its end, set apart by a rule.
+Four planning modes and one timeline, plus the focus panel. The mode strip in
+the title bar names the one you are in — in ink, on a quiet fill, the others
+muted — and its tooltips give every key that reaches the others; Focus and
+Timeline sit at its end, set apart by a rule.
 
 | Mode | Key | What it shows |
 | --- | --- | --- |
@@ -463,7 +437,7 @@ its end, set apart by a rule.
 | **Board** | `Cmd+2` | Columns of cards, dragged between and within |
 | **Outline** | `Cmd+3` | The list as a tree, indented, with each branch folding in place |
 | **Matrix** | `Cmd+4` | Eisenhower quadrants by importance and urgency |
-| **Focus** | `Cmd+8` | What to do next, or the block that is running |
+| **Focus** | `Cmd+8` | Raises the floating focus panel — the day, or the block that is running |
 | **Timeline** | `Cmd+9` | The day as elapsed time rather than as a list |
 
 `Cmd+0` shows **Everything** — every active list at once, rather than the one

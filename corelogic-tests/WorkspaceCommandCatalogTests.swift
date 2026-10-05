@@ -23,8 +23,8 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
   /// reference would be telling you a key does two things at once.
   ///
   /// A surface-specific row *shadowing* an `anywhere` row is not that — it is
-  /// how the router already works, since the focus screen and the timeline
-  /// take the keyboard before the workspace's own keys are consulted.
+  /// how the router already works, since the timeline takes the keyboard
+  /// before the workspace's own keys are consulted.
   func testNoKeyIsClaimedTwiceOnOneSurface() {
     var owners: [String: [String]] = [:]
     for command in WorkspaceCommandCatalog.defaults {
@@ -49,18 +49,16 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
     }
   }
 
-  /// Few rows are allowed to have no shortcut: the second press on a staged
-  /// focus task, which is a state rather than a key, and the handful of
-  /// things done rarely enough that the palette is the right way to reach
-  /// them. Anything else with an empty binding is a row nobody can reach from
-  /// the keyboard.
-  func testOnlyTheStagedSecondPressAndPaletteOnlyRowsLackAKey() {
+  /// Few rows are allowed to have no shortcut: the handful of things done
+  /// rarely enough that the palette is the right way to reach them. Anything
+  /// else with an empty binding is a row nobody can reach from the keyboard.
+  func testOnlyPaletteOnlyRowsLackAKey() {
     let keyless = WorkspaceCommandCatalog.defaults.filter(\.allKeys.isEmpty).map(\.id)
     XCTAssertEqual(
       keyless,
       [
         .windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics, .windowOpenThemesFolder,
-        .windowReloadThemes, .windowExportTheme, .focusBegin,
+        .windowReloadThemes, .windowExportTheme,
       ])
   }
 
@@ -316,16 +314,6 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       }
     }
     let expected: Set<String> = [
-      // The focus ladder replaces ordinary selection; f stages rather than
-      // starts, and Space ticks off the rung rather than a list row.
-      "focus:up", "focus:down", "focus:k", "focus:j", "focus:f", "focus:space",
-      "focus:x", "focus:l", "focus:escape",
-      // ⌥↑/⌥↓ move a task, and on the ladder the task they move is a rung.
-      "focus:option+up", "focus:option+down",
-      // A running block has exactly one task, so the list keys have nothing to
-      // mean and the block's own controls take them.
-      // Space and x complete it, which for a running block means finishing it.
-      "focusRunning:space", "focusRunning:x", "focusRunning:escape", "focusRunning:l", "focusRunning:f",
       // The timeline is a day at a time, so ←/→ and h/l step days rather than
       // entering and leaving a task.
       "timeline:left", "timeline:right", "timeline:h", "timeline:l", "timeline:escape",

@@ -240,7 +240,7 @@ public struct WorkspaceKeymap: Sendable, Equatable {
   /// arrow — and so do nothing useful from any other key. Their keys can be
   /// unbound, but nothing can be bound to them.
   public static let readsItsKey: Set<WorkspaceCommandID> = [
-    .goCycleRegion, .planMatrixPlace, .listNewTaskDestination, .focusReorder,
+    .goCycleRegion, .planMatrixPlace, .listNewTaskDestination,
     .motionSelectEnds, .motionSelectPage, .motionSidebarSelect, .motionBoardColumn,
     .motionSetPriority, .motionDoneSelect,
   ]

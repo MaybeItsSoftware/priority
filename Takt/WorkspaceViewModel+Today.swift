@@ -37,7 +37,7 @@ extension WorkspaceViewModel {
   /// sidebar keeps its own meaning for them, and a full-pane screen is not
   /// showing the day at all.
   var arrangesDayOnMove: Bool {
-    viewMode == .today && keyboardFocusArea == .tasks && !showsFocusScreen
+    viewMode == .today && keyboardFocusArea == .tasks
       && !showsTimelineScreen
   }
 

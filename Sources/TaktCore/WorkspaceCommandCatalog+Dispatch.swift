@@ -11,12 +11,11 @@ import Foundation
 /// mentioned. The rules for which key means what on which surface live here
 /// instead, where they can be tested, and the router only asks.
 extension WorkspaceCommandSurface {
-  /// Focus and the timeline replace the workspace in the main pane, so they
-  /// take the keyboard outright: a key they do not answer to must not reach
-  /// the task surface hidden behind them, where `⌫` would delete a task
-  /// nobody can see.
+  /// The timeline replaces the workspace in the main pane, so it takes the
+  /// keyboard outright: a key it does not answer to must not reach the task
+  /// surface hidden behind it, where `⌫` would delete a task nobody can see.
   public var ownsKeyboard: Bool {
-    self == .focus || self == .focusRunning || self == .timeline
+    self == .timeline
   }
 }
 
@@ -30,8 +29,8 @@ extension WorkspaceCommandCatalog {
   /// window rather than to the pane.
   ///
   /// `goListNavigator` is deliberately absent. One of its keys is `ll`, and admitting
-  /// it would make `l` a sequence starter on the ladder and the running block,
-  /// where `l` means something on its own — so it would wait out the timeout.
+  /// it would make `l` a sequence starter on the timeline, where `l` steps a
+  /// day forward on its own — so it would wait out the timeout.
   public static let reachableFromFullPaneScreens: Set<WorkspaceCommandID> = [
     .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline,
     .goSearch, .goCommandPalette, .goKeyboardReference,
@@ -75,7 +74,7 @@ extension WorkspaceCommandCatalog {
   ///   `regionBareKeys`.
   /// - The inspector is the same minus the sequences, because its controls
   ///   are where your typing goes.
-  /// - Focus and the timeline take only `reachableFromFullPaneScreens`.
+  /// - The timeline takes only `reachableFromFullPaneScreens`.
   ///
   /// A row's `surfaceKeys` count as that surface's own, and a keymap can take
   /// a key away from one surface without taking it from the rest — see
@@ -137,7 +136,7 @@ extension WorkspaceCommandCatalog {
     switch surface {
     case .anywhere, .today, .board, .outline, .matrix:
       return true
-    case .focus, .focusRunning, .timeline:
+    case .timeline:
       return reachableFromFullPaneScreens.contains(command.id)
     case .sidebar, .done:
       return isChord(key) || isSequence(key) || regionBareKeys.contains(key)

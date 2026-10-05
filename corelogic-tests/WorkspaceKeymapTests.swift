@@ -52,8 +52,8 @@ final class WorkspaceKeymapTests: XCTestCase {
     XCTAssertTrue(issues.isEmpty, "\(issues)")
     XCTAssertEqual(bindings.command(forKey: "x", on: .outline)?.id, .taskDelete)
     XCTAssertEqual(bindings.byID[.taskComplete]?.keys, ["space"])
-    // A different surface's own `x` is a different binding, and stays.
-    XCTAssertEqual(bindings.command(forKey: "x", on: .focus)?.id, .focusTickOff)
+    // A different surface's own `r` is a different binding, and stays.
+    XCTAssertEqual(bindings.command(forKey: "r", on: .done)?.id, .doneReopen)
   }
 
   func testAContextBindsOnThatSurfaceOnly() {
@@ -83,7 +83,7 @@ final class WorkspaceKeymapTests: XCTestCase {
     let (bindings, issues) = resolve(#"[{"bindings": {"x": null}}]"#)
     XCTAssertTrue(issues.isEmpty, "\(issues)")
     XCTAssertNil(bindings.command(forKey: "x", on: .outline))
-    XCTAssertNil(bindings.command(forKey: "x", on: .focus))
+    XCTAssertNil(bindings.command(forKey: "x", on: .board))
     XCTAssertEqual(bindings.byID[.taskComplete]?.keys, ["space"])
   }
 
@@ -144,7 +144,7 @@ final class WorkspaceKeymapTests: XCTestCase {
   }
 
   func testASurfaceCommandCannotBeBoundOnAnotherSurface() {
-    let (_, issues) = resolve(#"[{"context": "outline", "bindings": {"p": "focusPause"}}]"#)
+    let (_, issues) = resolve(#"[{"context": "outline", "bindings": {"t": "timelineToday"}}]"#)
     XCTAssertEqual(issues.map(\.kind), [.wrongSurface])
   }
 
@@ -193,9 +193,26 @@ final class WorkspaceKeymapTests: XCTestCase {
     XCTAssertEqual(pressed, try? WorkspaceKeymap.normalizedKey("shift+cmd+k").get())
   }
 
+  /// The focus pane and its commands are gone. A keymap written while they
+  /// existed still loads: their entries are reported and skipped, and the
+  /// rest of the file applies.
+  func testAKeymapNamingTheRetiredFocusPaneStillLoads() {
+    let (bindings, issues) = resolve(#"""
+      [
+        {"context": "focus", "bindings": {"x": "focusTickOff"}},
+        {"context": "focusRunning", "bindings": {"p": null}},
+        {"bindings": {"cmd+option+shift+p": "focusPause", "cmd+shift+u": "taskComplete"}}
+      ]
+      """#)
+    XCTAssertEqual(issues.map(\.kind), [.unknownContext, .unknownContext, .unknownCommand])
+    XCTAssertEqual(bindings.command(forKey: "cmd+shift+u", on: .outline)?.id, .taskComplete)
+    XCTAssertNil(bindings.command(forKey: "cmd+option+shift+p", on: .outline))
+  }
+
   func testContextsAreSurfaceNames() {
     XCTAssertEqual(WorkspaceKeymap.surface(named: "Board"), .board)
-    XCTAssertEqual(WorkspaceKeymap.surface(named: "focusRunning"), .focusRunning)
+    XCTAssertEqual(WorkspaceKeymap.surface(named: "Timeline"), .timeline)
+    XCTAssertNil(WorkspaceKeymap.surface(named: "focusRunning"))
     XCTAssertNil(WorkspaceKeymap.surface(named: "Workspace"))
   }
 

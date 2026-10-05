@@ -95,79 +95,12 @@ extension WorkspaceViewModel {
   // is stored on the class and rebuilt by `rebuildDayItems()`.
   //
   // Every surface that shows the day reads it rather than deriving its own:
-  // the panel, the focus screen and the menu bar have to agree about what
-  // today is, and three copies of the same fallback is how they stop agreeing.
+  // the panel, Today and the menu bar have to agree about what today is, and
+  // three copies of the same fallback is how they stop agreeing.
   //
   // Falling back to the ranked candidates keeps it useful for a workspace that
   // never adopted the Today column and dates nothing — but those are listed as
   // plain tasks, with no reason, because none of them were chosen.
-
-  // MARK: - The focus ladder
-
-  /// The rung currently under the cursor. Rung 0 is the most important thing;
-  /// climbing raises the index and lowers the priority.
-  var focusLadderSelection: ScoredNextUp? {
-    guard focusLadder.indices.contains(focusLadderIndex) else { return nil }
-    return focusLadder[focusLadderIndex]
-  }
-
-  var focusLadderTask: WorkspaceTask? {
-    guard let id = focusLadderSelection?.candidate.id else { return nil }
-    return task(withID: id)
-  }
-
-  private var focusLadderTaskID: String? { focusLadderSelection?.candidate.id }
-
-  /// `offset` of +1 climbs to the next less important task, -1 descends back
-  /// towards the most important one. Deliberately clamped rather than wrapped:
-  /// the ladder has a top and a bottom, and wrapping would hide which you are at.
-  func moveFocusLadder(by offset: Int) {
-    guard !focusLadder.isEmpty else { return }
-    let target = focusLadderIndex + offset
-    guard focusLadder.indices.contains(target) else { return }
-    focusLadderIndex = target
-    stagedTaskID = nil
-  }
-
-  /// Commits to the rung under the cursor: it becomes the thing you are about
-  /// to do, and the estimate is seeded from whatever it already knows.
-  func stageFocusLadderSelection() {
-    guard let task = focusLadderTask else { return }
-    stagedTaskID = task.id
-    let candidate = focusLadderSelection?.candidate
-    let seconds = candidate.map { TaskAvailabilityPolicy.suggestedSeconds(for: $0, context: effectiveFocusContext, now: .now) } ?? 1500
-    focusEstimateMinutes = max(1, Double(seconds) / 60)
-  }
-
-  func unstageFocusTask() {
-    stagedTaskID = nil
-  }
-
-  var stagedTask: WorkspaceTask? {
-    guard let id = stagedTaskID else { return nil }
-    return task(withID: id)
-  }
-
-  /// Begins work on the staged task with the committed estimate.
-  func beginStagedFocus() {
-    guard let task = stagedTask else { return }
-    let seconds = (max(1, focusEstimateMinutes) * 60).rounded()
-    guard seconds.isFinite, seconds < Double(Int.max) else { errorMessage = "Choose a supported session duration."; return }
-    startFocus(on: task, plannedSeconds: Int(seconds), automatic: true)
-  }
-
-  /// Describes what ticking the current rung off would be an instance of, so
-  /// the celebration can be chosen before the row is gone.
-  ///
-  /// Built here rather than in the view because every input is a question about
-  /// stored state — which rung, whether it is a daily, how the day has gone —
-  /// and the view has none of that.
-  func focusCompletionEvent() -> CompletionEvent? {
-    guard let task = focusLadderTask else { return nil }
-    // The rung being ticked is still in the ladder, so one left means this is
-    // the last of them.
-    return completionEvent(for: task, remainingVisibleTaskCount: focusLadder.count)
-  }
 
   /// What finishing this task is worth as an occasion: which kind of thing it
   /// is, and whether it lands on a milestone.
@@ -186,82 +119,5 @@ extension WorkspaceViewModel {
       ordinal: context.ordinalToday,
       streakDays: context.streakDays)
     return CompletionEvent(kind: kind, milestone: milestone, ordinal: context.ordinalToday)
-  }
-
-  /// Ticks the rung under the cursor off without ever starting a session —
-  /// the "actually, that's already done" path that stops the ladder being a
-  /// list you can only work through one sitting at a time.
-  func completeFocusLadderSelection() {
-    guard let store, let task = focusLadderTask else { return }
-    perform {
-      if let item = dailyItem(for: task), !item.isDoneToday {
-        try store.logContribution(dailyId: item.daily.id)
-      } else {
-        try store.setStatus(.completed, for: task.id)
-      }
-      stagedTaskID = nil
-      reloadDailies()
-      reloadOutline()
-      reloadNextUp()
-    }
-  }
-
-  /// Moves the task under the cursor through the ladder by hand, and follows it
-  /// with the cursor so the same task stays selected.
-  ///
-  /// Writing the whole visible order rather than one rank keeps the arrangement
-  /// stable: a single pinned task among floating ones drifts as soon as a due
-  /// date passes.
-  func reorderFocusLadder(by offset: Int) {
-    guard let store, !focusLadder.isEmpty else { return }
-    let target = focusLadderIndex + offset
-    guard focusLadder.indices.contains(target) else { return }
-    let moved = focusLadder[focusLadderIndex].candidate.id
-    perform {
-      // Only the task that moved is pinned. Its neighbour is left to the
-      // ranking, so a nudge stays a nudge instead of freezing the ladder.
-      try store.pinTask(id: moved, atIndex: target)
-      focusLadderIndex = target
-      stagedTaskID = nil
-      reloadNextUp()
-    }
-  }
-
-  /// Gives the ladder back to the ranking.
-  func clearManualFocusOrder() {
-    guard let store else { return }
-    perform {
-      try store.clearFocusOrder()
-      reloadNextUp()
-    }
-  }
-
-  /// Defers the task under the cursor. The default is tomorrow morning, which
-  /// is what "not today" almost always means.
-  func deferFocusLadderSelection(_ deferral: WorkspaceDeferral = .standard) {
-    guard let task = focusLadderTask else { return }
-    scheduleForLater(task, until: deferral.date(from: .now))
-  }
-
-  /// Leaves the focus screen, putting the ladder back at the top for next time.
-  ///
-  /// Called by every sidebar selection as well as by Escape: focus is a screen
-  /// you are looking at, not a mode you are trapped in, so asking to see a list
-  /// is a complete answer to "what now" and should simply show you the list.
-  func dismissFocusScreen() {
-    showsFocusScreen = false
-    stagedTaskID = nil
-    focusLadderIndex = 0
-  }
-
-  /// Pushes the suggestion out to `date`, so it stops being offered until then.
-  func scheduleForLater(_ task: WorkspaceTask, until date: Date) {
-    guard let store else { return }
-    perform {
-      try store.scheduleTask(id: task.id, startAt: date)
-      reloadNextUp()
-      reloadDailies()
-      reloadOutline()
-    }
   }
 }

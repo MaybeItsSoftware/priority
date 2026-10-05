@@ -70,13 +70,13 @@ final class DesktopShortcutSequenceTests: XCTestCase {
     XCTAssertEqual(sequence.advance("d", at: 1.2, sequences: outline), .command("dd"))
   }
 
-  /// Where no sequence begins with a key, it runs at once. On the focus ladder
-  /// `l` puts a task off, and nothing there starts with `l`, so it must not
+  /// Where no sequence begins with a key, it runs at once. On the timeline
+  /// `l` steps a day forward, and nothing there starts with `l`, so it must not
   /// wait out the timeout the way it does on the outline.
   func testAKeyIsOnlyHeldWhereASequenceBeginsWithIt() {
-    var ladder = DesktopShortcutSequence()
+    var timeline = DesktopShortcutSequence()
     XCTAssertEqual(
-      ladder.advance("l", at: 1, sequences: WorkspaceCommandCatalog.sequences(on: .focus)), .pass)
+      timeline.advance("l", at: 1, sequences: WorkspaceCommandCatalog.sequences(on: .timeline)), .pass)
     var list = DesktopShortcutSequence()
     XCTAssertEqual(list.advance("l", at: 1, sequences: outline), .pending)
   }

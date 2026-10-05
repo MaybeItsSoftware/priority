@@ -157,7 +157,7 @@ extension WorkspaceViewModel {
     for task in boardTreeTasks { cache[task.id] = task }
 
     var named = todayPlan.map(\.id) + focusLadder.prefix(WorkspaceNextUpSnapshot.fallbackDayLength).map(\.candidate.id)
-    named += [selectedTaskID, scopeTaskID, stagedTaskID, activeFocusSession?.activeTaskId].compactMap { $0 }
+    named += [selectedTaskID, scopeTaskID, activeFocusSession?.activeTaskId].compactMap { $0 }
     let missing = named.filter { cache[$0] == nil }
     if let store, !missing.isEmpty, let fetched = try? store.tasks(ids: missing) {
       for (id, task) in fetched { cache[id] = task }
@@ -247,7 +247,6 @@ extension WorkspaceViewModel {
   private func applyNextUp(_ snapshot: WorkspaceNextUpSnapshot) {
     if taskLoggedSeconds != snapshot.loggedSeconds { taskLoggedSeconds = snapshot.loggedSeconds }
     if taskPlanningByID != snapshot.planning { taskPlanningByID = snapshot.planning }
-    let selectedID = focusLadderSelection?.candidate.id
     if workspace != nil, focusConditions != snapshot.conditions { focusConditions = snapshot.conditions }
     if todayPlan != snapshot.todayPlan { todayPlan = snapshot.todayPlan }
     if workProgress != snapshot.workProgress { workProgress = snapshot.workProgress }
@@ -255,14 +254,7 @@ extension WorkspaceViewModel {
     if focusLadder != ranked { focusLadder = ranked }
     if blockedFocusTasks != snapshot.ranking.blocked { blockedFocusTasks = snapshot.ranking.blocked }
     nextFocusEvaluationAt = snapshot.ranking.nextEvaluationAt
-    if let id = selectedID, let index = ranked.firstIndex(where: { $0.candidate.id == id }) {
-      focusLadderIndex = index
-    } else {
-      focusLadderIndex = min(focusLadderIndex, max(0, ranked.count - 1))
-    }
-    if let stagedTaskID, !ranked.contains(where: { $0.id == stagedTaskID }) { self.stagedTaskID = nil }
     if nextUp != ranked.first { nextUp = ranked.first }
-    if hasManualFocusOrder != snapshot.hasManualFocusOrder { hasManualFocusOrder = snapshot.hasManualFocusOrder }
     // Fresher than anything cached: the epoch check means nothing has been
     // written since these rows were read.
     dayTaskSnapshot = snapshot.dayTasks

@@ -18,9 +18,6 @@ extension WorkspaceViewModel {
   /// the palette puts at the top and which keys the reference calls current.
   var commandSurface: WorkspaceCommandSurface {
     if showsTimelineScreen { return .timeline }
-    if showsFocusScreen {
-      return activeFocusSession != nil && activeFocusTask != nil ? .focusRunning : .focus
-    }
     if keyboardFocusArea == .done { return .done }
     if keyboardFocusArea == .sidebar { return .sidebar }
     if keyboardFocusArea == .inspector { return .inspector }
@@ -204,22 +201,6 @@ extension WorkspaceViewModel {
     case .windowReloadThemes: UserThemeLibrary.shared.reload(force: true)
     case .windowExportTheme: UserThemeLibrary.shared.exportCurrentTheme()
 
-    // MARK: Focus
-    case .focusLadderUp: moveFocusLadder(by: 1)
-    case .focusLadderDown: moveFocusLadder(by: -1)
-    // One key stages and then begins, so the row stands for both.
-    case .focusStage: if stagedTaskID == nil { stageFocusLadderSelection() } else { beginStagedFocus() }
-    case .focusBegin: beginStagedFocus()
-    case .focusTickOff: focusCompletionRequest += 1
-    case .focusDefer: deferFocusLadderSelection()
-    case .focusPause: toggleFocusPause()
-    case .focusLogAndKeep: requestFocusCompletion(completeTask: false)
-    case .focusFloat: requestFocusFloat()
-    case .focusFinish: requestFocusCompletion()
-    case .focusResetOrder: clearManualFocusOrder()
-    case .focusLeave: dismissFocusScreen()
-    case .focusUnstage: if stagedTaskID != nil { unstageFocusTask() } else { dismissFocusScreen() }
-
     // MARK: Timeline
     case .timelinePreviousDay: moveTimelineDay(by: -1)
     case .timelineNextDay: moveTimelineDay(by: 1)
@@ -243,9 +224,6 @@ extension WorkspaceViewModel {
     case .planMatrixPlace: if let key { placeSelectionInQuadrant(key) }
     case .listNewTaskDestination:
       if let key { cycleNewTaskDestination(by: key.hasSuffix("[") ? -1 : 1) }
-    // Same sign as the cursor keys, so the task travels the way the arrow
-    // points: up the screen is up the ladder, which is *less* important.
-    case .focusReorder: if let key { reorderFocusLadder(by: key.hasSuffix("up") ? 1 : -1) }
     case .motionSelectNext: if key != nil { moveTaskSelection(by: 1) }
     case .motionSelectPrevious: if key != nil { moveTaskSelection(by: -1) }
     case .motionSelectEnds: if let key { selectTaskAtEnd(first: key == "home" || key == "cmd+up") }

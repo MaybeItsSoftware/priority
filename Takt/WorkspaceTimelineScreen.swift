@@ -4,8 +4,7 @@ import SwiftUI
 
 /// Timeline mode: a day of focused work drawn against the clock.
 ///
-/// It takes the main pane the way focus mode does, and for the same reason.
-/// The question it answers — where did today actually go — is asked by
+/// It takes the main pane rather than floating over it. The question it answers — where did today actually go — is asked by
 /// comparing the shape of the day with the shape you expected, and a panel
 /// floating over the board gives you a dialog-sized slot to do that in. At
 /// pane size the gaps are as legible as the blocks, which is most of the

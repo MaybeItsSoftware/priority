@@ -39,7 +39,7 @@ struct WorkspaceDesktopView: View {
     // spare they were laid out at no width at all. An explicit width changes
     // only when you drag it.
     HStack(spacing: 0) {
-      // The sidebar stays through focus mode: setting up a session often means
+      // The sidebar stays through the timeline: reading a day back often means
       // looking at which list something came from, and losing your place in the
       // workspace to do that is its own distraction.
       if model.isSidebarVisible {
@@ -54,7 +54,7 @@ struct WorkspaceDesktopView: View {
       // the side docks run the window's full height beside it.
       VStack(spacing: 0) {
         mainPane
-        if model.isBottomDockVisible && !model.showsFocusScreen && !model.showsTimelineScreen {
+        if model.isBottomDockVisible && !model.showsTimelineScreen {
           WorkspaceHeightHandle(
             height: Bindable(model).bottomDockHeight,
             range: WorkspaceViewModel.minBottomDockHeight...WorkspaceViewModel.maxBottomDockHeight)
@@ -65,7 +65,7 @@ struct WorkspaceDesktopView: View {
       // Gone while a full-pane screen is up, without forgetting that it was
       // open: focus is the one place the app should not be showing you a
       // tally, and the timeline is already a reading of the same day.
-      if model.isRightDockVisible && !model.showsFocusScreen && !model.showsTimelineScreen {
+      if model.isRightDockVisible && !model.showsTimelineScreen {
         WorkspaceResizeHandle(
           width: Bindable(model).rightDockWidth, grows: .leading,
           range: WorkspaceViewModel.minRightDockWidth...WorkspaceViewModel.maxRightDockWidth)
@@ -111,7 +111,6 @@ struct WorkspaceDesktopView: View {
           .onChange(of: model.selectedTaskID) { _, _ in model.cancelPendingTaskDeletion() }
       }
     }
-    .animation(.easeInOut(duration: 0.15), value: model.showsFocusScreen)
     .animation(.easeInOut(duration: 0.15), value: model.showsTimelineScreen)
     .focusSection()
     .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)

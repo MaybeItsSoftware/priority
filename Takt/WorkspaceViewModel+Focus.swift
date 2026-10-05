@@ -12,8 +12,8 @@ enum FocusCompletionSurface {
 /// `WorkspaceViewModel.swift` only for size.
 @MainActor
 extension WorkspaceViewModel {
-  /// `plannedSeconds` is the estimate committed to on the focus screen. Without
-  /// one the task's own estimate is used, and failing that a default block.
+  /// `plannedSeconds` is the estimate committed to, if any. Without one the
+  /// task's own estimate is used, and failing that a default block.
   func startFocus(on task: WorkspaceTask, plannedSeconds: Int? = nil, automatic: Bool = false, override: Bool = false) {
     guard !task.isList else { openItemList(task); return }
     guard let store else { return }
@@ -44,7 +44,6 @@ extension WorkspaceViewModel {
       allowsQueueResume = true
       activeFocusSession = try store.startFocusSession(
         taskId: task.id, plannedSeconds: planned, context: effectiveFocusContext, overrideAvailability: override)
-      stagedTaskID = nil
       reloadFocus()
       reloadNextUp()
       // Where the block runs is the panel or the menu bar, never a pane of
@@ -61,41 +60,28 @@ extension WorkspaceViewModel {
     focusFloatRequest += 1
   }
 
-  /// Opens the timeline over the main pane, the way focus mode does.
+  /// Opens the timeline over the main pane.
   ///
-  /// It is a mode rather than a sheet for the same reason focus is: reading
-  /// back a day's work means comparing what you meant to do with what you
-  /// actually did, and a panel floating over the board gives you a slot the
-  /// size of a dialog to do that in.
+  /// It is a mode rather than a sheet because reading back a day's work means
+  /// comparing what you meant to do with what you actually did, and a panel
+  /// floating over the board gives you a slot the size of a dialog to do that in.
   func presentTimelineScreen() {
-    showsFocusScreen = false
     focusHistoryDate = min(focusHistoryDate, .now)
     reloadFocus()
     showsTimelineScreen = true
-  }
-
-  /// Puts the running session in the corner. The pane stays where it is —
-  /// floating is for working in another app, and coming back to a workspace
-  /// that had moved on without you would be a surprise.
-  func requestFocusFloat() {
-    guard activeFocusSession != nil else { return }
-    focusFloatRequest += 1
   }
 
   func dismissTimelineScreen() {
     showsTimelineScreen = false
   }
 
-  /// Leaves whichever full-pane screen is up.
+  /// Leaves the full-pane screen, which is now only ever the timeline.
   ///
-  /// Focus and the timeline both take the whole main pane, so anything that
-  /// *navigates* — choosing a list, entering a folder, revealing a search hit —
-  /// has to leave both, or the destination is drawn underneath a screen that is
-  /// still covering it. Three call sites were already dismissing the pair by
-  /// hand while the sidebar dismissed only focus, which is why clicking
-  /// Timeline and then a list looked like the list had refused to open.
+  /// The timeline takes the whole main pane, so anything that *navigates* —
+  /// choosing a list, entering a folder, revealing a search hit — has to leave
+  /// it, or the destination is drawn underneath a screen that is still
+  /// covering it.
   func leaveFullPaneScreens() {
-    dismissFocusScreen()
     dismissTimelineScreen()
   }
 
@@ -217,20 +203,6 @@ extension WorkspaceViewModel {
       reloadFocus()
       reloadOutline()
       reloadDailies()
-      reloadNextUp()
-    }
-  }
-
-  func finishFocus() {
-    synchroniseFocusClock(now: .now)
-    guard let store, let session = activeFocusSession else { return }
-    perform {
-      if session.activeTaskId != nil {
-        _ = try store.completeActiveFocusTask(sessionId: session.id, elapsedSeconds: session.elapsedSeconds(now: .now),
-          completeTask: false, expectedBlockId: session.activeBlockId, context: effectiveFocusContext)
-      }
-      try store.finishFocusSession(id: session.id)
-      reloadFocus()
       reloadNextUp()
     }
   }

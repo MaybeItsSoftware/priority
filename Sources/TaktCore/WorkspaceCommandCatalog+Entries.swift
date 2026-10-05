@@ -10,7 +10,7 @@ public enum WorkspaceCommandCatalog {
   /// The shipped keys. What is in force — these with any user keymap laid
   /// over them — is `all`; see `WorkspaceKeyBindings`.
   public static let defaults: [WorkspaceCommand] =
-    go + task + plan + lists + window + focus + timeline + done + motions
+    go + task + plan + lists + window + timeline + done + motions
 
   public static var byID: [WorkspaceCommandID: WorkspaceCommand] { bindings.byID }
 
@@ -317,56 +317,6 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .windowExportTheme, title: "Export the current theme as JSON", group: "Window",
       keys: [], note: "A complete, editable copy in the themes folder, put in force"),
-  ]
-
-  // MARK: - Focus
-
-  private static let focus: [WorkspaceCommand] = [
-    .init(
-      id: .focusLadderUp, title: "Climb to less important work", group: "Focus",
-      keys: ["up", "k"], surface: .focus),
-    .init(
-      id: .focusLadderDown, title: "Back down towards the most important", group: "Focus",
-      keys: ["down", "j"], surface: .focus),
-    .init(
-      id: .focusStage, title: "Stage the selected task", group: "Focus",
-      keys: ["f"], surface: .focus,
-      note: "Press again to begin the block with the estimate shown"),
-    .init(
-      id: .focusBegin, title: "Begin the staged block", group: "Focus", keys: [],
-      surface: .focus, note: "The second f on a staged task"),
-    .init(
-      id: .focusTickOff, title: "Tick the task off without starting", group: "Focus",
-      keys: ["space", "x"], surface: .focus),
-    .init(
-      id: .focusDefer, title: "Schedule it for tomorrow morning", group: "Focus", keys: ["l"],
-      surface: .focus, note: "So it stops being offered"),
-    .init(
-      id: .focusReorder, title: "Move the task up or down the ladder", group: "Focus",
-      keys: ["option+up", "option+down"], surface: .focus, kind: .motion,
-      note: "Fixes your own order over the computed one"),
-    .init(
-      id: .focusPause, title: "Pause or resume the block", group: "Focus", keys: ["p"],
-      surface: .focusRunning),
-    .init(
-      id: .focusLogAndKeep, title: "End the block, keep the task open", group: "Focus",
-      keys: ["l"], surface: .focusRunning),
-    .init(
-      id: .focusFloat, title: "Send the block to the tray", group: "Focus", keys: ["f"],
-      surface: .focusRunning),
-    .init(
-      id: .focusFinish, title: "Finish the block", group: "Focus", keys: ["space", "x"],
-      surface: .focusRunning, note: "Asks how it went"),
-    .init(
-      id: .focusLeave, title: "Leave the focus screen", group: "Focus", keys: ["escape"],
-      surface: .focusRunning, note: "The block keeps running behind it"),
-    .init(
-      id: .focusResetOrder, title: "Drop your own order of the ladder", group: "Focus",
-      keys: ["o"], surface: .focus,
-      note: "Back to the computed order, which is what the ladder is for"),
-    .init(
-      id: .focusUnstage, title: "Unstage the task, or leave the ladder", group: "Focus",
-      keys: ["escape"], surface: .focus, note: "Unstages first when a task is staged"),
   ]
 
   // MARK: - Timeline

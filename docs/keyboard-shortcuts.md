@@ -110,11 +110,12 @@ The shape is Zed's: an array of blocks, each with an optional `context` and a
   other command that had it on the same surface. A `null` there removes the
   key from every command.
 - **With a `context`** it applies on that surface only: `today`, `board`,
-  `outline`, `matrix`, `sidebar`, `inspector`, `focus`, `focusRunning`,
-  `timeline` or `done`. A `null` there stops the key meaning anything on that
-  surface unless the same file gives it a new job there. A command that
-  belongs to one surface — the focus ladder's, the timeline's — can only be
-  bound in its own context.
+  `outline`, `matrix`, `sidebar`, `inspector`, `timeline` or `done`. A `null`
+  there stops the key meaning anything on that surface unless the same file
+  gives it a new job there. A command that belongs to one surface — the
+  timeline's, the done rail's — can only be bound in its own context. The
+  retired focus pane's contexts (`focus`, `focusRunning`) and command ids are
+  reported and skipped rather than failing the file.
 - Within a block the `null`s apply first, so unbinding a key and binding it
   again can be written in either order. Blocks apply top to bottom.
 
@@ -159,8 +160,8 @@ not fall through to open the task selected behind it. See
 
 ## Surfaces own the keyboard
 
-Focus mode and the timeline take the main pane, and while either is up it owns
-the keyboard outright. A key the screen does not answer to does not fall
+The timeline takes the main pane, and while it is up it owns the keyboard
+outright. A key the screen does not answer to does not fall
 through to the task surface behind it — `Delete`, a digit or `i` there used to
 act on a task nobody could see. The only workspace keys that stay live are the
 window's own (`reachableFromFullPaneScreens` in the catalogue): the view keys,

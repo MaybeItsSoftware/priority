@@ -534,15 +534,8 @@ enum WorkspaceSidebarItem: Identifiable {
   /// down: finishing a block is the moment you want to see what is next, and
   /// the tray is the surface the scoring happened on.
   var activeFocusSession: FocusSession?
-  /// What launch did with the block left over from last time. Read by the
-  /// focus screen so a session that was closed out says so, rather than simply
-  /// not being there.
-  var staleFocusResolution: StaleFocusResolution = .keep
   private(set) var focusQueue: [FocusQueueTask] = []
   @ObservationIgnored var dailyTaskIDs: Set<String> = []
-  /// The focus screen: one task, an estimate, and a way out. Presented over
-  /// the workspace rather than as a view mode, because its whole job is to
-  /// hide everything else.
   /// What finishing the current block did — a task closed, or a day's
   /// contribution logged. Held so the UI can say which, then cleared.
   var lastFocusOutcome: WorkspaceStore.FocusCompletionOutcome?
@@ -576,12 +569,8 @@ enum WorkspaceSidebarItem: Identifiable {
   /// award carries the block's own id. Blocks finished without a judgement
   /// have no entry, which is the difference the timeline draws.
   private(set) var focusHistoryAwards: [String: FocusAward] = [:]
-  var showsFocusScreen = false
-  /// Whether the timeline has the main pane. Held beside `showsFocusScreen`
-  /// and mutually exclusive with it: both are takeovers of the same pane.
+  /// Whether the timeline has the main pane.
   var showsTimelineScreen = false
-  /// Minutes offered on the focus screen, seeded from the task's estimate.
-  var focusEstimateMinutes: Double = 25
   var errorMessage: String?
 
   /// Told after rows changed under the app — a sync pull or another
@@ -597,7 +586,7 @@ enum WorkspaceSidebarItem: Identifiable {
       // And then settle it: a block paused on a day that is over is finished
       // here rather than restored as the running session. Without this every
       // quit left a paused block behind that nothing ever cleared.
-      self.staleFocusResolution = try self.store?.resolveStaleFocusSession() ?? .keep
+      try self.store?.resolveStaleFocusSession()
       try load()
       // Ranked here rather than in the background: the first screen is the
       // day, and it should not paint empty and then fill.
@@ -720,16 +709,12 @@ enum WorkspaceSidebarItem: Identifiable {
   var completedTasks: [WorkspaceTask] = []
   /// The row the rail's cursor is on, or nil for "the newest thing finished".
   var doneCursorID: String?
-  /// What the focus screen offers, and why. Nil when there is nothing to do —
+  /// The top of the ranking, and why. Nil when there is nothing to do —
   /// which is a real state worth rendering, not an error.
   var nextUp: ScoredNextUp?
-  /// Everything worth doing, most important first. Focus mode presents this as
-  /// a ladder: rung 0 at the foot, less important work above it.
+  /// Everything worth doing, most important first. Today's Focus button and
+  /// the panel's fallback shortlist read it.
   var focusLadder: [ScoredNextUp] = []
-  /// Which rung the cursor is on. Climbing means accepting less priority.
-  var focusLadderIndex = 0
-  /// Whether the ladder carries hand-placed positions. Set with the ranking.
-  var hasManualFocusOrder = false
   var focusConditions: [TaskCondition] = []
   var taskLoggedSeconds: [String: Int] = [:]
   var taskPlanningByID: [String: TaskPlanning] = [:]
@@ -746,13 +731,6 @@ enum WorkspaceSidebarItem: Identifiable {
   var lastFocusClockAt = Date.now
   var lastFocusUptime = ProcessInfo.processInfo.systemUptime
   var lastFocusTimeZone = TimeZone.current.identifier
-  /// The task committed to but not yet started — the step between "this one"
-  /// and "go", where the estimate is decided.
-  var stagedTaskID: String?
-  /// Bumped when something asks for the current rung to be ticked off. The
-  /// focus screen watches this and runs the celebration, because the mutation
-  /// has to wait on an animation the model cannot see.
-  var focusCompletionRequest = 0
   /// Bumped whenever Today is asked for afresh, so the pane resets its search
   /// field the way a fresh summon resets the panel's.
   var dayPresentationCount = 0

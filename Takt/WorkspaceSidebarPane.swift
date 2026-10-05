@@ -202,8 +202,6 @@ struct WorkspaceSidebarPane: View {
 ///
 /// The fill says "open", the ring says "here". A ring needs the keyboard to
 /// mean anything, so it only draws while the sidebar has it.
-/// Internal rather than file-private: the Focus and timeline rows live in
-/// `WorkspaceFocusScreen.swift` and are sidebar rows like any other.
 /// Applied with `.background` outside the row's padding, so it spans the
 /// column edge to edge — the sidebar's rows are laid out on a plain stack
 /// now, with nothing between them and the pane's sides.
