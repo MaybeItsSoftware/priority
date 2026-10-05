@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import TaktCore
 
 public struct Workspace: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable, Equatable {
   public static let databaseTableName = "workspaces"
@@ -341,6 +342,19 @@ public struct WorkspaceDaily: Codable, FetchableRecord, PersistableRecord, Ident
   public var legacyDailyId: String?
   public let createdAt: Date
   public var updatedAt: Date
+  /// The task this habit was made from — "learn drums" behind "practise
+  /// drums". Nil for a standalone habit and for every plain daily.
+  public var sourceTaskId: String?
+  /// The board column each appearance lands in (`HabitPlacement`). Nil is a
+  /// plain daily, which never moves its task.
+  public var placementColumn: String?
+  /// Whether an appearance not done by the end of its day is dropped (a gap)
+  /// rather than carried until it is done.
+  public var dropsAtDayEnd: Bool = true
+  /// `HabitExpiry.rule`: "source", "date" or "never".
+  public var expiryRule: String = "never"
+  /// The day a "date" expiry takes effect.
+  public var expiresAt: Date?
 
   public static let allWeekdaysMask = 0b111_1111
 
@@ -371,6 +385,22 @@ public struct WorkspaceDaily: Codable, FetchableRecord, PersistableRecord, Ident
   }
 
   public var isArchived: Bool { archivedAt != nil }
+
+  /// A daily made through the habit form: it has a column to land in.
+  public var isHabit: Bool { placement != nil }
+
+  public var placement: HabitPlacement? { placementColumn.flatMap(HabitPlacement.init(rawValue:)) }
+
+  public var expiry: HabitExpiry { HabitExpiry(rule: expiryRule, date: expiresAt) }
+
+  public var frequency: HabitFrequency { HabitFrequency(weekdays: activeWeekdays, intervalDays: intervalDays) }
+
+  /// The schedule and options as the pure policy reads them.
+  public var habitRule: HabitRule {
+    HabitRule(
+      weekdays: activeWeekdays, intervalDays: intervalDays, anchor: intervalAnchor ?? createdAt,
+      dropsAtDayEnd: dropsAtDayEnd, expiry: expiry, placement: placement ?? .today)
+  }
 
   public static func mask(forWeekdays weekdays: Set<Int>) -> Int {
     weekdays.reduce(0) { $0 | (1 << ($1 - 1)) }

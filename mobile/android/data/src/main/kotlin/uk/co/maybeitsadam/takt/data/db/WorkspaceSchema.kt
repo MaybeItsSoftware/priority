@@ -5,8 +5,8 @@ package uk.co.maybeitsadam.takt.data.db
  *
  * A fresh database runs `cli/src/fixtures/workspace_schema.sql` (copied into
  * this module's resources at build time), then `v17_sync` and
- * `v18_themes_and_preferences` exactly as docs/sync.md and the Swift
- * `WorkspaceStore` specify. Every step is keyed on `grdb_migrations`, so a
+ * `v18_themes_and_preferences` and `v19_habit_options` exactly as
+ * docs/sync.md and the Swift `WorkspaceStore` specify. Every step is keyed on `grdb_migrations`, so a
  * step the fixture already carries is not applied twice; an older Android
  * database takes the steps it is missing.
  */
@@ -14,6 +14,16 @@ object WorkspaceSchema {
     const val FIXTURE_RESOURCE = "uk/co/maybeitsadam/takt/data/workspace_schema.sql"
     const val V17_SYNC = "v17_sync"
     const val V18_THEMES_AND_PREFERENCES = "v18_themes_and_preferences"
+    const val V19_HABIT_OPTIONS = "v19_habit_options"
+
+    /** `v19_habit_options`, verbatim from `WorkspaceStore.habitOptionColumns`. */
+    val habitOptionColumns: List<String> = listOf(
+        "ALTER TABLE dailies ADD COLUMN sourceTaskId TEXT",
+        "ALTER TABLE dailies ADD COLUMN placementColumn TEXT",
+        "ALTER TABLE dailies ADD COLUMN dropsAtDayEnd BOOLEAN NOT NULL DEFAULT 1",
+        "ALTER TABLE dailies ADD COLUMN expiryRule TEXT NOT NULL DEFAULT 'never'",
+        "ALTER TABLE dailies ADD COLUMN expiresAt DATETIME",
+    )
 
     /** Tables whose rows are the user's work, keyed by column (undo journal). Same order as Swift. */
     val journalledTables: List<Pair<String, String>> = listOf(
@@ -70,6 +80,57 @@ object WorkspaceSchema {
             applyV18ThemesAndPreferences(db)
             db.execute("INSERT INTO grdb_migrations (identifier) VALUES (?)", V18_THEMES_AND_PREFERENCES)
         }
+        if (!db.exists("SELECT 1 FROM grdb_migrations WHERE identifier = ?", V19_HABIT_OPTIONS)) {
+            applyV19HabitOptions(db)
+            db.execute("INSERT INTO grdb_migrations (identifier) VALUES (?)", V19_HABIT_OPTIONS)
+        }
+    }
+
+    /**
+     * `v19_habit_options`: five columns on `dailies`. Both trigger sets that
+     * name its columns are reinstalled — the undo journal's, as
+     * `WorkspaceStore.installChangeLogTriggers` writes them, and the outbox's.
+     */
+    fun applyV19HabitOptions(db: Db) {
+        for (statement in habitOptionColumns) db.execute(statement)
+        installChangeLogTriggers(db, "dailies")
+        installSyncTriggers(db)
+    }
+
+    /**
+     * The undo journal's triggers for one table, to the character of
+     * `WorkspaceStore+Undo.swift`, since the schema test compares SQL text.
+     */
+    fun installChangeLogTriggers(db: Db, table: String) {
+        val keyColumn = journalKey(table) ?: return
+        if (!db.tableExists(table)) return
+        val columns = db.columns(table)
+        fun json(prefix: String) =
+            "json_object(" + columns.joinToString(", ") { "'$it', $prefix.\"$it\"" } + ")"
+        val guardClause = "WHEN (SELECT suppressed FROM undo_control WHERE id = 0) = 0"
+        val entry = "INSERT INTO change_log(groupId, label, tableName, rowId, operation, beforeJSON, afterJSON)"
+        val context = "(SELECT groupId FROM undo_control WHERE id = 0), (SELECT label FROM undo_control WHERE id = 0)"
+        for (suffix in listOf("insert", "update", "delete")) {
+            db.execute("DROP TRIGGER IF EXISTS change_log_${table}_$suffix")
+        }
+        db.execute(
+            "CREATE TRIGGER change_log_${table}_insert AFTER INSERT ON $table $guardClause\n" +
+                "BEGIN\n" +
+                "  $entry VALUES ($context, '$table', NEW.\"$keyColumn\", 'insert', NULL, ${json("NEW")});\n" +
+                "END",
+        )
+        db.execute(
+            "CREATE TRIGGER change_log_${table}_update AFTER UPDATE ON $table $guardClause\n" +
+                "BEGIN\n" +
+                "  $entry VALUES ($context, '$table', NEW.\"$keyColumn\", 'update', ${json("OLD")}, ${json("NEW")});\n" +
+                "END",
+        )
+        db.execute(
+            "CREATE TRIGGER change_log_${table}_delete AFTER DELETE ON $table $guardClause\n" +
+                "BEGIN\n" +
+                "  $entry VALUES ($context, '$table', OLD.\"$keyColumn\", 'delete', ${json("OLD")}, NULL);\n" +
+                "END",
+        )
     }
 
     /**

@@ -7,12 +7,30 @@ import TaktWorkspace
 extension WorkspaceViewModel {
   func toggleTask(_ task: WorkspaceTask) {
     guard let store else { return }
+    // A habit is ticked for the day, not finished: its task is what the
+    // next appearance is made of.
+    if task.status == .open, isHabitTask(task) {
+      if dailyItem(for: task) != nil {
+        toggleDailyProgress(task)
+      } else if let daily = try? store.daily(forTaskId: task.id) {
+        // Not showing today, so there is nothing to un-tick: doing it now
+        // simply counts for today.
+        perform {
+          try store.logContribution(dailyId: daily.id)
+          reloadDailies()
+          reloadNextUp()
+        }
+      }
+      return
+    }
     perform {
       try store.setStatus(task.status == .open ? .completed : .open, for: task.id)
       if task.status == .open { celebrateCompletion(of: task) }
       // An ordinary task's status is not something the sidebar shows: its
       // counts include finished tasks, and only lists are drawn there.
       reloadOutline(refreshSidebar: task.isList)
+      // Closing a task can end the habits made from it.
+      reloadDailies()
       reloadNextUp()
     }
   }

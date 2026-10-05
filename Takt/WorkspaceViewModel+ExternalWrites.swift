@@ -50,6 +50,7 @@ extension WorkspaceViewModel {
   /// skips, and a burst of writes is one reload per tick at most.
   func checkForExternalWrites() {
     guard let store, !externalWriteCheckInFlight else { return }
+    checkForDayChange()
     externalWriteCheckInFlight = true
     Task { @MainActor [weak self] in
       let token = try? await store.readExternalChangeToken()

@@ -542,6 +542,11 @@ enum WorkspaceSidebarItem: Identifiable {
   var activeFocusSession: FocusSession?
   private(set) var focusQueue: [FocusQueueTask] = []
   @ObservationIgnored var dailyTaskIDs: Set<String> = []
+  /// The tasks whose daily is a habit — the ones ticked rather than closed.
+  @ObservationIgnored var habitTaskIDs: Set<String> = []
+  /// The day the habits were last placed for, so the first poll of a new day
+  /// moves them. See `checkForDayChange`.
+  @ObservationIgnored var habitDayKey: String?
   /// What finishing the current block did — a task closed, or a day's
   /// contribution logged. Held so the UI can say which, then cleared.
   var lastFocusOutcome: WorkspaceStore.FocusCompletionOutcome?

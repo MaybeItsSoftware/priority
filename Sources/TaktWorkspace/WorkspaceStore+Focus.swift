@@ -156,7 +156,10 @@ extension WorkspaceStore {
         task.completedAt = task.completedAt ?? now
         task.updatedAt = now
         try task.update(db)
-        if wasOpen { try Self.scheduleNextOccurrence(db, after: task, now: now, calendar: calendar) }
+        if wasOpen {
+          try Self.scheduleNextOccurrence(db, after: task, now: now, calendar: calendar)
+          try Self.expireHabits(db, sourceTaskId: task.id, now: now)
+        }
       }
       var block = FocusWorkBlock(id: blockId, sessionId: session.id, taskId: activeTask?.id,
         taskTitle: activeTask?.title ?? "Deleted task", seconds: max(0, elapsedSeconds), recordedAt: now)

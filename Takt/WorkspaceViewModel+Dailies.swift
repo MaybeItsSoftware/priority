@@ -27,10 +27,15 @@ extension WorkspaceViewModel {
   func reloadDailiesNow() {
     guard let store else { return }
     do {
+      // Habits are placed before they are read, so the day's list and the
+      // board agree about which appearances are showing.
+      habitDayKey = DailyContribution.dayKey(for: .now)
+      if try store.reconcileHabits() { refresh([.board, .nextUp]) }
       let items = try store.dailies()
-      let ids = Set(try store.allDailies().map(\.taskId))
+      let all = try store.allDailies()
       if dailyItems != items { dailyItems = items }
-      dailyTaskIDs = ids
+      dailyTaskIDs = Set(all.map(\.taskId))
+      habitTaskIDs = Set(all.filter(\.isHabit).map(\.taskId))
       dailyProgressRevision += 1
     } catch {
       errorMessage = error.localizedDescription
@@ -39,6 +44,38 @@ extension WorkspaceViewModel {
 
   func isDailyProgressTask(_ task: WorkspaceTask) -> Bool {
     dailyTaskIDs.contains(task.id)
+  }
+
+  func isHabitTask(_ task: WorkspaceTask) -> Bool {
+    habitTaskIDs.contains(task.id)
+  }
+
+  /// The first check of a new day puts that day's habits in their columns
+  /// and takes yesterday's dropped ones out. Driven by the external-write
+  /// poll, which already ticks once a second.
+  func checkForDayChange() {
+    guard habitDayKey != nil, habitDayKey != DailyContribution.dayKey(for: .now) else { return }
+    reloadDailies()
+    reloadNextUp()
+  }
+
+  /// Saves the habit form. Returns an error message, or nil once saved.
+  func saveHabit(_ draft: HabitDraft, habitTaskId: String?) -> String? {
+    guard let store else { return "The workspace is not open." }
+    var failure: String?
+    perform {
+      do {
+        let daily = try store.saveHabit(draft, habitTaskId: habitTaskId)
+        selectedTaskID = selectedTaskID ?? daily.taskId
+      } catch {
+        failure = error.localizedDescription
+        throw error
+      }
+      reloadOutline(refreshSidebar: true)
+      reloadDailies()
+      reloadNextUp()
+    }
+    return failure
   }
 
   /// Attaching a daily to a task is what "make daily progress" now means: the

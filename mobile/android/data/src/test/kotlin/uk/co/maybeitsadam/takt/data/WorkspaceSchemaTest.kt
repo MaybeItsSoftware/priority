@@ -56,9 +56,10 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(18, migrations.size)
+            assertEquals(19, migrations.size)
             assertTrue(WorkspaceSchema.V17_SYNC in migrations)
             assertTrue(WorkspaceSchema.V18_THEMES_AND_PREFERENCES in migrations)
+            assertTrue(WorkspaceSchema.V19_HABIT_OPTIONS in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -82,6 +83,43 @@ class WorkspaceSchemaTest {
         })
         reopened.close()
         dir.deleteRecursively()
+    }
+
+    /**
+     * An Android database made before v19 takes the five habit columns and
+     * comes out as the v19 fixture, triggers and all, to the character.
+     */
+    @Test
+    fun aV18DatabaseUpgradesToTheV19Fixture(): Unit = runBlocking {
+        val v19 = fixtureSchema()
+        val dir = Files.createTempDirectory("priority-v18").toFile()
+        val path = dir.resolve("priority.sqlite").path
+        val connection = BundledSQLiteDriver().open(path)
+        try {
+            for (statement in WorkspaceSchema.splitStatements(WorkspaceSchema.fixtureSQL())) connection.execSQL(statement)
+            // Roll back to v18: the journal's and the outbox's dailies
+            // triggers name the new columns, so they come off first.
+            for (op in listOf("insert", "update", "delete")) {
+                connection.execSQL("DROP TRIGGER change_log_dailies_$op")
+                connection.execSQL("DROP TRIGGER sync_outbox_dailies_$op")
+            }
+            for (column in listOf("sourceTaskId", "placementColumn", "dropsAtDayEnd", "expiryRule", "expiresAt")) {
+                connection.execSQL("ALTER TABLE dailies DROP COLUMN $column")
+            }
+            connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = '${WorkspaceSchema.V19_HABIT_OPTIONS}'")
+        } finally {
+            connection.close()
+        }
+
+        val upgraded = WorkspaceDatabase.open(path)
+        try {
+            assertEquals(v19, upgraded.read { schema(it) })
+            val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
+            assertEquals(WorkspaceSchema.V19_HABIT_OPTIONS, migrations.last())
+        } finally {
+            upgraded.close()
+            dir.deleteRecursively()
+        }
     }
 
     /**

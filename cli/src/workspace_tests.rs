@@ -381,6 +381,45 @@ fn completing_stamps_once_and_reopening_clears_the_stamp() {
 }
 
 #[test]
+fn completing_a_source_task_ends_the_habits_made_from_it() {
+    let fixture = Fixture::new();
+    let source = fixture.add(PROJECTS, "Learn drums", None);
+    let habit = fixture.add(PROJECTS, "Practise drums", None);
+    let other = fixture.add(PROJECTS, "Stretch", None);
+    let db = fixture.db();
+    for (id, task, rule) in [("H1", &habit, "source"), ("H2", &other, "never")] {
+        db.execute(
+            "INSERT INTO dailies (id, taskId, sortOrder, createdAt, updatedAt, sourceTaskId, \
+             placementColumn, expiryRule) VALUES (?1, ?2, 0, ?3, ?3, ?4, 'today', ?5)",
+            params![id, task, EARLIER, source, rule],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, kanbanColumn, \
+             updatedAt) VALUES (?1, '[]', '[]', 'today', ?2)",
+            params![task, EARLIER],
+        )
+        .unwrap();
+    }
+
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": source, "status": "completed" }),
+    );
+
+    let archived: Option<String> =
+        fixture.scalar("SELECT archivedAt FROM dailies WHERE id = ?1", "H1");
+    assert!(archived.is_some());
+    let column: Option<String> = fixture.scalar(
+        "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?1",
+        &habit,
+    );
+    assert_eq!(column, None);
+    let kept: Option<String> = fixture.scalar("SELECT archivedAt FROM dailies WHERE id = ?1", "H2");
+    assert_eq!(kept, None, "a habit that never expires outlives its source");
+}
+
+#[test]
 fn a_repeating_task_is_left_for_the_app_to_complete() {
     let fixture = Fixture::new();
     let id = fixture.add(PROJECTS, "Water the plants", None);

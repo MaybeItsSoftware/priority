@@ -6,6 +6,16 @@ import TaktCore
 /// the focus screen. Split from `WorkspaceStore.swift` only for size; this is
 /// the same type and the same database.
 extension WorkspaceStore {
+  /// `v19_habit_options`, verbatim. Android's `WorkspaceSchema.kt` runs the
+  /// same five statements.
+  static let habitOptionColumns = [
+    "ALTER TABLE dailies ADD COLUMN sourceTaskId TEXT",
+    "ALTER TABLE dailies ADD COLUMN placementColumn TEXT",
+    "ALTER TABLE dailies ADD COLUMN dropsAtDayEnd BOOLEAN NOT NULL DEFAULT 1",
+    "ALTER TABLE dailies ADD COLUMN expiryRule TEXT NOT NULL DEFAULT 'never'",
+    "ALTER TABLE dailies ADD COLUMN expiresAt DATETIME",
+  ]
+
   // MARK: - Dailies
 
   /// Every non-archived daily due on `day`, joined to its task and to that
@@ -16,7 +26,10 @@ extension WorkspaceStore {
       let dailies = try WorkspaceDaily.filter(Column("archivedAt") == nil)
         .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
       return try dailies.compactMap { daily -> DailyItem? in
-        guard daily.isDue(on: day, calendar: calendar),
+        let shows = daily.isHabit
+          ? try Self.habitShows(db, daily: daily, on: day, calendar: calendar)
+          : daily.isDue(on: day, calendar: calendar)
+        guard shows,
           let task = try WorkspaceTask.fetchOne(db, key: daily.taskId), !task.isList
         else { return nil }
         let contribution = try DailyContribution
@@ -292,7 +305,10 @@ extension WorkspaceStore {
       let contribution = daily.flatMap { contributions[$0.id] }
       var dailyUnavailable: TaskUnavailableReason?
       if let daily {
-        if !daily.isDue(on: now, calendar: calendar) {
+        let shows = daily.isHabit
+          ? try habitShows(db, daily: daily, on: now, calendar: calendar)
+          : daily.isDue(on: now, calendar: calendar)
+        if !shows {
           dailyUnavailable = .dailyNotScheduled
         } else if contribution?.completedAt != nil ||
           (daily.targetSeconds.map { $0 > 0 && (contribution?.secondsLogged ?? 0) >= $0 } ?? false) {

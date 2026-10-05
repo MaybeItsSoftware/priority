@@ -40,6 +40,15 @@ and `preferences(key TEXT PRIMARY KEY, value TEXT, updatedAt DATETIME NOT NULL)`
 They hold the user's theme files and the cross-device choices described in
 [themes](themes.md#the-chosen-theme-follows-you). Neither is journalled for undo.
 
+`v19_habit_options` adds five columns to `dailies` — `sourceTaskId TEXT`,
+`placementColumn TEXT`, `dropsAtDayEnd BOOLEAN NOT NULL DEFAULT 1`,
+`expiryRule TEXT NOT NULL DEFAULT 'never'` and `expiresAt DATETIME` — and
+reinstalls the `dailies` outbox and journal triggers, which name its columns.
+A client that does not know them still syncs: the defaults describe a plain
+daily. Only the Mac moves a habit's card between columns (see
+`WorkspaceStore+Habits.swift`); other clients see the result as ordinary
+`task_metadata` rows.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

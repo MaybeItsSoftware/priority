@@ -538,6 +538,9 @@ impl Workspace {
                     params![status, completed_at, now, task.id],
                 )
                 .map_err(map_write_error)?;
+                if status != "open" && was_open {
+                    expire_habits(tx, &task.id, now)?;
+                }
             }
 
             if let Some(links) = edit.external_links.as_ref() {
@@ -1248,6 +1251,35 @@ fn upsert_kanban_column(
 // -- values -------------------------------------------------------------------
 
 /// Uppercase, as Foundation's `UUID().uuidString` writes them.
+/// `WorkspaceStore.expireHabits`: closing a task ends every habit made from
+/// it whose expiry is "when the source is done", and takes each one's card
+/// out of the column the habit put it in. A no-op on a database the app has
+/// not yet migrated to `v19_habit_options`.
+fn expire_habits(tx: &Transaction, source_id: &str, now: &str) -> Result<()> {
+    if !exists(
+        tx,
+        "SELECT EXISTS(SELECT 1 FROM grdb_migrations WHERE identifier = ?1)",
+        "v19_habit_options",
+    )? {
+        return Ok(());
+    }
+    tx.execute(
+        "UPDATE task_metadata SET kanbanColumn = NULL, focusRank = NULL, updatedAt = ?2 \
+         WHERE taskId IN (SELECT taskId FROM dailies WHERE sourceTaskId = ?1 \
+           AND archivedAt IS NULL AND expiryRule = 'source' \
+           AND placementColumn = task_metadata.kanbanColumn)",
+        params![source_id, now],
+    )
+    .map_err(map_write_error)?;
+    tx.execute(
+        "UPDATE dailies SET archivedAt = ?2, updatedAt = ?2 \
+         WHERE sourceTaskId = ?1 AND archivedAt IS NULL AND expiryRule = 'source'",
+        params![source_id, now],
+    )
+    .map_err(map_write_error)?;
+    Ok(())
+}
+
 fn new_id() -> String {
     uuid::Uuid::new_v4().to_string().to_uppercase()
 }

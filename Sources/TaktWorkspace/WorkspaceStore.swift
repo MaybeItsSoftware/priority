@@ -502,6 +502,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       // Closing one occurrence of a repeating task writes the next one.
       if status != .open, wasOpen {
         try Self.scheduleNextOccurrence(db, after: task, now: now)
+        try Self.expireHabits(db, sourceTaskId: task.id, now: now)
       }
     }
   }
@@ -1145,6 +1146,17 @@ public final class WorkspaceStore: @unchecked Sendable {
       // Synced, so the outbox triggers are reinstalled to cover them. Not
       // journalled for undo, so `installChangeLogTriggers` is not.
       try WorkspaceStore.createThemeAndPreferenceTables(db)
+      try WorkspaceStore.installSyncTriggers(db)
+    }
+    migrator.registerMigration("v19_habit_options") { db in
+      // Raw SQL, not `db.alter`, so the Android and CLI copies can run the
+      // very same statements: the schema test compares the resulting SQL text.
+      for statement in WorkspaceStore.habitOptionColumns {
+        try db.execute(sql: statement)
+      }
+      // `dailies` is both journalled and synced, and both trigger sets list
+      // its columns by name.
+      try WorkspaceStore.installChangeLogTriggers(db)
       try WorkspaceStore.installSyncTriggers(db)
     }
 

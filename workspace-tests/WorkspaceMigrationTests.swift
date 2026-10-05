@@ -28,6 +28,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v16_task_completion_time",
     "v17_sync",
     "v18_themes_and_preferences",
+    "v19_habit_options",
   ]
 
   private var directoryURL: URL!
