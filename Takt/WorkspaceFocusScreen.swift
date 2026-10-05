@@ -116,11 +116,13 @@ struct WorkspaceFocusScreen: View {
         .foregroundStyle(isRunning ? theme.primary : theme.muted)
         .lineLimit(1)
     } trailing: {
-      Text("\(FocusPoints.formatted(model.focusPoints.today)) pts today")
-        .font(theme.numeralFont(theme.scale.caption))
-        .foregroundStyle(theme.dim)
-        .monospacedDigit()
-        .help("Minutes focused, multiplied by how well each block went")
+      if manager.preferences.scoresEachFocusBlock {
+        Text("\(FocusPoints.formatted(model.focusPoints.today)) pts today")
+          .font(theme.numeralFont(theme.scale.caption))
+          .foregroundStyle(theme.dim)
+          .monospacedDigit()
+          .help("Minutes focused, multiplied by how well each block went")
+      }
       // The footer's one control, moved up beside the others: the only strip
       // along the bottom of the window is the status bar's.
       if !isRunning && model.hasManualFocusOrder {

@@ -106,11 +106,13 @@ struct DayView: View {
         .lineLimit(1)
     } trailing: {
       if surface.isPanel {
-        Text("\(FocusPoints.formatted(model.focusPoints.today)) pts")
-          .font(theme.numeralFont(theme.scale.caption))
-          .foregroundStyle(theme.dim)
-          .monospacedDigit()
-          .help("Minutes focused today, multiplied by how well each block went")
+        if manager.preferences.scoresEachFocusBlock {
+          Text("\(FocusPoints.formatted(model.focusPoints.today)) pts")
+            .font(theme.numeralFont(theme.scale.caption))
+            .foregroundStyle(theme.dim)
+            .monospacedDigit()
+            .help("Minutes focused today, multiplied by how well each block went")
+        }
       } else {
         dayTally
       }

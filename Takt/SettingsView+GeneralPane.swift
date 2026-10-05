@@ -57,9 +57,9 @@ extension SettingsView {
           ])
       }
       SettingsToggleRow(
-        "Ask how each focus block went",
+        "Focus points",
         detail:
-          "Finishing a block asks for a quality multiplier, which is what turns minutes into points. Turn this off to log every block at ×1 and keep moving.",
+          "Finishing a block asks how it went — a multiplier from ×1.0, nudged a tenth at a time — and minutes times that is the block's points. Turn this off to drop scoring altogether: no question at the end of a block, and no points anywhere.",
         isOn: preferenceBinding(\.scoresEachFocusBlock))
     } header: {
       Text("Running a block")

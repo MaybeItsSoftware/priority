@@ -218,9 +218,11 @@ private struct WorkspaceStatusTrailing: View {
       HStack(spacing: theme.space.xs) {
         Text("\(WorkspaceDurationText.short(progress.today.seconds)) logged")
           .foregroundStyle(progress.today.seconds > 0 ? theme.ink : theme.dim)
-        Text("·").foregroundStyle(theme.dim)
-        Text("\(FocusPoints.formatted(points)) pts")
-          .foregroundStyle(points > 0 ? theme.ink : theme.dim)
+        if manager.preferences.scoresEachFocusBlock {
+          Text("·").foregroundStyle(theme.dim)
+          Text("\(FocusPoints.formatted(points)) pts")
+            .foregroundStyle(points > 0 ? theme.ink : theme.dim)
+        }
         Text("·").foregroundStyle(theme.dim)
         Text("\(done) done")
           .foregroundStyle(done > 0 ? theme.success : theme.dim)

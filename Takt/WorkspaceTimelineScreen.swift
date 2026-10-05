@@ -13,6 +13,7 @@ import SwiftUI
 struct WorkspaceTimelineScreen: View {
   @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
+  @Environment(AppCoordinator.self) private var manager
 
   /// Points per hour of ruler. Tall enough that a ten-minute block is still a
   /// visible bar rather than a rule, which is what makes a fragmented morning
@@ -132,7 +133,9 @@ struct WorkspaceTimelineScreen: View {
       figure(duration(day.totalSeconds), "Focused")
       figure("\(day.blocks.count)", day.blocks.count == 1 ? "Block" : "Blocks")
       figure(day.longestLabel, "Longest")
-      if day.isToday {
+      if !manager.preferences.scoresEachFocusBlock {
+        // Scoring is off: no points, even for days that were scored.
+      } else if day.isToday {
         figure("\(FocusPoints.formatted(model.focusPoints.today)) pts", "Scored")
       } else if day.scoredPoints > 0 {
         figure("\(FocusPoints.formatted(day.scoredPoints)) pts", "Scored")
@@ -254,7 +257,8 @@ struct WorkspaceTimelineScreen: View {
   /// with the border at full strength, so "live" reads without a second style.
   private func block(_ placement: FocusDayTimeline.Placement, minutes: Double, day: TimelineDay) -> some View {
     let hue = day.colour(for: placement.block.id)
-    let award = model.focusHistoryAwards[placement.block.id]
+    // Scoring off means no points on the timeline either, scored days included.
+    let award = manager.preferences.scoresEachFocusBlock ? model.focusHistoryAwards[placement.block.id] : nil
     let isLive = placement.block.isLive
     let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
     return VStack(alignment: .leading, spacing: 0) {
@@ -292,7 +296,7 @@ struct WorkspaceTimelineScreen: View {
     let end = placement.startedAt.addingTimeInterval(minutes * 60)
     var line = "\(placement.block.title) — \(time(placement.startedAt))–\(time(end)), \(duration(Int(minutes * 60)))"
     if placement.block.isLive { line += " (running)" }
-    if let award { line += " · \(award.quality?.title ?? "scored") \(FocusPoints.formatted(award.points)) pts" }
+    if let award, manager.preferences.scoresEachFocusBlock { line += " · \(award.quality?.title ?? "scored") \(FocusPoints.formatted(award.points)) pts" }
     return line
   }
 
