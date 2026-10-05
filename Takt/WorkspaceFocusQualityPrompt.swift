@@ -53,6 +53,12 @@ struct WorkspaceFocusQualityPrompt: View {
     .focused($hasKeyboard)
     .onKeyPress(.upArrow) { nudge(by: Self.step); return .handled }
     .onKeyPress(.downArrow) { nudge(by: -Self.step); return .handled }
+    // A menial task, or a block that should not count for some other reason:
+    // one key logs it at nothing, without stepping the dial down ten times.
+    .onKeyPress(characters: ["\\"]) { _ in
+      model.confirmFocusCompletion(multiplier: 0)
+      return .handled
+    }
     .onAppear { hasKeyboard = true }
     .onExitCommand { model.cancelFocusCompletion() }
   }
@@ -151,7 +157,7 @@ struct WorkspaceFocusQualityPrompt: View {
 
   private var actions: some View {
     HStack(spacing: theme.space.sm) {
-      Text("↑ ↓ adjust by 0.1 · ↩ log it · esc keep working")
+      Text("↑ ↓ adjust by 0.1 · ↩ log it · \\ log at ×0 · esc keep working")
         .font(theme.captionFont)
         .foregroundStyle(theme.dim)
       Spacer()
