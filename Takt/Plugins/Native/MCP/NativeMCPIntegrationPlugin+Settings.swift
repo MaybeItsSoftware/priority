@@ -25,7 +25,7 @@ private struct MCPIntegrationPluginSettingsView: View {
     @Bindable var manager = manager
     Section(header: MicroLabel("MCP Plugin")) {
       Toggle("Enable MCP integration", isOn: $manager.integrations.mcpIntegrationEnabled)
-        .toggleStyle(.switch)
+        .toggleStyle(.themedSwitch)
 
       if manager.integrations.mcpIntegrationEnabled {
         VStack(alignment: .leading, spacing: theme.space.md) {

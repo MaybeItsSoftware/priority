@@ -31,7 +31,7 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
     @Bindable var manager = manager
     Section(header: MicroLabel("AFFiNE Plugin")) {
       Toggle("Enable AFFiNE integration", isOn: $manager.integrations.affineIntegrationEnabled)
-        .toggleStyle(.switch)
+        .toggleStyle(.themedSwitch)
 
       if manager.integrations.affineIntegrationEnabled {
         VStack(alignment: .leading, spacing: theme.space.md) {
@@ -79,7 +79,7 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
       }
 
       TextField("Path to affine-mcp (optional)", text: $serverCommandPath)
-        .textFieldStyle(.roundedBorder)
+        .themedTextField()
         .onSubmit { plugin.serverCommandPath = serverCommandPath }
 
       // Priority never handles the AFFiNE password: the helper keeps its own
@@ -142,7 +142,7 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
         .foregroundStyle(theme.muted)
 
       TextField("Document id (optional)", text: $parentDocId)
-        .textFieldStyle(.roundedBorder)
+        .themedTextField()
         .onSubmit { plugin.parentDocId = parentDocId }
 
       Text("A new checklist document is linked under this one, so it shows in the sidebar.")

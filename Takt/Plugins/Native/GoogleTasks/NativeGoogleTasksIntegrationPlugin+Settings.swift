@@ -26,7 +26,7 @@ private struct GoogleTasksIntegrationPluginSettingsView: View {
         "Mirror my lists to Google Tasks",
         isOn: $manager.integrations.googleTasksIntegrationEnabled
       )
-      .toggleStyle(.switch)
+      .toggleStyle(.themedSwitch)
 
       if manager.integrations.googleTasksIntegrationEnabled {
         VStack(alignment: .leading, spacing: theme.space.md) {

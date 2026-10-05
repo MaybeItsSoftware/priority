@@ -52,7 +52,7 @@ private struct CheckvistSyncPluginSettingsView: View {
             set: { manager.repository.checkvistIntegrationEnabled = $0 }
           )
         )
-          .toggleStyle(.switch)
+          .toggleStyle(.themedSwitch)
         Text(
           "When disabled, Takt runs offline and your Checkvist credentials and list selection are preserved for when you re-enable it."
         )
@@ -78,7 +78,7 @@ private struct CheckvistSyncPluginSettingsView: View {
               ),
               prompt: Text("email@example.com")
             )
-              .textFieldStyle(.roundedBorder)
+              .themedTextField()
               .labelsHidden()
               .autocorrectionDisabled()
 
@@ -98,7 +98,7 @@ private struct CheckvistSyncPluginSettingsView: View {
               ),
               prompt: Text("Paste your key")
             )
-              .textFieldStyle(.roundedBorder)
+              .themedTextField()
               .labelsHidden()
           }
 
@@ -114,7 +114,7 @@ private struct CheckvistSyncPluginSettingsView: View {
             Button(connectButtonLabel) {
               Task { await loadLists(assignFirstIfMissing: false) }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(FocusActionButtonStyle(prominent: true))
             .disabled(isBusy || !manager.repository.canAttemptLogin)
 
             if isBusy {
@@ -155,6 +155,7 @@ private struct CheckvistSyncPluginSettingsView: View {
 
       if case .connected = connectionState {
         offlineSyncAndConflictResolutionSection
+        CheckvistMergeListsSection(manager: manager)
       }
       }
     }
@@ -332,7 +333,7 @@ private struct CheckvistSyncPluginSettingsView: View {
                 )
               }
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(FocusActionButtonStyle())
             .disabled(isBusy || manager.repository.offlineOpenTaskCount == 0 || uploadDestinationListId.isEmpty)
 
             Text("Uploads all local offline tasks to the selected remote list without deleting anything.")
@@ -345,7 +346,7 @@ private struct CheckvistSyncPluginSettingsView: View {
             Button("Keep Remote (Overwrite Local)") {
               showingOverwriteLocalAlert = true
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(FocusActionButtonStyle())
             .disabled(isBusy || manager.repository.listId.isEmpty)
 
             Text("Replaces all local offline tasks with the tasks from the selected remote Checkvist list.")
@@ -358,7 +359,7 @@ private struct CheckvistSyncPluginSettingsView: View {
             Button("Keep Local (Overwrite Remote)", role: .destructive) {
               showingOverwriteRemoteAlert = true
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(FocusActionButtonStyle())
             .disabled(isBusy || uploadDestinationListId.isEmpty)
 
             Text("Deletes all tasks currently on the remote Checkvist list and uploads your local offline tasks.")
@@ -419,6 +420,65 @@ private struct CheckvistSyncPluginSettingsView: View {
       } else if let first = manager.repository.availableLists.first {
         uploadDestinationListId = String(first.id)
       }
+    }
+  }
+}
+
+/// Copies the open tasks of one Checkvist list into another. It lived on the
+/// general preferences page, where it was a Checkvist tool among app settings;
+/// it is a Checkvist capability, so it sits with the rest of them.
+private struct CheckvistMergeListsSection: View {
+  @Environment(\.theme) private var theme
+  var manager: AppCoordinator
+  @State private var sourceListId = ""
+  @State private var destinationListId = ""
+
+  private var lists: [CheckvistList] { manager.repository.availableLists }
+
+  var body: some View {
+    Section(header: MicroLabel("Merge lists")) {
+      if lists.count >= 2 {
+        Picker("From", selection: $sourceListId) {
+          ForEach(lists) { list in Text(list.name).tag(String(list.id)) }
+        }
+        .pickerStyle(.menu)
+        Picker("Into", selection: $destinationListId) {
+          ForEach(lists) { list in Text(list.name).tag(String(list.id)) }
+        }
+        .pickerStyle(.menu)
+        HStack {
+          Text("Copies the open tasks of the first list into the second, on Checkvist.")
+            .font(theme.captionFont)
+            .foregroundStyle(theme.muted)
+          Spacer(minLength: theme.space.sm)
+          Button("Merge open tasks") {
+            Task {
+              _ = await manager.syncService.mergeOpenTasksBetweenLists(
+                sourceListId: sourceListId, destinationListId: destinationListId)
+            }
+          }
+          .disabled(
+            manager.repository.isLoading || sourceListId.isEmpty || destinationListId.isEmpty
+              || sourceListId == destinationListId)
+        }
+      } else {
+        Text("Load at least two Checkvist lists to merge one into another.")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+      }
+    }
+    .onAppear(perform: seed)
+    .onChange(of: lists.map(\.id)) { _, _ in seed() }
+  }
+
+  private func seed() {
+    let ids = lists.map { String($0.id) }
+    if !ids.contains(destinationListId) {
+      destinationListId =
+        ids.contains(manager.repository.listId) ? manager.repository.listId : (ids.first ?? "")
+    }
+    if !ids.contains(sourceListId) || sourceListId == destinationListId {
+      sourceListId = ids.first { $0 != destinationListId } ?? ""
     }
   }
 }

@@ -22,7 +22,7 @@ private struct ObsidianIntegrationPluginSettingsView: View {
     @Bindable var manager = manager
     Section(header: MicroLabel("Obsidian plugin")) {
       Toggle("Enable Obsidian integration", isOn: $manager.integrations.obsidianIntegrationEnabled)
-        .toggleStyle(.switch)
+        .toggleStyle(.themedSwitch)
 
       if manager.integrations.obsidianIntegrationEnabled {
         VStack(alignment: .leading, spacing: theme.space.sm) {

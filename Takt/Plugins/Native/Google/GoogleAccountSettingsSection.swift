@@ -30,7 +30,7 @@ struct GoogleAccountSettingsSection: View {
         text: $account.clientID,
         prompt: Text("1234567890-abc123.apps.googleusercontent.com")
       )
-      .textFieldStyle(.roundedBorder)
+      .themedTextField()
       .labelsHidden()
       .autocorrectionDisabled()
 
@@ -52,17 +52,17 @@ struct GoogleAccountSettingsSection: View {
 
       Text(statusLine)
         .font(theme.captionFont)
-        .foregroundColor(account.hasGrantedScopes(requiredScopes) ? .green : .secondary)
+        .foregroundStyle(account.hasGrantedScopes(requiredScopes) ? theme.success : theme.muted)
 
       if let signInError, !signInError.isEmpty {
         Text(signInError)
           .font(theme.captionFont)
-          .foregroundColor(.red)
+          .foregroundStyle(theme.danger)
       }
 
       Text("One sign-in covers every Google integration. Enabling another one later needs a fresh sign-in so Google can grant the extra access.")
         .font(theme.captionFont)
-        .foregroundColor(.secondary)
+        .foregroundStyle(theme.muted)
     }
     // Here rather than in the body: reading the keychain publishes observable
     // changes, and a view update is not allowed to cause those.

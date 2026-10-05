@@ -69,7 +69,10 @@ struct HotkeyRecorderField: NSViewRepresentable {
     // everywhere else they are drawn (`KeyCap`).
     let theme = context.environment.theme
     tf.font = Theme.nsFont(theme.type.mono, size: theme.scale.caption)
-    tf.bezelStyle = .roundedBezel
+    // Flat: the themed frame round it is drawn by SwiftUI, not AppKit's bezel.
+    tf.isBezeled = false
+    tf.drawsBackground = false
+    tf.textColor = NSColor(theme.ink)
     tf.displayString = Self.displayString(keyCode: keyCode, modifiers: modifiers)
     tf.stringValue = tf.displayString
     tf.onRecord = { code, mods in
@@ -118,35 +121,21 @@ struct HotkeyRecorderField: NSViewRepresentable {
 
 // MARK: - Settings View
 
+/// The settings window: a sidebar of pages and the page beside it.
+///
+/// Every page is a header and a `Form` of `Section`s drawn by
+/// `SettingsFormStyle`, so the app's own pages, the sync page and each
+/// plugin's page read as one surface. Integrations are enumerated from
+/// `AppCoordinator.activePluginSettingsPages` — never named here.
 struct SettingsView: View {
-  private struct BuiltInPluginSettingsDescriptor: Identifiable {
-    let pluginIdentifier: String
-    let displayName: String
-    let pluginDescription: String
-    let settingsIconSystemName: String
-    let plugin: any PluginSettingsPageProviding
-    var id: String { pluginIdentifier }
-
-    var shortName: String {
-      if displayName.hasPrefix("Native ") {
-        return String(displayName.dropFirst("Native ".count))
-      }
-      return displayName
-    }
-  }
-
-  private struct PluginCardDescriptor: Identifiable {
-    enum Source {
-      case builtIn(BuiltInPluginSettingsDescriptor)
-      case user(UserPluginManager.InstalledUserPlugin)
-    }
-
+  /// An integration's page, as the sidebar lists it.
+  struct IntegrationPage: Identifiable {
     let id: String
     let title: String
-    let subtitle: String
-    let description: String
-    let settingsIconSystemName: String
-    let source: Source
+    let summary: String
+    let status: String
+    let systemImage: String
+    let plugin: any PluginSettingsPageProviding
   }
 
   @Environment(AppCoordinator.self) var checkvistManager
@@ -155,11 +144,15 @@ struct SettingsView: View {
   // Internal rather than private: the panes are extensions in files of their
   // own, and every one of them draws from it.
   @Environment(\.theme) var theme
-  @State var selectedPluginCardID: String?
-  @State var isLoadingCheckvistLists = false
-  @State var didAutoloadCheckvistLists = false
-  @State var mergeSourceListId = ""
-  @State var mergeDestinationListId = ""
+  @State private var filter = ""
+  @FocusState private var focus: SidebarFocus?
+  @State var exportStatus: (message: String, isError: Bool)?
+  @State var fontSearch = ""
+
+  private enum SidebarFocus: Hashable {
+    case search
+    case list
+  }
 
   var preferences: PreferencesManager {
     checkvistManager.preferences
@@ -175,296 +168,325 @@ struct SettingsView: View {
   }
 
   var body: some View {
-    paneContent {
-      selectedPaneContent
+    HStack(spacing: 0) {
+      sidebar
+        .frame(width: 228)
+        .background(theme.altRow.ignoresSafeArea())
+      Rectangle().fill(theme.border).frame(width: theme.hairline).ignoresSafeArea()
+      detail
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(theme.paper.ignoresSafeArea())
     }
-    // The theme's primary and body face, like every other window. The settings
-    // window was the one surface still tinted by the older accent preference
-    // and set in the system face.
+    // The theme's primary and body face, like every other window.
     .tint(theme.primary)
     .font(theme.bodyFont())
     .foregroundStyle(theme.ink)
-    .background(theme.paper)
-    .task {
-      syncSelectedPluginCardIfNeeded()
-      await autoloadCheckvistListsIfNeeded()
-    }
-    .onChange(of: pluginCardIDs) { _, _ in
-      syncSelectedPluginCardIfNeeded()
-    }
-    .onChange(of: checkvistManager.repository.availableLists.map(\.id)) { _, _ in
-      seedMergeSelectionsIfNeeded()
-    }
-    .onChange(of: checkvistManager.repository.listId) { _, _ in
-      if !checkvistManager.repository.listId.isEmpty {
-        mergeDestinationListId = checkvistManager.repository.listId
+    .onAppear { focus = .list }
+    .background {
+      // ⌘1…⌘9 jump straight to a page, in sidebar order.
+      ForEach(Array(allDestinations.prefix(9).enumerated()), id: \.offset) { index, destination in
+        Button("") { navState.destination = destination }
+          .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
+          .opacity(0)
+          .accessibilityHidden(true)
       }
     }
   }
 
-  @ViewBuilder
-  private var selectedPaneContent: some View {
-    switch navState.selectedPane {
-    case .preferences:
-      preferencesPane
-    case .keybindings:
-      keybindingsPane
-    case .theme:
-      themePane
-    case .plugins:
-      pluginsPane
-    case .sync:
-      SettingsSyncPane()
-    #if DEBUG
-      case .debug:
-        debugPane
-    #endif
-    }
-  }
+  // MARK: - Sidebar
 
-  private var builtInPluginSettingsPages: [BuiltInPluginSettingsDescriptor] {
-    checkvistManager.activePluginSettingsPages.map {
-      BuiltInPluginSettingsDescriptor(
-        pluginIdentifier: $0.settingsCardIdentifier,
-        displayName: $0.displayName,
-        pluginDescription: $0.pluginDescription,
-        settingsIconSystemName: $0.settingsIconSystemName,
-        plugin: $0
-      )
-    }
-  }
-
-  private var pluginCards: [PluginCardDescriptor] {
-    builtInPluginSettingsPages.map { page in
-      PluginCardDescriptor(
-        id: "builtin:\(page.pluginIdentifier)",
-        title: page.shortName,
-        subtitle: page.plugin.sidebarStatusLabel(manager: checkvistManager),
-        description: page.pluginDescription,
-        settingsIconSystemName: page.settingsIconSystemName,
-        source: .builtIn(page)
-      )
-    }
-  }
-
-  private var userPluginCards: [PluginCardDescriptor] {
-    checkvistManager.userPluginManager.sortedInstalledPlugins.map { plugin in
-      let enabled = checkvistManager.userPluginManager.isPluginEnabled(plugin.manifest.id)
-      return PluginCardDescriptor(
-        id: "user:\(plugin.manifest.id)",
-        title: plugin.manifest.name,
-        subtitle: enabled ? "Enabled" : "Disabled",
-        description: plugin.manifest.summary ?? "User-installed plugin",
-        settingsIconSystemName: "puzzlepiece",
-        source: .user(plugin)
-      )
-    }
-  }
-
-  private var allPluginCards: [PluginCardDescriptor] { pluginCards + userPluginCards }
-
-  private var pluginCardIDs: [String] {
-    allPluginCards.map(\.id)
-  }
-
-  private var selectedPluginCard: PluginCardDescriptor? {
-    if let selectedPluginCardID,
-      let selected = allPluginCards.first(where: { $0.id == selectedPluginCardID })
-    {
-      return selected
-    }
-    return pluginCards.first
-  }
-
-  private var pluginsPane: some View {
-    HStack(spacing: 0) {
-      // Sidebar
-      List(selection: $selectedPluginCardID) {
-        Section {
-          ForEach(pluginCards) { card in
-            pluginListRow(for: card).tag(card.id as String?)
-          }
-        } header: {
-          MicroLabel("Built-in")
-        }
-        if !userPluginCards.isEmpty {
-          Section {
-            ForEach(userPluginCards) { card in
-              pluginListRow(for: card).tag(card.id as String?)
-            }
-          } header: {
-            MicroLabel("User plugins")
-          }
-        }
+  var integrationPages: [IntegrationPage] {
+    checkvistManager.activePluginSettingsPages
+      // Themes have a page of their own kind: Appearance draws the gallery.
+      .filter { !($0 is any ThemePlugin) }
+      .map { page in
+        let name =
+          page.displayName.hasPrefix("Native ")
+          ? String(page.displayName.dropFirst("Native ".count)) : page.displayName
+        return IntegrationPage(
+          id: page.settingsCardIdentifier,
+          title: name,
+          summary: page.pluginDescription,
+          status: page.sidebarStatusLabel(manager: checkvistManager),
+          systemImage: page.settingsIconSystemName,
+          plugin: page)
       }
-      .listStyle(.sidebar)
-      .scrollContentBackground(.hidden)
-      // A safe-area inset rather than a third element in a VStack: the bar is
-      // then laid out *inside* the list's own bounds and the list insets its
-      // scroll content to clear it. Stacked, the sidebar's height became the
-      // list's ideal height plus the bar, which overflowed the window once
-      // there were enough plugins to fill it — and because `paneContent`
-      // centres the pane, the overflow clipped the bar off the bottom.
-      .safeAreaInset(edge: .bottom, spacing: 0) {
-        VStack(spacing: 0) {
-          FocusRule()
-          HStack(spacing: theme.space.xs) {
-            Button {
-              checkvistManager.userPluginManager.installPluginPackageInteractively()
-            } label: {
-              Label("Install Plugin", systemImage: "plus")
-            }
-            .help("Install a plugin package")
-            Button {
-              checkvistManager.userPluginManager.openPluginsFolder()
-            } label: {
-              Label("Open Folder", systemImage: "folder")
-            }
-            .help("Open the plugins folder in Finder")
-          }
-          .buttonStyle(.borderless)
-          .labelStyle(.iconOnly)
-          .padding(.horizontal, theme.space.sm)
-          .padding(.vertical, theme.space.xs)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .background(theme.paper)
-      }
-      .frame(minWidth: 180, idealWidth: 200, maxWidth: 240, maxHeight: .infinity)
-
-      Rectangle().fill(theme.border).frame(width: theme.hairline)
-
-      // Detail
-      Group {
-        if let selectedPluginCard {
-          ScrollView {
-            switch selectedPluginCard.source {
-            case .builtIn:
-              Form { pluginSettingsView(for: selectedPluginCard) }
-                .formStyle(.grouped)
-                .scrollContentBackground(.hidden)
-            case .user(let plugin):
-              userPluginDetailView(for: plugin)
-            }
-          }
-        } else {
-          ContentUnavailableView(
-            "Select a Plugin",
-            systemImage: "puzzlepiece.extension",
-            description: Text("Choose a plugin from the sidebar to view its settings.")
-          )
-        }
-      }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
   }
 
-  private func pluginListRow(for card: PluginCardDescriptor) -> some View {
-    HStack(alignment: .top, spacing: theme.space.sm) {
-      Image(systemName: card.settingsIconSystemName)
-        .frame(width: WorkspaceSidebarMetrics.iconWidth, alignment: .center)
-        .foregroundStyle(theme.muted)
-      VStack(alignment: .leading, spacing: theme.space.xxs) {
-        HStack(spacing: theme.space.xs) {
-          Text(card.title)
-            .lineLimit(1)
-          Spacer(minLength: theme.space.xs)
-          Text(card.subtitle)
-            .font(theme.captionFont)
-            .foregroundStyle(theme.muted)
-        }
-        Text(card.description)
+  private var appPanes: [SettingsNavState.Pane] { SettingsNavState.Pane.appPanes.filter(matches) }
+  private var accountPanes: [SettingsNavState.Pane] {
+    SettingsNavState.Pane.accountPanes.filter(matches)
+  }
+  private var visibleIntegrations: [IntegrationPage] {
+    integrationPages.filter { matches($0.title) || matches($0.summary) }
+  }
+  private var showsPluginsPane: Bool { matches(.plugins) }
+
+  /// Every page in sidebar order, after the filter — what the arrow keys walk.
+  private var visibleDestinations: [SettingsNavState.Destination] {
+    appPanes.map { .pane($0) } + visibleIntegrations.map { .integration($0.id) }
+      + (showsPluginsPane ? [.pane(.plugins)] : []) + accountPanes.map { .pane($0) }
+  }
+
+  private var allDestinations: [SettingsNavState.Destination] {
+    SettingsNavState.Pane.appPanes.map { .pane($0) } + integrationPages.map { .integration($0.id) }
+      + [.pane(.plugins)] + SettingsNavState.Pane.accountPanes.map { .pane($0) }
+  }
+
+  private func matches(_ pane: SettingsNavState.Pane) -> Bool {
+    matches(pane.title) || matches(pane.summary) || pane.keywords.contains(where: matches)
+  }
+
+  private func matches(_ text: String) -> Bool {
+    let needle = filter.trimmingCharacters(in: .whitespaces)
+    return needle.isEmpty || text.localizedCaseInsensitiveContains(needle)
+  }
+
+  private var sidebar: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: theme.space.xs) {
+        Image(systemName: "magnifyingglass")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
-          .lineLimit(2)
+        TextField("Search settings", text: $filter)
+          .textFieldStyle(.plain)
+          .font(theme.bodyFont())
+          .focused($focus, equals: .search)
+          .onSubmit {
+            if let first = visibleDestinations.first { navState.destination = first }
+            focus = .list
+          }
+          .onKeyPress(.downArrow) {
+            focus = .list
+            return .handled
+          }
+      }
+      .themedControlFrame(expands: true)
+      .padding(.horizontal, theme.space.sm)
+      .padding(.top, theme.space.xs)
+      .padding(.bottom, theme.space.sm)
+
+      ScrollView {
+        VStack(alignment: .leading, spacing: theme.space.md) {
+          sidebarGroup(nil, panes: appPanes)
+          if !visibleIntegrations.isEmpty || showsPluginsPane {
+            VStack(alignment: .leading, spacing: 1) {
+              sidebarEyebrow("Integrations")
+              ForEach(visibleIntegrations) { page in
+                sidebarRow(
+                  .integration(page.id), title: page.title, systemImage: page.systemImage,
+                  status: page.status)
+              }
+              if showsPluginsPane {
+                sidebarRow(
+                  .pane(.plugins), title: SettingsNavState.Pane.plugins.title,
+                  systemImage: SettingsNavState.Pane.plugins.systemImage, status: nil)
+              }
+            }
+          }
+          sidebarGroup("Account", panes: accountPanes)
+          if visibleDestinations.isEmpty {
+            Text("No settings match “\(filter)”.")
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
+              .padding(.horizontal, theme.space.md)
+          }
+        }
+        .padding(.horizontal, theme.space.sm)
+        .padding(.bottom, theme.space.md)
+      }
+      .focusable()
+      .focused($focus, equals: .list)
+      .focusEffectDisabled()
+      .onKeyPress(.upArrow) { step(-1) }
+      .onKeyPress(.downArrow) { step(1) }
+      .onKeyPress(characters: .alphanumerics, phases: .down) { press in
+        // Typing while the list has focus starts a search, the way a source
+        // list's type-select would.
+        guard press.modifiers.isEmpty else { return .ignored }
+        filter = press.characters
+        focus = .search
+        return .handled
       }
     }
   }
 
-  private func userPluginDetailView(for plugin: UserPluginManager.InstalledUserPlugin) -> some View
-  {
-    let manager = checkvistManager.userPluginManager
-    return Form {
-      Section(header: MicroLabel(plugin.manifest.name)) {
-        if let summary = plugin.manifest.summary, !summary.isEmpty {
-          Text(summary)
-            .foregroundStyle(theme.muted)
+  private func step(_ delta: Int) -> KeyPress.Result {
+    let destinations = visibleDestinations
+    guard !destinations.isEmpty else { return .ignored }
+    let index = destinations.firstIndex(of: navState.destination) ?? (delta > 0 ? -1 : destinations.count)
+    let next = min(max(index + delta, 0), destinations.count - 1)
+    navState.destination = destinations[next]
+    return .handled
+  }
+
+  @ViewBuilder
+  private func sidebarGroup(_ title: String?, panes: [SettingsNavState.Pane]) -> some View {
+    if !panes.isEmpty {
+      VStack(alignment: .leading, spacing: 1) {
+        if let title { sidebarEyebrow(title) }
+        ForEach(panes) { pane in
+          sidebarRow(.pane(pane), title: pane.title, systemImage: pane.systemImage, status: nil)
         }
-        LabeledContent("Version", value: plugin.manifest.version ?? "—")
-        LabeledContent("ID", value: plugin.manifest.id)
-        Toggle(
+      }
+    }
+  }
+
+  private func sidebarEyebrow(_ title: String) -> some View {
+    MicroLabel(title)
+      .padding(.horizontal, theme.space.sm)
+      .padding(.top, theme.space.xs)
+      .padding(.bottom, theme.space.xxs)
+  }
+
+  private func sidebarRow(
+    _ destination: SettingsNavState.Destination, title: String, systemImage: String, status: String?
+  ) -> some View {
+    let isSelected = navState.destination == destination
+    let showsFocus = isSelected && focus == .list
+    return Button {
+      navState.destination = destination
+      focus = .list
+    } label: {
+      HStack(spacing: theme.space.sm) {
+        Image(systemName: systemImage)
+          .font(theme.bodyFont())
+          .foregroundStyle(isSelected ? theme.primary : theme.muted)
+          .frame(width: WorkspaceSidebarMetrics.iconWidth)
+        Text(title)
+          .font(theme.bodyFont(weight: isSelected ? .medium : .regular))
+          .foregroundStyle(theme.ink)
+          .lineLimit(1)
+        Spacer(minLength: theme.space.xs)
+        if let status, !status.isEmpty {
+          Text(status)
+            .font(theme.captionFont)
+            .foregroundStyle(theme.dim)
+            .lineLimit(1)
+        }
+      }
+      .padding(.horizontal, theme.space.sm)
+      .padding(.vertical, theme.space.xs + 1)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(
+        RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
+          .fill(isSelected ? theme.selectionFill : Color.clear))
+      .overlay(
+        RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
+          .strokeBorder(showsFocus ? theme.focusRing : Color.clear, lineWidth: theme.hairline))
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  // MARK: - Detail
+
+  private var detail: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: theme.space.xl) {
+        SettingsPageHeader(title: pageTitle, summary: pageSummary)
+        Form { pageContent }
+          .settingsChrome()
+      }
+      .padding(.horizontal, theme.space.xl + theme.space.md)
+      .padding(.top, theme.space.lg)
+      .padding(.bottom, theme.space.xl * 2)
+      .frame(maxWidth: 760, alignment: .leading)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .scrollContentBackground(.hidden)
+    // A fresh scroll position per page.
+    .id(navState.destination)
+  }
+
+  private var selectedIntegration: IntegrationPage? {
+    guard case .integration(let id) = navState.destination else { return nil }
+    return integrationPages.first { $0.id == id }
+  }
+
+  private var pageTitle: String {
+    switch navState.destination {
+    case .pane(let pane): return pane.title
+    case .integration: return selectedIntegration?.title ?? "Integration"
+    }
+  }
+
+  private var pageSummary: String {
+    switch navState.destination {
+    case .pane(let pane): return pane.summary
+    case .integration:
+      return selectedIntegration?.summary ?? "This integration is no longer installed."
+    }
+  }
+
+  @ViewBuilder
+  private var pageContent: some View {
+    switch navState.destination {
+    case .pane(.general): generalPane
+    case .pane(.focus): focusPane
+    case .pane(.appearance): appearancePane
+    case .pane(.keyboard): keyboardPane
+    case .pane(.plugins): pluginsPane
+    case .pane(.sync): SettingsSyncPane()
+    case .pane(.advanced): advancedPane
+    case .integration:
+      if let page = selectedIntegration {
+        page.plugin.makeSettingsView(manager: checkvistManager)
+      } else {
+        Section { Text("Choose a page from the sidebar.").foregroundStyle(theme.muted) }
+      }
+    }
+  }
+
+  // MARK: - Installed plugins
+
+  @ViewBuilder
+  private var pluginsPane: some View {
+    let manager = checkvistManager.userPluginManager
+    Section {
+      HStack(spacing: theme.space.xs) {
+        Button {
+          manager.installPluginPackageInteractively()
+        } label: {
+          Label("Install plugin…", systemImage: "plus")
+        }
+        Button {
+          manager.openPluginsFolder()
+        } label: {
+          Label("Open plugins folder", systemImage: "folder")
+        }
+        Spacer(minLength: 0)
+      }
+      if manager.sortedInstalledPlugins.isEmpty {
+        Text("No plugins installed. The built-in integrations are listed above them in the sidebar.")
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+      }
+    } header: {
+      Text("Plugins folder")
+    }
+    ForEach(manager.sortedInstalledPlugins, id: \.manifest.id) { plugin in
+      Section {
+        SettingsToggleRow(
           "Enabled",
+          detail: plugin.manifest.summary,
           isOn: Binding(
             get: { manager.isPluginEnabled(plugin.manifest.id) },
-            set: { manager.setPluginEnabled($0, pluginIdentifier: plugin.manifest.id) }
-          )
-        )
-          .toggleStyle(.switch)
-      }
-      Section {
-        Button("Reveal in Finder") {
-          manager.revealPluginInFinder(plugin)
+            set: { manager.setPluginEnabled($0, pluginIdentifier: plugin.manifest.id) }))
+        LabeledContent("Version", value: plugin.manifest.version ?? "—")
+        LabeledContent("Identifier") {
+          Text(plugin.manifest.id).font(theme.monoFont(size: theme.scale.caption))
         }
-        Button("Remove Plugin", role: .destructive) {
-          manager.removePlugin(plugin)
+        HStack(spacing: theme.space.xs) {
+          Button("Reveal in Finder") { manager.revealPluginInFinder(plugin) }
+          Spacer(minLength: 0)
+          Button("Remove plugin", role: .destructive) { manager.removePlugin(plugin) }
         }
+      } header: {
+        Text(plugin.manifest.name)
       }
     }
-    .formStyle(.grouped)
-    .scrollContentBackground(.hidden)
-    .id(plugin.id)
-  }
-
-  @ViewBuilder
-  private func paneContent<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-    if navState.selectedPane == .plugins {
-      content()
-        .padding(.top, theme.space.sm)
-        // Top-aligned, not the default centre: if the pane ever does exceed the
-        // window, the overflow should run off one edge where a scroll view can
-        // take it, rather than being trimmed off both.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    } else {
-      Form {
-        content()
-      }
-      .formStyle(.grouped)
-      // The page, not the grouped form's own grey: one flat surface.
-      .scrollContentBackground(.hidden)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-  }
-
-  @ViewBuilder
-  private func pluginSettingsView(for card: PluginCardDescriptor) -> some View {
-    switch card.source {
-    case .builtIn(let page):
-      Section(header: MicroLabel(card.title)) {
-        VStack(alignment: .leading, spacing: theme.space.xs) {
-          Text(page.pluginDescription)
-            .foregroundStyle(theme.muted)
-          Text("Status: \(card.subtitle)")
-            .font(theme.captionFont)
-            .foregroundStyle(theme.muted)
-        }
-        .padding(.top, theme.space.xxs)
-      }
-      page.plugin.makeSettingsView(manager: checkvistManager)
-    case .user:
-      EmptyView()
-    }
-  }
-
-  private func syncSelectedPluginCardIfNeeded() {
-    let activeIdentifiers = Set(pluginCardIDs)
-    guard !activeIdentifiers.isEmpty else {
-      selectedPluginCardID = nil
-      return
-    }
-    if let selectedPluginCardID, activeIdentifiers.contains(selectedPluginCardID) {
-      return
-    }
-    selectedPluginCardID = pluginCards.first?.id
   }
 }
 

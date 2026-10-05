@@ -31,166 +31,150 @@ extension ChalkDarkThemePlugin: PluginSettingsPageProviding {}
 extension GrapeThemePlugin: PluginSettingsPageProviding {}
 extension UserThemePlugin: PluginSettingsPageProviding {}
 
+/// The theme half of Settings → Appearance: a gallery of every theme drawn in
+/// its own colours and faces, the themes folder, and what the active theme is
+/// made of. Sections only, no `Form` of its own — it is laid into the
+/// Appearance page's form, which is what gives it the settings layout.
 struct ThemeSettingsPage: View {
+  /// Which half to draw: the gallery, or the themes folder and the details.
+  /// Two halves so the Appearance page can put light/dark and type between.
+  enum Part {
+    case choice
+    case library
+  }
+
   let manager: AppCoordinator
+  var part: Part = .choice
   @Environment(\.theme) private var theme
 
   private var themeManager: ThemeManager { manager.theme }
 
   var body: some View {
-    Form {
-      Section("Theme") {
-        Picker("Look", selection: themeBinding) {
-          ForEach(themeManager.availableThemes, id: \.pluginIdentifier) { plugin in
-            Label(plugin.displayName, systemImage: plugin.themeIconSystemName)
-              .tag(plugin.pluginIdentifier)
-          }
-        }
-        .pickerStyle(.inline)
+    switch part {
+    case .choice: choiceSection
+    case .library:
+      userThemesSection
+      detailsSection
+    }
+  }
 
+  @ViewBuilder private var choiceSection: some View {
+      Section {
+        ThemeGallery(themeManager: themeManager)
         if let choiceSync = themeManager.choiceSync {
-          Toggle(
+          SettingsToggleRow(
             "Use a different theme on this Mac",
+            detail: choiceSync.usesDeviceChoice
+              ? "This Mac keeps its own theme and appearance; your other devices neither change it nor are changed by it."
+              : "Your theme and appearance follow you to your other devices, and a change on any of them shows here.",
             isOn: Binding(
               get: { choiceSync.usesDeviceChoice },
               set: { choiceSync.usesDeviceChoice = $0 }))
-          Text(
-            choiceSync.usesDeviceChoice
-              ? "This Mac keeps its own theme and appearance. Your other devices are not changed by it, and it is not changed by them."
-              : "Your theme and appearance follow you to your other devices, and a change on any of them shows here."
-          )
-          .font(theme.captionFont)
-          .foregroundStyle(.secondary)
         }
-
-        Text(themeManager.activeThemePlugin.pluginDescription)
-          .font(theme.captionFont)
-          .foregroundStyle(.secondary)
-
         if themeManager.isFallingBack {
-          Text(
-            "Your theme \"\(themeManager.activeThemeIdentifier)\" did not load, so the Priority theme is standing in until its file is fixed. Why is under Your themes."
+          Label(
+            "Your theme \"\(themeManager.activeThemeIdentifier)\" did not load, so Priority is standing in until its file is fixed. Why is under Your themes.",
+            systemImage: "exclamationmark.triangle"
           )
           .font(theme.captionFont)
           .foregroundStyle(theme.warning)
         }
-
-        if let locked = themeManager.specification.lockedAppearance {
-          Text(
-            "Always \(locked.rawValue), whatever your desktop is set to — that is what picking this one means. Choose Priority or Zed to follow your Light/Dark/System setting instead."
-          )
-          .font(theme.captionFont)
-          .foregroundStyle(.secondary)
-        }
+      } header: {
+        Text("Theme")
+      } footer: {
+        Text(footerText)
       }
+  }
 
-      userThemesSection
-
-      Section("Palette") {
-        ForEach(ThemeAppearance.allCases, id: \.self) { appearance in
-          VStack(alignment: .leading, spacing: 6) {
-            Text(appearance.rawValue)
-              .microLabel(theme)
-            swatchGrid(for: appearance)
-          }
-          .padding(.vertical, 2)
-        }
-      }
-
-      Section("Structure") {
-        LabeledContent("Radii") {
-          Text(radiusSummary).font(theme.monoFont(size: theme.scale.caption))
-        }
-        LabeledContent("Borders") {
-          Text(borderSummary).font(theme.monoFont(size: theme.scale.caption))
-        }
-        LabeledContent("Spacing") {
-          Text(spacingSummary).font(theme.monoFont(size: theme.scale.caption))
-        }
-        LabeledContent("Faces") {
-          Text(faceSummary).font(theme.captionFont)
-        }
-        Text(
-          "Font families are requests, not bundled files: the named face is used if it is installed on this Mac, and the fallback design is what you see otherwise."
-        )
-        .font(theme.captionFont)
-        .foregroundStyle(.secondary)
-      }
-
-      Section("Audit") {
-        let issues = themeManager.activeThemeIssues
-        if issues.isEmpty {
-          Text("No findings.").font(theme.captionFont).foregroundStyle(.secondary)
-        } else {
-          ForEach(Array(issues.enumerated()), id: \.offset) { _, issue in
-            Label {
-              Text(issue.message).font(theme.captionFont)
-            } icon: {
-              Image(systemName: icon(for: issue.severity))
-                .foregroundStyle(color(for: issue.severity))
-            }
-          }
-        }
-      }
+  private var footerText: String {
+    let plugin = themeManager.activeThemePlugin
+    if let locked = themeManager.themeSpecification.lockedAppearance {
+      return "\(plugin.pluginDescription) Always \(locked.rawValue), whatever the appearance below is set to."
     }
-    .formStyle(.grouped)
+    return plugin.pluginDescription
   }
 
   /// The themes folder: where it is, the ways in, and what the files got
   /// wrong. The format is in `docs/themes.md`.
   @ViewBuilder private var userThemesSection: some View {
     let library = themeManager.userThemes
-    Section("Your themes") {
-      Text(
-        "Any .json file in the themes folder is a theme. The quickest start is three seed colours — background, foreground and accent — and the rest is worked out from them. It reloads as you save it. The format is in docs/themes.md."
-      )
-      .font(theme.captionFont)
-      .foregroundStyle(.secondary)
-
+    Section {
       LabeledContent("Folder") {
         Text(library.folderURL.path(percentEncoded: false))
-          .font(theme.captionFont)
-          .monospaced()
+          .font(theme.monoFont(size: theme.scale.caption))
           .textSelection(.enabled)
           .lineLimit(1)
           .truncationMode(.middle)
       }
-
-      HStack {
+      HStack(spacing: theme.space.xs) {
         Button("Open themes folder") { library.openFolder() }
-        Button("Export current theme") { library.exportCurrentTheme() }
+        Button("Duplicate current theme") { library.exportCurrentTheme() }
+          .help("Writes the theme in force to a new file in the themes folder and switches to it, so you can edit a copy")
+        Spacer(minLength: 0)
         Button("Reload") { library.reload(force: true) }
       }
-
       ForEach(library.skipped, id: \.source) { skipped in
-        Label {
-          Text("\(skipped.source) not loaded: \(skipped.reason)").font(theme.captionFont)
-        } icon: {
-          Image(systemName: icon(for: .error)).foregroundStyle(color(for: .error))
-        }
+        issueRow("\(skipped.source) not loaded: \(skipped.reason)", severity: .error)
       }
-
-      // Errors and warnings across every file. Notes are left to the Audit
-      // section, which gives them for the theme in force; skips are above.
+      // Errors and warnings across every file. Notes are left to the details
+      // below, which give them for the theme in force; skips are above.
       let fileIssues = library.issues.filter {
         $0.severity != .note && !$0.message.hasPrefix("not loaded:")
       }
       ForEach(Array(fileIssues.enumerated()), id: \.offset) { _, issue in
-        Label {
-          Text(issue.description).font(theme.captionFont)
-        } icon: {
-          Image(systemName: icon(for: issue.severity))
-            .foregroundStyle(color(for: issue.severity))
-        }
+        issueRow(issue.description, severity: issue.severity)
       }
+    } header: {
+      Text("Your themes")
+    } footer: {
+      Text(
+        "Any .json file in the themes folder is a theme, and it reloads as you save it. "
+          + "Three seed colours — background, foreground and accent — are enough; the rest is worked out from them. "
+          + "The format is in docs/themes.md."
+      )
     }
   }
 
-  private var themeBinding: Binding<String> {
-    Binding(
-      get: { themeManager.activeThemeIdentifier },
-      set: { themeManager.activeThemeIdentifier = $0 }
-    )
+  @ViewBuilder private var detailsSection: some View {
+    Section {
+      DisclosureGroup {
+        VStack(alignment: .leading, spacing: theme.space.sm) {
+          ForEach(ThemeAppearance.allCases, id: \.self) { appearance in
+            VStack(alignment: .leading, spacing: theme.space.xs) {
+              Text(appearance.rawValue).microLabel(theme)
+              swatchGrid(for: appearance)
+            }
+          }
+          LabeledContent("Radii") { Text(radiusSummary).font(theme.monoFont(size: theme.scale.caption)) }
+          LabeledContent("Borders") { Text(borderSummary).font(theme.monoFont(size: theme.scale.caption)) }
+          LabeledContent("Spacing") { Text(spacingSummary).font(theme.monoFont(size: theme.scale.caption)) }
+          LabeledContent("Faces") { Text(faceSummary).font(theme.captionFont) }
+          let issues = themeManager.activeThemeIssues
+          if issues.isEmpty {
+            Text("The audit has no findings.").font(theme.captionFont).foregroundStyle(theme.muted)
+          } else {
+            ForEach(Array(issues.enumerated()), id: \.offset) { _, issue in
+              issueRow(issue.message, severity: issue.severity)
+            }
+          }
+        }
+        .padding(.top, theme.space.sm)
+      } label: {
+        Text("Palette, structure and audit of \(themeManager.themeSpecification.name)")
+          .font(theme.bodyFont())
+          .foregroundStyle(theme.ink)
+      }
+    } header: {
+      Text("Details")
+    }
+  }
+
+  private func issueRow(_ message: String, severity: ThemeIssueSeverity) -> some View {
+    Label {
+      Text(message).font(theme.captionFont).foregroundStyle(theme.ink)
+    } icon: {
+      Image(systemName: icon(for: severity)).foregroundStyle(color(for: severity))
+    }
   }
 
   /// Every role, in both appearances, as the thing it actually is. A palette
@@ -199,8 +183,8 @@ struct ThemeSettingsPage: View {
     let specification = themeManager.specification
     let resolved = Theme(specification: specification, appearance: appearance)
     return LazyVGrid(
-      columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7),
-      spacing: 4
+      columns: Array(repeating: GridItem(.flexible(), spacing: theme.space.xxs), count: 7),
+      spacing: theme.space.xxs
     ) {
       ForEach(ThemeColorRole.allCases, id: \.self) { role in
         RoundedRectangle(cornerRadius: resolved.controlRadius, style: .continuous)
@@ -237,10 +221,10 @@ struct ThemeSettingsPage: View {
   private var faceSummary: String {
     let type = themeManager.specification.structure.typography
     func describe(_ face: ThemeFontFace) -> String {
-      face.families.isEmpty ? "system \(face.design.rawValue)" : face.families.joined(separator: "/")
+      face.families.first ?? "system \(face.design.rawValue)"
     }
     return
-      "\(describe(type.display)) display · \(describe(type.body)) body · \(describe(type.mono)) mono"
+      "\(describe(type.display)) display · \(describe(type.body)) body · \(describe(type.mono)) mono · \(number(type.bodySize))pt"
   }
 
   private func number(_ value: Double) -> String {
@@ -261,5 +245,153 @@ struct ThemeSettingsPage: View {
     case .warning: return theme.warning
     case .note: return theme.primary
     }
+  }
+}
+
+/// Every theme as a small window drawn in its own palette, radii and faces —
+/// with the reader's font choices over it, since those apply to all of them.
+/// Choosing one is a click or Return on the focused card.
+struct ThemeGallery: View {
+  let themeManager: ThemeManager
+  @Environment(\.theme) private var theme
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    LazyVGrid(
+      columns: [GridItem(.adaptive(minimum: 150, maximum: 220), spacing: theme.space.sm)],
+      alignment: .leading,
+      spacing: theme.space.sm
+    ) {
+      ForEach(themeManager.availableThemes, id: \.pluginIdentifier) { plugin in
+        let specification = themeManager.previewSpecification(for: plugin)
+        let appearance =
+          specification.lockedAppearance ?? (colorScheme == .dark ? .dark : .light)
+        ThemeGalleryCard(
+          preview: Theme(specification: specification, appearance: appearance),
+          name: plugin.displayName,
+          isUserTheme: plugin is UserThemePlugin,
+          isSelected: themeManager.activeThemeIdentifier == plugin.pluginIdentifier
+        ) {
+          themeManager.activeThemeIdentifier = plugin.pluginIdentifier
+        }
+      }
+    }
+    .padding(.vertical, theme.space.xxs)
+  }
+}
+
+private struct ThemeGalleryCard: View {
+  /// The theme being previewed — not the window's.
+  let preview: Theme
+  let name: String
+  let isUserTheme: Bool
+  let isSelected: Bool
+  let choose: () -> Void
+  /// The window's theme, for the card's caption and selection ring.
+  @Environment(\.theme) private var theme
+  @FocusState private var isFocused: Bool
+  @State private var isHovering = false
+
+  var body: some View {
+    Button(action: choose) {
+      VStack(alignment: .leading, spacing: theme.space.xs) {
+        miniature
+        HStack(spacing: theme.space.xs) {
+          Text(name)
+            .font(theme.bodyFont(weight: isSelected ? .medium : .regular))
+            .foregroundStyle(theme.ink)
+            .lineLimit(1)
+          Spacer(minLength: 0)
+          if isUserTheme { SettingsTag(text: "File") }
+          if isSelected {
+            Image(systemName: "checkmark")
+              .font(theme.captionFont)
+              .foregroundStyle(theme.primary)
+              .accessibilityHidden(true)
+          }
+        }
+      }
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .focusable()
+    .focused($isFocused)
+    .onKeyPress(.return) {
+      choose()
+      return .handled
+    }
+    .onHover { isHovering = $0 }
+    .accessibilityLabel("\(name) theme")
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  /// A window in miniature: a sidebar, a title in the theme's display face,
+  /// three rows with the selection on one, and the four status hues.
+  private var miniature: some View {
+    let shape = RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous)
+    return HStack(spacing: 0) {
+      VStack(alignment: .leading, spacing: 4) {
+        ForEach(0..<4, id: \.self) { index in
+          RoundedRectangle(cornerRadius: 1.5)
+            .fill(index == 1 ? preview.primary : preview.muted.opacity(0.55))
+            .frame(width: index == 1 ? 26 : 22, height: 3)
+        }
+        Spacer(minLength: 0)
+      }
+      .padding(6)
+      .frame(width: 40)
+      .frame(maxHeight: .infinity, alignment: .top)
+      .background(preview.altRow)
+      .overlay(alignment: .trailing) {
+        Rectangle().fill(preview.border).frame(width: preview.hairline)
+      }
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Aa")
+          .font(preview.displayFont(size: 15, weight: .medium))
+          .foregroundStyle(preview.ink)
+        miniRow(width: 70, selected: false)
+        miniRow(width: 54, selected: true)
+        miniRow(width: 62, selected: false)
+        Spacer(minLength: 0)
+        HStack(spacing: 3) {
+          ForEach([preview.success, preview.danger, preview.warning, preview.primary].indices, id: \.self) { index in
+            Circle()
+              .fill([preview.success, preview.danger, preview.warning, preview.primary][index])
+              .frame(width: 6, height: 6)
+          }
+          Spacer(minLength: 0)
+          Text("12:30")
+            .font(preview.monoFont(size: 8))
+            .foregroundStyle(preview.muted)
+        }
+      }
+      .padding(6)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .background(preview.paper)
+    }
+    .frame(height: 92)
+    .clipShape(shape)
+    .overlay(
+      shape.strokeBorder(
+        isSelected || isFocused ? theme.primary : (isHovering ? theme.inputBorder : theme.border),
+        lineWidth: isSelected || isFocused ? theme.emphasisBorder : theme.hairline))
+    .accessibilityHidden(true)
+  }
+
+  private func miniRow(width: CGFloat, selected: Bool) -> some View {
+    HStack(spacing: 4) {
+      RoundedRectangle(cornerRadius: 1.5)
+        .strokeBorder(preview.inputBorder, lineWidth: 1)
+        .frame(width: 6, height: 6)
+      RoundedRectangle(cornerRadius: 1.5)
+        .fill(preview.ink.opacity(0.7))
+        .frame(width: width, height: 3)
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, 3)
+    .padding(.vertical, 2)
+    .background(
+      RoundedRectangle(cornerRadius: min(preview.rowRadius, 3))
+        .fill(selected ? preview.selectionFill : Color.clear))
   }
 }

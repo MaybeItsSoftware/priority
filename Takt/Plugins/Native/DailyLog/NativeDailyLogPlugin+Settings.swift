@@ -90,8 +90,10 @@ private struct DailyLogPluginSettingsView: View {
         // settings field without pressing Return is normal, and silently
         // discarding the format would point the writer at the wrong file.
         TextField("File name format", text: $fileNameFormat)
+          .themedTextField()
           .onChange(of: fileNameFormat) { _, _ in saveFormat() }
         TextField("Subfolder format (optional)", text: $folderFormat)
+          .themedTextField()
           .onChange(of: folderFormat) { _, _ in saveFormat() }
         Text("Today's note would be: \(previewPath)")
           .font(theme.captionFont)
@@ -107,7 +109,7 @@ private struct DailyLogPluginSettingsView: View {
       .padding(.top, theme.space.xs)
 
       Toggle("Create missing notes", isOn: createsMissingNotesBinding)
-        .toggleStyle(.switch)
+        .toggleStyle(.themedSwitch)
       Text(
         createsMissingNotesBinding.wrappedValue
           ? "Takt will create the note if it doesn't exist yet. Turn this off if a "
@@ -121,7 +123,7 @@ private struct DailyLogPluginSettingsView: View {
       // The master switch, last: it acts on everything above it. Unreachable
       // until a folder exists, so it can never be on with nowhere to write.
       Toggle("Write days into Obsidian daily notes", isOn: dailyLogEnabledBinding)
-        .toggleStyle(.switch)
+        .toggleStyle(.themedSwitch)
         .disabled(dailyLog.dailiesFolderPath.isEmpty)
 
       if dailyLog.dailiesFolderPath.isEmpty {
@@ -136,7 +138,7 @@ private struct DailyLogPluginSettingsView: View {
 
       if dailyLog.dailyLogEnabled {
         Toggle("Write automatically at day rollover", isOn: writesAutomaticallyBinding)
-          .toggleStyle(.switch)
+          .toggleStyle(.themedSwitch)
 
         HStack {
           Button("Write Yesterday's Note Now") {
@@ -183,7 +185,7 @@ private struct DailyLogPluginSettingsView: View {
                 set: { titleDrafts[daily.id] = $0 }
               )
             )
-            .textFieldStyle(.roundedBorder)
+            .themedTextField()
             // Return commits; so does clicking away, because abandoning what
             // someone just typed for reaching at the mouse is the wrong
             // default. An empty or unchanged draft commits to nothing.

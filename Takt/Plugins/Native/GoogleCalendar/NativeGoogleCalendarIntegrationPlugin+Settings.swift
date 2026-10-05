@@ -32,7 +32,7 @@ private struct GoogleCalendarIntegrationPluginSettingsView: View {
         "Enable Google Calendar integration",
         isOn: $manager.integrations.googleCalendarIntegrationEnabled
       )
-        .toggleStyle(.switch)
+        .toggleStyle(.themedSwitch)
 
       if manager.integrations.googleCalendarIntegrationEnabled {
         VStack(alignment: .leading, spacing: theme.space.sm) {
@@ -45,12 +45,12 @@ private struct GoogleCalendarIntegrationPluginSettingsView: View {
 
           Text("Calendar ID")
           TextField("", text: $plugin.targetCalendarID, prompt: Text("primary"))
-            .textFieldStyle(.roundedBorder)
+            .themedTextField()
             .labelsHidden()
             .autocorrectionDisabled()
 
           Toggle("Open created event in browser", isOn: $plugin.openCreatedEventInBrowser)
-            .toggleStyle(.switch)
+            .toggleStyle(.themedSwitch)
 
           Button("Create event from selected task") {
             manager.integrations.openTaskInGoogleCalendar()

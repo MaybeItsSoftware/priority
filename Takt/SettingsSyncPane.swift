@@ -36,7 +36,7 @@ struct SettingsSyncPane: View {
         signedOut(session)
       }
     } else {
-      Section(header: Text("Sync")) {
+      Section(header: MicroLabel("Sync")) {
         Text("The workspace did not open, so there is nothing to sync.")
           .foregroundStyle(theme.muted)
       }
@@ -46,7 +46,7 @@ struct SettingsSyncPane: View {
   // MARK: - Signed out
 
   private func signedOut(_ session: SyncSession) -> some View {
-    Section(header: Text("Sync")) {
+    Section(header: MicroLabel("Sync")) {
       if session.phase == .needsSignIn {
         Label("Signed out. Sign in again to keep syncing.", systemImage: "exclamationmark.icloud")
           .foregroundStyle(theme.danger)
@@ -178,14 +178,14 @@ struct SettingsSyncPane: View {
 
   @ViewBuilder
   private func signedIn(_ session: SyncSession) -> some View {
-    Section(header: Text("Sync")) {
+    Section(header: MicroLabel("Sync")) {
       LabeledContent("Signed in as") {
         Text(session.email ?? "an account without an email").textSelection(.enabled)
       }
       LabeledContent("Status") { SyncPhaseText(phase: session.phase) }
       if let server = session.credentials?.serverURL, server != SyncServer.defaultURL {
         LabeledContent("Server") {
-          Text(server.absoluteString).font(theme.monoFont(size: 11)).foregroundStyle(theme.muted)
+          Text(server.absoluteString).font(theme.monoFont(size: theme.scale.caption)).foregroundStyle(theme.muted)
         }
       }
       HStack(spacing: theme.space.sm) {
@@ -209,7 +209,7 @@ struct SettingsSyncPane: View {
     }
 
     if session.needsNewPassword {
-      Section(header: Text("Choose a new password")) {
+      Section(header: MicroLabel("Choose a new password")) {
         Text("You signed in from a password-reset email. Set the password to use from now on.")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
@@ -227,7 +227,7 @@ struct SettingsSyncPane: View {
       }
     }
 
-    Section(header: Text("Devices")) {
+    Section(header: MicroLabel("Devices")) {
       if let devices = session.account?.devices {
         ForEach(devices) { device in deviceRow(device) }
       } else {
@@ -235,7 +235,7 @@ struct SettingsSyncPane: View {
       }
     }
 
-    Section(header: Text("Account")) {
+    Section(header: MicroLabel("Account")) {
       HStack(alignment: .firstTextBaseline, spacing: theme.space.md) {
         Text(
           "Deleting the account removes everything synced to the server and signs out every device. "

@@ -103,9 +103,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       checkvistManager.theme.choiceSync = choiceSync
       workspace.onWorkspaceChangedElsewhere = { [weak choiceSync] in choiceSync?.workspaceDidChange() }
     }
-    workspace.preferredQuickCaptureListID = { [weak checkvistManager] in
-      checkvistManager?.preferences.quickCaptureListID ?? ""
-    }
+    workspace.preferredQuickCaptureListID = { [weak checkvistManager] in checkvistManager?.preferences.quickCaptureListID ?? "" }
     workspace.asksHowEachBlockWent = { [weak checkvistManager] in
       checkvistManager?.preferences.scoresEachFocusBlock ?? true
     }
@@ -292,32 +290,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       .environment(workspace)
       .environment(navState)
       .themed(checkvistManager.theme)
-      .frame(minWidth: 720, idealWidth: 820, minHeight: 560, idealHeight: 660)
+      .frame(
+        minWidth: Self.preferencesMinContentSize.width, idealWidth: 940,
+        minHeight: Self.preferencesMinContentSize.height, idealHeight: 700)
     let hostingController = NSHostingController(rootView: rootView)
 
+    // A sidebar window, the way System Settings, Linear and Raycast are: the
+    // content runs under a transparent title bar, the sidebar sits beneath the
+    // traffic lights, and there is no toolbar of tabs.
     let window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 820, height: 660),
-      styleMask: [.titled, .closable, .resizable],
+      contentRect: NSRect(x: 0, y: 0, width: 940, height: 700),
+      styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
-    window.title = "Preferences"
+    window.title = "Settings"
     window.titleVisibility = .hidden
-    window.toolbarStyle = .preference
-    let toolbar = NSToolbar(identifier: "PriorityPreferencesToolbar")
-    toolbar.delegate = navState
-    toolbar.displayMode = .iconAndLabel
-    toolbar.allowsUserCustomization = false
-    toolbar.selectedItemIdentifier = NSToolbarItem.Identifier(
-      SettingsNavState.Pane.preferences.rawValue)
-    navState.toolbar = toolbar
-    window.toolbar = toolbar
+    window.titlebarAppearsTransparent = true
     window.center()
     window.isReleasedWhenClosed = false
     window.isRestorable = false
     window.tabbingMode = .disallowed
     window.delegate = self
     window.contentViewController = hostingController
+    // The autosave name is storage: it keeps the old one so a window someone
+    // has placed stays where they put it.
     window.setFrameAutosaveName("PriorityPreferencesWindowV2")
     WindowContentSizing.enforce(
       on: window,
@@ -330,8 +327,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
   /// Minimum *content* size the settings root asks for, matching the
   /// `.frame(minWidth:minHeight:)` on `SettingsView` above.
-  private static let preferencesMinContentSize = NSSize(width: 720, height: 560)
-  private static let preferencesMaxContentSize = NSSize(width: 1200, height: 900)
+  private static let preferencesMinContentSize = NSSize(width: 820, height: 560)
+  private static let preferencesMaxContentSize = NSSize(width: 1400, height: 1100)
 
   func windowWillClose(_ notification: Notification) {
     guard let closingWindow = notification.object as? NSWindow else { return }

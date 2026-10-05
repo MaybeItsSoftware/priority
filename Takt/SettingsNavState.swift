@@ -1,95 +1,95 @@
-import AppKit
 import Observation
 
-@Observable final class SettingsNavState: NSObject {
-  enum Pane: String {
-    case preferences
-    case keybindings
-    case theme
+/// Which page of the settings window is showing.
+///
+/// The window is a sidebar of pages rather than a toolbar of tabs: the app's
+/// own pages first, then one page per integration — enumerated from the
+/// plugins that vend one, never named here — then sync and the advanced page.
+@MainActor
+@Observable final class SettingsNavState {
+  enum Pane: String, CaseIterable, Identifiable {
+    case general
+    case focus
+    case appearance
+    case keyboard
     case plugins
     case sync
-    #if DEBUG
-      case debug
-    #endif
+    case advanced
+
+    var id: String { rawValue }
 
     var title: String {
       switch self {
-      case .preferences: "Preferences"
-      case .keybindings: "Keybindings"
-      case .theme: "Theme"
-      case .plugins: "Plugins"
+      case .general: "General"
+      case .focus: "Focus"
+      case .appearance: "Appearance"
+      case .keyboard: "Keyboard"
+      case .plugins: "Installed plugins"
       case .sync: "Sync"
-      #if DEBUG
-        case .debug: "Debug"
-      #endif
+      case .advanced: "Advanced"
+      }
+    }
+
+    var summary: String {
+      switch self {
+      case .general:
+        "How the app starts, confirms and celebrates."
+      case .focus:
+        "Where a focus block runs and how it is scored."
+      case .appearance:
+        "Theme, light or dark, and the faces and size the app is set in."
+      case .keyboard:
+        "Global hotkeys, where Quick Add captures, and the window's keymap."
+      case .plugins:
+        "Plugins you installed yourself, as packages in the plugins folder."
+      case .sync:
+        "One workspace across this Mac, your iPhone and your Android phone."
+      case .advanced:
+        "Export your workspace, diagnostics and the files behind the app."
       }
     }
 
     var systemImage: String {
       switch self {
-      case .preferences: "slider.horizontal.3"
-      case .keybindings: "keyboard"
-      case .theme: "paintpalette"
+      case .general: "gearshape"
+      case .focus: "scope"
+      case .appearance: "paintpalette"
+      case .keyboard: "keyboard"
       case .plugins: "puzzlepiece.extension"
       case .sync: "arrow.triangle.2.circlepath"
-      #if DEBUG
-        case .debug: "ladybug"
-      #endif
+      case .advanced: "wrench.and.screwdriver"
       }
     }
 
-    static var allPanes: [Pane] {
-      var panes: [Pane] = [.preferences, .keybindings, .theme, .plugins, .sync]
-      #if DEBUG
-        panes.append(.debug)
-      #endif
-      return panes
+    /// Extra words the sidebar's filter matches, so typing "font" finds
+    /// Appearance and "hotkey" finds Keyboard.
+    var keywords: [String] {
+      switch self {
+      case .general: ["login", "launch", "delete", "confirm", "celebration", "sound", "completing"]
+      case .focus: ["panel", "menu bar", "score", "quality", "multiplier", "block", "timer"]
+      case .appearance:
+        ["theme", "dark", "light", "font", "typeface", "text size", "colour", "color", "zed", "grape", "priority"]
+      case .keyboard: ["hotkey", "shortcut", "quick add", "capture", "keymap", "keybinding"]
+      case .plugins: ["install", "package", "extension"]
+      case .sync: ["account", "devices", "iphone", "android", "server", "password"]
+      case .advanced: ["export", "markdown", "json", "backup", "diagnostics", "debug", "support"]
+      }
     }
+
+    static let appPanes: [Pane] = [.general, .focus, .appearance, .keyboard]
+    static let accountPanes: [Pane] = [.sync, .advanced]
   }
 
-  var selectedPane: Pane = .preferences
-  @ObservationIgnored weak var toolbar: NSToolbar?
+  /// A page in the sidebar: one of the app's, or an integration's by its
+  /// settings card identifier.
+  enum Destination: Hashable {
+    case pane(Pane)
+    case integration(String)
+  }
+
+  var destination: Destination = .pane(.general)
 
   func select(pane: Pane) {
-    selectedPane = pane
-    toolbar?.selectedItemIdentifier = NSToolbarItem.Identifier(pane.rawValue)
+    destination = .pane(pane)
   }
-}
-
-extension SettingsNavState: NSToolbarDelegate {
-  func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    Pane.allPanes.map { .init($0.rawValue) }
-  }
-
-  func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    toolbarDefaultItemIdentifiers(toolbar)
-  }
-
-  func toolbarSelectableItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    toolbarDefaultItemIdentifiers(toolbar)
-  }
-
-  func toolbar(
-    _ toolbar: NSToolbar,
-    itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
-    willBeInsertedIntoToolbar flag: Bool
-  ) -> NSToolbarItem? {
-    guard let pane = Pane(rawValue: itemIdentifier.rawValue) else { return nil }
-    let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-    item.label = pane.title
-    item.image = NSImage(systemSymbolName: pane.systemImage, accessibilityDescription: pane.title)
-    item.target = self
-    item.action = #selector(selectPane(_:))
-    return item
-  }
-
-  @objc private func selectPane(_ sender: NSToolbarItem) {
-    guard let pane = Pane(rawValue: sender.itemIdentifier.rawValue) else { return }
-    selectedPane = pane
-    toolbar?.selectedItemIdentifier = sender.itemIdentifier
-  }
-}
-
-extension SettingsNavState: NSToolbarItemValidation {
-  func validateToolbarItem(_ item: NSToolbarItem) -> Bool { true }
 }
