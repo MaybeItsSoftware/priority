@@ -1,11 +1,11 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// `TaskVisibilityEngine` is the single function that answers "what rows does
 /// the popover show, in what order" for every combination of root view, scope
 /// filter, search and drill-down level. It had no coverage at all until it
-/// moved into `PriorityCore`.
+/// moved into `TaktCore`.
 ///
 /// The context is wired with the real `TaskFilterEngine` implementations rather
 /// than stubs, so these exercise the composition the app actually runs.

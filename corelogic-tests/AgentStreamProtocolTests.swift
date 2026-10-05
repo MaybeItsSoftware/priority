@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The lines below are trimmed from a real session with Claude Code 2.1.283,
 /// driven the way the panel drives it, against a throwaway database.

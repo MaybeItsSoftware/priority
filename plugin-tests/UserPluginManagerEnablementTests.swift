@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import PriorityPlugins
+@testable import TaktPlugins
 
 /// Covers which plugins end up enabled after a reload. The rule is:
 /// auto-enable on first discovery, then never touch the user's choice again.

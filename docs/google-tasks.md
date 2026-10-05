@@ -82,9 +82,9 @@ decision and the decision should be readable without a network:
 
 | Piece | Where | What it is |
 | --- | --- | --- |
-| `GoogleTasksMirror` | `Sources/PriorityCore/` | Pure. Given both sides and what was last pushed, returns the operations and the conflicts. All the rules above live here, and so do their tests. |
-| `NativeGoogleTasksIntegrationPlugin` | `Priority/Plugins/Native/GoogleTasks/` | Transport. Lists, tasks, create, patch, delete, and paging. Knows nothing about when. |
-| `GoogleTasksMirrorService` | `Priority/Plugins/Native/GoogleTasks/` | The driver. Snapshots the workspace, runs the planner, carries out the plan, writes the ledger and the log. |
+| `GoogleTasksMirror` | `Sources/TaktCore/` | Pure. Given both sides and what was last pushed, returns the operations and the conflicts. All the rules above live here, and so do their tests. |
+| `NativeGoogleTasksIntegrationPlugin` | `Takt/Plugins/Native/GoogleTasks/` | Transport. Lists, tasks, create, patch, delete, and paging. Knows nothing about when. |
+| `GoogleTasksMirrorService` | `Takt/Plugins/Native/GoogleTasks/` | The driver. Snapshots the workspace, runs the planner, carries out the plan, writes the ledger and the log. |
 
 ### The ledger
 

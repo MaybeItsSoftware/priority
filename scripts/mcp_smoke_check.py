@@ -10,7 +10,7 @@ lists, their answers, the files they left on disk, and their HTTP requests.
 
 There is now one implementation. The Swift server is gone; the app bundles the
 CLI at `Contents/Helpers/takt` and `--mcp-server` hands the process over to
-it (see `Priority/MCPServerShim.swift`). Correctness of the server itself is
+it (see `Takt/MCPServerShim.swift`). Correctness of the server itself is
 `cargo test`'s job.
 
 What is left to check is the seam — that the handover works, and in particular
@@ -40,7 +40,7 @@ def find_app() -> pathlib.Path | None:
     candidates = [
         *(REPO / "build").rglob("Takt.app"),
         *pathlib.Path.home().joinpath("Library/Developer/Xcode/DerivedData").glob(
-            "Priority-*/Build/Products/Debug/Takt.app"
+            "Takt-*/Build/Products/Debug/Takt.app"
         ),
     ]
     binaries = [c for c in candidates if (c / "Contents/MacOS/Takt").exists()]
@@ -100,7 +100,7 @@ def main() -> int:
     if app is None:
         print(
             "error: no Debug Takt.app found. Build it first:\n"
-            "  xcodebuild -project Priority.xcodeproj -scheme Priority "
+            "  xcodebuild -project Takt.xcodeproj -scheme Takt "
             "-configuration Debug -destination 'platform=macOS' build",
             file=sys.stderr,
         )
@@ -111,7 +111,7 @@ def main() -> int:
         print(
             f"error: {helper} is missing — the app has no MCP server.\n"
             "       scripts/bundle_cli.sh should have installed it during the build.\n"
-            "       (Was PRIORITY_SKIP_CLI_BUNDLE=1 set?)",
+            "       (Was TAKT_SKIP_CLI_BUNDLE=1 set?)",
             file=sys.stderr,
         )
         return 1

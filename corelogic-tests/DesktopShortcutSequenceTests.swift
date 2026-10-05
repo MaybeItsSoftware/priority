@@ -1,5 +1,5 @@
 import XCTest
-@testable import PriorityCore
+@testable import TaktCore
 
 final class DesktopShortcutSequenceTests: XCTestCase {
   private let outline = WorkspaceCommandCatalog.sequences(on: .outline)

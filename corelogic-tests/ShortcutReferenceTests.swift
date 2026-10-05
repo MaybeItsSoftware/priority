@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// `ShortcutReference` renders a binding token as it is read on a Mac
 /// keyboard. Every key cap the workspace draws — palette, reference, tooltips,

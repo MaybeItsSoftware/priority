@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import PriorityAppLogic
+@testable import TaktAppLogic
 
 /// Returns a `UserDefaults` instance backed by a fresh suite. Each test that
 /// hits defaults should use one of these so suite contents from prior tests

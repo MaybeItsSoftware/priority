@@ -1,10 +1,10 @@
 # Shared themes
 
 Generated from Swift. Do not edit by hand: change
-`Sources/PriorityCore/Theming/` and run
+`Sources/TaktCore/Theming/` and run
 
 ```bash
-PRIORITY_REGENERATE_THEMES=1 swift test --filter PriorityCoreTests.ThemeConformanceTests
+TAKT_REGENERATE_THEMES=1 swift test --filter TaktCoreTests.ThemeConformanceTests
 ```
 
 `ThemeConformanceTests` fails whenever these files differ from what Swift

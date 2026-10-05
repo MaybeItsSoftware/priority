@@ -1,6 +1,6 @@
 import Foundation
 
-@testable import PriorityAppLogic
+@testable import TaktAppLogic
 
 /// Stands in for `AppCoordinator` when exercising `TaskMutationService` and
 /// `SyncService`.

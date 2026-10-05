@@ -1,0 +1,210 @@
+import Foundation
+import TaktCore
+import TaktWorkspace
+
+/// Reading the main pane's outline and board out of the store. Split from
+/// `WorkspaceViewModel.swift` for size — it is the same type, and these are
+/// what `WorkspaceViewModel+Refresh.swift` calls when a scope is stale.
+extension WorkspaceViewModel {
+  private static let kanbanColumnsKey = "localWorkspaceKanbanColumnsV1"
+
+  /// Marks the main pane stale; see `refresh(_:)`. Pass `refreshSidebar:
+  /// false` when the change cannot have touched a list or a count.
+  func reloadOutline(refreshSidebar: Bool = true) {
+    refresh(refreshSidebar ? [.outline, .sidebar] : .outline)
+  }
+
+  func reloadBoard() {
+    refresh(.board)
+  }
+
+  func reloadOutlineNow() {
+    guard let store else {
+      outline = []
+      boardTasks = []
+      boardTaskColumns = [:]
+      matrixPositions = [:]
+      return
+    }
+    do {
+      var items: [TaskOutlineItem]
+      if isEverythingSelected || folderScopeListIDs != nil {
+        items = viewMode == .outline
+          ? try actionableScopeTasks(store: store).map { TaskOutlineItem(task: $0, depth: 0) } : []
+      } else if let selectedListID {
+        let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
+        let parentID = scopeTaskID ?? selectedList.flatMap {
+          tree?.visibleRootParentTaskID(registeredRootId: $0.visibleRootTaskId)
+        }
+        items = tree?.visibleOutline(under: parentID) ?? []
+      } else {
+        items = []
+      }
+      if hidesCompletedTasks { items.removeAll { $0.task.status != .open } }
+      if outline != items { outline = items }
+      reloadBoardNow()
+      // The rail is a view of the same writes. Hooked in here rather than at
+      // every mutation because this is the one funnel they all pass through,
+      // and it costs nothing while the rail is closed.
+      reloadCompleted()
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  /// Every open, doable task in a combined scope, in sidebar order: the same
+  /// answer as `WorkspaceStore.actionableTasks`, shaped from this refresh's
+  /// shared reads.
+  private func actionableScopeTasks(store: WorkspaceStore) throws -> [WorkspaceTask] {
+    let open = lists.filter { $0.completedAt == nil }
+    let scoped: [TaskList]
+    if let ids = folderScopeListIDs {
+      let byID = Dictionary(open.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+      scoped = ids.compactMap { byID[$0] }
+    } else {
+      scoped = open
+    }
+    let trees = try listTrees(for: scoped.map(\.id), store: store)
+    return scoped.flatMap { trees[$0.id]?.actionableTasks(visibleRootTaskId: $0.visibleRootTaskId) ?? [] }
+  }
+
+  var boardConfigurationKey: String {
+    if isEverythingSelected { return "everything/root" }
+    if let selectedFolderID { return "folder:\(selectedFolderID)/root" }
+    return "\(selectedListID ?? "none")/\(scopeTaskID ?? "root")"
+  }
+
+  func reloadBoardNow() {
+    defer { rebuildBoardIndex() }
+    guard let store else {
+      boardTasks = []
+      boardCrossColumnTasks = []
+      boardDescendants = [:]
+      boardTaskParents = [:]
+      boardParentTaskID = nil
+      boardTreeTasks = []
+      return
+    }
+    do {
+      var tasks: [WorkspaceTask]
+      let parentTaskID: String?
+      if isEverythingSelected || folderScopeListIDs != nil {
+        parentTaskID = nil
+        tasks = try actionableScopeTasks(store: store)
+      } else if let selectedListID {
+        let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
+        parentTaskID = scopeTaskID ?? selectedList.flatMap {
+          tree?.visibleRootParentTaskID(registeredRootId: $0.visibleRootTaskId)
+        }
+        tasks = tree?.children(of: parentTaskID) ?? []
+      } else {
+        parentTaskID = nil
+        tasks = []
+      }
+      if boardParentTaskID != parentTaskID { boardParentTaskID = parentTaskID }
+      tasks.removeAll { ($0.isList && $0.archivedAt != nil) || (hidesCompletedTasks && $0.status != .open) }
+      let boardIDs = Set(tasks.map(\.id))
+      let listIDs = Array(Set(tasks.map(\.listId)))
+      let trees = try listTrees(for: listIDs, store: store)
+      // Every level beneath every card, the nested cards' own trees included,
+      // in one walk of rows already read — never a query per card.
+      let board = WorkspaceBoardTrees(cardIDs: boardIDs, trees: listIDs.compactMap { trees[$0] })
+      let descendants = board.descendants
+      let parents = board.parents
+      var treeIDs = Set<String>()
+      let treeTasks = (tasks + tasks.flatMap { root in
+        descendants[root.id, default: []].map(\.task)
+      }).filter { treeIDs.insert($0.id).inserted }
+      let metadata = try store.boardMetadata(for: treeTasks.map(\.id))
+      let columnsByTask = metadata.columns
+      // A subtask nobody filed is in whatever column its parent is in. It
+      // used to count as being in the first column, so moving a card out of
+      // Backlog left every one of its subtasks behind there as a card of its
+      // own — as though each had been filed in Backlog on purpose.
+      var effectiveColumns: [String: String] = [:]
+      func effectiveColumn(of task: WorkspaceTask) -> String {
+        if let known = effectiveColumns[task.id] { return known }
+        let column = columnsByTask[task.id]
+          ?? parents[task.id].map { effectiveColumn(of: $0) }
+          ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
+        effectiveColumns[task.id] = column
+        return column
+      }
+      let crossColumn = treeTasks.filter { task in
+        if hidesCompletedTasks && task.status != .open { return false }
+        guard !task.isList else { return false }
+        guard !boardIDs.contains(task.id), let parent = parents[task.id],
+          let filed = columnsByTask[task.id]
+        else { return false }
+        return filed != effectiveColumn(of: parent)
+      }
+      let columns = try resolvedBoardColumns(usedColumnIDs: Set(columnsByTask.values), store: store)
+      // Assigned only when they differ, so a refresh that changed nothing on
+      // the board does not redraw every card.
+      boardTreeTasks = treeTasks
+      if boardTasks != tasks { boardTasks = tasks }
+      if boardDescendants != descendants { boardDescendants = descendants }
+      if boardTaskParents != parents { boardTaskParents = parents }
+      if boardTaskColumns != columnsByTask { boardTaskColumns = columnsByTask }
+      if boardCrossColumnTasks != crossColumn { boardCrossColumnTasks = crossColumn }
+      if boardColumns != columns { boardColumns = columns }
+      if matrixPositions != metadata.positions { matrixPositions = metadata.positions }
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  /// The current scope's columns, plus any column a card on it is filed under
+  /// that the scope's own layout does not list.
+  private func resolvedBoardColumns(usedColumnIDs: Set<String>, store: WorkspaceStore) throws -> [WorkspaceKanbanColumn] {
+    let key = boardConfigurationKey
+    // The store call also seeds a layout for a scope that has none, so it is
+    // made again for a scope this cache has not seen.
+    if boardColumnConfigurations?[key] == nil {
+      let legacy = UserDefaults.standard.dictionary(forKey: Self.kanbanColumnsKey) as? [String: Data] ?? [:]
+      boardColumnConfigurations = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: key)
+    }
+    let configurations = boardColumnConfigurations ?? [:]
+    func decode(_ key: String) -> [WorkspaceKanbanColumn]? {
+      configurations[key].flatMap { try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: $0) }
+    }
+    var columns: [WorkspaceKanbanColumn]
+    if let decoded = decode(key), !decoded.isEmpty {
+      columns = decoded
+    } else {
+      columns = WorkspaceKanbanColumn.blitzitDefaults
+    }
+    if isEverythingSelected {
+      for list in lists {
+        guard let listColumns = decode("\(list.id)/root") else { continue }
+        for column in listColumns where usedColumnIDs.contains(column.id)
+          && !columns.contains(where: { $0.id == column.id }) {
+          columns.append(column)
+        }
+      }
+    } else {
+      let globalColumns = decode("everything/root") ?? []
+      for column in globalColumns + WorkspaceKanbanColumn.blitzitDefaults
+        where usedColumnIDs.contains(column.id)
+          && !columns.contains(where: { $0.id == column.id }) {
+        columns.append(column)
+      }
+    }
+    return columns
+  }
+
+  /// Some Checkvist imports have a single transport root repeating the list
+  /// name. Its children are the visible list roots in both single-list and
+  /// Everything scopes, while their actual parent IDs remain unchanged.
+  func visibleRootParentTaskID(for list: TaskList, store: WorkspaceStore) throws -> String? {
+    try store.visibleRootParentTaskID(for: list)
+  }
+
+  func uniqueColumnID(base: String, in columns: [WorkspaceKanbanColumn]) -> String {
+    guard columns.contains(where: { $0.id == base }) else { return base }
+    var counter = 2
+    while columns.contains(where: { $0.id == "\(base)-\(counter)" }) { counter += 1 }
+    return "\(base)-\(counter)"
+  }
+
+}

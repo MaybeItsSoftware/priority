@@ -354,7 +354,7 @@ exported as complete JSON to `shared/themes/priority.json`,
 `shared/themes/chalk.json` (Zed) and `shared/themes/chalk-dark.json` (Zed
 Dark). A Swift test
 fails if those files and the Swift definitions disagree; run it with
-`PRIORITY_REGENERATE_THEMES=1` to rewrite them. The Android app reads those files
+`TAKT_REGENERATE_THEMES=1` to rewrite them. The Android app reads those files
 from its assets (a Gradle task copies them in, the same way it copies the
 workspace schema), so the three apps cannot drift apart on a hex value.
 
@@ -431,8 +431,8 @@ missing: without a base it falls back to Priority's.
 
 ## For developers
 
-The format is decoded in `PriorityCore`
-(`Sources/PriorityCore/Theming/ThemeFile.swift` and `ThemeFileLoader.swift`)
+The format is decoded in `TaktCore`
+(`Sources/TaktCore/Theming/ThemeFile.swift` and `ThemeFileLoader.swift`)
 and tested in `corelogic-tests/ThemeFileTests.swift`.
 
 - **Platforms.** `ThemeFileLoader.load(_:platform:)` resolves a folder for
@@ -447,22 +447,22 @@ and tested in `corelogic-tests/ThemeFileTests.swift`.
 - **Seeds.** `ThemeSeeds` grows a palette table from up to six colours; the
   loader applies a file's `seeds` after the base and before its `palette`. `ThemeStructureAudit` warns about a `touchTarget`
   between 0 and 44.
-- **Shared files.** `ThemeConformance` (in `PriorityCore`) builds the
+- **Shared files.** `ThemeConformance` (in `TaktCore`) builds the
   complete built-in files and the canonical resolved form, and
   `corelogic-tests/ThemeConformanceTests.swift` holds `shared/themes/` to it:
   the cases are listed in that test. Add a case there, then regenerate with
-  `PRIORITY_REGENERATE_THEMES=1 swift test --filter PriorityCoreTests.ThemeConformanceTests`.
+  `TAKT_REGENERATE_THEMES=1 swift test --filter TaktCoreTests.ThemeConformanceTests`.
   The format is in [`shared/themes/README.md`](../shared/themes/README.md).
 - **Sync.** The rows are `WorkspaceStore.themes()`, `upsertTheme(id:json:)`,
   `deleteTheme(id:)`, `preference(_:)` and `setPreference(_:_:)`
-  (`Sources/PriorityWorkspace/WorkspaceStore+Themes.swift`, migration
+  (`Sources/TaktWorkspace/WorkspaceStore+Themes.swift`, migration
   `v18_themes_and_preferences`). Writes that change nothing are skipped, which
   is what keeps a row and a file from echoing each other. The keys are
   `WorkspacePreferenceKey.themeSelected` and `.themeAppearance`.
 - **The Mac.** `UserThemeLibrary` watches the folder and vends a
   `UserThemePlugin` per file to `ThemeManager`. Once the workspace is open it
   also mirrors the folder into the `themes` table on every load. What to do is
-  decided by `ThemeFolderMirror.plan` in `PriorityCore`, tested in
+  decided by `ThemeFolderMirror.plan` in `TaktCore`, tested in
   `corelogic-tests/ThemeFolderMirrorTests.swift`. That compares each side
   with the digest of the text last mirrored, which is kept in `UserDefaults`.
   `ThemeChoiceSync` keeps `ThemeManager`'s pick and the appearance setting in

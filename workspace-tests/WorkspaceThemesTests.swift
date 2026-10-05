@@ -1,6 +1,6 @@
 import Foundation
 import GRDB
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 /// The `themes` and `preferences` tables: synced, unjournalled, and quiet
@@ -12,7 +12,7 @@ final class WorkspaceThemesTests: XCTestCase {
 
   override func setUpWithError() throws {
     directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityThemesTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktThemesTests-\(UUID().uuidString)", isDirectory: true)
     databaseURL = directoryURL.appendingPathComponent("priority.sqlite")
     store = try WorkspaceStore(databaseURL: databaseURL)
     _ = try store.bootstrapIfNeeded()

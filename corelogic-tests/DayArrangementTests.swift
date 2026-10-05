@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class DayArrangementTests: XCTestCase {
   private let order = ["a", "b", "c", "d"]

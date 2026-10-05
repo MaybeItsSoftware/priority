@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The rename rules, and the bug they exist for.
 ///

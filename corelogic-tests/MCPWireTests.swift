@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The half of an MCP client that has no process in it: what goes down the
 /// pipe, and what can be read back off it.

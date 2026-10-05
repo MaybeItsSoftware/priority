@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
-import PriorityCore
-@testable import PriorityWorkspace
+import TaktCore
+@testable import TaktWorkspace
 import XCTest
 
 final class WorkspaceConditionsTests: XCTestCase {

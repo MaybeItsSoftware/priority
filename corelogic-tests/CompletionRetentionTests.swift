@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Completing a task used to delete both its place on the matrix and its slot
 /// in the priority queue, and undo had nothing to say about either — undo

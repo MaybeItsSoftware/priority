@@ -3,9 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT_DIR="$ROOT_DIR"
-XCODEPROJ="$PROJECT_DIR/Priority.xcodeproj"
-# The scheme keeps the code's name; the product it builds is Takt.
-SCHEME="Priority"
+XCODEPROJ="$PROJECT_DIR/Takt.xcodeproj"
+SCHEME="Takt"
 APP_NAME="Takt.app"
 VOL_NAME="Takt"
 
@@ -69,7 +68,7 @@ fi
 if [[ ! -x "$APP_PATH/Contents/Helpers/takt" ]]; then
   echo "Build succeeded but the bundled MCP server is missing:" >&2
   echo "  $APP_PATH/Contents/Helpers/takt" >&2
-  echo "Was PRIORITY_SKIP_CLI_BUNDLE=1 set?" >&2
+  echo "Was TAKT_SKIP_CLI_BUNDLE=1 set?" >&2
   exit 1
 fi
 

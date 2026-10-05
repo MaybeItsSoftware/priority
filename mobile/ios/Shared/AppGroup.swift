@@ -16,7 +16,7 @@ enum AppGroup {
 
   static var containerURL: URL {
     if isUITesting {
-      return FileManager.default.temporaryDirectory.appending(path: "PriorityUITests", directoryHint: .isDirectory)
+      return FileManager.default.temporaryDirectory.appending(path: "TaktUITests", directoryHint: .isDirectory)
     }
     return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: identifier)
       ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

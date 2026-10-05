@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// What a task and a day look like as AFFiNE documents, and — the part that
 /// matters — what happens the second time one is written.

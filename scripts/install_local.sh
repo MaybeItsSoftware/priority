@@ -16,9 +16,8 @@ set -euo pipefail
 # are only disk.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-XCODEPROJ="$ROOT_DIR/Priority.xcodeproj"
-# The scheme keeps the code's name; the product it builds is Takt.
-SCHEME="Priority"
+XCODEPROJ="$ROOT_DIR/Takt.xcodeproj"
+SCHEME="Takt"
 APP_NAME="Takt.app"
 PROCESS_NAME="Takt"
 INSTALL_PATH="/Applications/$APP_NAME"

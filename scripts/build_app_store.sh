@@ -25,7 +25,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 ios="$root/mobile/ios"
 out="$root/build/app-store"
-archive="$out/PriorityMobile.xcarchive"
+archive="$out/TaktMobile.xcarchive"
 build_number="$(git -C "$root" rev-list --count HEAD)"
 destination="export"
 [[ "${1:-}" == "--upload" ]] && destination="upload"
@@ -58,7 +58,7 @@ PLIST
 
 echo "Archiving Takt for iPhone, build $build_number"
 rm -rf "$archive"
-xcodebuild -project "$ios/PriorityMobile.xcodeproj" -scheme PriorityMobile \
+xcodebuild -project "$ios/TaktMobile.xcodeproj" -scheme TaktMobile \
   -configuration Release -destination 'generic/platform=iOS' \
   -archivePath "$archive" -allowProvisioningUpdates "${auth[@]}" \
   CURRENT_PROJECT_VERSION="$build_number" \

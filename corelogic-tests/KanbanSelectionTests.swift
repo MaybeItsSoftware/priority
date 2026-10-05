@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The other half of `KanbanManager`. `KanbanFilter` decides which column a
 /// card lands in; `KanbanSelection` decides which card is selected once it has.

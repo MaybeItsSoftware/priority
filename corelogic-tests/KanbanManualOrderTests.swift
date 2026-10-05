@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The manual-order overlay is the one part of the board a user positions by
 /// hand, and until now the only way to write it was a keyboard nudge that

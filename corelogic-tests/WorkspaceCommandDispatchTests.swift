@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The key router asks the catalogue what a key means and runs the answer —
 /// it has no list of its own. These pin that the answer is the one the

@@ -18,7 +18,7 @@ which is a lot for an arrow key, and it makes `←` not a true inverse.
 
 ### The typed-command language
 
-`Sources/PriorityCore/CommandEngine.swift` parses `due tomorrow 9am`, `tag x`,
+`Sources/TaktCore/CommandEngine.swift` parses `due tomorrow 9am`, `tag x`,
 `matrix do` and much more — about 1,400 tested lines with exactly one caller,
 `AppCoordinator.executeCommandInput`, which nothing calls. It was deliberately
 left out of the `Cmd+K` palette: it is a different interaction (arguments,
@@ -153,7 +153,7 @@ its `themeColor(_:)` helper until that mechanism goes.
 
 ### Two theme mechanisms are still live
 
-A useful count while migrating: `grep -c accentColor Priority/*.swift`.
+A useful count while migrating: `grep -c accentColor Takt/*.swift`.
 
 Two mechanisms are live at once — the plugin, and the older
 `AppThemeColorToken` / `PreferencesManager.themeColor(for:)` with its per-token

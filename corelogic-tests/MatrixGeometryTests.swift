@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The matrix could only ever be read, never written by pointing at it, because
 /// the coordinate-to-point mapping was inlined in the view and the inverse did

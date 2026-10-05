@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The shortcut a palette row prints is a claim that pressing it runs that row.
 final class CommandPaletteKeybindTests: XCTestCase {

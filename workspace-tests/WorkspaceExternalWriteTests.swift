@@ -1,6 +1,6 @@
 import Foundation
 import GRDB
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 /// The `priority` CLI (the app's MCP server) writes the task tree from another
@@ -14,7 +14,7 @@ final class WorkspaceExternalWriteTests: XCTestCase {
 
   override func setUpWithError() throws {
     directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityExternalWriteTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktExternalWriteTests-\(UUID().uuidString)", isDirectory: true)
     databaseURL = directoryURL.appendingPathComponent("priority.sqlite")
     store = try WorkspaceStore(databaseURL: databaseURL)
     let workspace = try store.bootstrapIfNeeded()

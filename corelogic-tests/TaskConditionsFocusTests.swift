@@ -1,5 +1,5 @@
 import Foundation
-import PriorityCore
+import TaktCore
 import XCTest
 
 final class TaskConditionsFocusTests: XCTestCase {

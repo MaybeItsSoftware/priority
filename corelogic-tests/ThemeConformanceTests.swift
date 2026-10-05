@@ -1,5 +1,5 @@
 import Foundation
-import PriorityCore
+import TaktCore
 import XCTest
 
 /// Holds `shared/themes/` to the Swift definitions.
@@ -7,7 +7,7 @@ import XCTest
 /// The built-ins and the conformance cases there are generated from Swift, and
 /// the other apps read them instead of restating Chalk or reimplementing the
 /// resolver by eye. A difference fails here; run with
-/// `PRIORITY_REGENERATE_THEMES=1` to rewrite the files from Swift.
+/// `TAKT_REGENERATE_THEMES=1` to rewrite the files from Swift.
 final class ThemeConformanceTests: XCTestCase {
   private static let sharedThemes = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent()
@@ -15,7 +15,7 @@ final class ThemeConformanceTests: XCTestCase {
     .appending(path: "shared/themes", directoryHint: .isDirectory)
 
   private var regenerating: Bool {
-    ProcessInfo.processInfo.environment["PRIORITY_REGENERATE_THEMES"] == "1"
+    ProcessInfo.processInfo.environment["TAKT_REGENERATE_THEMES"] == "1"
   }
 
   /// Every case, by file name. The inputs are written the way a person writes
@@ -267,6 +267,6 @@ final class ThemeConformanceTests: XCTestCase {
     let current = try? Data(contentsOf: url)
     XCTAssertEqual(
       current.flatMap { String(bytes: $0, encoding: .utf8) }, String(bytes: expected, encoding: .utf8),
-      "\(url.lastPathComponent) differs from Swift; run PRIORITY_REGENERATE_THEMES=1 swift test --filter ThemeConformanceTests")
+      "\(url.lastPathComponent) differs from Swift; run TAKT_REGENERATE_THEMES=1 swift test --filter ThemeConformanceTests")
   }
 }

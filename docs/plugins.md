@@ -2,20 +2,20 @@
 
 Takt ships with native plugins only. Plugins are self-contained and live under:
 
-- `Priority/Plugins/Native/Checkvist/`
-- `Priority/Plugins/Native/Obsidian/`
-- `Priority/Plugins/Native/AFFiNE/`
-- `Priority/Plugins/Native/GoogleCalendar/`
-- `Priority/Plugins/Native/MCP/`
-- `Priority/Plugins/Native/DailyLog/`
-- `Priority/Plugins/Native/Celebration/`
-- `Priority/Plugins/Native/Theme/`
+- `Takt/Plugins/Native/Checkvist/`
+- `Takt/Plugins/Native/Obsidian/`
+- `Takt/Plugins/Native/AFFiNE/`
+- `Takt/Plugins/Native/GoogleCalendar/`
+- `Takt/Plugins/Native/MCP/`
+- `Takt/Plugins/Native/DailyLog/`
+- `Takt/Plugins/Native/Celebration/`
+- `Takt/Plugins/Native/Theme/`
 
 `SettingsView` renders plugin settings from active native plugins through shared protocols.
 
 ## Core Interfaces
 
-Plugin contracts are defined under `Priority/Plugins/Protocols/`:
+Plugin contracts are defined under `Takt/Plugins/Protocols/`:
 
 - `Plugin` — the base identity contract every plugin conforms to
 - `CheckvistSyncPlugin`
@@ -29,7 +29,7 @@ Plugin contracts are defined under `Priority/Plugins/Protocols/`:
 - `ThemePlugin` (likewise, in `Protocols/ThemePluginProtocol.swift` — see below)
 - `PluginSettingsPageProviding`
 
-Plugin registration lives in `Priority/Plugins/Registry/PluginRegistry.swift`.
+Plugin registration lives in `Takt/Plugins/Registry/PluginRegistry.swift`.
 
 ## Native Plugin Rules
 
@@ -78,7 +78,7 @@ handles an AFFiNE credential. See `docs/affine.md`.
 
 Transport for the Google Tasks mirror: lists, tasks, create, patch, delete and
 paging. It decides nothing — what the mirror *should* do is `GoogleTasksMirror`
-in `PriorityCore`, and when it should happen is `GoogleTasksMirrorService`.
+in `TaktCore`, and when it should happen is `GoogleTasksMirrorService`.
 
 One Google Tasks list per Takt list, with Takt as the source of
 authority: local edits win and are logged when they overwrite something, while
@@ -89,7 +89,7 @@ completions, added notes and tasks created on the Google side are kept. See
 
 Calendar and Tasks are two APIs on one Google user, so the OAuth dance —
 client ID, PKCE, the loopback receiver, the keychain item and refresh — lives
-in `Priority/Plugins/Native/Google/` and both plugins are handed the same
+in `Takt/Plugins/Native/Google/` and both plugins are handed the same
 `GoogleAccount`. Each declares the scopes it needs with `requireScopes` at
 construction; signing in asks for the union of them.
 
@@ -146,18 +146,18 @@ This plugin breaks two conventions on purpose, both for the same reason:
 
 - Its contract lives in `Protocols/DailyLogPluginProtocol.swift` rather than in
   `PluginProtocols.swift`, and
-- the whole `Native/DailyLog/` folder is excluded from the `PriorityPlugins`
+- the whole `Native/DailyLog/` folder is excluded from the `TaktPlugins`
   SPM target.
 
-Both follow from the module boundary: the plugin traffics in `PriorityCore`
+Both follow from the module boundary: the plugin traffics in `TaktCore`
 types (`DayLogEvent`, `DayBoundary`, `DayLogAggregator`), a file can only belong
 to one SPM target, and the Xcode app compiles everything as one module where
-`import PriorityCore` isn't available. `MCPClientInstaller.swift` is app-only
+`import TaktCore` isn't available. `MCPClientInstaller.swift` is app-only
 for exactly the same reason. No coverage is lost — the logic worth testing lives
-in `Sources/PriorityCore/` and is exercised by `corelogic-tests`.
+in `Sources/TaktCore/` and is exercised by `corelogic-tests`.
 
 Recording reaches the plugin through `TaskMutationHost.recordDayLogTaskAction`
-(primitives only, since `PriorityAppLogic` can't see the event type either) and
+(primitives only, since `TaktAppLogic` can't see the event type either) and
 through `FocusSessionManager.onFocusSessionCompleted`.
 
 ### Completion Celebration (`CompletionCelebrationPlugin`)
@@ -177,10 +177,10 @@ deliberate:
 - **Its settings live in the theme pane, not in a plugin card.** Registering
   four presets as `PluginSettingsPageProviding` would put four entries in the
   plugin sidebar for what is one setting.
-- **It excludes itself from `PriorityPlugins`** — the whole `Native/Celebration/`
+- **It excludes itself from `TaktPlugins`** — the whole `Native/Celebration/`
   folder plus its contract — for a variant of the `DailyLog` reason: celebrations
   are motion, motion is SwiftUI, and the SPM target can't have it. Everything
-  worth testing therefore has to live in `Sources/PriorityCore/`, which is why a
+  worth testing therefore has to live in `Sources/TaktCore/`, which is why a
   preset expresses its *timing* as a `CelebrationScript` rather than as a
   sequence of `Task.sleep` calls: `CompletionMilestonePolicy`,
   `CelebrationRowTreatment` and `CelebrationScript` are all covered by
@@ -266,14 +266,14 @@ A plugin declares three things and nothing else:
 
 `specification` composes the three with the `Plugin` identity and is defaulted,
 so a native theme is a registration rather than a place to keep hex — the hex
-lives in `Sources/PriorityCore/Theming/BuiltInThemeSpecifications.swift`, where
+lives in `Sources/TaktCore/Theming/BuiltInThemeSpecifications.swift`, where
 it is covered by `corelogic-tests`.
 
 Like `DailyLog` and `Celebration`, this capability breaks two conventions for
 the one reason: the contract sits in `Protocols/ThemePluginProtocol.swift` and
-the whole `Native/Theme/` folder is excluded from the `PriorityPlugins` target,
-because it traffics in `PriorityCore` types and one file can only belong to one
-SPM target. Everything worth testing is therefore in `PriorityCore`:
+the whole `Native/Theme/` folder is excluded from the `TaktPlugins` target,
+because it traffics in `TaktCore` types and one file can only belong to one
+SPM target. Everything worth testing is therefore in `TaktCore`:
 `ThemeColorValue` (hex parsing, WCAG luminance and contrast), `ThemePalette`
 (role resolution and the flip), and `ThemeSpecification.validate()`.
 
@@ -282,7 +282,7 @@ SPM target. Everything worth testing is therefore in `PriorityCore`:
 [`themes.md`](themes.md). They are not registered with `PluginRegistry`,
 because they come and go while the app runs: `UserThemeLibrary` (in
 `Native/Theme/`) watches the folder, decodes and merges each file through
-`ThemeFileLoader` in `PriorityCore`, and vends a `UserThemePlugin` per file.
+`ThemeFileLoader` in `TaktCore`, and vends a `UserThemePlugin` per file.
 `ThemeManager` lists those after the built-ins and keeps the user's pick even
 while its file is missing, rendering Chalk until it returns. Load problems go
 to Diagnostics and the window's error line, the way `keymap.json`'s do.
@@ -310,7 +310,7 @@ draws the system separator and does not flip.
 names families in preference order and falls back to its `design` when none is
 installed. The built-ins ask for Zed's pair — IBM Plex Sans for display and
 body, Lilex for mono and numerals — and the app bundles both: the `.ttf`s and
-their SIL OFL licences live in `Priority/Fonts/`, the synchronized group copies
+their SIL OFL licences live in `Takt/Fonts/`, the synchronized group copies
 them into Resources, and `BundledFonts.register()` registers them for the
 process from `AppDelegate.init`, before any surface draws. `Theme.font` and its
 AppKit twin `Theme.nsFont` share one resolver, which picks the family's real
@@ -331,6 +331,6 @@ plugin. Both are live at once on purpose; a surface is migrated when its
 After plugin changes, run:
 
 ```bash
-xcodebuild -project 'Priority.xcodeproj' -scheme 'Priority' -configuration Debug -destination 'platform=macOS' build
+xcodebuild -project 'Takt.xcodeproj' -scheme 'Takt' -configuration Debug -destination 'platform=macOS' build
 swift test
 ```

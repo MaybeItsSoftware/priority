@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityAppLogic
+@testable import TaktAppLogic
 
 @MainActor
 final class OfflineTaskSyncPluginTests: XCTestCase {

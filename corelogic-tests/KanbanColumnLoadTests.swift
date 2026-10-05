@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// A WIP limit is advisory. Going over is shown, never prevented — a board that
 /// refuses a drop because a number says so is a board people stop using.

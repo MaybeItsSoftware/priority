@@ -1,13 +1,13 @@
 import Synchronization
 import XCTest
 
-@testable import PriorityAppLogic
-@testable import PriorityCore
+@testable import TaktAppLogic
+@testable import TaktCore
 
 /// `TaskListViewModel` decides what every list view renders, and owns
 /// `cacheVersion`, whose whole job is to be correct about SwiftUI observation.
 /// None of it could be reached from a test: the type named five app-only
-/// managers concretely, and `PriorityAppLogic` could not import `PriorityCore`
+/// managers concretely, and `TaktAppLogic` could not import `TaktCore`
 /// for the visibility engines it uses. Both are now false — the app links the
 /// package rather than compiling it — so this is the first coverage it has had.
 @MainActor

@@ -103,8 +103,8 @@ jobs:
       # in their keychain, so signing has to be off here.
       - name: Build app (Debug)
         run: |
-          xcodebuild -project 'Priority.xcodeproj' \
-            -scheme 'Priority' \
+          xcodebuild -project 'Takt.xcodeproj' \
+            -scheme 'Takt' \
             -configuration Debug \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \
@@ -117,8 +117,8 @@ jobs:
       # users without ever failing CI.
       - name: Build app (Release)
         run: |
-          xcodebuild -project 'Priority.xcodeproj' \
-            -scheme 'Priority' \
+          xcodebuild -project 'Takt.xcodeproj' \
+            -scheme 'Takt' \
             -configuration Release \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \
@@ -137,7 +137,7 @@ jobs:
       # `keychain-access-groups` first; see the entitlements file.
       - name: Verify release entitlements
         run: |
-          ENTITLEMENTS='Priority/Priority.release.entitlements'
+          ENTITLEMENTS='Takt/Takt.release.entitlements'
           read_key() {
             /usr/libexec/PlistBuddy -c "Print :$1" "$ENTITLEMENTS" 2>/dev/null || echo missing
           }
@@ -152,7 +152,7 @@ jobs:
           # The build setting is what actually decides this — an earlier attempt
           # to unsandbox by editing the plist alone changed nothing, because
           # Xcode synthesises entitlements from ENABLE_APP_SANDBOX.
-          if grep -q 'ENABLE_APP_SANDBOX = YES' 'Priority.xcodeproj/project.pbxproj'; then
+          if grep -q 'ENABLE_APP_SANDBOX = YES' 'Takt.xcodeproj/project.pbxproj'; then
             echo "::error::ENABLE_APP_SANDBOX is YES in project.pbxproj, which overrides the plist."
             exit 1
           fi
@@ -234,8 +234,8 @@ jobs:
       # and installs it into the bundle, so this covers the bundling too.
       - name: Build app (Debug)
         run: |
-          xcodebuild -project 'Priority.xcodeproj' \
-            -scheme 'Priority' \
+          xcodebuild -project 'Takt.xcodeproj' \
+            -scheme 'Takt' \
             -configuration Debug \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \

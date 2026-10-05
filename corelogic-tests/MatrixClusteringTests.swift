@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Inheritance shares a coordinate exactly, so a pile is the normal case rather
 /// than a coincidence. These are the properties the plot relies on to draw one

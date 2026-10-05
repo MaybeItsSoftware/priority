@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The rules `IntegrationCoordinator` applies to the Obsidian sync queue and
 /// the calendar link map. 659 LOC with no coverage; these are the parts of it

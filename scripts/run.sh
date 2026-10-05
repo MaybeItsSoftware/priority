@@ -2,9 +2,7 @@
 set -o pipefail
 
 # Configuration
-SCHEME="Priority"
-# The scheme keeps the code's name; the product, and so the bundle and its
-# executable, is Takt.
+SCHEME="Takt"
 PRODUCT="Takt"
 CONFIG="Debug"
 BUILD_DIR="$(pwd)/build"
@@ -41,7 +39,7 @@ fi
 
 # Guard against launching something older than the sources. Cheap insurance
 # against an incremental build that quietly no-op'd.
-NEWER_SOURCE=$(find Priority -name '*.swift' -newer "$BINARY_PATH" -print -quit 2>/dev/null)
+NEWER_SOURCE=$(find Takt -name '*.swift' -newer "$BINARY_PATH" -print -quit 2>/dev/null)
 if [ -n "$NEWER_SOURCE" ]; then
     echo "❌ Error: $NEWER_SOURCE is newer than the built binary."
     echo "   The build did not pick up your changes. Try: rm -rf \"$BUILD_DIR/$CONFIG\""

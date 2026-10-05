@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class ThemePaletteTests: XCTestCase {
   private func value(_ hex: String) -> ThemeColorValue {

@@ -111,14 +111,14 @@ Two safeguards are worth knowing:
 
 | Piece | File |
 | --- | --- |
-| JSON-RPC framing, request builders, result parsing | `Sources/PriorityCore/MCPWire.swift` |
-| Finding the helper, and the PATH to launch it with | `Sources/PriorityCore/AFFiNEHelperLocator.swift` |
-| Document rendering and heading-delimited merging | `Sources/PriorityCore/AFFiNEDocumentMarkdown.swift` |
-| The checklist: rendering it, and reading ticks back | `Sources/PriorityCore/AFFiNEChecklistMarkdown.swift` |
-| The process, its pipes, and the watchdog | `Priority/Plugins/Native/AFFiNE/AFFiNEMCPSession.swift` |
-| Tool orchestration and the task → document memory | `Priority/Plugins/Native/AFFiNE/AFFiNEExportService.swift` |
-| The plugin, and its settings page | `Priority/Plugins/Native/AFFiNE/NativeAFFiNEIntegrationPlugin*.swift` |
-| Ordering the close-then-write, and reporting it | `Priority/Managers/IntegrationCoordinator+AFFiNE.swift` |
+| JSON-RPC framing, request builders, result parsing | `Sources/TaktCore/MCPWire.swift` |
+| Finding the helper, and the PATH to launch it with | `Sources/TaktCore/AFFiNEHelperLocator.swift` |
+| Document rendering and heading-delimited merging | `Sources/TaktCore/AFFiNEDocumentMarkdown.swift` |
+| The checklist: rendering it, and reading ticks back | `Sources/TaktCore/AFFiNEChecklistMarkdown.swift` |
+| The process, its pipes, and the watchdog | `Takt/Plugins/Native/AFFiNE/AFFiNEMCPSession.swift` |
+| Tool orchestration and the task → document memory | `Takt/Plugins/Native/AFFiNE/AFFiNEExportService.swift` |
+| The plugin, and its settings page | `Takt/Plugins/Native/AFFiNE/NativeAFFiNEIntegrationPlugin*.swift` |
+| Ordering the close-then-write, and reporting it | `Takt/Managers/IntegrationCoordinator+AFFiNE.swift` |
 
 Closing a task is the mutation service's job, not an integration's, so the
 plugin hands the ticked ids back through a callback and the coordinator applies

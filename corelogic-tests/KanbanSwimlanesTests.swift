@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// A single row of columns says what state a task is in but never what it is
 /// for. For a tree that is a handful of goals and a couple of hundred

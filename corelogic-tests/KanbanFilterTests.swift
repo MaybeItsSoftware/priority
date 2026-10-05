@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// `KanbanFilter` decides which column a card lands in and where it sits in
 /// that column. It lived on `KanbanManager`, reading everything through a weak

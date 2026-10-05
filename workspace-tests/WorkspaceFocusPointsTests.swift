@@ -1,5 +1,5 @@
 import Foundation
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 /// Points for focused work: minutes spent, multiplied by how well it went.
@@ -11,7 +11,7 @@ final class WorkspaceFocusPointsTests: XCTestCase {
 
   override func setUpWithError() throws {
     directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityPointsTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktPointsTests-\(UUID().uuidString)", isDirectory: true)
     store = try WorkspaceStore(databaseURL: directoryURL.appendingPathComponent("priority.sqlite"))
     let workspace = try store.bootstrapIfNeeded()
     list = try XCTUnwrap(store.inbox(in: workspace.id))

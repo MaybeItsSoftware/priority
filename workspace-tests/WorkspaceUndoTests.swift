@@ -1,6 +1,6 @@
 import Foundation
 import GRDB
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 final class WorkspaceUndoTests: XCTestCase {
@@ -11,7 +11,7 @@ final class WorkspaceUndoTests: XCTestCase {
 
   override func setUpWithError() throws {
     directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityUndoTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktUndoTests-\(UUID().uuidString)", isDirectory: true)
     store = try WorkspaceStore(databaseURL: directoryURL.appendingPathComponent("priority.sqlite"))
     let workspace = try store.bootstrapIfNeeded()
     workspaceID = workspace.id

@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class MCPClientConfigTests: XCTestCase {
   private let entry = MCPServerEntry(

@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityAppLogic
+@testable import TaktAppLogic
 
 /// Coverage for the network-facing service: the offline replay queue, the
 /// refetch fan-out, and list switching.

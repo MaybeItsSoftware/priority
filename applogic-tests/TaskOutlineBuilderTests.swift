@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityAppLogic
+@testable import TaktAppLogic
 
 /// Covers the outline flattening and the right/left decisions that read it.
 final class TaskOutlineBuilderTests: XCTestCase {

@@ -11,11 +11,11 @@ set -euo pipefail
 # See docs/mcp-server.md.
 #
 # Run from an Xcode build phase, so it reads the usual build settings. Set
-# PRIORITY_SKIP_CLI_BUNDLE=1 to skip it — the app still builds and runs, but
+# TAKT_SKIP_CLI_BUNDLE=1 to skip it — the app still builds and runs, but
 # `--mcp-server` will have nothing to exec.
 
-if [[ "${PRIORITY_SKIP_CLI_BUNDLE:-0}" == "1" ]]; then
-  echo "note: PRIORITY_SKIP_CLI_BUNDLE=1 — the app will ship without an MCP server"
+if [[ "${TAKT_SKIP_CLI_BUNDLE:-0}" == "1" ]]; then
+  echo "note: TAKT_SKIP_CLI_BUNDLE=1 — the app will ship without an MCP server"
   exit 0
 fi
 
@@ -32,7 +32,7 @@ error: cargo is required to build Takt — the app bundles the `takt` CLI
        as its MCP server (Contents/Helpers/takt).
 
        Install Rust:  https://rustup.rs
-       Or skip it:    PRIORITY_SKIP_CLI_BUNDLE=1 (the app will have no MCP server)
+       Or skip it:    TAKT_SKIP_CLI_BUNDLE=1 (the app will have no MCP server)
 MSG
   exit 1
 fi

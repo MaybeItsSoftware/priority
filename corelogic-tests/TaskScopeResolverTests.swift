@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Five views used to give four different answers to "what am I looking at",
 /// two of them implemented privately in their own files, and none of them said

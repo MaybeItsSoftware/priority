@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Where `Takt --mcp-server` looks for the CLI it hands over to.
 ///
@@ -44,7 +44,7 @@ final class MCPHelperLocatorTests: XCTestCase {
     XCTAssertEqual(candidates(override: "  /tmp/priority \n").first, "/tmp/priority")
   }
 
-  /// The fallbacks matter for a bundle built with PRIORITY_SKIP_CLI_BUNDLE=1,
+  /// The fallbacks matter for a bundle built with TAKT_SKIP_CLI_BUNDLE=1,
   /// or one run straight out of DerivedData.
   func testASeparatelyInstalledCLIIsFoundWhenTheBundleHasNone() {
     let resolved = MCPHelperLocator.resolve(candidates: candidates()) {

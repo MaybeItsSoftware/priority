@@ -1,7 +1,7 @@
 import Auth
 import Foundation
-@testable import PrioritySync
-import PriorityWorkspace
+@testable import TaktSync
+import TaktWorkspace
 import XCTest
 
 /// The account routes from `docs/sync.md` ("Wire protocol", "Devices and the

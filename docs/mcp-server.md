@@ -84,7 +84,7 @@ Notes:
   `WorkspaceStore`, and a second writer would skip them. None of the workspace
   tools recompute the app's policy. Which task is next, whether one is
   available in the current context and how a day is scored all live in
-  `PriorityCore`, and a second implementation of them here is the thing this
+  `TaktCore`, and a second implementation of them here is the thing this
   server stopped having. `database_path` in the CLI's config, or
   `$PRIORITY_MCP_DB_PATH`, points them elsewhere.
 - The task-tree writes work **while the app is running**. See
@@ -136,7 +136,7 @@ subtasks become the list's contents with ids and hierarchy intact. The lighter
 where it is.
 
 Deliberately not here: completing a **repeating** task. Its next occurrence is
-scheduled from a `PeriodicSchedule` that only `PriorityCore` can parse, so the
+scheduled from a `PeriodicSchedule` that only `TaktCore` can parse, so the
 tool refuses rather than ending the series. Complete those in the app.
 - `task_metadata` is read-only, and stays that way. Priorities, recurrence and
   start dates live in `UserDefaults`, which the running app holds in memory and
@@ -162,7 +162,7 @@ tool refuses rather than ending the series. Complete those in the app.
 Two processes edit `dailies.json` and `daylog.jsonl`: the app and this server.
 Three things make that safe, and all three are load-bearing:
 
-1. **A file lock.** `FileLock` (`Sources/PriorityCore/FileLock.swift`) takes `flock(2)` on a
+1. **A file lock.** `FileLock` (`Sources/TaktCore/FileLock.swift`) takes `flock(2)` on a
    sibling `.lock` file — a sibling, because saves are atomic (temp + rename) and
    replace the data file's inode, so a lock held on it guards nothing. The CLI
    takes the same lock on the same path, so the two genuinely exclude each
@@ -209,7 +209,7 @@ where the CLI was never installed separately — which is what made retiring the
 old server safe.
 
 There used to be a second implementation: 1,760 lines of Swift in
-`Priority/Plugins/MCP/MCPServer.swift`, running in-process. A third, a bundled
+`Takt/Plugins/MCP/MCPServer.swift`, running in-process. A third, a bundled
 `python3` fallback script, went earlier. Both existed for the same reason — a
 client might be pointed at any of them — and both cost the same thing: every
 tool change was a two- or three-way edit, and every divergence a two- or

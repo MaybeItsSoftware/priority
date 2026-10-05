@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Inheritance put two hundred tasks on seven points. These are the properties
 /// that let the plot say something about a task that it does not already say

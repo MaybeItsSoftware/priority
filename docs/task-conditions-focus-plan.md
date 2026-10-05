@@ -23,7 +23,7 @@ a deadline has repeatedly been postponed. Never infer that history from
 - `WorkspaceTask.dueAt` and `estimateSeconds` already exist.
 - `TaskMetadata.startAt` already exists, with a store API and a schedule-for-later
   action. Expose it in the inspector and include it in atomic drafts and saves.
-- `Sources/PriorityCore/NextUpSelector.swift` filters future starts, then uses
+- `Sources/TaktCore/NextUpSelector.swift` filters future starts, then uses
   additive scores. Dailies receive the largest single contribution; overdue age
   stops increasing after 30 days. Manual `focusRank` positions can override all
   urgency. Replace these behaviours with the policy below.
@@ -276,7 +276,7 @@ Conflicting requirement edits should initially reconcile as one field rather
 than silently unioning two incompatible sets.
 
 Introduce pure `TaskAvailabilityPolicy` and focus-order policy types in
-`PriorityCore`. Flatten workspace records into candidates in one consistent
+`TaktCore`. Flatten workspace records into candidates in one consistent
 read, with batched metadata, conditions and logged-work queries rather than a
 query per task. Return ranked tasks, blocked tasks and the next reevaluation
 instant. Keep SwiftUI limited to inputs, displays and explicit actions.
@@ -339,7 +339,7 @@ scores or global pins, and all timing surfaces agree on planned and actual work.
 
 ## Implementation and verification record
 
-Implemented in `PriorityCore`, `PriorityWorkspace` and the local macOS workspace:
+Implemented in `TaktCore`, `TaktWorkspace` and the local macOS workspace:
 
 - Context conditions, all-of/either-or requirements, stable renames and archival.
 - Atomic Start/Due/condition/block-rule saves, one undo step, retained v1/v2 draft

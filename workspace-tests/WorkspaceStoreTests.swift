@@ -1,5 +1,5 @@
 import Foundation
-@testable import PriorityWorkspace
+@testable import TaktWorkspace
 import GRDB
 import XCTest
 
@@ -9,7 +9,7 @@ final class WorkspaceStoreTests: XCTestCase {
 
   override func setUpWithError() throws {
     directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityWorkspaceTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktWorkspaceTests-\(UUID().uuidString)", isDirectory: true)
     store = try WorkspaceStore(databaseURL: directoryURL.appendingPathComponent("priority.sqlite"))
   }
 

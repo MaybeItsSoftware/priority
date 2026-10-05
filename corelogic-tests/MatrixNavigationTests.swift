@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The plot answered only to the mouse. These are the properties that make the
 /// arrow keys a real way round it rather than an approximation of one.

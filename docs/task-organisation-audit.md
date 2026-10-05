@@ -52,7 +52,7 @@ they retain their actual, fully visible hierarchy.
 1. **Task editor drafts can be silently discarded.** Edit a title or notes,
    then select another task or close the inspector before Save. The editor
    reloads from the task and has no draft retention or leave handling.
-   See [WorkspaceInspectorViews.swift](../Priority/WorkspaceInspectorViews.swift).
+   See [WorkspaceInspectorViews.swift](../Takt/WorkspaceInspectorViews.swift).
    Decide whether to save automatically or retain drafts by task identity.
 
 2. **Undo can leave the inspector showing stale values for the same task.**
@@ -68,8 +68,8 @@ they retain their actual, fully visible hierarchy.
    name before attempting the move. A later failure can leave earlier edits
    committed, and the sheets dismiss regardless. Make each editor Save one
    validated transaction and one undo group, and dismiss only on success.
-   See [WorkspaceViewModel.swift](../Priority/WorkspaceViewModel.swift) and
-   [WorkspaceInspectorViews.swift](../Priority/WorkspaceInspectorViews.swift).
+   See [WorkspaceViewModel.swift](../Takt/WorkspaceViewModel.swift) and
+   [WorkspaceInspectorViews.swift](../Takt/WorkspaceInspectorViews.swift).
 
 4. **Folder settings offer invalid destinations.** A folder's descendants
    appear in its parent picker. Choosing one fails the store's cycle check

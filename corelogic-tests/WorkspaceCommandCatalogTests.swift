@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The catalogue is the only place the workspace's keys are written down, so
 /// these are the properties that make that claim worth anything.

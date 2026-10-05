@@ -1,5 +1,5 @@
 import Foundation
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 /// Folding a branch has to leave exactly the rows the outline draws and the

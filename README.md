@@ -1,4 +1,4 @@
-<img src="Priority/Assets.xcassets/AppIcon.appiconset/ios-1024.png" alt="" width="72" align="left" />
+<img src="Takt/Assets.xcassets/AppIcon.appiconset/ios-1024.png" alt="" width="72" align="left" />
 
 # Takt
 
@@ -125,7 +125,7 @@ arrows to Spaces and Mission Control.
 The table above is the short version. The complete one is in the app: `Cmd+K`,
 or a **double-tap of Shift**, opens the palette, and `Cmd+/` — or the keyboard icon in
 the status bar — shows the same commands as a grouped reference. Both are rendered from a single catalogue in
-`Sources/PriorityCore/WorkspaceCommandCatalog.swift`, which is also what the
+`Sources/TaktCore/WorkspaceCommandCatalog.swift`, which is also what the
 key router dispatches through — so a key, a palette row and a reference row
 cannot disagree about what happens. [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md)
 covers the behaviour a table cannot: sequence timing, which keys survive a text
@@ -765,7 +765,7 @@ git clone https://github.com/MaybeItsSoftware/priority.git
 cd priority
 
 # The app
-xcodebuild -project 'Priority.xcodeproj' -scheme 'Priority' -configuration Debug -destination 'platform=macOS' build
+xcodebuild -project 'Takt.xcodeproj' -scheme 'Takt' -configuration Debug -destination 'platform=macOS' build
 
 # Headless logic (658 tests)
 swift test
@@ -785,14 +785,14 @@ python3 scripts/mcp_smoke_check.py
 
 | Path | What |
 | --- | --- |
-| `Priority/` | The macOS app. |
-| `Sources/PriorityCore/` | Pure, headless, UI-free logic. The app links it as a package product. |
-| `Priority/Plugins/` | Integration plugins, one folder each, behind protocols |
+| `Takt/` | The macOS app. |
+| `Sources/TaktCore/` | Pure, headless, UI-free logic. The app links it as a package product. |
+| `Takt/Plugins/` | Integration plugins, one folder each, behind protocols |
 | `cli/` | The Rust CLI crate — shares no source with the Swift side |
 | `scripts/` | Build, install, the Python MCP fallback, and the parity check |
 | `docs/` | [CLI](docs/cli.md) · [MCP](docs/mcp-server.md) · [plugins](docs/plugins.md) · [state ownership](docs/state-ownership.md) |
 
-The same source tree is compiled by two build systems: the Xcode project builds the app, and `Package.swift` exposes `PriorityCore`, `PriorityPlugins` and `PriorityAppLogic` as SPM libraries so the headless logic can be tested without the app shell. Adding or moving a file often means updating `Package.swift` too — see [CLAUDE.md](CLAUDE.md).
+The same source tree is compiled by two build systems: the Xcode project builds the app, and `Package.swift` exposes `TaktCore`, `TaktPlugins` and `TaktAppLogic` as SPM libraries so the headless logic can be tested without the app shell. Adding or moving a file often means updating `Package.swift` too — see [CLAUDE.md](CLAUDE.md).
 
 ## Where your data lives
 

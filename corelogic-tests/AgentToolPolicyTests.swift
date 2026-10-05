@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class AgentToolPolicyTests: XCTestCase {
 

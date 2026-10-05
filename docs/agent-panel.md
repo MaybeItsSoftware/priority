@@ -17,13 +17,13 @@ The rule it is built around is the one chosen when it was added:
 
 | File | What it is |
 |---|---|
-| `Sources/PriorityCore/AgentStreamProtocol.swift` | The stream-json wire format: lines in to `AgentStreamEvent`s, and the user messages and `control_response`s out |
-| `Sources/PriorityCore/AgentToolPolicy.swift` | Which tools are read-only, the exact `claude` invocation, where `claude` is looked for, the system prompt |
-| `Sources/PriorityCore/AgentToolSummary.swift` | A tool call in words, for the approval card and the read lines |
-| `Priority/WorkspaceAgentSession.swift` | The process: launch, the line reader, approvals, stop, new thread |
-| `Priority/WorkspaceAgentPane.swift` | The transcript, the approval card, the setup state |
-| `Priority/WorkspaceAgentInputField.swift` | The message field (an `NSTextView`: Return sends, Shift+Return is a new line) |
-| `Priority/WorkspaceLeftDock.swift` | The dock's tab bar: Lists and Agent |
+| `Sources/TaktCore/AgentStreamProtocol.swift` | The stream-json wire format: lines in to `AgentStreamEvent`s, and the user messages and `control_response`s out |
+| `Sources/TaktCore/AgentToolPolicy.swift` | Which tools are read-only, the exact `claude` invocation, where `claude` is looked for, the system prompt |
+| `Sources/TaktCore/AgentToolSummary.swift` | A tool call in words, for the approval card and the read lines |
+| `Takt/WorkspaceAgentSession.swift` | The process: launch, the line reader, approvals, stop, new thread |
+| `Takt/WorkspaceAgentPane.swift` | The transcript, the approval card, the setup state |
+| `Takt/WorkspaceAgentInputField.swift` | The message field (an `NSTextView`: Return sends, Shift+Return is a new line) |
+| `Takt/WorkspaceLeftDock.swift` | The dock's tab bar: Lists and Agent |
 
 The first three are pure and tested in `corelogic-tests/AgentStreamProtocolTests.swift`
 and `AgentToolPolicyTests.swift`; the stream-json fixtures there are lines
@@ -47,7 +47,7 @@ path.
 Takt's MCP server is found the way `Takt --mcp-server` finds it
 (`MCPHelperLocator`): `$PRIORITY_MCP_EXECUTABLE_PATH`, then the bundled helper
 at `Contents/Helpers/takt`, then an installed CLI. A build made with
-`PRIORITY_SKIP_CLI_BUNDLE=1` and no installed CLI has no tools to give the
+`TAKT_SKIP_CLI_BUNDLE=1` and no installed CLI has no tools to give the
 assistant, and the panel says that instead of starting.
 
 ## The invocation

@@ -37,8 +37,8 @@ jobs:
       - name: Build release app
         run: |
           DERIVED_DIR="$RUNNER_TEMP/derived-release"
-          xcodebuild -project 'Priority.xcodeproj' \
-            -scheme 'Priority' \
+          xcodebuild -project 'Takt.xcodeproj' \
+            -scheme 'Takt' \
             -configuration Release \
             -derivedDataPath "$DERIVED_DIR" \
             -destination 'platform=macOS' \

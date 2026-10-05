@@ -1,12 +1,12 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The timing of a celebration, now that it is data rather than a hand-written
 /// sequence of sleeps inside a SwiftUI file.
 ///
 /// None of this was reachable from a test before. `Native/Celebration/` is
-/// excluded from the `PriorityPlugins` target because celebrations are motion
+/// excluded from the `TaktPlugins` target because celebrations are motion
 /// and motion is SwiftUI, so every preset's budget arithmetic lived somewhere
 /// nothing could check — which is how the budget came to be enforced per sleep
 /// instead of over the sequence, and stayed that way.

@@ -1,16 +1,16 @@
 import Foundation
-import PriorityCore
+import TaktCore
 
-// Plugin protocols and stub models needed by `PriorityAppLogic`
+// Plugin protocols and stub models needed by `TaktAppLogic`
 // (`TaskRepository`, `OfflineTaskSyncPlugin`, `LocalTaskStore`).
 //
 // These mirror the canonical types in:
-//   • Priority/Plugins/Protocols/PluginProtocols.swift
-//   • Priority/Plugins/Native/Checkvist/CheckvistModels.swift
-//   • Priority/Plugins/Native/Checkvist/CheckvistTaskCachePayload.swift
-//   • Priority/Plugins/Native/Checkvist/CheckvistSessionError.swift
+//   • Takt/Plugins/Protocols/PluginProtocols.swift
+//   • Takt/Plugins/Native/Checkvist/CheckvistModels.swift
+//   • Takt/Plugins/Native/Checkvist/CheckvistTaskCachePayload.swift
+//   • Takt/Plugins/Native/Checkvist/CheckvistSessionError.swift
 //
-// Deduplicating against `PriorityPlugins` would require making every
+// Deduplicating against `TaktPlugins` would require making every
 // imported type `public`, which is a meaningful broadening of the plugin
 // library's API surface — left as follow-on work. See Phase 5.2 in
 // ARCHITECTURE_IMPROVEMENT_PLAN.md.

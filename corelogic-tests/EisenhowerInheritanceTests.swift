@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The reason placing tasks is affordable at all: a tree of a few goals and a
 /// couple of hundred descendants needs as many placements as it has goals, not

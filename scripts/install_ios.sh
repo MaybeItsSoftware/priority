@@ -22,7 +22,7 @@ build() {
   local destination="$1"
   local log
   log="$(mktemp)"
-  if ! xcodebuild -project "$IOS/PriorityMobile.xcodeproj" -scheme PriorityMobile -configuration Release \
+  if ! xcodebuild -project "$IOS/TaktMobile.xcodeproj" -scheme TaktMobile -configuration Release \
       -destination "$destination" -derivedDataPath "$DERIVED" build >"$log" 2>&1; then
     grep -E "error:" "$log" | sort -u >&2 || true
     echo "** BUILD FAILED ** (full log: $log)" >&2

@@ -1,12 +1,12 @@
-name: PriorityMobile
+name: TaktMobile
 
 # The iOS app. Generated with XcodeGen; the .xcodeproj is not committed.
 #
 #   cd mobile/ios && xcodegen
 #
 # The workspace logic is not re-implemented here: the app links the repo's own
-# Swift package (`../..`) — PriorityCore, PriorityWorkspace and
-# PriorityWorkspaceEditing — exactly the libraries the Mac app uses.
+# Swift package (`../..`) — TaktCore, TaktWorkspace and
+# TaktWorkspaceEditing — exactly the libraries the Mac app uses.
 
 options:
   bundleIdPrefix: uk.co.maybeitssoftware
@@ -28,32 +28,32 @@ settings:
     DEAD_CODE_STRIPPING: YES
 
 packages:
-  Priority:
+  Takt:
     path: ../..
 
 targets:
-  PriorityMobile:
+  TaktMobile:
     type: application
     platform: iOS
     sources:
-      - path: PriorityMobile
+      - path: TaktMobile
       - path: Shared
-      - path: ../../Priority/Fonts
+      - path: ../../Takt/Fonts
         group: Fonts
         buildPhase: resources
     dependencies:
-      - package: Priority
-        product: PriorityCore
-      - package: Priority
-        product: PriorityWorkspace
-      - package: Priority
-        product: PriorityWorkspaceEditing
-      - package: Priority
-        product: PrioritySync
-      - target: PriorityWidgets
+      - package: Takt
+        product: TaktCore
+      - package: Takt
+        product: TaktWorkspace
+      - package: Takt
+        product: TaktWorkspaceEditing
+      - package: Takt
+        product: TaktSync
+      - target: TaktWidgets
         embed: true
     entitlements:
-      path: PriorityMobile/PriorityMobile.entitlements
+      path: TaktMobile/TaktMobile.entitlements
       properties:
         com.apple.security.application-groups:
           - group.uk.co.maybeitssoftware.takt
@@ -61,7 +61,7 @@ targets:
         com.apple.developer.applesignin:
           - Default
     info:
-      path: PriorityMobile/Info.plist
+      path: TaktMobile/Info.plist
       properties:
         CFBundleDisplayName: Takt
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -104,22 +104,19 @@ targets:
           - Lilex-Bold.ttf
     settings:
       base:
-        # The bundle is Takt.app; the Swift module keeps its name, so the
-        # tests' `@testable import Priority` still resolves.
         PRODUCT_NAME: Takt
-        PRODUCT_MODULE_NAME: Priority
         PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SUPPORTS_MACCATALYST: NO
 
-  PriorityWidgets:
+  TaktWidgets:
     type: app-extension
     platform: iOS
     sources:
-      - path: PriorityWidgets
+      - path: TaktWidgets
       - path: Shared
-      - path: ../../Priority/Fonts
+      - path: ../../Takt/Fonts
         group: WidgetFonts
         buildPhase: resources
         includes:
@@ -130,12 +127,12 @@ targets:
       - sdk: ActivityKit.framework
       - sdk: AppIntents.framework
     entitlements:
-      path: PriorityWidgets/PriorityWidgets.entitlements
+      path: TaktWidgets/TaktWidgets.entitlements
       properties:
         com.apple.security.application-groups:
           - group.uk.co.maybeitssoftware.takt
     info:
-      path: PriorityWidgets/Info.plist
+      path: TaktWidgets/Info.plist
       properties:
         CFBundleDisplayName: Takt
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -150,23 +147,23 @@ targets:
           - Lilex-Medium.ttf
     settings:
       base:
-        PRODUCT_NAME: PriorityWidgets
+        PRODUCT_NAME: TaktWidgets
         PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.widgets
         TARGETED_DEVICE_FAMILY: "1,2"
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
 
-  PriorityMobileTests:
+  TaktMobileTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: PriorityMobileTests
+      - path: TaktMobileTests
     dependencies:
-      - target: PriorityMobile
-      - package: Priority
-        product: PriorityWorkspace
-      - package: Priority
-        product: PriorityCore
+      - target: TaktMobile
+      - package: Takt
+        product: TaktWorkspace
+      - package: Takt
+        product: TaktCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.tests
@@ -177,19 +174,19 @@ targets:
   # The widget views and the Live Activity's lock-screen view, rendered from
   # the extension's own sources (all but the @main bundle) and the shared
   # snapshot types. Hosted by the app so the bundled fonts are registered.
-  PriorityWidgetsTests:
+  TaktWidgetsTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: PriorityWidgetsTests
+      - path: TaktWidgetsTests
       - path: Shared
-      - path: PriorityWidgets
+      - path: TaktWidgets
         excludes:
-          - PriorityWidgetsBundle.swift
+          - TaktWidgetsBundle.swift
           - Info.plist
           - "*.entitlements"
     dependencies:
-      - target: PriorityMobile
+      - target: TaktMobile
       - sdk: WidgetKit.framework
       - sdk: ActivityKit.framework
       - sdk: AppIntents.framework
@@ -200,33 +197,33 @@ targets:
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Takt.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Takt
         BUNDLE_LOADER: $(TEST_HOST)
 
-  PriorityMobileUITests:
+  TaktMobileUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - path: PriorityMobileUITests
+      - path: TaktMobileUITests
     dependencies:
-      - target: PriorityMobile
+      - target: TaktMobile
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uk.co.maybeitssoftware.takt.uitests
         GENERATE_INFOPLIST_FILE: YES
-        TEST_TARGET_NAME: PriorityMobile
+        TEST_TARGET_NAME: TaktMobile
 
 schemes:
-  PriorityMobile:
+  TaktMobile:
     build:
       targets:
-        PriorityMobile: all
-        PriorityWidgets: all
+        TaktMobile: all
+        TaktWidgets: all
     run:
       config: Debug
     test:
       config: Debug
       gatherCoverageData: false
       targets:
-        - PriorityMobileTests
-        - PriorityWidgetsTests
-        - PriorityMobileUITests
+        - TaktMobileTests
+        - TaktWidgetsTests
+        - TaktMobileUITests
     archive:
       config: Release

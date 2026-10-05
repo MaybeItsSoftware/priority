@@ -1,6 +1,6 @@
 import Foundation
 import GRDB
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 /// The migration ladder itself, as opposed to what any one migration does.
@@ -34,7 +34,7 @@ final class WorkspaceMigrationTests: XCTestCase {
 
   override func setUpWithError() throws {
     directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityMigrationTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktMigrationTests-\(UUID().uuidString)", isDirectory: true)
   }
 
   override func tearDownWithError() throws {

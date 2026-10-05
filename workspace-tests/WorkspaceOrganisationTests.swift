@@ -1,5 +1,5 @@
 import Foundation
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 final class WorkspaceOrganisationTests: XCTestCase {
@@ -10,7 +10,7 @@ final class WorkspaceOrganisationTests: XCTestCase {
 
   override func setUpWithError() throws {
     directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityOrganisationTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktOrganisationTests-\(UUID().uuidString)", isDirectory: true)
     store = try WorkspaceStore(databaseURL: directoryURL.appendingPathComponent("priority.sqlite"))
     workspaceID = try store.bootstrapIfNeeded().id
     inboxID = try XCTUnwrap(store.inbox(in: workspaceID)).id

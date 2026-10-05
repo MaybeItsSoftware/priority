@@ -6,8 +6,8 @@ copies row changes between them through one small server (`sync-server/`,
 hosted on Railway). The server stores rows and merges them; it knows nothing
 about tasks.
 
-Three clients implement the client half: Swift (`Sources/PriorityWorkspace/
-WorkspaceStore+Sync.swift` with `Sources/PrioritySync`, used by macOS and iOS),
+Three clients implement the client half: Swift (`Sources/TaktWorkspace/
+WorkspaceStore+Sync.swift` with `Sources/TaktSync`, used by macOS and iOS),
 Kotlin (`mobile/android/data`), and, passively, the Rust CLI. The CLI never
 talks to the server, but its writes go through the same triggers, so they sync
 the next time the app does.
@@ -117,7 +117,7 @@ are GRDB's `"yyyy-MM-dd HH:mm:ss.SSS"` text in UTC, and booleans are `0`/`1`.
 
 ### Signing in on the Mac and iPhone
 
-`Sources/PrioritySync` holds both apps' half. `SyncServer` names the
+`Sources/TaktSync` holds both apps' half. `SyncServer` names the
 Supabase project (its URL and publishable key) and the redirect,
 `takt://auth-callback`, which has to be on the project's allowed
 redirect URLs.

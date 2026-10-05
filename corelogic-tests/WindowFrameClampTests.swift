@@ -1,7 +1,7 @@
 import CoreGraphics
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class WindowFrameClampTests: XCTestCase {
 

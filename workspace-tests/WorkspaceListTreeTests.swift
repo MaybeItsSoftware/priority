@@ -1,6 +1,6 @@
 import Foundation
-import PriorityCore
-import PriorityWorkspace
+import TaktCore
+import TaktWorkspace
 import XCTest
 
 /// The in-memory shapes the desktop now builds from one read of a list have

@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// A minimal `VisibilityTask`. The engines only read six properties, so a
 /// fixture can supply them directly — no Checkvist model, no date parsing, no
@@ -16,7 +16,7 @@ struct FixtureTask: VisibilityTask {
 
 /// `TaskFilterEngine` classifies, sorts and relates tasks; it is the layer
 /// under every list the user sees. It had no coverage at all until it moved
-/// into `PriorityCore`.
+/// into `TaktCore`.
 final class TaskFilterEngineTests: XCTestCase {
   private let calendar = Calendar.current
 

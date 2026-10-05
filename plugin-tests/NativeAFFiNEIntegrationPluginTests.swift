@@ -1,8 +1,8 @@
 import Foundation
-import PriorityCore
+import TaktCore
 import XCTest
 
-@testable import PriorityPlugins
+@testable import TaktPlugins
 
 /// A stand-in for a running `affine-mcp`: it records what was asked of it and
 /// answers with the shapes the real server's output schemas promise.

@@ -1,5 +1,5 @@
 import Foundation
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 final class TaskEditorDraftTests: XCTestCase {

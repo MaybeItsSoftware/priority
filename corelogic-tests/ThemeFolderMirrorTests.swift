@@ -1,5 +1,5 @@
 import Foundation
-import PriorityCore
+import TaktCore
 import XCTest
 
 /// The Mac's themes folder against the synced `themes` table: which side

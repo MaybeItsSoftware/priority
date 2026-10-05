@@ -21,11 +21,11 @@ Relevant implementation locations:
 
 | Area | Files |
 | --- | --- |
-| Local schema and persistence | `Sources/PriorityWorkspace/WorkspaceModels.swift`, `Sources/PriorityWorkspace/WorkspaceStore.swift` |
-| Desktop state and migration | `Priority/WorkspaceViewModel.swift` |
-| Desktop UI | `Priority/WorkspaceDesktopView.swift`, `Priority/MainWindowController.swift` |
-| Focus floating timer | `Priority/LocalFloatingFocusTimer.swift` |
-| Startup and legacy import trigger | `Priority/AppDelegate.swift` |
+| Local schema and persistence | `Sources/TaktWorkspace/WorkspaceModels.swift`, `Sources/TaktWorkspace/WorkspaceStore.swift` |
+| Desktop state and migration | `Takt/WorkspaceViewModel.swift` |
+| Desktop UI | `Takt/WorkspaceDesktopView.swift`, `Takt/MainWindowController.swift` |
+| Focus floating timer | `Takt/LocalFloatingFocusTimer.swift` |
+| Startup and legacy import trigger | `Takt/AppDelegate.swift` |
 
 ## Non-negotiable product rules
 
@@ -59,7 +59,7 @@ Goal: make Lists + Focus viable for daily use without relying on the old app.
 ### Task editing and organization
 
 - Add full task inspector fields: due date, estimate, tags, priority, recurrence, links/attachments as appropriate.
-  *Recurrence now does something: `PeriodicSchedule` in `PriorityCore` owns the
+  *Recurrence now does something: `PeriodicSchedule` in `TaktCore` owns the
   vocabulary (`daily`, `weekdays`, `weekly`, `every N days/weeks`, `every
   <weekday>`) and completing a task that carries one closes that occurrence for
   good and writes the next as a new task, dated by stepping the cadence from the
@@ -259,7 +259,7 @@ Each item should land as a coherent, tested commit. Do not combine schema change
 ## Verification checklist for every milestone
 
 - `swift test`
-- `xcodebuild -project 'Priority.xcodeproj' -scheme 'Priority' -configuration Debug -destination 'platform=macOS' build`
+- `xcodebuild -project 'Takt.xcodeproj' -scheme 'Takt' -configuration Debug -destination 'platform=macOS' build`
 - Manual keyboard-only smoke test for the changed workflow.
 - Relaunch test to verify persistence.
 - Offline test with network unavailable where relevant.

@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import PriorityPlugins
+@testable import TaktPlugins
 
 @MainActor
 final class NativeGoogleCalendarIntegrationPluginTests: XCTestCase {

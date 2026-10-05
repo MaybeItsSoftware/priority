@@ -29,7 +29,7 @@ allows normal navigation without a confirmation prompt on every task change.
 | Step | Status |
 | --- | --- |
 | Atomic editor saves and valid destinations | Implemented in `WorkspaceStore+Editing.swift`; forms dismiss only on successful commits. |
-| Draft retention | Implemented with an observable manager in `Priority/Editing/WorkspaceTaskEditor.swift` and separate atomic local storage. |
+| Draft retention | Implemented with an observable manager in `Takt/Editing/WorkspaceTaskEditor.swift` and separate atomic local storage. |
 | Undo/redo reconciliation | Implemented per field, with explicit conflict choices and stale-save rejection inside the transaction. |
 | Legacy root recovery | Implemented in list settings, with a preview and one undoable settings Save. |
 | Automated verification | 1,037 tests passed, including injected rollback failures and restoration after deletion. Final Debug and Release app builds passed. |
@@ -44,7 +44,7 @@ out-of-range input stays in the draft and cannot silently clear the estimate.
 Implement this first because editor state needs a reliable save result.
 
 Add complete edit requests and store methods in
-`Sources/PriorityWorkspace/WorkspaceStore+Editing.swift`:
+`Sources/TaktWorkspace/WorkspaceStore+Editing.swift`:
 
 - Task: title, notes, due date, estimate, editor metadata and daily attachment.
 - List: name, colour, folder and archive state.
@@ -84,8 +84,8 @@ command; unchanged Save does not alter history; failed Save keeps the form open.
 ## 2. Move task drafts out of the inspector's view lifecycle
 
 Add Foundation-only editor snapshot, draft and validation types to
-`PriorityWorkspace`, with tests in `workspace-tests`. Add an observable draft
-manager under `Priority/` and keep `LocalTaskInspector` focused on bindings and
+`TaktWorkspace`, with tests in `workspace-tests`. Add an observable draft
+manager under `Takt/` and keep `LocalTaskInspector` focused on bindings and
 focus behaviour. The app's synchronised source group will include app files;
 package types and tests use the existing workspace targets.
 

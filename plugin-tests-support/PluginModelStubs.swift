@@ -3,15 +3,15 @@ import Foundation
 // Fakes for the four app-only services (`ObsidianSyncService`,
 // `CheckvistSession`, `CheckvistTaskRepository`, `GoogleOAuthLoopbackReceiver`)
 // that the plugin code references directly. The classes here share the name
-// of the real services so `PriorityPlugins` compiles the same plugin source
+// of the real services so `TaktPlugins` compiles the same plugin source
 // against these in-memory stand-ins, while the Xcode app target compiles
 // against the real implementations.
 //
 // Originally this file also duplicated the data models (`CheckvistTask`,
 // `CheckvistNote`, `CheckvistList`, `CheckvistTaskCachePayload`,
 // `ObsidianOpenMode`, `CheckvistSessionError`). Those were promoted to
-// canonical sources under `Priority/Plugins/Native/...` and are now
-// compiled into `PriorityPlugins` directly — see Phase 5.2 of
+// canonical sources under `Takt/Plugins/Native/...` and are now
+// compiled into `TaktPlugins` directly — see Phase 5.2 of
 // `ARCHITECTURE_IMPROVEMENT_PLAN.md`. The remaining service fakes are still
 // here pending a follow-on refactor that introduces protocol seams for the
 // services themselves.

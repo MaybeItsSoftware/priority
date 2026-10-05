@@ -3,7 +3,7 @@
 **The list of keys lives in the app, not here.** Press `Cmd+Shift+P` (or `Cmd+K`) for the command
 palette, which shows every command the workspace has and the key that runs it,
 or `Cmd+/` for the same information grouped as a reference sheet. Both are
-rendered from `WorkspaceCommandCatalog` (`Sources/PriorityCore/`), which is the
+rendered from `WorkspaceCommandCatalog` (`Sources/TaktCore/`), which is the
 single place a workspace key is written down.
 
 This file used to carry a table of its own. It is gone deliberately. There were
@@ -95,7 +95,7 @@ The shape is Zed's: an array of blocks, each with an optional `context` and a
 ```
 
 - **Command ids** are the cases of `WorkspaceCommandID`
-  (`Sources/PriorityCore/WorkspaceCommandID.swift`) — `taskComplete`,
+  (`Sources/TaktCore/WorkspaceCommandID.swift`) — `taskComplete`,
   `goBoard`, `listRename` and so on.
 - **Keys** are written the way the catalogue writes them: modifiers `cmd`,
   `ctrl`, `option`, `shift` joined to the key with `+` (Zed's `-` works too,

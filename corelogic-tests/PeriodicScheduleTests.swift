@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class PeriodicScheduleTests: XCTestCase {
   private var calendar: Calendar = {

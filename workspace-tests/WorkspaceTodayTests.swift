@@ -1,6 +1,6 @@
 import Foundation
-import PriorityCore
-import PriorityWorkspace
+import TaktCore
+import TaktWorkspace
 import XCTest
 
 /// A task typed with its details, and a day planned and arranged by hand.
@@ -13,7 +13,7 @@ final class WorkspaceTodayTests: XCTestCase {
 
   override func setUpWithError() throws {
     directory = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityTodayTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktTodayTests-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     store = try WorkspaceStore(databaseURL: directory.appendingPathComponent("priority.sqlite"))
     workspaceID = try store.bootstrapIfNeeded().id

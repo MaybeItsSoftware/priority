@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class ThemeFileTests: XCTestCase {
   private func source(_ name: String, _ json: String) -> ThemeFileSource {

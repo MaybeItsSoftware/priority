@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The add field's trailing tokens. The property that matters most is the one
 /// that is easiest to break: a title is only ever trimmed from the end, and

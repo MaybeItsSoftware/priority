@@ -1,6 +1,6 @@
 import Foundation
 import GRDB
-import PriorityWorkspace
+import TaktWorkspace
 import XCTest
 
 /// The Inbox is the one list the app itself relies on, so its identity has to
@@ -11,7 +11,7 @@ final class WorkspaceInboxTests: XCTestCase {
 
   override func setUpWithError() throws {
     directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PriorityInboxTests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("TaktInboxTests-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
   }
 

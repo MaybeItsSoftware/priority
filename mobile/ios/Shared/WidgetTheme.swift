@@ -4,7 +4,7 @@ import UIKit
 
 /// The chosen theme as the widgets and the Live Activity draw it.
 ///
-/// The extension does not link PriorityCore, so it cannot resolve a theme
+/// The extension does not link TaktCore, so it cannot resolve a theme
 /// file itself. The app resolves the chosen theme and writes the result here —
 /// both appearances' colours as hex, the lock if the theme has one, and the
 /// faces and control radius — whenever the choice changes, then reloads the

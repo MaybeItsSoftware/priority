@@ -24,10 +24,10 @@ code is right; fix this section.
 | `AppCoordinator` | 2,205 LOC / 9 files | **525 LOC / 2 files** (`AppCoordinator.swift`, `+ServiceHosts.swift`) |
 | `PopoverView.swift` | 2,068 LOC | 1,461 LOC |
 | `SettingsView.swift` | 1,473 LOC | 526 LOC |
-| `KanbanManager.swift` | 778 LOC | 625 LOC (rules and selection moved to `PriorityCore`) |
-| `KeyboardShortcutRouter.swift` | 1,011 LOC | 923 LOC across 2 files; gates, sequences and guards in `PriorityCore` |
+| `KanbanManager.swift` | 778 LOC | 625 LOC (rules and selection moved to `TaktCore`) |
+| `KeyboardShortcutRouter.swift` | 1,011 LOC | 923 LOC across 2 files; gates, sequences and guards in `TaktCore` |
 | MCP implementations | 3 (Swift, Python, Rust) | **1** (the Rust CLI, bundled in the app) |
-| How the app gets `PriorityCore` | compiled its sources | **links the package product** |
+| How the app gets `TaktCore` | compiled its sources | **links the package product** |
 | Test count | — | **570 SPM + 92 cargo** |
 | SwiftLint in CI | never ran | runs (non-strict); 11 standing warnings |
 
@@ -49,7 +49,7 @@ it unused and were deleted in phase 5 of `docs/zed-overhaul-plan.md`; only
 remain, because the catalogue spells and renders keys with them. What follows
 is the record of what they found.
 
-**Mostly addressed.** Three pure pieces are out, in `PriorityCore` and tested:
+**Mostly addressed.** Three pure pieces are out, in `TaktCore` and tested:
 
 - `ShortcutKeyToken` — the token spelling (`"cmd+k"`, `"shift+enter"`), next to
   `ConfigurableShortcutAction.defaultBinding`, which has to agree with it.
@@ -94,29 +94,29 @@ resolver test failure rather than a silently dead key.
 
 **Route 2 has started, and the premise behind this whole finding is gone.**
 
-`PriorityCore`'s sources moved to `Sources/PriorityCore`, and the Xcode target
+`TaktCore`'s sources moved to `Sources/TaktCore`, and the Xcode target
 now *links* the package product instead of compiling the same files. That was
-~46 files gaining an `import PriorityCore` and ~300 declarations gaining
+~46 files gaining an `import TaktCore` and ~300 declarations gaining
 `public` — all compile-checked, and the target has no `@Observable` types, so
 the silent "stops updating" failure mode did not apply.
 
-The consequence is larger than the move. **`PriorityAppLogic` and
-`PriorityPlugins` can now `import PriorityCore`.** That import used to break the
+The consequence is larger than the move. **`TaktAppLogic` and
+`TaktPlugins` can now `import TaktCore`.** That import used to break the
 app build, because the same sources are compiled straight into the app where no
 such module existed — the constraint this document called "the one-file-one-target
 rule" and treated as fixed. It is not fixed; it only held while the app compiled
 the sources. Three things followed immediately:
 
-- `OfflineReplayPolicy.swift` moved into `Sources/PriorityCore`, ending the
+- `OfflineReplayPolicy.swift` moved into `Sources/TaktCore`, ending the
   exile this document used as its example of the rule.
 - The due-date parsing moved out of `CheckvistTask` into
-  `PriorityCore.DueDateParsing`, so the real model and the shadow now share it
+  `TaktCore.DueDateParsing`, so the real model and the shadow now share it
   rather than the shadow re-deriving forty lines of date formats.
 - `TaskListViewModel` became reachable — see finding 3.
 
 **Still open:** `applogic-support/AppLogicSharedTypes.swift` and
 `plugin-tests-support/PluginModelStubs.swift` still exist. Deleting them needs
-`PriorityPlugins` to be linked by the app as well, and that is blocked on three
+`TaktPlugins` to be linked by the app as well, and that is blocked on three
 plugin files that name app-only services (`CheckvistSession`,
 `CheckvistTaskRepository`, `ObsidianSyncService`, `GoogleOAuthLoopbackReceiver`
 — which is what `PluginModelStubs` fakes). Only `ObsidianSyncService` imports
@@ -127,7 +127,7 @@ are shorter but not gone.
 ### 3. Managers with no tests
 
 The pattern is now established five times: take the pure decision out, make it
-generic or parameterised so it needs no app types, put it in `PriorityCore`, and
+generic or parameterised so it needs no app types, put it in `TaktCore`, and
 leave the manager gathering inputs and applying results.
 
 **Done since the audit:**
@@ -191,7 +191,7 @@ noticeable.
 
 ### 6. The in-process MCP server — done
 
-**Closed.** `Priority/Plugins/MCP/MCPServer.swift` (1,760 LOC) is deleted, along
+**Closed.** `Takt/Plugins/MCP/MCPServer.swift` (1,760 LOC) is deleted, along
 with `scripts/mcp_parity_check.py` (614 LOC), the `mcp-parity` CI job, and
 `CoreLogic/MCPMessageFraming.swift` (161 LOC plus its tests), which existed only
 to frame that server's stdio.
@@ -203,7 +203,7 @@ requests made. It was that MCP client configurations already on users' disks nam
 
 So the app ships the CLI instead. `scripts/bundle_cli.sh`, from an Xcode build
 phase, cargo-builds it and installs it at `Contents/Helpers/priority`, signed
-with the app. `PriorityEntryPoint.main()` checks for `--mcp-server` before
+with the app. `TaktEntryPoint.main()` checks for `--mcp-server` before
 `MainApp.main()` and hands the process to `MCPServerShim.run()`, which `execv`s
 the helper — so a process that only speaks JSON-RPC on stdio never initialises
 AppKit, and there is no supervision to get wrong.
@@ -215,11 +215,11 @@ is exactly where a client configuration puts credentials.
 
 Two costs, both deliberate:
 
-- **Building the app now needs cargo.** `PRIORITY_SKIP_CLI_BUNDLE=1` opts out
+- **Building the app now needs cargo.** `TAKT_SKIP_CLI_BUNDLE=1` opts out
   and produces an app with no MCP server; `scripts/build_dmg.sh` refuses to
   package a bundle missing the helper. `ENABLE_USER_SCRIPT_SANDBOXING` had to go
   to `NO`, because cargo writes outside any declarable output.
-- **`CLAUDE.md`'s rule changed.** "Nothing in `Priority/` may reference it"
+- **`CLAUDE.md`'s rule changed.** "Nothing in `Takt/` may reference it"
   became "…except the `--mcp-server` shim, which execs the bundled helper". The
   app *runs* the CLI; it still shares no source with it.
 
@@ -227,7 +227,7 @@ What replaced the parity harness is `scripts/mcp_smoke_check.py`, which is a
 different question: `cargo test` covers the server, and the smoke check covers
 the seam — that both spellings reach it and expose the same nineteen tools, and
 specifically that an old-style invocation with credentials in `env` still gets a
-working server. Plus `MCPHelperLocator` in `PriorityCore`, 12 tests, for the
+working server. Plus `MCPHelperLocator` in `TaktCore`, 12 tests, for the
 search order and its diagnostic.
 
 ## History: the phased plan
@@ -244,7 +244,7 @@ Order mattered: each phase removed blockers for the next.
 Before refactoring `AppCoordinator` we need a regression harness for the behaviour we're about to move.
 
 - [x] Add integration-style tests for `TaskRepository`: load, mutate, reorder, switch list, switch online/offline. Use the existing `OfflineTaskSyncPlugin` plus a fake `CheckvistSyncPlugin` to drive both branches.
-- [x] Add tests for reordering paths (`ReorderQueueTests`). Undo paths gained coverage in step 3.2 once `UndoService` was extracted behind the `UndoActionPerforming` protocol — see `applogic-tests/UndoServiceTests.swift`. `taskAction` and the rest of the coordinator-level mutation orchestration gained direct coverage in step 3.8, once `TaskMutationService` and `SyncService` moved into `PriorityAppLogic` behind the host protocols — see `applogic-tests/TaskMutationServiceTests.swift` and `applogic-tests/SyncServiceTests.swift`.
+- [x] Add tests for reordering paths (`ReorderQueueTests`). Undo paths gained coverage in step 3.2 once `UndoService` was extracted behind the `UndoActionPerforming` protocol — see `applogic-tests/UndoServiceTests.swift`. `taskAction` and the rest of the coordinator-level mutation orchestration gained direct coverage in step 3.8, once `TaskMutationService` and `SyncService` moved into `TaktAppLogic` behind the host protocols — see `applogic-tests/TaskMutationServiceTests.swift` and `applogic-tests/SyncServiceTests.swift`.
 - [x] Add a test for cache invalidation: mutate `tasks`, `availableLists`, `priorityTaskIdsByParentId`, assert `TaskListViewModel.cache` rebuilds (this will reveal the missing `availableLists` `didSet`).
 
 ### Phase 1 — De-duplicate plugin-switch state
@@ -259,7 +259,7 @@ Concrete, low-risk; removes the most-cited leak.
 
 Goal: one mechanism, no missed invalidations.
 
-- [x] Replaced `onCacheRelevantChange` callbacks with a single `CacheInvalidationBus` (`Priority/CacheInvalidationBus.swift`). Producers (`TaskRepository`, `NavigationState`, `KanbanManager`, `QuickEntryManager`, `TimerManager`, `StartDateManager`, `FocusSessionManager`) take the bus at init and call `bus.invalidate()` from their `didSet`s. The lone subscriber today (`AppCoordinator`) registers once in `setupChildCallbacks` and routes into `TaskListViewModel.invalidateCaches()`. The bus's `init` is `nonisolated` so `@MainActor` managers can keep a `CacheInvalidationBus()` default value on the parameter.
+- [x] Replaced `onCacheRelevantChange` callbacks with a single `CacheInvalidationBus` (`Takt/CacheInvalidationBus.swift`). Producers (`TaskRepository`, `NavigationState`, `KanbanManager`, `QuickEntryManager`, `TimerManager`, `StartDateManager`, `FocusSessionManager`) take the bus at init and call `bus.invalidate()` from their `didSet`s. The lone subscriber today (`AppCoordinator`) registers once in `setupChildCallbacks` and routes into `TaskListViewModel.invalidateCaches()`. The bus's `init` is `nonisolated` so `@MainActor` managers can keep a `CacheInvalidationBus()` default value on the parameter.
 - [x] Audited every `var` on `TaskRepository` and `AppCoordinator`. Added `didSet` for `availableLists` and `isNetworkReachable` (both fire the bus). `checkvistIntegrationEnabled` also fires the bus from `didSet`, so `setupChildCallbacks` no longer reaches into `invalidateCaches()` from its callback. Vars that don't drive task-visibility caches (`isLoading`, `errorMessage`, `lastUndo`, the auth-credential vars whose downstream effect already routes through `tasks`/priority-queue reload) are intentionally exempt and remain unhooked. The previously-XCTExpectFailure'd cases in `TaskRepositoryCacheInvalidationTests` now pass without the wrapper.
 - [x] Removed the per-manager `onCacheRelevantChange` properties and the AppCoordinator-side `currentParentId` setter no longer calls `invalidateCaches()` (NavigationState fires the bus from its own `didSet`).
 
@@ -272,14 +272,14 @@ Target shape:
 - `AppCoordinator` shrinks to lifecycle wiring + composition (≤200 LOC).
 - Behaviour moves to dedicated services consumed by views directly via `@Environment` / `@Observable`:
   - `TaskMutationService` ← `+TaskMutations`, `+QuickAdd`, `+Undo` (one undo stack, owned here). **Done (steps 3.2 + 3.4):**
-    - **Undo half (step 3.2):** split out into `Priority/UndoService.swift` (owns `lastAction` and the rewind switch, replacing the misplaced `TaskRepository.lastUndo` slot). Depends on the new `UndoActionPerforming` protocol rather than `AppCoordinator` directly, which let it move into `PriorityAppLogic` — `applogic-tests/UndoServiceTests.swift` covers record/clear and the rewind dispatch for every `UndoableAction` case (10 new tests). `+Undo.swift` is deleted.
-    - **Mutation half (step 3.4):** new `Priority/TaskMutationService.swift` owns mark-done / reopen / invalidate / `taskAction`, `updateTask`, `addTask`, `addTaskAsChild`, `deleteTask`, `createNextOccurrence`, and the QuickAdd flow (`beginQuickAddEntry`, `setQuickAddSpecificLocationToCurrentTask`, `submitQuickAddTask`). `+TaskMutations.swift` and `+QuickAdd.swift` are forwarding shims; the recurrence convenience accessors (`recurrenceRule(for:)`, `setRecurrenceRule`, `clearRecurrenceRule`) stay in `+TaskMutations.swift` since they're already one-liners over `recurrence`.
-    - **Promoted to AppLogic (step 3.8).** Both `TaskMutationService` and `SyncService` now depend on `TaskMutationHost` / `SyncHost` (`Priority/TaskServiceHosts.swift`) instead of holding a `weak var coordinator: AppCoordinator?`. The UI-bound behaviour they used to inline — the `NSHapticFeedbackManager` + `withAnimation` completion sequence, the kanban column maths, the recurrence rule store, the `TimerElapsedReassignmentPolicy` remap — is expressed as behaviour the host performs, so it lives in `AppCoordinator+ServiceHosts.swift` (the only app-only half of the split) while the services compile into `PriorityAppLogic`. `applogic-tests/TaskMutationServiceTests.swift` (20 tests) and `applogic-tests/SyncServiceTests.swift` (14 tests) drive them against `StubTaskServiceHost`, covering `taskAction` rollback, the optimistic add/delete paths, offline queueing, the recurrence hand-off, and offline replay. Writing them surfaced a real defect: `TaskRepository.init`'s `pendingOfflineWorkStore` default ignored the injected `defaults`, so the offline queue always went to `UserDefaults.standard`.
-      - `OfflineReplayPolicy.swift` moved out of `CoreLogic/` to the app root in the same step: SPM forbids one file belonging to two targets, and `PriorityAppLogic` can't `import PriorityCore` (the same sources are also compiled straight into the Xcode app, where `PriorityCore` isn't a module). Its tests moved to `applogic-tests/` unchanged.
+    - **Undo half (step 3.2):** split out into `Takt/UndoService.swift` (owns `lastAction` and the rewind switch, replacing the misplaced `TaskRepository.lastUndo` slot). Depends on the new `UndoActionPerforming` protocol rather than `AppCoordinator` directly, which let it move into `TaktAppLogic` — `applogic-tests/UndoServiceTests.swift` covers record/clear and the rewind dispatch for every `UndoableAction` case (10 new tests). `+Undo.swift` is deleted.
+    - **Mutation half (step 3.4):** new `Takt/TaskMutationService.swift` owns mark-done / reopen / invalidate / `taskAction`, `updateTask`, `addTask`, `addTaskAsChild`, `deleteTask`, `createNextOccurrence`, and the QuickAdd flow (`beginQuickAddEntry`, `setQuickAddSpecificLocationToCurrentTask`, `submitQuickAddTask`). `+TaskMutations.swift` and `+QuickAdd.swift` are forwarding shims; the recurrence convenience accessors (`recurrenceRule(for:)`, `setRecurrenceRule`, `clearRecurrenceRule`) stay in `+TaskMutations.swift` since they're already one-liners over `recurrence`.
+    - **Promoted to AppLogic (step 3.8).** Both `TaskMutationService` and `SyncService` now depend on `TaskMutationHost` / `SyncHost` (`Takt/TaskServiceHosts.swift`) instead of holding a `weak var coordinator: AppCoordinator?`. The UI-bound behaviour they used to inline — the `NSHapticFeedbackManager` + `withAnimation` completion sequence, the kanban column maths, the recurrence rule store, the `TimerElapsedReassignmentPolicy` remap — is expressed as behaviour the host performs, so it lives in `AppCoordinator+ServiceHosts.swift` (the only app-only half of the split) while the services compile into `TaktAppLogic`. `applogic-tests/TaskMutationServiceTests.swift` (20 tests) and `applogic-tests/SyncServiceTests.swift` (14 tests) drive them against `StubTaskServiceHost`, covering `taskAction` rollback, the optimistic add/delete paths, offline queueing, the recurrence hand-off, and offline replay. Writing them surfaced a real defect: `TaskRepository.init`'s `pendingOfflineWorkStore` default ignored the injected `defaults`, so the offline queue always went to `UserDefaults.standard`.
+      - `OfflineReplayPolicy.swift` moved out of `CoreLogic/` to the app root in the same step: SPM forbids one file belonging to two targets, and `TaktAppLogic` can't `import TaktCore` (the same sources are also compiled straight into the Xcode app, where `TaktCore` isn't a module). Its tests moved to `applogic-tests/` unchanged.
     - AppCoordinator still exposes the original method names as forwarding shims so existing keybindings, `CommandExecutor`, and view call sites keep working — those move in the forwarding cull.
-  - `TaskNavigationService` ← `+Navigation`, `+TaskScoping`. **Partly done (step 3.3):** new `Priority/TaskNavigationService.swift` owns the navigation actions (next/prev, enter/exit, navigate-to, clamp) and the four root-task view-switch operations (`setRootTaskView`, `cycleRootTaskView`, `cycleRootScopeFilter`, `selectRootScopeFilter`), wrapping the pure-logic `TaskNavigationCoordinator` struct. `+Navigation.swift` is now a forwarding shim; the four moved methods in `+TaskScoping.swift` are forwarders too. `TaskRepository.navigationCoordinator` is gone — the service holds its own logic instance. **Not yet moved out of `+TaskScoping.swift`:** the connection-state derivations (`hasCredentials`, `canAttemptLogin`, `checkvistConnectionState`, `canSyncRemotely`), priority-on-current-task mutations (`setPriorityForCurrentTask` etc.), plugin/MCP view-helpers, and the cache/badge accessors. Those belong to later steps (`SyncService`, `TaskMutationService`) or to view-side cleanup.
-  - `SyncService` ← `+TaskSync`, `+ReorderingAndTiming` reorder-flush logic. **Done (step 3.5):** new `Priority/SyncService.swift` owns the network-facing surface — login, `fetchTopTask`, list management (`fetchLists`, `loadCheckvistLists`, `switchCheckvistList`, `createCheckvistListAndSwitch`, `mergeOpenTasksBetweenLists`, `selectList`, `uploadOfflineTasksToCheckvist`), the offline-mutation flush, and the reorder/move surface (`moveTask` + per-view strategies, the reorder queue lifecycle, `indentTask`, `unindentTask`). `+TaskSync.swift` is now a 45-line forwarding shim. `+ReorderingAndTiming.swift` is a mixed file: forwarders for the reorder/indent surface, plus the helpers that *didn't* move because other services still call them through the coordinator (`subtreeBlockRange`, the timer/cache roll-up accessors, `executeCommandInput`, the date-resolver helpers). Renaming or splitting that residual file belongs to the post-cull cleanup.
-  - `LifecycleController` ← `+StateAndLifecycle` setup/teardown. **Done (step 3.1):** new `Priority/LifecycleController.swift` owns the cache-bus subscription, repository/manager-callback wiring, and the network-monitor lifecycle. AppCoordinator constructs it in `init` and calls `lifecycle.start()`; `reachabilityMonitor` stays on AppCoordinator so the nonisolated `deinit` can stop it without an actor hop. The four other concerns previously crammed into `+StateAndLifecycle.swift` (priority-queue forwarding, loading helpers, keychain bootstrap, onboarding dialogs) remain in that extension for now — they belong to later services in this phase.
+  - `TaskNavigationService` ← `+Navigation`, `+TaskScoping`. **Partly done (step 3.3):** new `Takt/TaskNavigationService.swift` owns the navigation actions (next/prev, enter/exit, navigate-to, clamp) and the four root-task view-switch operations (`setRootTaskView`, `cycleRootTaskView`, `cycleRootScopeFilter`, `selectRootScopeFilter`), wrapping the pure-logic `TaskNavigationCoordinator` struct. `+Navigation.swift` is now a forwarding shim; the four moved methods in `+TaskScoping.swift` are forwarders too. `TaskRepository.navigationCoordinator` is gone — the service holds its own logic instance. **Not yet moved out of `+TaskScoping.swift`:** the connection-state derivations (`hasCredentials`, `canAttemptLogin`, `checkvistConnectionState`, `canSyncRemotely`), priority-on-current-task mutations (`setPriorityForCurrentTask` etc.), plugin/MCP view-helpers, and the cache/badge accessors. Those belong to later steps (`SyncService`, `TaskMutationService`) or to view-side cleanup.
+  - `SyncService` ← `+TaskSync`, `+ReorderingAndTiming` reorder-flush logic. **Done (step 3.5):** new `Takt/SyncService.swift` owns the network-facing surface — login, `fetchTopTask`, list management (`fetchLists`, `loadCheckvistLists`, `switchCheckvistList`, `createCheckvistListAndSwitch`, `mergeOpenTasksBetweenLists`, `selectList`, `uploadOfflineTasksToCheckvist`), the offline-mutation flush, and the reorder/move surface (`moveTask` + per-view strategies, the reorder queue lifecycle, `indentTask`, `unindentTask`). `+TaskSync.swift` is now a 45-line forwarding shim. `+ReorderingAndTiming.swift` is a mixed file: forwarders for the reorder/indent surface, plus the helpers that *didn't* move because other services still call them through the coordinator (`subtreeBlockRange`, the timer/cache roll-up accessors, `executeCommandInput`, the date-resolver helpers). Renaming or splitting that residual file belongs to the post-cull cleanup.
+  - `LifecycleController` ← `+StateAndLifecycle` setup/teardown. **Done (step 3.1):** new `Takt/LifecycleController.swift` owns the cache-bus subscription, repository/manager-callback wiring, and the network-monitor lifecycle. AppCoordinator constructs it in `init` and calls `lifecycle.start()`; `reachabilityMonitor` stays on AppCoordinator so the nonisolated `deinit` can stop it without an actor hop. The four other concerns previously crammed into `+StateAndLifecycle.swift` (priority-queue forwarding, loading helpers, keychain bootstrap, onboarding dialogs) remain in that extension for now — they belong to later services in this phase.
 - ~~Forwarding properties on `AppCoordinator` are deleted; views read from the relevant service directly.~~ **Method forwarders culled (step 3.6); property cull complete (step 3.7).** Final batch landed: `listId`, `errorMessage`, `username`, `remoteKey`, `availableLists`, `isLoading`, `taskEisenhowerLevels`, `activeCredentials`, and the unused `usernameLower` — all `TaskRepository`-owned, all deleted. Views go through `@Environment(TaskRepository.self) var repository`; non-view callers (`CommandExecutor`, `KeyboardShortcutRouter`, `MenuBarController`, `LifecycleController`, the `AppCoordinator+*` extensions) read via `manager.repository.X` / `coordinator.repository.X` / `repository.X`. `SyncService` and `TaskMutationService` were also narrowed in the same pass — they now take a strong `TaskRepository` field in their initializer (matching `TaskNavigationService`'s shape) instead of routing every forwarder hop through the weak coordinator reference. Two SwiftUI bindings in `NativeCheckvistSyncPlugin+Settings.swift` (the username and remote-key fields) needed explicit `Binding(get:set:)` wrappers because `repository` is a `let` on `AppCoordinator` — the keypath-derived `$manager.repository.username` projection isn't writable.
 
 ### Phase 3 outcome (step 3.7 — property forwarder cull, started)
@@ -318,18 +318,18 @@ Internal callers in services also retargeted: `TaskMutationService` calls `coord
 - [x] `PopoverView.swift` (2,068 LOC) → **done.** Split into the main shell (1,273 LOC) plus two extension files: `PopoverView+TaskRow.swift` (451 LOC — `taskRow`, `dueSectionHeader`, and every badge: timer/priority/matrix/start/recurrence/due/metadata-token, plus `formatTaskContent` and the inline-tag formatter) and `PopoverView+QuickEntryBar.swift` (359 LOC — `quickEntryBar`, the icon/placeholder/font/sequence-hint helpers, and the submit/escape/tab/empty-list-composer actions). `MarqueeTextLine` and several helpers (`themeColor`, `isAddMode`, `activePromptText`, `activePromptTextBinding`, `clearPrompt`, `shouldShowEmptyListComposer`) dropped `private` so the extensions can see them. `breadcrumbPath(for:includeCurrentParent:)` stays in `PopoverView.swift` because both extensions need it. The full plan-vision split (`PopoverHeader`, dedicated `TaskListPane`, separate overlay file) wasn't necessary to clear the lint error limit — those further splits are available if `PopoverView.swift` grows again.
 - [x] `SettingsView.swift` (1,473 LOC) → **done.** Main file is now 517 LOC; the four panes live as extensions in their own files: `SettingsView+DebugPane.swift` (19 LOC), `SettingsView+ThemePane.swift` (189 LOC), `SettingsView+KeybindingsPane.swift` (457 LOC), `SettingsView+PreferencesPane.swift` (316 LOC). The pane bodies stay as `var <pane>Pane: some View` on `SettingsView` so `selectedPaneContent` dispatches normally — `@State` properties have to live on the original struct, so they were upgraded from `private` to internal. The plugins pane stays in the main file (it already enumerates plugins generically via `pluginCards` / `userPluginCards`).
 - [x] **Plugin status-label convention fix** (called out in `docs/plugins.md`): `SettingsView.pluginStatusLabel(for:)` had a switch on plugin identifier (`"native.checkvist.sync"` → `checkvistManager.checkvistIntegrationEnabled`, etc.). Replaced with a new `sidebarStatusLabel(manager:)` requirement on `PluginSettingsPageProviding` (default = `"Built-in plugin"`); each of the four native plugins overrides it in its `+Settings.swift` to report Enabled/Disabled against its own toggle state. `SettingsView` now calls `page.plugin.sidebarStatusLabel(manager: checkvistManager)` with no plugin-aware branching.
-- [x] `KanbanManager.swift` (was 794 LOC) → separate column-state ownership from filter/sort logic. **Done in the 2026-08-18 audit**, exactly as predicted here: `subtreeTasks`, `columnForTask`, `taskMatchesCondition` and `sortedForKanban` moved into a `KanbanFilter` namespace in `PriorityCore` that takes its inputs as parameters instead of reaching through `dataSource`, generic over `VisibilityTask` so it needs no app types. `KanbanColumn.swift` moved into `CoreLogic/` alongside it. `KanbanManager` is 702 LOC and now owns board *state*; the rules are covered by 23 tests. The prompt was testability rather than lint pressure — the note below was right that the file length was never the point.
+- [x] `KanbanManager.swift` (was 794 LOC) → separate column-state ownership from filter/sort logic. **Done in the 2026-08-18 audit**, exactly as predicted here: `subtreeTasks`, `columnForTask`, `taskMatchesCondition` and `sortedForKanban` moved into a `KanbanFilter` namespace in `TaktCore` that takes its inputs as parameters instead of reaching through `dataSource`, generic over `VisibilityTask` so it needs no app types. `KanbanColumn.swift` moved into `CoreLogic/` alongside it. `KanbanManager` is 702 LOC and now owns board *state*; the rules are covered by 23 tests. The prompt was testability rather than lint pressure — the note below was right that the file length was never the point.
 
 ### Phase 5 — MCP isolation (optional, lower priority)
 
 - [x] **Done, differently.** The plan here was to extract `MCPServer` into a separate executable target and have the app invoke it. What happened instead is that the server was *deleted*: the Rust CLI already implemented every tool identically, so the app bundles that binary at `Contents/Helpers/priority` and `--mcp-server` `execv`s it. The concern recorded below — that extraction would either strand installed client configurations or add a child-process indirection for little benefit — was the right concern and is what the shim answers: configurations keep working, and there is no supervision because the process is replaced rather than spawned. See finding 6.
 
-- [x] **Done (step 5.2):** Promoted the canonical Checkvist data types (`CheckvistNote`, `CheckvistTask`, `CheckvistList`, plus the freshly-extracted `CheckvistTaskCachePayload`, `CheckvistSessionError`, `ObsidianOpenMode`) into `PriorityPlugins` sources by un-excluding `CheckvistModels.swift` and splitting `CheckvistTaskCachePayload` / `CheckvistSessionError` / `ObsidianOpenMode` into focused files under their plugin folders. Removed the six duplicate type definitions from `plugin-tests-support/PluginModelStubs.swift`; what remains there is the four genuine app-service fakes (`ObsidianSyncService`, `CheckvistSession`, `CheckvistTaskRepository`, `GoogleOAuthLoopbackReceiver`) the plugin code reaches into directly — the file header now describes that accurately.
+- [x] **Done (step 5.2):** Promoted the canonical Checkvist data types (`CheckvistNote`, `CheckvistTask`, `CheckvistList`, plus the freshly-extracted `CheckvistTaskCachePayload`, `CheckvistSessionError`, `ObsidianOpenMode`) into `TaktPlugins` sources by un-excluding `CheckvistModels.swift` and splitting `CheckvistTaskCachePayload` / `CheckvistSessionError` / `ObsidianOpenMode` into focused files under their plugin folders. Removed the six duplicate type definitions from `plugin-tests-support/PluginModelStubs.swift`; what remains there is the four genuine app-service fakes (`ObsidianSyncService`, `CheckvistSession`, `CheckvistTaskRepository`, `GoogleOAuthLoopbackReceiver`) the plugin code reaches into directly — the file header now describes that accurately.
 
   Also marked `CheckvistModels.swift`'s two static date-formatter arrays `nonisolated(unsafe)` (they were fine in the Xcode build but tripped SPM's strict concurrency check once the file landed in the plugin target).
 
   **Not done (separate concern):**
-  - `applogic-support/AppLogicSharedTypes.swift` still re-declares the Checkvist types for `PriorityAppLogic`. Sharing them via `import PriorityPlugins` would require turning every imported type (`Plugin`, `CheckvistSyncPlugin`, `CheckvistTask` and friends) `public` — that meaningfully broadens the plugin library's API surface and is left as follow-on work.
+  - `applogic-support/AppLogicSharedTypes.swift` still re-declares the Checkvist types for `TaktAppLogic`. Sharing them via `import TaktPlugins` would require turning every imported type (`Plugin`, `CheckvistSyncPlugin`, `CheckvistTask` and friends) `public` — that meaningfully broadens the plugin library's API surface and is left as follow-on work.
   - The four service fakes in `PluginModelStubs.swift` still exist because the plugin code references the concrete service types (`ObsidianSyncService`, `CheckvistSession`, etc.) directly. Eliminating those requires introducing protocol seams for those services first — a structural refactor outside Phase 5.2's documented scope.
 
 ### Post-Phase-4 audit (2026-08-18)
@@ -353,7 +353,7 @@ An external audit of the whole tree. What it changed:
   fallen behind its inputs (the priority queues drive row ordering and were
   missing). Replaced by an observable `cacheVersion` read inside
   `ensureVisibleTasksCacheValid()`, before its early return.
-- **The visibility layer moved into `PriorityCore`.** `TaskVisibilityEngine` and
+- **The visibility layer moved into `TaktCore`.** `TaskVisibilityEngine` and
   `TaskFilterEngine` are pure `import Foundation` and decide what the user sees,
   but belonged to no SPM target and so had no tests. They are now generic over a
   new `VisibilityTask` protocol — stating the six properties the algorithms
@@ -380,7 +380,7 @@ An external audit of the whole tree. What it changed:
   document calls "the constraint" was never enforced. Non-strict, so errors
   block and the 13 standing warnings don't. See Open Finding 4.
 - **The keybinding token format is tested.** `ShortcutKeyToken` moved into
-  `PriorityCore` next to `ConfigurableShortcutAction`, whose defaults have to
+  `TaktCore` next to `ConfigurableShortcutAction`, whose defaults have to
   agree with it. That found `rootFilter7`'s dead `"comma"` binding. See Open
   Finding 1.
 - **The shadow types are pinned.** `applogic-tests/SharedTypeDriftTests.swift`
@@ -397,7 +397,7 @@ An external audit of the whole tree. What it changed:
   including this process's own writes — so the cost of recording an event grew
   with the length of the user's history. Two `stat` calls short-circuit it now.
 - **`KanbanFilter` extracted.** The board's membership and ordering rules came
-  out of `KanbanManager` into `PriorityCore`, closing the Phase 4 item that had
+  out of `KanbanManager` into `TaktCore`, closing the Phase 4 item that had
   been deferred for want of lint pressure. 23 tests on card placement and the
   five-way sort tie-break, which had none. See Open Finding 3.
 - **Finding 6 re-examined rather than re-deferred.** The reason given for
@@ -418,7 +418,7 @@ An external audit of the whole tree. What it changed:
 
 Closing the audit's open list. In order:
 
-- **`KanbanSelection`** — the second half of `KanbanManager` into `PriorityCore`,
+- **`KanbanSelection`** — the second half of `KanbanManager` into `TaktCore`,
   working on a grid of task ids so it needs no app types. 26 tests. Also removed
   a per-column re-filter that ran on every arrow key.
 - **`PendingSyncQueue` / `IntegrationLinkStore`** — the pure rules out of
@@ -433,9 +433,9 @@ Closing the audit's open list. In order:
 - **The in-process MCP server deleted** (finding 6), and the app now ships the
   Rust CLI as a signed helper. ~2,500 lines of Swift and Python gone, plus a CI
   job.
-- **`Sources/PriorityCore`, linked rather than compiled** (finding 2). The move
-  itself was mechanical; what it changed is that `PriorityAppLogic` and
-  `PriorityPlugins` can now import `PriorityCore`, which this document had
+- **`Sources/TaktCore`, linked rather than compiled** (finding 2). The move
+  itself was mechanical; what it changed is that `TaktAppLogic` and
+  `TaktPlugins` can now import `TaktCore`, which this document had
   recorded as impossible. `OfflineReplayPolicy` came home and the due-date
   parsing is shared rather than duplicated into the shadow type.
 - **`TaskListViewModel` reachable at last** (finding 3) via a

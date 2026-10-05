@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityAppLogic
+@testable import TaktAppLogic
 
 /// Coverage for the optimistic-mutation layer: what lands in `tasks`
 /// immediately, what gets rolled back when the server says no, and what gets

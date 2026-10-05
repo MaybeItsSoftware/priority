@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// A user keymap laid over the catalogue. Every test resolves into a
 /// `WorkspaceKeyBindings` value of its own rather than installing it, so none

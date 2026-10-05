@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class StaleFocusPolicyTests: XCTestCase {
   private let calendar = Calendar(identifier: .gregorian)

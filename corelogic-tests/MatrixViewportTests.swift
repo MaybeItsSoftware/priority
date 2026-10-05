@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Zooming is a change of viewport, not of data — so the unzoomed window has to
 /// keep drawing exactly what it drew before, and a round trip through both

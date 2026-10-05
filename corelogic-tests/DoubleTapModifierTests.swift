@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Shift is held for every capital letter typed into this app, so the whole
 /// difficulty of ⇧⇧ is telling a gesture from ordinary work.

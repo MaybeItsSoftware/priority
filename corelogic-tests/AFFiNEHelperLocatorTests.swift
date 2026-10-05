@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Finding `affine-mcp`, which is not ours and is not bundled — the user
 /// installed it, and under nvm it is somewhere no GUI app's PATH reaches.

@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// The sidebar's order, and the cursor that walks it.
 final class WorkspaceSidebarOutlineTests: XCTestCase {

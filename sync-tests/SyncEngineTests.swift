@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
-import PrioritySync
-import PriorityWorkspace
+import TaktSync
+import TaktWorkspace
 import XCTest
 
 /// The client cycle from `docs/sync.md`, run between real stores through a

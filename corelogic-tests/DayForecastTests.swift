@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 final class DayForecastTests: XCTestCase {
   private let now = Date(timeIntervalSinceReferenceDate: 800_000_000)

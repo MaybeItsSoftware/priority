@@ -1,6 +1,6 @@
 import Foundation
-import PriorityWorkspace
-@testable import PriorityWorkspaceEditing
+import TaktWorkspace
+@testable import TaktWorkspaceEditing
 import XCTest
 
 final class WorkspaceTaskEditorTests: XCTestCase {

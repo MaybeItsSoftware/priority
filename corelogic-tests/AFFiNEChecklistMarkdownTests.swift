@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import PriorityCore
+@testable import TaktCore
 
 /// Tasks as AFFiNE todo blocks, and — the half that makes it two-way — reading
 /// back what someone ticked.

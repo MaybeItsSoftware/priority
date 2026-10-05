@@ -1,14 +1,14 @@
 import XCTest
 
-@testable import PriorityAppLogic
-@testable import PriorityPlugins
+@testable import TaktAppLogic
+@testable import TaktPlugins
 
 /// Guards the one genuine hazard in `applogic-support/AppLogicSharedTypes.swift`.
 ///
-/// `PriorityAppLogic` re-declares the Checkvist models rather than importing
-/// them, because it cannot import `PriorityPlugins`: the same source files are
+/// `TaktAppLogic` re-declares the Checkvist models rather than importing
+/// them, because it cannot import `TaktPlugins`: the same source files are
 /// compiled straight into the Xcode app, where neither module exists, so an
-/// `import PriorityPlugins` line would break the app build. (`docs` and
+/// `import TaktPlugins` line would break the app build. (`docs` and
 /// `ARCHITECTURE_IMPROVEMENT_PLAN.md` describe the two real fixes; both are
 /// larger than the duplication itself.)
 ///
@@ -25,7 +25,7 @@ final class SharedTypeDriftTests: XCTestCase {
   /// and not the other shows up as a mismatch here rather than as data quietly
   /// going missing at runtime.
   func testTheShadowCheckvistTaskRoundTripsEveryFieldOfTheRealOne() throws {
-    let real = PriorityPlugins.CheckvistTask(
+    let real = TaktPlugins.CheckvistTask(
       id: 7,
       content: "write the report",
       status: 1,
@@ -34,7 +34,7 @@ final class SharedTypeDriftTests: XCTestCase {
       parentId: 2,
       level: 4,
       notes: [
-        PriorityPlugins.CheckvistNote(
+        TaktPlugins.CheckvistNote(
           id: 11, content: "a note",
           createdAt: "2026-08-01T00:00:00Z", updatedAt: "2026-08-02T00:00:00Z")
       ],
@@ -42,7 +42,7 @@ final class SharedTypeDriftTests: XCTestCase {
     )
 
     let shadow = try JSONDecoder().decode(
-      PriorityAppLogic.CheckvistTask.self, from: JSONEncoder().encode(real))
+      TaktAppLogic.CheckvistTask.self, from: JSONEncoder().encode(real))
 
     XCTAssertEqual(shadow.id, real.id)
     XCTAssertEqual(shadow.content, real.content)
@@ -53,24 +53,24 @@ final class SharedTypeDriftTests: XCTestCase {
     XCTAssertEqual(shadow.level, real.level)
     XCTAssertEqual(shadow.updatedAt, real.updatedAt)
     XCTAssertEqual(
-      shadow.notes?.map(\PriorityAppLogic.CheckvistNote.content),
-      real.notes?.map(\PriorityPlugins.CheckvistNote.content))
+      shadow.notes?.map(\TaktAppLogic.CheckvistNote.content),
+      real.notes?.map(\TaktPlugins.CheckvistNote.content))
     XCTAssertEqual(
-      shadow.notes?.map(\PriorityAppLogic.CheckvistNote.id),
-      real.notes?.map(\PriorityPlugins.CheckvistNote.id))
+      shadow.notes?.map(\TaktAppLogic.CheckvistNote.id),
+      real.notes?.map(\TaktPlugins.CheckvistNote.id))
     XCTAssertEqual(
-      shadow.notes?.map(\PriorityAppLogic.CheckvistNote.createdAt),
-      real.notes?.map(\PriorityPlugins.CheckvistNote.createdAt),
+      shadow.notes?.map(\TaktAppLogic.CheckvistNote.createdAt),
+      real.notes?.map(\TaktPlugins.CheckvistNote.createdAt),
       "note timestamps were the drift this test was written to find")
   }
 
   /// Counts the encoded keys rather than naming them, so a field added to the
   /// real model fails here even though nobody thought to assert on it above.
   func testNeitherCheckvistTaskCarriesAFieldTheOtherLacks() throws {
-    let real = PriorityPlugins.CheckvistTask(
+    let real = TaktPlugins.CheckvistTask(
       id: 1, content: "x", status: 0, due: nil, position: 1,
       parentId: nil, level: nil, notes: nil, updatedAt: nil)
-    let shadow = PriorityAppLogic.CheckvistTask(
+    let shadow = TaktAppLogic.CheckvistTask(
       id: 1, content: "x", status: 0, due: nil, position: 1,
       parentId: nil, level: nil, notes: nil, updatedAt: nil)
 
@@ -82,9 +82,9 @@ final class SharedTypeDriftTests: XCTestCase {
   /// The one that had already drifted: the real note carries `created_at` and
   /// `updated_at`, the shadow carried neither.
   func testNeitherCheckvistNoteCarriesAFieldTheOtherLacks() throws {
-    let real = PriorityPlugins.CheckvistNote(
+    let real = TaktPlugins.CheckvistNote(
       id: 1, content: "x", createdAt: "a", updatedAt: "b")
-    let shadow = PriorityAppLogic.CheckvistNote(
+    let shadow = TaktAppLogic.CheckvistNote(
       id: 1, content: "x", createdAt: "a", updatedAt: "b")
 
     XCTAssertEqual(
@@ -93,11 +93,11 @@ final class SharedTypeDriftTests: XCTestCase {
   }
 
   func testTheShadowCheckvistListRoundTripsEveryFieldOfTheRealOne() throws {
-    let real = PriorityPlugins.CheckvistList(
+    let real = TaktPlugins.CheckvistList(
       id: 42, name: "Inbox", archived: false, readOnly: true)
 
     let shadow = try JSONDecoder().decode(
-      PriorityAppLogic.CheckvistList.self, from: JSONEncoder().encode(real))
+      TaktAppLogic.CheckvistList.self, from: JSONEncoder().encode(real))
 
     XCTAssertEqual(shadow.id, real.id)
     XCTAssertEqual(shadow.name, real.name)
@@ -111,8 +111,8 @@ final class SharedTypeDriftTests: XCTestCase {
   /// enumerations have to agree on both the cases and their raw values.
   func testBothCheckvistTaskActionsHaveTheSameCasesAndRawValues() {
     XCTAssertEqual(
-      PriorityPlugins.CheckvistTaskAction.allCasesForDrift,
-      PriorityAppLogic.CheckvistTaskAction.allCasesForDrift)
+      TaktPlugins.CheckvistTaskAction.allCasesForDrift,
+      TaktAppLogic.CheckvistTaskAction.allCasesForDrift)
   }
 
   private func encodedKeys<T: Encodable>(_ value: T) throws -> [String] {
@@ -127,13 +127,13 @@ final class SharedTypeDriftTests: XCTestCase {
 // in the shipping code purely for a test would be the tail wagging the dog.
 // Listing the raw values here is equivalent: a case added to one module and not
 // the other changes one of these lists and not the other.
-extension PriorityPlugins.CheckvistTaskAction {
+extension TaktPlugins.CheckvistTaskAction {
   static var allCasesForDrift: [String] {
     [Self.close, .reopen, .invalidate].map(\.rawValue).sorted()
   }
 }
 
-extension PriorityAppLogic.CheckvistTaskAction {
+extension TaktAppLogic.CheckvistTaskAction {
   static var allCasesForDrift: [String] {
     [Self.close, .reopen, .invalidate].map(\.rawValue).sorted()
   }
