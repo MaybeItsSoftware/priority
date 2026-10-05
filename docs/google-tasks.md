@@ -54,7 +54,7 @@ task that Takt still has.
 Every time the authority rule discards something, it is written to
 `google-tasks-conflicts.jsonl` in Takt's Application Support folder —
 append-only, one JSON object per line, and tolerant of a torn tail, like
-`daylog.jsonl`. The most recent entries are shown in *Preferences → Google
+`daylog.jsonl`. The most recent entries are shown in *Settings → Google
 Tasks*.
 
 This is the point of the log: the rule means Takt sometimes overwrites
@@ -68,7 +68,7 @@ silently is indistinguishable from a bug.
 - Every five minutes, to notice what was ticked off elsewhere. Google Tasks has
   no push channel to subscribe to.
 - At launch, so anything done on a phone overnight has landed before you look.
-- On demand, from *Sync now* in Preferences.
+- On demand, from *Sync now* on its Settings page.
 
 A pass is never concurrent with itself: Google Tasks has no transactions, and
 two passes racing would each read the other's half-finished work as remote

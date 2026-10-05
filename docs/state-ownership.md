@@ -123,7 +123,7 @@ flattened outline: `TaskVisibilityEngine` picks the rows a tab wants, then
 | `FocusSessionManager` | `promptTaskId`, `session`, `phase`, `durationMinutes`, `breakDurationMinutes`, `lastFocusedTaskId` | drives focus alerts; pauses timer via `onFocusBlockEnded` |
 | `StartDateManager` | `taskStartDatesByTaskId` | yes (affects `hideFuture` visibility) |
 | `RecurrenceManager` | `recurrenceRulesByTaskId` | no (consulted on completion) |
-| `PreferencesManager` | all prefs-backed settings: theme, hotkeys, shortcuts, named-time hours, `confirmBeforeDelete`, `launchAtLogin`, `maxTitleWidth`, etc. | no |
+| `PreferencesManager` | prefs-backed settings: appearance mode, hotkeys, the Quick Add list, focus behaviour, `confirmBeforeDelete`, `launchAtLogin`, etc. The theme pick and font choices are `ThemeManager`'s | no |
 | `IntegrationCoordinator` | `obsidian/googleCalendar/mcpIntegrationEnabled`, `obsidianInboxPath`, `mcpServerCommandPath`, `pendingObsidianSyncTaskIds`, `googleCalendarEventLinksByTaskKey` | reads tasks/listId/currentTask/credentials via `dataSource` |
 
 ### `AppCoordinator` — genuinely owns (everything else is forwarding)

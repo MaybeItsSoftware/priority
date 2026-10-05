@@ -22,7 +22,7 @@ You can add your own the way Zed does: as JSON files in a folder.
 ~/Library/Application Support/Takt/themes/*.json
 ```
 
-Every `.json` file there is a theme. It appears in **Settings → Theme** beside
+Every `.json` file there is a theme. It appears in **Settings → Appearance** beside
 the built-ins, and the app reloads it as you save it. If the theme you are
 using is edited, the window redraws; if its file disappears or stops loading,
 Priority stands in until it comes back. Your themes and your choice sync to
@@ -388,7 +388,7 @@ Your themes and your choice of theme sync with the rest of the workspace
 - The choice of theme and appearance (`theme.selected`, `theme.appearance`:
   `system`, `light` or `dark`) are rows in the synced `preferences` table. Each
   device can opt out with **Use a different theme on this device** (on the
-  Mac, **Use a different theme on this Mac** in Settings → Theme), which is
+  Mac, **Use a different theme on this Mac** in Settings → Appearance), which is
   stored locally and not synced. Turning it on keeps the theme the device is
   showing, and from then on changes stay on that device. Turning it off
   takes up the synced choice again. The first time a Mac with this feature opens
@@ -396,6 +396,18 @@ Your themes and your choice of theme sync with the rest of the workspace
   unless another device has already set one.
 - A device that does not know the chosen theme (it failed to load there, or
   has not arrived yet) shows Priority until it does.
+
+### Your fonts are not part of the theme
+
+On the Mac, **Settings → Appearance → Type** sets the interface, heading and
+numeral/code families and a text size over whichever theme is active. They are
+the reader's, not the theme's: they are not written into theme files, not
+synced, and kept through a theme switch. **Reset to theme** clears them. A
+chosen family is tried first and the theme's own `families` and `design` stay
+behind it, so a family later uninstalled falls back to the theme rather than to
+the system face; the text size multiplies `bodySize`, every `scale` step and the
+micro-label's `size`, rounded to the half point. To ship a face *in* a theme,
+name it in `structure.typography` as below.
 
 ## When something is wrong
 

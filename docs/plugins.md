@@ -163,8 +163,8 @@ through `FocusSessionManager.onFocusSessionCompleted`.
 ### Completion Celebration (`CompletionCelebrationPlugin`)
 
 What completing a task or ticking a daily *looks like*. Four presets ship —
-None, Strike (the default), Fold, Spark — and the user picks one in
-Settings → Theme.
+None, Strike (the default), Fold, Spark — and the user picks one, and plays
+it on a sample row, in Settings → General.
 
 This capability is shaped differently from the others in three ways, all
 deliberate:
@@ -174,7 +174,7 @@ deliberate:
   capability with a list-them-all accessor (`PluginRegistry.celebrationPlugins`)
   and the only one whose registry reference is retained past `AppCoordinator.init`,
   because the active plugin can change at runtime.
-- **Its settings live in the theme pane, not in a plugin card.** Registering
+- **Its settings live on the General page, not in a plugin card.** Registering
   four presets as `PluginSettingsPageProviding` would put four entries in the
   plugin sidebar for what is one setting.
 - **It excludes itself from `TaktPlugins`** — the whole `Native/Celebration/`
@@ -202,7 +202,7 @@ What a new preset actually implements:
   `inlineBudget` + a small grace either way, so a slow preset costs the app its
   animation rather than the user their task.
 - **`celebrationSound(for:)`** — optional, off unless the user turns sound on in
-  Settings → Theme. It exists because `NSHapticFeedbackManager` reaches only a
+  Settings → General. It exists because `NSHapticFeedbackManager` reaches only a
   Force Touch trackpad, and only while a finger is on it, so for most
   completions of a keyboard-first app the "tactile" confirmation reaches nobody.
 - **`makeFlourish(_:)` / `makeRowAccent(for:)`** — optional decoration. The
@@ -317,14 +317,23 @@ AppKit twin `Theme.nsFont` share one resolver, which picks the family's real
 face at each weight rather than thickening the regular one. A user theme can
 name any installed family instead.
 
-**What renders through it today.** The Eisenhower matrix, and the persistent
-shell chrome: the dock row, the resize strip, the sync readout, the top bevel,
-the breadcrumb bar and the scope chip. Everything else — the task list, the
-kanban board, the daily view, the focus session, settings — still resolves
-colour through `AppThemeColorToken` and `PreferencesManager.themeColor(for:)`,
-which is the older per-token override mechanism and is unrelated to this
-plugin. Both are live at once on purpose; a surface is migrated when its
-`themeColor(_:)` helper is gone.
+**It is the only way the app is coloured and typed.** The older mechanism —
+an accent preset, fourteen `AppThemeColorToken` overrides and a theme JSON
+document of its own, edited on the old settings theme pane — is gone, and its
+last readers (diagnostics, the celebrations) read the theme's roles. The
+light/dark/system choice it carried is `AppearanceMode`, stored under the same
+`appThemeRawValue` key.
+
+**The reader's fonts sit over the theme, not in it.** `ThemeTypographyOverride`
+(`Sources/TaktCore/Theming`) holds an interface, heading and numeral family
+and a text size. `ThemeManager.specification` is the active theme with it laid
+over through `ThemeFileLoader.merge` — the overlay a theme file's own
+`structure` goes through — so a chosen family is tried first with the theme's
+request behind it, and the text size scales the body, every step of the type
+scale and the micro-label in proportion. It is stored per Mac
+(`themeTypographyOverride`, JSON) and not synced; a theme switch keeps it, and
+`resetTypographyToTheme()` clears it. `themeSpecification` is the theme as it
+ships, which is what **Duplicate current theme** writes out.
 
 ## Verification
 

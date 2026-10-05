@@ -246,7 +246,7 @@ needs no Checkvist credentials.
 
 ## Setup (the short version)
 
-**Preferences → Plugins → Native MCP Integration.** Enable the toggle and the page
+**Settings → MCP.** Enable the toggle and the page
 walks three steps:
 
 1. **Checkvist connected** — the server signs in with your Checkvist credentials,

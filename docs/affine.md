@@ -41,7 +41,7 @@ npm install -g affine-mcp-server
 affine-mcp login          # AFFiNE Cloud, or --base-url for self-hosted
 ```
 
-Then in **Preferences → Plugins → AFFiNE**:
+Then in **Settings → AFFiNE**:
 
 1. Switch on **Enable AFFiNE integration**.
 2. Check the **Server** line names a resolved `affine-mcp`. If the search missed

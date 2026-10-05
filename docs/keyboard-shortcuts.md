@@ -39,7 +39,7 @@ a task as Zed treats a line:
 | New file / new directory | `Cmd+N` / `Cmd+Alt+N` | New task / new folder |
 | Rename | `F2` | Rename the task, or the sidebar row |
 | Undo / redo | `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
-| Settings | `Cmd+,` | Preferences |
+| Settings | `Cmd+,` | Settings |
 
 The sidebar is Zed's project panel, with a list as a file and a folder as a
 directory. Its keys act on the sidebar row, never on a task behind it:
@@ -127,7 +127,7 @@ priority digits, the direction keys, `⌥1`–`⌥4` on the matrix — cannot be
 bound to another key, though their keys can be unbound.
 
 The three global hotkeys (show the window, the focus panel, quick add) work
-outside the window and are set in **Preferences → Keybindings** instead.
+outside the window and are set in **Settings → Keyboard** instead.
 
 ## Two-letter sequences
 

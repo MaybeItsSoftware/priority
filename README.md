@@ -41,23 +41,22 @@ Or build it yourself — see [Build from source](#build-from-source).
 
 ## First run
 
-Open Preferences with `Cmd+,`:
+Open Settings with `Cmd+,`. It is one window with a sidebar of pages — type
+to filter them, walk them with `↑`/`↓`, or jump with `⌘1`–`⌘9`:
 
-| Step | What |
+| Page | What |
 | --- | --- |
-| 1 | Checkvist username and remote API key (from [checkvist.com/auth/profile](https://checkvist.com/auth/profile)) |
-| 2 | The checklist/list ID to work in |
-| 3 | Global hotkey to show the window |
-| 4 | Focus panel hotkey — `⌃⌥⇧⌘F` by default |
-| 5 | Quick-add hotkey, and whether it targets the list root or a specific parent |
-| 6 | Day rollover hour — when your day starts, default 04:00 |
-| 7 | Obsidian inbox folder *(optional)* |
-| 8 | MCP integration *(optional)* |
-| 9 | Launch at login |
+| General | Launch at login, confirming deletes, and the completion celebration with a preview |
+| Focus | Open on the focus screen, where a started block runs, and whether each block is scored |
+| Appearance | The theme gallery, light/dark/system, the interface, heading and numeral fonts, and the text size |
+| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘N`), the list Quick Add captures into, and `keymap.json` |
+| Integrations | One page per integration — Checkvist, Obsidian, AFFiNE, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
+| Sync | The account that keeps the Mac and phones on one workspace |
+| Advanced | Export the workspace as Markdown or JSON, diagnostics, and the app's data folder |
 
 None of it is required: the workspace is local-first and works with every row
-left blank. Checkvist, Obsidian and Google Calendar are set up from their own
-pages under **Preferences → Plugins**, when you want them.
+left alone. Checkvist, Obsidian and Google Calendar are set up from their own
+pages under **Integrations**, when you want them.
 
 ## Keyboard flow
 
@@ -346,7 +345,7 @@ exactly as before, keyboard included. Closing the window while the panel is up
 hands the caret straight back to it.
 
 Where a started block runs is a preference — **Run focus blocks in** under
-Settings → Preferences. *Floating panel*, the default, keeps the panel up.
+Settings → Focus. *Floating panel*, the default, keeps the panel up.
 *Menu bar* puts the panel away too: the status item carries the task and its
 clock, and the keyboard goes back to the app you were in. *Both* does both.
 With the panel alone, the status item leaves the menu bar while a block runs.
@@ -385,7 +384,7 @@ mid-sentence and pressing `Esc` puts the caret back where it was. Clicking away
 instead leaves the panel up and makes no such promise. The status
 item's context menu has **Focus Panel** too, so the hotkey is a shortcut for
 something visible rather than the only way in. Rebind or disable it in
-Preferences → Keybindings.
+Settings → Keyboard.
 
 ## Command palette
 
@@ -579,7 +578,7 @@ line in the focus colour, so which pane will answer the arrow keys is always
 visible without a thick ring. Empty panes say so in one line of muted text in
 the middle.
 
-Preferences is `Cmd+,` and the app menu; there is no gear in the window.
+Settings is `Cmd+,` and the app menu; there is no gear in the window.
 
 It used to be the second-class half of a pair. The first-class half was a
 400pt menu bar panel that dismissed on any outside click — right for a glance,
@@ -602,15 +601,27 @@ with every window closed.
 
 ## Themes
 
-Pick a look in **Settings → Theme**: **Chalk**, the house style, which follows
-your Light/Dark setting, or **Chalk Dark**. Your own themes are JSON files in
+Pick a look in **Settings → Appearance**, from a gallery that draws each theme
+in its own colours and faces: **Priority**, the default, which follows your
+Light/Dark setting; **Zed** and **Zed Dark**; and **Grape**, the house design
+language — chalk paper, grape ink and the Arvo slab serif. Light, dark or
+system is chosen beside it.
+
+**Fonts are yours, over any theme.** Appearance sets the interface, heading and
+numeral/code faces and a text size (85–130%, scaling every size the theme sets
+in proportion). Each picker lists the theme's own face, the families Takt
+ships — Inter, Geist, IBM Plex Sans, Arvo, Lilex, JetBrains Mono, Geist Mono —
+and every family installed on the Mac, searchable and each set in itself.
+Switching theme keeps your choices; **Reset to theme** hands them back.
+
+Your own themes are JSON files in
 `~/Library/Application Support/Takt/themes/`, and they appear in the same
-picker. A file can extend a built-in and change only a few colours or sizes,
-and the app reloads it as you save, so the easiest start is **Export the
-current theme as JSON** in the command palette — it writes a complete copy,
-opens it and switches to it. **Open the themes folder** and **Reload themes**
-are there too. A broken file is reported on the status line and in
-Diagnostics, never fatal.
+gallery. A file can extend a built-in and change only a few colours or sizes,
+and the app reloads it as you save, so the easiest start is **Duplicate current
+theme** on the Appearance page, or **Export the current theme as JSON** in the
+command palette — it writes a complete copy, opens it and switches to it.
+**Open the themes folder** and **Reload** are there too. A broken file is
+reported on the status line and in Diagnostics, never fatal.
 
 **Format and a full example: [docs/themes.md](docs/themes.md)**
 
@@ -644,8 +655,8 @@ Recurring things you intend to do — habits, not tasks — sitting at the top o
 - **They're local.** Stored in `~/Library/Application Support/Takt/dailies.json`, so "brush teeth" never clutters your project lists or syncs to other Checkvist clients. Ticking one is instant and works offline.
 - **Ticks land in the same log as task completions**, so they appear in the Obsidian note alongside them. The chart plots the ticks alone: a day's task count is whatever happened to be on the list, and summing the two in let it swamp the routine the chart sits under.
 - **Two kinds of schedule.** Fixed weekdays (`Mon Wed Fri`, weekdays, weekends, every day) or a rotating cycle — every other day, every three days — counted from the day you set it. A cycle walks through the week, so it's the one for "water the plants", not "standup".
-- **Set the schedule as you type** from the menu in the add field, or edit any daily in full — day-by-day toggles, cycle length — in `Preferences → Plugins → Daily Log`.
-- **Rename in place with `a`, delete with `Delete`**, without leaving the checklist. Deleting *archives*: the row goes from today's list and from the editor, but every past day that ticked it still renders with its title rather than a raw id, and it can be restored from the Deleted list in `Preferences → Plugins → Daily Log`. That is why deleting needs no confirmation — nothing has been lost.
+- **Set the schedule as you type** from the menu in the add field, or edit any daily in full — day-by-day toggles, cycle length — in `Settings → Daily Log`.
+- **Rename in place with `a`, delete with `Delete`**, without leaving the checklist. Deleting *archives*: the row goes from today's list and from the editor, but every past day that ticked it still renders with its title rather than a raw id, and it can be restored from the Deleted list in `Settings → Daily Log`. That is why deleting needs no confirmation — nothing has been lost.
 
 ### What the day records
 
@@ -658,7 +669,7 @@ Recurring things you intend to do — habits, not tasks — sitting at the top o
 
 ## Obsidian daily notes
 
-In `Preferences → Plugins → Daily Log`, point Takt at your dailies folder and set the note naming to match your vault (`yyyy-MM-dd` by default; a subfolder pattern like `yyyy/MM` nests them). The preview line shows exactly which note today's block would land in. Then switch on "Write days into Obsidian daily notes", which stays disabled until a folder is chosen.
+In `Settings → Daily Log`, point Takt at your dailies folder and set the note naming to match your vault (`yyyy-MM-dd` by default; a subfolder pattern like `yyyy/MM` nests them). The preview line shows exactly which note today's block would land in. Then switch on "Write days into Obsidian daily notes", which stays disabled until a folder is chosen.
 
 Once a day closes, its block is spliced into that day's note:
 
@@ -704,7 +715,7 @@ npm install -g affine-mcp-server
 affine-mcp login
 ```
 
-Then switch the plugin on in `Preferences → Plugins → AFFiNE` and click **Load Workspaces**. Your AFFiNE credentials stay in that helper's own config — Takt never handles them. Takt owns the `## Tasks` heading and what sits under it; everything else in the document is yours, and an item you typed in by hand is put back rather than deleted.
+Then switch the plugin on in `Settings → AFFiNE` and click **Load Workspaces**. Your AFFiNE credentials stay in that helper's own config — Takt never handles them. Takt owns the `## Tasks` heading and what sits under it; everything else in the document is yours, and an item you typed in by hand is put back rather than deleted.
 
 **Details: [docs/affine.md](docs/affine.md)**
 
@@ -753,7 +764,7 @@ Takt exposes **21 MCP tools** so an AI assistant can work with your lists direct
 
 All but one are reads or Checkvist writes. `task_matrix_set` places tasks on the Eisenhower matrix in bulk (`takt matrix <id>:<urgency>:<importance> …` from a terminal), and refuses while Takt is running — the app holds those coordinates in memory and would overwrite them. Quit Takt, let the assistant do a first pass over the whole list, then reopen and correct it by dragging.
 
-Set it up from `Preferences → Plugins → Native MCP Integration`. It detects Claude Code, Claude Desktop, Cursor, Windsurf, VS Code and Zed, and adds Takt to the one you pick in a single click, preserving any servers already in that client's config.
+Set it up from `Settings → MCP`. It detects Claude Code, Claude Desktop, Cursor, Windsurf, VS Code and Zed, and adds Takt to the one you pick in a single click, preserving any servers already in that client's config.
 
 There is one implementation — the Rust CLI — and the app ships it at `Contents/Helpers/takt`, so it works whether or not you installed the CLI separately. `Takt --mcp-server` hands the process over to it, which keeps configurations written for older versions working; one written before the rename names `Priority.app`, and setting that client up again replaces its `priority` entry with a `takt` one. There were three implementations once; `scripts/mcp_smoke_check.py` is what remains of holding them together, and it now only checks that handover.
 
@@ -765,7 +776,7 @@ Every external integration is a plugin behind a protocol.
 
 Built in: `NativeCheckvistSyncPlugin`, `NativeObsidianIntegrationPlugin`, `NativeAFFiNEIntegrationPlugin`, `NativeGoogleCalendarIntegrationPlugin`, `NativeMCPIntegrationPlugin`, `NativeDailyLogPlugin`, `OfflineTaskSyncPlugin`.
 
-To install your own, open `Preferences → Plugins` and click **Install Plugin** (folder, `.zip`, or `.priority-plugin`), or drop a plugin folder into `~/Library/Application Support/Takt/Plugins` and hit **Reload**.
+To install your own, open `Settings → Installed plugins` and click **Install plugin…** (folder, `.zip`, or `.priority-plugin`), or drop a plugin folder into `~/Library/Application Support/Takt/Plugins` and hit **Reload**.
 
 Built-in plugins are fully functional; user-installed plugins are manifest-driven (settings, metadata, lifecycle) and prepared for runtime capability wiring.
 

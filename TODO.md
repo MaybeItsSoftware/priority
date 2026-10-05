@@ -147,18 +147,19 @@ the task composer and quick capture, every overlay (palette, search, move,
 quick edit, list finder), Settings and the plugin settings pages.
 
 What does not: the focus quality prompt and most of the day tray (`DayView`),
-where the remaining `Color.accentColor` uses are concentrated. The Settings
-theme page still drives the older accent/token mechanism below, so it keeps
-its `themeColor(_:)` helper until that mechanism goes.
+where the remaining `Color.accentColor` uses are concentrated. A useful count
+while migrating: `grep -c accentColor Takt/*.swift`.
 
-### Two theme mechanisms are still live
+The older accent-preset / `AppThemeColorToken` mechanism is gone: the theme
+specification is the one way the app is coloured, and the reader's fonts are a
+`ThemeTypographyOverride` laid over it (see `docs/plugins.md`).
 
-A useful count while migrating: `grep -c accentColor Takt/*.swift`.
+### Fonts on the phones
 
-Two mechanisms are live at once — the plugin, and the older
-`AppThemeColorToken` / `PreferencesManager.themeColor(for:)` with its per-token
-overrides and theme JSON import/export. A surface counts as migrated when its
-local `themeColor(_:)` helper is gone. See `docs/plugins.md`.
+The Mac's interface, heading and numeral fonts and text size are a per-Mac
+override. The iPhone and Android apps bundle the same families but have no
+equivalent control yet; the override is a `TaktCore` value, so the iPhone
+could adopt it directly, and Android would need a Kotlin port of the merge.
 
 ### Theme values that were guessed
 
