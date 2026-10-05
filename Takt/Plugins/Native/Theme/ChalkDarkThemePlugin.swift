@@ -11,7 +11,7 @@ struct ChalkDarkThemePlugin: ThemePlugin {
   private let specificationValue = BuiltInThemeSpecifications.chalkDark
 
   var pluginIdentifier: String { specificationValue.identifier }
-  var displayName: String { "Chalk Dark Theme" }
+  var displayName: String { specificationValue.name }
   var pluginDescription: String { specificationValue.summary }
   var themeIconSystemName: String { "moon.fill" }
 

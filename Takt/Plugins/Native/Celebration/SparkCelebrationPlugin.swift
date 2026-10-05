@@ -79,8 +79,8 @@ private struct SparkBurst: View {
   @State private var progress: Double = 0
 
   var body: some View {
-    let tint = manager.preferences.themeColor(for: .success)
-    let accent = manager.preferences.themeAccentColor
+    let tint = theme.success
+    let accent = theme.primary
 
     ZStack {
       Canvas { context, size in

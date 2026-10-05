@@ -55,7 +55,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // Takt is a desktop app first. The status item remains available as a
     // compact utility surface, but it no longer owns the initial experience.
     NSApp.setActivationPolicy(.regular)
-    applyAppTheme()
+    applyAppearanceMode()
 
     menuBarController = MenuBarController(manager: checkvistManager)
     menuBarController.onShowSettings = { [weak self] in
@@ -202,7 +202,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       self.focusPanelController.toggle(model: self.workspace)
     }
 
-    observeForAppThemeChanges()
+    observeForAppearanceModeChanges()
 
     // What to do next is the question the app exists to answer, so it is the
     // one the first screen asks. Decided before the window is built rather
@@ -253,8 +253,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
   }
 
-  private func applyAppTheme() {
-    switch checkvistManager.preferences.appTheme {
+  private func applyAppearanceMode() {
+    switch checkvistManager.preferences.appearanceMode {
     case .system:
       NSApp.appearance = nil
     case .light:
@@ -492,13 +492,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     shortcutManager?.unregisterGlobalHotkeys()
   }
 
-  private func observeForAppThemeChanges() {
+  private func observeForAppearanceModeChanges() {
     withObservationTracking {
-      _ = self.checkvistManager.preferences.appTheme
+      _ = self.checkvistManager.preferences.appearanceMode
     } onChange: {
       Task { @MainActor [weak self] in
-        self?.applyAppTheme()
-        self?.observeForAppThemeChanges()
+        self?.applyAppearanceMode()
+        self?.observeForAppearanceModeChanges()
       }
     }
   }

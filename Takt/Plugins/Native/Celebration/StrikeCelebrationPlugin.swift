@@ -75,7 +75,7 @@ private struct StrikeFlourish: View {
   @State private var progress: Double = 0
 
   private var tint: Color {
-    manager.preferences.themeColor(for: .success)
+    theme.success
   }
 
   /// 1.5pt for a daily tick up to 4pt for a cleared list.

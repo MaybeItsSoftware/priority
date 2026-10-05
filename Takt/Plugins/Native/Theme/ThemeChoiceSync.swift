@@ -10,7 +10,7 @@ import os
 /// follows you").
 ///
 /// The Mac keeps its own copy of both, where it always has: `ThemeManager`'s
-/// stored pick and `PreferencesManager.appTheme`. While the Mac follows the
+/// stored pick and `PreferencesManager.appearanceMode`. While the Mac follows the
 /// synced choice, those are updated from it and every change to them is written
 /// back. "Use a different theme on this Mac" (`usesDeviceChoice`, local and not
 /// synced) stops both directions, and the Mac keeps whatever it shows at that
@@ -75,9 +75,9 @@ final class ThemeChoiceSync {
       theme.adoptSyncedChoice(selected)
     }
     if let raw = read(WorkspacePreferenceKey.themeAppearance),
-      let appearance = Self.appearance(fromSynced: raw), preferences.appTheme != appearance
+      let appearance = Self.appearance(fromSynced: raw), preferences.appearanceMode != appearance
     {
-      preferences.appTheme = appearance
+      preferences.appearanceMode = appearance
     }
   }
 
@@ -89,14 +89,14 @@ final class ThemeChoiceSync {
       write(WorkspacePreferenceKey.themeSelected, theme.activeThemeIdentifier)
     }
     if read(WorkspacePreferenceKey.themeAppearance) == nil {
-      write(WorkspacePreferenceKey.themeAppearance, Self.syncedValue(of: preferences.appTheme))
+      write(WorkspacePreferenceKey.themeAppearance, Self.syncedValue(of: preferences.appearanceMode))
     }
   }
 
   private func observeLocalChoice() {
     withObservationTracking {
       _ = theme.activeThemeIdentifier
-      _ = preferences.appTheme
+      _ = preferences.appearanceMode
     } onChange: { [weak self] in
       Task { @MainActor [weak self] in
         guard let self else { return }
@@ -109,7 +109,7 @@ final class ThemeChoiceSync {
   private func localChoiceChanged() {
     guard !usesDeviceChoice, !applying else { return }
     write(WorkspacePreferenceKey.themeSelected, theme.activeThemeIdentifier)
-    write(WorkspacePreferenceKey.themeAppearance, Self.syncedValue(of: preferences.appTheme))
+    write(WorkspacePreferenceKey.themeAppearance, Self.syncedValue(of: preferences.appearanceMode))
   }
 
   // MARK: - Helpers
@@ -132,7 +132,7 @@ final class ThemeChoiceSync {
   }
 
   /// `system`, `light` or `dark`, the values every app writes.
-  nonisolated static func syncedValue(of appearance: AppTheme) -> String {
+  nonisolated static func syncedValue(of appearance: AppearanceMode) -> String {
     switch appearance {
     case .system: return "system"
     case .light: return "light"
@@ -140,7 +140,7 @@ final class ThemeChoiceSync {
     }
   }
 
-  nonisolated static func appearance(fromSynced value: String) -> AppTheme? {
+  nonisolated static func appearance(fromSynced value: String) -> AppearanceMode? {
     switch value {
     case "system": return .system
     case "light": return .light

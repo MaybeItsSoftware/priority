@@ -50,7 +50,7 @@ private struct FoldFlourish: View {
   @State private var settled = false
 
   var body: some View {
-    let tint = manager.preferences.themeColor(for: .success)
+    let tint = theme.success
     // Scaled by the occasion rather than fixed: a daily tick gets a hint, a
     // cleared list gets something you would notice from across the desk.
     let peak = 0.10 + 0.22 * milestone.flourishWeight

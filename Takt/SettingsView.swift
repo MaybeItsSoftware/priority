@@ -156,9 +156,6 @@ struct SettingsView: View {
   // own, and every one of them draws from it.
   @Environment(\.theme) var theme
   @State var selectedPluginCardID: String?
-  @State var themeJSONDraft: String = ""
-  @State var themeJSONStatusMessage: String = ""
-  @State var themeJSONStatusIsError: Bool = false
   @State var isLoadingCheckvistLists = false
   @State var didAutoloadCheckvistLists = false
   @State var mergeSourceListId = ""
@@ -177,10 +174,6 @@ struct SettingsView: View {
     )
   }
 
-  func themeColor(_ token: AppThemeColorToken) -> Color {
-    preferences.themeColor(for: token)
-  }
-
   var body: some View {
     paneContent {
       selectedPaneContent
@@ -194,9 +187,6 @@ struct SettingsView: View {
     .background(theme.paper)
     .task {
       syncSelectedPluginCardIfNeeded()
-      if themeJSONDraft.isEmpty {
-        themeJSONDraft = preferences.exportThemeJSON(prettyPrinted: true)
-      }
       await autoloadCheckvistListsIfNeeded()
     }
     .onChange(of: pluginCardIDs) { _, _ in

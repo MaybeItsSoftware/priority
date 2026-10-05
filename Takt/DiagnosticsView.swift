@@ -19,10 +19,6 @@ struct DiagnosticsView: View {
 
   private var repository: TaskRepository { manager.repository }
 
-  private func themeColor(_ token: AppThemeColorToken) -> Color {
-    manager.preferences.themeColor(for: token)
-  }
-
   var body: some View {
     VStack(spacing: 0) {
       header
@@ -55,7 +51,7 @@ struct DiagnosticsView: View {
         Text("Diagnostics").font(theme.titleFont)
         Text("\(Self.appVersion) (\(Self.buildNumber)) · \(Self.bundleIdentifier)")
           .font(theme.captionFont)
-          .foregroundColor(themeColor(.textSecondary))
+          .foregroundStyle(theme.muted)
           .textSelection(.enabled)
       }
       Spacer(minLength: 0)
@@ -72,7 +68,7 @@ struct DiagnosticsView: View {
       if let copyConfirmation {
         Text(copyConfirmation)
           .font(theme.captionFont)
-          .foregroundColor(themeColor(.textSecondary))
+          .foregroundStyle(theme.muted)
       }
       Spacer(minLength: 0)
       Button("Retry Sync") {
@@ -115,7 +111,7 @@ struct DiagnosticsView: View {
         // plainly rather than showing an empty box that reads as broken.
         Text("Nothing has failed since the app started.")
           .font(theme.captionFont)
-          .foregroundColor(themeColor(.textSecondary))
+          .foregroundStyle(theme.muted)
       } else {
         ForEach(Array(entries), id: \.id) { entry in
           HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -131,7 +127,7 @@ struct DiagnosticsView: View {
                 .fixedSize(horizontal: false, vertical: true)
               Text("\(entry.category) · \(Self.timeFormatter.string(from: entry.date))")
                 .font(theme.captionFont)
-                .foregroundColor(themeColor(.textSecondary))
+                .foregroundStyle(theme.muted)
             }
             Spacer(minLength: 0)
           }
@@ -149,7 +145,7 @@ struct DiagnosticsView: View {
             Text(entry.label)
             Text(entry.url.path)
               .font(theme.captionFont)
-              .foregroundColor(themeColor(.textSecondary))
+              .foregroundStyle(theme.muted)
               .textSelection(.enabled)
               .fixedSize(horizontal: false, vertical: true)
           }
@@ -176,7 +172,7 @@ struct DiagnosticsView: View {
         if !detail.isEmpty {
           Text(detail)
             .font(theme.captionFont)
-            .foregroundColor(themeColor(.textSecondary))
+            .foregroundStyle(theme.muted)
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -187,7 +183,7 @@ struct DiagnosticsView: View {
 
   private func labelledRow(_ label: String, _ value: String, tint: Color? = nil) -> some View {
     HStack(alignment: .firstTextBaseline) {
-      Text(label).foregroundColor(themeColor(.textSecondary))
+      Text(label).foregroundStyle(theme.muted)
       Spacer(minLength: 12)
       Text(value)
         .foregroundColor(tint)
@@ -200,8 +196,8 @@ struct DiagnosticsView: View {
   private func severityColor(_ severity: SyncStatusSeverity) -> Color? {
     switch severity {
     case .ok: return nil
-    case .warning: return themeColor(.warning)
-    case .problem: return themeColor(.danger)
+    case .warning: return theme.warning
+    case .problem: return theme.danger
     }
   }
 

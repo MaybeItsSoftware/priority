@@ -12,7 +12,7 @@ struct ChalkThemePlugin: ThemePlugin {
   private let specificationValue = BuiltInThemeSpecifications.chalk
 
   var pluginIdentifier: String { specificationValue.identifier }
-  var displayName: String { "Zed Theme" }
+  var displayName: String { specificationValue.name }
   var pluginDescription: String { specificationValue.summary }
   var themeIconSystemName: String { "doc.plaintext" }
 

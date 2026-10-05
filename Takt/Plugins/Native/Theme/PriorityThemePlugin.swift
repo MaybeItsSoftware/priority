@@ -10,7 +10,7 @@ struct PriorityThemePlugin: ThemePlugin {
   private let specificationValue = BuiltInThemeSpecifications.priority
 
   var pluginIdentifier: String { specificationValue.identifier }
-  var displayName: String { "Priority Theme" }
+  var displayName: String { specificationValue.name }
   var pluginDescription: String { specificationValue.summary }
   var themeIconSystemName: String { "circle.lefthalf.filled" }
 

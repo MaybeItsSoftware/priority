@@ -47,9 +47,6 @@ final class PreferencesStore {
     /// Identifier → SHA-256 of the text last mirrored between a theme file and
     /// its `themes` row, so `UserThemeLibrary` can tell which side changed.
     case mirroredUserThemeDigests
-    case themeAccentPresetRawValue
-    case themeCustomAccentHex
-    case themeColorTokenHexOverrides
     case dismissedOnboardingDialogs
     case kanbanColumns
     case taskStartDatesByTaskId

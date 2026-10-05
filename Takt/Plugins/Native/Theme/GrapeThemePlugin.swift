@@ -10,7 +10,7 @@ struct GrapeThemePlugin: ThemePlugin {
   private let specificationValue = BuiltInThemeSpecifications.grape
 
   var pluginIdentifier: String { specificationValue.identifier }
-  var displayName: String { "Grape Theme" }
+  var displayName: String { specificationValue.name }
   var pluginDescription: String { specificationValue.summary }
   var themeIconSystemName: String { "textformat" }
 

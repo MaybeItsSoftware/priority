@@ -44,7 +44,6 @@ let pluginTargetExcludes = [
   // App-level source files at Takt/ root
   "Takt/AppCoordinator.swift",
   "Takt/AppDelegate.swift",
-  "Takt/AppThemeColorSupport.swift",
   "Takt/CacheInvalidationBus.swift",
   "Takt/CacheState.swift",
   "Takt/CommandExecutor.swift",
@@ -196,7 +195,7 @@ let appLogicTargetExcludes = [
 
   // Models — AppLogic only wants UndoableAction.swift and CheckvistConnectionState.swift;
   // the rest are app-only enums.
-  "Takt/Models/AppThemeModels.swift",
+  "Takt/Models/AppearanceMode.swift",
   "Takt/Models/CommandSuggestion.swift",
   "Takt/Models/DailyChartRange.swift",
   "Takt/Models/FocusRunSurface.swift",
@@ -206,7 +205,6 @@ let appLogicTargetExcludes = [
   "Takt/AppCoordinator.swift",
   "Takt/AppCoordinator+ServiceHosts.swift",
   "Takt/AppDelegate.swift",
-  "Takt/AppThemeColorSupport.swift",
   "Takt/CommandExecutor.swift",
   "Takt/DailyLogDataSourceAdapter.swift",
   "Takt/IntegrationDataSourceAdapter.swift",
