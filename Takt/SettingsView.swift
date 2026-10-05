@@ -200,9 +200,12 @@ struct SettingsView: View {
       // Themes have a page of their own kind: Appearance draws the gallery.
       .filter { !($0 is any ThemePlugin) }
       .map { page in
-        let name =
-          page.displayName.hasPrefix("Native ")
-          ? String(page.displayName.dropFirst("Native ".count)) : page.displayName
+        // "Native Obsidian Integration" reads as "Obsidian" in a sidebar.
+        var name = page.displayName
+        for prefix in ["Native "] where name.hasPrefix(prefix) { name.removeFirst(prefix.count) }
+        for suffix in [" Integration", " Plugin"] where name.hasSuffix(suffix) {
+          name.removeLast(suffix.count)
+        }
         return IntegrationPage(
           id: page.settingsCardIdentifier,
           title: name,

@@ -90,6 +90,9 @@ extension SettingsView {
         isOn: Binding(
           get: { celebration.soundEnabled },
           set: { celebration.soundEnabled = $0 }))
+      // Plays whichever preset is chosen above, so a change can be seen
+      // without finishing a real task.
+      CelebrationPreview(celebration: celebration)
     } header: {
       Text("Completing a task")
     }
