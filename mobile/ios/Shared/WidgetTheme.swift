@@ -39,22 +39,23 @@ struct WidgetTheme: Codable, Equatable, Sendable {
     try encoder.encode(self).write(to: url, options: .atomic)
   }
 
-  /// Priority, the default and the fallback: the same hexes as
-  /// `shared/themes/priority.json`, and the system's own faces.
+  /// The default ("Takt", stored as Priority) and the fallback: the same
+  /// hexes as `shared/themes/priority.json`, its faces, and its iPhone control
+  /// radius.
   static let fallback = WidgetTheme(
     identifier: "native.theme.priority",
     lockedAppearance: nil,
     light: [
-      "paper": "#f7f7f8", "raised": "#fcfcfc", "well": "#e8e8e9", "border": "#dddddf",
-      "ink": "#1f2026", "mutedText": "#55565b", "dimText": "#a5a5a8",
-      "primary": "#3d63dd", "success": "#4cc38e", "danger": "#d62246", "warning": "#ffbf00",
+      "paper": "#f7f4ee", "raised": "#fffdf9", "well": "#e9e6e0", "border": "#dedbd6",
+      "ink": "#2a2622", "mutedText": "#5d5a55", "dimText": "#a9a6a0",
+      "primary": "#5b4fe0", "success": "#1a9c5b", "danger": "#e0444b", "warning": "#f2a20c",
     ],
     dark: [
-      "paper": "#19191d", "raised": "#212125", "well": "#28282c", "border": "#323236",
-      "ink": "#ececf0", "mutedText": "#b7b7bb", "dimText": "#69696d",
-      "primary": "#7b9bff", "success": "#4cc38e", "danger": "#d62246", "warning": "#ffbf00",
+      "paper": "#191a23", "raised": "#23242f", "well": "#282932", "border": "#32333c",
+      "ink": "#ecedf3", "mutedText": "#b7b8bf", "dimText": "#696a72",
+      "primary": "#9b93ff", "success": "#3dd68c", "danger": "#ff6b6f", "warning": "#ffc53d",
     ],
-    bodyFamily: nil, monoFamily: nil, controlRadius: 8, hairline: 1)
+    bodyFamily: "Inter", monoFamily: "Geist Mono", controlRadius: 10, hairline: 1)
 }
 
 /// The colours, faces and radius a widget view draws with, read from the

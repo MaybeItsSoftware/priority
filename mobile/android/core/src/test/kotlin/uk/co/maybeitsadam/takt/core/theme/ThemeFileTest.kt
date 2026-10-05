@@ -276,9 +276,9 @@ class ThemeFileTest {
     @Test
     fun prioritysPerPlatformStructureIsTheDocumentedTable() {
         val table = mapOf(
-            ThemePlatform.MACOS to Triple(13.0, listOf(8.0, 6.0, 6.0), 0.0),
-            ThemePlatform.IOS to Triple(17.0, listOf(10.0, 8.0, 8.0), 44.0),
-            ThemePlatform.ANDROID to Triple(16.0, listOf(12.0, 8.0, 8.0), 48.0),
+            ThemePlatform.MACOS to Triple(13.0, listOf(12.0, 8.0, 8.0), 0.0),
+            ThemePlatform.IOS to Triple(17.0, listOf(14.0, 10.0, 10.0), 44.0),
+            ThemePlatform.ANDROID to Triple(16.0, listOf(16.0, 12.0, 10.0), 48.0),
         )
         for ((platform, row) in table) {
             val structure = BuiltInThemeSpecifications.priority(platform).structure
@@ -298,20 +298,20 @@ class ThemeFileTest {
     }
 
     @Test
-    fun priorityIsTheDefaultFirstAndNamesNoFamilies() {
+    fun priorityIsTheDefaultFirstAndSetInInter() {
         for (platform in ThemePlatform.entries) {
             val all = BuiltInThemeSpecifications.all(platform)
             assertEquals(
                 listOf("native.theme.priority", "native.theme.chalk", "native.theme.chalk.dark", "native.theme.grape"),
                 all.map { it.identifier },
             )
-            assertEquals(listOf("Priority", "Zed", "Zed Dark", "Grape"), all.map { it.name })
+            assertEquals(listOf("Takt", "Zed", "Zed Dark", "Grape"), all.map { it.name })
             assertEquals(BuiltInThemeSpecifications.DEFAULT_IDENTIFIER, BuiltInThemeSpecifications.defaultTheme(platform).identifier)
         }
         val type = priority.structure.typography
-        assertEquals(ThemeFontFace(emptyList(), ThemeFontDesign.SANS), type.body)
-        assertEquals(ThemeFontFace(emptyList(), ThemeFontDesign.SANS), type.display)
-        assertEquals(ThemeFontFace(emptyList(), ThemeFontDesign.MONOSPACED), type.mono)
+        assertEquals(ThemeFontFace(listOf("Inter"), ThemeFontDesign.SANS), type.body)
+        assertEquals(ThemeFontFace(listOf("Inter"), ThemeFontDesign.SANS), type.display)
+        assertEquals(ThemeFontFace(listOf("Geist Mono"), ThemeFontDesign.MONOSPACED), type.mono)
         // A file that names no base extends Priority.
         val bare = load(source("bare.json", "{}")).themes.first()
         assertEquals(priority.palette, bare.palette)
@@ -319,11 +319,13 @@ class ThemeFileTest {
     }
 
     @Test
-    fun prioritysPaletteIsWhatItsSeedsGrow() {
+    fun prioritysPaletteIsWhatItsSeedsGrowApartFromRaised() {
         for (appearance in ThemeAppearance.entries) {
             val seeds = ThemeSeeds.implicitIn(priority.palette.table(appearance))
             val grown = seeds.roles(appearance)!!
             for ((role, value) in grown) {
+                // The default names its cards, so the dark one is a clear step above the page.
+                if (role == ThemeColorRole.RAISED) continue
                 assertEquals("${appearance.raw} ${role.raw}", value, priority.color(role, appearance))
             }
         }
@@ -453,7 +455,7 @@ class ThemeFileTest {
               "structure": { "radius": { "control": 2 } },
               "platforms": {
                 "ios": { "structure": { "typography": { "bodySize": 18 } } },
-                "android": { "structure": { "spacing": { "md": 14 } } }
+                "android": { "structure": { "spacing": { "md": 18 } } }
               }
             }
         """
@@ -461,8 +463,8 @@ class ThemeFileTest {
         val onIOS = load(source("dusk.json", dusk), platform = ThemePlatform.IOS).themes.first()
         val onMac = load(source("dusk.json", dusk), platform = ThemePlatform.MACOS).themes.first()
 
-        assertEquals(14.0, onAndroid.structure.spacing.md, 0.0)
-        assertEquals(12.0, onIOS.structure.spacing.md, 0.0)
+        assertEquals(18.0, onAndroid.structure.spacing.md, 0.0)
+        assertEquals(14.0, onIOS.structure.spacing.md, 0.0)
         assertEquals(2.0, onAndroid.structure.radius.control, 0.0)
         assertEquals(2.0, onMac.structure.radius.control, 0.0)
         assertEquals("Android keeps Chalk's Android body size", 16.0, onAndroid.structure.typography.bodySize, 0.0)

@@ -10,7 +10,7 @@
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
+          "danger" : "#ff6b6f",
           "dimText" : "#5c6c70",
           "hover" : "#18272c",
           "ink" : "#dcecef",
@@ -22,8 +22,8 @@
           "paper" : "#0e1d22",
           "primary" : "#4fc3d4",
           "raised" : "#16252a",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
+          "success" : "#3dd68c",
+          "warning" : "#ffc53d",
           "well" : "#1c2b30"
         },
         "identifier" : "user.sea",
@@ -36,18 +36,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 8,
-            "panel" : 12,
+            "control" : 10,
+            "panel" : 16,
             "pill" : 9999,
-            "row" : 8,
-            "shell" : 20
+            "row" : 12,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 48,
@@ -55,27 +55,27 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 16,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 12,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
@@ -99,7 +99,7 @@
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
+          "danger" : "#e0444b",
           "dimText" : "#9facb0",
           "hover" : "#e9eeef",
           "ink" : "#14303a",
@@ -111,8 +111,8 @@
           "paper" : "#f4f8f9",
           "primary" : "#0b7a8c",
           "raised" : "#fbfcfd",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
+          "success" : "#1a9c5b",
+          "warning" : "#f2a20c",
           "well" : "#e4eaec"
         },
         "identifier" : "user.sea",
@@ -125,18 +125,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 8,
-            "panel" : 12,
+            "control" : 10,
+            "panel" : 16,
             "pill" : 9999,
-            "row" : 8,
-            "shell" : 20
+            "row" : 12,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 48,
@@ -144,27 +144,27 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 16,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 12,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
@@ -190,7 +190,7 @@
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
+          "danger" : "#ff6b6f",
           "dimText" : "#5c6c70",
           "hover" : "#18272c",
           "ink" : "#dcecef",
@@ -202,8 +202,8 @@
           "paper" : "#0e1d22",
           "primary" : "#4fc3d4",
           "raised" : "#16252a",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
+          "success" : "#3dd68c",
+          "warning" : "#ffc53d",
           "well" : "#1c2b30"
         },
         "identifier" : "user.sea",
@@ -216,18 +216,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 8,
-            "panel" : 10,
+            "control" : 10,
+            "panel" : 14,
             "pill" : 9999,
-            "row" : 8,
-            "shell" : 20
+            "row" : 10,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 44,
@@ -235,27 +235,27 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 17,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 13,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
@@ -279,7 +279,7 @@
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
+          "danger" : "#e0444b",
           "dimText" : "#9facb0",
           "hover" : "#e9eeef",
           "ink" : "#14303a",
@@ -291,8 +291,8 @@
           "paper" : "#f4f8f9",
           "primary" : "#0b7a8c",
           "raised" : "#fbfcfd",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
+          "success" : "#1a9c5b",
+          "warning" : "#f2a20c",
           "well" : "#e4eaec"
         },
         "identifier" : "user.sea",
@@ -305,18 +305,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 8,
-            "panel" : 10,
+            "control" : 10,
+            "panel" : 14,
             "pill" : 9999,
-            "row" : 8,
-            "shell" : 20
+            "row" : 10,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 44,
@@ -324,27 +324,27 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 17,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 13,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
@@ -370,7 +370,7 @@
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
+          "danger" : "#ff6b6f",
           "dimText" : "#5c6c70",
           "hover" : "#18272c",
           "ink" : "#dcecef",
@@ -382,8 +382,8 @@
           "paper" : "#0e1d22",
           "primary" : "#4fc3d4",
           "raised" : "#16252a",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
+          "success" : "#3dd68c",
+          "warning" : "#ffc53d",
           "well" : "#1c2b30"
         },
         "identifier" : "user.sea",
@@ -396,18 +396,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 6,
-            "panel" : 8,
+            "control" : 8,
+            "panel" : 12,
             "pill" : 9999,
-            "row" : 6,
-            "shell" : 20
+            "row" : 8,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 0,
@@ -415,35 +415,35 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 13,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 11,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
               "body" : 13,
-              "caption" : 11,
-              "display" : 28,
+              "caption" : 12,
+              "display" : 30,
               "hero" : 64,
-              "title" : 15
+              "title" : 16
             }
           },
           "usesGradientsOnChrome" : false,
@@ -459,7 +459,7 @@
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
+          "danger" : "#e0444b",
           "dimText" : "#9facb0",
           "hover" : "#e9eeef",
           "ink" : "#14303a",
@@ -471,8 +471,8 @@
           "paper" : "#f4f8f9",
           "primary" : "#0b7a8c",
           "raised" : "#fbfcfd",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
+          "success" : "#1a9c5b",
+          "warning" : "#f2a20c",
           "well" : "#e4eaec"
         },
         "identifier" : "user.sea",
@@ -485,18 +485,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 6,
-            "panel" : 8,
+            "control" : 8,
+            "panel" : 12,
             "pill" : 9999,
-            "row" : 6,
-            "shell" : 20
+            "row" : 8,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 0,
@@ -504,35 +504,35 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 13,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 11,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
               "body" : 13,
-              "caption" : 11,
-              "display" : 28,
+              "caption" : 12,
+              "display" : 30,
               "hero" : 64,
-              "title" : 15
+              "title" : 16
             }
           },
           "usesGradientsOnChrome" : false,

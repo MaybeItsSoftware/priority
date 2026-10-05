@@ -4,27 +4,27 @@
       "dark" : {
         "appearance" : "dark",
         "colors" : {
-          "altRow" : "#1e1e22",
-          "border" : "#323236",
-          "borderMuted" : "#28282c",
+          "altRow" : "#1e1f28",
+          "border" : "#32333c",
+          "borderMuted" : "#282932",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
-          "dimText" : "#69696d",
-          "hover" : "#242428",
-          "ink" : "#ececf0",
-          "inputBorder" : "#434347",
+          "danger" : "#ff6b6f",
+          "dimText" : "#696a72",
+          "hover" : "#24252d",
+          "ink" : "#ecedf3",
+          "inputBorder" : "#43444d",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#b7b7bb",
-          "paper" : "#19191d",
+          "mutedText" : "#b7b8bf",
+          "paper" : "#191a23",
           "primary" : "#ff6b2b",
-          "raised" : "#212125",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
-          "well" : "#28282c"
+          "raised" : "#23242f",
+          "success" : "#3dd68c",
+          "warning" : "#ffc53d",
+          "well" : "#282932"
         },
         "identifier" : "user.top",
         "lockedAppearance" : null,
@@ -36,18 +36,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 8,
-            "panel" : 12,
+            "control" : 10,
+            "panel" : 16,
             "pill" : 9999,
-            "row" : 8,
-            "shell" : 20
+            "row" : 12,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 48,
@@ -55,27 +55,27 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 16,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 12,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
@@ -93,27 +93,27 @@
       "light" : {
         "appearance" : "light",
         "colors" : {
-          "altRow" : "#f2f2f3",
-          "border" : "#dddddf",
-          "borderMuted" : "#e8e8e9",
+          "altRow" : "#f2efe9",
+          "border" : "#dedbd6",
+          "borderMuted" : "#e9e6e0",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
-          "dimText" : "#a5a5a8",
-          "hover" : "#ececee",
+          "danger" : "#e0444b",
+          "dimText" : "#a9a6a0",
+          "hover" : "#edeae4",
           "ink" : "#222222",
-          "inputBorder" : "#ccccce",
+          "inputBorder" : "#cecbc5",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#55565b",
-          "paper" : "#f7f7f8",
-          "primary" : "#3d63dd",
-          "raised" : "#fcfcfc",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
-          "well" : "#e8e8e9"
+          "mutedText" : "#5d5a55",
+          "paper" : "#f7f4ee",
+          "primary" : "#5b4fe0",
+          "raised" : "#fffdf9",
+          "success" : "#1a9c5b",
+          "warning" : "#f2a20c",
+          "well" : "#e9e6e0"
         },
         "identifier" : "user.top",
         "lockedAppearance" : null,
@@ -125,18 +125,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 8,
-            "panel" : 12,
+            "control" : 10,
+            "panel" : 16,
             "pill" : 9999,
-            "row" : 8,
-            "shell" : 20
+            "row" : 12,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 48,
@@ -144,27 +144,27 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 16,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 12,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
@@ -184,27 +184,27 @@
       "dark" : {
         "appearance" : "dark",
         "colors" : {
-          "altRow" : "#1e1e22",
-          "border" : "#323236",
-          "borderMuted" : "#28282c",
+          "altRow" : "#1e1f28",
+          "border" : "#32333c",
+          "borderMuted" : "#282932",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
-          "dimText" : "#69696d",
-          "hover" : "#242428",
-          "ink" : "#ececf0",
-          "inputBorder" : "#434347",
+          "danger" : "#ff6b6f",
+          "dimText" : "#696a72",
+          "hover" : "#24252d",
+          "ink" : "#ecedf3",
+          "inputBorder" : "#43444d",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#b7b7bb",
-          "paper" : "#19191d",
+          "mutedText" : "#b7b8bf",
+          "paper" : "#191a23",
           "primary" : "#ff6b2b",
-          "raised" : "#212125",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
-          "well" : "#28282c"
+          "raised" : "#23242f",
+          "success" : "#3dd68c",
+          "warning" : "#ffc53d",
+          "well" : "#282932"
         },
         "identifier" : "user.top",
         "lockedAppearance" : null,
@@ -216,18 +216,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 8,
+            "control" : 10,
             "panel" : 12,
             "pill" : 9999,
-            "row" : 8,
-            "shell" : 20
+            "row" : 10,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 44,
@@ -235,27 +235,27 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 17,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 13,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
@@ -273,27 +273,27 @@
       "light" : {
         "appearance" : "light",
         "colors" : {
-          "altRow" : "#f2f2f3",
-          "border" : "#dddddf",
-          "borderMuted" : "#e8e8e9",
+          "altRow" : "#f2efe9",
+          "border" : "#dedbd6",
+          "borderMuted" : "#e9e6e0",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
-          "dimText" : "#a5a5a8",
-          "hover" : "#ececee",
+          "danger" : "#e0444b",
+          "dimText" : "#a9a6a0",
+          "hover" : "#edeae4",
           "ink" : "#222222",
-          "inputBorder" : "#ccccce",
+          "inputBorder" : "#cecbc5",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#55565b",
-          "paper" : "#f7f7f8",
-          "primary" : "#3d63dd",
-          "raised" : "#fcfcfc",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
-          "well" : "#e8e8e9"
+          "mutedText" : "#5d5a55",
+          "paper" : "#f7f4ee",
+          "primary" : "#5b4fe0",
+          "raised" : "#fffdf9",
+          "success" : "#1a9c5b",
+          "warning" : "#f2a20c",
+          "well" : "#e9e6e0"
         },
         "identifier" : "user.top",
         "lockedAppearance" : null,
@@ -305,18 +305,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 8,
+            "control" : 10,
             "panel" : 12,
             "pill" : 9999,
-            "row" : 8,
-            "shell" : 20
+            "row" : 10,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 44,
@@ -324,27 +324,27 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 17,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 13,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
@@ -364,27 +364,27 @@
       "dark" : {
         "appearance" : "dark",
         "colors" : {
-          "altRow" : "#1e1e22",
-          "border" : "#323236",
-          "borderMuted" : "#28282c",
+          "altRow" : "#1e1f28",
+          "border" : "#32333c",
+          "borderMuted" : "#282932",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
-          "dimText" : "#69696d",
-          "hover" : "#242428",
-          "ink" : "#ececf0",
-          "inputBorder" : "#434347",
+          "danger" : "#ff6b6f",
+          "dimText" : "#696a72",
+          "hover" : "#24252d",
+          "ink" : "#ecedf3",
+          "inputBorder" : "#43444d",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#b7b7bb",
-          "paper" : "#19191d",
+          "mutedText" : "#b7b8bf",
+          "paper" : "#191a23",
           "primary" : "#ff6b2b",
-          "raised" : "#212125",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
-          "well" : "#28282c"
+          "raised" : "#23242f",
+          "success" : "#3dd68c",
+          "warning" : "#ffc53d",
+          "well" : "#282932"
         },
         "identifier" : "user.top",
         "lockedAppearance" : null,
@@ -396,18 +396,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 6,
-            "panel" : 8,
+            "control" : 8,
+            "panel" : 12,
             "pill" : 9999,
-            "row" : 6,
-            "shell" : 20
+            "row" : 8,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 0,
@@ -415,35 +415,35 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 13,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 11,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
               "body" : 13,
-              "caption" : 11,
-              "display" : 28,
+              "caption" : 12,
+              "display" : 30,
               "hero" : 64,
-              "title" : 15
+              "title" : 16
             }
           },
           "usesGradientsOnChrome" : false,
@@ -453,27 +453,27 @@
       "light" : {
         "appearance" : "light",
         "colors" : {
-          "altRow" : "#f2f2f3",
-          "border" : "#dddddf",
-          "borderMuted" : "#e8e8e9",
+          "altRow" : "#f2efe9",
+          "border" : "#dedbd6",
+          "borderMuted" : "#e9e6e0",
           "categoricalOrange" : "#ff6b2b",
           "categoricalPink" : "#ff88dc",
           "categoricalPurple" : "#7a4de8",
-          "danger" : "#d62246",
-          "dimText" : "#a5a5a8",
-          "hover" : "#ececee",
+          "danger" : "#e0444b",
+          "dimText" : "#a9a6a0",
+          "hover" : "#edeae4",
           "ink" : "#222222",
-          "inputBorder" : "#ccccce",
+          "inputBorder" : "#cecbc5",
           "mediaLetterbox" : "#000000",
           "mediaScrim" : "#000000b3",
           "mediaScrimInk" : "#ffffff",
-          "mutedText" : "#55565b",
-          "paper" : "#f7f7f8",
-          "primary" : "#3d63dd",
-          "raised" : "#fcfcfc",
-          "success" : "#4cc38e",
-          "warning" : "#ffbf00",
-          "well" : "#e8e8e9"
+          "mutedText" : "#5d5a55",
+          "paper" : "#f7f4ee",
+          "primary" : "#5b4fe0",
+          "raised" : "#fffdf9",
+          "success" : "#1a9c5b",
+          "warning" : "#f2a20c",
+          "well" : "#e9e6e0"
         },
         "identifier" : "user.top",
         "lockedAppearance" : null,
@@ -485,18 +485,18 @@
             "hairline" : 1
           },
           "radius" : {
-            "control" : 6,
-            "panel" : 8,
+            "control" : 8,
+            "panel" : 12,
             "pill" : 9999,
-            "row" : 6,
-            "shell" : 20
+            "row" : 8,
+            "shell" : 18
           },
           "spacing" : {
-            "lg" : 16,
-            "md" : 12,
-            "sm" : 8,
-            "xl" : 24,
-            "xs" : 4,
+            "lg" : 20,
+            "md" : 14,
+            "sm" : 10,
+            "xl" : 28,
+            "xs" : 6,
             "xxs" : 2
           },
           "touchTarget" : 0,
@@ -504,35 +504,35 @@
             "body" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "bodySize" : 13,
             "display" : {
               "design" : "sans",
               "families" : [
-
+                "Inter"
               ]
             },
             "microLabel" : {
               "role" : "mutedText",
               "size" : 11,
-              "tracking" : 0,
+              "tracking" : 0.02,
               "uppercase" : false,
-              "weight" : "medium"
+              "weight" : "semibold"
             },
             "mono" : {
               "design" : "monospaced",
               "families" : [
-
+                "Geist Mono"
               ]
             },
             "scale" : {
               "body" : 13,
-              "caption" : 11,
-              "display" : 28,
+              "caption" : 12,
+              "display" : 30,
               "hero" : 64,
-              "title" : 15
+              "title" : 16
             }
           },
           "usesGradientsOnChrome" : false,

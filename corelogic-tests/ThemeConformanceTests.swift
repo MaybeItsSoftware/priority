@@ -42,7 +42,7 @@ final class ThemeConformanceTests: XCTestCase {
           "structure": { "radius": { "control": 2 } },
           "platforms": {
             "ios": { "structure": { "typography": { "bodySize": 18 } } },
-            "android": { "structure": { "spacing": { "md": 14 }, "touchTarget": 52 } }
+            "android": { "structure": { "spacing": { "md": 18 }, "touchTarget": 52 } }
           }
         }
         """
@@ -209,7 +209,7 @@ final class ThemeConformanceTests: XCTestCase {
     }
     let dusk = try built("platform-override")
     XCTAssertEqual(dusk.expected["ios"]?["light"]?.structure.typography.bodySize, 18)
-    XCTAssertEqual(dusk.expected["android"]?["light"]?.structure.spacing["md"], 14)
+    XCTAssertEqual(dusk.expected["android"]?["light"]?.structure.spacing["md"], 18)
     XCTAssertEqual(dusk.expected["macos"]?["light"]?.structure.radius["control"], 2)
 
     let typo = try built("misspelt-key")

@@ -30,7 +30,7 @@ class ThemeLibraryStateTest {
             listOf("native.theme.priority", "native.theme.chalk", "native.theme.chalk.dark", "native.theme.grape", "user.dusk"),
             s.available.map { it.identifier },
         )
-        assertEquals(listOf("Priority", "Zed", "Zed Dark", "Grape"), s.builtIns.map { it.name })
+        assertEquals(listOf("Takt", "Zed", "Zed Dark", "Grape"), s.builtIns.map { it.name })
     }
 
     @Test

@@ -7,7 +7,7 @@ import Foundation
 /// `Takt/Plugins/Native/Theme/` is a pair of four-line wrappers over these
 /// two values.
 public enum BuiltInThemeSpecifications {
-  /// Priority, the default: what a fresh install shows, what a theme file
+  /// The default (shown as "Takt", stored as Priority): what a fresh install shows, what a theme file
   /// extends unless it says otherwise, and what stands in for a theme that
   /// will not load.
   public static let priorityIdentifier = "native.theme.priority"
@@ -36,7 +36,7 @@ public enum BuiltInThemeSpecifications {
     priority(for: platform)
   }
 
-  /// Priority, resolved for `platform`. `priority` is the macOS one.
+  /// The default, resolved for `platform`. `priority` is the macOS one.
   public static func priority(for platform: ThemePlatform) -> ThemeSpecification {
     priorityByPlatform[platform] ?? priority
   }
@@ -96,19 +96,20 @@ public enum BuiltInThemeSpecifications {
       touchTarget: 48),
   ]
 
-  /// What Priority lays over its own structure on each platform. The same
-  /// sizes as Chalk's on the phones, with the rounder corners the platforms'
-  /// own controls have.
+  /// What the default lays over its own structure on each platform. The same
+  /// type sizes as Chalk's on the phones, its own roomy spacing everywhere,
+  /// and corners rounder again in the hand, the way the platforms' own cards
+  /// and controls are.
   public static let priorityPlatformStructures: [ThemePlatform: ThemeFile.Structure] = [
     .ios: ThemeFile.Structure(
-      radius: .init(panel: 10, row: 8, control: 8),
+      radius: .init(panel: 14, row: 10, control: 10),
       typography: .init(
         bodySize: 17,
         scale: .init(caption: 13, body: 17, title: 20, display: 34, hero: 72),
         microLabel: .init(size: 13)),
       touchTarget: 44),
     .android: ThemeFile.Structure(
-      radius: .init(panel: 12, row: 8, control: 8),
+      radius: .init(panel: 16, row: 12, control: 10),
       typography: .init(
         bodySize: 16,
         scale: .init(caption: 12, body: 16, title: 20, display: 32, hero: 72),
@@ -168,53 +169,73 @@ public enum BuiltInThemeSpecifications {
       structure: ThemeFileLoader.merge(structure, over: specification.structure))
   }
 
-  // MARK: - Priority — the default
+  // MARK: - Takt (née Priority) — the default
 
-  /// Plain enough to build on. Cool neutral greys, one blue, the system's own
-  /// faces, and the house radius scale: 8 for panels, 6 for what you press.
+  /// Friendly, roomy and rounded: the generic modern app, rather than an
+  /// editor. Shown as "Takt"; the identifier still says Priority because it
+  /// is stored as people's choice and synced between devices.
   ///
-  /// It is made the way a theme file is meant to be: from seeds. The eleven
-  /// neutrals are mixed from the background and the text (see `ThemeSeeds`),
-  /// so its palette is what a themer gets by writing three colours.
+  /// - Light is paper: a warm off-white page, cards a whisker whiter and
+  ///   warmer above it, warm-grey hairlines and a deep warm charcoal ink.
+  /// - Dark is a tinted slate rather than black or flat grey, with cards a
+  ///   clear step lighter so the layers stay apart, and every accent lifted to
+  ///   a lighter tint so it reads on the dark page.
+  /// - One cheerful indigo-violet accent, and status hues saturated enough to
+  ///   be friendly rather than alarming.
+  /// - Inter for everything read, Geist Mono for numerals and code; 12 on
+  ///   cards, 8 on rows and what you press, and a more generous spacing scale
+  ///   than the editor themes, which widens every gutter and row with it.
+  ///
+  /// It is still made the way a theme file is meant to be: from seeds. The
+  /// neutrals are mixed from the page and the ink (see `ThemeSeeds`); only
+  /// `raised` is named, because a seeded card in the dark sits too close to
+  /// the page to read as a layer.
   public static let priority = ThemeSpecification(
     identifier: priorityIdentifier,
-    name: "Priority",
-    summary: "The default. Quiet greys, one blue, and your system's own fonts — easy to make your own.",
+    name: "Takt",
+    summary:
+      "The default. Friendly and roomy: rounded cards, Inter, a warm paper light mode and a deep slate dark one.",
     palette: ThemePalette(
       light: seeded(
         ThemeSeeds(
-          background: hex("#f7f7f8"), foreground: hex("#1f2026"), accent: hex("#3d63dd"),
-          success: emerald, danger: raspberry, warning: amber),
-        .light),
+          background: hex("#f7f4ee"), foreground: hex("#2a2622"), accent: hex("#5b4fe0"),
+          success: hex("#1a9c5b"), danger: hex("#e0444b"), warning: hex("#f2a20c")),
+        .light,
+        overrides: [.raised: hex("#fffdf9")]),
       dark: seeded(
         ThemeSeeds(
-          background: hex("#19191d"), foreground: hex("#ececf0"), accent: hex("#7b9bff"),
-          success: emerald, danger: raspberry, warning: amber),
-        .dark)),
+          background: hex("#191a23"), foreground: hex("#ecedf3"), accent: hex("#9b93ff"),
+          success: hex("#3dd68c"), danger: hex("#ff6b6f"), warning: hex("#ffc53d")),
+        .dark,
+        overrides: [.raised: hex("#23242f")])),
     structure: ThemeStructure(
-      radius: ThemeRadiusScale(panel: 8, row: 6, control: 6, pill: 9999, shell: 20),
+      radius: ThemeRadiusScale(panel: 12, row: 8, control: 8, pill: 9999, shell: 18),
       border: ThemeBorderScale(hairline: 1, emphasis: 2, focusRing: 2),
-      spacing: ThemeSpacingScale(xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24),
+      // Half again the editor themes' scale at the top end: the pane gutter
+      // (`xl`), the list gutter (`md`) and a row's padding (`xs`) all come
+      // from here, so this is what gives the window its air.
+      spacing: ThemeSpacingScale(xxs: 2, xs: 6, sm: 10, md: 14, lg: 20, xl: 28),
       typography: ThemeTypography(
-        // No families: the system's faces — SF Pro and SF Mono on Apple,
-        // Roboto and its monospace on Android.
-        display: ThemeFontFace(families: [], design: .sans),
-        body: ThemeFontFace(families: [], design: .sans),
-        mono: ThemeFontFace(families: [], design: .monospaced),
+        // Bundled on every platform (see `BundledFonts`); the system sans and
+        // monospace stand behind them if registration ever fails.
+        display: ThemeFontFace(families: ["Inter"], design: .sans),
+        body: ThemeFontFace(families: ["Inter"], design: .sans),
+        mono: ThemeFontFace(families: ["Geist Mono"], design: .monospaced),
         bodySize: 13,
-        scale: ThemeTypeScale(caption: 11, body: 13, title: 15, display: 28, hero: 64),
+        scale: ThemeTypeScale(caption: 12, body: 13, title: 16, display: 30, hero: 64),
         microLabel: ThemeMicroLabel(
-          size: 11, weight: .medium, tracking: 0, isUppercased: false, role: .mutedText)
+          size: 11, weight: .semibold, tracking: 0.02, isUppercased: false, role: .mutedText)
       )
     )
   )
 
   /// A table grown from `seeds`, plus the roles seeds do not reach: the
   /// categorical hues and, in the light table, the media surfaces.
-  private static func seeded(_ seeds: ThemeSeeds, _ appearance: ThemeAppearance)
-    -> [ThemeColorRole: ThemeColorValue]
-  {
-    var table = seeds.roles(in: appearance) ?? [:]
+  private static func seeded(
+    _ seeds: ThemeSeeds, _ appearance: ThemeAppearance,
+    overrides: [ThemeColorRole: ThemeColorValue] = [:]
+  ) -> [ThemeColorRole: ThemeColorValue] {
+    var table = (seeds.roles(in: appearance) ?? [:]).merging(overrides) { _, override in override }
     table[.categoricalPurple] = purple
     table[.categoricalPink] = pink
     table[.categoricalOrange] = orange

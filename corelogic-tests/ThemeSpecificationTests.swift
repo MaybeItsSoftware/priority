@@ -280,29 +280,42 @@ final class ThemeSpecificationTests: XCTestCase {
     XCTAssertEqual(label.trackingPoints, 1.5, accuracy: 0.0001)
   }
 
-  /// The built-ins are set the way Zed is: Plex Sans for everything read,
-  /// Lilex for code and numerals, and labels at caption size, regular, as
-  /// written and untracked. A system design sits behind each face so a failed
-  /// registration lands in a sans, never in a serif.
-  /// The default names no families, so each platform draws its own system
-  /// faces, and its palette is the one its seeds grow.
-  func testTheDefaultUsesSystemFacesAndIsGrownFromSeeds() {
+  /// The default is set in the bundled Inter and Geist Mono, rounded and
+  /// roomy, and its palette is the one its seeds grow — apart from `raised`,
+  /// which it names so the dark card is a clear step above the page.
+  func testTheDefaultIsFriendlyRoundedAndGrownFromSeeds() {
     let priority = BuiltInThemeSpecifications.priority
+    XCTAssertEqual(priority.name, "Takt")
     let type = priority.structure.typography
-    XCTAssertEqual(type.body, ThemeFontFace(families: [], design: .sans))
-    XCTAssertEqual(type.mono, ThemeFontFace(families: [], design: .monospaced))
-    XCTAssertEqual(priority.structure.radius.panel, 8)
-    XCTAssertEqual(priority.structure.radius.control, 6)
+    XCTAssertEqual(type.body, ThemeFontFace(families: ["Inter"], design: .sans))
+    XCTAssertEqual(type.display, ThemeFontFace(families: ["Inter"], design: .sans))
+    XCTAssertEqual(type.mono, ThemeFontFace(families: ["Geist Mono"], design: .monospaced))
+    XCTAssertEqual(priority.structure.radius.panel, 12)
+    XCTAssertEqual(priority.structure.radius.row, 8)
+    XCTAssertEqual(priority.structure.radius.control, 8)
+    XCTAssertEqual(priority.structure.radius.shell, 18)
+    XCTAssertGreaterThan(priority.structure.spacing.xl, BuiltInThemeSpecifications.chalk.structure.spacing.xl)
     for appearance in ThemeAppearance.allCases {
       let seeds = ThemeSeeds(implicitIn: priority.palette.table(appearance))
       let grown = seeds.roles(in: appearance) ?? [:]
-      for (role, value) in grown {
+      for (role, value) in grown where role != .raised {
         XCTAssertEqual(priority.color(role, in: appearance), value, "\(appearance) \(role)")
       }
     }
-    XCTAssertTrue(priority.validate().filter { $0.severity == .error }.isEmpty)
+    // Paper in the light, a tinted slate in the dark: neither is white, black
+    // or a neutral grey.
+    let light = priority.color(.paper, in: .light)
+    XCTAssertGreaterThan(light.red, light.blue, "a warm page")
+    let dark = priority.color(.paper, in: .dark)
+    XCTAssertGreaterThan(dark.blue, dark.red, "a cool slate, not a flat grey")
+    XCTAssertGreaterThan(dark.red, 0.05, "not crushed to black")
+    XCTAssertTrue(priority.validate().filter { $0.severity != .note }.isEmpty, "\(priority.validate())")
   }
 
+  /// Zed is set the way Zed sets itself: Plex Sans for everything read,
+  /// Lilex for code and numerals, and labels at caption size, regular, as
+  /// written and untracked. A system design sits behind each face so a failed
+  /// registration lands in a sans, never in a serif.
   func testZedUsesZedsFacesAndQuietLabels() {
     for builtIn in [BuiltInThemeSpecifications.chalk, BuiltInThemeSpecifications.chalkDark] {
       let type = builtIn.structure.typography
