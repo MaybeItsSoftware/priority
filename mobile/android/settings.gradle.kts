@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Priority"
+rootProject.name = "Takt"
 include(":core", ":data", ":app", ":baselineprofile", ":benchmark")

@@ -9,6 +9,6 @@
         <intent
             android:action="uk.co.maybeitsadam.priority.QUICK_ADD"
             android:targetPackage="uk.co.maybeitssoftware.takt"
-            android:targetClass="uk.co.maybeitsadam.priority.MainActivity" />
+            android:targetClass="uk.co.maybeitsadam.takt.MainActivity" />
     </shortcut>
 </shortcuts>

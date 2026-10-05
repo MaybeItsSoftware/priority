@@ -20,7 +20,7 @@ val sharedThemes = rootProject.layout.projectDirectory.dir("../../shared/themes"
 val copySharedThemes = tasks.register<Sync>("copySharedThemes") {
     from(sharedThemes) {
         include("*.json")
-        into("uk/co/maybeitsadam/priority/core/theme/builtin")
+        into("uk/co/maybeitsadam/takt/core/theme/builtin")
     }
     into(layout.buildDirectory.dir("generated/sharedThemes"))
 }

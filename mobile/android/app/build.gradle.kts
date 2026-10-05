@@ -34,7 +34,7 @@ val prioritySupabaseKey = stringProperty("prioritySupabaseKey") ?: "sb_publishab
 val priorityGoogleWebClientId = stringProperty("priorityGoogleWebClientId") ?: ""
 
 android {
-    namespace = "uk.co.maybeitsadam.priority"
+    namespace = "uk.co.maybeitsadam.takt"
     compileSdk = 36
     defaultConfig {
         applicationId = "uk.co.maybeitssoftware.takt"

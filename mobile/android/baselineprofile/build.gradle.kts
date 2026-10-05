@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "uk.co.maybeitsadam.priority.baselineprofile"
+    namespace = "uk.co.maybeitsadam.takt.baselineprofile"
     compileSdk = 36
     defaultConfig {
         minSdk = 29

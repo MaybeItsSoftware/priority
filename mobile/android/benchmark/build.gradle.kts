@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "uk.co.maybeitsadam.priority.benchmark"
+    namespace = "uk.co.maybeitsadam.takt.benchmark"
     compileSdk = 36
     defaultConfig {
         minSdk = 29

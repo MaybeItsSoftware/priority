@@ -14,7 +14,7 @@ counts. The Compose UI is built on top of these APIs in the next stage.
 | --- | --- | --- |
 | `:core` | Kotlin/JVM library, no Android | Ports of the pure policy code. Each file is named after its Swift original: `PeriodicSchedule`, `TaskCaptureSyntax`, `DueDateParsing`, `NextUpSelector`, `DayBoundary`, `DayPlanSelector`, `StaleFocusPolicy`, `FocusDayTimeline`, `TaskProgressSeries`, `CompletedWorkDigest`, `WorkProgressSummary`, `WorkspaceSidebarOutline`, `KanbanColumn`, `Daily`, `MatrixGeometry`, `WorkspaceModels`, `TaskPlanning`, `TaskOutlineFolding`, `WorkspaceListTree`, `FocusPoints`, `WorkspaceNextUpSnapshot`. It also holds the sync clock (`HybridLogicalClock`) and the wire types (`SyncWire`, kotlinx.serialization). |
 | `:data` | Android library | The SQLite store and sync. `db/` holds the connection pool (`WorkspaceDatabase`), the schema (`WorkspaceSchema`), GRDB-compatible dates (`SqlDates`) and a thin statement API (`Db`, `Row`). `workspace/` holds `WorkspaceRepository`, the port of `WorkspaceStore` and its extensions. `sync/` holds `SyncStore`, `SyncEngine`, `SyncScheduler` and `SyncTransport` with its OkHttp implementation. |
-| `:app` | Android application | Application id `uk.co.maybeitssoftware.takt`; Kotlin namespace `uk.co.maybeitsadam.priority`. It contains `PriorityApplication`, which owns the repository, and a placeholder `MainActivity`. The fonts are bundled in `res/font`: IBM Plex Sans and Lilex. Their OFL licences are in `assets/licenses`. |
+| `:app` | Android application | Application id `uk.co.maybeitssoftware.takt`; Kotlin namespace `uk.co.maybeitsadam.takt`. It contains `TaktApplication`, which owns the repository, and a placeholder `MainActivity`. The fonts are bundled in `res/font`: IBM Plex Sans and Lilex. Their OFL licences are in `assets/licenses`. |
 
 minSdk 29, target and compile SDK 36. The versions are pinned in
 `gradle/libs.versions.toml`. Compose stays on BOM 2026.05.00 because later
@@ -39,7 +39,7 @@ To try the app on an emulator:
 ```bash
 ~/Library/Android/sdk/emulator/emulator -avd flutter_android -no-window -no-audio &
 ./gradlew :app:installDebug
-adb shell am start -n uk.co.maybeitssoftware.takt/uk.co.maybeitsadam.priority.MainActivity
+adb shell am start -n uk.co.maybeitssoftware.takt/uk.co.maybeitsadam.takt.MainActivity
 ```
 
 ## Where the schema comes from
@@ -79,7 +79,7 @@ Rows are written the way GRDB writes them:
 ## Using the data layer from a ViewModel
 
 ```kotlin
-val repository = (application as PriorityApplication).repository
+val repository = (application as TaktApplication).repository
 val workspace = repository.bootstrapIfNeeded()           // suspend
 val lists: Flow<List<TaskList>> = repository.observeLists(workspace.id)
 repository.createTask(capturing = "Write report 45m #work !1", listId = inboxId)

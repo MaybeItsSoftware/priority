@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "uk.co.maybeitsadam.priority.data"
+    namespace = "uk.co.maybeitsadam.takt.data"
     compileSdk = 36
     defaultConfig {
         minSdk = 29
@@ -38,7 +38,7 @@ abstract class CopyWorkspaceSchema : DefaultTask() {
 
     @TaskAction
     fun copy() {
-        val target = outputDir.get().asFile.resolve("uk/co/maybeitsadam/priority/data/workspace_schema.sql")
+        val target = outputDir.get().asFile.resolve("uk/co/maybeitsadam/takt/data/workspace_schema.sql")
         target.parentFile.mkdirs()
         fixture.get().asFile.copyTo(target, overwrite = true)
     }
