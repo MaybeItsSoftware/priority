@@ -412,7 +412,7 @@ struct WorkspaceKanbanCard: View {
         Text("List · \(model.descendants(of: task).filter { !$0.task.isList }.count) tasks")
           .font(theme.captionFont).foregroundStyle(theme.muted)
       } else {
-        WorkspaceTaskPlanningBadges(task: task)
+        WorkspaceTaskPlanningBadges(task: task, isExpanded: isSelected)
       }
       subtaskTree
     }
@@ -488,7 +488,9 @@ struct WorkspaceKanbanCard: View {
   }
 
   private var cardHeading: some View {
-    HStack(spacing: theme.space.xs) {
+    // A selected card grows to its whole title, with the handle, the check
+    // and the buttons kept level with the title's first line.
+    HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.xs) {
       Image(systemName: "line.3.horizontal")
         .font(theme.microLabelFont)
         .foregroundStyle(theme.dim)
@@ -514,8 +516,7 @@ struct WorkspaceKanbanCard: View {
       .foregroundStyle(task.status == .open ? theme.ink : theme.muted)
       .focusable()
       .multilineTextAlignment(.leading)
-      .lineLimit(2)
-      .truncationMode(.tail)
+      .expandsWhenSelected(isSelected, lineLimit: 2)
       .frame(maxWidth: .infinity, alignment: .leading)
       .help(task.title)
       .strikethrough(task.status != .open)
@@ -642,7 +643,8 @@ struct WorkspaceKanbanCard: View {
   private func subtaskRow(_ item: TaskOutlineItem, isFolded: Bool?) -> some View {
     let isOpen = item.task.status == .open
     let step = Self.indentStep(theme)
-    return HStack(spacing: 0) {
+    let isRowSelected = selectedRowID == item.task.id
+    return HStack(alignment: isRowSelected ? .firstTextBaseline : .center, spacing: 0) {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
@@ -661,8 +663,8 @@ struct WorkspaceKanbanCard: View {
       .buttonStyle(.plain)
       .foregroundStyle(isOpen ? theme.ink : theme.muted)
       .strikethrough(!isOpen)
-      .lineLimit(1)
-      .truncationMode(.tail)
+      .multilineTextAlignment(.leading)
+      .expandsWhenSelected(isRowSelected)
       .frame(maxWidth: .infinity, alignment: .leading)
       .help(item.task.title)
       // Trailing, as the card's own fold is, so the guides stay under the
@@ -678,8 +680,7 @@ struct WorkspaceKanbanCard: View {
     // arrow keys can be seen stepping through a card's subtasks.
     .background {
       WorkspaceSelectionBackground(
-        isSelected: selectedRowID == item.task.id,
-        hasKeyboard: hasKeyboard && selectedRowID == item.task.id, radius: 0)
+        isSelected: isRowSelected, hasKeyboard: hasKeyboard && isRowSelected, radius: 0)
     }
     // Behind the padded row, so each guide runs its full height and meets
     // the next row's without a gap.

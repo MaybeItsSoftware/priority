@@ -246,6 +246,8 @@ struct WorkspaceTaskPlanningBadges: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let task: WorkspaceTask
+  /// The selected row's badges show in full; the rest stop at two lines.
+  var isExpanded = false
 
   var body: some View {
     let planning = model.taskPlanningByID[task.id]
@@ -266,6 +268,6 @@ struct WorkspaceTaskPlanningBadges: View {
         Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
           .foregroundStyle(theme.warning)
       }
-    }.font(theme.captionFont).foregroundStyle(theme.muted).lineLimit(2)
+    }.font(theme.captionFont).foregroundStyle(theme.muted).expandsWhenSelected(isExpanded, lineLimit: 2)
   }
 }

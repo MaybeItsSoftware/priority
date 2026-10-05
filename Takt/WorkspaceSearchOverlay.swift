@@ -82,22 +82,24 @@ struct WorkspaceSearchOverlay: View {
 
   private func row(_ result: TaskSearchResult) -> some View {
     let isSelected = result.id == model.selectedSearchResultID
+    // The highlighted result grows to show its whole title, list and snippet.
     return VStack(alignment: .leading, spacing: theme.space.xxs) {
-      HStack(spacing: theme.space.sm) {
+      HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.sm) {
         Text(result.task.title)
           .font(theme.bodyFont())
           .foregroundStyle(theme.ink)
           .strikethrough(result.task.status == .completed)
-          .lineLimit(1)
+          .expandsWhenSelected(isSelected)
         Spacer(minLength: theme.space.md)
         MicroLabel(result.list.name)
           .lineLimit(1)
+          .fixedSize(horizontal: isSelected, vertical: false)
       }
       if let snippet = result.notesSnippet {
         Text(snippet)
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
-          .lineLimit(1)
+          .expandsWhenSelected(isSelected)
       }
     }
     .overlayRow(isSelected: isSelected)

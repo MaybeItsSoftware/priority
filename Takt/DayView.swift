@@ -406,20 +406,26 @@ struct DayView: View {
 
   /// An ordinary row: what it is, what it should cost, what it has cost.
   private func taskCard(task: WorkspaceTask, index: Int?, listName: String?, detail: String?) -> some View {
-    card(id: task.id) {
+    // The row under the cursor grows to show all of its text; the rest stay
+    // one line each. Baseline-aligned while it is grown, so the number, the
+    // list and the time stay on the first line beside the title's start.
+    let isExpanded = task.id == cursorID
+    let alignment: VerticalAlignment = isExpanded ? .firstTextBaseline : .center
+    return card(id: task.id) {
       VStack(alignment: .leading, spacing: theme.space.xxs) {
-        HStack(spacing: theme.space.sm) {
+        HStack(alignment: alignment, spacing: theme.space.sm) {
           marker(for: task, index: index)
           Text(task.title)
             .font(theme.bodyFont())
             .foregroundStyle(theme.ink)
-            .lineLimit(1)
-            .truncationMode(.tail)
+            .expandsWhenSelected(isExpanded)
           if model.isDailyProgressTask(task) {
             DailyBadge(task: task, isDoneToday: model.isDailyProgressComplete(task))
           }
           Spacer(minLength: theme.space.sm)
-          if let listName { MicroLabel(listName).lineLimit(1) }
+          if let listName {
+            MicroLabel(listName).lineLimit(1).fixedSize(horizontal: isExpanded, vertical: false)
+          }
           // Time only once there is some: logged against the estimate, or
           // either alone. A column of "No estimate" and 00:00 down a fresh
           // day was the noisiest thing on the screen and said nothing.
@@ -437,7 +443,7 @@ struct DayView: View {
           Text(detail)
             .font(theme.captionFont)
             .foregroundStyle(theme.dim)
-            .lineLimit(1)
+            .expandsWhenSelected(isExpanded)
             .padding(.leading, 14 + theme.space.sm)
         }
       }
@@ -537,9 +543,10 @@ struct DayView: View {
   /// The row you are on. Same card, grown: a live clock, and the controls that
   /// only ever apply to the task actually running.
   private func activeCard(task: WorkspaceTask, index: Int?, session: FocusSession) -> some View {
-    card(id: task.id, isActive: true) {
+    let isExpanded = task.id == cursorID
+    return card(id: task.id, isActive: true) {
       VStack(alignment: .leading, spacing: theme.space.sm) {
-        HStack(spacing: theme.space.sm) {
+        HStack(alignment: isExpanded ? .firstTextBaseline : .center, spacing: theme.space.sm) {
           if let index {
             Text("\(index)")
               .font(theme.numeralFont(theme.scale.caption))
@@ -550,9 +557,11 @@ struct DayView: View {
           Text(task.title)
             .font(theme.titleFont)
             .foregroundStyle(theme.ink)
-            .lineLimit(2)
+            .expandsWhenSelected(isExpanded, lineLimit: 2)
           Spacer(minLength: theme.space.sm)
-          if let list = model.list(for: task) { MicroLabel(list.name).lineLimit(1) }
+          if let list = model.list(for: task) {
+            MicroLabel(list.name).lineLimit(1).fixedSize(horizontal: isExpanded, vertical: false)
+          }
         }
         HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
           TimelineView(.periodic(from: .now, by: 1)) { context in

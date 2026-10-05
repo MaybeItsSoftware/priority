@@ -143,7 +143,10 @@ struct WorkspaceOutlineRow: View {
   let isFolded: Bool?
 
   var body: some View {
-    HStack(spacing: theme.space.sm) {
+    // The selected row grows to show its whole title and every badge line;
+    // baseline-aligned while it does, so the glyph and the badges stay level
+    // with the title's first line.
+    HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.sm) {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
@@ -171,13 +174,14 @@ struct WorkspaceOutlineRow: View {
       }
         .buttonStyle(.plain)
         .focusable()
-        .lineLimit(1)
-        .truncationMode(.tail)
+        .multilineTextAlignment(.leading)
+        .expandsWhenSelected(isSelected)
         .frame(maxWidth: .infinity, alignment: .leading)
         .help(item.task.title)
         .strikethrough(item.task.status != .open)
         .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
-      WorkspaceTaskPlanningBadges(task: item.task).frame(maxWidth: 170, alignment: .leading)
+      WorkspaceTaskPlanningBadges(task: item.task, isExpanded: isSelected)
+        .frame(maxWidth: 170, alignment: .leading)
     }
     // On the row itself: a List row takes its face from the table style, not
     // from the window, so without this every title was in the system sans.

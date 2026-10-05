@@ -144,4 +144,19 @@ extension View {
       }
     }
   }
+
+  /// A row's text, cut to `lineLimit` lines while the row is one of many and
+  /// shown whole once it is the selected one: the row grows to fit rather than
+  /// hiding the end of the title the cursor is on.
+  ///
+  /// The vertical `fixedSize` is what makes it wrap: inside a stack that
+  /// offers it one line's height, text with no limit still clips.
+  func expandsWhenSelected(
+    _ isSelected: Bool, lineLimit: Int = 1, truncation: Text.TruncationMode = .tail
+  ) -> some View {
+    self
+      .lineLimit(isSelected ? nil : lineLimit)
+      .truncationMode(truncation)
+      .fixedSize(horizontal: false, vertical: isSelected)
+  }
 }

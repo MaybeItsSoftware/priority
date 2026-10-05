@@ -186,7 +186,9 @@ struct WorkspaceMatrixTaskRow: View {
   let task: WorkspaceTask
 
   var body: some View {
-    HStack(spacing: theme.space.sm) {
+    // The selected row grows to show its whole title and list name.
+    let isSelected = task.id == model.selectedTaskID
+    HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.sm) {
       Button(task.title) {
         model.selectTask(task)
         model.reportKeyboardFocus(.tasks)
@@ -195,16 +197,15 @@ struct WorkspaceMatrixTaskRow: View {
       .font(theme.bodyFont())
       .foregroundStyle(theme.ink)
       .focusable()
-      .lineLimit(1)
-      .truncationMode(.tail)
+      .multilineTextAlignment(.leading)
+      .expandsWhenSelected(isSelected)
       .help(task.title)
       .frame(maxWidth: .infinity, alignment: .leading)
       if model.isMultiListScope, let list = model.list(for: task) {
         Text(list.name)
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
-          .lineLimit(1)
-          .truncationMode(.middle)
+          .expandsWhenSelected(isSelected, truncation: .middle)
           .help(list.name)
       }
     }
@@ -213,8 +214,7 @@ struct WorkspaceMatrixTaskRow: View {
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
     .workspaceSelection(
-      isSelected: task.id == model.selectedTaskID,
-      hasKeyboard: model.keyboardFocusArea == .tasks && task.id == model.selectedTaskID)
+      isSelected: isSelected, hasKeyboard: model.keyboardFocusArea == .tasks && isSelected)
     .focusable()
     .focused($isRowFocused)
     .focusEffectDisabled()
