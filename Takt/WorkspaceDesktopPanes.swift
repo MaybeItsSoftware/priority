@@ -180,6 +180,7 @@ struct WorkspaceOutlineRow: View {
         .help(item.task.title)
         .strikethrough(item.task.status != .open)
         .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
+      WorkspaceWaitingBadges(task: item.task)
       WorkspaceTaskPlanningBadges(task: item.task, isExpanded: isSelected)
         .frame(maxWidth: 170, alignment: .leading)
     }

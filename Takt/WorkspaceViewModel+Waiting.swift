@@ -31,6 +31,12 @@ extension WorkspaceViewModel {
     waitingDetails[task.id]
   }
 
+  /// The Waiting on form, on the selected task. Nothing for a list or no task.
+  func presentWaitingForm() {
+    guard let task = selectedTask, !task.isList else { return }
+    presentOverlay(.waiting(WorkspaceWaitingRequest(task: task, details: waitingDetails[task.id])))
+  }
+
   /// Sets what `task` waits on and when to follow up, filing it in Waiting
   /// on. Returns an error message, or nil once saved.
   @discardableResult

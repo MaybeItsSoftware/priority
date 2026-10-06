@@ -264,6 +264,7 @@ takt ws add Section 3 --parent <TASK_ID> -n "Start with the proofs"
 takt ws update <TASK_ID> --title "Read the paper twice" --link https://example.com
 takt ws update <TASK_ID> --no-links
 takt ws update <TASK_ID> --kind list --pin      # nested list, pinned to the sidebar
+takt ws update <TASK_ID> -w Sam --follow-up "2026-10-08 14:00"   # to Waiting on; "" clears
 takt ws done <TASK_ID>
 takt ws move <TASK_ID> --parent <TASK_ID>       # the subtree comes too
 takt ws move <TASK_ID> --list <LIST_ID> --position 1

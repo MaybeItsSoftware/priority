@@ -20,7 +20,7 @@ It works offline. It works from the terminal. And it exposes the whole surface t
 
 - [Install](#install) · [First run](#first-run)
 - [Keyboard flow](#keyboard-flow) · [Focus](#focus) · [Command palette](#command-palette)
-- [Views](#views) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Themes](#themes) · [Diagnostics](#diagnostics)
+- [Views](#views) · [Waiting on](#waiting-on) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Themes](#themes) · [Diagnostics](#diagnostics)
 - [Daily log](#daily-log) · [Obsidian daily notes](#obsidian-daily-notes) · [AFFiNE](#affine)
 - [Command line](#command-line) · [MCP server](#mcp-server) · [Plugins](#plugins)
 - [Build from source](#build-from-source) · [Where your data lives](#where-your-data-lives)
@@ -82,6 +82,7 @@ something you already have to know.
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |
 | `Ctrl+T` | Plan the task for today, or take it off |
 | `hh` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
+| `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection in the outline and the matrix, into the list you are in elsewhere |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
@@ -164,7 +165,7 @@ after Return.
 ### Coming from Checkvist
 
 The desktop workspace supports Checkvist-style two-letter commands, including
-`uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll`, `hc` and `hh`, plus native undo/redo in the
+`uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll`, `hc`, `hh` and `ww`, plus native undo/redo in the
 Edit menu. Board arrows navigate every column, including empty ones, and
 `Up`/`Down` step through the subtask rows drawn on each card as well as the
 cards (folded cards are skipped over); `Space` completes the row you are on and
@@ -449,6 +450,36 @@ panel: All, Due, Tags, Priority, Kanban, Matrix and Daily. Due, Tags and
 Priority were filters over one list wearing the costume of separate places, and
 Daily was a dashboard for a thing that is now a badge on a task. What is left
 is the four that ask genuinely different questions.
+## Waiting on
+
+The board's **Waiting on** column holds what is out of your hands. `ww` on a
+task opens a small form with two fields, and saving moves the task into that
+column if it is not there already:
+
+| Field | What it takes |
+| --- | --- |
+| Waiting on | Who or what — `Sam`, `Legal`, `invoice`. Shown as a small tag on the card, the outline row and in the inspector |
+| Follow up | When to chase it: the add field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`) with or without a time (`9am`, `2:30pm`, `14:00`, `noon`), in either order — `tomorrow 9am`, `fri at 2pm`, `2026-10-08 14:00`. A day on its own is 9:00; a time on its own is the next one to come. Shown as `↻ Thu 14:00` |
+
+`Tab` and the arrows move between the fields, the line under Follow up says
+what it read, `Return` saves, and emptying a field clears it.
+
+At the follow-up time, if the task is **still open and still in Waiting on**,
+a task called "Follow up with Sam: Contract signed" (or "Follow up: Contract
+signed" with no tag) lands in **Today**, due at that time, beside the task it
+chases; its inspector links back. It is made once — deleting it does not bring
+it back, and setting a new time makes a new one. A task that leaves Waiting on
+before its time gets no follow-up; one that leaves after it leaves the
+follow-up where it is, for you to finish. A time already past makes it at
+once. The app checks every quarter-minute while it runs, and on the first poll
+of a new day; Android checks too, and both give the follow-up the same id, so
+a phone and a Mac that both notice it make one task between them.
+
+The inspector edits both in place under **Waiting on**. From `takt`,
+`takt ws update <id> --waiting-on Sam --follow-up "2026-10-08 14:00"` does the
+same (the MCP tool takes `waiting_on` and `follow_up_at`); the app makes the
+follow-up when it next looks.
+
 ## Repeating work
 
 Give a task a **period** — `daily`, `weekdays`, `weekly`, `every 3 days`,

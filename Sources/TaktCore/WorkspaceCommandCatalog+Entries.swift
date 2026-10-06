@@ -36,7 +36,7 @@ public enum WorkspaceCommandCatalog {
     [.taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown],
     [.taskMoveToPreviousList, .taskMoveToNextList, .taskMove],
     [.taskConvertToList, .taskPromoteList, .taskExtractBranch],
-    [.taskTogglePlannedToday, .taskToggleDaily, .taskHabit, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
+    [.taskTogglePlannedToday, .taskToggleDaily, .taskHabit, .taskWaiting, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
   ]
 
   // MARK: - Go
@@ -122,6 +122,11 @@ public enum WorkspaceCommandCatalog {
       id: .taskHabit, title: "Make a habit from the task, or edit its habit", group: "Task",
       keys: ["hh", "cmd+shift+h"],
       note: "How often, which column, an estimate, and when it ends. With nothing selected, a habit of its own"),
+    // `w` was free, so `ww` is a sequence of its own.
+    .init(
+      id: .taskWaiting, title: "Waiting on: who, and when to follow up", group: "Task",
+      keys: ["ww"],
+      note: "Moves the task to Waiting on. At the follow-up time, if it is still waiting, a follow-up lands in Today"),
     // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T is
     // already "due today", which is a date rather than a choice.
     .init(

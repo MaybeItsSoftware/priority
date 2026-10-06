@@ -48,6 +48,7 @@ struct LocalTaskInspector: View {
     notes(draft)
     planning(draft)
     scheduling(draft)
+    if !task.isList { WorkspaceWaitingInspectorSection(task: task) }
     filing(draft)
     structure
     saveControls(draft)

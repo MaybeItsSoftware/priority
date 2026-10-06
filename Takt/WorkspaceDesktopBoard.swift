@@ -413,6 +413,7 @@ struct WorkspaceKanbanCard: View {
           .font(theme.captionFont).foregroundStyle(theme.muted)
       } else {
         WorkspaceTaskPlanningBadges(task: task, isExpanded: isSelected)
+        WorkspaceWaitingBadges(task: task)
       }
       subtaskTree
     }
