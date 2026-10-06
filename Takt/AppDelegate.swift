@@ -4,6 +4,7 @@ import OSLog
 import Observation
 import TaktCore
 import TaktSync
+import TaktWorkspace
 import SwiftUI
 
 @MainActor
@@ -29,6 +30,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private(set) var shortcutManager: GlobalShortcutManager!
   private(set) var mainWindowController: MainWindowController!
   private(set) var focusPanelController = FocusPanelController()
+  /// True while ⌘Q is putting the window away, so the close it causes does
+  /// not summon the focus panel in its place.
+  private var isPuttingAway = false
   /// The always-on-top companion. Owned here rather than by the desktop view,
   /// because a running block has to stay visible after the window that started
   /// it has gone — which is exactly when a small clock in the corner is the
@@ -388,7 +392,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // without being asked. That is the state the tray exists for, and having
     // to remember to press F before closing the window is exactly the kind of
     // thing nobody remembers.
-    if let workspace, workspace.activeFocusSession != nil,
+    //
+    // Only a block that is ticking, though. A paused one — or one left over
+    // with nothing on it — is not focus mode, and ⌘Q is putting the app away,
+    // not asking for a panel: both used to bring it up on every quit.
+    if let workspace, let session = workspace.activeFocusSession,
+      session.phase == .running, session.pausedAt == nil, !isPuttingAway,
       !hasOrdinaryWindow, !focusPanelController.isVisible {
       focusPanelController.show(model: workspace)
     }
@@ -458,7 +467,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       // left in an editor that is about to be closed is a draft lost.
       workspace?.taskEditor.flush()
       focusPanelController.dismiss(.back)
+      isPuttingAway = true
       mainWindowController.hide()
+      isPuttingAway = false
     case .cancel:
       break
     }

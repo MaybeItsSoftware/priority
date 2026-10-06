@@ -39,6 +39,16 @@ final class StaleFocusPolicyTests: XCTestCase {
       .keep)
   }
 
+  /// A paused session with nothing on it is left over, not paused work: it
+  /// goes the same day, or every close of the window looked like focus mode.
+  func testAPausedSessionWithNoTaskIsDiscardedTheSameDay() {
+    XCTAssertEqual(
+      StaleFocusPolicy.resolution(
+        pausedAt: date(25, 9), accumulatedSeconds: 210, hasActiveTask: false, now: date(25, 11),
+        boundary: utcBoundary),
+      .discard)
+  }
+
   /// The logical day runs from 04:00, so a block paused at half midnight is
   /// still the same day's work when you come back an hour later.
   func testABlockPausedAfterMidnightBelongsToTheDayThatStarted() {

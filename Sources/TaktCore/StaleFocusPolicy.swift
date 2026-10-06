@@ -39,10 +39,12 @@ public enum StaleFocusPolicy {
     // Running, not paused: nothing to decide. Recovery pauses an interrupted
     // session before this is asked, so in practice a nil means it is live.
     guard let pausedAt else { return .keep }
-    guard boundary.logicalDay(for: pausedAt) < boundary.logicalDay(for: now) else { return .keep }
-    // A session whose queue ran dry has no block to credit, whatever it
-    // accumulated against the task it has already finished with.
+    // A paused session with nothing on it is not a block at all — the queue
+    // ran dry and it was left behind. It has nothing to credit and nothing to
+    // resume, so it goes at once rather than at the end of the day; kept, it
+    // made every close of the window look like focus mode.
     guard hasActiveTask else { return .discard }
+    guard boundary.logicalDay(for: pausedAt) < boundary.logicalDay(for: now) else { return .keep }
     return accumulatedSeconds >= minimumCreditedSeconds ? .close : .discard
   }
 }
