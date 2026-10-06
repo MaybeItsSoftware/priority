@@ -127,7 +127,7 @@ fun FocusScreen() {
         }
     }
 
-    pending?.let { QualityPrompt(it, onScore = vm::confirmCompletion, onCancel = vm::cancelCompletion) }
+    pending?.let { QualityPrompt(it, onScore = vm::confirmCompletion, onCancel = vm::cancelCompletion, todayPoints = state.points.today) }
     override?.let { held ->
         ChalkDialog(
             "Start anyway?",
@@ -159,7 +159,8 @@ private fun Planning(state: FocusUiState, context: FocusContextState, vm: FocusV
         contentPadding = PaddingValues(bottom = 32.dp),
     ) {
         item(key = "points", contentType = "points") {
-            PointsStrip(state, lastBlock, onDismiss = vm::dismissLastBlock)
+            val scoring by vm.scoresEachFocusBlock.collectAsStateWithLifecycle()
+            PointsStrip(state, lastBlock, scoring, onDismiss = vm::dismissLastBlock)
         }
         item(key = "context", contentType = "context") { ContextControls(state, context, vm) }
         val stagedId = staged
@@ -226,7 +227,9 @@ private fun Planning(state: FocusUiState, context: FocusContextState, vm: FocusV
 }
 
 @Composable
-private fun PointsStrip(state: FocusUiState, last: LastBlock?, onDismiss: () -> Unit) {
+private fun PointsStrip(state: FocusUiState, last: LastBlock?, scoring: Boolean, onDismiss: () -> Unit) {
+    // With focus points off there is nothing to show but what the last block did.
+    if (!scoring && last == null) return
     Column(Modifier.fillMaxWidth().padding(horizontal = Metrics.lg, vertical = Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
         if (last != null) {
             val warning = TaktTheme.colors.warning
@@ -240,13 +243,13 @@ private fun PointsStrip(state: FocusUiState, last: LastBlock?, onDismiss: () -> 
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val award = last.award
-                MonoText(if (award != null) "+${FocusPoints.formatted(award.points)} points" else "Logged", color = TaktTheme.colors.ink)
+                MonoText(if (award != null && scoring) "+${FocusPoints.formatted(award.points)} points" else "Logged", color = TaktTheme.colors.ink)
                 Spacer(Modifier.width(Metrics.sm))
                 Text(FocusActions.outcomeText(last.outcome), style = TaktTheme.type.small, color = TaktTheme.colors.mutedText, modifier = Modifier.weight(1f))
                 IconAction(Icons.Filled.Close, "Dismiss", onClick = onDismiss)
             }
         }
-        Row(Modifier.fillMaxWidth().testTag("focus_points")) {
+        if (scoring) Row(Modifier.fillMaxWidth().testTag("focus_points")) {
             Stat("Today", FocusPoints.formatted(state.points.today), Modifier.weight(1f))
             Stat("7 days", FocusPoints.formatted(state.points.last7Days), Modifier.weight(1f))
             Stat("All time", FocusPoints.formatted(state.points.allTime), Modifier.weight(1f))

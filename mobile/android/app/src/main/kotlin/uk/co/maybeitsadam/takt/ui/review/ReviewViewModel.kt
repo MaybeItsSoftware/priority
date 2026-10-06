@@ -125,6 +125,9 @@ class ReviewViewModel(private val container: AppContainer) : ViewModel() {
             }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressSummary())
 
+    /** The "Focus points" setting: off hides every points display. */
+    val scoresEachFocusBlock: StateFlow<Boolean> = container.scoresEachFocusBlock
+
     val points: StateFlow<FocusPointsSummary> = container.withSession { it.repository.observeFocusPointsSummary() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FocusPointsSummary.ZERO)
 

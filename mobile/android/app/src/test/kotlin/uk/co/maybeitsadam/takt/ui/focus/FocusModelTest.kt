@@ -36,6 +36,20 @@ class FocusModelTest {
         assertEquals("1 point", FocusText.points(60, 1.0))
     }
 
+    /** The Mac's dial: ×1.0 to start, a tenth a step, ×0.0 to ×5.0, ten steps up exactly ×2.0. */
+    @Test fun theScoreDialMovesByTenthsFromOne() {
+        assertEquals("×1.0", FocusText.dial(FocusText.NEUTRAL_TENTHS))
+        var tenths = FocusText.NEUTRAL_TENTHS
+        repeat(10) { tenths = FocusText.nudge(tenths, 1) }
+        assertEquals("×2.0", FocusText.dial(tenths))
+        assertEquals(2.0, tenths / 10.0, 0.0)
+        assertEquals("×0.9", FocusText.dial(FocusText.nudge(FocusText.NEUTRAL_TENTHS, -1)))
+        assertEquals(0, FocusText.nudge(0, -1))
+        assertEquals(50, FocusText.nudge(50, 1))
+        assertEquals("×0.0", FocusText.dial(0))
+        assertEquals("0 points", FocusText.points(1500, 0.0))
+    }
+
     @Test fun unavailableTexts() {
         assertEquals("Needs at least 2 minutes", FocusText.unavailable(TaskUnavailableReason.InsufficientTime(61), emptyList()))
         assertEquals(

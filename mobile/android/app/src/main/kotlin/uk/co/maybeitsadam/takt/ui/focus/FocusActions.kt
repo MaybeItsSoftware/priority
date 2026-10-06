@@ -41,13 +41,28 @@ class FocusActions(private val container: AppContainer) {
     /**
      * Stops the clock and returns the block to ask about. `completeTask`
      * false is "log and keep": the time is credited and the task stays open.
+     * Null when there is nothing to ask because focus points are off: the
+     * block is then credited straight away (with [context], then [onDone]).
      */
-    fun requestCompletion(session: FocusSession, title: String, completeTask: Boolean, now: Instant = Instant.now()): PendingCompletion? {
+    fun requestCompletion(
+        session: FocusSession,
+        title: String,
+        completeTask: Boolean,
+        now: Instant = Instant.now(),
+        context: FocusContext = FocusContext(),
+        onDone: (FocusCompletion) -> Unit = {},
+    ): PendingCompletion? {
         val taskId = session.activeTaskId ?: return null
         val pending = PendingCompletion(
             sessionId = session.id, taskId = taskId, title = title, seconds = session.elapsedSeconds(now),
             completeTask = completeTask, blockId = session.activeBlockId, wasPaused = session.pausedAt != null,
         )
+        // Someone who has turned focus points off only wants the minutes: the
+        // block closes at the neutral multiplier with nothing in the way, as on the Mac.
+        if (!container.scoresEachFocusBlock.value) {
+            confirm(pending, FocusText.NEUTRAL_MULTIPLIER, context, onDone)
+            return null
+        }
         if (session.pausedAt == null) container.undo.perform(announce = false) { it.pauseFocusSession(session.id, now) }
         return pending
     }

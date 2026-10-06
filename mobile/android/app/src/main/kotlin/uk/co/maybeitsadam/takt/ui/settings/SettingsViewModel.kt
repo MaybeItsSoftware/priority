@@ -64,6 +64,10 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setCelebration(style: CelebrationStyle) = viewModelScope.launch { settings.setCelebrationStyle(style) }
 
+    val scoresEachFocusBlock: StateFlow<Boolean> = container.scoresEachFocusBlock
+
+    fun setScoresEachFocusBlock(enabled: Boolean) = viewModelScope.launch { settings.setScoresEachFocusBlock(enabled) }
+
     /**
      * Imports a theme file. It is kept whatever loading it reports, so the
      * issues show under it and a fix is one re-import; it is switched to only

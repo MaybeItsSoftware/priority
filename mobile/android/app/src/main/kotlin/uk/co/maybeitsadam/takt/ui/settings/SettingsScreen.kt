@@ -76,6 +76,7 @@ import uk.co.maybeitsadam.takt.ui.components.IconAction
 import uk.co.maybeitsadam.takt.ui.components.MonoText
 import uk.co.maybeitsadam.takt.ui.components.PButton
 import uk.co.maybeitsadam.takt.ui.components.TaktTopBar
+import uk.co.maybeitsadam.takt.ui.inspector.SwitchRow
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
 import uk.co.maybeitsadam.takt.ui.review.Segmented
 import uk.co.maybeitsadam.takt.ui.theme.Metrics
@@ -99,6 +100,7 @@ fun SettingsScreen() {
         ) {
             ThemeSection(model)
             CelebrationSection(model)
+            FocusSection(model)
             SyncSection(shell.container.sync)
             AboutSection(model)
         }
@@ -145,6 +147,22 @@ private fun CelebrationSection(model: SettingsViewModel) {
                 model.setCelebration(option)
             }
         }
+    }
+}
+
+@Composable
+private fun FocusSection(model: SettingsViewModel) {
+    val scoring by model.scoresEachFocusBlock.collectAsStateWithLifecycle()
+    Section("Focus") {
+        SwitchRow(
+            "Focus points",
+            checked = scoring,
+            onCheckedChange = model::setScoresEachFocusBlock,
+            detail = "Finishing a block asks how it went — a multiplier from ×1.0, nudged a tenth at a time — and " +
+                "minutes times that is the block's points. Turn this off to drop scoring altogether: no question at " +
+                "the end of a block, and no points anywhere.",
+            modifier = Modifier.padding(horizontal = Metrics.md).testTag("settings_focus_points"),
+        )
     }
 }
 

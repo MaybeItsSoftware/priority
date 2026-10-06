@@ -116,6 +116,22 @@ object FocusText {
         return result
     }
 
+    /** Where the score dial starts: an ordinary block. Also what a block closes at with focus points off. */
+    const val NEUTRAL_MULTIPLIER = 1.0
+
+    /** The dial counts in tenths, so ten steps up from ×1.0 land on exactly ×2.0. */
+    const val NEUTRAL_TENTHS = 10
+
+    /** The dial's range in tenths: ×0.0 to ×5.0, `FocusPoints.multiplierRange`. */
+    val tenthsRange: IntRange =
+        Math.round(FocusPoints.multiplierRange.start * 10).toInt()..Math.round(FocusPoints.multiplierRange.endInclusive * 10).toInt()
+
+    /** One step of the dial, kept inside [tenthsRange]. */
+    fun nudge(tenths: Int, by: Int): Int = (tenths + by).coerceIn(tenthsRange)
+
+    /** `×1.0`, `×1.1`, `×0.0`: always one decimal place, so neighbouring values read as neighbours. */
+    fun dial(tenths: Int): String = "×%d.%d".format(tenths / 10, tenths % 10)
+
     /** `×1`, `×1.5`, `×0.75`. */
     fun multiplier(value: Double): String =
         "×" + java.math.BigDecimal.valueOf(value).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()

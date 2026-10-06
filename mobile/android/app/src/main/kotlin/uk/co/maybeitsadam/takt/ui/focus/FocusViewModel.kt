@@ -106,6 +106,9 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
     private val _stagedMinutes = MutableStateFlow(25)
     val stagedMinutes: StateFlow<Int> = _stagedMinutes.asStateFlow()
 
+    /** The "Focus points" setting: off hides every points display. */
+    val scoresEachFocusBlock: StateFlow<Boolean> = container.scoresEachFocusBlock
+
     private val _pending = MutableStateFlow<PendingCompletion?>(null)
     val pendingCompletion: StateFlow<PendingCompletion?> = _pending.asStateFlow()
 
@@ -314,10 +317,12 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
         if (_pending.value != null) return
         val current = state.value
         val session = current.session ?: return
-        _pending.value = actions.requestCompletion(session, current.activeTitle ?: "Focus block", completeTask, now)
+        _pending.value = actions.requestCompletion(
+            session, current.activeTitle ?: "Focus block", completeTask, now, contextState.value.context,
+        ) { completion -> _lastBlock.value = LastBlock(completion.award, completion.outcome) }
     }
 
-    fun confirmCompletion(multiplier: Double?) {
+    fun confirmCompletion(multiplier: Double) {
         val pending = _pending.value ?: return
         _pending.value = null
         actions.confirm(pending, multiplier, contextState.value.context) { completion ->

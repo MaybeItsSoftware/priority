@@ -181,7 +181,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         _pending.value = focus.requestCompletion(session, title, completeTask)
     }
 
-    fun confirmCompletion(multiplier: Double?) {
+    fun confirmCompletion(multiplier: Double) {
         val pending = _pending.value ?: return
         _pending.value = null
         focus.confirm(pending, multiplier)

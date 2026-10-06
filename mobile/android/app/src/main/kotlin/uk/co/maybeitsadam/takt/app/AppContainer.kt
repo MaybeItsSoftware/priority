@@ -81,6 +81,9 @@ class AppContainer(
      * widget, the focus notification) that read it synchronously.
      */
     val theme: StateFlow<ThemeLibraryState> = themes.state.stateIn(scope, SharingStarted.Eagerly, ThemeLibraryState())
+    /** Whether focus blocks are scored; read synchronously when a block ends. */
+    val scoresEachFocusBlock: StateFlow<Boolean> =
+        settings.scoresEachFocusBlock.stateIn(scope, SharingStarted.Eagerly, true)
     val folds = FoldStore(context)
     val inspector = InspectorController()
     val quickAdd = QuickAddController()

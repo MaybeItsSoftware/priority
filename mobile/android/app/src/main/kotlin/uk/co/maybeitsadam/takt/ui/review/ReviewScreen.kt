@@ -155,11 +155,12 @@ private fun TimelinePane(model: ReviewViewModel) {
         if (current == null || current.day != day) {
             Spacer(Modifier.height(HOUR_HEIGHT))
         } else {
+            val scoring by model.scoresEachFocusBlock.collectAsStateWithLifecycle()
             StatRow(
-                listOf(
+                listOfNotNull(
                     "Focused" to if (current.totalSeconds > 0) Format.duration(current.totalSeconds) else "—",
                     "Blocks" to current.layout.placements.size.toString(),
-                    "Points" to FocusPoints.formatted(current.points),
+                    if (scoring) "Points" to FocusPoints.formatted(current.points) else null,
                     "Finished" to current.completions.count { !it.cancelled }.toString(),
                 ),
                 Modifier.padding(horizontal = Metrics.lg),
@@ -493,7 +494,8 @@ private fun ProgressPane(model: ReviewViewModel) {
                 color = TaktTheme.colors.mutedText,
             )
         }
-        PointsSummary(points)
+        val scoring by model.scoresEachFocusBlock.collectAsStateWithLifecycle()
+        if (scoring) PointsSummary(points)
     }
 }
 
