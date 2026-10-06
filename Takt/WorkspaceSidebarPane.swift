@@ -15,6 +15,7 @@ struct WorkspaceSidebarPane: View {
   private let everythingSidebarID = "priority:everything"
   private let todaySidebarID = "priority:today"
   @State private var isTopLevelDropTargeted = false
+  @State private var isBottomDropTargeted = false
 
   var body: some View {
     // No header of its own: the left dock's tab bar is drawn over it, and
@@ -96,6 +97,7 @@ struct WorkspaceSidebarPane: View {
             sidebarListRow(list, isLastInGroup: list.id == rootLists.last?.id)
             WorkspaceNestedListRows(list: list, depth: 1)
           }
+          topLevelDropZone
         }
         .padding(.bottom, theme.space.sm)
       }
@@ -121,6 +123,33 @@ struct WorkspaceSidebarPane: View {
         withAnimation(.easeInOut(duration: 0.12)) { sidebarProxy.scrollTo(id) }
       }
     }
+  }
+
+  /// The space under the tree, as a drop target for "top level, at the end".
+  ///
+  /// The "Lists" caption was the only other way out of a folder, and it is a
+  /// strip one caption tall at the far end of a drag. On the way to it the
+  /// pointer crosses list rows whose middles nest what is dropped on them, so
+  /// taking a list out of a folder tended to put it inside another list.
+  /// This is a big, empty target at the end you are already heading for.
+  private var topLevelDropZone: some View {
+    Text(isBottomDropTargeted ? "Drop here to make it top level" : "")
+      .font(theme.captionFont)
+      .foregroundStyle(theme.primary)
+      .frame(maxWidth: .infinity, minHeight: 96)
+      .contentShape(Rectangle())
+      .background(
+        isBottomDropTargeted ? theme.selectionFill : .clear,
+        in: RoundedRectangle(cornerRadius: theme.rowRadius))
+      .padding(.horizontal, theme.listGutter)
+      .accessibilityHidden(true)
+      .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isBottomDropTargeted) { providers in
+        WorkspaceTaskDrag.readItemID(from: providers) { payload in
+          // A task dropped here is a task made into a top-level list, which
+          // is what the caption does with one too.
+          model.moveDroppedItem(payload, toFolderID: nil)
+        }
+      }
   }
 
   /// The "Lists" caption over the tree, which is also where a list is dropped

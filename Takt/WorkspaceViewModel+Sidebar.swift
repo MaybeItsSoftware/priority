@@ -97,6 +97,12 @@ extension WorkspaceViewModel {
   }
 
   func moveDroppedItem(_ payload: String, toFolderID folderID: String?) {
+    // A folder dropped on the top level, or on another folder, is a folder
+    // placed at the end there — not a task to look up by an id it is not.
+    if let item = WorkspaceTaskDrag.sidebarItemID(from: payload), item.isFolder {
+      placeDroppedItem(payload, before: nil, inFolderID: folderID)
+      return
+    }
     guard let store else { return }
     taskEditor.flush()
     perform {
