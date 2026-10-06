@@ -51,7 +51,7 @@ to filter them, walk them with `↑`/`↓`, or jump with `⌘1`–`⌘9`:
 | Appearance | The theme gallery, light/dark/system, the interface, heading and numeral fonts, and the text size |
 | Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘N`), the list Quick Add captures into, and `keymap.json` |
 | Integrations | One page per integration — Checkvist, Obsidian, AFFiNE, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
-| Sync | The account that keeps the Mac and phones on one workspace |
+| Sync | The account that keeps the Mac and phones on one workspace, on Takt's server or [your own](docs/self-hosting.md) |
 | Advanced | Export the workspace as Markdown or JSON, diagnostics, and the app's data folder |
 
 None of it is required: the workspace is local-first and works with every row
@@ -825,7 +825,7 @@ python3 scripts/mcp_smoke_check.py
 | `Takt/Plugins/` | Integration plugins, one folder each, behind protocols |
 | `cli/` | The Rust CLI crate — shares no source with the Swift side |
 | `scripts/` | Build, install, the Python MCP fallback, and the parity check |
-| `docs/` | [CLI](docs/cli.md) · [MCP](docs/mcp-server.md) · [plugins](docs/plugins.md) · [state ownership](docs/state-ownership.md) |
+| `docs/` | [CLI](docs/cli.md) · [MCP](docs/mcp-server.md) · [plugins](docs/plugins.md) · [state ownership](docs/state-ownership.md) · [sync](docs/sync.md) · [self-hosting sync](docs/self-hosting.md) |
 
 The same source tree is compiled by two build systems: the Xcode project builds the app, and `Package.swift` exposes `TaktCore`, `TaktPlugins` and `TaktAppLogic` as SPM libraries so the headless logic can be tested without the app shell. Adding or moving a file often means updating `Package.swift` too — see [CLAUDE.md](CLAUDE.md).
 

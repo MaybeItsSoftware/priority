@@ -1,0 +1,11 @@
+# HTTPS in front of the sync server, for `docker compose --profile tls up`.
+# Caddy gets and renews a Let's Encrypt certificate for TAKT_DOMAIN by itself;
+# the domain's DNS must already point at this machine, with ports 80 and 443
+# open. See docs/self-hosting.md.
+
+{$TAKT_DOMAIN} {
+	encode zstd gzip
+	# Devices hold GET /v1/changes open for up to 25 s; Caddy doesn't time a
+	# proxied response out by default, so nothing more is needed for that.
+	reverse_proxy server:8080
+}

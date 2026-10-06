@@ -129,7 +129,11 @@ are GRDB's `"yyyy-MM-dd HH:mm:ss.SSS"` text in UTC, and booleans are `0`/`1`.
 `Sources/TaktSync` holds both apps' half. `SyncServer` names the
 Supabase project (its URL and publishable key) and the redirect,
 `takt://auth-callback`, which has to be on the project's allowed
-redirect URLs.
+redirect URLs. `SyncEndpoints` is the server and project in use: those
+defaults, or a self-hosted pair entered under "Use a different server"
+(on the Mac and Android) and kept apart from the sign-in, through signing
+out. Changing it signs the device out first. See
+[self-hosting](self-hosting.md).
 
 - **Email and password**: sign in, or create an account. When the project
   asks for confirmed emails, signing up says "check your email". "Forgot

@@ -1,0 +1,76 @@
+# The sync server with a Postgres of its own, for running Takt sync yourself.
+# The guide is docs/self-hosting.md.
+#
+#   cp .env.example .env      # then fill it in
+#   docker compose up -d --build
+#   curl http://localhost:8080/health    # {"ok":true}
+#
+# With Caddy in front for HTTPS (set TAKT_DOMAIN in .env, and point the
+# domain's DNS at this machine first):
+#
+#   docker compose --profile tls up -d --build
+#
+# Accounts are still Supabase Auth users: the server checks every request's
+# token against SUPABASE_URL's published keys. It never signs anyone in.
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: takt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: takt
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U takt -d takt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # The server makes its `sync` schema and applies its migrations itself,
+      # at boot. Point this at another Postgres (Supabase's session pooler on
+      # port 5432, say) and drop the `db` service to use that instead.
+      DATABASE_URL: postgres://takt:${POSTGRES_PASSWORD}@db:5432/takt
+      SUPABASE_URL: ${SUPABASE_URL:?set SUPABASE_URL in .env}
+      # Optional: only for deleting accounts from the apps.
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      # Optional: only for a project still signing tokens with the legacy
+      # shared secret (HS256).
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-}
+      RUST_LOG: ${RUST_LOG:-info}
+      PORT: "8080"
+    ports:
+      # Plain HTTP. Bound to this machine only: put TLS in front (the `tls`
+      # profile below, or a proxy of your own) before the phones reach it.
+      - "127.0.0.1:${HOST_PORT:-8080}:8080"
+
+  caddy:
+    image: caddy:2
+    profiles: ["tls"]
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      TAKT_DOMAIN: ${TAKT_DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

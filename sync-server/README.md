@@ -5,6 +5,10 @@ workspace through. `../docs/sync.md` is the protocol; this crate is its server
 half. It stores rows and merges them by per-column last-write-wins, and knows
 nothing about tasks.
 
+To run it yourself (a Supabase project for accounts, this server and
+Postgres under Docker Compose, Caddy for TLS, and pointing the apps at it),
+see [`docs/self-hosting.md`](../docs/self-hosting.md).
+
 ## Layout
 
 | File | What |
@@ -71,4 +75,9 @@ docker build .
 
 ## Deploying
 
-Railway, from this directory: see the comments in `railway.toml`.
+Takt's own: Railway, from this directory; see the comments in `railway.toml`.
+
+Anyone else's: `docker-compose.yml` here runs the server with a Postgres of
+its own, and Caddy for HTTPS behind the `tls` profile (`.env.example` lists
+the settings). The walk-through is
+[`docs/self-hosting.md`](../docs/self-hosting.md).
