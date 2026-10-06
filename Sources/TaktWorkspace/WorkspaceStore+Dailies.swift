@@ -461,16 +461,20 @@ extension WorkspaceStore {
   }
 
   func habitsList(_ db: Database, workspaceId: String, now: Date) throws -> TaskList {
-    if let existing = try TaskList.filter(Column("workspaceId") == workspaceId && Column("name") == "Habits")
-      .fetchOne(db)
-    {
+    let id = HabitPolicy.habitsListId(workspaceId: workspaceId)
+    if let existing = try TaskList.fetchOne(db, key: id) { return existing }
+    if let existing = try TaskList.filter(
+      Column("workspaceId") == workspaceId && Column("name") == HabitPolicy.habitsListName
+    ).fetchOne(db) {
       return existing
     }
     let order = try Int.fetchOne(
       db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM task_lists WHERE workspaceId = ?",
       arguments: [workspaceId]) ?? 0
     let list = TaskList(
-      id: UUID().uuidString, workspaceId: workspaceId, folderId: nil, name: "Habits", colorHex: nil,
+      // Derived rather than random: another device making it too makes the
+      // same row, and sync merges the two.
+      id: id, workspaceId: workspaceId, folderId: nil, name: HabitPolicy.habitsListName, colorHex: nil,
       sortOrder: order, isArchived: false, createdAt: now, updatedAt: now)
     try list.insert(db)
     return list

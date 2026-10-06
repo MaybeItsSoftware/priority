@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// The board column a habit's appearance lands in.
@@ -237,6 +238,26 @@ public enum HabitPolicy {
     guard !word.isEmpty else { return nil }
     if let minutes = Int(word), minutes > 0 { return min(minutes * 60, TaskCaptureToken.maximumEstimateSeconds) }
     return TaskCaptureToken.estimate(word)
+  }
+
+  /// The list a new habit goes in.
+  public static let habitsListName = "Habits"
+
+  /// The Habits list's id in `workspaceId`: a UUID-shaped SHA-256 of
+  /// `takt.habits-list:<workspace id>`, made as
+  /// `WaitingFollowUp.followUpTaskId` makes one. Android derives the same, so
+  /// two devices that each make the list before they sync make one row.
+  public static func habitsListId(workspaceId: String) -> String {
+    let digest = SHA256.hash(data: Data("takt.habits-list:\(workspaceId)".utf8))
+    var bytes = Array(digest.prefix(16))
+    bytes[6] = (bytes[6] & 0x0F) | 0x50
+    bytes[8] = (bytes[8] & 0x3F) | 0x80
+    let hex = bytes.map { String(format: "%02X", $0) }.joined()
+    let parts = [0..<8, 8..<12, 12..<16, 16..<20, 20..<32].map { range in
+      String(hex[hex.index(hex.startIndex, offsetBy: range.lowerBound)..<hex.index(
+        hex.startIndex, offsetBy: range.upperBound)])
+    }
+    return parts.joined(separator: "-")
   }
 
   /// `2026-12-31`, `3w`, `friday`, `tomorrow` — the capture bar's date words.

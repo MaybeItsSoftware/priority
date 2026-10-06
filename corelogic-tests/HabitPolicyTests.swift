@@ -117,4 +117,11 @@ final class HabitPolicyTests: XCTestCase {
                    calendar.date(from: DateComponents(year: 2026, month: 12, day: 31)))
     XCTAssertEqual(HabitPolicy.date(from: "2w", now: day(5), calendar: calendar), day(19, hour: 0))
   }
+
+  // MARK: - The shared list id
+
+  func testTheHabitsListIdIsTheOneAndroidDerives() {
+    // The same literal is pinned in Android's `HabitPolicyTest.kt`.
+    XCTAssertEqual(HabitPolicy.habitsListId(workspaceId: "WORKSPACE"), "CBC20FA7-CBCE-52A3-A729-95DCFFC9C2A4")
+  }
 }
