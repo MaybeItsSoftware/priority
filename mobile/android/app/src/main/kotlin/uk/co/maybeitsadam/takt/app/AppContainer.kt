@@ -87,11 +87,13 @@ class AppContainer(
     val undo = UndoCenter(this)
     val commands = TaskCommands(this)
     val sync = SyncController(this)
+    private val followUps = WaitingFollowUps(this)
 
     init {
         scope.launch { awaitSession() }
         FocusServiceLauncher.attach(this)
         sync.attach()
+        followUps.attach()
         // The widget is drawn from the theme in force, so a new one redraws it.
         scope.launch {
             theme.map { it.specification to it.mode }.distinctUntilChanged().drop(1).collect {

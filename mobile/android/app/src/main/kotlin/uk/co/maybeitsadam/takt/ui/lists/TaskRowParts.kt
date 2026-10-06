@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
 import uk.co.maybeitsadam.takt.core.TaskStatus
+import uk.co.maybeitsadam.takt.ui.components.Tag
 import uk.co.maybeitsadam.takt.ui.components.TaskCheck
 import uk.co.maybeitsadam.takt.ui.components.priorityColor
 import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
@@ -160,6 +161,8 @@ internal fun RowMarkers(row: OutlineRow, modifier: Modifier = Modifier, maxTags:
         val colors = TaktTheme.colors
         if (row.isPlanned) Icon(PIcons.Today, "Planned for today", tint = colors.primary, modifier = Modifier.size(14.dp))
         if (row.isDaily) Icon(PIcons.Repeat, "Daily", tint = colors.success, modifier = Modifier.size(14.dp))
+        row.waitingOn?.let { Tag(it, Modifier.semantics { contentDescription = "Waiting on $it" }) }
+        row.followUp?.let { Text(it, style = TaktTheme.type.monoSmall, color = colors.mutedText, maxLines = 1) }
         for (tag in row.tags.take(maxTags)) {
             Text("#$tag", style = TaktTheme.type.small, color = colors.mutedText, maxLines = 1)
         }

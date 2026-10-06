@@ -115,6 +115,14 @@ data class TaskMetadata(
     val focusRank: Int? = null,
     val updatedAt: Instant,
     val planningJSON: String? = null,
+    /** Who or what the task waits on, while it is in `waiting-on`. See [WaitingFollowUp]. */
+    val waitingOn: String? = null,
+    /** When to chase it. */
+    val waitingFollowUpAt: Instant? = null,
+    /** The follow-up already made for this task, so it is made once per time. */
+    val waitingFollowUpTaskId: String? = null,
+    /** On a follow-up task: the waiting task it chases. */
+    val followUpOfTaskId: String? = null,
 )
 
 data class TaskEditorMetadata(

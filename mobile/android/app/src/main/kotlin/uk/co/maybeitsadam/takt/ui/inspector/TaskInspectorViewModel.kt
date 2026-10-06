@@ -39,6 +39,7 @@ import uk.co.maybeitsadam.takt.data.workspace.TaskEditorValues
 import uk.co.maybeitsadam.takt.data.workspace.TaskInspectorFacts
 import uk.co.maybeitsadam.takt.data.workspace.WorkspaceStoreException
 import uk.co.maybeitsadam.takt.data.workspace.observeTaskInspectorFacts
+import uk.co.maybeitsadam.takt.data.workspace.setWaiting
 
 /** Everything around the draft: the task row, its list, the catalogues, its placement. */
 @Immutable
@@ -241,6 +242,12 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
     fun setColumn(column: String?) {
         val id = taskId.value ?: return
         container.undo.perform { it.setKanbanColumn(column, id) }
+    }
+
+    /** Files the task in Waiting on with [tag] and [followUpAt] (either may be null), as one undo step. */
+    fun setWaiting(tag: String?, followUpAt: java.time.Instant?) {
+        val id = taskId.value ?: return
+        container.undo.perform { it.setWaiting(id, tag, followUpAt) }
     }
 
     fun setPlannedToday(planned: Boolean) {

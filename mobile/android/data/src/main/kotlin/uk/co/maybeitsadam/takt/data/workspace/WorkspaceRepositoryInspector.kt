@@ -20,6 +20,10 @@ data class TaskInspectorFacts(
     /** Seconds of focused work, across renames (`originalTaskId`). */
     val loggedSeconds: Int = 0,
     val workBlockCount: Int = 0,
+    /** Who or what it waits on. See [setWaiting]. */
+    val waitingOn: String? = null,
+    /** When to chase it. */
+    val followUpAt: java.time.Instant? = null,
 ) {
     val isPlannedToday: Boolean get() = kanbanColumn == NextUpSelector.todayColumnID
 }
@@ -44,5 +48,7 @@ private fun inspectorFacts(db: Db, taskId: String): TaskInspectorFacts {
         daily = daily,
         loggedSeconds = blocks.sumOf { maxOf(0, it.seconds) },
         workBlockCount = blocks.size,
+        waitingOn = metadata?.waitingOn,
+        followUpAt = metadata?.waitingFollowUpAt,
     )
 }

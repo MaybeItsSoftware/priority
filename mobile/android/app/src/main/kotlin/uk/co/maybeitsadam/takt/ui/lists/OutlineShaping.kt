@@ -12,6 +12,7 @@ import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.core.TaskOutlineFolding
 import uk.co.maybeitsadam.takt.core.TaskOutlineItem
 import uk.co.maybeitsadam.takt.core.TaskStatus
+import uk.co.maybeitsadam.takt.core.WaitingFollowUp
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.workspace.ListScopeData
 import uk.co.maybeitsadam.takt.data.workspace.TaskDecoration
@@ -40,6 +41,10 @@ data class OutlineRow(
     val isDaily: Boolean,
     val isPlanned: Boolean,
     val hasNotes: Boolean,
+    /** In Waiting on: who or what it waits on, as a chip. */
+    val waitingOn: String? = null,
+    /** In Waiting on: `↻ Thu 14:00`, when it will be chased. */
+    val followUp: String? = null,
 )
 
 /** What the outline's lazy column draws: task rows and, in Everything, a header per list. */
@@ -154,6 +159,9 @@ object OutlineShaping {
         isDaily = isDaily,
         isPlanned = decoration?.kanbanColumn == NextUpSelector.todayColumnID,
         hasNotes = task.notes.isNotBlank(),
+        waitingOn = decoration?.takeIf { it.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID }?.waitingOn,
+        followUp = decoration?.takeIf { it.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID && task.status == TaskStatus.OPEN }
+            ?.followUpAt?.let { WaitingFollowUp.label(it, today, zone) },
     )
 
     /**

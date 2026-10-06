@@ -50,6 +50,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import uk.co.maybeitsadam.takt.core.MatrixQuadrant
 import uk.co.maybeitsadam.takt.core.TaskStatus
+import uk.co.maybeitsadam.takt.core.WaitingFollowUp
 import uk.co.maybeitsadam.takt.core.WorkspaceDaily
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorDraft
@@ -114,6 +115,7 @@ internal fun InspectorBody(
         RepeatSection(values, zone, edit)
         ConditionsSection(vm, values, around, problem(TaskEditorField.MINIMUM_BLOCK), problem(TaskEditorField.SINGLE_SITTING), edit)
         TodaySection(vm, values, draft, around, edit)
+        WaitingSection(vm, task, around, today, zone)
         LinksSection(values, edit)
         PlacementSection(vm, around)
         AboutSection(task, around, zone)
@@ -506,6 +508,67 @@ private fun TodaySection(
             values.dailyProgress && !draft.baseline.dailyProgress -> Hint("Save to make it a daily, then set its schedule here.")
             !values.dailyProgress && draft.baseline.dailyProgress -> Hint("Save to stop it being a daily. Its history is kept.")
         }
+    }
+}
+
+/**
+ * Waiting on: who or what the task waits on, and when to chase it. Written
+ * straight away by its own button, like placement, and filing the task in
+ * Waiting on; at the follow-up time a follow-up task lands in Today.
+ */
+@Composable
+private fun WaitingSection(
+    vm: TaskInspectorViewModel,
+    task: WorkspaceTask,
+    around: InspectorSurroundings,
+    today: LocalDate,
+    zone: ZoneId,
+) {
+    val facts = around.facts
+    val savedTag = facts.waitingOn.orEmpty()
+    val savedAt = facts.followUpAt
+    var tag by rememberSaveable(task.id, savedTag) { mutableStateOf(savedTag) }
+    var day by rememberSaveable(task.id, savedAt) { mutableStateOf(savedAt?.let { DateFieldMath.date(it, zone) }) }
+    var time by rememberSaveable(task.id, savedAt) {
+        mutableStateOf(savedAt?.let { DateFieldMath.time(it, zone) } ?: LocalTime.of(9, 0))
+    }
+    val followUpAt = day?.let { DateFieldMath.combine(it, time, zone) }
+    val isWaiting = facts.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID
+    val changed = WaitingFollowUp.normalizedTag(tag) != facts.waitingOn || followUpAt != savedAt
+    InspectorSection("Waiting on", detail = if (isWaiting) savedAt?.let { WaitingFollowUp.label(it, today, zone) } else null) {
+        ChalkField(
+            tag,
+            onValueChange = { tag = it.take(WaitingFollowUp.MAXIMUM_TAG_LENGTH) },
+            placeholder = "Who or what — Sam, Legal, the invoice",
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+            modifier = Modifier.testTag("inspector_waiting_on"),
+            contentDescription = "Waiting on",
+        )
+        FieldLabel("Follow up")
+        ChalkDateField(
+            label = "Follow up",
+            date = day,
+            time = time,
+            today = today,
+            placeholder = "No follow-up",
+            onDate = { day = it },
+            onTime = { time = it },
+            testTag = "inspector_follow_up",
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.weight(1f))
+            PButton(
+                if (isWaiting) "Save" else "Move to Waiting on",
+                primary = true,
+                enabled = changed || !isWaiting,
+                onClick = { vm.setWaiting(tag, followUpAt) },
+                modifier = Modifier.testTag("inspector_waiting_save"),
+            )
+        }
+        Hint(
+            if (followUpAt == null) "Files it in Waiting on. Pick a time to have a follow-up land in Today."
+            else "If it is still waiting then, “${WaitingFollowUp.title(task.title, tag)}” lands in Today.",
+        )
     }
 }
 

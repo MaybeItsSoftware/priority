@@ -17,6 +17,10 @@ data class TaskDecoration(
     val kanbanColumn: String? = null,
     val matrixUrgency: Int? = null,
     val matrixImportance: Int? = null,
+    /** Who or what it waits on, while it is in `waiting-on`. */
+    val waitingOn: String? = null,
+    /** When to chase it. */
+    val followUpAt: java.time.Instant? = null,
 )
 
 /** One list scope, read at once: its lists, their trees, and the rows' decorations. */
@@ -54,6 +58,8 @@ private fun Db.decorations(listIds: Collection<String>): Map<String, TaskDecorat
                 kanbanColumn = m.kanbanColumn,
                 matrixUrgency = m.matrixUrgency,
                 matrixImportance = m.matrixImportance,
+                waitingOn = m.waitingOn,
+                followUpAt = m.waitingFollowUpAt,
             )
         }
     }

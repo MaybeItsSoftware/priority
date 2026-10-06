@@ -96,6 +96,21 @@ class ListsShapingTest {
         assertTrue(shape.rows.first { it.id == "a" }.isDaily)
     }
 
+    @Test fun aWaitingRowShowsItsTagAndFollowUpOnlyWhileInWaitingOn() {
+        val at = Instant.parse("2026-10-03T14:00:00Z")
+        val decorations = mapOf(
+            "b" to TaskDecoration(kanbanColumn = "waiting-on", waitingOn = "Sam", followUpAt = at),
+            "a" to TaskDecoration(kanbanColumn = "today", waitingOn = "Legal", followUpAt = at),
+        )
+        val rows = OutlineShaping.shape(scope(listOf(home), tasks, decorations), false, emptySet(), false, emptySet(), zone, today).rows
+        val b = rows.first { it.id == "b" }
+        assertEquals("Sam", b.waitingOn)
+        assertEquals("↻ Tomorrow 14:00", b.followUp)
+        val a = rows.first { it.id == "a" }
+        assertNull(a.waitingOn)
+        assertNull(a.followUp)
+    }
+
     @Test fun everythingHasAHeaderPerListWithRows() {
         val work = list("work")
         val all = tasks + task("w", "work")

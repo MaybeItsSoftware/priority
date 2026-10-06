@@ -58,6 +58,8 @@ internal fun Row.toMetadata() = TaskMetadata(
     matrixUrgency = intOrNull("matrixUrgency"), matrixImportance = intOrNull("matrixImportance"),
     kanbanColumn = stringOrNull("kanbanColumn"), externalLinksJSON = string("externalLinksJSON"),
     focusRank = intOrNull("focusRank"), updatedAt = instant("updatedAt"), planningJSON = stringOrNull("planningJSON"),
+    waitingOn = stringOrNull("waitingOn"), waitingFollowUpAt = instantOrNull("waitingFollowUpAt"),
+    waitingFollowUpTaskId = stringOrNull("waitingFollowUpTaskId"), followUpOfTaskId = stringOrNull("followUpOfTaskId"),
 )
 
 internal fun Row.toSession() = FocusSession(
@@ -179,18 +181,21 @@ internal fun Db.update(t: WorkspaceTask) = execute(
 
 internal fun Db.insert(m: TaskMetadata) = execute(
     "INSERT INTO task_metadata (taskId, priority, startAt, tagsJSON, recurrenceRule, matrixUrgency, " +
-        "matrixImportance, kanbanColumn, externalLinksJSON, updatedAt, focusRank, planningJSON) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "matrixImportance, kanbanColumn, externalLinksJSON, updatedAt, focusRank, planningJSON, waitingOn, " +
+        "waitingFollowUpAt, waitingFollowUpTaskId, followUpOfTaskId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     m.taskId, m.priority, m.startAt, m.tagsJSON, m.recurrenceRule, m.matrixUrgency, m.matrixImportance,
-    m.kanbanColumn, m.externalLinksJSON, m.updatedAt, m.focusRank, m.planningJSON,
+    m.kanbanColumn, m.externalLinksJSON, m.updatedAt, m.focusRank, m.planningJSON, m.waitingOn, m.waitingFollowUpAt,
+    m.waitingFollowUpTaskId, m.followUpOfTaskId,
 )
 
 internal fun Db.update(m: TaskMetadata) = execute(
     "UPDATE task_metadata SET priority = ?, startAt = ?, tagsJSON = ?, recurrenceRule = ?, matrixUrgency = ?, " +
         "matrixImportance = ?, kanbanColumn = ?, externalLinksJSON = ?, updatedAt = ?, focusRank = ?, " +
-        "planningJSON = ? WHERE taskId = ?",
+        "planningJSON = ?, waitingOn = ?, waitingFollowUpAt = ?, waitingFollowUpTaskId = ?, followUpOfTaskId = ? " +
+        "WHERE taskId = ?",
     m.priority, m.startAt, m.tagsJSON, m.recurrenceRule, m.matrixUrgency, m.matrixImportance, m.kanbanColumn,
-    m.externalLinksJSON, m.updatedAt, m.focusRank, m.planningJSON, m.taskId,
+    m.externalLinksJSON, m.updatedAt, m.focusRank, m.planningJSON, m.waitingOn, m.waitingFollowUpAt,
+    m.waitingFollowUpTaskId, m.followUpOfTaskId, m.taskId,
 )
 
 /** GRDB's `save`: update when the row exists, insert otherwise. */
