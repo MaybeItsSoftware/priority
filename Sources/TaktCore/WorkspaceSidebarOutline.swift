@@ -96,8 +96,10 @@ public enum WorkspaceSidebarOutline {
     expandedFolderIDs: Set<String>
   ) -> [WorkspaceSidebarRow] {
     var result: [WorkspaceSidebarRow] = [
-      WorkspaceSidebarRow(id: "row:everything", kind: .everything, depth: 0),
+      // Today first: it is the screen the day starts on, and Everything is
+      // a view you go looking for.
       WorkspaceSidebarRow(id: "row:today", kind: .today, depth: 0),
+      WorkspaceSidebarRow(id: "row:everything", kind: .everything, depth: 0),
     ]
     var visitedFolders = Set<String>()
 

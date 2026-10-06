@@ -42,25 +42,6 @@ struct WorkspaceSidebarPane: View {
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
           Button {
-            model.selectEverything()
-            model.reportKeyboardFocus(.sidebar)
-          } label: {
-            HStack(spacing: theme.space.sm) {
-              Image(systemName: "square.stack.3d.up")
-                .foregroundStyle(theme.muted)
-                .frame(width: WorkspaceSidebarMetrics.iconWidth)
-              Text("Everything")
-            }
-            .sidebarRowPadding(theme)
-          }
-          .buttonStyle(.plain)
-          .id(everythingSidebarID)
-          .background(
-            WorkspaceSidebarSelectionBackground(
-              isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
-              rowID: "row:everything"))
-          .accessibilityLabel("Everything, all lists")
-          Button {
             model.selectToday()
             model.reportKeyboardFocus(.sidebar)
           } label: {
@@ -79,6 +60,25 @@ struct WorkspaceSidebarPane: View {
               isCurrent: model.isCurrentSidebarRow(todaySidebarID),
               rowID: "row:today"))
           .accessibilityLabel("Today, across all lists")
+          Button {
+            model.selectEverything()
+            model.reportKeyboardFocus(.sidebar)
+          } label: {
+            HStack(spacing: theme.space.sm) {
+              Image(systemName: "square.stack.3d.up")
+                .foregroundStyle(theme.muted)
+                .frame(width: WorkspaceSidebarMetrics.iconWidth)
+              Text("Everything")
+            }
+            .sidebarRowPadding(theme)
+          }
+          .buttonStyle(.plain)
+          .id(everythingSidebarID)
+          .background(
+            WorkspaceSidebarSelectionBackground(
+              isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
+              rowID: "row:everything"))
+          .accessibilityLabel("Everything, all lists")
           if let inbox = model.inboxList {
             sidebarListRow(inbox)
             WorkspaceNestedListRows(list: inbox, depth: 1)

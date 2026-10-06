@@ -19,9 +19,9 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
 
   /// Focus and the timeline live in the mode strip, not here: the sidebar
   /// opens on Everything.
-  func testEverythingComesFirst() {
+  func testTodayComesFirst() {
     let rows = outline()
-    XCTAssertEqual(rows.first?.kind, .everything)
+    XCTAssertEqual(rows.first?.kind, .today)
     XCTAssertFalse(rows.contains { $0.id == "row:focus" || $0.id == "row:timeline" })
   }
 
@@ -37,8 +37,8 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
     XCTAssertEqual(
       rows.map(\.kind),
       [
-        .everything,
         .today,
+        .everything,
         .list("inbox"), .nestedList("pin"),
         .nestedList("pin"),
         .folder("work"), .list("filed"),
@@ -108,7 +108,7 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
         SidebarFolderDescriptor(id: "b", parentFolderID: "a"),
       ],
       expanded: ["a", "b"])
-    XCTAssertEqual(rows.map(\.kind), [.everything, .today])
+    XCTAssertEqual(rows.map(\.kind), [.today, .everything])
   }
 
   func testTheCursorStopsAtEitherEndRatherThanWrapping() {
