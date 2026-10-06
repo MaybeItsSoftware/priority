@@ -27,6 +27,13 @@ final class TaskCaptureSyntaxTests: XCTestCase {
     XCTAssertEqual(parse("  Write the release notes "), TaskCapture(title: "Write the release notes"))
   }
 
+  func testCheckvistsCaretMarksADueDayToo() {
+    let capture = parse("Ring the bank ^fri")
+    XCTAssertEqual(capture.title, "Ring the bank")
+    XCTAssertEqual(capture.dueAt, date(2026, 10, 2))
+    XCTAssertEqual(parse("Ring the bank ^fri").dueAt, parse("Ring the bank @fri").dueAt)
+  }
+
   func testEveryKindOfTokenAtTheEnd() {
     let capture = parse("Write the release notes 45m #work @fri !1")
     XCTAssertEqual(capture.title, "Write the release notes")

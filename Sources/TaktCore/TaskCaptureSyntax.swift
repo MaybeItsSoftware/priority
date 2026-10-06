@@ -169,7 +169,10 @@ enum TaskCaptureToken: Equatable {
     let lower = word.lowercased()
     if let seconds = Self.estimate(lower) {
       self = .estimate(seconds)
-    } else if lower.hasPrefix("@"), let date = Self.due(String(lower.dropFirst()), now: now, calendar: calendar) {
+    } else if lower.hasPrefix("@") || lower.hasPrefix("^"),
+      let date = Self.due(String(lower.dropFirst()), now: now, calendar: calendar) {
+      // `^` is Checkvist's due marker (`^fri`, `^tomorrow`), so hands used to
+      // it type the same thing here.
       self = .due(date)
     } else if let tag = Self.tag(word) {
       self = .tag(tag)
