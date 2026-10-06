@@ -400,9 +400,9 @@ public enum WorkspaceCommandCatalog {
       id: .motionBoardColumn, title: "Focus the next or previous column",
       group: "Moving around", keys: ["left", "right"], surface: .board, kind: .motion),
     .init(
-      id: .motionOutlineUnfold, title: "Show the subtasks, or step into them",
+      id: .motionOutlineUnfold, title: "Show the subtasks, step into them, or go to the inspector",
       group: "Moving around", keys: ["right"], surface: .outline, kind: .motion,
-      note: "l or ] still opens the task"),
+      note: "On a task with no subtasks it moves to the inspector; l or ] still opens the task"),
     .init(
       id: .motionOutlineFold, title: "Hide the subtasks, or step out to the parent",
       group: "Moving around", keys: ["left"], surface: .outline, kind: .motion,

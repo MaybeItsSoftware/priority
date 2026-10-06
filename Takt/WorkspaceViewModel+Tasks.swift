@@ -198,7 +198,13 @@ extension WorkspaceViewModel {
       selectedTaskID = outlineRows.first?.id
       return
     }
-    guard outlineParentIDs.contains(task.id) else { return }
+    // A task with nothing under it has nowhere further right to go in the
+    // outline, so → carries on to the inspector beside it — the details are
+    // the next thing to the right.
+    guard outlineParentIDs.contains(task.id) else {
+      requestKeyboardFocus(.inspector)
+      return
+    }
     if isFolded(task) {
       setFolded(task, false)
     } else if let child = TaskOutlineFolding.firstChildID(of: task.id, in: outlineRows) {
