@@ -168,18 +168,32 @@ struct WorkspaceOutlineRow: View {
         }
       }
 
-      Button(item.task.title) {
-        model.selectTask(item.task)
-        model.reportKeyboardFocus(.tasks)
+      if model.editingTaskTitleID == item.task.id {
+        WorkspaceTaskTitleField(
+          initialTitle: item.task.title,
+          onCommit: { model.commitTaskTitleEdit(item.task, text: $0) },
+          onCancel: { model.cancelTaskTitleEdit() })
+          .frame(maxWidth: .infinity, alignment: .leading)
+      } else {
+        Button(item.task.title) {
+          // A click on the row already selected edits its title in place,
+          // as in Checkvist; the first click only selects.
+          if isSelected && model.keyboardFocusArea == .tasks {
+            model.editSelectedTaskTitle()
+          } else {
+            model.selectTask(item.task)
+            model.reportKeyboardFocus(.tasks)
+          }
+        }
+          .buttonStyle(.plain)
+          .focusable()
+          .multilineTextAlignment(.leading)
+          .expandsWhenSelected(isSelected)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .help(item.task.title)
+          .strikethrough(item.task.status != .open)
+          .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       }
-        .buttonStyle(.plain)
-        .focusable()
-        .multilineTextAlignment(.leading)
-        .expandsWhenSelected(isSelected)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .help(item.task.title)
-        .strikethrough(item.task.status != .open)
-        .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       WorkspaceWaitingBadges(task: item.task)
       WorkspaceTaskPlanningBadges(task: item.task, isExpanded: isSelected)
         .frame(maxWidth: 170, alignment: .leading)
@@ -239,5 +253,72 @@ struct WorkspaceFoldButton: View {
     .buttonStyle(.plain)
     .accessibilityLabel(isFolded ? "Show the subtasks of \(title)" : "Hide the subtasks of \(title)")
     .commandHelp(.planToggleFold, note: isFolded ? "Show subtasks" : "Hide subtasks")
+  }
+}
+
+/// A task's title as a field in its own row, for editing in place.
+///
+/// The trailing tokens the add field reads work here too — `45m`, `@fri` or
+/// `^fri`, `#tag`, `!1` — and the same chips preview what they will set, so
+/// changing a due day is typing ` ^fri` and Return. Return saves, Escape puts
+/// the title back, and clicking away saves, as the sidebar's rename does.
+struct WorkspaceTaskTitleField: View {
+  @Environment(\.theme) private var theme
+  let initialTitle: String
+  let onCommit: (String) -> Void
+  let onCancel: () -> Void
+
+  @State private var text: String
+  @State private var didFinish = false
+  @FocusState private var isFocused: Bool
+
+  init(initialTitle: String, onCommit: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
+    self.initialTitle = initialTitle
+    self.onCommit = onCommit
+    self.onCancel = onCancel
+    _text = State(initialValue: initialTitle)
+  }
+
+  var body: some View {
+    let capture = TaskCapture.parse(text)
+    HStack(spacing: theme.space.xs) {
+      TextField("Title", text: $text)
+        .textFieldStyle(.plain)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.ink)
+        .focused($isFocused)
+        .onSubmit { commit() }
+        .onExitCommand { cancel() }
+        .help(TaskCapturePreview.syntaxHint)
+      if capture.hasDetails {
+        TaskCapturePreview(capture: capture)
+      }
+    }
+    .padding(.horizontal, theme.space.xxs)
+    .background(
+      RoundedRectangle(cornerRadius: theme.controlRadius)
+        .strokeBorder(theme.focusRing, lineWidth: theme.hairline))
+    .onAppear { isFocused = true }
+    .onChange(of: isFocused) { wasFocused, nowFocused in
+      if wasFocused && !nowFocused { commit() }
+    }
+    .onDisappear { commit() }
+  }
+
+  private func commit() {
+    guard !didFinish else { return }
+    didFinish = true
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, trimmed != initialTitle else {
+      onCancel()
+      return
+    }
+    onCommit(trimmed)
+  }
+
+  private func cancel() {
+    guard !didFinish else { return }
+    didFinish = true
+    onCancel()
   }
 }

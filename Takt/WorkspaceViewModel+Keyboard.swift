@@ -191,13 +191,50 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// `ee`/F2: in the outline the title turns into a field in its own row,
+  /// the way Checkvist edits; elsewhere the quick-edit overlay does the job.
   func editSelectedTaskTitle() {
-    if keyboardFocusArea == .sidebar { beginRenamingSelection() }
-    else { quickEdit(.title) }
+    if keyboardFocusArea == .sidebar { beginRenamingSelection(); return }
+    if viewMode == .outline, let task = selectedTask, outlineRows.contains(where: { $0.id == task.id }) {
+      editingTaskTitleID = task.id
+    } else {
+      quickEdit(.title)
+    }
+  }
+
+  /// Saves an in-row title edit. Trailing tokens are read the way the add
+  /// field reads them — `45m`, `@fri` or `^fri`, `#tag`, `!1` — and set the
+  /// estimate, due day, tags (added to the ones it has) and priority, all as
+  /// one undo step with the new title.
+  func commitTaskTitleEdit(_ task: WorkspaceTask, text: String) {
+    editingTaskTitleID = nil
+    let capture = TaskCapture.parse(text)
+    guard !capture.title.isEmpty else { return }
+    guard capture.title != task.title || capture.hasDetails else { return }
+    editTaskValues(of: task) { values in
+      values.title = capture.title
+      if let dueAt = capture.dueAt { values.dueAt = dueAt; values.dueDate = nil }
+      if let seconds = capture.estimateSeconds { values.estimateMinutes = String(seconds / 60) }
+      if let priority = capture.priority { values.priority = priority }
+      if !capture.tags.isEmpty {
+        let existing = values.tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+          .filter { !$0.isEmpty }
+        values.tags = (existing + capture.tags).joined(separator: ", ")
+      }
+    }
+  }
+
+  func cancelTaskTitleEdit() {
+    editingTaskTitleID = nil
   }
 
   func editTaskValues(_ change: (inout TaskEditorValues) -> Void) {
-    guard let task = selectedTask, let store else { return }
+    guard let task = selectedTask else { return }
+    editTaskValues(of: task, change)
+  }
+
+  func editTaskValues(of task: WorkspaceTask, _ change: (inout TaskEditorValues) -> Void) {
+    guard let store else { return }
     perform {
       var draft = TaskEditorDraft(snapshot: try store.taskEditorSnapshot(for: task.id))
       change(&draft.values)

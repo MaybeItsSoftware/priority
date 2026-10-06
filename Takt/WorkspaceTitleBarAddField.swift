@@ -259,7 +259,7 @@ struct TaskCapturePreview: View {
 
   /// One sentence on the syntax, for the tooltips of the places that parse it.
   static let syntaxHint =
-    "End it with 30m, @fri, #tag or !1 to set its estimate, due day, tags or priority."
+    "End it with 30m, @fri (or ^fri), #tag or !1 to set its estimate, due day, tags or priority."
 
   var body: some View {
     let labels = capture.detailLabels()

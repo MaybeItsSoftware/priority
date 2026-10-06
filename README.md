@@ -145,13 +145,19 @@ afterwards:
 | Ending | Sets |
 | --- | --- |
 | `30m`, `1h`, `1.5h`, `1h30m` | The estimate (up to a day) |
-| `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included |
+| `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included. `^` works as well as `@`, as in Checkvist (`^fri`) |
 | `#work` | A tag — it has to start with a letter, so `#12` stays in the title |
 | `!1`–`!4` | The priority |
 
 `Write the release notes 45m #work @fri !1` files a task called "Write the
 release notes", estimated at 45 minutes, tagged `work`, due on Friday, at
 priority 1.
+
+The same endings work when you **edit a title in place**. In the outline,
+`F2`, `ee` or a click on the task already selected turns its title into a field
+in the row, as in Checkvist: type ` ^fri !2` after the title and Return, and the
+title stays as it was while the due day and priority change. Tags are added to
+the ones the task has. Escape puts the title back; clicking away saves.
 
 Only the **trailing** words are read, and the first word from the end that is
 not one of these stops the reading — so a title is never rewritten in the

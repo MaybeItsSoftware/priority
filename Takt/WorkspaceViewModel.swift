@@ -491,6 +491,8 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The list or folder currently showing a rename field, by its own id.
   /// Lists and folders both carry UUIDs, so one field serves both.
   var renamingSidebarItemID: String?
+  /// The outline task whose title is being edited in its own row.
+  var editingTaskTitleID: String?
   var pendingSidebarDeletion: WorkspaceSidebarItem?
   /// A task a delete key has asked to remove, waiting for Return. Held by id
   /// so a task that disappears meanwhile simply has nothing left to confirm.
