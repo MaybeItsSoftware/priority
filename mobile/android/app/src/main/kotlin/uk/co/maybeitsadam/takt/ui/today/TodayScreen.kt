@@ -98,7 +98,10 @@ fun TodayScreen() {
     )
 
     Column(Modifier.fillMaxSize().background(TaktTheme.colors.paper)) {
-        TaktTopBar("Today", subtitle = longDay(LocalDate.now()), actions = { SettingsAction() })
+        TaktTopBar("Today", subtitle = longDay(LocalDate.now()), actions = {
+            IconAction(PIcons.Repeat, "New habit") { container.habits.open(null) }
+            SettingsAction()
+        })
         QuickAddBar(listId = null)
         val sections = day.sections
         val plannedIds = day.plannedIds
@@ -144,7 +147,7 @@ fun TodayScreen() {
                             onStart = { gate { vm.start(card) } },
                             onOpen = { vm.inspect(card) },
                             menu = { dismiss ->
-                                CardMenu(card, vm, dismiss, onStart = { gate { vm.start(card) } })
+                                CardMenu(card, vm, dismiss, onStart = { gate { vm.start(card) } }, onHabit = { container.habits.open(card.id) })
                             },
                             handle = if (card.isPlanned && plannedIds.size > 1) {
                                 Modifier.plannedDragHandle(drag, card.id, plannedIds, vm::arrange)
@@ -327,7 +330,7 @@ private fun CardCost(card: DayCard) {
 }
 
 @Composable
-private fun CardMenu(card: DayCard, vm: TodayViewModel, dismiss: () -> Unit, onStart: () -> Unit) {
+private fun CardMenu(card: DayCard, vm: TodayViewModel, dismiss: () -> Unit, onStart: () -> Unit, onHabit: () -> Unit) {
     ChalkMenuItem(if (card.isPlanned) "Take off today" else "Plan for today") { dismiss(); vm.togglePlanned(card) }
     if (card.isPlanned) {
         ChalkMenuItem("Move up in the day") { dismiss(); vm.movePlanned(card.id, -1) }
@@ -337,6 +340,7 @@ private fun CardMenu(card: DayCard, vm: TodayViewModel, dismiss: () -> Unit, onS
     ChalkMenuItem("Due tomorrow") { dismiss(); vm.dueTomorrow(card) }
     ChalkMenuItem("Not today") { dismiss(); vm.deferToTomorrow(card) }
     ChalkMenuItem("Start focus") { dismiss(); onStart() }
+    ChalkMenuItem("Habit…") { dismiss(); onHabit() }
     ChalkMenuItem("Open inspector") { dismiss(); vm.inspect(card) }
 }
 

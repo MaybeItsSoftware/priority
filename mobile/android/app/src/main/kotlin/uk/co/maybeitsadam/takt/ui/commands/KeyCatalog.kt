@@ -36,6 +36,7 @@ enum class KeyCommand(val id: String, val title: String, val group: String, val 
     TASK_CLEAR_DUE("taskClearDue", "Clear the due date", "Task", ""),
     TASK_CLEAR_PRIORITY("taskClearPriority", "Clear the priority", "Task", "0"),
     TASK_TOGGLE_DAILY("taskToggleDaily", "Commit to this daily, or stop", "Task", "Ctrl+Shift+D"),
+    TASK_HABIT("taskHabit", "Make a habit, or edit this one", "Task", "Ctrl+Shift+H"),
     TASK_TOGGLE_PLANNED_TODAY("taskTogglePlannedToday", "Plan for today, or take it off", "Task", "Alt+T"),
     TASK_START_FOCUS("taskStartFocus", "Start focus on the task", "Task", "F"),
     TASK_MOVE("taskMove", "Move the task or list", "Task", "Ctrl+Shift+M"),

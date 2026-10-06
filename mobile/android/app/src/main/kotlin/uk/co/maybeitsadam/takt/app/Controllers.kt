@@ -50,3 +50,20 @@ class QuickAddController {
         _request.value = null
     }
 }
+
+/** What the habit form opens on: [taskId]'s habit, a new one made from it, or (null) a standalone habit. */
+data class HabitRequest(val taskId: String? = null, val nonce: Long = System.nanoTime())
+
+/** Opens and closes the habit form, from wherever it is asked for. */
+class HabitFormController {
+    private val _request = MutableStateFlow<HabitRequest?>(null)
+    val request: StateFlow<HabitRequest?> = _request.asStateFlow()
+
+    fun open(taskId: String? = null) {
+        _request.value = HabitRequest(taskId)
+    }
+
+    fun close() {
+        _request.value = null
+    }
+}

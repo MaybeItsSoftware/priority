@@ -98,6 +98,7 @@ import uk.co.maybeitsadam.takt.ui.navigation.Tab
 import uk.co.maybeitsadam.takt.ui.navigation.TodayRoute
 import uk.co.maybeitsadam.takt.ui.navigation.WindowLayout
 import uk.co.maybeitsadam.takt.ui.quickadd.QuickAddSheet
+import uk.co.maybeitsadam.takt.ui.habits.HabitSheet
 import uk.co.maybeitsadam.takt.ui.review.ReviewScreen
 import uk.co.maybeitsadam.takt.ui.search.SearchScreen
 import uk.co.maybeitsadam.takt.settings.SupabaseAccounts
@@ -155,6 +156,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
     val snackbar = remember { SnackbarHostState() }
     val inspectorTaskId by container.inspector.taskId.collectAsStateWithLifecycle()
     val quickAdd by container.quickAdd.request.collectAsStateWithLifecycle()
+    val habitRequest by container.habits.request.collectAsStateWithLifecycle()
 
     LaunchedEffect(container) {
         container.undo.messages.collect { message ->
@@ -201,6 +203,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
             KeyCommand.GO_SEARCH.palette { navigator.openTab(Tab.SEARCH) },
             PaletteCommand("goLists", "Go to Lists", "Go", "") { navigator.openTab(Tab.LISTS) },
             KeyCommand.TASK_NEW.palette { container.quickAdd.open(QuickAddRequest(listId = container.quickAdd.contextListId.value)) },
+            PaletteCommand("habitNew", "New habit", "Task", "") { container.habits.open(null) },
             KeyCommand.WINDOW_UNDO.palette { container.undo.undo() },
             KeyCommand.WINDOW_REDO.palette { container.undo.redo() },
             KeyCommand.WINDOW_HISTORY.palette { historyOpen = true },
@@ -336,6 +339,10 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
 
             quickAdd?.let { request ->
                 QuickAddSheet(request = request, onDismiss = container.quickAdd::close)
+            }
+
+            habitRequest?.let { request ->
+                HabitSheet(request = request, onDismiss = container.habits::close)
             }
 
             if (historyOpen) HistorySheet(onDismiss = { historyOpen = false })

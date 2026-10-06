@@ -7,6 +7,7 @@ import uk.co.maybeitsadam.takt.core.NextUpSelector
 import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.core.WorkspaceItemKind
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
+import uk.co.maybeitsadam.takt.data.workspace.WorkspaceRepository
 
 /**
  * Every Task-group command from the desktop catalogue
@@ -22,12 +23,32 @@ class TaskCommands(private val container: AppContainer) {
         return java.time.LocalDate.now(zone).plusDays(offsetDays).atStartOfDay(zone).toInstant()
     }
 
-    /** Space / x: complete an open task, reopen a closed one. */
+    /**
+     * Space / x: complete an open task, reopen a closed one. A habit is ticked
+     * for the day instead, as on the Mac: its task is what the next
+     * appearance is made of, so closing it would end the habit.
+     */
     fun toggleComplete(task: WorkspaceTask) = undo.perform { repo ->
+        if (task.status == TaskStatus.OPEN && tickHabit(repo, task.id)) return@perform
         repo.setStatus(if (task.status == TaskStatus.OPEN) TaskStatus.COMPLETED else TaskStatus.OPEN, task.id)
     }
 
-    fun complete(taskId: String) = undo.perform { it.setStatus(TaskStatus.COMPLETED, taskId) }
+    fun complete(taskId: String) = undo.perform { repo ->
+        if (tickHabit(repo, taskId)) return@perform
+        repo.setStatus(TaskStatus.COMPLETED, taskId)
+    }
+
+    /**
+     * Ticks [taskId]'s habit for today, or un-ticks it if today is already
+     * ticked. A habit not showing today has nothing to un-tick, so doing it
+     * now simply counts for today. False when the task is not a habit.
+     */
+    private suspend fun tickHabit(repo: WorkspaceRepository, taskId: String): Boolean {
+        val daily = repo.daily(taskId)?.takeIf { it.isHabit } ?: return false
+        val today = repo.dailies().firstOrNull { it.daily.id == daily.id }
+        if (today?.isDoneToday == true) repo.clearContribution(daily.id) else repo.logContribution(daily.id)
+        return true
+    }
 
     fun reopen(taskId: String) = undo.perform { it.setStatus(TaskStatus.OPEN, taskId) }
 

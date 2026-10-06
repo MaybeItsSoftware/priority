@@ -192,6 +192,8 @@ class ListViewModel(
         if (task.status == TaskStatus.OPEN) {
             if (celebration.value == CelebrationStyle.FOLD) {
                 viewModelScope.launch {
+                    // A habit is ticked, not finished: it stays in the outline.
+                    if (container.repository().daily(id)?.isHabit == true) return@launch
                     delay(FOLD_DELAY_MILLIS)
                     foldedAway.value = foldedAway.value + id
                 }

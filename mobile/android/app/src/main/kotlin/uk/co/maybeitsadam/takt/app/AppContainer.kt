@@ -84,16 +84,17 @@ class AppContainer(
     val folds = FoldStore(context)
     val inspector = InspectorController()
     val quickAdd = QuickAddController()
+    val habits = HabitFormController()
     val undo = UndoCenter(this)
     val commands = TaskCommands(this)
     val sync = SyncController(this)
-    private val followUps = WaitingFollowUps(this)
+    private val engines = ForegroundEngines(this)
 
     init {
         scope.launch { awaitSession() }
         FocusServiceLauncher.attach(this)
         sync.attach()
-        followUps.attach()
+        engines.attach()
         // The widget is drawn from the theme in force, so a new one redraws it.
         scope.launch {
             theme.map { it.specification to it.mode }.distinctUntilChanged().drop(1).collect {

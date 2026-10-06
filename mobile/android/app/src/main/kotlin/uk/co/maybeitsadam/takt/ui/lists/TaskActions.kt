@@ -74,6 +74,7 @@ class TaskActions(
     fun setPriority(id: String, priority: Int?) = commands.setPriority(id, priority)
     fun togglePlannedToday(id: String) = commands.togglePlannedToday(id)
     fun toggleDaily(id: String) = commands.toggleDaily(id)
+    fun openHabit(id: String) = container.habits.open(id)
     fun startFocus(id: String) = commands.startFocus(id)
     fun moveToList(id: String, listId: String) = commands.moveToList(id, listId)
     fun moveToNewList(id: String, name: String) = commands.moveToNewList(id, name)
@@ -110,6 +111,7 @@ class TaskActions(
             Chord(Key.T, ctrl = true).matches(event) -> { { dueToday(id) } }
             Chord(Key.T, ctrl = true, shift = true).matches(event) -> { { dueTomorrow(id) } }
             Chord(Key.D, ctrl = true, shift = true).matches(event) -> { { toggleDaily(id) } }
+            Chord(Key.H, ctrl = true, shift = true).matches(event) -> { { openHabit(id) } }
             Chord(Key.L, ctrl = true, shift = true).matches(event) -> { { toggleList(id) } }
             Chord(Key.M, ctrl = true, shift = true).matches(event) -> { { askMove(row) } }
             Chord(Key.Zero).matches(event) -> { { setPriority(id, null) } }
@@ -144,6 +146,7 @@ class TaskActions(
             KeyCommand.TASK_CLEAR_PRIORITY.palette { setPriority(id, null) },
             KeyCommand.TASK_TOGGLE_PLANNED_TODAY.palette { togglePlannedToday(id) },
             KeyCommand.TASK_TOGGLE_DAILY.palette { toggleDaily(id) },
+            KeyCommand.TASK_HABIT.palette { openHabit(id) },
             KeyCommand.TASK_START_FOCUS.palette { startFocus(id) },
             KeyCommand.TASK_TOGGLE_INSPECTOR.palette { openInspector(id) },
             KeyCommand.PLAN_TOGGLE_FOLD.palette { toggleFold(id) },
@@ -200,6 +203,7 @@ internal fun ColumnScope.TaskMenuItems(
     PMenuDivider()
     PMenuItem(if (row.isPlanned) "Take off today" else "Plan for today", PIcons.Today, onClick = run { actions.togglePlannedToday(id) })
     PMenuItem(if (row.isDaily) "Stop daily" else "Make daily", PIcons.Repeat, onClick = run { actions.toggleDaily(id) })
+    PMenuItem(if (row.isDaily) "Habit options…" else "Make a habit…", PIcons.Repeat, onClick = run { actions.openHabit(id) })
     PMenuItem("Start focus", Icons.Filled.PlayArrow, trailing = "F", onClick = run { actions.startFocus(id) })
     PMenuDivider()
     PMenuItem("Rename…", Icons.Filled.Edit, trailing = "F2", onClick = run { actions.askRename(row) })

@@ -15,6 +15,7 @@ import uk.co.maybeitsadam.takt.data.workspace.HistoryEntry
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorException
 import uk.co.maybeitsadam.takt.data.workspace.WorkspaceRepository
 import uk.co.maybeitsadam.takt.data.workspace.WorkspaceStoreException
+import uk.co.maybeitsadam.takt.data.workspace.reconcileHabits
 
 /** What the snackbar offers after a message. */
 enum class SnackAction(val label: String) { UNDO("Undo"), REDO("Redo") }
@@ -59,6 +60,7 @@ class UndoCenter(private val container: AppContainer) {
         val repository = container.repository()
         return try {
             block(repository)
+            placeHabits(repository)
             if (announce) {
                 val label = message ?: repository.undoableLabel()
                 if (label != null) _messages.tryEmit(SnackMessage(label, SnackAction.UNDO))
@@ -75,6 +77,7 @@ class UndoCenter(private val container: AppContainer) {
     fun undo() {
         container.scope.launch {
             val label = container.repository().undo()
+            placeHabits(container.repository())
             _messages.tryEmit(
                 if (label != null) SnackMessage("Undid ${label.lowercaseFirst()}", SnackAction.REDO) else SnackMessage("Nothing to undo"),
             )
@@ -84,6 +87,7 @@ class UndoCenter(private val container: AppContainer) {
     fun redo() {
         container.scope.launch {
             val label = container.repository().redo()
+            placeHabits(container.repository())
             _messages.tryEmit(
                 if (label != null) SnackMessage("Redid ${label.lowercaseFirst()}", SnackAction.UNDO) else SnackMessage("Nothing to redo"),
             )
@@ -105,6 +109,22 @@ class UndoCenter(private val container: AppContainer) {
                 repeat(steps) { repository.undo() }
             }
             _messages.tryEmit(SnackMessage("Back to ${(to.label ?: "that step").lowercaseFirst()}"))
+        }
+    }
+
+    /**
+     * Puts habits where they belong after an edit: a tick takes a card out
+     * of its column, an un-tick or an undo puts it back. The Mac does the
+     * same on every dailies reload. A single read when there are no habits;
+     * a failure here never fails the edit.
+     */
+    private suspend fun placeHabits(repository: WorkspaceRepository) {
+        try {
+            repository.reconcileHabits()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // The foreground pass tries again within half a minute.
         }
     }
 
