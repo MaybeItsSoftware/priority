@@ -56,15 +56,19 @@ public final class SupabaseSyncAuth: SyncAuthenticating {
 
   /// `keychainService` keeps the product's old name, Priority, for the same
   /// reason `KeychainSyncCredentialStore`'s does.
+  ///
+  /// `storageKey` names the session's item within the service; nil is the
+  /// SDK's default, which Takt's own project has always used.
   public init(
     projectURL: URL = SyncServer.supabaseURL, publishableKey: String = SyncServer.supabasePublishableKey,
-    keychainService: String = "uk.co.maybeitsadam.priority.supabase"
+    keychainService: String = "uk.co.maybeitsadam.priority.supabase", storageKey: String? = nil
   ) {
     client = AuthClient(
       url: projectURL.appending(path: "auth/v1"),
       headers: ["apikey": publishableKey],
       flowType: .pkce,
       redirectToURL: SyncServer.authCallbackURL,
+      storageKey: storageKey,
       // The SDK's own Keychain storage, readable after first unlock so a
       // background refresh can sync.
       localStorage: KeychainLocalStorage(service: keychainService),
@@ -72,6 +76,15 @@ public final class SupabaseSyncAuth: SyncAuthenticating {
       // refreshes one about to expire; no timer is needed besides.
       autoRefreshToken: false,
       emitLocalSessionAsInitialSession: true)
+  }
+
+  /// Accounts in `endpoints`' Supabase project. A self-hosted project keeps
+  /// its session under a key of its own, so it can never be mistaken for a
+  /// session with Takt's.
+  public convenience init(endpoints: SyncEndpoints) {
+    self.init(
+      projectURL: endpoints.supabaseURL, publishableKey: endpoints.supabaseKey,
+      storageKey: endpoints.usesHostedAccounts ? nil : "sb-\(endpoints.supabaseURL.host() ?? "self-hosted")-auth-token")
   }
 
   public var currentUser: SyncAuthUser? { client.currentSession.map { Self.user($0.user) } }

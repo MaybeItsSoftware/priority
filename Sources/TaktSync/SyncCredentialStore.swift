@@ -12,6 +12,10 @@ public protocol SyncCredentialStore: Sendable {
   /// signing in to another account.
   func loadDeviceId() -> String?
   func saveDeviceId(_ id: String)
+  /// The self-hosted server and Supabase project chosen under "Use a
+  /// different server", kept through signing out. Nil means Takt's own.
+  func loadEndpoints() -> SyncEndpoints?
+  func saveEndpoints(_ endpoints: SyncEndpoints?)
 }
 
 extension SyncCredentialStore {
@@ -90,6 +94,18 @@ public struct KeychainSyncCredentialStore: SyncCredentialStore {
   public func saveDeviceId(_ id: String) {
     try? write(Data(id.utf8), to: "device-id")
   }
+
+  public func loadEndpoints() -> SyncEndpoints? {
+    read("endpoints").flatMap { try? JSONDecoder().decode(SyncEndpoints.self, from: $0) }
+  }
+
+  public func saveEndpoints(_ endpoints: SyncEndpoints?) {
+    guard let endpoints, let data = try? JSONEncoder().encode(endpoints) else {
+      SecItemDelete(query("endpoints") as CFDictionary)
+      return
+    }
+    try? write(data, to: "endpoints")
+  }
 }
 
 /// Credentials held in memory, for tests and previews.
@@ -97,9 +113,11 @@ public final class InMemorySyncCredentialStore: SyncCredentialStore, @unchecked 
   private let lock = NSLock()
   private var credentials: SyncCredentials?
   private var device: String?
-  public init(_ credentials: SyncCredentials? = nil, deviceId: String? = nil) {
+  private var endpoints: SyncEndpoints?
+  public init(_ credentials: SyncCredentials? = nil, deviceId: String? = nil, endpoints: SyncEndpoints? = nil) {
     self.credentials = credentials
     self.device = deviceId
+    self.endpoints = endpoints
   }
   public func load() -> SyncCredentials? { lock.withLock { credentials } }
   /// Through JSON, as the Keychain item is, so what isn't saved is lost.
@@ -110,4 +128,6 @@ public final class InMemorySyncCredentialStore: SyncCredentialStore, @unchecked 
   public func clear() { lock.withLock { credentials = nil } }
   public func loadDeviceId() -> String? { lock.withLock { device } }
   public func saveDeviceId(_ id: String) { lock.withLock { device = id } }
+  public func loadEndpoints() -> SyncEndpoints? { lock.withLock { endpoints } }
+  public func saveEndpoints(_ endpoints: SyncEndpoints?) { lock.withLock { self.endpoints = endpoints } }
 }

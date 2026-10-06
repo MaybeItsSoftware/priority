@@ -38,6 +38,9 @@ public final class SyncSession {
   /// The email and server last used here, to fill in the sign-in form.
   public private(set) var rememberedEmail: String?
   public private(set) var rememberedServerURL: URL?
+  /// The sync server and Supabase project this device uses: Takt's own, or
+  /// a self-hosted pair chosen with `use(_:)`. Kept through signing out.
+  public private(set) var endpoints: SyncEndpoints
   /// The account and its devices, from `refreshAccount()`.
   public private(set) var account: SyncAccount?
   /// Signed in from a password-reset email: the settings screen asks for the
@@ -51,7 +54,9 @@ public final class SyncSession {
   @ObservationIgnored public let deviceId: String
   @ObservationIgnored private let store: WorkspaceStore
   @ObservationIgnored private let credentialStore: any SyncCredentialStore
-  @ObservationIgnored private let auth: any SyncAuthenticating
+  @ObservationIgnored private var auth: any SyncAuthenticating
+  /// Makes the Supabase client for a project, when `use(_:)` changes it.
+  @ObservationIgnored private let makeAuth: (SyncEndpoints) -> any SyncAuthenticating
   @ObservationIgnored private let urlSession: URLSession
   @ObservationIgnored private let deviceName: String
   @ObservationIgnored private let platform: String
@@ -62,13 +67,33 @@ public final class SyncSession {
   /// Called on the main actor after a pull has changed the workspace.
   @ObservationIgnored public var onRemoteChanges: (() -> Void)?
 
+  /// `auth`, when given, is used whatever the endpoints (tests); otherwise
+  /// `makeAuth` makes one for the endpoints' project, by default
+  /// `SupabaseSyncAuth`.
   public init(
     store: WorkspaceStore, credentialStore: any SyncCredentialStore = KeychainSyncCredentialStore(),
-    auth: (any SyncAuthenticating)? = nil, deviceName: String, platform: String, urlSession: URLSession = .shared
+    auth: (any SyncAuthenticating)? = nil, makeAuth: ((SyncEndpoints) -> any SyncAuthenticating)? = nil,
+    deviceName: String, platform: String, urlSession: URLSession = .shared
   ) {
     self.store = store
     self.credentialStore = credentialStore
-    self.auth = auth ?? SupabaseSyncAuth()
+    let factory: (SyncEndpoints) -> any SyncAuthenticating
+    if let auth {
+      factory = { _ in auth }
+    } else {
+      factory = makeAuth ?? { SupabaseSyncAuth(endpoints: $0) }
+    }
+    self.makeAuth = factory
+    // A device that chose a server of its own before a Supabase project
+    // could be chosen too kept only the server, with Takt's accounts.
+    var endpoints = SyncEndpoints.hosted
+    if let saved = credentialStore.loadEndpoints() {
+      endpoints = saved
+    } else if let server = credentialStore.load()?.serverURL {
+      endpoints.serverURL = server
+    }
+    self.endpoints = endpoints
+    self.auth = factory(endpoints)
     self.urlSession = urlSession
     self.deviceName = deviceName
     self.platform = platform
@@ -144,38 +169,40 @@ public final class SyncSession {
   // MARK: - Signing in
 
   /// Signs this device in to an existing account.
-  public func signIn(email: String, password: String, serverURL: URL = SyncServer.defaultURL) async throws {
+  public func signIn(email: String, password: String, serverURL: URL? = nil) async throws {
     let email = try Self.checked(email: email, password: password)
-    try await finishSignIn(auth.signIn(email: email, password: password), serverURL: serverURL)
+    let user = try await auth.signIn(email: email, password: password)
+    try await finishSignIn(user, serverURL: serverURL ?? endpoints.serverURL)
   }
 
   /// Makes an account and, unless Supabase wants the address confirmed
   /// first, signs this device in to it.
   public func signUp(
-    email: String, password: String, serverURL: URL = SyncServer.defaultURL
+    email: String, password: String, serverURL: URL? = nil
   ) async throws -> SignUpOutcome {
     let email = try Self.checked(email: email, password: password)
     guard let user = try await auth.signUp(email: email, password: password) else {
       // The link in the email comes back to `completeSignIn(from:)`.
       rememberedEmail = email
-      rememberedServerURL = serverURL
+      rememberedServerURL = serverURL ?? endpoints.serverURL
       return .confirmEmail(email)
     }
-    try await finishSignIn(user, serverURL: serverURL)
+    try await finishSignIn(user, serverURL: serverURL ?? endpoints.serverURL)
     return .signedIn
   }
 
   /// Google or Apple, in a browser sheet. Throws `SyncError.cancelled` when
   /// the sheet is closed.
-  public func signIn(with provider: SyncOAuthProvider, serverURL: URL = SyncServer.defaultURL) async throws {
-    try await finishSignIn(auth.signIn(with: provider), serverURL: serverURL)
+  public func signIn(with provider: SyncOAuthProvider, serverURL: URL? = nil) async throws {
+    try await finishSignIn(auth.signIn(with: provider), serverURL: serverURL ?? endpoints.serverURL)
   }
 
   /// Sign in with Apple, done natively by the app (`SyncAppleNonce`).
   public func signInWithApple(
-    idToken: String, nonce: String, serverURL: URL = SyncServer.defaultURL
+    idToken: String, nonce: String, serverURL: URL? = nil
   ) async throws {
-    try await finishSignIn(auth.signInWithApple(idToken: idToken, nonce: nonce), serverURL: serverURL)
+    try await finishSignIn(
+      auth.signInWithApple(idToken: idToken, nonce: nonce), serverURL: serverURL ?? endpoints.serverURL)
   }
 
   /// A link from a Supabase email (confirming the address, or resetting the
@@ -189,7 +216,7 @@ public final class SyncSession {
       throw SyncError.invalid(
         "That link didn't sign you in here. If it confirmed your email, sign in with your password.")
     }
-    try await finishSignIn(user, serverURL: rememberedServerURL ?? SyncServer.defaultURL)
+    try await finishSignIn(user, serverURL: rememberedServerURL ?? endpoints.serverURL)
     if isResettingPassword {
       isResettingPassword = false
       needsNewPassword = true
@@ -268,6 +295,35 @@ public final class SyncSession {
     try forget()
     rememberedEmail = nil
     rememberedServerURL = nil
+  }
+
+  // MARK: - Server
+
+  /// Switches to `endpoints`: a self-hosted sync server and Supabase
+  /// project, or `.hosted` to go back to Takt's. Nothing changes if they are
+  /// the ones in use. Otherwise a self-hosted pair is checked first
+  /// (`SyncEndpointCheck`) unless `check` is false, and then this device
+  /// signs out cleanly (off the old server's device list, out of the old
+  /// project, the outbox dropped) before the new ones are saved. The
+  /// workspace stays as it is.
+  public func use(_ endpoints: SyncEndpoints, check: Bool = true) async throws {
+    guard endpoints != self.endpoints else { return }
+    if check, !endpoints.isHosted {
+      try await SyncEndpointCheck.check(endpoints, session: urlSession)
+    }
+    if isSignedIn {
+      await signOut()
+    } else {
+      await auth.signOut()
+      try? forget()
+    }
+    let projectChanged =
+      endpoints.supabaseURL != self.endpoints.supabaseURL || endpoints.supabaseKey != self.endpoints.supabaseKey
+    credentialStore.saveEndpoints(endpoints.isHosted ? nil : endpoints)
+    self.endpoints = endpoints
+    if projectChanged { auth = makeAuth(endpoints) }
+    rememberedServerURL = endpoints.serverURL
+    isResettingPassword = false
   }
 
   // MARK: - Internals

@@ -6,8 +6,9 @@ import SwiftUI
 ///
 /// Signed out: Apple, Google, or an email and password, to sign in or make an
 /// account. All three are Supabase accounts (`docs/sync.md`). Signed in: the
-/// account, its devices, signing out and deleting the account. The server is
-/// the hosted one unless "Use a different server" says otherwise.
+/// account, its devices, signing out and deleting the account. The server and
+/// the Supabase project are Takt's unless "Use a different server" names a
+/// self-hosted pair (`docs/self-hosting.md`).
 ///
 /// Sign in with Apple goes through Supabase's web flow here rather than the
 /// native sheet the iPhone uses: the native one needs the Sign in with Apple
@@ -19,7 +20,11 @@ struct SettingsSyncPane: View {
   @State private var email = ""
   @State private var password = ""
   @State private var newPassword = ""
-  @State private var serverURL = SyncServer.defaultURL.absoluteString
+  /// "Use a different server": a sync server, and the Supabase project it
+  /// trusts. Blank fields are Takt's own (`SyncEndpoints.resolve`).
+  @State private var serverURL = ""
+  @State private var supabaseURL = ""
+  @State private var supabaseKey = ""
   @State private var usesOtherServer = false
   @State private var isWorking = false
   @State private var message: String?
@@ -102,12 +107,33 @@ struct SettingsSyncPane: View {
       .padding(.vertical, theme.space.xs)
 
       DisclosureGroup("Use a different server", isExpanded: $usesOtherServer) {
-        VStack(alignment: .leading, spacing: theme.space.xs) {
-          TextField("", text: $serverURL, prompt: Text(SyncServer.defaultURL.absoluteString))
-            .themedTextField()
-          Text("For a server you run yourself. Leave it as it is to use Takt's.")
+        VStack(alignment: .leading, spacing: theme.space.sm) {
+          field("Sync server") {
+            TextField("", text: $serverURL, prompt: Text(SyncServer.defaultURL.absoluteString))
+              .themedTextField()
+          }
+          field("Supabase URL") {
+            TextField("", text: $supabaseURL, prompt: Text("https://<project>.supabase.co"))
+              .themedTextField()
+          }
+          field("Supabase publishable key") {
+            TextField("", text: $supabaseKey, prompt: Text("sb_publishable_…"))
+              .font(theme.monoFont(size: theme.scale.caption))
+              .themedTextField()
+          }
+          HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
+            Text(
+              "For a server you run yourself, and the Supabase project it trusts for accounts. "
+                + "Leave a field blank to use Takt's. Changing them signs this Mac out."
+            )
             .font(theme.captionFont)
             .foregroundStyle(theme.muted)
+            Spacer()
+            Button("Check") { checkEndpoints() }
+              .buttonStyle(FocusActionButtonStyle())
+              .disabled(isWorking)
+              .help("Ask the server's /health and the Supabase project whether they answer.")
+          }
         }
         .padding(.top, theme.space.xs)
       }
@@ -128,19 +154,24 @@ struct SettingsSyncPane: View {
   private func signIn(_ session: SyncSession) {
     guard !email.isEmpty, !password.isEmpty, !isWorking else { return }
     run { [email, password] in
-      try await session.signIn(email: email, password: password, serverURL: try chosenServer())
+      try await session.use(try chosenEndpoints())
+      try await session.signIn(email: email, password: password)
       self.password = ""
     }
   }
 
   private func signIn(_ session: SyncSession, with provider: SyncOAuthProvider) {
     guard !isWorking else { return }
-    run { try await session.signIn(with: provider, serverURL: try chosenServer()) }
+    run {
+      try await session.use(try chosenEndpoints())
+      try await session.signIn(with: provider)
+    }
   }
 
   private func signUp(_ session: SyncSession) {
     run { [email, password] in
-      let outcome = try await session.signUp(email: email, password: password, serverURL: try chosenServer())
+      try await session.use(try chosenEndpoints())
+      let outcome = try await session.signUp(email: email, password: password)
       self.password = ""
       if case .confirmEmail(let address) = outcome {
         notice = SyncSession.confirmEmailMessage(for: address)
@@ -152,26 +183,40 @@ struct SettingsSyncPane: View {
   private func requestPasswordReset(_ session: SyncSession) {
     guard !isWorking else { return }
     run { [email] in
+      try await session.use(try chosenEndpoints())
       let sent = try await session.requestPasswordReset(email: email)
       notice = SyncSession.passwordResetSentMessage(for: sent)
     }
   }
 
-  /// The hosted server, unless the disclosure names another.
-  private func chosenServer() throws -> URL {
-    guard let url = SyncServer.url(from: serverURL) else {
-      throw SyncError.invalid("That server address isn't a web address.")
-    }
-    return url
+  /// Takt's own, unless the disclosure is open and names others.
+  private func chosenEndpoints() throws -> SyncEndpoints {
+    guard usesOtherServer else { return .hosted }
+    return try SyncEndpoints.resolve(server: serverURL, supabaseURL: supabaseURL, supabaseKey: supabaseKey)
   }
 
-  /// After a refused session, the same email and server again.
+  /// Checks the typed server and project without switching to them.
+  private func checkEndpoints() {
+    run {
+      let endpoints = try chosenEndpoints()
+      if !endpoints.isHosted {
+        try await SyncEndpointCheck.check(endpoints)
+      }
+      notice = "Both answered. Sign in to use them."
+    }
+  }
+
+  /// After a refused session, the same email; and the server in use.
   private func prefill(from session: SyncSession) {
     if email.isEmpty, let remembered = session.rememberedEmail { email = remembered }
-    if let server = session.rememberedServerURL, server != SyncServer.defaultURL {
-      serverURL = server.absoluteString
-      usesOtherServer = true
+    let endpoints = session.endpoints
+    guard !endpoints.isHosted else { return }
+    if endpoints.serverURL != SyncServer.defaultURL { serverURL = endpoints.serverURL.absoluteString }
+    if !endpoints.usesHostedAccounts {
+      supabaseURL = endpoints.supabaseURL.absoluteString
+      supabaseKey = endpoints.supabaseKey
     }
+    usesOtherServer = true
   }
 
   // MARK: - Signed in
@@ -186,6 +231,14 @@ struct SettingsSyncPane: View {
       if let server = session.credentials?.serverURL, server != SyncServer.defaultURL {
         LabeledContent("Server") {
           Text(server.absoluteString).font(theme.monoFont(size: theme.scale.caption)).foregroundStyle(theme.muted)
+        }
+      }
+      if !session.endpoints.usesHostedAccounts {
+        LabeledContent("Accounts") {
+          Text(session.endpoints.supabaseURL.absoluteString)
+            .font(theme.monoFont(size: theme.scale.caption))
+            .foregroundStyle(theme.muted)
+            .help("The Supabase project this server trusts. Sign out to change it.")
         }
       }
       HStack(spacing: theme.space.sm) {
