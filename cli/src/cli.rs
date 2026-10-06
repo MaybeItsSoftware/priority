@@ -359,6 +359,12 @@ pub enum WsCommand {
         /// Unpin a nested list from the sidebar.
         #[arg(long)]
         unpin: bool,
+        /// Who or what it waits on; files it in Waiting on. Empty clears.
+        #[arg(long, short = 'w', value_name = "TAG")]
+        waiting_on: Option<String>,
+        /// When to follow up, e.g. "2026-10-08 14:00". Empty clears.
+        #[arg(long, value_name = "WHEN")]
+        follow_up: Option<String>,
     },
     /// Complete a task.
     Done { task_id: String },
@@ -758,6 +764,8 @@ fn resolve_workspace(command: &WsCommand, arguments: &mut Map<String, Value>) ->
             kind,
             pin,
             unpin,
+            waiting_on,
+            follow_up,
         } => {
             arguments.insert("task_id".into(), json!(task_id));
             insert_if_some(arguments, "title", title.as_deref());
@@ -771,6 +779,8 @@ fn resolve_workspace(command: &WsCommand, arguments: &mut Map<String, Value>) ->
             if *pin || *unpin {
                 arguments.insert("pinned".into(), json!(*pin));
             }
+            insert_if_some(arguments, "waiting_on", waiting_on.as_deref());
+            insert_if_some(arguments, "follow_up_at", follow_up.as_deref());
             "workspace_task_update"
         }
         WsCommand::Done { task_id } | WsCommand::Reopen { task_id } => {

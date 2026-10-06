@@ -51,6 +51,7 @@ extension WorkspaceViewModel {
   func checkForExternalWrites() {
     guard let store, !externalWriteCheckInFlight else { return }
     checkForDayChange()
+    checkForDueFollowUps()
     externalWriteCheckInFlight = true
     Task { @MainActor [weak self] in
       let token = try? await store.readExternalChangeToken()

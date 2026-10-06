@@ -67,6 +67,15 @@ const TASK_COLUMNS: &str = "t.id, t.listId, t.parentTaskId, t.title, t.notes, t.
      t.completedAt, m.kanbanColumn, m.externalLinksJSON, m.recurrenceRule, \
      m.taskId IS NOT NULL";
 
+/// What `v20_waiting_follow_ups` adds to a task row, and what stands in for
+/// it on a database the app has not yet migrated.
+const WAITING_COLUMNS: &str = "m.waitingOn, m.waitingFollowUpAt, m.followUpOfTaskId";
+const NO_WAITING_COLUMNS: &str = "NULL, NULL, NULL";
+const WAITING_MIGRATION: &str = "v20_waiting_follow_ups";
+
+/// The board column a waiting task is filed in (`WaitingFollowUp`).
+const WAITING_COLUMN: &str = "waiting-on";
+
 /// One task row with the metadata the tools show beside it.
 struct TaskRow {
     id: String,
@@ -86,6 +95,9 @@ struct TaskRow {
     links_json: Option<String>,
     recurrence_rule: Option<String>,
     has_metadata: bool,
+    waiting_on: Option<String>,
+    follow_up_at: Option<String>,
+    follow_up_of: Option<String>,
 }
 
 impl TaskRow {
@@ -108,6 +120,9 @@ impl TaskRow {
             links_json: row.get(14)?,
             recurrence_rule: row.get(15)?,
             has_metadata: row.get(16)?,
+            waiting_on: row.get(17)?,
+            follow_up_at: row.get(18)?,
+            follow_up_of: row.get(19)?,
         })
     }
 
@@ -150,6 +165,18 @@ impl TaskRow {
         }
         if self.is_promoted == Some(true) {
             object.insert("is_promoted".into(), json!(true));
+        }
+        if let Some(tag) = &self.waiting_on {
+            object.insert("waiting_on".into(), json!(tag));
+        }
+        if self.follow_up_at.is_some() {
+            object.insert(
+                "follow_up_at".into(),
+                json!(local_string(&self.follow_up_at)),
+            );
+        }
+        if let Some(source) = &self.follow_up_of {
+            object.insert("follow_up_of".into(), json!(source));
         }
         if let Some(rule) = self
             .recurrence_rule
@@ -223,6 +250,12 @@ pub struct TaskEdit {
     pub kind: Option<String>,
     /// Pin a nested list to the sidebar: `setNestedListPromoted`.
     pub pinned: Option<bool>,
+    /// Who or what it waits on. `Some(None)` clears it. Either this or
+    /// `follow_up_at` files the task in Waiting on, as `setWaiting` does.
+    pub waiting_on: Option<Option<String>>,
+    /// When to chase it, as typed: `2026-10-08 14:00`, local time, or RFC 3339.
+    /// `Some(None)` clears it. The app makes the follow-up task when it is due.
+    pub follow_up_at: Option<Option<String>>,
 }
 
 impl TaskEdit {
@@ -238,6 +271,7 @@ impl TaskEdit {
             self.kanban_column.is_some(),
             self.kind.is_some(),
             self.pinned.is_some(),
+            self.waiting_on.is_some() || self.follow_up_at.is_some(),
         ]
         .iter()
         .filter(|set| **set)
@@ -255,6 +289,9 @@ impl TaskEdit {
         }
         if self.kanban_column.is_some() {
             return "Move Task";
+        }
+        if self.waiting_on.is_some() || self.follow_up_at.is_some() {
+            return "Waiting On";
         }
         match (self.kind.as_deref(), self.pinned) {
             (Some("list"), _) => "Convert to List",
@@ -475,7 +512,7 @@ impl Workspace {
         if edit.is_empty() {
             return Err(ToolError::new(
                 "No updates provided. Pass title, notes, external_links, status, kanban_column, \
-                 kind and/or pinned.",
+                 kind, pinned, waiting_on and/or follow_up_at.",
             ));
         }
         let title = edit
@@ -495,6 +532,11 @@ impl Workspace {
         {
             return Err(ToolError::new("kind must be 'task' or 'list'."));
         }
+        let follow_up_at = match edit.follow_up_at.as_ref() {
+            Some(Some(text)) if !text.trim().is_empty() => Some(Some(parse_follow_up(text)?)),
+            Some(_) => Some(None),
+            None => None,
+        };
         let label = edit.label();
 
         self.journalled(label, |tx, now| {
@@ -568,6 +610,18 @@ impl Workspace {
                 if column != task.kanban_column {
                     upsert_kanban_column(tx, &task.id, column.as_deref(), now)?;
                 }
+            }
+
+            if edit.waiting_on.is_some() || follow_up_at.is_some() {
+                set_waiting(
+                    tx,
+                    &task.id,
+                    edit.waiting_on
+                        .as_ref()
+                        .map(|tag| normalized_tag(tag.as_deref())),
+                    follow_up_at.clone(),
+                    now,
+                )?;
             }
 
             // Kind before pinning, so "make this a nested list and pin it" is
@@ -1071,9 +1125,15 @@ fn task_rows<P: rusqlite::Params>(
     filter: &str,
     params: P,
 ) -> Result<Vec<TaskRow>> {
+    let waiting = if has_migration(connection, WAITING_MIGRATION)? {
+        WAITING_COLUMNS
+    } else {
+        NO_WAITING_COLUMNS
+    };
     let mut statement = connection
         .prepare(&format!(
-            "SELECT {TASK_COLUMNS} FROM tasks t LEFT JOIN task_metadata m ON m.taskId = t.id \
+            "SELECT {TASK_COLUMNS}, {waiting} FROM tasks t \
+             LEFT JOIN task_metadata m ON m.taskId = t.id \
              WHERE {filter} ORDER BY t.sortOrder, t.createdAt, t.id"
         ))
         .map_err(map_query_error)?;
@@ -1249,6 +1309,101 @@ fn upsert_kanban_column(
 }
 
 // -- values -------------------------------------------------------------------
+
+/// Whether the app has run `identifier` on this database.
+fn has_migration(connection: &Connection, identifier: &str) -> Result<bool> {
+    exists(
+        connection,
+        "SELECT EXISTS(SELECT 1 FROM grdb_migrations WHERE identifier = ?1)",
+        identifier,
+    )
+}
+
+/// `WorkspaceStore.setWaiting`: the tag and the follow-up time, each only
+/// when given, and the task filed in Waiting on — leaving Today drops its
+/// place in the day. The follow-up task itself is the app's to make, on its
+/// next poll, so that it is made by one engine with one deterministic id.
+fn set_waiting(
+    tx: &Transaction,
+    task_id: &str,
+    waiting_on: Option<Option<String>>,
+    follow_up_at: Option<Option<String>>,
+    now: &str,
+) -> Result<()> {
+    if !has_migration(tx, WAITING_MIGRATION)? {
+        return Err(ToolError::new(
+            "This workspace predates Waiting on. Open an up-to-date Takt once to migrate it.",
+        ));
+    }
+    tx.execute(
+        "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, updatedAt) \
+         VALUES (?1, '[]', '[]', ?2) ON CONFLICT(taskId) DO NOTHING",
+        params![task_id, now],
+    )
+    .map_err(map_write_error)?;
+    tx.execute(
+        "UPDATE task_metadata SET \
+           focusRank = CASE WHEN kanbanColumn = 'today' THEN NULL ELSE focusRank END, \
+           kanbanColumn = ?2, updatedAt = ?3 \
+         WHERE taskId = ?1 AND kanbanColumn IS NOT ?2",
+        params![task_id, WAITING_COLUMN, now],
+    )
+    .map_err(map_write_error)?;
+    if let Some(tag) = waiting_on {
+        tx.execute(
+            "UPDATE task_metadata SET waitingOn = ?2, updatedAt = ?3 WHERE taskId = ?1",
+            params![task_id, tag, now],
+        )
+        .map_err(map_write_error)?;
+    }
+    if let Some(at) = follow_up_at {
+        tx.execute(
+            "UPDATE task_metadata SET waitingFollowUpAt = ?2, updatedAt = ?3 WHERE taskId = ?1",
+            params![task_id, at, now],
+        )
+        .map_err(map_write_error)?;
+    }
+    Ok(())
+}
+
+/// `WaitingFollowUp.normalizedTag`: trimmed, at most 40 characters, and
+/// nothing at all when empty.
+fn normalized_tag(tag: Option<&str>) -> Option<String> {
+    let trimmed = tag?.trim();
+    (!trimmed.is_empty()).then(|| trimmed.chars().take(40).collect())
+}
+
+/// A follow-up time as stored: UTC, whole minutes. Takes `2026-10-08 14:00`
+/// or `2026-10-08T14:00` in local time, or an RFC 3339 instant.
+fn parse_follow_up(text: &str) -> Result<String> {
+    use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Timelike};
+    let text = text.trim();
+    let instant = DateTime::parse_from_rfc3339(text)
+        .map(|date| date.with_timezone(&Utc))
+        .ok()
+        .or_else(|| {
+            [
+                "%Y-%m-%d %H:%M",
+                "%Y-%m-%dT%H:%M",
+                "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%dT%H:%M:%S",
+            ]
+            .iter()
+            .find_map(|format| NaiveDateTime::parse_from_str(text, format).ok())
+            .and_then(|naive| Local.from_local_datetime(&naive).earliest())
+            .map(|local| local.with_timezone(&Utc))
+        })
+        .ok_or_else(|| {
+            ToolError::new(format!(
+                "follow_up_at must be a date and time such as 2026-10-08 14:00, not \"{text}\"."
+            ))
+        })?;
+    let minute = instant
+        .with_second(0)
+        .and_then(|date| date.with_nanosecond(0))
+        .unwrap_or(instant);
+    Ok(stored_string(minute))
+}
 
 /// Uppercase, as Foundation's `UUID().uuidString` writes them.
 /// `WorkspaceStore.expireHabits`: closing a task ends every habit made from

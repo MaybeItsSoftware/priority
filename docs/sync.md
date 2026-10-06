@@ -49,6 +49,19 @@ daily. Only the Mac moves a habit's card between columns (see
 `WorkspaceStore+Habits.swift`); other clients see the result as ordinary
 `task_metadata` rows.
 
+`v20_waiting_follow_ups` adds four columns to `task_metadata` — `waitingOn TEXT`
+(who or what a task in the `waiting-on` column waits on), `waitingFollowUpAt
+DATETIME` (when to chase it), `waitingFollowUpTaskId TEXT` (the follow-up already
+made for it) and `followUpOfTaskId TEXT` (on a follow-up: the task it chases) —
+and reinstalls the `task_metadata` outbox and journal triggers. Every client
+that runs the follow-up engine (the Mac and Android; see `WaitingFollowUp` in
+`Sources/TaktCore` and its Kotlin port) gives the follow-up task the same id,
+derived from the source's id and the follow-up time:
+`SHA-256("takt.follow-up:<sourceTaskId>:<epoch seconds>")`, its first 16 bytes
+formatted as an uppercase UUID with the version-5 and RFC 4122 variant bits set.
+Two devices that both make the same follow-up therefore write the same `tasks`
+and `task_metadata` rows, which merge rather than duplicate.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

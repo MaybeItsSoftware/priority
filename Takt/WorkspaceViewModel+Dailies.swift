@@ -31,6 +31,7 @@ extension WorkspaceViewModel {
       // board agree about which appearances are showing.
       habitDayKey = DailyContribution.dayKey(for: .now)
       if try store.reconcileHabits() { refresh([.board, .nextUp]) }
+      if try store.reconcileWaitingFollowUps() { refresh([.outline, .nextUp]) }
       let items = try store.dailies()
       let all = try store.allDailies()
       if dailyItems != items { dailyItems = items }

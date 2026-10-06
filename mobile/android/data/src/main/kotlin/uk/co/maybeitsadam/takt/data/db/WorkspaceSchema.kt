@@ -5,7 +5,8 @@ package uk.co.maybeitsadam.takt.data.db
  *
  * A fresh database runs `cli/src/fixtures/workspace_schema.sql` (copied into
  * this module's resources at build time), then `v17_sync` and
- * `v18_themes_and_preferences` and `v19_habit_options` exactly as
+ * `v18_themes_and_preferences`, `v19_habit_options` and
+ * `v20_waiting_follow_ups` exactly as
  * docs/sync.md and the Swift `WorkspaceStore` specify. Every step is keyed on `grdb_migrations`, so a
  * step the fixture already carries is not applied twice; an older Android
  * database takes the steps it is missing.
@@ -15,6 +16,7 @@ object WorkspaceSchema {
     const val V17_SYNC = "v17_sync"
     const val V18_THEMES_AND_PREFERENCES = "v18_themes_and_preferences"
     const val V19_HABIT_OPTIONS = "v19_habit_options"
+    const val V20_WAITING_FOLLOW_UPS = "v20_waiting_follow_ups"
 
     /** `v19_habit_options`, verbatim from `WorkspaceStore.habitOptionColumns`. */
     val habitOptionColumns: List<String> = listOf(
@@ -23,6 +25,14 @@ object WorkspaceSchema {
         "ALTER TABLE dailies ADD COLUMN dropsAtDayEnd BOOLEAN NOT NULL DEFAULT 1",
         "ALTER TABLE dailies ADD COLUMN expiryRule TEXT NOT NULL DEFAULT 'never'",
         "ALTER TABLE dailies ADD COLUMN expiresAt DATETIME",
+    )
+
+    /** `v20_waiting_follow_ups`, verbatim from `WorkspaceStore.waitingColumns`. */
+    val waitingColumns: List<String> = listOf(
+        "ALTER TABLE task_metadata ADD COLUMN waitingOn TEXT",
+        "ALTER TABLE task_metadata ADD COLUMN waitingFollowUpAt DATETIME",
+        "ALTER TABLE task_metadata ADD COLUMN waitingFollowUpTaskId TEXT",
+        "ALTER TABLE task_metadata ADD COLUMN followUpOfTaskId TEXT",
     )
 
     /** Tables whose rows are the user's work, keyed by column (undo journal). Same order as Swift. */
@@ -84,6 +94,20 @@ object WorkspaceSchema {
             applyV19HabitOptions(db)
             db.execute("INSERT INTO grdb_migrations (identifier) VALUES (?)", V19_HABIT_OPTIONS)
         }
+        if (!db.exists("SELECT 1 FROM grdb_migrations WHERE identifier = ?", V20_WAITING_FOLLOW_UPS)) {
+            applyV20WaitingFollowUps(db)
+            db.execute("INSERT INTO grdb_migrations (identifier) VALUES (?)", V20_WAITING_FOLLOW_UPS)
+        }
+    }
+
+    /**
+     * `v20_waiting_follow_ups`: four columns on `task_metadata`, and both of
+     * its trigger sets reinstalled, since they name its columns.
+     */
+    fun applyV20WaitingFollowUps(db: Db) {
+        for (statement in waitingColumns) db.execute(statement)
+        installChangeLogTriggers(db, "task_metadata")
+        installSyncTriggers(db)
     }
 
     /**

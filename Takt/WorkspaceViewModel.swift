@@ -547,6 +547,11 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The day the habits were last placed for, so the first poll of a new day
   /// moves them. See `checkForDayChange`.
   @ObservationIgnored var habitDayKey: String?
+  /// What each waiting task waits on and when to chase it, for the chips on
+  /// cards and rows. Reread with the task cache.
+  var waitingDetails: [String: TaskWaitingDetails] = [:]
+  /// When the poll next looks for a follow-up that has come due.
+  @ObservationIgnored var nextFollowUpCheck: Date = .distantPast
   /// What finishing the current block did — a task closed, or a day's
   /// contribution logged. Held so the UI can say which, then cleared.
   var lastFocusOutcome: WorkspaceStore.FocusCompletionOutcome?

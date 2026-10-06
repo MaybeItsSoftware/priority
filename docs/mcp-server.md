@@ -61,7 +61,7 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 | `workspace_tree` | Folders, lists (with `folder_id`, open-task counts, visible root) and nested lists | read |
 | `workspace_tasks` | One list's task tree: ids, titles, notes, status, kind, kanban column, external links | read |
 | `workspace_task_add` | Create a task or nested list, at a list's top level or under a parent, with notes, links and a column | write |
-| `workspace_task_update` | Title, notes, links, status, column, kind (task ⇄ nested list), sidebar pin | write |
+| `workspace_task_update` | Title, notes, links, status, column, kind (task ⇄ nested list), sidebar pin, `waiting_on` and `follow_up_at` (both file the task in Waiting on) | write |
 | `workspace_task_move` | Reparent (subtree follows, across lists too) and/or reorder by 1-based position | write |
 | `workspace_task_to_list` | Promote a task to a standalone list, optionally in a folder, keeping its subtasks | write |
 | `workspace_task_delete` | Delete a task and its subtree | write |

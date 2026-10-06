@@ -669,7 +669,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_task_update",
-            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind or sidebar pin. Fields left out are unchanged; one call is one undo step. Completing a repeating task is refused: do that in Takt, which schedules the next occurrence.",
+            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind, sidebar pin, or what it is waiting on and when to follow up. Fields left out are unchanged; one call is one undo step. Completing a repeating task is refused: do that in Takt, which schedules the next occurrence.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -686,6 +686,14 @@ fn workspace_tool_definitions() -> Vec<Value> {
                     "pinned": {
                         "type": "boolean",
                         "description": "Pin a nested list to the sidebar (the app's 'Promote to sidebar'), or unpin it. Only for kind 'list'.",
+                    },
+                    "waiting_on": {
+                        "type": ["string", "null"],
+                        "description": "Who or what the task waits on (\"Sam\", \"Legal\"). Files it in the waiting-on column. Null or empty clears the tag.",
+                    },
+                    "follow_up_at": {
+                        "type": ["string", "null"],
+                        "description": "When to chase it: 2026-10-08 14:00 (local) or RFC 3339. Files it in the waiting-on column; if it is still waiting then, Takt adds a 'Follow up' task to Today. Null or empty clears it.",
                     },
                 },
                 "required": ["task_id"],

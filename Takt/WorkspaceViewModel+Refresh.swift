@@ -164,6 +164,7 @@ extension WorkspaceViewModel {
       for id in missing { dayTaskSnapshot[id] = fetched[id] }
     }
     taskCache = cache
+    reloadWaitingDetails()
     missingTaskIDs.removeAll(keepingCapacity: true)
     descendantCache.removeAll(keepingCapacity: true)
     taskContentRevision += 1

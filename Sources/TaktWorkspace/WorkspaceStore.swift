@@ -1159,6 +1159,16 @@ public final class WorkspaceStore: @unchecked Sendable {
       try WorkspaceStore.installChangeLogTriggers(db)
       try WorkspaceStore.installSyncTriggers(db)
     }
+    migrator.registerMigration("v20_waiting_follow_ups") { db in
+      // Raw SQL for the same reason as v19: Android runs these statements too.
+      for statement in WorkspaceStore.waitingColumns {
+        try db.execute(sql: statement)
+      }
+      // `task_metadata` is journalled and synced; both trigger sets name its
+      // columns.
+      try WorkspaceStore.installChangeLogTriggers(db)
+      try WorkspaceStore.installSyncTriggers(db)
+    }
 
     return migrator
   }()

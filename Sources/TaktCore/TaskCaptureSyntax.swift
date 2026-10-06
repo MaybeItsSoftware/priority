@@ -100,6 +100,44 @@ public struct TaskCapture: Equatable, Sendable {
     return remainder == 0 ? "\(minutes / 60)h" : "\(minutes / 60)h \(remainder)m"
   }
 
+  /// A day and a time of day, as the follow-up field reads them: the add
+  /// field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`, each with or
+  /// without the `@`), a time (`9am`, `9:30pm`, `14:00`, `noon`), or both in
+  /// either order, with an optional `at` between.
+  ///
+  /// A day with no time is at `defaultHour`. A time with no day is today, or
+  /// tomorrow once that time has passed; a weekday whose time has passed
+  /// today is next week's. Nil for anything else.
+  public static func dateTime(
+    from text: String, now: Date = .now, calendar: Calendar = .current, defaultHour: Int = 9
+  ) -> Date? {
+    var day: Date?
+    var time: (hour: Int, minute: Int)?
+    var namedWeekday = false
+    let words = text.lowercased().split(whereSeparator: { $0 == " " || $0 == "," }).map(String.init)
+    for raw in words where raw != "at" {
+      let word = raw.hasPrefix("@") ? String(raw.dropFirst()) : raw
+      if time == nil, let parsed = TaskCaptureToken.timeOfDay(word) {
+        time = parsed
+      } else if day == nil, let parsed = TaskCaptureToken.due(word, now: now, calendar: calendar) {
+        day = parsed
+        namedWeekday = TaskCaptureToken.isWeekday(word)
+      } else {
+        return nil
+      }
+    }
+    guard day != nil || time != nil else { return nil }
+    let start = day ?? calendar.startOfDay(for: now)
+    let clock = time ?? (defaultHour, 0)
+    guard var result = calendar.date(bySettingHour: clock.hour, minute: clock.minute, second: 0, of: start)
+    else { return nil }
+    if result <= now, time != nil, day == nil || namedWeekday {
+      let step = day == nil ? 1 : 7
+      result = calendar.date(byAdding: .day, value: step, to: result) ?? result
+    }
+    return result
+  }
+
   static func dueLabel(_ date: Date, now: Date, calendar: Calendar) -> String {
     if calendar.isDate(date, inSameDayAs: now) { return "Today" }
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
@@ -199,6 +237,32 @@ enum TaskCaptureToken: Equatable {
       return calendar.startOfDay(for: date)
     }
     return nil
+  }
+
+  /// `9am`, `9:30pm`, `12am`, `14:00`, `9.30`, `noon`, `midnight` — an hour
+  /// and minute on the 24-hour clock.
+  static func timeOfDay(_ word: String) -> (hour: Int, minute: Int)? {
+    switch word {
+    case "noon", "midday": return (12, 0)
+    case "midnight": return (0, 0)
+    default: break
+    }
+    if let match = word.wholeMatch(of: /(\d{1,2})(?:[:.](\d{2}))?(am|pm|a|p)/),
+      let hour = Int(match.1), (1...12).contains(hour) {
+      let minute = match.2.flatMap { Int($0) } ?? 0
+      guard minute < 60 else { return nil }
+      let isPM = match.3.hasPrefix("p")
+      return ((hour % 12) + (isPM ? 12 : 0), minute)
+    }
+    if let match = word.wholeMatch(of: /(\d{1,2})[:.](\d{2})/),
+      let hour = Int(match.1), let minute = Int(match.2), hour < 24, minute < 60 {
+      return (hour, minute)
+    }
+    return nil
+  }
+
+  static func isWeekday(_ word: String) -> Bool {
+    weekdays.contains { $0.names.contains(word) }
   }
 
   /// `#word`, where the word starts with a letter — so `#1` and `#123`, which

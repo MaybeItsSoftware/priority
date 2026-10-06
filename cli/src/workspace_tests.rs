@@ -381,6 +381,56 @@ fn completing_stamps_once_and_reopening_clears_the_stamp() {
 }
 
 #[test]
+fn waiting_on_and_a_follow_up_file_the_task_in_waiting_on() {
+    let fixture = Fixture::new();
+    let task = fixture.add(PROJECTS, "Contract signed", None);
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "kanban_column": "today" }),
+    );
+
+    let updated = fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "waiting_on": "  Sam ", "follow_up_at": "2026-10-08 14:00" }),
+    );
+    assert_eq!(updated["waiting_on"], json!("Sam"));
+    assert!(
+        updated["follow_up_at"]
+            .as_str()
+            .is_some_and(|at| at.starts_with("2026-10-08 14:00"))
+    );
+    let column: Option<String> = fixture.scalar(
+        "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?1",
+        &task,
+    );
+    assert_eq!(column.as_deref(), Some("waiting-on"));
+    let stored: Option<String> = fixture.scalar(
+        "SELECT waitingFollowUpAt FROM task_metadata WHERE taskId = ?1",
+        &task,
+    );
+    assert!(stored.is_some_and(|at| at.ends_with(":00.000")));
+
+    // Null clears the tag and leaves the time and the column.
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": task, "waiting_on": null }),
+    );
+    let tag: Option<String> = fixture.scalar(
+        "SELECT waitingOn FROM task_metadata WHERE taskId = ?1",
+        &task,
+    );
+    assert_eq!(tag, None);
+
+    let error = fixture
+        .try_call(
+            "workspace_task_update",
+            json!({ "task_id": task, "follow_up_at": "soonish" }),
+        )
+        .unwrap_err();
+    assert!(error.contains("2026-10-08 14:00"), "{error}");
+}
+
+#[test]
 fn completing_a_source_task_ends_the_habits_made_from_it() {
     let fixture = Fixture::new();
     let source = fixture.add(PROJECTS, "Learn drums", None);

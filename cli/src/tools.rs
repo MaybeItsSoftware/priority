@@ -406,6 +406,13 @@ impl Tools {
                         None | Some(Value::Null) => None,
                         value => Some(as_bool(value, false)?),
                     },
+                    // Present-but-null (or empty) clears; absent leaves it.
+                    waiting_on: arguments
+                        .get("waiting_on")
+                        .map(|value| as_string(Some(value))),
+                    follow_up_at: arguments
+                        .get("follow_up_at")
+                        .map(|value| as_string(Some(value))),
                 };
                 Ok(outcome(
                     "Task updated",

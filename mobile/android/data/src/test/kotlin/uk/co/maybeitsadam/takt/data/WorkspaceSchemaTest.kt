@@ -56,10 +56,11 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(19, migrations.size)
+            assertEquals(20, migrations.size)
             assertTrue(WorkspaceSchema.V17_SYNC in migrations)
             assertTrue(WorkspaceSchema.V18_THEMES_AND_PREFERENCES in migrations)
             assertTrue(WorkspaceSchema.V19_HABIT_OPTIONS in migrations)
+            assertTrue(WorkspaceSchema.V20_WAITING_FOLLOW_UPS in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -83,6 +84,41 @@ class WorkspaceSchemaTest {
         })
         reopened.close()
         dir.deleteRecursively()
+    }
+
+    /**
+     * An Android database made before v20 takes the four waiting columns on
+     * `task_metadata` and comes out as the v20 fixture, to the character.
+     */
+    @Test
+    fun aV19DatabaseUpgradesToTheV20Fixture(): Unit = runBlocking {
+        val v20 = fixtureSchema()
+        val dir = Files.createTempDirectory("priority-v19").toFile()
+        val path = dir.resolve("priority.sqlite").path
+        val connection = BundledSQLiteDriver().open(path)
+        try {
+            for (statement in WorkspaceSchema.splitStatements(WorkspaceSchema.fixtureSQL())) connection.execSQL(statement)
+            for (op in listOf("insert", "update", "delete")) {
+                connection.execSQL("DROP TRIGGER change_log_task_metadata_$op")
+                connection.execSQL("DROP TRIGGER sync_outbox_task_metadata_$op")
+            }
+            for (column in listOf("waitingOn", "waitingFollowUpAt", "waitingFollowUpTaskId", "followUpOfTaskId")) {
+                connection.execSQL("ALTER TABLE task_metadata DROP COLUMN $column")
+            }
+            connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = '${WorkspaceSchema.V20_WAITING_FOLLOW_UPS}'")
+        } finally {
+            connection.close()
+        }
+
+        val upgraded = WorkspaceDatabase.open(path)
+        try {
+            assertEquals(v20, upgraded.read { schema(it) })
+            val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
+            assertEquals(WorkspaceSchema.V20_WAITING_FOLLOW_UPS, migrations.last())
+        } finally {
+            upgraded.close()
+            dir.deleteRecursively()
+        }
     }
 
     /**
