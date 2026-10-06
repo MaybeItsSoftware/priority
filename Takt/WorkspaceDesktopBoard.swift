@@ -428,18 +428,17 @@ struct WorkspaceKanbanCard: View {
     .background {
       ZStack {
         Rectangle().fill(isHovered ? theme.hover : theme.paper)
-        WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: hasKeyboard && isSelected, radius: 0)
+        WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: hasKeyboard && isSelected)
       }
     }
-    .onHover { isHovered = $0 }
+    .onHover { hovering in withAnimation(WorkspaceMotion.quick) { isHovered = hovering } }
     .overlay {
       // Rules above and below only: the card runs the column's full width, so
-      // side edges would double the hairlines between columns. Nothing when
-      // the selection is already drawing an edge — which it does only while
-      // it has the keyboard — so the card never carries two borders at once.
+      // side edges would double the hairlines between columns. The selection
+      // is an inset band with no edge of its own, so the rules stay under it.
       if isDropTargeted {
         Rectangle().strokeBorder(theme.primary, lineWidth: theme.emphasisBorder)
-      } else if !(isSelected && hasKeyboard) {
+      } else {
         VStack(spacing: 0) {
           Rectangle().fill(theme.border).frame(height: theme.hairline)
           Spacer(minLength: 0)

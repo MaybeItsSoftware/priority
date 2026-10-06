@@ -111,7 +111,10 @@ struct WorkspaceDesktopView: View {
           .onChange(of: model.selectedTaskID) { _, _ in model.cancelPendingTaskDeletion() }
       }
     }
-    .animation(.easeInOut(duration: 0.15), value: model.showsTimelineScreen)
+    .animation(WorkspaceMotion.quick, value: model.showsTimelineScreen)
+    // Switching outline, board, matrix or Today fades rather than cuts. Only
+    // the swap is animated: the pane's own reloads stay instant.
+    .animation(WorkspaceMotion.quick, value: model.viewMode)
     .focusSection()
     .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
   }

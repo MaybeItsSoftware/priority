@@ -47,24 +47,31 @@ struct WorkspaceSelectionBackground: View {
     return hasKeyboard ? WorkspaceSelection.cursorFill : 0
   }
 
-  /// A hairline in the focus colour while the keyboard is on the row, and
-  /// nothing otherwise — the way an editor's project panel marks its cursor.
-  /// A resting selection used to carry a primary edge too and the keyboard a
-  /// two-point ring, which drew every selected row as a box inside the pane;
-  /// the fill is what says "selected", the line only "and the keys land here".
-  private var border: Color { hasKeyboard ? theme.focusRing : .clear }
+  /// A hairline in the focus colour only for a cursor that is not on the
+  /// selection — the sidebar's, standing on a row that selects nothing — where
+  /// the fill alone could not tell it from a resting selection. A selected row
+  /// says "and the keys land here" with the stronger fill: a square band with
+  /// its own hairline, flush against a pane that already draws a focus border,
+  /// read as a box jammed inside a box.
+  private var border: Color { hasKeyboard && !isSelected ? theme.focusRing : .clear }
 
-  /// The row radius rather than the control one: a selection is the line
-  /// being chosen, full width of its pane, not a button inside it. Zero in
-  /// the built-ins, so the band and its keyboard hairline are square like
-  /// Zed's project panel; a theme can round them again.
+  /// How far the band sits in from the row's edges, so it never meets the
+  /// pane's border and lines up with the inset fields and chips around it.
+  static let inset: CGFloat = 4
+
+  /// Rounded like the controls beside it — the add field, the chips — and
+  /// inset from the row, so a selection is a soft band inside the pane rather
+  /// than a square cut across it. A theme with a row radius keeps its own.
   var body: some View {
-    let shape = RoundedRectangle(cornerRadius: radius ?? theme.rowRadius, style: .continuous)
+    let shape = RoundedRectangle(cornerRadius: radius ?? max(theme.rowRadius, theme.controlRadius), style: .continuous)
     shape
       .fill(theme.color(.primary, opacity: fill))
       .overlay(
         shape.strokeBorder(border, lineWidth: theme.hairline)
       )
+      .padding(.horizontal, Self.inset)
+      .padding(.vertical, 1)
+      .animation(WorkspaceMotion.quick, value: fill)
   }
 }
 

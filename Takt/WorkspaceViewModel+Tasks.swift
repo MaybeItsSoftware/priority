@@ -173,7 +173,7 @@ extension WorkspaceViewModel {
   }
 
   func toggleFold(of task: WorkspaceTask) {
-    setFolded(task, !isFolded(task))
+    WorkspaceMotion.animate { setFolded(task, !isFolded(task)) }
   }
 
   /// Folds or unfolds every branch of the outline on screen. Folding leaves
@@ -206,7 +206,7 @@ extension WorkspaceViewModel {
       return
     }
     if isFolded(task) {
-      setFolded(task, false)
+      WorkspaceMotion.animate { setFolded(task, false) }
     } else if let child = TaskOutlineFolding.firstChildID(of: task.id, in: outlineRows) {
       selectedTaskID = child
     }
@@ -220,7 +220,7 @@ extension WorkspaceViewModel {
       return
     }
     if outlineParentIDs.contains(task.id) && !isFolded(task) {
-      setFolded(task, true)
+      WorkspaceMotion.animate { setFolded(task, true) }
     } else if let parent = TaskOutlineFolding.parentID(of: task.id, in: outlineRows) {
       selectedTaskID = parent
     } else {
