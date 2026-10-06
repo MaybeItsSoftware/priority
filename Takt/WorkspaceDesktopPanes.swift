@@ -171,6 +171,7 @@ struct WorkspaceOutlineRow: View {
       if model.editingTaskTitleID == item.task.id {
         WorkspaceTaskTitleField(
           initialTitle: item.task.title,
+          caret: model.editingTaskTitleCaret,
           onCommit: { model.commitTaskTitleEdit(item.task, text: $0) },
           onCancel: { model.cancelTaskTitleEdit() })
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -265,6 +266,7 @@ struct WorkspaceFoldButton: View {
 struct WorkspaceTaskTitleField: View {
   @Environment(\.theme) private var theme
   let initialTitle: String
+  var caret: WorkspaceTitleCaret = .selectAll
   let onCommit: (String) -> Void
   let onCancel: () -> Void
 
@@ -272,8 +274,12 @@ struct WorkspaceTaskTitleField: View {
   @State private var didFinish = false
   @FocusState private var isFocused: Bool
 
-  init(initialTitle: String, onCommit: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
+  init(
+    initialTitle: String, caret: WorkspaceTitleCaret = .selectAll,
+    onCommit: @escaping (String) -> Void, onCancel: @escaping () -> Void
+  ) {
     self.initialTitle = initialTitle
+    self.caret = caret
     self.onCommit = onCommit
     self.onCancel = onCancel
     _text = State(initialValue: initialTitle)
@@ -300,9 +306,21 @@ struct WorkspaceTaskTitleField: View {
         .strokeBorder(theme.focusRing, lineWidth: theme.hairline))
     .onAppear { isFocused = true }
     .onChange(of: isFocused) { wasFocused, nowFocused in
+      if nowFocused { placeCaret() }
       if wasFocused && !nowFocused { commit() }
     }
     .onDisappear { commit() }
+  }
+
+  /// SwiftUI selects a field's text on focus and has no say over the cursor,
+  /// so `ea` and `ei` move it on the field editor once it is in place.
+  private func placeCaret() {
+    guard caret != .selectAll else { return }
+    let location = caret == .end ? (text as NSString).length : 0
+    DispatchQueue.main.async {
+      (NSApp.keyWindow?.firstResponder as? NSTextView)?
+        .setSelectedRange(NSRange(location: location, length: 0))
+    }
   }
 
   private func commit() {

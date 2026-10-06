@@ -16,12 +16,13 @@ import Foundation
 public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   // Go
   case goToday, goBoard, goOutline, goMatrix, goEverything, goFocus, goTimeline
+  case goPreviousList, goNextList
   case goListNavigator, goSearch, goCommandPalette, goKeyboardReference
   case goSidebarRegion, goTaskRegion, goInspectorRegion, goCycleRegion
 
   // Task
   case taskNew, taskNewAbove, taskNewChild, taskComplete, taskInvalidate, taskDelete
-  case taskRename, taskEditDue, taskEditNotes, taskEditTags, taskEditRecurrence
+  case taskRename, taskRenameAppend, taskRenameInsert, taskEditDue, taskEditNotes, taskEditTags, taskEditRecurrence
   case taskEditStart, taskEditEstimate
   case taskDueToday, taskDueTomorrow, taskClearDue, taskClearNotes, taskClearTags
   case taskClearPriority, taskToggleDaily, taskHabit, taskWaiting, taskTogglePlannedToday, taskStartFocus, taskMove

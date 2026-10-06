@@ -78,7 +78,8 @@ something you already have to know.
 | `Cmd+↑` / `Cmd+↓` | First / last task |
 | `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) — on Today, earlier or later in the day |
 | `Alt+←` / `Alt+→` | Outdent / indent the task — out of, or under, the task above |
-| `Shift+Alt+←` / `Shift+Alt+→` | Move the card a board column left / right |
+| `Cmd+←` / `Cmd+→`, or `Shift+Alt+←` / `Shift+Alt+→` | Move the card a board column left / right (in the outline `Cmd+←` / `Cmd+→` still fold and unfold everything) |
+| `Cmd+Alt+←` / `Cmd+Alt+→`, or `Cmd+{` / `Cmd+}` | The list above / below in the sidebar — Zed's previous / next tab |
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |
 | `Ctrl+T` | Plan the task for today, or take it off |
 | `hh` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
@@ -155,7 +156,8 @@ priority 1.
 
 The same endings work when you **edit a title in place**. In the outline,
 `F2`, `ee` or a click on the task already selected turns its title into a field
-in the row, as in Checkvist: type ` ^fri !2` after the title and Return, and the
+in the row, as in Checkvist; `ea` starts typing at the end of the title and `ei`
+at the start, as vim's `a` and `i` do: type ` ^fri !2` after the title and Return, and the
 title stays as it was while the due day and priority change. Tags are added to
 the ones the task has. Escape puts the title back; clicking away saves.
 

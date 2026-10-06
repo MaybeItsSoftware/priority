@@ -493,6 +493,9 @@ enum WorkspaceSidebarItem: Identifiable {
   var renamingSidebarItemID: String?
   /// The outline task whose title is being edited in its own row.
   var editingTaskTitleID: String?
+  /// Where that edit puts the cursor: `ee` selects the title, `ea` and `ei`
+  /// type after or before it.
+  var editingTaskTitleCaret: WorkspaceTitleCaret = .selectAll
   var pendingSidebarDeletion: WorkspaceSidebarItem?
   /// A task a delete key has asked to remove, waiting for Return. Held by id
   /// so a task that disappears meanwhile simply has nothing left to confirm.

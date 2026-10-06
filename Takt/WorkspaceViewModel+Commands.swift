@@ -80,6 +80,8 @@ extension WorkspaceViewModel {
     rememberRun(id, key: key)
     switch id {
     // MARK: Go
+    case .goPreviousList: selectAdjacentList(by: -1)
+    case .goNextList: selectAdjacentList(by: 1)
     case .goToday: goToMode(.today)
     case .goBoard: goToMode(.board)
     case .goOutline: goToMode(.outline)
@@ -111,6 +113,8 @@ extension WorkspaceViewModel {
     case .taskInvalidate: if let task = selectedTask { invalidateTask(task) }
     case .taskDelete: requestSelectedTaskDeletion()
     case .taskRename: editSelectedTaskTitle()
+    case .taskRenameAppend: editSelectedTaskTitle(caret: .end)
+    case .taskRenameInsert: editSelectedTaskTitle(caret: .start)
     case .taskEditDue: quickEdit(.due)
     case .taskEditNotes: quickEdit(.notes)
     case .taskEditTags: quickEdit(.tags)

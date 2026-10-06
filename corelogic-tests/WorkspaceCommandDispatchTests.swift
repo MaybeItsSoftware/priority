@@ -174,7 +174,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertEqual(
       WorkspaceCommandCatalog.sequences(on: .outline),
       [
-        "ee", "dd", "nn", "tt", "mm", "ll", "uu", "td", "tm", "cd", "cn", "ct",
+        "ee", "ea", "ei", "dd", "nn", "tt", "mm", "ll", "uu", "td", "tm", "cd", "cn", "ct",
         "dr", "hc", "hh", "ww", "gh", "sd", "oo", "pc", "xx", "gg", "za",
       ])
     let written = Set(
@@ -265,5 +265,31 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
         }
       }
     }
+  }
+
+  /// Zed's previous and next tab move between lists. ⌘{ arrives as Shift-[
+  /// with Command held, so it is spelled with the brace the key produces.
+  func testZedsTabKeysMoveBetweenLists() {
+    let brace = WorkspaceCommandCatalog.key(
+      keyCode: 33, charactersIgnoringModifiers: "{", shift: true, ctrl: false, cmd: true, option: false)
+    XCTAssertEqual(brace, "cmd+shift+{")
+    for surface in [WorkspaceCommandSurface.outline, .board, .sidebar] {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+shift+{", on: surface)?.id, .goPreviousList)
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+shift+}", on: surface)?.id, .goNextList)
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+option+left", on: surface)?.id, .goPreviousList)
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+option+right", on: surface)?.id, .goNextList)
+    }
+  }
+
+  /// ⌘← and ⌘→ move a card on the board, and still fold in the outline.
+  func testCommandArrowsMoveACardOnlyOnTheBoard() {
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+left", on: .board)?.id, .planBoardMoveCardLeft)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+right", on: .board)?.id, .planBoardMoveCardRight)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+left", on: .outline)?.id, .planFoldAll)
+  }
+
+  func testEaAndEiEditAtTheEndAndTheStart() {
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "ea", on: .outline)?.id, .taskRenameAppend)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "ei", on: .outline)?.id, .taskRenameInsert)
   }
 }

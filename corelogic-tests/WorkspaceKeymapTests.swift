@@ -67,7 +67,7 @@ final class WorkspaceKeymapTests: XCTestCase {
   func testAContextBindingBeatsTheSurfacesOwnRow() {
     let (bindings, _) = resolve(#"[{"context": "board", "bindings": {"option+shift+left": "taskOutdent"}}]"#)
     XCTAssertEqual(bindings.command(forKey: "option+shift+left", on: .board)?.id, .taskOutdent)
-    XCTAssertEqual(bindings.byID[.planBoardMoveCardLeft]?.keys, [])
+    XCTAssertEqual(bindings.byID[.planBoardMoveCardLeft]?.keys, ["cmd+left"])
   }
 
   func testASequenceCanBeBoundAndIsThenHeld() {

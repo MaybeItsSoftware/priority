@@ -29,7 +29,7 @@ public enum WorkspaceCommandCatalog {
     [.taskComplete, .taskInvalidate, .taskStartFocus, .taskDelete],
     [.taskNewAbove, .taskNewChild],
     [
-      .taskRename, .taskEditDue, .taskEditStart, .taskEditEstimate, .taskEditNotes,
+      .taskRename, .taskRenameAppend, .taskRenameInsert, .taskEditDue, .taskEditStart, .taskEditEstimate, .taskEditNotes,
       .taskEditTags, .taskEditRecurrence,
     ],
     [.taskDueToday, .taskDueTomorrow, .taskClearDue, .taskClearNotes, .taskClearTags],
@@ -43,6 +43,14 @@ public enum WorkspaceCommandCatalog {
 
   private static let go: [WorkspaceCommand] = [
     .init(id: .goToday, title: "Go to Today", group: "Go", keys: ["cmd+1"]),
+    // Zed's keys for the previous and next tab (`pane::ActivatePreviousItem`
+    // and `ActivateNextItem`); a list is what a tab is here.
+    .init(
+      id: .goPreviousList, title: "Go to the list above", group: "Go",
+      keys: ["cmd+option+left", "cmd+shift+{"]),
+    .init(
+      id: .goNextList, title: "Go to the list below", group: "Go",
+      keys: ["cmd+option+right", "cmd+shift+}"]),
     .init(id: .goBoard, title: "Go to Board", group: "Go", keys: ["cmd+2"]),
     .init(id: .goOutline, title: "Go to Outline", group: "Go", keys: ["cmd+3"]),
     .init(id: .goMatrix, title: "Go to Matrix", group: "Go", keys: ["cmd+4"]),
@@ -100,6 +108,12 @@ public enum WorkspaceCommandCatalog {
       id: .taskDelete, title: "Delete the task", group: "Task", keys: ["delete", "cmd+delete", "cmd+shift+k"],
       note: "Takes its subtasks with it. ⇧⌘K is Zed's delete line"),
     .init(id: .taskRename, title: "Rename the task", group: "Task", keys: ["ee", "f2", "cmd+ctrl+e"]),
+    .init(
+      id: .taskRenameAppend, title: "Edit the title, typing at the end", group: "Task", keys: ["ea"],
+      note: "Like vim's a: the cursor lands after the last character"),
+    .init(
+      id: .taskRenameInsert, title: "Edit the title, typing at the start", group: "Task", keys: ["ei"],
+      note: "Like vim's i: the cursor lands before the first character"),
     .init(id: .taskEditDue, title: "Edit the due date", group: "Task", keys: ["dd", "cmd+d"]),
     .init(id: .taskEditNotes, title: "Edit the notes", group: "Task", keys: ["nn", "cmd+ctrl+n"]),
     .init(id: .taskEditTags, title: "Edit the tags", group: "Task", keys: ["tt", "cmd+ctrl+t"]),
@@ -158,11 +172,11 @@ public enum WorkspaceCommandCatalog {
     // left alone: macOS gives ⌃ and the arrows to Spaces and Mission Control.
     .init(
       id: .taskIndent, title: "Indent the task", group: "Task",
-      keys: ["tab", "option+right", "cmd+option+right"],
+      keys: ["tab", "option+right"],
       note: "Under the task above it"),
     .init(
       id: .taskOutdent, title: "Outdent the task", group: "Task",
-      keys: ["shift+tab", "option+left", "cmd+option+left"]),
+      keys: ["shift+tab", "option+left"]),
     // ⌥↑ and ⌥↓ are Zed's move line; ⌘↑ and ⌘↓ go to the ends, as they do
     // in an editor.
     // On Today there are no siblings to move among, so they arrange the day.
@@ -208,10 +222,10 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+shift+c"], surface: .board),
     .init(
       id: .planBoardMoveCardLeft, title: "Move the card a column left", group: "Plan",
-      keys: ["option+shift+left"], surface: .board),
+      keys: ["cmd+left", "option+shift+left"], surface: .board),
     .init(
       id: .planBoardMoveCardRight, title: "Move the card a column right", group: "Plan",
-      keys: ["option+shift+right"], surface: .board),
+      keys: ["cmd+right", "option+shift+right"], surface: .board),
     .init(
       id: .planBoardRemoveColumn, title: "Remove this board column", group: "Plan",
       keys: ["cmd+ctrl+c"], surface: .board,

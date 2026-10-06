@@ -193,9 +193,10 @@ extension WorkspaceViewModel {
 
   /// `ee`/F2: in the outline the title turns into a field in its own row,
   /// the way Checkvist edits; elsewhere the quick-edit overlay does the job.
-  func editSelectedTaskTitle() {
+  func editSelectedTaskTitle(caret: WorkspaceTitleCaret = .selectAll) {
     if keyboardFocusArea == .sidebar { beginRenamingSelection(); return }
     if viewMode == .outline, let task = selectedTask, outlineRows.contains(where: { $0.id == task.id }) {
+      editingTaskTitleCaret = caret
       editingTaskTitleID = task.id
     } else {
       quickEdit(.title)
@@ -276,5 +277,30 @@ private enum CursorStep {
     case "end", "cmd+down", "shift+g": self = .last
     default: return nil
     }
+  }
+}
+
+/// Where an in-row title edit starts typing.
+enum WorkspaceTitleCaret {
+  case selectAll, start, end
+}
+
+extension WorkspaceViewModel {
+  /// ⌥⌘← / ⌥⌘→ and ⌘{ / ⌘}, Zed's previous and next tab: the list above or
+  /// below in the sidebar, folders opened through. From Today, Everything or
+  /// a folder there is no current list, so it starts at either end.
+  func selectAdjacentList(by offset: Int) {
+    let ordered = listsInSidebarOrder
+    guard !ordered.isEmpty else { return }
+    let current = (isEverythingSelected || selectedFolderID != nil)
+      ? nil : ordered.firstIndex { $0.id == selectedListID }
+    let target: Int
+    if let current {
+      target = min(max(0, current + offset), ordered.count - 1)
+      guard target != current else { return }
+    } else {
+      target = offset > 0 ? 0 : ordered.count - 1
+    }
+    selectList(ordered[target].id)
   }
 }
