@@ -219,7 +219,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         guard let key = event.workspaceCommandKey,
           WorkspaceCommandCatalog.reachesIntoTextField(key, on: self.workspace.commandSurface)
         else {
-          return event
+          return self.keepInField(event, in: window) ? nil : event
         }
       }
       return self.workspace.handleDesktopKey(event) ? nil : event
@@ -259,6 +259,25 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       return content.bounds.contains(content.convert(event.locationInWindow, from: nil))
         ? nil : event
     }
+  }
+
+  /// Hands a chord the menu bar would otherwise take straight to the field
+  /// being typed in.
+  ///
+  /// Menu shortcuts are matched before the focused view sees the key, so the
+  /// Task menu's ⌘⌫ asked to delete the selected task while you were clearing
+  /// a line, and its ⌥← ⌥→ indented a task instead of moving the cursor a
+  /// word. Inside a field those keys are the field's. Undo and redo keep their
+  /// own menu items, which already know about fields.
+  private func keepInField(_ event: NSEvent, in window: NSWindow) -> Bool {
+    guard let key = event.workspaceCommandKey,
+      !event.modifierFlags.isDisjoint(with: [.command, .option, .control]),
+      let command = WorkspaceCommandCatalog.command(forKey: key, on: workspace.commandSurface),
+      command.id != .windowUndo, command.id != .windowRedo,
+      let editor = window.firstResponder as? NSTextView
+    else { return false }
+    editor.keyDown(with: event)
+    return true
   }
 
   private func isEditingText(in window: NSWindow) -> Bool {
