@@ -36,7 +36,7 @@ public enum WorkspaceCommandCatalog {
     [.taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown],
     [.taskMoveToPreviousList, .taskMoveToNextList, .taskMove],
     [.taskConvertToList, .taskPromoteList, .taskExtractBranch],
-    [.taskTogglePlannedToday, .taskToggleDaily, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
+    [.taskTogglePlannedToday, .taskToggleDaily, .taskHabit, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
   ]
 
   // MARK: - Go
@@ -117,6 +117,11 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .taskToggleDaily, title: "Commit to this daily, or stop", group: "Task",
       keys: ["cmd+shift+d"], note: "A requirement to contribute to it every day"),
+    // `hh` sits beside `hc`, so `h` was already held for a sequence.
+    .init(
+      id: .taskHabit, title: "Make a habit from the task, or edit its habit", group: "Task",
+      keys: ["hh", "cmd+shift+h"],
+      note: "How often, which column, an estimate, and when it ends. With nothing selected, a habit of its own"),
     // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T is
     // already "due today", which is a date rather than a choice.
     .init(

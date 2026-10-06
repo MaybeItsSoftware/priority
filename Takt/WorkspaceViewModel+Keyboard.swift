@@ -177,6 +177,20 @@ extension WorkspaceViewModel {
     presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: task, kind: kind)))
   }
 
+  /// The habit form, on the selected task: its habit if it has one, a new
+  /// habit made from it if not. With no task (or a list) selected, a
+  /// standalone habit.
+  func presentHabitForm() {
+    guard let store else { return }
+    let task = selectedTask.flatMap { $0.isList ? nil : $0 }
+    do {
+      let context = try store.habitFormContext(forTaskId: task?.id)
+      presentOverlay(.habit(WorkspaceHabitRequest(context: context)))
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
   func editSelectedTaskTitle() {
     if keyboardFocusArea == .sidebar { beginRenamingSelection() }
     else { quickEdit(.title) }

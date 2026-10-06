@@ -81,6 +81,7 @@ something you already have to know.
 | `Shift+Alt+←` / `Shift+Alt+→` | Move the card a board column left / right |
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |
 | `Ctrl+T` | Plan the task for today, or take it off |
+| `hh` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection in the outline and the matrix, into the list you are in elsewhere |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
@@ -163,7 +164,7 @@ after Return.
 ### Coming from Checkvist
 
 The desktop workspace supports Checkvist-style two-letter commands, including
-`uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll` and `hc`, plus native undo/redo in the
+`uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll`, `hc` and `hh`, plus native undo/redo in the
 Edit menu. Board arrows navigate every column, including empty ones, and
 `Up`/`Down` step through the subtask rows drawn on each card as well as the
 cards (folded cards are skipped over); `Space` completes the row you are on and
@@ -637,6 +638,34 @@ Recurring things you intend to do — habits, not tasks — sitting at the top o
 - **Two kinds of schedule.** Fixed weekdays (`Mon Wed Fri`, weekdays, weekends, every day) or a rotating cycle — every other day, every three days — counted from the day you set it. A cycle walks through the week, so it's the one for "water the plants", not "standup".
 - **Set the schedule as you type** from the menu in the add field, or edit any daily in full — day-by-day toggles, cycle length — in `Settings → Daily Log`.
 - **Rename in place with `a`, delete with `Delete`**, without leaving the checklist. Deleting *archives*: the row goes from today's list and from the editor, but every past day that ticked it still renders with its title rather than a raw id, and it can be restored from the Deleted list in `Settings → Daily Log`. That is why deleting needs no confirmation — nothing has been lost.
+
+### Habits
+
+`hh` (or `Cmd+Shift+H`) opens the habit form. On a task it makes a habit *from*
+that task — select "Learn drums" and save "Practise drums" — which goes into the
+Habits list with a daily attached, so everything above about dailies holds for
+it. On a task that already has a daily it edits that daily, and with nothing
+selected it makes a habit of its own.
+
+| Row | What it sets |
+| --- | --- |
+| Habit | The name, prefilled with the task's title |
+| How often | Every day, on chosen days (`1`–`7` toggle Mon–Sun), every N days (type N), or weekly — counted from the day you make it |
+| Appears in | The board column each appearance lands in: Today, This week or Waiting (the `today`, `this-week` and `waiting-on` columns) |
+| End of day | **Disappears**: a missed day is a gap. **Stays until done**: it is carried, in its column, until you tick it |
+| Estimate | `30m`, `1h`, `1h30` or minutes — each appearance's target, and the task's estimate |
+| Ends | **When the task is done** (the default for a habit made from a task), **on a date** (`2026-12-31`, `3w`, `friday`; it last appears the day before), or **never** |
+
+`Tab`, `Shift+Tab`, `↑` and `↓` move between rows, `←` and `→` change a choice,
+`Space` flips the end-of-day toggle, `Return` saves from any row and `Escape`
+cancels.
+
+Each day the app puts a due habit into its column and takes it out once it is
+ticked, dropped at the end of its day, or ended. `Space` on a habit ticks it
+for the day rather than completing it. A card you move to another column by
+hand is left where you put it. Completing the task a habit came from ends the
+habit straight away — undo brings it back — and the same is true when the
+task is completed from `takt` or an assistant.
 
 ### What the day records
 

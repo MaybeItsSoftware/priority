@@ -125,6 +125,7 @@ extension WorkspaceViewModel {
     case .taskClearPriority: editTaskValues { $0.priority = 0 }
     case .taskToggleDaily:
       if let task = selectedTask { setDailyProgressTask(task, enabled: !isDailyProgressTask(task)) }
+    case .taskHabit: presentHabitForm()
     case .taskTogglePlannedToday: togglePlannedTodayForSelection()
     case .taskStartFocus: focusSelectedTask()
     case .taskMove: requestMoveSelectedTask()
