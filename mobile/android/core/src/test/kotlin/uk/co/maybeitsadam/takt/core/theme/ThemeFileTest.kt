@@ -319,13 +319,11 @@ class ThemeFileTest {
     }
 
     @Test
-    fun prioritysPaletteIsWhatItsSeedsGrowApartFromRaised() {
+    fun prioritysPaletteIsTheHouseColoursExactly() {
+        // The default is Zed's colours on its own roomier structure: every
+        // role Zed names, with the same hex, in both appearances.
         for (appearance in ThemeAppearance.entries) {
-            val seeds = ThemeSeeds.implicitIn(priority.palette.table(appearance))
-            val grown = seeds.roles(appearance)!!
-            for ((role, value) in grown) {
-                // The default names its cards, so the dark one is a clear step above the page.
-                if (role == ThemeColorRole.RAISED) continue
+            for ((role, value) in chalk.palette.table(appearance)) {
                 assertEquals("${appearance.raw} ${role.raw}", value, priority.color(role, appearance))
             }
         }

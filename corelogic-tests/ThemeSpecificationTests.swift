@@ -283,7 +283,7 @@ final class ThemeSpecificationTests: XCTestCase {
   /// The default is set in the bundled Inter and Geist Mono, rounded and
   /// roomy, and its palette is the one its seeds grow — apart from `raised`,
   /// which it names so the dark card is a clear step above the page.
-  func testTheDefaultIsFriendlyRoundedAndGrownFromSeeds() {
+  func testTheDefaultIsRoundedAndInTheHouseColours() {
     let priority = BuiltInThemeSpecifications.priority
     XCTAssertEqual(priority.name, "Takt")
     let type = priority.structure.typography
@@ -295,20 +295,18 @@ final class ThemeSpecificationTests: XCTestCase {
     XCTAssertEqual(priority.structure.radius.control, 8)
     XCTAssertEqual(priority.structure.radius.shell, 18)
     XCTAssertGreaterThan(priority.structure.spacing.xl, BuiltInThemeSpecifications.chalk.structure.spacing.xl)
+    // The house colours, exactly: every role Zed names, with the same hex,
+    // in both appearances — the default differs from Zed in structure only.
+    let zed = BuiltInThemeSpecifications.chalk
     for appearance in ThemeAppearance.allCases {
-      let seeds = ThemeSeeds(implicitIn: priority.palette.table(appearance))
-      let grown = seeds.roles(in: appearance) ?? [:]
-      for (role, value) in grown where role != .raised {
+      for (role, value) in zed.palette.table(appearance) {
         XCTAssertEqual(priority.color(role, in: appearance), value, "\(appearance) \(role)")
       }
     }
-    // Paper in the light, a tinted slate in the dark: neither is white, black
-    // or a neutral grey.
-    let light = priority.color(.paper, in: .light)
-    XCTAssertGreaterThan(light.red, light.blue, "a warm page")
-    let dark = priority.color(.paper, in: .dark)
-    XCTAssertGreaterThan(dark.blue, dark.red, "a cool slate, not a flat grey")
-    XCTAssertGreaterThan(dark.red, 0.05, "not crushed to black")
+    XCTAssertEqual(priority.color(.paper, in: .light), ThemeColorValue(hex: "#faf8f4"))
+    XCTAssertEqual(priority.color(.ink, in: .light), ThemeColorValue(hex: "#444054"))
+    XCTAssertEqual(priority.color(.primary, in: .light), ThemeColorValue(hex: "#007fff"))
+    XCTAssertEqual(priority.color(.paper, in: .dark), ThemeColorValue(hex: "#1c1a23"))
     XCTAssertTrue(priority.validate().filter { $0.severity != .note }.isEmpty, "\(priority.validate())")
   }
 

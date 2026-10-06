@@ -46,14 +46,14 @@ struct WidgetTheme: Codable, Equatable, Sendable {
     identifier: "native.theme.priority",
     lockedAppearance: nil,
     light: [
-      "paper": "#f7f4ee", "raised": "#fffdf9", "well": "#e9e6e0", "border": "#dedbd6",
-      "ink": "#2a2622", "mutedText": "#5d5a55", "dimText": "#a9a6a0",
-      "primary": "#5b4fe0", "success": "#1a9c5b", "danger": "#e0444b", "warning": "#f2a20c",
+      "paper": "#faf8f4", "raised": "#ffffff", "well": "#edebef", "border": "#e6e4ea",
+      "ink": "#444054", "mutedText": "#6e6b7c", "dimText": "#b6b3bf",
+      "primary": "#007fff", "success": "#4cc38e", "danger": "#d62246", "warning": "#ffbf00",
     ],
     dark: [
-      "paper": "#191a23", "raised": "#23242f", "well": "#282932", "border": "#32333c",
-      "ink": "#ecedf3", "mutedText": "#b7b8bf", "dimText": "#696a72",
-      "primary": "#9b93ff", "success": "#3dd68c", "danger": "#ff6b6f", "warning": "#ffc53d",
+      "paper": "#1c1a23", "raised": "#25232f", "well": "#2d2b38", "border": "#34313f",
+      "ink": "#f5f4f7", "mutedText": "#b6b3bf", "dimText": "#6e6b7c",
+      "primary": "#007fff", "success": "#4cc38e", "danger": "#d62246", "warning": "#ffbf00",
     ],
     bodyFamily: "Inter", monoFamily: "Geist Mono", controlRadius: 10, hairline: 1)
 }

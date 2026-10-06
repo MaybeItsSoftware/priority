@@ -175,39 +175,38 @@ public enum BuiltInThemeSpecifications {
   /// editor. Shown as "Takt"; the identifier still says Priority because it
   /// is stored as people's choice and synced between devices.
   ///
-  /// - Light is paper: a warm off-white page, cards a whisker whiter and
-  ///   warmer above it, warm-grey hairlines and a deep warm charcoal ink.
-  /// - Dark is a tinted slate rather than black or flat grey, with cards a
-  ///   clear step lighter so the layers stay apart, and every accent lifted to
-  ///   a lighter tint so it reads on the dark page.
-  /// - One cheerful indigo-violet accent, and status hues saturated enough to
-  ///   be friendly rather than alarming.
+  /// - The house palette: chalk paper (`#faf8f4`) with white cards above it,
+  ///   grape ink (`#444054`) that tints every grey and hairline, and azure
+  ///   (`#007fff`) for actions, with emerald, raspberry and amber for status.
+  /// - Dark is the same grape pulled down (`#1c1a23`), never neutral grey, and
+  ///   the accents keep their hex.
   /// - Inter for everything read, Geist Mono for numerals and code; 12 on
   ///   cards, 8 on rows and what you press, and a more generous spacing scale
   ///   than the editor themes, which widens every gutter and row with it.
   ///
-  /// It is still made the way a theme file is meant to be: from seeds. The
-  /// neutrals are mixed from the page and the ink (see `ThemeSeeds`); only
-  /// `raised` is named, because a seeded card in the dark sits too close to
-  /// the page to read as a layer.
+  /// It is still made the way a theme file is meant to be: from seeds — the
+  /// page, the ink, the accent and the three status hues. The house palette
+  /// then names its own neutrals by hand (warm at the paper end, cool at the
+  /// ink end, the way paper is), and named roles win over grown ones, so it
+  /// is exactly Zed's colours on the default's roomier structure.
   public static let priority = ThemeSpecification(
     identifier: priorityIdentifier,
     name: "Takt",
     summary:
-      "The default. Friendly and roomy: rounded cards, Inter, a warm paper light mode and a deep slate dark one.",
+      "The default. Roomy and rounded, in the house colours: chalk paper, grape ink and an azure accent.",
     palette: ThemePalette(
       light: seeded(
         ThemeSeeds(
-          background: hex("#f7f4ee"), foreground: hex("#2a2622"), accent: hex("#5b4fe0"),
-          success: hex("#1a9c5b"), danger: hex("#e0444b"), warning: hex("#f2a20c")),
+          background: hex("#faf8f4"), foreground: hex("#444054"), accent: azure,
+          success: emerald, danger: raspberry, warning: amber),
         .light,
-        overrides: [.raised: hex("#fffdf9")]),
+        overrides: chalk.palette.light),
       dark: seeded(
         ThemeSeeds(
-          background: hex("#191a23"), foreground: hex("#ecedf3"), accent: hex("#9b93ff"),
-          success: hex("#3dd68c"), danger: hex("#ff6b6f"), warning: hex("#ffc53d")),
+          background: hex("#1c1a23"), foreground: hex("#f5f4f7"), accent: azure,
+          success: emerald, danger: raspberry, warning: amber),
         .dark,
-        overrides: [.raised: hex("#23242f")])),
+        overrides: chalk.palette.dark)),
     structure: ThemeStructure(
       radius: ThemeRadiusScale(panel: 12, row: 8, control: 8, pill: 9999, shell: 18),
       border: ThemeBorderScale(hairline: 1, emphasis: 2, focusRing: 2),

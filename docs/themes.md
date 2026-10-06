@@ -6,10 +6,10 @@ Mac, the iPhone and Android:
 
 - **Takt**, the default. Friendly and roomy, the way a modern app is: Inter
   with Geist Mono for numerals, 12px cards and 8px rows and controls, and a
-  more generous spacing scale. Light is warm paper with a deep charcoal ink;
-  dark is a tinted slate with cards a clear step above the page; one
-  indigo-violet accent. It is grown from seeds, so it is the easiest one to
-  make your own. Its identifier is still `native.theme.priority`, its old
+  more generous spacing scale, in the house colours: chalk paper (`#faf8f4`),
+  grape ink (`#444054`) and an azure accent (`#007fff`), with dark the same
+  grape pulled down (`#1c1a23`). It is grown from seeds, so it is the easiest
+  one to make your own. Its identifier is still `native.theme.priority`, its old
   name, because that is what people's saved choice says.
 - **Zed**, the Zed look: IBM Plex Sans and Lilex, square panels, hairlines,
   warm paper and grape ink. It was called Chalk, and its identifier still is
