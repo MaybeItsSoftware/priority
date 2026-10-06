@@ -140,13 +140,18 @@ internal fun ChoiceRow(title: String, selected: Boolean, detail: String? = null,
 @Composable
 private fun CelebrationSection(model: SettingsViewModel) {
     val style by model.celebration.collectAsStateWithLifecycle()
+    // Each choice, and Preview, plays the chosen celebration on a sample row.
+    var play by rememberSaveable { mutableStateOf(0) }
     Section("Completing a task") {
         CelebrationStyle.entries.forEachIndexed { index, option ->
             if (index > 0) Hairline(color = TaktTheme.colors.borderMuted)
             ChoiceRow(option.title, option == style, detail = option.detail, tag = "settings_celebration_${option.raw}") {
                 model.setCelebration(option)
+                play += 1
             }
         }
+        Hairline()
+        CelebrationPreview(style, play, onPreview = { play += 1 })
     }
 }
 

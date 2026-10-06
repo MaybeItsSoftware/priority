@@ -315,6 +315,7 @@ class ListViewModel(
 
     companion object {
         const val HIDE_COMPLETED = "outlineHidesCompleted"
-        private const val FOLD_DELAY_MILLIS = 450L
+        /** How long a finished row stays before the Fold celebration folds it away. */
+        internal const val FOLD_DELAY_MILLIS = 450L
     }
 }
