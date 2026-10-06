@@ -169,10 +169,21 @@ extension WorkspaceStore {
   /// consistent moment rather than one per list.
   public func listTrees(in listIds: [String]) throws -> [String: WorkspaceListTree] {
     guard !listIds.isEmpty else { return [:] }
+    // One query for every list rather than one each: the sidebar asks for
+    // all of them on every reload. Rows arrive in each list's order, so
+    // grouping keeps it.
+    let ids = Array(Set(listIds))
     return try database.read { db in
-      var result: [String: WorkspaceListTree] = [:]
-      for id in Set(listIds) { result[id] = try Self.listTree(db, listId: id) }
-      return result
+      var grouped: [String: [WorkspaceTask]] = Dictionary(uniqueKeysWithValues: ids.map { ($0, []) })
+      for start in stride(from: 0, to: ids.count, by: 500) {
+        let chunk = Array(ids[start..<min(start + 500, ids.count)])
+        let tasks = try WorkspaceTask.filter(chunk.contains(Column("listId")))
+          .order(Column("listId"), Column("sortOrder"), Column("createdAt")).fetchAll(db)
+        for task in tasks { grouped[task.listId, default: []].append(task) }
+      }
+      return Dictionary(uniqueKeysWithValues: grouped.map { id, tasks in
+        (id, WorkspaceListTree(listId: id, tasks: tasks))
+      })
     }
   }
 
