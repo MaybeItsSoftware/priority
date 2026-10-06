@@ -1,0 +1,3 @@
+# The service account key is passed to supply by the lane in Fastfile, from
+# PLAY_SERVICE_ACCOUNT_JSON (its contents) or PLAY_JSON_KEY_FILE (a path).
+package_name("uk.co.maybeitssoftware.takt")

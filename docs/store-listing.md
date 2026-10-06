@@ -130,3 +130,49 @@ upload; then copy Play's app-signing SHA-1 into its own Google OAuth Android
 client, or Google sign-in fails for store installs. The full set of clients,
 the Supabase provider settings and where the build reads the Web client id
 from are in [Google sign-in on Android](android-google-sign-in.md).
+
+## Releasing Android
+
+Both paths build with `scripts/build_play_bundle.sh` and upload with the
+fastlane lane `internal` in `mobile/android/fastlane/Fastfile`, which puts the
+bundle on the **internal** testing track as a completed release and leaves the
+listing, images and screenshots alone. versionCode is the commit count on
+`HEAD`; bump `versionName` in `mobile/android/app/build.gradle.kts` (or pass
+it) for each release. Play only accepts API uploads once the app exists and a
+first bundle has been uploaded by hand in the Console.
+
+Credentials are a Google Play service account key (Play Console → Users and
+permissions → invite the service account with release rights for Takt).
+
+**Locally**, with `mobile/android/keystore.properties` in place and Ruby with
+bundler installed:
+
+```bash
+./scripts/build_play_bundle.sh 0.3.0
+PLAY_JSON_KEY_FILE=~/path/to/play-service-account.json \
+  ./scripts/upload_play_internal.sh build/play/takt-0.3.0-<versionCode>.aab
+```
+
+`PLAY_SERVICE_ACCOUNT_JSON` (the key's contents) works in place of
+`PLAY_JSON_KEY_FILE`. The script runs `bundle install` in `mobile/android`
+the first time and refuses to start without one of the two.
+
+**In CI**, run *Android internal testing*
+(`.github/workflows/android-internal.yml`) from the Actions tab, optionally
+with a versionName; or `gh workflow run android-internal.yml -f version_name=0.3.0`.
+It rebuilds the upload keystore from secrets, runs the same build script on
+Ubuntu, keeps the `.aab` as a run artifact and uploads it.
+
+The repository secrets it reads (names only; `gh secret set NAME` prompts for
+the value, or pipe it in):
+
+```bash
+base64 -i mobile/android/<upload-keystore>.jks | gh secret set ANDROID_KEYSTORE_BASE64
+gh secret set KEYSTORE_PASSWORD
+gh secret set KEY_ALIAS
+gh secret set KEY_PASSWORD
+gh secret set PLAY_STORE_SERVICE_ACCOUNT_JSON < ~/path/to/play-service-account.json
+gh secret set TAKT_GOOGLE_WEB_CLIENT_ID   # optional; without it the Google button is hidden
+```
+
+The four keystore values are the ones in `mobile/android/keystore.properties`.

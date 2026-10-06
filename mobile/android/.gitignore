@@ -13,3 +13,7 @@ captures/
 keystore.properties
 *.jks
 *.keystore
+
+# fastlane gems installed by `bundle install` (mobile/android/Gemfile)
+.bundle/
+vendor/

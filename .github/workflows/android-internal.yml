@@ -1,0 +1,96 @@
+name: Android internal testing
+
+# Builds the signed bundle with scripts/build_play_bundle.sh, exactly as a
+# local release does, and uploads it to Play's internal testing track.
+# Run it from the Actions tab. docs/store-listing.md lists the secrets.
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "versionName (blank: the default in mobile/android/app/build.gradle.kts)"
+        required: false
+        default: ""
+
+concurrency:
+  group: android-internal
+  cancel-in-progress: false
+
+jobs:
+  internal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # versionCode is the commit count on HEAD; a shallow clone would make it 1.
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Ruby + fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: mobile/android
+
+      - name: Write keystore.properties
+        working-directory: mobile/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          for name in ANDROID_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::secret $name is not set"; exit 1; fi
+          done
+          echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > upload-keystore.jks
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Build signed bundle
+        env:
+          # Optional: without it the build hides the Google sign-in button.
+          TAKT_GOOGLE_WEB_CLIENT_ID: ${{ secrets.TAKT_GOOGLE_WEB_CLIENT_ID }}
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          if [ -n "$VERSION_NAME" ]; then
+            ./scripts/build_play_bundle.sh "$VERSION_NAME"
+          else
+            ./scripts/build_play_bundle.sh
+          fi
+          aab="$(ls -t build/play/*.aab | head -1)"
+          echo "AAB=$aab" >> "$GITHUB_ENV"
+
+      - name: Keep the bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: takt-play-bundle
+          path: ${{ env.AAB }}
+          retention-days: 30
+
+      - name: Upload to Play (internal)
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+        run: ./scripts/upload_play_internal.sh "$AAB"
+
+      - name: Remove signing material
+        if: always()
+        working-directory: mobile/android
+        run: rm -f upload-keystore.jks keystore.properties

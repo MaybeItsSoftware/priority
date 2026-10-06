@@ -1,0 +1,41 @@
+# Uploads a bundle built by scripts/build_play_bundle.sh. Building stays in that
+# script so the local path and CI sign, test and version the same way; this
+# file only talks to Play. scripts/upload_play_internal.sh is the local entry.
+
+APP_ID = "uk.co.maybeitssoftware.takt"
+
+platform :android do
+  desc "Upload a signed .aab to the internal testing track"
+  desc "  bundle exec fastlane android internal aab:/path/to/takt-0.3.0-1234.aab"
+  lane :internal do |options|
+    aab = options[:aab]
+    UI.user_error!("pass aab:/path/to/bundle.aab (from scripts/build_play_bundle.sh)") if aab.to_s.empty?
+    aab = File.expand_path(aab)
+    UI.user_error!("no such bundle: #{aab}") unless File.exist?(aab)
+
+    upload_to_play_store(
+      package_name:            APP_ID,
+      track:                   "internal",
+      aab:                     aab,
+      release_status:          "completed",
+      **play_credentials,
+      skip_upload_apk:         true,
+      skip_upload_metadata:    true,
+      skip_upload_changelogs:  true,
+      skip_upload_images:      true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  # The key's contents (CI, from the PLAY_STORE_SERVICE_ACCOUNT_JSON secret)
+  # win over a path to it (a local machine).
+  def play_credentials
+    json = ENV["PLAY_SERVICE_ACCOUNT_JSON"].to_s
+    return { json_key_data: json } unless json.strip.empty?
+
+    file = ENV["PLAY_JSON_KEY_FILE"].to_s
+    return { json_key: File.expand_path(file) } unless file.strip.empty?
+
+    UI.user_error!("set PLAY_SERVICE_ACCOUNT_JSON (the key's JSON) or PLAY_JSON_KEY_FILE (a path to it)")
+  end
+end
