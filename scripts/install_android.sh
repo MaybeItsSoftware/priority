@@ -40,5 +40,5 @@ if ! "$adb" install -r "$apk"; then
   "$adb" uninstall uk.co.maybeitssoftware.takt >/dev/null || true
   "$adb" install "$apk"
 fi
-"$adb" shell am start -n uk.co.maybeitssoftware.takt/uk.co.maybeitsadam.priority.MainActivity >/dev/null
+"$adb" shell am start -n uk.co.maybeitssoftware.takt/uk.co.maybeitsadam.takt.MainActivity >/dev/null
 echo "Installed."
