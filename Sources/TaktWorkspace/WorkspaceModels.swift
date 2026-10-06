@@ -127,13 +127,13 @@ public struct TaskMetadata: Codable, FetchableRecord, PersistableRecord, Sendabl
   public var updatedAt: Date
   public var planningJSON: String?
   /// Who or what a waiting task waits on: "Sam", "Legal", "invoice".
-  public var waitingOn: String? = nil
+  public var waitingOn: String?
   /// When to chase a waiting task. See `WaitingFollowUp`.
-  public var waitingFollowUpAt: Date? = nil
+  public var waitingFollowUpAt: Date?
   /// The follow-up task already made for this one, so it is made once.
-  public var waitingFollowUpTaskId: String? = nil
+  public var waitingFollowUpTaskId: String?
   /// On a follow-up task: the waiting task it chases.
-  public var followUpOfTaskId: String? = nil
+  public var followUpOfTaskId: String?
 
   public init(
     taskId: String,
