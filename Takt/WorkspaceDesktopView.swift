@@ -166,7 +166,10 @@ struct WorkspaceDesktopView: View {
       ),
       presenting: model.pendingSidebarDeletion
     ) { _ in
+      // Return confirms, as it does for a task: the key that asked to delete
+      // is already under your hand, and Esc is still there to back out.
       Button("Delete", role: .destructive) { model.confirmPendingSidebarDeletion() }
+        .keyboardShortcut(.defaultAction)
       Button("Cancel", role: .cancel) {}
     } message: { item in
       Text(item.deletionMessage)
