@@ -1,6 +1,6 @@
 import Foundation
 import TaktCore
-import TaktWorkspace
+@testable import TaktWorkspace
 import XCTest
 
 /// A task typed with its details, and a day planned and arranged by hand.
@@ -122,5 +122,15 @@ final class WorkspaceTodayTests: XCTestCase {
     try store.setPlannedForToday(true, taskIds: [email.id])
     // Back at the end of the day, behind the task that kept its place.
     XCTAssertEqual(try plannedOrder(), [report.id, email.id])
+  }
+
+  func testWaitColonFilesTheTaskInWaitingOnInOneStep() throws {
+    let task = try store.createTask(capturing: "Contract signed wait:Sam", listId: work.id)
+    XCTAssertEqual(task.title, "Contract signed")
+    XCTAssertEqual(try store.boardMetadata(for: [task.id]).columns[task.id], WaitingFollowUp.waitingColumnID)
+    let waitingOn = try store.database.read { db in try TaskMetadata.fetchOne(db, key: task.id)?.waitingOn }
+    XCTAssertEqual(waitingOn, "Sam")
+    _ = try store.undo()
+    XCTAssertNil(try store.task(id: task.id), "one undo removes the task and its waiting state together")
   }
 }

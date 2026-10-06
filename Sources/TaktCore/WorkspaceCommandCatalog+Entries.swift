@@ -43,14 +43,19 @@ public enum WorkspaceCommandCatalog {
 
   private static let go: [WorkspaceCommand] = [
     .init(id: .goToday, title: "Go to Today", group: "Go", keys: ["cmd+1"]),
-    // Zed's keys for the previous and next tab (`pane::ActivatePreviousItem`
-    // and `ActivateNextItem`); a list is what a tab is here.
+    // Up and down the sidebar's lists without going to the sidebar, and
+    // Zed's previous / next tab (`cmd-{` / `cmd-}`), a list being what a tab is.
     .init(
       id: .goPreviousList, title: "Go to the list above", group: "Go",
-      keys: ["cmd+option+left", "cmd+shift+{"]),
+      keys: ["cmd+option+up", "cmd+shift+{"]),
     .init(
       id: .goNextList, title: "Go to the list below", group: "Go",
-      keys: ["cmd+option+right", "cmd+shift+}"]),
+      keys: ["cmd+option+down", "cmd+shift+}"]),
+    // Zed's `pane::GoBack` / `GoForward`: the lists you were just in.
+    .init(
+      id: .goBack, title: "Back to the list you were in", group: "Go", keys: ["ctrl+-"],
+      note: "Like a browser's back: again goes further back"),
+    .init(id: .goForward, title: "Forward again", group: "Go", keys: ["ctrl+shift+-"]),
     .init(id: .goBoard, title: "Go to Board", group: "Go", keys: ["cmd+2"]),
     .init(id: .goOutline, title: "Go to Outline", group: "Go", keys: ["cmd+3"]),
     .init(id: .goMatrix, title: "Go to Matrix", group: "Go", keys: ["cmd+4"]),
@@ -172,11 +177,11 @@ public enum WorkspaceCommandCatalog {
     // left alone: macOS gives ⌃ and the arrows to Spaces and Mission Control.
     .init(
       id: .taskIndent, title: "Indent the task", group: "Task",
-      keys: ["tab", "option+right"],
+      keys: ["tab", "option+right", "cmd+option+right"],
       note: "Under the task above it"),
     .init(
       id: .taskOutdent, title: "Outdent the task", group: "Task",
-      keys: ["shift+tab", "option+left"]),
+      keys: ["shift+tab", "option+left", "cmd+option+left"]),
     // ⌥↑ and ⌥↓ are Zed's move line; ⌘↑ and ⌘↓ go to the ends, as they do
     // in an editor.
     // On Today there are no siblings to move among, so they arrange the day.

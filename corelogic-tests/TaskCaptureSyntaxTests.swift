@@ -127,4 +127,13 @@ final class TaskCaptureSyntaxTests: XCTestCase {
     XCTAssertEqual(parse("Book flights @2026-10-02").detailLabels(now: now, calendar: calendar), ["Fri 2 Oct"])
     XCTAssertEqual(parse("Renew passport @2027-03-01").detailLabels(now: now, calendar: calendar), ["1 Mar 2027"])
   }
+
+  func testWaitColonFilesItAsWaitingOnSomeone() {
+    let capture = parse("Contract signed wait:Sam ^fri")
+    XCTAssertEqual(capture.title, "Contract signed")
+    XCTAssertEqual(capture.waitingOn, "Sam")
+    XCTAssertEqual(capture.dueAt, date(2026, 10, 2))
+    XCTAssertEqual(parse("Can't wait").title, "Can't wait", "a bare word is never a token")
+    XCTAssertNil(parse("Ask wait:").waitingOn)
+  }
 }

@@ -82,6 +82,8 @@ extension WorkspaceViewModel {
     // MARK: Go
     case .goPreviousList: selectAdjacentList(by: -1)
     case .goNextList: selectAdjacentList(by: 1)
+    case .goBack: goBackInListHistory()
+    case .goForward: goForwardInListHistory()
     case .goToday: goToMode(.today)
     case .goBoard: goToMode(.board)
     case .goOutline: goToMode(.outline)
@@ -236,7 +238,7 @@ extension WorkspaceViewModel {
     case .motionSelectPage: if let key { moveTaskSelection(by: key == "pageup" ? -8 : 8) }
     case .motionSidebarSelect: if let key { moveSidebarCursor(key) }
     case .motionSidebarExpand:
-      if let key { activateSidebarCursor(expandOnly: key == "right" || key == "l") }
+      if let key { activateSidebarCursor(expandOnly: key == "right" || key == "l", enters: key == "enter") }
     case .motionSidebarCollapse: if key != nil { collapseSidebarCursor() }
     case .motionBoardColumn: if let key { focusAdjacentBoardColumn(by: key == "right" ? 1 : -1) }
     case .motionOutlineUnfold: if key != nil { unfoldOrDescendSelection() }

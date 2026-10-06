@@ -126,12 +126,21 @@ extension WorkspaceViewModel {
   ///
   /// A folder toggles or expands, and everything else hands the keyboard to
   /// the task surface — which is what a list row has always done.
-  func activateSidebarCursor(expandOnly: Bool) {
+  func activateSidebarCursor(expandOnly: Bool, enters: Bool = false) {
     guard let row = sidebarCursorRow else { return enterTaskSurfaceFromSidebar() }
     switch row.kind {
     case .folder(let id):
       guard let folder = folders.first(where: { $0.id == id }) else { return }
-      if expandOnly { setFolderExpanded(folder, expanded: true) } else { toggleFolderExpansion(folder) }
+      if expandOnly {
+        setFolderExpanded(folder, expanded: true)
+      } else if enters {
+        // Return goes into the folder: its lists' tasks together, with the
+        // keyboard on them, the way Return on a list goes into the list.
+        selectFolder(folder)
+        enterTaskSurfaceFromSidebar()
+      } else {
+        toggleFolderExpansion(folder)
+      }
     case .everything, .today, .list, .nestedList:
       enterTaskSurfaceFromSidebar()
     }

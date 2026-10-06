@@ -438,9 +438,13 @@ public final class WorkspaceStore: @unchecked Sendable {
     estimateSeconds: Int? = nil,
     tags: [String] = [],
     priority: Int? = nil,
+    waitingOn: String? = nil,
     now: Date = .now
   ) throws -> WorkspaceTask {
     let trimmed = try Self.nonEmptyName(title)
+    // Waiting on someone puts it in that column, as `setWaiting` does.
+    let waitingOn = WaitingFollowUp.normalizedTag(waitingOn)
+    let kanbanColumn = waitingOn != nil ? WaitingFollowUp.waitingColumnID : kanbanColumn
     // What the add field read off the end of the title, written in the same
     // undo step as the task: undoing a typed task should not leave its
     // estimate behind as a second step to undo first.
@@ -462,12 +466,13 @@ public final class WorkspaceStore: @unchecked Sendable {
         notes: "", status: .open, sortOrder: nextOrder, dueAt: dueAt, estimateSeconds: estimateSeconds,
         itemKind: kind, createdAt: now, updatedAt: now)
       try task.insert(db)
-      if kanbanColumn != nil || startAt != nil || !tags.isEmpty || priority != nil {
+      if kanbanColumn != nil || startAt != nil || !tags.isEmpty || priority != nil || waitingOn != nil {
         let tagsJSON = String(data: try JSONEncoder().encode(tags), encoding: .utf8) ?? "[]"
         try db.execute(sql: """
-          INSERT INTO task_metadata(taskId, priority, startAt, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
-          VALUES (?, ?, ?, ?, '[]', ?, ?)
-          """, arguments: [task.id, priority, startAt, tagsJSON, kanbanColumn, now])
+          INSERT INTO task_metadata(taskId, priority, startAt, tagsJSON, externalLinksJSON, kanbanColumn, waitingOn,
+            updatedAt)
+          VALUES (?, ?, ?, ?, '[]', ?, ?, ?)
+          """, arguments: [task.id, priority, startAt, tagsJSON, kanbanColumn, waitingOn, now])
       }
       if atTop || adjacentTaskId != nil {
         var siblings = try WorkspaceTask

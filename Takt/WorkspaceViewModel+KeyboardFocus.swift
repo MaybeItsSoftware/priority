@@ -110,3 +110,26 @@ extension WorkspaceViewModel {
     }
   }
 }
+
+@MainActor
+extension WorkspaceViewModel {
+  /// Tab in a draft row: the task being typed goes inside the one it was
+  /// to follow. Only in the outline, where depth is something you can see.
+  func indentTaskDraft() {
+    guard viewMode == .outline, taskInsertionReference != nil, !taskInsertionAbove else { return }
+    taskInsertionIsChild = true
+  }
+
+  /// ⇧Tab: back out a level — from inside the task above to beside it, and
+  /// from beside it to after its parent.
+  func outdentTaskDraft() {
+    guard viewMode == .outline, let reference = taskInsertionReference else { return }
+    if taskInsertionIsChild {
+      taskInsertionIsChild = false
+    } else if let parentID = reference.parentTaskId, parentID != scopeTaskID,
+      let parent = task(withID: parentID), outlineRows.contains(where: { $0.id == parentID }) {
+      taskInsertionReference = parent
+      taskInsertionAbove = false
+    }
+  }
+}

@@ -29,6 +29,6 @@ extension WorkspaceStore {
       listId: listId, title: capture.title, parentTaskId: parentTaskId, kanbanColumn: kanbanColumn,
       startAt: startAt, atTop: atTop, adjacentTaskId: adjacentTaskId, above: above,
       dueAt: capture.dueAt ?? defaultDueAt, estimateSeconds: capture.estimateSeconds, tags: capture.tags,
-      priority: capture.priority, now: now)
+      priority: capture.priority, waitingOn: capture.waitingOn, now: now)
   }
 }

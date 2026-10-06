@@ -304,3 +304,40 @@ extension WorkspaceViewModel {
     selectList(ordered[target].id)
   }
 }
+
+extension WorkspaceViewModel {
+  /// Records a move between lists for ⌃- / ⌃⇧- and for ⌘P's recent order.
+  func noteListVisit(leaving previous: String?, arriving id: String) {
+    guard previous != id else { return }
+    if !isWalkingListHistory {
+      if let previous { listBackStack.append(previous) }
+      if listBackStack.count > 50 { listBackStack.removeFirst(listBackStack.count - 50) }
+      listForwardStack.removeAll()
+    }
+    var recent = recentListIDs.filter { $0 != id }
+    recent.insert(id, at: 0)
+    recentListIDs = Array(recent.prefix(30))
+    UserDefaults.standard.set(recentListIDs, forKey: "workspaceRecentListsV1")
+  }
+
+  /// Zed's `pane::GoBack`, for lists: the one you were in before this one.
+  func goBackInListHistory() {
+    walkListHistory(from: &listBackStack, to: &listForwardStack)
+  }
+
+  func goForwardInListHistory() {
+    walkListHistory(from: &listForwardStack, to: &listBackStack)
+  }
+
+  private func walkListHistory(from source: inout [String], to destination: inout [String]) {
+    // Lists deleted since are skipped rather than ending the walk.
+    while let id = source.popLast() {
+      guard lists.contains(where: { $0.id == id }) else { continue }
+      if let current = selectedListID, !isMultiListScope { destination.append(current) }
+      isWalkingListHistory = true
+      selectList(id)
+      isWalkingListHistory = false
+      return
+    }
+  }
+}

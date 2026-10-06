@@ -283,7 +283,16 @@ struct WorkspaceListNavigator: View {
     }
     let all = lists + nested
     let query = query.trimmingCharacters(in: .whitespaces)
-    guard !query.isEmpty else { return all }
+    // With nothing typed, the lists you were last in come first — the one
+    // before this at the top, as Zed's file finder puts the last file — so
+    // ⌘P Return goes back. Then everything else in sidebar order.
+    guard !query.isEmpty else {
+      let rank = Dictionary(
+        model.recentListIDs.filter { $0 != currentID }.enumerated().map { ($1, $0) },
+        uniquingKeysWith: { first, _ in first })
+      let recent = all.filter { rank[$0.id] != nil }.sorted { rank[$0.id]! < rank[$1.id]! }
+      return recent + all.filter { rank[$0.id] == nil }
+    }
     let scored: [(Destination, Int)] = all.compactMap { destination in
       let title = WorkspaceCommandQuery.fuzzyScore(query, in: destination.title).map { $0 * 2 }
       let context = destination.context.flatMap { WorkspaceCommandQuery.fuzzyScore(query, in: $0) }

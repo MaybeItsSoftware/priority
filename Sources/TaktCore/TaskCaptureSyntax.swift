@@ -25,21 +25,25 @@ public struct TaskCapture: Equatable, Sendable {
   public var tags: [String]
   /// 1 to 4, the range the workspace stores.
   public var priority: Int?
+  /// Who it waits on, from `wait:Sam`: the task is filed in Waiting on with
+  /// that tag, as `ww` would put it there.
+  public var waitingOn: String?
 
   public init(
     title: String, estimateSeconds: Int? = nil, dueAt: Date? = nil, tags: [String] = [],
-    priority: Int? = nil
+    priority: Int? = nil, waitingOn: String? = nil
   ) {
     self.title = title
     self.estimateSeconds = estimateSeconds
     self.dueAt = dueAt
     self.tags = tags
     self.priority = priority
+    self.waitingOn = waitingOn
   }
 
   /// Whether anything beyond the title was found.
   public var hasDetails: Bool {
-    estimateSeconds != nil || dueAt != nil || !tags.isEmpty || priority != nil
+    estimateSeconds != nil || dueAt != nil || !tags.isEmpty || priority != nil || waitingOn != nil
   }
 
   /// Parses `text` as typed into an add field. See the type for the rules.
@@ -67,6 +71,9 @@ public struct TaskCapture: Equatable, Sendable {
       case .priority(let value):
         guard capture.priority == nil else { break scan }
         capture.priority = value
+      case .waiting(let name):
+        guard capture.waitingOn == nil else { break scan }
+        capture.waitingOn = name
       case .tag(let tag):
         // A repeated tag is harmless, so it is folded rather than ending the
         // scan — keeping the spelling and place of the first one typed.
@@ -90,6 +97,7 @@ public struct TaskCapture: Equatable, Sendable {
     if let dueAt { labels.append(Self.dueLabel(dueAt, now: now, calendar: calendar)) }
     labels += tags.map { "#\($0)" }
     if let priority { labels.append("!\(priority)") }
+    if let waitingOn { labels.append("waiting on \(waitingOn)") }
     return labels
   }
 
@@ -160,6 +168,7 @@ enum TaskCaptureToken: Equatable {
   case due(Date)
   case tag(String)
   case priority(Int)
+  case waiting(String)
 
   /// The longest estimate a token may set. Anything past a day is a typo or
   /// not an estimate — `48h` is more likely a deadline than a sitting.
@@ -178,6 +187,9 @@ enum TaskCaptureToken: Equatable {
       self = .tag(tag)
     } else if let value = Self.priority(lower) {
       self = .priority(value)
+    } else if lower.hasPrefix("wait:"), word.count > 5 {
+      // `wait:Sam` — the name keeps the case it was typed in.
+      self = .waiting(String(word.dropFirst(5)))
     } else {
       return nil
     }

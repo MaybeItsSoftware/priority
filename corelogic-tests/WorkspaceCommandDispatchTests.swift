@@ -276,8 +276,6 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     for surface in [WorkspaceCommandSurface.outline, .board, .sidebar] {
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+shift+{", on: surface)?.id, .goPreviousList)
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+shift+}", on: surface)?.id, .goNextList)
-      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+option+left", on: surface)?.id, .goPreviousList)
-      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+option+right", on: surface)?.id, .goNextList)
     }
   }
 
@@ -291,5 +289,18 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   func testEaAndEiEditAtTheEndAndTheStart() {
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "ea", on: .outline)?.id, .taskRenameAppend)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "ei", on: .outline)?.id, .taskRenameInsert)
+  }
+
+  /// Zed's back and forward. The minus key is named whatever Shift does, so
+  /// ⌃⇧- arrives as `ctrl+shift+-`.
+  func testZedsBackAndForwardWalkTheListsYouWereIn() {
+    let back = WorkspaceCommandCatalog.key(
+      keyCode: 27, charactersIgnoringModifiers: "-", shift: false, ctrl: true, cmd: false, option: false)
+    let forward = WorkspaceCommandCatalog.key(
+      keyCode: 27, charactersIgnoringModifiers: "_", shift: true, ctrl: true, cmd: false, option: false)
+    XCTAssertEqual(back.flatMap { WorkspaceCommandCatalog.command(forKey: $0, on: .outline)?.id }, .goBack)
+    XCTAssertEqual(forward.flatMap { WorkspaceCommandCatalog.command(forKey: $0, on: .outline)?.id }, .goForward)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+option+down", on: .board)?.id, .goNextList)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+option+right", on: .outline)?.id, .taskIndent)
   }
 }

@@ -34,6 +34,12 @@ struct WorkspaceTaskDraftRow: View {
         .focused($isFocused)
         .onSubmit(submit)
         .onExitCommand { model.endTaskDraft() }
+        // Checkvist's indent while typing: Tab puts the new task inside the
+        // one above it, ⇧Tab back out to that task's level.
+        .onKeyPress(.tab, phases: .down) { press in
+          press.modifiers.contains(.shift) ? model.outdentTaskDraft() : model.indentTaskDraft()
+          return .handled
+        }
       if capture.hasDetails {
         TaskCapturePreview(capture: capture)
           .font(theme.monoFont(size: theme.type.microLabel.size))

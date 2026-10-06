@@ -16,7 +16,7 @@ import Foundation
 public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   // Go
   case goToday, goBoard, goOutline, goMatrix, goEverything, goFocus, goTimeline
-  case goPreviousList, goNextList
+  case goPreviousList, goNextList, goBack, goForward
   case goListNavigator, goSearch, goCommandPalette, goKeyboardReference
   case goSidebarRegion, goTaskRegion, goInspectorRegion, goCycleRegion
 

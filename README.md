@@ -79,7 +79,8 @@ something you already have to know.
 | `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) — on Today, earlier or later in the day |
 | `Alt+←` / `Alt+→` | Outdent / indent the task — out of, or under, the task above |
 | `Cmd+←` / `Cmd+→`, or `Shift+Alt+←` / `Shift+Alt+→` | Move the card a board column left / right (in the outline `Cmd+←` / `Cmd+→` still fold and unfold everything) |
-| `Cmd+Alt+←` / `Cmd+Alt+→`, or `Cmd+{` / `Cmd+}` | The list above / below in the sidebar — Zed's previous / next tab |
+| `Cmd+Alt+←` / `Cmd+Alt+→`, `Cmd+Alt+↑` / `Cmd+Alt+↓`, or `Cmd+{` / `Cmd+}` | The list above / below in the sidebar — Zed's previous / next tab (in the sidebar itself `Cmd+Alt+↑` / `↓` still move a folder) |
+| `Ctrl+-` / `Ctrl+Shift+-` | Back / forward through the lists you have been in — Zed's go back / go forward |
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |
 | `Ctrl+T` | Plan the task for today, or take it off |
 | `hh` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
@@ -94,7 +95,7 @@ something you already have to know.
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
 | `Shift+Return` / `Alt+Shift+Return` | New task above the selection (Checkvist's) / new subtask |
 | `Cmd+F` / `Cmd+Shift+F` | Search |
-| `Cmd+P` / `ll` | Go to a list — every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
+| `Cmd+P` / `ll` | Go to a list — opened empty, it lists the ones you were in most recently first. Every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
@@ -108,7 +109,7 @@ something you already have to know.
 In the sidebar the keys are Zed's project panel's, lists standing in for files
 and folders for directories: `Cmd+N` new list and `Cmd+Alt+N` new folder beside
 the row you are on, `F2` rename, `Delete` delete (it asks), `Cmd+←` / `Cmd+→`
-collapse / expand every folder, `→` opens the row. `Return` adds a task to the list you are in, as it does everywhere. Its vim panel's netrw
+collapse / expand every folder, `→` opens the row. `Return` on a folder **enters** it: its lists' tasks together on one board or outline, with the keyboard on them, so you can work through the folder without opening each list. On a list, `Return` goes into its tasks the same way. Its vim panel's netrw
 keys work too: `d` new folder, `%` new list, `Shift+D` delete, `Shift+R`
 rename, `h` / `l` / `-` collapse, expand and go up, `gg` / `Shift+G` the ends,
 `{` / `}` the previous / next folder and `:` the palette.
@@ -149,6 +150,7 @@ afterwards:
 | `@today`, `@tomorrow`, `@fri`, `@3d`, `@2w`, `@2026-10-02` | The day it is due — a weekday means the next one, today included. `^` works as well as `@`, as in Checkvist (`^fri`) |
 | `#work` | A tag — it has to start with a letter, so `#12` stays in the title |
 | `!1`–`!4` | The priority |
+| `wait:Sam` | Waiting on Sam — filed in the Waiting on column straight away |
 
 `Write the release notes 45m #work @fri !1` files a task called "Write the
 release notes", estimated at 45 minutes, tagged `work`, due on Friday, at
@@ -160,6 +162,10 @@ in the row, as in Checkvist; `ea` starts typing at the end of the title and `ei`
 at the start, as vim's `a` and `i` do: type ` ^fri !2` after the title and Return, and the
 title stays as it was while the due day and priority change. Tags are added to
 the ones the task has. Escape puts the title back; clicking away saves.
+
+In the row that opens for a new task (`Return`, `Shift+Return`), `Tab` makes it a
+subtask of the task above and `Shift+Tab` takes it back out, before you type or
+after.
 
 Only the **trailing** words are read, and the first word from the end that is
 not one of these stops the reading — so a title is never rewritten in the

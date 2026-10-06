@@ -13,6 +13,7 @@ extension WorkspaceViewModel {
     sidebarCursorID = nil
 
     guard lists.contains(where: { $0.id == id }) else { return }
+    noteListVisit(leaving: isMultiListScope ? nil : selectedListID, arriving: id)
     taskEditor.flush()
     leaveFullPaneScreens()
     isEverythingSelected = false

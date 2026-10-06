@@ -491,6 +491,13 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The list or folder currently showing a rename field, by its own id.
   /// Lists and folders both carry UUIDs, so one field serves both.
   var renamingSidebarItemID: String?
+  /// Lists visited, most recent first, for ⌘P's ordering. Remembered across
+  /// launches, since "the list I was in yesterday" is the common case.
+  var recentListIDs: [String] = UserDefaults.standard.stringArray(forKey: "workspaceRecentListsV1") ?? []
+  /// ⌃- and ⌃⇧-: the lists behind and ahead of this one in this session.
+  @ObservationIgnored var listBackStack: [String] = []
+  @ObservationIgnored var listForwardStack: [String] = []
+  @ObservationIgnored var isWalkingListHistory = false
   /// The outline task whose title is being edited in its own row.
   var editingTaskTitleID: String?
   /// Where that edit puts the cursor: `ee` selects the title, `ea` and `ei`
