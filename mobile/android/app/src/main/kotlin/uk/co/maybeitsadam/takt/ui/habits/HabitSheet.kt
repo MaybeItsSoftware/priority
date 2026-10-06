@@ -187,29 +187,24 @@ private fun HabitFormBody(context: HabitFormContext, save: suspend (uk.co.maybei
         FormRow("Ends") {
             val kinds = HabitForm.expiryKinds(draft.sourceTaskId != null)
             val kind = HabitForm.expiryKind(draft.expiry)
-            Column(verticalArrangement = Arrangement.spacedBy(Metrics.xs)) {
-                for (option in kinds) {
-                    Tag(
-                        HabitForm.expiryLabel(option, context.sourceTitle),
-                        color = if (option == kind) TaktTheme.colors.primary else TaktTheme.colors.mutedText,
-                        selected = option == kind,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            draft = draft.copy(
-                                expiry = when (option) {
-                                    HabitExpiryKind.SOURCE -> HabitExpiry.WhenSourceCompleted
-                                    HabitExpiryKind.NEVER -> HabitExpiry.Never
-                                    HabitExpiryKind.DATE -> {
-                                        val date = HabitForm.defaultEndDate()
-                                        if (expiryDateText.isEmpty()) expiryDateText = HabitForm.dayText(date)
-                                        HabitExpiry.On(date)
-                                    }
-                                },
-                            )
+            Segmented(
+                kinds.map { Segment(HabitForm.expiryLabel(it), it) },
+                selected = kind,
+                onSelect = { option ->
+                    draft = draft.copy(
+                        expiry = when (option) {
+                            HabitExpiryKind.SOURCE -> HabitExpiry.WhenSourceCompleted
+                            HabitExpiryKind.NEVER -> HabitExpiry.Never
+                            HabitExpiryKind.DATE -> {
+                                val date = HabitForm.defaultEndDate()
+                                if (expiryDateText.isEmpty()) expiryDateText = HabitForm.dayText(date)
+                                HabitExpiry.On(date)
+                            }
                         },
                     )
-                }
-            }
+                },
+            )
+            if (kind == HabitExpiryKind.SOURCE) Hint(HabitForm.sourceHint(context.sourceTitle))
             if (kind == HabitExpiryKind.DATE) {
                 ChalkField(
                     expiryDateText,

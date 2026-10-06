@@ -43,7 +43,8 @@ class HabitFormTest {
     @Test fun onlyAHabitFromATaskCanEndWithIt() {
         assertEquals(HabitExpiryKind.entries, HabitForm.expiryKinds(hasSource = true))
         assertEquals(listOf(HabitExpiryKind.DATE, HabitExpiryKind.NEVER), HabitForm.expiryKinds(hasSource = false))
-        assertEquals("When Learn drums is done", HabitForm.expiryLabel(HabitExpiryKind.SOURCE, "Learn drums"))
+        assertEquals("With its task", HabitForm.expiryLabel(HabitExpiryKind.SOURCE))
+        assertEquals("Ends when “Learn drums” is done.", HabitForm.sourceHint("Learn drums"))
     }
 
     @Test fun validationReadsTheFieldsAndNamesWhatIsWrong() {

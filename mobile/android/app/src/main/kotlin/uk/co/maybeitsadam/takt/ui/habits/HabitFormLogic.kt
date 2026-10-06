@@ -80,11 +80,15 @@ object HabitForm {
     fun expiryKinds(hasSource: Boolean): List<HabitExpiryKind> =
         if (hasSource) HabitExpiryKind.entries else listOf(HabitExpiryKind.DATE, HabitExpiryKind.NEVER)
 
-    fun expiryLabel(kind: HabitExpiryKind, sourceTitle: String?): String = when (kind) {
-        HabitExpiryKind.SOURCE -> "When ${sourceTitle ?: "its task"} is done"
+    /** A segment's label: short, so three fit across a phone. */
+    fun expiryLabel(kind: HabitExpiryKind): String = when (kind) {
+        HabitExpiryKind.SOURCE -> "With its task"
         HabitExpiryKind.DATE -> "On a date"
         HabitExpiryKind.NEVER -> "Never"
     }
+
+    /** The line under "With its task", naming the task, as the Mac's option does. */
+    fun sourceHint(sourceTitle: String?): String = "Ends when ${sourceTitle?.let { "“$it”" } ?: "its task"} is done."
 
     /** `30m`, `1h`, `1h30`: what the estimate field shows for a stored estimate. */
     fun estimateText(seconds: Int?): String {
