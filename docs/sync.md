@@ -45,9 +45,13 @@ They hold the user's theme files and the cross-device choices described in
 `expiryRule TEXT NOT NULL DEFAULT 'never'` and `expiresAt DATETIME` — and
 reinstalls the `dailies` outbox and journal triggers, which name its columns.
 A client that does not know them still syncs: the defaults describe a plain
-daily. Only the Mac moves a habit's card between columns (see
-`WorkspaceStore+Habits.swift`); other clients see the result as ordinary
-`task_metadata` rows.
+daily. The Mac (`WorkspaceStore+Habits.swift`) and Android
+(`WorkspaceRepositoryHabits.kt`) both move a habit's card between columns
+and expire habits, from the same `HabitPolicy`. Each pass writes only the
+habit's own `task_metadata` and `dailies` rows, so two devices converge on
+the same values. The Habits list a new habit goes in has an id derived from
+the workspace (`HabitPolicy.habitsListId`), so two devices that each make
+it make one row. Other clients see the result as ordinary rows.
 
 `v20_waiting_follow_ups` adds four columns to `task_metadata` — `waitingOn TEXT`
 (who or what a task in the `waiting-on` column waits on), `waitingFollowUpAt
