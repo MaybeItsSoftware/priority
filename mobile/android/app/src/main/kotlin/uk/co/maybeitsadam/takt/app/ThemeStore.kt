@@ -17,6 +17,7 @@ import uk.co.maybeitsadam.takt.core.theme.ThemeFileOutcome
 import uk.co.maybeitsadam.takt.core.theme.ThemePlatform
 import uk.co.maybeitsadam.takt.core.theme.ThemeRows
 import uk.co.maybeitsadam.takt.core.theme.ThemeSpecification
+import uk.co.maybeitsadam.takt.core.theme.ThemeTypographyOverride
 import uk.co.maybeitsadam.takt.data.workspace.WorkspacePreferenceKey
 import uk.co.maybeitsadam.takt.data.workspace.WorkspaceRepository
 import uk.co.maybeitsadam.takt.data.workspace.deleteTheme
@@ -46,6 +47,11 @@ data class ThemeLibraryState(
     /** This device's own choice, used when [useDeviceChoice] is on. Never synced. */
     val device: ThemeSelection = ThemeSelection(),
     val useDeviceChoice: Boolean = false,
+    /**
+     * The reader's faces and text size, laid over whichever theme is chosen
+     * so a theme switch keeps them. Kept per device, like the Mac's.
+     */
+    val typography: ThemeTypographyOverride = ThemeTypographyOverride(),
 ) {
     val builtIns: List<ThemeSpecification> get() = BuiltInThemeSpecifications.all(ThemePlatform.ANDROID)
 
@@ -54,10 +60,13 @@ data class ThemeLibraryState(
 
     val selection: ThemeSelection get() = if (useDeviceChoice) device else shared
 
-    /** The theme in force. A choice this device does not know (yet) is the default until it does. */
-    val specification: ThemeSpecification
+    /** The theme chosen, as it ships. A choice this device does not know (yet) is the default until it does. */
+    val themeSpecification: ThemeSpecification
         get() = available.firstOrNull { it.identifier == selection.selected }
             ?: BuiltInThemeSpecifications.defaultTheme(ThemePlatform.ANDROID)
+
+    /** The theme in force: the chosen one with [typography] laid over it. */
+    val specification: ThemeSpecification get() = typography.applied(themeSpecification)
 
     val mode: ThemeMode get() = selection.appearance
 
@@ -68,6 +77,7 @@ data class ThemeLibraryState(
             preferences: Map<String, String?>,
             device: ThemeSelection,
             useDeviceChoice: Boolean,
+            typography: ThemeTypographyOverride = ThemeTypographyOverride(),
         ): ThemeLibraryState {
             val files = rows.map { (id, json) -> UserThemeFile(id, ThemeRows.fileName(id, json), json) }.sortedBy { it.name }
             return ThemeLibraryState(
@@ -79,6 +89,7 @@ data class ThemeLibraryState(
                 ),
                 device = device,
                 useDeviceChoice = useDeviceChoice,
+                typography = typography,
             )
         }
     }
@@ -105,6 +116,7 @@ class ThemeStore(private val settings: SettingsStore, private val container: App
                     ThemeMode.of(prefs[DEVICE_APPEARANCE]),
                 ),
                 prefs[USE_DEVICE] == "true",
+                ThemeTypographyOverride.fromJson(prefs[TYPOGRAPHY]),
             )
         }.onStart { migrateLocal(repo) }
     }
@@ -157,6 +169,13 @@ class ThemeStore(private val settings: SettingsStore, private val container: App
         }
     }
 
+    /** Sets the faces and text size laid over every theme; an empty override is removed. */
+    suspend fun setTypography(override: ThemeTypographyOverride) {
+        settings.edit { prefs ->
+            if (override.isEmpty) prefs.remove(TYPOGRAPHY) else prefs[TYPOGRAPHY] = override.toJson()
+        }
+    }
+
     private suspend fun useDevice(): Boolean = settings.data.first()[USE_DEVICE] == "true"
 
     /**
@@ -185,6 +204,9 @@ class ThemeStore(private val settings: SettingsStore, private val container: App
         val USE_DEVICE = SettingsStore.key("theme.device.enabled")
         val DEVICE_SELECTED = SettingsStore.key("theme.device.selected")
         val DEVICE_APPEARANCE = SettingsStore.key("theme.device.appearance")
+
+        /** The Mac's `themeTypographyOverride`, as the same JSON. */
+        val TYPOGRAPHY = SettingsStore.key("theme.typography")
 
         // Before the synced tables: the file list and the choice in DataStore,
         // and before that one imported JSON under two keys.

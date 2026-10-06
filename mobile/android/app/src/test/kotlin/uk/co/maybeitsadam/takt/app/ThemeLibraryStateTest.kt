@@ -2,7 +2,9 @@ package uk.co.maybeitsadam.takt.app
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import uk.co.maybeitsadam.takt.core.theme.ThemeTypographyOverride
 import uk.co.maybeitsadam.takt.core.theme.BuiltInThemeSpecifications
 import uk.co.maybeitsadam.takt.core.theme.ThemeAppearance
 import uk.co.maybeitsadam.takt.core.theme.ThemePlatform
@@ -94,5 +96,24 @@ class ThemeLibraryStateTest {
         assertEquals(mapOf("user.imported" to imported), dark.rows)
         assertEquals(BuiltInThemeSpecifications.CHALK_DARK_IDENTIFIER, dark.selected)
         assertNull(dark.appearance)
+    }
+
+    @Test
+    fun theTypeOverrideLaysOverWhicheverThemeIsChosen() {
+        val override = ThemeTypographyOverride(bodyFamily = "Arvo", textScale = 1.2)
+        val zed = ThemeLibraryState.of(
+            rows, mapOf(WorkspacePreferenceKey.THEME_SELECTED to BuiltInThemeSpecifications.CHALK_IDENTIFIER),
+            ThemeSelection(), false, override,
+        )
+        assertEquals("Zed", zed.specification.name)
+        assertEquals("Arvo", zed.specification.structure.typography.body.families.first())
+        val base = zed.themeSpecification.structure.typography
+        val type = zed.specification.structure.typography
+        assertEquals(base.body.families.filter { it != "Arvo" }, type.body.families.drop(1))
+        assertTrue(type.bodySize > base.bodySize)
+        assertEquals(base.display, type.display)
+        // The chosen theme itself is untouched, for the settings' "Theme default".
+        assertEquals(override.applied(zed.themeSpecification), zed.specification)
+        assertEquals(zed.themeSpecification, ThemeLibraryState.of(rows, mapOf(WorkspacePreferenceKey.THEME_SELECTED to BuiltInThemeSpecifications.CHALK_IDENTIFIER), ThemeSelection(), false).specification)
     }
 }

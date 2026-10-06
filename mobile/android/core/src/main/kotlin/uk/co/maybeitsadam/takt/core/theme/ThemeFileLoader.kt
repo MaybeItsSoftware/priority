@@ -88,6 +88,18 @@ object ThemeFileLoader {
     }
 
     /**
+     * Lays a partial [overrides] over [base] exactly as a theme file's own
+     * `structure` is laid over its base: each bad value is reported and leaves
+     * the base's value standing. Swift's `ThemeFileLoader.merge(_:over:)`.
+     */
+    fun merge(
+        overrides: ThemeFile.Structure?,
+        base: ThemeStructure,
+        path: String = "structure",
+        report: (ThemeIssueSeverity, String) -> Unit = { _, _ -> },
+    ): ThemeStructure = ThemeFileMerger.mergeStructure(overrides, base, path, report)
+
+    /**
      * Loads every source for [platform], resolving `extends` against
      * [builtIns] and against each other. Sources are taken in name order; an
      * identifier that is a built-in's, or already taken, is skipped.
@@ -351,7 +363,7 @@ internal object ThemeFileMerger {
         return ThemeFileOutcome(source, specification, null, ThemeFileLoader.sorted(issues))
     }
 
-    private fun mergeStructure(
+    fun mergeStructure(
         overrides: ThemeFile.Structure?,
         base: ThemeStructure,
         prefix: String,

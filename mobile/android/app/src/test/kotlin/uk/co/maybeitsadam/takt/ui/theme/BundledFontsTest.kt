@@ -1,10 +1,14 @@
 package uk.co.maybeitsadam.takt.ui.theme
 
 import java.io.File
+import androidx.compose.ui.text.font.FontFamily
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.co.maybeitsadam.takt.core.theme.BuiltInThemeSpecifications
+import uk.co.maybeitsadam.takt.core.theme.BundledFontFamily
+import uk.co.maybeitsadam.takt.core.theme.ThemeFontFace
 import uk.co.maybeitsadam.takt.core.theme.ThemePlatform
 
 /**
@@ -28,6 +32,15 @@ class BundledFontsTest {
             "geistmono_regular", "geistmono_medium", "geistmono_bold")) {
             val file = File(fonts, "$name.ttf")
             assertTrue("$file is missing", file.isFile && file.length() > 10_000)
+        }
+    }
+
+    /** Every family the type settings offer is a bundled face, never the system fallback. */
+    @Test fun everyFamilyTheTypeSettingsOfferIsBundled() {
+        val system = setOf(FontFamily.SansSerif, FontFamily.Serif, FontFamily.Monospace, FontFamily.Default)
+        for (family in BundledFontFamily.all) {
+            val resolved = Fonts.resolve(ThemeFontFace(listOf(family.name), family.design))
+            assertFalse("${family.name} falls back to the system", resolved in system)
         }
     }
 }

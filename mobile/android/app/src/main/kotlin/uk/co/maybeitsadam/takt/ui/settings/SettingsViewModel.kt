@@ -19,6 +19,7 @@ import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
 import uk.co.maybeitsadam.takt.settings.SyncUiState
 import uk.co.maybeitsadam.takt.app.ThemeLibraryState
+import uk.co.maybeitsadam.takt.core.theme.ThemeTypographyOverride
 import uk.co.maybeitsadam.takt.ui.theme.ThemeMode
 
 /** `Synced just now`, `Synced at 14:05`, `Couldn't sync: …`. */
@@ -61,6 +62,8 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun selectTheme(identifier: String) = viewModelScope.launch { container.themes.select(identifier) }
 
     fun setUseDeviceTheme(enabled: Boolean) = viewModelScope.launch { container.themes.setUseDeviceChoice(enabled) }
+
+    fun setTypography(override: ThemeTypographyOverride) = viewModelScope.launch { container.themes.setTypography(override) }
 
     fun setCelebration(style: CelebrationStyle) = viewModelScope.launch { settings.setCelebrationStyle(style) }
 

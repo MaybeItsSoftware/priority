@@ -99,6 +99,7 @@ fun SettingsScreen() {
             verticalArrangement = Arrangement.spacedBy(Metrics.xl),
         ) {
             ThemeSection(model)
+            TypeSection(model)
             CelebrationSection(model)
             FocusSection(model)
             SyncSection(shell.container.sync)
