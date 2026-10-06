@@ -517,3 +517,62 @@ public struct LegacyDailySeed: Sendable, Equatable {
     self.createdAt = createdAt
   }
 }
+
+// MARK: - Reading rows without Codable
+//
+// Every surface reads tasks and their metadata, and a reload reads all of
+// them, so how a row becomes a value is on the app's hottest path. GRDB's
+// `Decodable` route builds a keyed decoding container per row and looks each
+// column up by name through it — a profile of an external write's reload put
+// most of its main-thread time there. Reading the columns straight off the
+// row does the same work several times faster. Writing still goes through
+// `Encodable`, which is not hot.
+//
+// The column names are the stored properties' names, as `Codable` used, and
+// a value of the wrong type still throws rather than trapping.
+
+extension TaskStatus: DatabaseValueConvertible {}
+extension WorkspaceItemKind: DatabaseValueConvertible {}
+
+extension WorkspaceTask {
+  public init(row: Row) throws {
+    id = try row.decode(forColumn: "id")
+    listId = try row.decode(forColumn: "listId")
+    parentTaskId = try row.decode(forColumn: "parentTaskId")
+    title = try row.decode(forColumn: "title")
+    notes = try row.decode(forColumn: "notes")
+    status = try row.decode(forColumn: "status")
+    sortOrder = try row.decode(forColumn: "sortOrder")
+    dueAt = try row.decode(forColumn: "dueAt")
+    estimateSeconds = try row.decode(forColumn: "estimateSeconds")
+    sourceSystem = try row.decode(forColumn: "sourceSystem")
+    sourceId = try row.decode(forColumn: "sourceId")
+    itemKind = try row.decode(forColumn: "itemKind")
+    isPromoted = try row.decode(forColumn: "isPromoted")
+    archivedAt = try row.decode(forColumn: "archivedAt")
+    completedAt = try row.decode(forColumn: "completedAt")
+    createdAt = try row.decode(forColumn: "createdAt")
+    updatedAt = try row.decode(forColumn: "updatedAt")
+  }
+}
+
+extension TaskMetadata {
+  public init(row: Row) throws {
+    taskId = try row.decode(forColumn: "taskId")
+    priority = try row.decode(forColumn: "priority")
+    startAt = try row.decode(forColumn: "startAt")
+    tagsJSON = try row.decode(forColumn: "tagsJSON")
+    recurrenceRule = try row.decode(forColumn: "recurrenceRule")
+    matrixUrgency = try row.decode(forColumn: "matrixUrgency")
+    matrixImportance = try row.decode(forColumn: "matrixImportance")
+    kanbanColumn = try row.decode(forColumn: "kanbanColumn")
+    externalLinksJSON = try row.decode(forColumn: "externalLinksJSON")
+    focusRank = try row.decode(forColumn: "focusRank")
+    updatedAt = try row.decode(forColumn: "updatedAt")
+    planningJSON = try row.decode(forColumn: "planningJSON")
+    waitingOn = try row.decode(forColumn: "waitingOn")
+    waitingFollowUpAt = try row.decode(forColumn: "waitingFollowUpAt")
+    waitingFollowUpTaskId = try row.decode(forColumn: "waitingFollowUpTaskId")
+    followUpOfTaskId = try row.decode(forColumn: "followUpOfTaskId")
+  }
+}
