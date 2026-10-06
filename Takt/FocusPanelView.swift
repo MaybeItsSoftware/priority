@@ -44,10 +44,12 @@ struct FocusPanelView: View {
 
 /// The running block as one row: what you are doing and how long it has had.
 ///
-/// Nothing else is drawn. The keys still reach everything a block needs —
-/// Space finishes and asks how it went, Return opens the day to add a task,
-/// P pauses, ↓ brings the day back, Esc hides — and the tooltip says so, rather than a row of hints taking up
-/// the height the strip exists to give back.
+/// Nothing else is drawn until the pointer is over it. The keys reach
+/// everything a block needs — Space finishes and asks how it went, Return
+/// opens the day to add a task, P pauses, ↓ brings the day back, Esc hides —
+/// and hovering shows the same actions as buttons beside the clock, so a
+/// mouse is not left with only a tooltip. They take no height of their own:
+/// the strip stays the size it exists to be.
 private struct FocusPanelStrip: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -58,6 +60,7 @@ private struct FocusPanelStrip: View {
   let onClose: (FocusPanelDismissal) -> Void
 
   @FocusState private var hasKeyboard: Bool
+  @State private var isHovered = false
 
   var body: some View {
     HStack(spacing: theme.space.md) {
@@ -67,6 +70,10 @@ private struct FocusPanelStrip: View {
         .lineLimit(1)
         .truncationMode(.tail)
       Spacer(minLength: theme.space.sm)
+      if isHovered {
+        actions
+          .transition(.opacity)
+      }
       TimelineView(.periodic(from: .now, by: 1)) { context in
         let reading = FocusTimerDisplay.reading(
           elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
@@ -113,7 +120,42 @@ private struct FocusPanelStrip: View {
       return .handled
     }
     .onTapGesture(count: 2) { onShowDay() }
+    .onHover { hovering in withAnimation(WorkspaceMotion.quick) { isHovered = hovering } }
     .onAppear { hasKeyboard = true }
     .onChange(of: resetToken) { _, _ in hasKeyboard = true }
+  }
+
+  private var isPaused: Bool { session.pausedAt != nil }
+
+  /// The strip's keys as buttons, in the order they matter while working.
+  private var actions: some View {
+    HStack(spacing: theme.space.xs) {
+      stripButton(isPaused ? "Resume" : "Pause", systemImage: isPaused ? "play.fill" : "pause.fill", key: "P") {
+        model.toggleFocusPause()
+      }
+      stripButton("Finish", systemImage: "checkmark", key: "Space") {
+        model.requestFocusCompletion(from: .panel)
+      }
+      stripButton("Show the day", systemImage: "list.bullet", key: "↓") { onShowDay() }
+      stripButton("Open in the window", systemImage: "macwindow", key: "⌘↩") {
+        onClose(.toWindow)
+        AppDelegate.shared.showMainWindow()
+      }
+      stripButton("Hide", systemImage: "xmark", key: "Esc") { onClose(.back) }
+    }
+  }
+
+  private func stripButton(
+    _ title: String, systemImage: String, key: String, action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Image(systemName: systemImage)
+        .frame(width: 24, height: 24)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .foregroundStyle(theme.muted)
+    .help("\(title) (\(key))")
+    .accessibilityLabel(title)
   }
 }
