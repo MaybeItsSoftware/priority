@@ -63,7 +63,7 @@ Last checked against `main` on 6 October 2026.
 | Default theme "Takt" with Inter and Geist Mono | Done | The fonts are bundled in `res/font` and survive release shrinking. `BundledFontsTest` pins the mapping |
 | Built-in themes, theme files, import, follow the device's choice | Done | Shared conformance fixtures in `shared/themes` |
 | Theme gallery with miniatures | Done, as a list | Themes are listed by name, without miniatures |
-| Font controls: interface, heading and numeral families, text size (cc8a82d, 8108dae) | Missing | Not ported yet. Android follows the system font scale in the meantime |
+| Font controls: interface, heading and numeral families, text size (cc8a82d, 8108dae) | Done | Settings → Type. `ThemeTypographyOverride` in `:core`, merged over the theme as on the Mac and kept per device. The faces are the seven bundled families; a phone cannot offer fonts installed on the system. The size scales the theme's own sizes, on top of the system font scale |
 | Completion celebrations (Strike, Spark, Fold, None) | Done | |
 | Celebration preview in Settings | Done | Plays on a sample row when chosen, or with Preview |
 
@@ -86,7 +86,7 @@ Last checked against `main` on 6 October 2026.
 | AFFiNE | Missing | Same as Checkvist: the integration runs on the Mac |
 | Obsidian daily notes | Not on a phone | Writes into a local vault folder |
 | Daily log files | Missing | Per-device files on the Mac. Nothing records them on Android |
-| Workspace export (Markdown, JSON) | Missing | Could use the Android share sheet. Not built yet |
+| Workspace export (Markdown, JSON) | Done | Settings → Your data, through the system save dialog. `WorkspaceExport` in `:core` writes the same bytes as the Mac (fixtures from Foundation's `JSONEncoder`). Neither app imports it |
 | MCP server and `takt` CLI | Not on a phone | Desktop processes |
 | Diagnostics window | Not on a phone | |
 
