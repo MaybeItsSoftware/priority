@@ -19,7 +19,10 @@ import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
 import uk.co.maybeitsadam.takt.settings.SyncUiState
 import uk.co.maybeitsadam.takt.app.ThemeLibraryState
+import uk.co.maybeitsadam.takt.core.WorkspaceExport
+import uk.co.maybeitsadam.takt.core.WorkspaceExportFormat
 import uk.co.maybeitsadam.takt.core.theme.ThemeTypographyOverride
+import uk.co.maybeitsadam.takt.data.workspace.exportSnapshot
 import uk.co.maybeitsadam.takt.ui.theme.ThemeMode
 
 /** `Synced just now`, `Synced at 14:05`, `Couldn't sync: …`. */
@@ -100,6 +103,35 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         } else {
             _themeError.value = "${read.first} was not loaded: ${outcome?.skippedReason ?: "it could not be read"}."
         }
+    }
+
+    /** The last export's outcome, as the Mac shows it under the buttons. */
+    data class ExportStatus(val message: String, val isError: Boolean)
+
+    private val _exportStatus = MutableStateFlow<ExportStatus?>(null)
+    val exportStatus: StateFlow<ExportStatus?> = _exportStatus
+
+    /**
+     * Writes the whole workspace to [uri], a document the system's save
+     * dialog just created, in the Mac's format so the files are
+     * interchangeable.
+     */
+    fun export(format: WorkspaceExportFormat, uri: Uri) = viewModelScope.launch {
+        _exportStatus.value = runCatching {
+            val session = container.awaitSession()
+            val document = WorkspaceExport.document(session.repository.exportSnapshot(session.workspace.id), format)
+            val resolver = container.context.contentResolver
+            withContext(Dispatchers.IO) {
+                checkNotNull(resolver.openOutputStream(uri, "wt")) { "the file could not be opened" }
+                    .use { it.write(document.toByteArray(Charsets.UTF_8)) }
+            }
+            val name = withContext(Dispatchers.IO) {
+                resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getString(0) else null
+                }
+            }
+            ExportStatus("Saved ${name ?: format.suggestedFileName}.", isError = false)
+        }.getOrElse { ExportStatus("Could not save: ${it.message ?: it.javaClass.simpleName}", isError = true) }
     }
 
     fun removeTheme(id: String) = viewModelScope.launch {

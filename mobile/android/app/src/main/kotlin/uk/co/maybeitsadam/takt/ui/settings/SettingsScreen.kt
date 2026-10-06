@@ -103,6 +103,7 @@ fun SettingsScreen() {
             CelebrationSection(model)
             FocusSection(model)
             SyncSection(shell.container.sync)
+            DataSection(model)
             AboutSection(model)
         }
     }
