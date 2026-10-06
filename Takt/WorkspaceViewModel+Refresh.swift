@@ -117,6 +117,11 @@ extension WorkspaceViewModel {
       rebuildTaskCache()
       refreshHistoryLabels()
     }
+    // The day and the ladder are read from the whole workspace, so any write
+    // can change them — a task added on Today most of all, which otherwise
+    // vanished from the screen it was typed on until something else asked for
+    // a ranking. Off the main thread, and coalesced with any other request.
+    if wrote { scheduleNextUp() }
     listTreeCache = [:]
   }
 
