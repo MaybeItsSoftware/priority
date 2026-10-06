@@ -127,4 +127,6 @@ graphic 1024×500, and at least two phone screenshots.
 **Release:** internal testing first, with `build/play/takt-<v>-<n>.aab`
 from `scripts/build_play_bundle.sh`. Opt in to Play App Signing on the first
 upload; then copy Play's app-signing SHA-1 into its own Google OAuth Android
-client, or Google sign-in fails for store installs.
+client, or Google sign-in fails for store installs. The full set of clients,
+the Supabase provider settings and where the build reads the Web client id
+from are in [Google sign-in on Android](android-google-sign-in.md).

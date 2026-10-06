@@ -117,4 +117,7 @@ Settings → Sync can also be pointed elsewhere under "Use a different server".
 The Supabase project is `-PprioritySupabaseUrl=…` and `-PprioritySupabaseKey=…`
 (the publishable key). Sign in with Google needs the Google Cloud **Web**
 OAuth client id as `-PpriorityGoogleWebClientId=…` (or in
-`~/.gradle/gradle.properties`); without it the Google button is hidden.
+`~/.gradle/gradle.properties`), the `TAKT_GOOGLE_WEB_CLIENT_ID` environment
+variable, or `priorityGoogleWebClientId=…` in the gitignored
+`local.properties`; without it the Google button is hidden. The console
+setup is in `docs/android-google-sign-in.md`.

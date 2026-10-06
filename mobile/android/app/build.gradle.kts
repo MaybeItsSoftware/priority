@@ -28,10 +28,24 @@ fun stringProperty(name: String): String? = (findProperty(name) as String?)?.tri
 val prioritySupabaseUrl = stringProperty("prioritySupabaseUrl") ?: "https://rsckzmldfpfjdrvulwke.supabase.co"
 val prioritySupabaseKey = stringProperty("prioritySupabaseKey") ?: "sb_publishable_htC171zOquUGx7bBi8MrIQ_ZuIdqL5U"
 
+// `local.properties` beside settings.gradle.kts is gitignored, so a machine's
+// own values (the SDK path, a Google client id) can live there.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
 // The Google Cloud *Web* OAuth client id that Sign in with Google asks for an
 // ID token for (Supabase checks the token's audience against it). Empty hides
-// the Google button.
-val priorityGoogleWebClientId = stringProperty("priorityGoogleWebClientId") ?: ""
+// the Google button. The first of these that is set wins: the Gradle property
+// (`-PpriorityGoogleWebClientId=…` or ~/.gradle/gradle.properties), the
+// TAKT_GOOGLE_WEB_CLIENT_ID environment variable (CI), then
+// `priorityGoogleWebClientId=…` in local.properties. docs/android-google-sign-in.md
+// has the console steps that make one.
+val priorityGoogleWebClientId = stringProperty("priorityGoogleWebClientId")
+    ?: System.getenv("TAKT_GOOGLE_WEB_CLIENT_ID")?.trim()?.takeIf { it.isNotEmpty() }
+    ?: localProperties.getProperty("priorityGoogleWebClientId")?.trim()?.takeIf { it.isNotEmpty() }
+    ?: ""
 
 android {
     namespace = "uk.co.maybeitsadam.takt"
