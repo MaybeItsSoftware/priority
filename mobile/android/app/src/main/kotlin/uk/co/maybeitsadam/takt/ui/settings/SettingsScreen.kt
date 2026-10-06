@@ -265,6 +265,11 @@ private fun SignedInSync(sync: SyncController, status: SyncUiState, credentials:
             Hairline(color = TaktTheme.colors.borderMuted)
             InfoRow("Server") { MonoText(SyncController.hostOf(credentials.serverURL)) }
         }
+        val endpoints by sync.endpoints.collectAsStateWithLifecycle()
+        if (!endpoints.usesAccountsOf(SyncController.hostedEndpoints)) {
+            Hairline(color = TaktTheme.colors.borderMuted)
+            InfoRow("Accounts") { MonoText(SyncController.hostOf(endpoints.supabaseURL)) }
+        }
         Hairline(color = TaktTheme.colors.borderMuted)
         Row(Modifier.padding(Metrics.md), horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
             PButton("Sync now", icon = PIcons.Sync, enabled = status != SyncUiState.Syncing, modifier = Modifier.testTag("sync_now")) { sync.syncNow() }
@@ -436,14 +441,23 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
     val context = LocalContext.current
     var email by rememberSaveable(hint?.email) { mutableStateOf(hint?.email.orEmpty()) }
     var password by rememberSaveable { mutableStateOf("") }
-    var server by rememberSaveable(hint?.serverURL) { mutableStateOf(hint?.serverURL ?: SyncController.defaultServer) }
-    var otherServer by rememberSaveable(hint?.serverURL) {
-        mutableStateOf(hint?.serverURL != null && hint.serverURL.trimEnd('/') != SyncController.defaultServer.trimEnd('/'))
-    }
+    // "Use a different server": blank fields are Takt's own (SyncEndpoints.resolve).
+    val endpoints by sync.endpoints.collectAsStateWithLifecycle()
+    val hosted = SyncController.hostedEndpoints
+    val ownServer = endpoints.serverURL.takeIf { it != hosted.serverURL }.orEmpty()
+    val ownAccounts = !endpoints.usesAccountsOf(hosted)
+    var server by rememberSaveable(endpoints) { mutableStateOf(ownServer) }
+    var supabaseUrl by rememberSaveable(endpoints) { mutableStateOf(if (ownAccounts) endpoints.supabaseURL else "") }
+    var supabaseKey by rememberSaveable(endpoints) { mutableStateOf(if (ownAccounts) endpoints.supabaseKey else "") }
+    var otherServer by rememberSaveable(endpoints) { mutableStateOf(endpoints != hosted) }
     val requestingReset by sync.isRequestingReset.collectAsStateWithLifecycle()
     val notice by sync.notice.collectAsStateWithLifecycle()
     val ready = !signingIn && email.isNotBlank() && password.isNotEmpty()
-    val target = if (otherServer) server else SyncController.defaultServer
+    // Switches to the chosen endpoints (signing out of others first) and answers the server, or null.
+    suspend fun target(): String? =
+        if (otherServer) sync.useEndpoints(server, supabaseUrl, supabaseKey) else sync.useEndpoints("", "", "")
+    // Google's client id belongs to Takt's project; a self-hosted one signs in with email or Apple.
+    val googleAvailable = GoogleSignIn.isConfigured && !(otherServer && (supabaseUrl.isNotBlank() || supabaseKey.isNotBlank()))
 
     Section("Sync", footer = "One account keeps your tasks the same on every device. A password needs at least 8 characters.") {
         if (hint?.expired == true) {
@@ -463,10 +477,10 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm)) {
                 PButton(if (signingIn) "Signing in…" else "Sign in", primary = true, enabled = ready, modifier = Modifier.testTag("sync_sign_in")) {
-                    scope.launch { if (sync.signIn(target, email, password)) password = "" }
+                    scope.launch { val target = target() ?: return@launch; if (sync.signIn(target, email, password)) password = "" }
                 }
                 PButton("Create account", enabled = ready, modifier = Modifier.testTag("sync_sign_up")) {
-                    scope.launch { sync.signUp(target, email, password) }
+                    scope.launch { val target = target() ?: return@launch; sync.signUp(target, email, password) }
                 }
             }
             Text(
@@ -476,7 +490,7 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
                 modifier = Modifier
                     .heightIn(min = Metrics.touchTarget)
                     .clickable(enabled = !signingIn && !requestingReset, role = Role.Button) {
-                        scope.launch { sync.requestPasswordReset(target, email) }
+                        scope.launch { val target = target() ?: return@launch; sync.requestPasswordReset(target, email) }
                     }
                     .wrapContentHeight(Alignment.CenterVertically)
                     .testTag("sync_forgot_password"),
@@ -485,13 +499,13 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
         }
         Hairline(color = TaktTheme.colors.borderMuted)
         Column(Modifier.padding(Metrics.md), verticalArrangement = Arrangement.spacedBy(Metrics.sm)) {
-            if (GoogleSignIn.isConfigured) {
+            if (googleAvailable) {
                 PButton("Sign in with Google", enabled = !signingIn, modifier = Modifier.fillMaxWidth().testTag("sync_google")) {
-                    scope.launch { sync.signInWithGoogle(context, target) }
+                    scope.launch { val target = target() ?: return@launch; sync.signInWithGoogle(context, target) }
                 }
             }
             PButton("Sign in with Apple", enabled = !signingIn, modifier = Modifier.fillMaxWidth().testTag("sync_apple")) {
-                scope.launch { sync.signInWithApple(target) }
+                scope.launch { val target = target() ?: return@launch; sync.signInWithApple(target) }
             }
         }
         Hairline(color = TaktTheme.colors.borderMuted)
@@ -511,8 +525,30 @@ private fun SignedOutSync(sync: SyncController, signingIn: Boolean, hint: Signed
             )
         }
         if (otherServer) {
-            Column(Modifier.padding(start = Metrics.md, end = Metrics.md, bottom = Metrics.md)) {
-                Field(server, { server = it; sync.clearSignInError() }, "Server address", Modifier.testTag("sync_server_field"), KeyboardType.Uri)
+            Column(
+                Modifier.padding(start = Metrics.md, end = Metrics.md, bottom = Metrics.md),
+                verticalArrangement = Arrangement.spacedBy(Metrics.sm),
+            ) {
+                Field(
+                    server, { server = it; sync.clearSignInError() }, "Sync server (${SyncController.hostOf(hosted.serverURL)})",
+                    Modifier.testTag("sync_server_field"), KeyboardType.Uri,
+                )
+                Field(
+                    supabaseUrl, { supabaseUrl = it; sync.clearSignInError() }, "Supabase URL (https://<project>.supabase.co)",
+                    Modifier.testTag("sync_supabase_url_field"), KeyboardType.Uri,
+                )
+                Field(
+                    supabaseKey, { supabaseKey = it; sync.clearSignInError() }, "Supabase publishable key",
+                    Modifier.testTag("sync_supabase_key_field"), KeyboardType.Ascii,
+                )
+                Text(
+                    "For a server you run yourself, and the Supabase project it trusts for accounts. " +
+                        "Leave a field blank to use Takt's. Changing them signs this device out.",
+                    style = TaktTheme.type.small, color = TaktTheme.colors.mutedText,
+                )
+                PButton("Check", enabled = !signingIn, modifier = Modifier.testTag("sync_check_server")) {
+                    scope.launch { sync.checkEndpoints(server, supabaseUrl, supabaseKey) }
+                }
             }
         }
     }

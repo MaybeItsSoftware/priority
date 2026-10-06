@@ -44,6 +44,9 @@ import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.appContainer
 import uk.co.maybeitsadam.takt.core.SyncAccountInfo
 import uk.co.maybeitsadam.takt.core.SyncCredentials
+import uk.co.maybeitsadam.takt.core.SyncEndpoints
+import uk.co.maybeitsadam.takt.data.sync.SyncEndpointCheck
+import uk.co.maybeitsadam.takt.data.sync.SyncEndpointProblem
 import uk.co.maybeitsadam.takt.data.sync.OkHttpSyncTransport
 import uk.co.maybeitsadam.takt.data.sync.SyncEngine
 import uk.co.maybeitsadam.takt.data.sync.SyncException
@@ -80,7 +83,18 @@ class SyncController(private val container: AppContainer) {
     private class Active(val credentials: SyncCredentials, val engine: SyncEngine, val scheduler: SyncScheduler, val scope: CoroutineScope)
 
     private val credentialStore by lazy { SyncCredentialStore(container.context) }
-    private val accounts by lazy { SupabaseAccounts(credentialStore) }
+    private val _endpoints = MutableStateFlow(hostedEndpoints)
+
+    /** The sync server and Supabase project in use: Takt's, or a self-hosted pair from [useEndpoints]. */
+    val endpoints: StateFlow<SyncEndpoints> = _endpoints.asStateFlow()
+
+    @Volatile private var currentAccounts: SupabaseAccounts? = null
+
+    /** The Supabase client for [endpoints]' project, made again when [useEndpoints] changes it. */
+    private val accounts: SupabaseAccounts
+        get() = currentAccounts ?: synchronized(this) {
+            currentAccounts ?: SupabaseAccounts(credentialStore, _endpoints.value).also { currentAccounts = it }
+        }
     private val lock = Mutex()
     private val ready = CompletableDeferred<Unit>()
     private val active = MutableStateFlow<Active?>(null)
@@ -155,6 +169,7 @@ class SyncController(private val container: AppContainer) {
                 val session = container.awaitSession()
                 val store = SyncStore(session.repository.database)
                 migrateFromDeviceTokens(store)
+                _endpoints.value = withContext(Dispatchers.IO) { savedEndpoints() }
                 accounts.ready()
                 val saved = withContext(Dispatchers.IO) { runCatching { credentialStore.load() }.getOrNull() }
                 val state = store.syncState()
@@ -194,6 +209,91 @@ class SyncController(private val container: AppContainer) {
             credentialStore.saveSignedOut(SignedOutHint(legacy.email, legacy.serverURL, expired = true))
         }
         store.endSync()
+    }
+
+    /**
+     * The endpoints kept from last time. A device that chose a server of its
+     * own before a Supabase project could be chosen too kept only the server,
+     * with Takt's accounts.
+     */
+    private fun savedEndpoints(): SyncEndpoints {
+        runCatching { credentialStore.endpoints }.getOrNull()?.let { return it }
+        val server = runCatching { credentialStore.load()?.serverURL ?: credentialStore.loadSignedOut()?.serverURL }.getOrNull()
+        return if (server.isNullOrBlank()) hostedEndpoints else hostedEndpoints.copy(serverURL = server)
+    }
+
+    /**
+     * Switches to the endpoints typed under "Use a different server" (blank
+     * fields are Takt's) and answers the server to sign in to, or null with
+     * the reason in [signInError]. A self-hosted pair is checked first
+     * ([SyncEndpointCheck]). If they differ from the ones in use, this device
+     * signs out cleanly — off the old server's device list, out of the old
+     * Supabase project, the outbox dropped — before they are saved. The
+     * workspace stays as it is.
+     */
+    suspend fun useEndpoints(server: String, supabaseURL: String, supabaseKey: String): String? {
+        ready.await()
+        val chosen = resolveEndpoints(server, supabaseURL, supabaseKey) ?: return null
+        val current = _endpoints.value
+        if (chosen == current) return chosen.serverURL
+        _isSigningIn.value = true
+        try {
+            if (chosen != hostedEndpoints) SyncEndpointCheck().check(chosen)
+            val credentials = _credentials.value
+            if (credentials != null) {
+                runCatching { transport(credentials).signOut() }.onFailure { if (it is CancellationException) throw it }
+                accounts.signOut()
+                tearDown(SignedOutHint(credentials.email, chosen.serverURL, expired = false))
+            } else {
+                accounts.forget()
+            }
+            withContext(Dispatchers.IO) {
+                credentialStore.endpoints = chosen.takeIf { it != hostedEndpoints }
+                credentialStore.pendingServer = null
+                credentialStore.recoveryPending = false
+            }
+            _endpoints.value = chosen
+            if (!chosen.usesAccountsOf(current)) {
+                val fresh = SupabaseAccounts(credentialStore, chosen)
+                synchronized(this) { currentAccounts = fresh }
+                fresh.ready()
+            }
+            return chosen.serverURL
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            _signInError.value = message(error, "Couldn't switch servers.")
+            return null
+        } finally {
+            _isSigningIn.value = false
+        }
+    }
+
+    /** Asks the typed server and Supabase project whether they answer, without switching to them. */
+    suspend fun checkEndpoints(server: String, supabaseURL: String, supabaseKey: String) {
+        val chosen = resolveEndpoints(server, supabaseURL, supabaseKey) ?: return
+        _isSigningIn.value = true
+        try {
+            if (chosen != hostedEndpoints) SyncEndpointCheck().check(chosen)
+            _notice.value = "Both answered. Sign in to use them."
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            _signInError.value = message(error, "Couldn't check the server.")
+        } finally {
+            _isSigningIn.value = false
+        }
+    }
+
+    private fun resolveEndpoints(server: String, supabaseURL: String, supabaseKey: String): SyncEndpoints? {
+        _signInError.value = null
+        _notice.value = null
+        return try {
+            SyncEndpoints.resolve(server, supabaseURL, supabaseKey, hostedEndpoints)
+        } catch (invalid: IllegalArgumentException) {
+            _signInError.value = invalid.message
+            null
+        }
     }
 
     /** One cycle, for the background worker and "Sync now". True when it succeeded, or there was nothing to do. */
@@ -269,7 +369,7 @@ class SyncController(private val container: AppContainer) {
         container.scope.launch {
             ready.await()
             val (server, recovering) = withContext(Dispatchers.IO) {
-                (credentialStore.pendingServer ?: _signedOut.value?.serverURL ?: defaultServer) to credentialStore.recoveryPending
+                (credentialStore.pendingServer ?: _endpoints.value.serverURL) to credentialStore.recoveryPending
             }
             val signedIn = signInWith(server) {
                 accounts.completeRedirect(uri)
@@ -289,7 +389,7 @@ class SyncController(private val container: AppContainer) {
     }
 
     private fun checkedServer(serverURL: String, email: String? = null, password: String? = null): String? {
-        val server = serverURL.trim().ifEmpty { BuildConfig.SYNC_SERVER }
+        val server = serverURL.trim().ifEmpty { _endpoints.value.serverURL }
         _signInError.value = when {
             !isHttpURL(server) -> "Enter the server's full address, starting with https://."
             email != null && email.isBlank() -> "Enter your email."
@@ -520,6 +620,10 @@ class SyncController(private val container: AppContainer) {
         /** The server new accounts go to, unless Settings is told another. */
         val defaultServer: String get() = BuildConfig.SYNC_SERVER
 
+        /** Takt's own server and Supabase project, as built (gradle properties can point a build elsewhere). */
+        val hostedEndpoints: SyncEndpoints
+            get() = SyncEndpoints(BuildConfig.SYNC_SERVER, BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+
         fun describe(credentials: SyncCredentials?, engine: SyncEngine.Status?, stored: SyncLocalState?, expired: Boolean = false): SyncUiState = when {
             credentials == null -> if (expired) SyncUiState.SessionExpired else SyncUiState.Unpaired
             engine is SyncEngine.Status.SignedOut -> SyncUiState.SessionExpired
@@ -532,6 +636,7 @@ class SyncController(private val container: AppContainer) {
         /** The server's or Supabase's own words for a failure, or a plain fallback for anything else. */
         fun message(error: Throwable, fallback: String): String = SupabaseAccounts.message(error) ?: when (error) {
             is SyncException -> error.message ?: fallback
+            is SyncEndpointProblem -> error.message ?: fallback
             is AccountException -> error.message ?: fallback
             is java.io.IOException -> "Couldn't connect. Check the connection and the server address."
             is IllegalArgumentException -> "That server address isn't valid."

@@ -14,6 +14,7 @@ import javax.crypto.spec.GCMParameterSpec
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import uk.co.maybeitsadam.takt.core.SyncCredentials
+import uk.co.maybeitsadam.takt.core.SyncEndpoints
 
 /** Ciphertext and the nonce it was sealed with. */
 class SealedBytes(val iv: ByteArray, val ciphertext: ByteArray)
@@ -123,7 +124,8 @@ class KeystoreCredentialCipher(private val alias: String = "priority.sync.creden
  * - the Supabase session (access and refresh tokens), sealed by [codec];
  * - which server this device syncs with and as whom ([SyncCredentials]), sealed;
  * - the device's own id, made once and kept across sign-outs;
- * - while signed out, what to prefill.
+ * - while signed out, what to prefill;
+ * - a self-hosted server and Supabase project, when one was chosen.
  */
 class SyncCredentialStore(
     context: Context,
@@ -174,6 +176,19 @@ class SyncCredentialStore(
         return codec.decodeLegacy(sealed)
     }
 
+    /**
+     * The sync server and Supabase project chosen under "Use a different
+     * server", kept through signing out; null means Takt's own. Not secret
+     * (the key is a publishable one), so stored as it is.
+     */
+    var endpoints: SyncEndpoints?
+        get() = prefs.getString(KEY_ENDPOINTS, null)?.let {
+            runCatching { endpointsJson.decodeFromString(SyncEndpoints.serializer(), it) }.getOrNull()
+        }
+        set(value) = prefs.edit(commit = true) {
+            if (value == null) remove(KEY_ENDPOINTS) else putString(KEY_ENDPOINTS, endpointsJson.encodeToString(SyncEndpoints.serializer(), value))
+        }
+
     /** The server a browser sign-in (Apple, or an emailed link) started with, for when it comes back. */
     var pendingServer: String?
         get() = prefs.getString(KEY_PENDING_SERVER, null)
@@ -220,6 +235,8 @@ class SyncCredentialStore(
         private const val KEY_RECOVERY = "recovery_pending"
         private const val KEY_SIGNED_OUT = "signed_out"
         private const val KEY_EXPIRED = "signed_out_expired"
+        private const val KEY_ENDPOINTS = "endpoints"
+        private val endpointsJson = Json { ignoreUnknownKeys = true }
 
         /** [candidate] when it is a uuid (the server takes nothing else), or a new random one. */
         fun stableDeviceId(candidate: String?): String =

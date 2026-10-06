@@ -23,7 +23,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import uk.co.maybeitsadam.takt.BuildConfig
+import uk.co.maybeitsadam.takt.core.SyncEndpoints
 import uk.co.maybeitsadam.takt.data.sync.AccessToken
 import uk.co.maybeitsadam.takt.data.sync.RefreshingAccessTokens
 import uk.co.maybeitsadam.takt.data.sync.SyncAccessTokens
@@ -43,9 +43,13 @@ data class AccountSession(val userId: String?, val email: String?)
  * Supabase's own auto-refresh is off. [tokens] refreshes before a request
  * when the token is about to expire, and once more when the server refuses
  * it, so a session only ends when Supabase refuses the refresh token.
+ *
+ * [project] is the Supabase project of the endpoints in use: Takt's, or a
+ * self-hosted one. [SyncController] makes a new instance when it changes,
+ * after forgetting the old project's session.
  */
-class SupabaseAccounts(private val store: SyncCredentialStore) {
-    private val client = createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY) {
+class SupabaseAccounts(private val store: SyncCredentialStore, val project: SyncEndpoints = SyncController.hostedEndpoints) {
+    private val client = createSupabaseClient(project.supabaseURL, project.supabaseKey) {
         httpEngine = OkHttp.create()
         install(Auth) {
             flowType = FlowType.PKCE
