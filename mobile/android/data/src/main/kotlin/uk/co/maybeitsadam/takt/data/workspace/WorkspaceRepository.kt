@@ -549,7 +549,12 @@ class WorkspaceRepository(
                 updatedAt = now,
             )
             db.update(task)
-            if (status != TaskStatus.OPEN && wasOpen) scheduleNextOccurrence(db, task, now, zone)
+            // Closing one occurrence of a repeating task writes the next one,
+            // and ends the habits made from it.
+            if (status != TaskStatus.OPEN && wasOpen) {
+                scheduleNextOccurrence(db, task, now, zone)
+                expireHabits(db, task.id, now)
+            }
         }
     }
 

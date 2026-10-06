@@ -83,6 +83,8 @@ internal fun Row.toDaily() = WorkspaceDaily(
     intervalDays = intOrNull("intervalDays"), intervalAnchor = instantOrNull("intervalAnchor"),
     targetSeconds = intOrNull("targetSeconds"), sortOrder = int("sortOrder"), archivedAt = instantOrNull("archivedAt"),
     legacyDailyId = stringOrNull("legacyDailyId"), createdAt = instant("createdAt"), updatedAt = instant("updatedAt"),
+    sourceTaskId = stringOrNull("sourceTaskId"), placementColumn = stringOrNull("placementColumn"),
+    dropsAtDayEnd = bool("dropsAtDayEnd"), expiryRule = string("expiryRule"), expiresAt = instantOrNull("expiresAt"),
 )
 
 internal fun Row.toContribution() = DailyContribution(
@@ -233,17 +235,20 @@ internal fun Db.update(q: FocusQueueItem) = execute(
 
 internal fun Db.insert(d: WorkspaceDaily) = execute(
     "INSERT INTO dailies (id, taskId, activeWeekdaysMask, intervalDays, intervalAnchor, targetSeconds, sortOrder, " +
-        "archivedAt, legacyDailyId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "archivedAt, legacyDailyId, createdAt, updatedAt, sourceTaskId, placementColumn, dropsAtDayEnd, " +
+        "expiryRule, expiresAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     d.id, d.taskId, d.activeWeekdaysMask, d.intervalDays, d.intervalAnchor, d.targetSeconds, d.sortOrder,
-    d.archivedAt, d.legacyDailyId, d.createdAt, d.updatedAt,
+    d.archivedAt, d.legacyDailyId, d.createdAt, d.updatedAt, d.sourceTaskId, d.placementColumn, d.dropsAtDayEnd,
+    d.expiryRule, d.expiresAt,
 )
 
 internal fun Db.update(d: WorkspaceDaily) = execute(
     "UPDATE dailies SET taskId = ?, activeWeekdaysMask = ?, intervalDays = ?, intervalAnchor = ?, " +
-        "targetSeconds = ?, sortOrder = ?, archivedAt = ?, legacyDailyId = ?, createdAt = ?, updatedAt = ? " +
-        "WHERE id = ?",
+        "targetSeconds = ?, sortOrder = ?, archivedAt = ?, legacyDailyId = ?, createdAt = ?, updatedAt = ?, " +
+        "sourceTaskId = ?, placementColumn = ?, dropsAtDayEnd = ?, expiryRule = ?, expiresAt = ? WHERE id = ?",
     d.taskId, d.activeWeekdaysMask, d.intervalDays, d.intervalAnchor, d.targetSeconds, d.sortOrder, d.archivedAt,
-    d.legacyDailyId, d.createdAt, d.updatedAt, d.id,
+    d.legacyDailyId, d.createdAt, d.updatedAt, d.sourceTaskId, d.placementColumn, d.dropsAtDayEnd, d.expiryRule,
+    d.expiresAt, d.id,
 )
 
 internal fun Db.insert(c: DailyContribution) = execute(

@@ -227,10 +227,36 @@ data class WorkspaceDaily(
     val legacyDailyId: String? = null,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** The task this habit was made from. Nil for a standalone habit and every plain daily. */
+    val sourceTaskId: String? = null,
+    /** The board column each appearance lands in ([HabitPlacement]). Nil is a plain daily. */
+    val placementColumn: String? = null,
+    /** Whether an appearance not done by the end of its day is dropped rather than carried. */
+    val dropsAtDayEnd: Boolean = true,
+    /** [HabitExpiry.rule]: "source", "date" or "never". */
+    val expiryRule: String = "never",
+    /** The day a "date" expiry takes effect. */
+    val expiresAt: Instant? = null,
 ) {
     val isArchived: Boolean get() = archivedAt != null
 
     val activeWeekdays: Set<Int> get() = (1..7).filter { activeWeekdaysMask and (1 shl (it - 1)) != 0 }.toSet()
+
+    /** A daily made through the habit form: it has a column to land in. */
+    val isHabit: Boolean get() = placement != null
+
+    val placement: HabitPlacement? get() = HabitPlacement.of(placementColumn)
+
+    val expiry: HabitExpiry get() = HabitExpiry.of(expiryRule, expiresAt)
+
+    val frequency: HabitFrequency get() = HabitFrequency.of(activeWeekdays, intervalDays)
+
+    /** The schedule and options as [HabitPolicy] reads them. */
+    val habitRule: HabitRule
+        get() = HabitRule(
+            weekdays = activeWeekdays, intervalDays = intervalDays, anchor = intervalAnchor ?: createdAt,
+            dropsAtDayEnd = dropsAtDayEnd, expiry = expiry, placement = placement ?: HabitPlacement.TODAY,
+        )
 
     /** Whether this daily is expected on `day`. */
     fun isDue(day: Instant, zone: ZoneId = ZoneId.systemDefault()): Boolean {

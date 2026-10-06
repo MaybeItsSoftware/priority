@@ -89,7 +89,7 @@ internal fun dailiesOn(db: Db, day: Instant, zone: ZoneId): List<DailyItem> {
     val key = DailyContribution.dayKey(day, zone)
     val dailies = db.query("SELECT * FROM dailies WHERE archivedAt IS NULL ORDER BY sortOrder, createdAt") { it.toDaily() }
     return dailies.mapNotNull { daily ->
-        if (!daily.isDue(day, zone)) return@mapNotNull null
+        if (!dailyShows(db, daily, day, zone)) return@mapNotNull null
         val task = db.task(daily.taskId)?.takeIf { !it.isList } ?: return@mapNotNull null
         val contribution = db.queryOne(
             "SELECT * FROM daily_contributions WHERE dailyId = ? AND dayKey = ?", daily.id, key,
@@ -159,7 +159,7 @@ internal fun focusCandidates(db: Db, now: Instant, zone: ZoneId): List<NextUpCan
         val contribution = daily?.let { contributions[it.id] }
         var dailyUnavailable: TaskUnavailableReason? = null
         if (daily != null) {
-            if (!daily.isDue(now, zone)) {
+            if (!dailyShows(db, daily, now, zone)) {
                 dailyUnavailable = TaskUnavailableReason.DailyNotScheduled
             } else if (contribution?.completedAt != null ||
                 (daily.targetSeconds?.let { it > 0 && (contribution?.secondsLogged ?: 0) >= it } ?: false)
@@ -276,7 +276,10 @@ internal fun completeActiveFocusTask(
             status = TaskStatus.COMPLETED, completedAt = activeTask.completedAt ?: now, updatedAt = now,
         )
         db.update(closed)
-        if (wasOpen) scheduleNextOccurrence(db, closed, now, zone)
+        if (wasOpen) {
+            scheduleNextOccurrence(db, closed, now, zone)
+            expireHabits(db, closed.id, now)
+        }
     }
     db.insert(
         FocusWorkBlock(
