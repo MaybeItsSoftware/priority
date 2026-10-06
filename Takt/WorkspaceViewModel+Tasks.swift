@@ -58,7 +58,7 @@ extension WorkspaceViewModel {
       let parentID = isMultiListScope
         ? try visibleRootParentTaskID(for: destinationList, store: store) : boardParentTaskID
       let task = try store.createTask(capturing: title, listId: destinationID, parentTaskId: parentID,
-        kanbanColumn: column?.id, atTop: atTop)
+        kanbanColumn: column?.id, atTop: atTop, defaultDueAt: addedTodayDueAt)
       created = task
       selectedTaskID = task.id
       reloadOutline()

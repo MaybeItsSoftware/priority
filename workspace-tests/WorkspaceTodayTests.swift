@@ -32,6 +32,18 @@ final class WorkspaceTodayTests: XCTestCase {
 
   // MARK: - Details typed with the title
 
+  func testADefaultDueDateFillsInOnlyWhenTheTextNamesNone() throws {
+    let today = Calendar.current.startOfDay(for: .now)
+    let plain = try store.createTask(
+      capturing: "Ring the bank", listId: work.id, kanbanColumn: NextUpSelector.todayColumnID,
+      defaultDueAt: today)
+    XCTAssertEqual(plain.dueAt, today)
+
+    let dated = try store.createTask(capturing: "Ring the bank @tomorrow", listId: work.id, defaultDueAt: today)
+    XCTAssertNotNil(dated.dueAt)
+    XCTAssertNotEqual(dated.dueAt, today, "a date typed in the title wins")
+  }
+
   func testATypedTaskCarriesItsDetails() throws {
     let due = Calendar.current.startOfDay(for: .now)
     let task = try store.createTask(

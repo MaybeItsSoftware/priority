@@ -19,7 +19,9 @@ import TaktWorkspace
 ///   a thought to file later, which is what the inbox is for.
 ///
 /// On Today, the last two also put the task in the Today column, the way the
-/// day's own field did before the title bar took its job.
+/// day's own field did before the title bar took its job, and make it due
+/// today unless the text names another day: adding to Today means doing it
+/// today, and a due date says so everywhere else too — the phone, the CLI.
 @MainActor
 extension WorkspaceViewModel {
   func submitAddField(named title: String) {
@@ -81,6 +83,14 @@ extension WorkspaceViewModel {
     return !isEverythingSelected && selectedList != nil
   }
 
+  /// The due date a task added from Today's field takes when its text names
+  /// none: the start of today. Nil anywhere else, and for `a`/`A`/`O`, which
+  /// place a task beside another rather than on the day.
+  var addedTodayDueAt: Date? {
+    guard viewMode == .today, taskInsertionReference == nil, !isQuickCaptureActive else { return nil }
+    return Calendar.current.startOfDay(for: .now)
+  }
+
   /// The board column that puts a task on today — the one Today's own field
   /// used to file into.
   private var todayColumn: WorkspaceKanbanColumn? { boardColumns.first { $0.id == "today" } }
@@ -102,7 +112,8 @@ extension WorkspaceViewModel {
     perform {
       let parentID = try visibleRootParentTaskID(for: inbox, store: store)
       let task = try store.createTask(
-        capturing: title, listId: inbox.id, parentTaskId: parentID, kanbanColumn: column?.id)
+        capturing: title, listId: inbox.id, parentTaskId: parentID, kanbanColumn: column?.id,
+        defaultDueAt: addedTodayDueAt)
       // Selected only where it will be on screen to be selected.
       if isEverythingSelected || selectedListID == inbox.id { selectedTaskID = task.id }
       reloadOutline()
