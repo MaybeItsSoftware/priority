@@ -57,7 +57,7 @@ android {
         // scripts/build_play_bundle.sh passes the commit count, which only grows,
         // because Play refuses an upload whose versionCode it has seen before.
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
-        versionName = (findProperty("versionName") as String?) ?: "0.2.0"
+        versionName = (findProperty("versionName") as String?) ?: "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SYNC_SERVER", "\"$prioritySyncServer\"")
         buildConfigField("String", "SUPABASE_URL", "\"$prioritySupabaseUrl\"")
