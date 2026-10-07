@@ -66,11 +66,6 @@ extension WorkspaceViewModel {
     hideRightDock()
   }
 
-  /// There is no full-pane screen any more: the timeline sits in the dock
-  /// beside the work, so navigating leaves it where it is. Nothing left to
-  /// do here; the remaining callers in the views can drop it.
-  func leaveFullPaneScreens() {}
-
   /// Steps the day the timeline is showing. Never past today: the future holds
   /// no logged work, so a day ahead is an empty screen with nothing to say.
   /// Reloading is left to the screen's `onChange`, which the date picker needs

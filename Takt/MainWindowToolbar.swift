@@ -99,7 +99,6 @@ struct WorkspaceModeStrip: View {
           title: mode.title, command: mode.command,
           isCurrent: onScreen && model.viewMode == mode
         ) {
-          model.leaveFullPaneScreens()
           model.selectViewMode(mode)
           model.requestKeyboardFocus(.tasks)
         }
