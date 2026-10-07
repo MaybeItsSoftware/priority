@@ -163,8 +163,12 @@ extension WorkspaceViewModel {
   }
 
   func returnToCurrentListInSidebar() {
-    selectedFolderID = nil
-    var folderID = selectedList?.folderId
+    // A folder you are working in stays open, with the cursor on its row; a
+    // list puts the cursor on the list. Either way the stored cursor is let
+    // go, since it may name a row you walked off long ago.
+    var folderID = selectedFolderID.flatMap { id in folders.first { $0.id == id }?.parentFolderId }
+      ?? selectedList?.folderId
+    sidebarCursorID = nil
     var visited = Set<String>()
     while let id = folderID, visited.insert(id).inserted,
       let folder = folders.first(where: { $0.id == id }) {
@@ -174,20 +178,15 @@ extension WorkspaceViewModel {
     requestKeyboardFocus(.sidebar)
   }
 
-  /// Left steps out by one, whatever "out" currently means: out of a task's
-  /// children, then out of a list into everything, then out of the selection.
+  /// Left steps out by one: out of a task's children while you are inside a
+  /// task, and otherwise out of the list to its row in the sidebar.
   ///
-  /// The last step used to be a no-op — pressing left on a pane with nothing
-  /// left to leave did nothing at all, so the key looked broken at exactly the
-  /// point you were trying to get somewhere. It now leaves the pane, which is
-  /// what the board has always done at its first column.
+  /// It used to take two more presses on the way — one to clear the
+  /// selection and one to widen the list to Everything — so ← out of a list
+  /// landed on a different view rather than back on the list.
   func leaveSelectedTaskScope() {
     if scopeTaskID != nil {
       leaveTaskScope()
-    } else if selectedTaskID == nil && !isEverythingSelected {
-      selectEverything()
-    } else if selectedTaskID != nil {
-      selectedTaskID = nil
     } else {
       returnToCurrentListInSidebar()
     }
