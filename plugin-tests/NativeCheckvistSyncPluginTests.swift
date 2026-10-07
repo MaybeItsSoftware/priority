@@ -52,6 +52,37 @@ final class NativeCheckvistSyncPluginTests: XCTestCase {
     XCTAssertEqual(lists.map(\.name), ["Open", "NoArchiveFlag"])
   }
 
+  func testFetchListsThrowsOnServerErrorInsteadOfReportingNoLists() async throws {
+    let session = CheckvistSession()
+    let repository = CheckvistTaskRepository()
+    let plugin = NativeCheckvistSyncPlugin(session: session, taskRepository: repository)
+    session.nextResponseStatusCode = 503
+    session.nextResponseData = Data("<html>unavailable</html>".utf8)
+    let credentials = CheckvistCredentials(username: "user@example.com", remoteKey: "key")
+
+    do {
+      _ = try await plugin.fetchLists(credentials: credentials)
+      XCTFail("A 503 must surface as a failed fetch, not an empty list.")
+    } catch CheckvistSessionError.invalidResponse(let statusCode) {
+      XCTAssertEqual(statusCode, 503)
+    }
+  }
+
+  func testFetchListsThrowsAuthenticationUnavailableOnUnauthorized() async throws {
+    let session = CheckvistSession()
+    let repository = CheckvistTaskRepository()
+    let plugin = NativeCheckvistSyncPlugin(session: session, taskRepository: repository)
+    session.nextResponseStatusCode = 401
+    let credentials = CheckvistCredentials(username: "user@example.com", remoteKey: "key")
+
+    do {
+      _ = try await plugin.fetchLists(credentials: credentials)
+      XCTFail("A 401 must surface as an authentication failure.")
+    } catch CheckvistSessionError.authenticationUnavailable {
+      // expected
+    }
+  }
+
   func testCreateTaskBuildsFormEncodedRequestAndDecodesCreatedTask() async throws {
     let session = CheckvistSession()
     let repository = CheckvistTaskRepository()

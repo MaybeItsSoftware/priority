@@ -159,6 +159,39 @@ final class OfflineTaskSyncPluginTests: XCTestCase {
     XCTAssertEqual(updated.due, "2026-01-01")
   }
 
+  func testWritesReadArchiveAndIdCounterFromStoreRewrittenUnderneath() async throws {
+    let doomed = try await plugin.createTask(
+      listId: "", content: "closed before the overwrite", parentId: nil, position: nil,
+      credentials: credentials)
+    _ = try await plugin.performTaskAction(
+      listId: "", taskId: doomed?.id ?? -1, action: .close, credentials: credentials)
+    XCTAssertEqual(localStore.load().archivedTasks.map(\.id), [doomed?.id])
+
+    // "Keep Remote (Overwrite Local)" saves a fresh payload with no archive
+    // behind the plugin's back; the plugin was constructed before this.
+    localStore.save(
+      OfflineTaskStorePayload(
+        openTasks: [makeTask(id: 40, content: "remote")], archivedTasks: [], nextTaskId: 41))
+
+    _ = try await plugin.updateTask(
+      listId: "", taskId: 40, content: "remote, renamed", due: nil, credentials: credentials)
+    XCTAssertTrue(
+      localStore.load().archivedTasks.isEmpty,
+      "A write after the overwrite must not put the old archive back.")
+    XCTAssertEqual(localStore.load().nextTaskId, 41)
+
+    let created = try await plugin.createTask(
+      listId: "", content: "new", parentId: nil, position: nil, credentials: credentials)
+    XCTAssertEqual(created?.id, 41, "Ids continue from the stored counter, not the one at init.")
+
+    _ = try await plugin.performTaskAction(
+      listId: "", taskId: doomed?.id ?? -1, action: .reopen, credentials: credentials)
+    let openTasks = try await plugin.fetchOpenTasks(listId: "", credentials: credentials)
+    XCTAssertEqual(
+      openTasks.map(\.id).sorted(), [40, 41],
+      "Reopening an id the overwrite discarded must not resurrect it.")
+  }
+
   func testFetchListsIsAlwaysEmptyAndLoginAlwaysSucceeds() async throws {
     let lists = try await plugin.fetchLists(credentials: credentials)
     XCTAssertTrue(lists.isEmpty)

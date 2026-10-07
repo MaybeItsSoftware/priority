@@ -150,6 +150,26 @@ import os
     items = []
   }
 
+  /// For `applicationWillTerminate`: ends the process and returns only once
+  /// it has gone, because nothing will be left running to escalate
+  /// afterwards. Blocks the caller for at most the grace period.
+  func shutdown() {
+    guard let process else { return }
+    stoppedOnPurpose = true
+    try? input?.close()
+    self.process = nil
+    input = nil
+    guard process.isRunning else { return }
+    process.terminate()
+    let deadline = Date().addingTimeInterval(Self.terminationGracePeriod)
+    while process.isRunning, Date() < deadline {
+      Thread.sleep(forTimeInterval: 0.05)
+    }
+    if process.isRunning {
+      kill(process.processIdentifier, SIGKILL)
+    }
+  }
+
   // MARK: - The process
 
   /// Launches `claude`. Returns false, with a notice saying why, when it
@@ -237,12 +257,28 @@ import os
   private func end() {
     stoppedOnPurpose = true
     try? input?.close()
-    process?.terminate()
+    if let process { Self.terminate(process) }
     process = nil
     input = nil
     isWorking = false
     toolItems = [:]
     withdrawPendingApprovals()
+  }
+
+  /// How long a process gets to leave on SIGTERM before it is killed.
+  private static let terminationGracePeriod: TimeInterval = 2
+
+  /// SIGTERM, then SIGKILL if the process is still there after the grace
+  /// period. The wait is off the main thread: Stop is a click, and a CLI
+  /// that ignores SIGTERM must not make the click hang.
+  private static func terminate(_ process: Process) {
+    guard process.isRunning else { return }
+    process.terminate()
+    DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + terminationGracePeriod) {
+      guard process.isRunning else { return }
+      log.warning("Claude Code ignored SIGTERM for \(terminationGracePeriod)s; sending SIGKILL.")
+      kill(process.processIdentifier, SIGKILL)
+    }
   }
 
   private func processExited(status: Int32, generation: Int) {

@@ -9,7 +9,6 @@ import OSLog
 struct CheckvistTaskRepository {
   private let logger = Logger(
     subsystem: "uk.co.maybeitssoftware.takt", category: "task-repository")
-  private static let userAgent = "Takt/1.0 (Macintosh; Mac OS X)"
   private static let cacheFreshnessInterval: TimeInterval = 15 * 60
 
   func fetchTasks(
@@ -33,7 +32,7 @@ struct CheckvistTaskRepository {
       var request = URLRequest(url: url)
       request.httpMethod = "GET"
       request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
       return request
     }
 

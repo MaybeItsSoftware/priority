@@ -19,7 +19,7 @@ enum CheckvistSessionError: LocalizedError {
       }
       return "Invalid response from Checkvist."
     case .requestFailed(let underlying):
-      return "Request failed: \(underlying.localizedDescription)"
+      return "Could not reach Checkvist (\(underlying.localizedDescription))"
     }
   }
 }

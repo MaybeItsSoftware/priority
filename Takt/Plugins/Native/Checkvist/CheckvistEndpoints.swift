@@ -5,6 +5,9 @@ import Foundation
 enum CheckvistEndpoints {
   static let baseURL = "https://checkvist.com"
 
+  /// Sent on every request so Checkvist's logs can tell this client apart.
+  static let userAgent = "Takt/1.0 (Macintosh; Mac OS X)"
+
   // MARK: - Static endpoints
 
   static var login: URL { URL(string: "\(baseURL)/auth/login.json")! }

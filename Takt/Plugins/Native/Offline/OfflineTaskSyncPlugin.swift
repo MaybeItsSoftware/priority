@@ -6,16 +6,14 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
   let displayName = "Offline Store"
   let pluginDescription = "Local offline task storage."
 
+  /// The only state. Archive and id counter are read from the stored payload
+  /// on every write, never cached here: "Keep Remote (Overwrite Local)"
+  /// rewrites the store underneath this plugin, and a copy remembered from
+  /// init would be written straight back over it on the next action.
   private let localStore: LocalTaskStore
-  private var archivedTasksById: [Int: CheckvistTask] = [:]
-  private var nextTaskIdValue: Int = 1
 
   init(localStore: LocalTaskStore = LocalTaskStore()) {
     self.localStore = localStore
-    let payload = localStore.load()
-    self.archivedTasksById = Dictionary(
-      uniqueKeysWithValues: payload.archivedTasks.map { ($0.id, $0) })
-    self.nextTaskIdValue = max(payload.nextTaskId, 1)
   }
 
   func fetchOpenTasks(listId: String, credentials: CheckvistCredentials) async throws
@@ -43,7 +41,8 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
   ) async throws -> Bool {
     let payload = localStore.load()
     var openTasks = payload.openTasks
-    var archivedTasks = payload.archivedTasks
+    var archivedTasksById = Dictionary(
+      payload.archivedTasks.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
 
     if action == .close || action == .invalidate {
       let status = action == .invalidate ? -1 : 1
@@ -70,10 +69,10 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
       }
     }
 
-    archivedTasks = Array(archivedTasksById.values)
+    let archivedTasks = archivedTasksById.values.sorted { $0.id < $1.id }
     localStore.save(
       OfflineTaskStorePayload(
-        openTasks: openTasks, archivedTasks: archivedTasks, nextTaskId: nextTaskIdValue))
+        openTasks: openTasks, archivedTasks: archivedTasks, nextTaskId: payload.nextTaskId))
     return true
   }
 
@@ -92,7 +91,7 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
       openTasks[index] = rebuiltTask(task, content: content ?? task.content, due: due ?? task.due)
       localStore.save(
         OfflineTaskStorePayload(
-          openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: nextTaskIdValue))
+          openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: payload.nextTaskId))
       return true
     }
     return false
@@ -108,8 +107,7 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
     let payload = localStore.load()
     var openTasks = payload.openTasks
 
-    let taskId = nextTaskIdValue
-    nextTaskIdValue += 1
+    let taskId = Self.nextTaskId(in: payload)
 
     let newTask = CheckvistTask(
       id: taskId, content: content, status: 0, due: nil, position: position, parentId: parentId,
@@ -119,8 +117,16 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
 
     localStore.save(
       OfflineTaskStorePayload(
-        openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: nextTaskIdValue))
+        openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: taskId + 1))
     return newTask
+  }
+
+  /// The id a new task gets: the stored counter, unless a task already holds
+  /// an id at or past it (a payload written by something else), in which case
+  /// the first free one after every existing id.
+  private static func nextTaskId(in payload: OfflineTaskStorePayload) -> Int {
+    let highestExisting = (payload.openTasks + payload.archivedTasks).map(\.id).max() ?? 0
+    return max(payload.nextTaskId, highestExisting + 1, 1)
   }
 
   func deleteTask(listId: String, taskId: Int, credentials: CheckvistCredentials) async throws
@@ -137,7 +143,7 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
 
     localStore.save(
       OfflineTaskStorePayload(
-        openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: nextTaskIdValue))
+        openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: payload.nextTaskId))
     return true
   }
 
@@ -155,7 +161,7 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
       openTasks[index] = rebuiltTask(task, position: position)
       localStore.save(
         OfflineTaskStorePayload(
-          openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: nextTaskIdValue))
+          openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: payload.nextTaskId))
       return true
     }
     return false
@@ -175,7 +181,7 @@ final class OfflineTaskSyncPlugin: CheckvistSyncPlugin {
       openTasks[index] = rebuiltTask(task, parentId: parentId)
       localStore.save(
         OfflineTaskStorePayload(
-          openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: nextTaskIdValue))
+          openTasks: openTasks, archivedTasks: payload.archivedTasks, nextTaskId: payload.nextTaskId))
       return true
     }
     return false

@@ -82,6 +82,7 @@ final class AFFiNEMCPSession: AFFiNEToolCalling, @unchecked Sendable {
   private var process: Process?
   private var standardInput: FileHandle?
   private var standardOutput: FileHandle?
+  private var standardError: FileHandle?
   private var buffer = Data()
   private var nextRequestId = 1
   private let stderrLock = NSLock()
@@ -93,6 +94,7 @@ final class AFFiNEMCPSession: AFFiNEToolCalling, @unchecked Sendable {
   }
 
   deinit {
+    standardError?.readabilityHandler = nil
     runningProcess()?.terminate()
   }
 
@@ -114,11 +116,13 @@ final class AFFiNEMCPSession: AFFiNEToolCalling, @unchecked Sendable {
   func close() {
     queue.async { [self] in
       standardInput?.closeFile()
+      standardError?.readabilityHandler = nil
       let running = runningProcess()
       running?.terminate()
       setProcess(nil)
       standardInput = nil
       standardOutput = nil
+      standardError = nil
       buffer = Data()
     }
   }
@@ -183,7 +187,13 @@ final class AFFiNEMCPSession: AFFiNEToolCalling, @unchecked Sendable {
     // stderr and then exits, which otherwise surfaces as a bare EOF.
     errors.fileHandleForReading.readabilityHandler = { [weak self] handle in
       let chunk = handle.availableData
-      guard !chunk.isEmpty, let self else { return }
+      guard !chunk.isEmpty else {
+        // EOF. A handler left installed here is called again at once, and
+        // again, for as long as the pipe exists.
+        handle.readabilityHandler = nil
+        return
+      }
+      guard let self else { return }
       stderrLock.lock()
       stderrTail.append(chunk)
       if stderrTail.count > 4096 { stderrTail.removeFirst(stderrTail.count - 4096) }
@@ -199,6 +209,7 @@ final class AFFiNEMCPSession: AFFiNEToolCalling, @unchecked Sendable {
     setProcess(process)
     self.standardInput = input.fileHandleForWriting
     self.standardOutput = output.fileHandleForReading
+    self.standardError = errors.fileHandleForReading
     self.buffer = Data()
 
     let id = takeRequestId()

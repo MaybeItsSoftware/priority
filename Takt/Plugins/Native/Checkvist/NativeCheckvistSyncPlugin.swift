@@ -6,7 +6,6 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
   let displayName = "Native Checkvist Sync"
   let pluginDescription = "Connect to Checkvist, load remote workspaces, and upload offline tasks."
 
-  private static let userAgent = "Takt/1.0 (Macintosh; Mac OS X)"
   private let session: CheckvistSession
   private let taskRepository: CheckvistTaskRepository
   private let credentialStore: CheckvistCredentialStore
@@ -87,12 +86,17 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       request.httpMethod = "GET"
       request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
       request.setValue("application/json", forHTTPHeaderField: "Accept")
-      request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
       return request
     }
 
+    // A failed fetch is a failed fetch, not a user with no lists: returning
+    // `[]` here made the repository report success and empty the sidebar.
     guard (200...299).contains(response.statusCode) else {
-      return []
+      if response.statusCode == 401 {
+        throw CheckvistSessionError.authenticationUnavailable
+      }
+      throw CheckvistSessionError.invalidResponse(statusCode: response.statusCode)
     }
 
     let lists = try JSONDecoder().decode([CheckvistList].self, from: data)
@@ -110,8 +114,8 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
       request.setValue("application/json", forHTTPHeaderField: "Accept")
       request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-      request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
-      let encodedName = Self.percentEncodeFormValue(trimmedName)
+      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
+      let encodedName = FormURLEncoding.percentEncodeFormValue(trimmedName)
       request.httpBody = "checklist[name]=\(encodedName)".data(using: .utf8)
       return request
     }
@@ -143,7 +147,7 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       var request = URLRequest(url: url)
       request.httpMethod = "POST"
       request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
       return request
     }
 
@@ -159,10 +163,10 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
   ) async throws -> Bool {
     var bodyParts: [String] = []
     if let content {
-      bodyParts.append("task[content]=\(Self.percentEncodeFormValue(content))")
+      bodyParts.append("task[content]=\(FormURLEncoding.percentEncodeFormValue(content))")
     }
     if let due {
-      bodyParts.append("task[due_date]=\(Self.percentEncodeFormValue(due))")
+      bodyParts.append("task[due_date]=\(FormURLEncoding.percentEncodeFormValue(due))")
     }
     guard !bodyParts.isEmpty else { return true }
     // Never send parse=true for updates.  Checkvist's server-side parser
@@ -191,7 +195,7 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       return nil
     }
 
-    var bodyParts = ["task[content]=\(Self.percentEncodeFormValue(trimmedContent))"]
+    var bodyParts = ["task[content]=\(FormURLEncoding.percentEncodeFormValue(trimmedContent))"]
     if let parentId {
       bodyParts.append("task[parent_id]=\(parentId)")
     }
@@ -205,7 +209,7 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
       request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
       request.setValue("application/json", forHTTPHeaderField: "Accept")
-      request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
       request.httpBody = bodyParts.joined(separator: "&").data(using: .utf8)
       return request
     }
@@ -241,7 +245,7 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       var request = URLRequest(url: url)
       request.httpMethod = "DELETE"
       request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
       return request
     }
 
@@ -316,7 +320,7 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       request.httpMethod = "PUT"
       request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
       request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
       var requestPayload: [String: Any] = ["task": bodyTaskPayload]
       if includeParseFlag {
         requestPayload["parse"] = true
@@ -354,7 +358,7 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
       request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
       request.setValue("application/json", forHTTPHeaderField: "Accept")
-      request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
       request.httpBody = bodyParts.joined(separator: "&").data(using: .utf8)
       return request
     }
@@ -373,13 +377,6 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
     )
   }
 
-  private static func percentEncodeFormValue(_ raw: String) -> String {
-    let allowed = CharacterSet(
-      charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
-    // Force-unwrap is safe: addingPercentEncoding only returns nil for invalid UTF-16
-    // surrogates, which Swift's String type cannot represent.
-    return raw.addingPercentEncoding(withAllowedCharacters: allowed)!
-  }
 }
 
 private struct CheckvistListCreateResponse: Decodable {
