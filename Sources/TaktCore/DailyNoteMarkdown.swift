@@ -8,8 +8,10 @@ import Foundation
 /// written twice replaces its own block rather than stacking duplicates.
 /// Everything outside the markers belongs to the user and is never touched.
 public enum DailyNoteMarkdown {
-  public static let beginMarker = "<!-- priority:begin -->"
-  public static let endMarker = "<!-- priority:end -->"
+  /// The block is `ManagedMarkdownBlock.takt`; these two are kept so existing
+  /// callers and tests keep reading.
+  public static let beginMarker = ManagedMarkdownBlock.takt.beginMarker
+  public static let endMarker = ManagedMarkdownBlock.takt.endMarker
 
   /// The managed block for a day, markers included.
   /// - Parameter dailies: the dailies that were expected on this day, in
@@ -82,30 +84,10 @@ public enum DailyNoteMarkdown {
   }
 
   /// Splices `section` into `existing`, replacing a previous managed block if
-  /// there is one and appending otherwise.
-  ///
-  /// If a begin marker appears without a matching end *after* it, the note is
-  /// treated as having no managed block and a fresh one is appended. Replacing
-  /// on a half-open marker would consume everything the user wrote below it,
-  /// and a duplicate block they can delete is a far better failure than prose
-  /// that is silently gone.
+  /// there is one and appending otherwise. See `ManagedMarkdownBlock.merged`
+  /// for the half-open-marker rule.
   public static func merged(section: String, into existing: String) -> String {
-    guard
-      let beginRange = existing.range(of: beginMarker),
-      let endRange = existing.range(of: endMarker, range: beginRange.upperBound..<existing.endIndex)
-    else {
-      return appended(section: section, to: existing)
-    }
-
-    var merged = existing
-    merged.replaceSubrange(beginRange.lowerBound..<endRange.upperBound, with: section)
-    return merged
-  }
-
-  private static func appended(section: String, to existing: String) -> String {
-    let trimmed = existing.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return section + "\n" }
-    return trimmed + "\n\n" + section + "\n"
+    ManagedMarkdownBlock.takt.merged(block: section, into: existing)
   }
 
   /// Task titles are arbitrary user text landing in a markdown list. Leading

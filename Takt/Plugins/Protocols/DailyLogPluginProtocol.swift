@@ -46,6 +46,14 @@ protocol DailyLogPlugin: Plugin, AnyObject {
   /// external edit would only appear after a relaunch.
   var onExternalChange: (() -> Void)? { get set }
 
+  /// Fired when a write that should have reached disk did not — a log append
+  /// that failed, a dailies edit that could not be saved — or when the dailies
+  /// file exists but will not decode. The plugin keeps the in-memory state
+  /// usable in every case, so this is a report, not a failure: the UI should
+  /// tell the user their history or configuration is not being kept, the way
+  /// `DailyLogManager.onError` surfaces a failed note write.
+  var onPersistenceError: ((Error) -> Void)? { get set }
+
   /// Captures the day's plan once per logical day. Repeat calls within the same
   /// day are ignored, so this is safe to call on every popover open.
   func snapshotPlanIfNeeded(plannedTaskIds: [Int], now: Date)

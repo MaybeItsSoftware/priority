@@ -59,6 +59,11 @@ final class NativeDailyLogPlugin: DailyLogPlugin {
     set { service.onExternalChange = newValue }
   }
 
+  var onPersistenceError: ((Error) -> Void)? {
+    get { service.onPersistenceError }
+    set { service.onPersistenceError = newValue }
+  }
+
   func record(_ event: DayLogEvent) {
     service.record(event)
   }

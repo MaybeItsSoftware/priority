@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import TaktCore
 
 // `ObsidianOpenMode` moved to `ObsidianOpenMode.swift` so it can be shared
 // with `TaktPlugins` / `TaktAppLogic` without AppKit-bound code.
@@ -41,7 +42,7 @@ final class ObsidianSyncService {
   }
 
   var inboxPath: String {
-    Self.pathFromBookmarkData(inboxBookmark) ?? ""
+    SecurityScopedFolderBookmark.path(from: inboxBookmark) ?? ""
   }
 
   @MainActor
@@ -56,11 +57,7 @@ final class ObsidianSyncService {
 
     guard panel.runModal() == .OK, let selectedURL = panel.url else { return nil }
 
-    let bookmark = try selectedURL.bookmarkData(
-      options: [.withSecurityScope],
-      includingResourceValuesForKeys: nil,
-      relativeTo: nil
-    )
+    let bookmark = try SecurityScopedFolderBookmark.make(for: selectedURL)
 
     inboxBookmark = bookmark
     UserDefaults.standard.set(bookmark, forKey: Self.bookmarkDefaultsKey)
@@ -84,11 +81,7 @@ final class ObsidianSyncService {
 
     guard panel.runModal() == .OK, let selectedURL = panel.url else { return nil }
 
-    let bookmark = try selectedURL.bookmarkData(
-      options: [.withSecurityScope],
-      includingResourceValuesForKeys: nil,
-      relativeTo: nil
-    )
+    let bookmark = try SecurityScopedFolderBookmark.make(for: selectedURL)
 
     linkedFolderBookmarksByTaskId[taskId] = bookmark.base64EncodedString()
     persistLinkedFolderBookmarks()
@@ -108,24 +101,16 @@ final class ObsidianSyncService {
 
     guard panel.runModal() == .OK, let parentURL = panel.url else { return nil }
 
-    let accessed = parentURL.startAccessingSecurityScopedResource()
-    defer {
-      if accessed {
-        parentURL.stopAccessingSecurityScopedResource()
-      }
+    let bookmark = try SecurityScopedFolderBookmark.withAccess(parentURL) {
+      let preferredName = sanitizeTaskFileName(taskContent)
+      let createdFolderURL = try uniqueFolderURL(in: parentURL, preferredName: preferredName)
+      try FileManager.default.createDirectory(
+        at: createdFolderURL, withIntermediateDirectories: true)
+      return (try SecurityScopedFolderBookmark.make(for: createdFolderURL), createdFolderURL)
     }
+    let createdFolderURL = bookmark.1
 
-    let preferredName = sanitizeTaskFileName(taskContent)
-    let createdFolderURL = try uniqueFolderURL(in: parentURL, preferredName: preferredName)
-    try FileManager.default.createDirectory(at: createdFolderURL, withIntermediateDirectories: true)
-
-    let bookmark = try createdFolderURL.bookmarkData(
-      options: [.withSecurityScope],
-      includingResourceValuesForKeys: nil,
-      relativeTo: nil
-    )
-
-    linkedFolderBookmarksByTaskId[taskId] = bookmark.base64EncodedString()
+    linkedFolderBookmarksByTaskId[taskId] = bookmark.0.base64EncodedString()
     persistLinkedFolderBookmarks()
     return createdFolderURL.path
   }
@@ -137,7 +122,7 @@ final class ObsidianSyncService {
 
   func linkedFolderPath(forTaskId taskId: Int) -> String? {
     guard let bookmark = bookmarkDataForLinkedTask(taskId) else { return nil }
-    return Self.pathFromBookmarkData(bookmark)
+    return SecurityScopedFolderBookmark.path(from: bookmark)
   }
 
   func hasLinkedFolder(forTaskId taskId: Int) -> Bool {
@@ -149,7 +134,7 @@ final class ObsidianSyncService {
       let destinationFolderURL = try? resolvedDestinationFolderURL(
         linkedFolderTaskId: linkedFolderTaskId)
     else { return false }
-    return withSecurityScope(destinationFolderURL) {
+    return SecurityScopedFolderBookmark.withAccess(destinationFolderURL) {
       guard
         let markdownURL = try? noteFileURL(
           task: task,
@@ -169,12 +154,12 @@ final class ObsidianSyncService {
     syncDate: Date = Date()
   ) throws -> URL {
     let inboxURL = try resolvedDestinationFolderURL(linkedFolderTaskId: linkedFolderTaskId)
-    // The security scope must stay held across the directory creation, the
-    // creation-date probe *and* the write — not just while the destination URL
-    // is being assembled. Release builds are sandboxed
-    // (`Priority.release.entitlements`), so file access outside this window is
-    // denied even though it succeeds in unsandboxed Debug builds.
-    let markdownURL = try withSecurityScope(inboxURL) {
+    // The access window spans the directory creation, the creation-date probe
+    // *and* the write — not just the step that assembles the destination URL.
+    // The app is not sandboxed today (see `SecurityScopedFolderBookmark`), so
+    // this is discipline rather than necessity; it is what lets the
+    // entitlement be added later without revisiting every write.
+    let markdownURL = try SecurityScopedFolderBookmark.withAccess(inboxURL) {
       try writeTaskMarkdown(
         task: task,
         listId: listId,
@@ -184,18 +169,6 @@ final class ObsidianSyncService {
     }
     openInObsidian(markdownURL, mode: openMode)
     return markdownURL
-  }
-
-  /// Runs `body` while holding security-scoped access to `url`. Every read or
-  /// write under a bookmark-resolved folder must happen inside one of these.
-  private func withSecurityScope<T>(_ url: URL, _ body: () throws -> T) rethrows -> T {
-    let accessed = url.startAccessingSecurityScopedResource()
-    defer {
-      if accessed {
-        url.stopAccessingSecurityScopedResource()
-      }
-    }
-    return try body()
   }
 
   private func persistLinkedFolderBookmarks() {
@@ -225,41 +198,19 @@ final class ObsidianSyncService {
     guard let bookmarkData = inboxBookmark else {
       throw ObsidianSyncError.inboxFolderNotConfigured
     }
-    return try resolveSecurityScopedBookmark(bookmarkData) { refreshed in
-      inboxBookmark = refreshed
+    return try SecurityScopedFolderBookmark.resolve(bookmarkData) { [weak self] refreshed in
+      self?.inboxBookmark = refreshed
       UserDefaults.standard.set(refreshed, forKey: Self.bookmarkDefaultsKey)
     }
   }
 
   private func resolvedLinkedFolderURL(forTaskId taskId: Int) throws -> URL? {
     guard let bookmarkData = bookmarkDataForLinkedTask(taskId) else { return nil }
-    return try resolveSecurityScopedBookmark(bookmarkData) { refreshed in
-      linkedFolderBookmarksByTaskId[taskId] = refreshed.base64EncodedString()
-      persistLinkedFolderBookmarks()
+    return try SecurityScopedFolderBookmark.resolve(bookmarkData) { [weak self] refreshed in
+      guard let self else { return }
+      self.linkedFolderBookmarksByTaskId[taskId] = refreshed.base64EncodedString()
+      self.persistLinkedFolderBookmarks()
     }
-  }
-
-  /// Resolves a security-scoped bookmark, refreshing it via `onStale` if the OS reports it stale.
-  private func resolveSecurityScopedBookmark(
-    _ bookmarkData: Data,
-    onStale: (Data) -> Void
-  ) throws -> URL {
-    var isStale = false
-    let resolvedURL = try URL(
-      resolvingBookmarkData: bookmarkData,
-      options: [.withSecurityScope],
-      relativeTo: nil,
-      bookmarkDataIsStale: &isStale
-    )
-    if isStale {
-      let refreshed = try resolvedURL.bookmarkData(
-        options: [.withSecurityScope],
-        includingResourceValuesForKeys: nil,
-        relativeTo: nil
-      )
-      onStale(refreshed)
-    }
-    return resolvedURL
   }
 
   private func writeTaskMarkdown(task: CheckvistTask, listId: String, inboxURL: URL, syncDate: Date)
@@ -270,20 +221,58 @@ final class ObsidianSyncService {
       destinationFolderURL: inboxURL,
       createDirectoryIfNeeded: true
     )
+    let block = ManagedMarkdownBlock.takt
+    let body = markdownDocument(for: task, listId: listId, syncDate: syncDate)
+
+    guard FileManager.default.fileExists(atPath: markdownURL.path) else {
+      try (block.wrap(body) + "\n").write(to: markdownURL, atomically: true, encoding: .utf8)
+      return markdownURL
+    }
+
     let localCreationDate = try? fileCreationDate(at: markdownURL)
     let latestRemoteUpdate = latestRemoteUpdateDate(for: task)
-
     if let localCreationDate, let latestRemoteUpdate, latestRemoteUpdate < localCreationDate {
       return markdownURL
     }
 
-    let markdown = markdownDocument(for: task, listId: listId, syncDate: syncDate)
-    try markdown.write(to: markdownURL, atomically: true, encoding: .utf8)
+    // The file is keyed only on the task's title, so what is at that path may
+    // be the user's own note that happens to share it, or a note we wrote that
+    // they have since added to. Either way only the managed block is ours to
+    // rewrite: everything outside the markers comes back untouched, and a file
+    // with no markers that we did not write is refused rather than replaced.
+    let existing = try String(contentsOf: markdownURL, encoding: .utf8)
+    let merged: String
+    if block.contains(existing) {
+      merged = block.merging(body: body, into: existing)
+    } else if Self.isLegacySyncedNote(existing, taskId: task.id) {
+      // Written whole-file by an earlier Takt, before the markers. Nothing in
+      // it is the user's, so adopting it into a block loses nothing.
+      merged = block.wrap(body) + "\n"
+    } else {
+      throw ObsidianSyncError.noteNotManaged(path: markdownURL.lastPathComponent)
+    }
+
+    guard merged != existing else { return markdownURL }
+    try merged.write(to: markdownURL, atomically: true, encoding: .utf8)
     return markdownURL
   }
 
+  /// Whether `contents` is a note this service wrote before it used markers:
+  /// the whole-file shape was the title, then a `Task ID:` or `Checkvist Link:`
+  /// line naming this task, then `Sync Date:`. Both lines are required, so a
+  /// user's note that happens to mention the task's permalink is not mistaken
+  /// for ours.
+  static func isLegacySyncedNote(_ contents: String, taskId: Int) -> Bool {
+    let lines = contents.split(separator: "\n", omittingEmptySubsequences: false).prefix(4)
+    let namesTask = lines.contains {
+      $0 == "Task ID: \(taskId)" || ($0.hasPrefix("Checkvist Link: ") && $0.hasSuffix("#t\(taskId)"))
+    }
+    let hasSyncDate = lines.contains { $0.hasPrefix("Sync Date: ") }
+    return namesTask && hasSyncDate
+  }
+
   /// Callers must already hold security-scoped access to `destinationFolderURL`
-  /// (see `withSecurityScope`) — this both touches the filesystem when
+  /// (see `SecurityScopedFolderBookmark.withAccess`) — this both touches the filesystem when
   /// `createDirectoryIfNeeded` is set and returns a URL the caller will read or
   /// write immediately afterwards.
   private func noteFileURL(
@@ -466,26 +455,14 @@ final class ObsidianSyncService {
     throw ObsidianSyncError.fileDateUnavailable
   }
 
-  private static func pathFromBookmarkData(_ bookmarkData: Data?) -> String? {
-    guard let bookmarkData else { return nil }
-
-    var isStale = false
-    guard
-      let resolvedURL = try? URL(
-        resolvingBookmarkData: bookmarkData,
-        options: [.withSecurityScope],
-        relativeTo: nil,
-        bookmarkDataIsStale: &isStale
-      )
-    else { return nil }
-
-    return resolvedURL.path
-  }
 }
 
 enum ObsidianSyncError: LocalizedError {
   case inboxFolderNotConfigured
   case fileDateUnavailable
+  /// A file already sits where the task's note would go, and it is not one
+  /// Takt wrote: no managed-block markers, not the pre-marker shape either.
+  case noteNotManaged(path: String)
 
   var errorDescription: String? {
     switch self {
@@ -493,6 +470,10 @@ enum ObsidianSyncError: LocalizedError {
       return "Choose an Obsidian Inbox folder in Settings first."
     case .fileDateUnavailable:
       return "Unable to determine the local file date."
+    case .noteNotManaged(let path):
+      return
+        "\(path) already exists and wasn't written by Takt, so it was left alone. "
+        + "Rename it, or add <!-- priority:begin --> and <!-- priority:end --> where the task should go."
     }
   }
 }

@@ -48,9 +48,21 @@ final class DailyLogService {
   /// UI can re-read its projections. Set by `DailyLogManager`.
   var onExternalChange: (() -> Void)?
 
+  /// Fired when something that should have reached disk did not: a log append
+  /// that failed, a dailies edit that could not be saved, or a `dailies.json`
+  /// that exists but will not decode. The in-memory state stays usable in each
+  /// case, so these are not fatal — but they are the user's history and their
+  /// configuration silently not being kept, which they need to hear about
+  /// rather than discover at the next launch. Set by `DailyLogManager`.
+  var onPersistenceError: ((Error) -> Void)?
+
   private var directoryWatcher: DispatchSourceFileSystemObject?
-  private var watchedDirectoryDescriptor: CInt = -1
+  private var logFileWatcher: DispatchSourceFileSystemObject?
   private let storeDirectory: URL
+
+  /// The last dailies-file failure reported, so a file that stays broken is
+  /// announced once rather than on every write event the watcher delivers.
+  private var reportedDailiesLoadFailure: String?
 
   init(defaults: UserDefaults = .standard, storeDirectoryURL: URL? = nil) {
     self.defaults = defaults
@@ -59,51 +71,138 @@ final class DailyLogService {
     self.store = DayLogFileStore(directoryURL: directoryURL)
     self.dailiesStore = DailyDefinitionsStore(directoryURL: directoryURL)
     self.cachedEvents = store.loadAll()
-    self.cachedDailies = dailiesStore.load()
+    self.cachedDailies = DailyCollection()
     self.folderBookmark = defaults.data(forKey: Self.bookmarkDefaultsKey)
+    loadDailiesReportingFailure()
     startWatchingStoreDirectory()
+    startWatchingLogFile()
   }
 
   deinit {
     directoryWatcher?.cancel()
+    logFileWatcher?.cancel()
   }
 
-  /// Watches the store *directory* rather than the two files.
+  /// Reads `dailies.json` strictly, keeping the cache as it was if the file is
+  /// present but broken. Reading it as empty — which `load()` does — would be
+  /// wrong here on both counts: the UI would show no dailies, and the next
+  /// edit would start from nothing. `DailyDefinitionsStore.mutate` refuses to
+  /// save over such a file, so the cache being stale is the lesser harm.
+  private func loadDailiesReportingFailure() {
+    do {
+      cachedDailies = try dailiesStore.loadStrict()
+      reportedDailiesLoadFailure = nil
+    } catch {
+      let description = error.localizedDescription
+      logger.error("Dailies file unreadable: \(description, privacy: .public)")
+      if reportedDailiesLoadFailure != description {
+        reportedDailiesLoadFailure = description
+        onPersistenceError?(error)
+      }
+    }
+  }
+
+  /// Watches the store *directory*, for `dailies.json` and for the log file
+  /// appearing, disappearing or being replaced.
   ///
   /// `dailies.json` is saved atomically — written to a temporary and renamed
-  /// over the target — so a watch on the file follows the old, now-unlinked
-  /// inode and goes silent after the first external save. The directory's inode
-  /// is stable and sees the rename, so one watcher covers both files and
-  /// survives any number of saves.
+  /// over the target — so a watch on that file would follow the old,
+  /// now-unlinked inode and go silent after the first external save. The
+  /// directory's inode is stable and sees the rename.
   ///
-  /// Without this, an MCP-side edit would sit on disk unseen until the next
-  /// launch, and the app's own next edit would be computed from a stale cache.
+  /// What the directory *cannot* see is an in-place append to `daylog.jsonl`:
+  /// a write to an existing file changes that file's vnode, not the
+  /// directory's, so an MCP `daily_tick` left the popover stale until relaunch.
+  /// That is what `startWatchingLogFile` is for; this watcher's job for the
+  /// log is only to notice when the file it watches has been swapped out so it
+  /// can re-open it.
   private func startWatchingStoreDirectory() {
     try? FileManager.default.createDirectory(
       at: storeDirectory, withIntermediateDirectories: true)
 
-    let descriptor = open(storeDirectory.path, O_EVTONLY)
-    guard descriptor >= 0 else {
+    guard
+      let source = Self.makeWatcher(
+        path: storeDirectory.path,
+        eventMask: [.write, .rename, .delete],
+        onEvent: { [weak self] _ in
+          guard let self else { return }
+          self.reloadFromDisk()
+          // The log file may have just been created, or replaced, by another
+          // process; make sure the file watcher is on the current inode.
+          if self.logFileWatcher == nil {
+            self.startWatchingLogFile()
+          }
+        }
+      )
+    else {
       logger.error("Could not watch the daily-log directory; external edits need a relaunch.")
       return
     }
-    watchedDirectoryDescriptor = descriptor
+    directoryWatcher = source
+  }
+
+  /// Watches the log file's own descriptor, which is what sees an append.
+  ///
+  /// The file is append-only and never rewritten, so its inode is stable in
+  /// normal use and this watch lives as long as the process does. If it is
+  /// deleted or renamed out from under us — a user clearing their history, say
+  /// — the watch is dropped and the directory watcher re-opens it once a new
+  /// file appears. Nothing to do when the file does not exist yet: that also
+  /// falls to the directory watcher.
+  private func startWatchingLogFile() {
+    logFileWatcher?.cancel()
+    logFileWatcher = nil
+    guard FileManager.default.fileExists(atPath: store.fileURL.path) else { return }
+
+    guard
+      let source = Self.makeWatcher(
+        path: store.fileURL.path,
+        eventMask: [.write, .extend, .rename, .delete],
+        onEvent: { [weak self] events in
+          guard let self else { return }
+          if !events.isDisjoint(with: [.rename, .delete]) {
+            self.logFileWatcher?.cancel()
+            self.logFileWatcher = nil
+          }
+          self.reloadFromDisk()
+          if self.logFileWatcher == nil {
+            self.startWatchingLogFile()
+          }
+        }
+      )
+    else {
+      logger.error("Could not watch the daily-log file; external ticks need a relaunch.")
+      return
+    }
+    logFileWatcher = source
+  }
+
+  /// Opens `path` for events only and returns a resumed source, or nil if it
+  /// could not be opened. The cancel handler captures the descriptor *by
+  /// value*: capturing `self` weakly — as this used to — meant that once the
+  /// service was deallocated the handler found no `self` and returned without
+  /// closing anything, leaking the descriptor for the life of the process.
+  private static func makeWatcher(
+    path: String,
+    eventMask: DispatchSource.FileSystemEvent,
+    onEvent: @escaping (DispatchSource.FileSystemEvent) -> Void
+  ) -> DispatchSourceFileSystemObject? {
+    let descriptor = open(path, O_EVTONLY | O_CLOEXEC)
+    guard descriptor >= 0 else { return nil }
 
     let source = DispatchSource.makeFileSystemObjectSource(
       fileDescriptor: descriptor,
-      eventMask: [.write, .rename, .delete],
+      eventMask: eventMask,
       queue: .main
     )
-    source.setEventHandler { [weak self] in
-      self?.reloadFromDisk()
+    source.setEventHandler { [weak source] in
+      onEvent(source?.data ?? [])
     }
-    source.setCancelHandler { [weak self] in
-      guard let self, self.watchedDirectoryDescriptor >= 0 else { return }
-      close(self.watchedDirectoryDescriptor)
-      self.watchedDirectoryDescriptor = -1
+    source.setCancelHandler {
+      close(descriptor)
     }
     source.resume()
-    directoryWatcher = source
+    return source
   }
 
   /// Size and modification date of a watched file, as a change detector.
@@ -129,12 +228,12 @@ final class DailyLogService {
   /// bumping the UI revision on every self-inflicted save would redraw the
   /// popover on each keystroke of a rename.
   ///
-  /// The stat check in front is what keeps that cheap. The watcher fires on
-  /// *every* write to the directory — including this process's own, so every
-  /// recorded event triggers one — and the day log is append-only, so decoding
-  /// it and comparing the whole array meant the cost of each write grew with
-  /// the length of the user's history. Two `stat` calls settle it instead, and
-  /// the deep comparison below still has the final say on whether to notify.
+  /// The stat check in front is what keeps that cheap. The watchers fire on
+  /// *every* write — including this process's own, so every recorded event
+  /// triggers one — and the day log is append-only, so decoding it and
+  /// comparing the whole array meant the cost of each write grew with the
+  /// length of the user's history. Two `stat` calls settle it instead, and the
+  /// deep comparison below still has the final say on whether to notify.
   private func reloadFromDisk() {
     let logStamp = FileStamp(store.fileURL)
     let dailiesStamp = FileStamp(dailiesStore.fileURL)
@@ -147,10 +246,10 @@ final class DailyLogService {
     lastDailiesStamp = dailiesStamp
 
     let events = store.loadAll()
-    let dailies = dailiesStore.load()
-    guard events != cachedEvents || dailies != cachedDailies else { return }
+    let previousDailies = cachedDailies
+    loadDailiesReportingFailure()
+    guard events != cachedEvents || cachedDailies != previousDailies else { return }
     cachedEvents = events
-    cachedDailies = dailies
     onExternalChange?()
   }
 
@@ -215,7 +314,7 @@ final class DailyLogService {
   // MARK: - Folder
 
   var dailiesFolderPath: String {
-    Self.pathFromBookmarkData(folderBookmark) ?? ""
+    SecurityScopedFolderBookmark.path(from: folderBookmark) ?? ""
   }
 
   @MainActor
@@ -230,11 +329,7 @@ final class DailyLogService {
 
     guard panel.runModal() == .OK, let selectedURL = panel.url else { return nil }
 
-    let bookmark = try selectedURL.bookmarkData(
-      options: [.withSecurityScope],
-      includingResourceValuesForKeys: nil,
-      relativeTo: nil
-    )
+    let bookmark = try SecurityScopedFolderBookmark.make(for: selectedURL)
     folderBookmark = bookmark
     defaults.set(bookmark, forKey: Self.bookmarkDefaultsKey)
     return selectedURL.path
@@ -256,8 +351,10 @@ final class DailyLogService {
     } catch {
       // The in-memory copy still has it, so the current session stays correct;
       // only durability is lost. Failing the user's completion because a log
-      // line didn't land would be a far worse trade.
+      // line didn't land would be a far worse trade — but they do need to know
+      // the line is not on disk.
       logger.error("Daily log append failed: \(error.localizedDescription, privacy: .public)")
+      onPersistenceError?(error)
     }
   }
 
@@ -369,9 +466,13 @@ final class DailyLogService {
       cachedDailies = try dailiesStore.mutate(transform)
     } catch {
       // Apply locally so the session stays usable; only durability is lost.
-      // Same trade as `record`.
+      // Same trade as `record`, and the same obligation to say so: an edit
+      // that looks saved and isn't — most likely because the file on disk is
+      // one the store refused to overwrite — would otherwise be discovered at
+      // the next launch, when it is gone.
       transform(&cachedDailies)
       logger.error("Dailies save failed: \(error.localizedDescription, privacy: .public)")
+      onPersistenceError?(error)
     }
   }
 
@@ -412,11 +513,16 @@ final class DailyLogService {
       dailies: dailies(dueOn: day)
     )
 
-    return try withSecurityScope(folderURL) {
+    return try SecurityScopedFolderBookmark.withAccess(folderURL) {
       let noteURL = folderURL.appendingPathComponent(relativePath)
-      let existing = try? String(contentsOf: noteURL, encoding: .utf8)
 
-      guard let existing else {
+      // Existence and readability are two different questions, and conflating
+      // them — `try? String(contentsOf:)` then "nil means create" — meant a
+      // note that *exists* but could not be read just then (an iCloud dataless
+      // file still downloading, a permissions hiccup) was replaced with a
+      // stub when "create missing notes" was on. Only a genuine absence may
+      // create; any other read failure is the caller's to see.
+      guard FileManager.default.fileExists(atPath: noteURL.path) else {
         guard createsMissingNotes else {
           throw DailyLogError.noteMissing(path: relativePath)
         }
@@ -428,6 +534,7 @@ final class DailyLogService {
         return noteURL
       }
 
+      let existing = try String(contentsOf: noteURL, encoding: .utf8)
       let merged = DailyNoteMarkdown.merged(section: section, into: existing)
       guard merged != existing else { return noteURL }
       try merged.write(to: noteURL, atomically: true, encoding: .utf8)
@@ -435,96 +542,87 @@ final class DailyLogService {
     }
   }
 
-  /// Mirrors any logical day that has closed since the last write.
+  /// How far back a catch-up write will reach. A machine that has been off
+  /// for longer than this gets its last month mirrored, not its whole absence
+  /// — the notes for older days are very likely to have been written by hand
+  /// by then, and a month of stubs landing at once is not a welcome surprise.
+  private static let maximumCatchUpDays = 30
+
+  /// Mirrors every logical day that has closed since the last write.
   ///
   /// Only closed days are written: mirroring a day still in progress would keep
   /// rewriting the block all afternoon, and the note is meant to be a record of
   /// what a day *was*, not a live dashboard. That is what the Daily view is for.
+  ///
+  /// *Every* closed day, not just yesterday: this used to write `previousDay`
+  /// alone and then stamp it, so a laptop closed on Friday and opened on Monday
+  /// mirrored Sunday and silently skipped Friday and Saturday for good. The
+  /// walk now runs from the day after the stamp up to yesterday, oldest first,
+  /// and stops at the first failure so the stamp never jumps past a day that
+  /// has not landed.
   func writeClosedDayNotesIfNeeded(now: Date, titlesByTaskId: [Int: String]) {
     guard writesNotesAutomatically, !dailiesFolderPath.isEmpty else { return }
 
     let todayKey = boundary.dayKey(for: now)
     let previousDay = boundary.day(offsetBy: -1, from: now)
     let previousKey = boundary.dayKey(for: previousDay)
+    let lastWrittenKey = defaults.string(forKey: Self.lastWrittenNoteDayKeyDefaultsKey)
 
-    guard defaults.string(forKey: Self.lastWrittenNoteDayKeyDefaultsKey) != previousKey,
-      previousKey != todayKey
-    else { return }
+    guard lastWrittenKey != previousKey, previousKey != todayKey else { return }
 
-    // Nothing happened, nothing to say — don't stamp an empty block into a note.
-    let summary = summary(on: previousDay)
-    guard
-      summary.completedCount > 0 || summary.plannedCount > 0 || summary.focusSeconds > 0
-        || !dailies(dueOn: previousDay).isEmpty
-    else {
-      defaults.set(previousKey, forKey: Self.lastWrittenNoteDayKeyDefaultsKey)
-      return
+    // With no stamp at all this is a first run, and there is no "since" to
+    // catch up from: yesterday is the only day owed. Day keys are
+    // `yyyy-MM-dd`, so plain string order is date order.
+    let pendingDays: [Date]
+    if let lastWrittenKey {
+      pendingDays = boundary.days(endingOn: previousDay, count: Self.maximumCatchUpDays)
+        .filter { boundary.dayKey(for: $0) > lastWrittenKey }
+    } else {
+      pendingDays = [previousDay]
     }
 
-    do {
-      try writeDailyNote(for: previousDay, titlesByTaskId: titlesByTaskId)
-      defaults.set(previousKey, forKey: Self.lastWrittenNoteDayKeyDefaultsKey)
-    } catch {
-      // Left unstamped on purpose so the next launch retries — a missing note
-      // today (say, because the vault is on an unmounted drive) shouldn't cost
-      // that day's entry permanently.
-      logger.error(
-        "Daily note write for \(previousKey, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
-      )
-    }
-  }
+    for day in pendingDays {
+      let key = boundary.dayKey(for: day)
 
-  // MARK: - Security-scoped access
+      // Nothing happened, nothing to say — don't stamp an empty block into a
+      // note. The day still counts as handled.
+      let summary = summary(on: day)
+      guard
+        summary.completedCount > 0 || summary.plannedCount > 0 || summary.focusSeconds > 0
+          || !dailies(dueOn: day).isEmpty
+      else {
+        defaults.set(key, forKey: Self.lastWrittenNoteDayKeyDefaultsKey)
+        continue
+      }
 
-  /// Runs `body` while holding security-scoped access. Release builds are
-  /// sandboxed, so every read and write under the bookmark-resolved folder has
-  /// to happen inside one of these — see `ObsidianSyncService` for the same
-  /// pattern and the same reason.
-  private func withSecurityScope<T>(_ url: URL, _ body: () throws -> T) rethrows -> T {
-    let accessed = url.startAccessingSecurityScopedResource()
-    defer {
-      if accessed {
-        url.stopAccessingSecurityScopedResource()
+      do {
+        try writeDailyNote(for: day, titlesByTaskId: titlesByTaskId)
+        defaults.set(key, forKey: Self.lastWrittenNoteDayKeyDefaultsKey)
+      } catch {
+        // Left unstamped on purpose so the next launch retries — a missing
+        // note today (say, because the vault is on an unmounted drive)
+        // shouldn't cost that day's entry permanently. Later days wait too,
+        // or the stamp would move past this one.
+        logger.error(
+          "Daily note write for \(key, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
+        )
+        return
       }
     }
-    return try body()
   }
 
+  // MARK: - Folder bookmark
+
+  /// The bookmark machinery itself — resolving, refreshing when stale, holding
+  /// access around reads and writes — is `SecurityScopedFolderBookmark`,
+  /// shared with `ObsidianSyncService`.
   private func resolvedFolderURL() throws -> URL {
     guard let folderBookmark else { throw DailyLogError.folderNotConfigured }
-
-    var isStale = false
-    let resolvedURL = try URL(
-      resolvingBookmarkData: folderBookmark,
-      options: [.withSecurityScope],
-      relativeTo: nil,
-      bookmarkDataIsStale: &isStale
-    )
-    if isStale,
-      let refreshed = try? resolvedURL.bookmarkData(
-        options: [.withSecurityScope],
-        includingResourceValuesForKeys: nil,
-        relativeTo: nil
-      )
-    {
+    return try SecurityScopedFolderBookmark.resolve(folderBookmark) { [weak self] refreshed in
+      guard let self else { return }
       self.folderBookmark = refreshed
-      defaults.set(refreshed, forKey: Self.bookmarkDefaultsKey)
+      self.defaults.set(refreshed, forKey: Self.bookmarkDefaultsKey)
     }
-    return resolvedURL
-  }
-
-  private static func pathFromBookmarkData(_ bookmarkData: Data?) -> String? {
-    guard let bookmarkData else { return nil }
-    var isStale = false
-    guard
-      let resolvedURL = try? URL(
-        resolvingBookmarkData: bookmarkData,
-        options: [.withSecurityScope],
-        relativeTo: nil,
-        bookmarkDataIsStale: &isStale
-      )
-    else { return nil }
-    return resolvedURL.path
   }
 }
 
