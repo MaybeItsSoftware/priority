@@ -38,7 +38,7 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		665C2D7A2F588A0A002ED852 /* Bundle the priority CLI */ = {
+		665C2D7A2F588A0A002ED852 /* Bundle the takt CLI */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -46,7 +46,7 @@
 			);
 			inputPaths = (
 			);
-			name = "Bundle the priority CLI";
+			name = "Bundle the takt CLI";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -95,7 +95,7 @@
 				665C2D592F588A0A002ED852 /* Sources */,
 				665C2D5A2F588A0A002ED852 /* Frameworks */,
 				665C2D5B2F588A0A002ED852 /* Resources */,
-				665C2D7A2F588A0A002ED852 /* Bundle the priority CLI */,
+				665C2D7A2F588A0A002ED852 /* Bundle the takt CLI */,
 			);
 			buildRules = (
 			);
