@@ -51,7 +51,7 @@ extension SettingsView {
         Button("Reset to defaults") {
           preferences.globalHotkeyKeyCode = 49  // Space
           preferences.globalHotkeyModifiers = 0x0800  // Option
-          preferences.quickAddHotkeyKeyCode = 45  // N
+          preferences.quickAddHotkeyKeyCode = 2  // D
           preferences.quickAddHotkeyModifiers = 0x1B00  // Hyper
           preferences.focusPanelHotkeyKeyCode = 3  // F
           preferences.focusPanelHotkeyModifiers = 0x1B00  // Hyper

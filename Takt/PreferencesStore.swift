@@ -31,6 +31,7 @@ final class PreferencesStore {
     case quickAddHotkeyEnabled
     case quickAddHotkeyKeyCode
     case quickAddHotkeyModifiers
+    case quickAddHyperDMigrationCompleted
     case quickAddHyperNMigrationCompleted
     /// The workspace list the quick-add hotkey captures into; empty is the inbox.
     case quickCaptureListID

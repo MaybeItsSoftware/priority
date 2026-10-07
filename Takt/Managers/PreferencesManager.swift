@@ -57,7 +57,7 @@ import TaktCore
   var quickAddHotkeyEnabled: Bool {
     didSet { preferencesStore.set(quickAddHotkeyEnabled, for: .quickAddHotkeyEnabled) }
   }
-  /// Carbon keyCode for the quick add hotkey (default 45 = N)
+  /// Carbon keyCode for the quick add hotkey (default 2 = D, with Hyper)
   var quickAddHotkeyKeyCode: Int {
     didSet { preferencesStore.set(quickAddHotkeyKeyCode, for: .quickAddHotkeyKeyCode) }
   }
@@ -119,7 +119,7 @@ import TaktCore
     self.quickAddHotkeyEnabled = preferencesStore.bool(.quickAddHotkeyEnabled, default: true)
     self.quickAddHotkeyKeyCode = preferencesStore.int(
       .quickAddHotkeyKeyCode,
-      default: AppCoordinator.CarbonKey.n
+      default: AppCoordinator.CarbonKey.d
     )
     self.quickAddHotkeyModifiers = preferencesStore.int(
       .quickAddHotkeyModifiers,
@@ -142,6 +142,16 @@ import TaktCore
         quickAddHotkeyModifiers = AppCoordinator.CarbonModifier.hyper
       }
       preferencesStore.set(true, for: .quickAddHyperNMigrationCompleted)
+    }
+    // Then from Hyper-N to Hyper-D, the new task key. Again only for a
+    // binding still on the old default.
+    if !preferencesStore.bool(.quickAddHyperDMigrationCompleted, default: false) {
+      if quickAddHotkeyKeyCode == AppCoordinator.CarbonKey.n,
+        quickAddHotkeyModifiers == AppCoordinator.CarbonModifier.hyper
+      {
+        quickAddHotkeyKeyCode = AppCoordinator.CarbonKey.d
+      }
+      preferencesStore.set(true, for: .quickAddHyperDMigrationCompleted)
     }
   }
 
