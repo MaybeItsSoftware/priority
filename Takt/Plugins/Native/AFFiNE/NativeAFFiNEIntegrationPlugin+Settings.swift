@@ -29,29 +29,29 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: MicroLabel("AFFiNE Plugin")) {
-      Toggle("Enable AFFiNE integration", isOn: $manager.integrations.affineIntegrationEnabled)
-        .toggleStyle(.themedSwitch)
+    Section {
+      SettingsToggleRow(
+        "Enable AFFiNE integration", isOn: $manager.integrations.affineIntegrationEnabled)
 
+      // One row of the panel each, divided by its hairlines.
       if manager.integrations.affineIntegrationEnabled {
-        VStack(alignment: .leading, spacing: theme.space.md) {
-          helperSection
-          workspaceSection
-          filingSection
+        helperSection
+        workspaceSection
+        filingSection
 
-          if let statusMessage {
-            Text(statusMessage)
-              .font(theme.captionFont)
-              .foregroundStyle(statusIsError ? theme.danger : theme.muted)
-              .textSelection(.enabled)
-          }
+        if let statusMessage {
+          Text(statusMessage)
+            .font(theme.captionFont)
+            .foregroundStyle(statusIsError ? theme.danger : theme.muted)
+            .textSelection(.enabled)
         }
-        .padding(.top, theme.space.xs)
       } else {
         Text("AFFiNE integration is disabled.")
           .foregroundStyle(theme.muted)
           .font(theme.captionFont)
       }
+    } header: {
+      Text("AFFiNE Plugin")
     }
     .onAppear {
       serverCommandPath = plugin.serverCommandPath

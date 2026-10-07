@@ -41,9 +41,11 @@ struct SettingsSyncPane: View {
         signedOut(session)
       }
     } else {
-      Section(header: MicroLabel("Sync")) {
+      Section {
         Text("The workspace did not open, so there is nothing to sync.")
           .foregroundStyle(theme.muted)
+      } header: {
+        Text("Sync")
       }
     }
   }
@@ -51,7 +53,7 @@ struct SettingsSyncPane: View {
   // MARK: - Signed out
 
   private func signedOut(_ session: SyncSession) -> some View {
-    Section(header: MicroLabel("Sync")) {
+    Section {
       if session.phase == .needsSignIn {
         Label("Signed out. Sign in again to keep syncing.", systemImage: "exclamationmark.icloud")
           .foregroundStyle(theme.danger)
@@ -63,18 +65,18 @@ struct SettingsSyncPane: View {
       .font(theme.captionFont)
       .foregroundStyle(theme.muted)
 
+      // The providers and the email form are two rows, so the panel's
+      // hairline divides them.
+      HStack(spacing: theme.space.sm) {
+        Button { signIn(session, with: .apple) } label: { SyncProviderButtonLabel(.apple, font: providerFont) }
+          .buttonStyle(.plain)
+        Button { signIn(session, with: .google) } label: { SyncProviderButtonLabel(.google, font: providerFont) }
+          .buttonStyle(.plain)
+      }
+      .disabled(isWorking)
+      .frame(maxWidth: 460)
+
       VStack(alignment: .leading, spacing: theme.space.sm) {
-        HStack(spacing: theme.space.sm) {
-          Button { signIn(session, with: .apple) } label: { SyncProviderButtonLabel(.apple, font: providerFont) }
-            .buttonStyle(.plain)
-          Button { signIn(session, with: .google) } label: { SyncProviderButtonLabel(.google, font: providerFont) }
-            .buttonStyle(.plain)
-        }
-        .disabled(isWorking)
-        .frame(maxWidth: 460)
-
-        Divider().padding(.vertical, theme.space.xs)
-
         field("Email") {
           TextField("", text: $email, prompt: Text("you@example.com"))
             .textContentType(.username)
@@ -104,7 +106,6 @@ struct SettingsSyncPane: View {
             .disabled(isWorking)
         }
       }
-      .padding(.vertical, theme.space.xs)
 
       DisclosureGroup("Use a different server", isExpanded: $usesOtherServer) {
         VStack(alignment: .leading, spacing: theme.space.sm) {
@@ -138,6 +139,8 @@ struct SettingsSyncPane: View {
         .padding(.top, theme.space.xs)
       }
       feedback(session)
+    } header: {
+      Text("Sync")
     }
     .onAppear { prefill(from: session) }
   }
@@ -223,7 +226,7 @@ struct SettingsSyncPane: View {
 
   @ViewBuilder
   private func signedIn(_ session: SyncSession) -> some View {
-    Section(header: MicroLabel("Sync")) {
+    Section {
       LabeledContent("Signed in as") {
         Text(session.email ?? "an account without an email").textSelection(.enabled)
       }
@@ -256,16 +259,15 @@ struct SettingsSyncPane: View {
         .disabled(isWorking)
       }
       feedback(session)
+    } header: {
+      Text("Sync")
     }
     .task(id: session.credentials?.accountId) {
       try? await session.refreshAccount()
     }
 
     if session.needsNewPassword {
-      Section(header: MicroLabel("Choose a new password")) {
-        Text("You signed in from a password-reset email. Set the password to use from now on.")
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
+      Section {
         HStack(spacing: theme.space.sm) {
           SecureField("", text: $newPassword, prompt: Text("New password"))
             .textContentType(.newPassword)
@@ -277,18 +279,24 @@ struct SettingsSyncPane: View {
           Button("Not now") { session.skipNewPassword() }
             .buttonStyle(FocusActionButtonStyle())
         }
+      } header: {
+        Text("Choose a new password")
+      } footer: {
+        Text("You signed in from a password-reset email. Set the password to use from now on.")
       }
     }
 
-    Section(header: MicroLabel("Devices")) {
+    Section {
       if let devices = session.account?.devices {
         ForEach(devices) { device in deviceRow(device) }
       } else {
         Text("Loading…").foregroundStyle(theme.muted)
       }
+    } header: {
+      Text("Devices")
     }
 
-    Section(header: MicroLabel("Account")) {
+    Section {
       HStack(alignment: .firstTextBaseline, spacing: theme.space.md) {
         Text(
           "Deleting the account removes everything synced to the server and signs out every device. "
@@ -301,6 +309,8 @@ struct SettingsSyncPane: View {
           .buttonStyle(FocusActionButtonStyle())
           .disabled(isWorking)
       }
+    } header: {
+      Text("Account")
     }
     .confirmationDialog("Delete your sync account?", isPresented: $isConfirmingDelete) {
       Button("Delete account", role: .destructive) {
@@ -326,9 +336,9 @@ struct SettingsSyncPane: View {
 
   private func deviceRow(_ device: SyncDevice) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text(device.displayName)
-        HStack(spacing: 4) {
+        HStack(spacing: theme.space.xs) {
           Text(device.platformName)
           if let seen = device.lastSeenDate {
             Text("·")

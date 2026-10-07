@@ -6,11 +6,12 @@ import UniformTypeIdentifiers
 /// The support screen: what state the app is in, what is unhealthy, what has
 /// gone wrong this session, and where its files are.
 ///
-/// Built in the Settings pane shape — `Group { Section { … } }` inside a grouped
-/// `Form` — rather than as a bespoke layout, so it can also be dropped into
-/// `SettingsView` later for one `Pane` case and one line of dispatch. It is
-/// deliberately outside `#if DEBUG`: the existing debug pane is compiled out of
-/// Release, which is exactly when someone needs to be asked what they are seeing.
+/// Built in the Settings pane shape — `Section`s inside a `Form` under
+/// `.settingsChrome()` — rather than as a bespoke layout, so it can also be
+/// dropped into `SettingsView` later for one `Pane` case and one line of
+/// dispatch. It is deliberately outside `#if DEBUG`: the existing debug pane is
+/// compiled out of Release, which is exactly when someone needs to be asked
+/// what they are seeing.
 struct DiagnosticsView: View {
   @Environment(AppCoordinator.self) private var manager
   @Environment(\.theme) private var theme
@@ -22,17 +23,24 @@ struct DiagnosticsView: View {
   var body: some View {
     VStack(spacing: 0) {
       header
-      Divider()
-      Form {
-        statusSection
-        healthSection
-        recentProblemsSection
-        dataSection
+      FocusRule()
+      // The settings layout lays its sections in a stack with no scroll of
+      // its own, so the scroll is here, as it is on the settings pages.
+      ScrollView {
+        Form {
+          statusSection
+          healthSection
+          recentProblemsSection
+          dataSection
+        }
+        .settingsChrome()
+        .padding(theme.space.lg)
       }
-      .formStyle(.grouped)
-      Divider()
+      FocusRule()
       footer
     }
+    .buttonStyle(FocusActionButtonStyle())
+    .background(theme.paper)
     .frame(minWidth: 560, idealWidth: 680, minHeight: 420, idealHeight: 620)
     // The Google rows report a sign-in that is read from the keychain on
     // first use. Asking for it here means the health pane shows the real
@@ -47,7 +55,7 @@ struct DiagnosticsView: View {
 
   private var header: some View {
     HStack {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text("Diagnostics").font(theme.titleFont)
         Text("\(Self.appVersion) (\(Self.buildNumber)) · \(Self.bundleIdentifier)")
           .font(theme.captionFont)
@@ -56,13 +64,14 @@ struct DiagnosticsView: View {
       }
       Spacer(minLength: 0)
       Button("Done") { manager.popoverChrome.showsDiagnostics = false }
+        .buttonStyle(FocusActionButtonStyle(prominent: true))
         .keyboardShortcut(.defaultAction)
     }
-    .padding(12)
+    .padding(theme.space.md)
   }
 
   private var footer: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: theme.space.sm) {
       Button("Copy Report") { copyReport() }
       Button("Export Report…") { exportReport() }
       if let copyConfirmation {
@@ -76,13 +85,13 @@ struct DiagnosticsView: View {
       }
       .disabled(repository.isLoading)
     }
-    .padding(12)
+    .padding(theme.space.md)
   }
 
   // MARK: - Sections
 
   private var statusSection: some View {
-    Section(header: Text("Status")) {
+    Section {
       let summary = syncSummary
       labelledRow("Connection", connectionDescription)
       labelledRow("List", listDescription)
@@ -92,19 +101,23 @@ struct DiagnosticsView: View {
       labelledRow(
         "Queued offline",
         repository.hasPendingOfflineWork ? "Yes" : "None")
+    } header: {
+      Text("Status")
     }
   }
 
   private var healthSection: some View {
-    Section(header: Text("Health")) {
+    Section {
       ForEach(Array(healthItems.enumerated()), id: \.offset) { _, item in
         stepRow(ok: item.isHealthy, title: item.title, detail: item.detail)
       }
+    } header: {
+      Text("Health")
     }
   }
 
   private var recentProblemsSection: some View {
-    Section(header: Text("Recent problems")) {
+    Section {
       let entries = manager.diagnosticsLog.entries.reversed()
       if entries.isEmpty {
         // Distinct from "no data": nothing has failed, which is worth saying
@@ -114,14 +127,14 @@ struct DiagnosticsView: View {
           .foregroundStyle(theme.muted)
       } else {
         ForEach(Array(entries), id: \.id) { entry in
-          HStack(alignment: .firstTextBaseline, spacing: 6) {
+          HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
             Image(
               systemName: entry.isFailure
                 ? "exclamationmark.triangle.fill" : "info.circle.fill"
             )
-            .foregroundStyle(entry.isFailure ? Color.orange : Color.secondary)
+            .foregroundStyle(entry.isFailure ? theme.warning : theme.muted)
             .font(theme.captionFont)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: theme.space.xxs) {
               Text(entry.message)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
@@ -134,14 +147,16 @@ struct DiagnosticsView: View {
         }
         Button("Clear") { manager.diagnosticsLog.clear() }
       }
+    } header: {
+      Text("Recent problems")
     }
   }
 
   private var dataSection: some View {
-    Section(header: Text("Data")) {
+    Section {
       ForEach(Array(dataPaths.enumerated()), id: \.offset) { _, entry in
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-          VStack(alignment: .leading, spacing: 1) {
+        HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
+          VStack(alignment: .leading, spacing: theme.space.xxs) {
             Text(entry.label)
             Text(entry.url.path)
               .font(theme.captionFont)
@@ -151,10 +166,11 @@ struct DiagnosticsView: View {
           }
           Spacer(minLength: 0)
           Button("Reveal") { reveal(entry.url) }
-            .buttonStyle(.borderless)
             .disabled(!FileManager.default.fileExists(atPath: entry.url.path))
         }
       }
+    } header: {
+      Text("Data")
     }
   }
 
@@ -163,11 +179,11 @@ struct DiagnosticsView: View {
   /// The same green-tick / orange-triangle row the MCP settings pane uses, so a
   /// health list reads the same wherever it appears.
   private func stepRow(ok: Bool, title: String, detail: String) -> some View {
-    HStack(alignment: .firstTextBaseline, spacing: 6) {
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
       Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-        .foregroundStyle(ok ? Color.green : Color.orange)
+        .foregroundStyle(ok ? theme.success : theme.warning)
         .font(theme.captionFont)
-      VStack(alignment: .leading, spacing: 1) {
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text(title)
         if !detail.isEmpty {
           Text(detail)
@@ -181,14 +197,13 @@ struct DiagnosticsView: View {
     }
   }
 
+  /// The settings window's own label-and-value row; a tint only where the
+  /// value is a status.
   private func labelledRow(_ label: String, _ value: String, tint: Color? = nil) -> some View {
-    HStack(alignment: .firstTextBaseline) {
-      Text(label).foregroundStyle(theme.muted)
-      Spacer(minLength: 12)
+    LabeledContent(label) {
       Text(value)
         .foregroundColor(tint)
         .textSelection(.enabled)
-        .multilineTextAlignment(.trailing)
         .fixedSize(horizontal: false, vertical: true)
     }
   }

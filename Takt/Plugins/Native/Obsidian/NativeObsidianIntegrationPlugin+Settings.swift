@@ -20,9 +20,9 @@ private struct ObsidianIntegrationPluginSettingsView: View {
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: MicroLabel("Obsidian plugin")) {
-      Toggle("Enable Obsidian integration", isOn: $manager.integrations.obsidianIntegrationEnabled)
-        .toggleStyle(.themedSwitch)
+    Section {
+      SettingsToggleRow(
+        "Enable Obsidian integration", isOn: $manager.integrations.obsidianIntegrationEnabled)
 
       if manager.integrations.obsidianIntegrationEnabled {
         VStack(alignment: .leading, spacing: theme.space.sm) {
@@ -54,12 +54,13 @@ private struct ObsidianIntegrationPluginSettingsView: View {
             }
           }
         }
-        .padding(.top, theme.space.xs)
       } else {
         Text("Obsidian integration is disabled.")
           .foregroundStyle(theme.muted)
           .font(theme.captionFont)
       }
+    } header: {
+      Text("Obsidian plugin")
     }
   }
 }

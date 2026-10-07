@@ -44,27 +44,27 @@ private struct CheckvistSyncPluginSettingsView: View {
   var body: some View {
     @Bindable var manager = manager
     Group {
-      Section(header: MicroLabel("Checkvist sync")) {
-        Toggle(
+      Section {
+        SettingsToggleRow(
           "Enable Checkvist sync",
+          detail:
+            "When disabled, Takt runs offline and your Checkvist credentials and list selection are preserved for when you re-enable it.",
           isOn: Binding(
             get: { manager.repository.checkvistIntegrationEnabled },
             set: { manager.repository.checkvistIntegrationEnabled = $0 }
           )
         )
-          .toggleStyle(.themedSwitch)
-        Text(
-          "When disabled, Takt runs offline and your Checkvist credentials and list selection are preserved for when you re-enable it."
-        )
-        .font(theme.captionFont)
-        .foregroundStyle(theme.muted)
+      } header: {
+        Text("Checkvist sync")
       }
 
       if manager.repository.checkvistIntegrationEnabled {
-      Section(header: MicroLabel("Connection")) {
-        VStack(alignment: .leading, spacing: theme.space.md) {
-          connectionStatusBanner
+      // The banner and each numbered step are rows of the panel, so the
+      // hairlines between them do the work the stack's spacing used to.
+      Section {
+        connectionStatusBanner
 
+        VStack(alignment: .leading, spacing: theme.space.sm) {
           stepHeader(number: 1, title: "Enter your Checkvist credentials")
           VStack(alignment: .leading, spacing: theme.space.sm) {
             Text("Email")
@@ -108,7 +108,9 @@ private struct CheckvistSyncPluginSettingsView: View {
             }
             .help("Reads the saved Checkvist key only after you explicitly request it.")
           }
+        }
 
+        VStack(alignment: .leading, spacing: theme.space.sm) {
           stepHeader(number: 2, title: "Connect")
           HStack(spacing: theme.space.sm) {
             Button(connectButtonLabel) {
@@ -122,35 +124,36 @@ private struct CheckvistSyncPluginSettingsView: View {
             }
             Spacer(minLength: 0)
           }
+        }
 
-          if case .connected(let listCount) = connectionState {
+        if case .connected(let listCount) = connectionState {
+          VStack(alignment: .leading, spacing: theme.space.sm) {
             stepHeader(number: 3, title: "Choose a workspace")
-            VStack(alignment: .leading, spacing: theme.space.xs) {
-              Picker("", selection: activeWorkspaceBinding) {
-                Text("Offline workspace").tag("")
-                if !manager.repository.listId.isEmpty && !isCurrentListInAvailableLists {
-                  Text("Current list (\(manager.repository.listId))").tag(manager.repository.listId)
-                }
-                ForEach(manager.repository.availableLists) { list in
-                  Text(list.name).tag(String(list.id))
-                }
+            Picker("", selection: activeWorkspaceBinding) {
+              Text("Offline workspace").tag("")
+              if !manager.repository.listId.isEmpty && !isCurrentListInAvailableLists {
+                Text("Current list (\(manager.repository.listId))").tag(manager.repository.listId)
               }
-              .labelsHidden()
-              .pickerStyle(.menu)
-
-              Text(workspaceCaption(listCount: listCount))
-                .font(theme.captionFont)
-                .foregroundStyle(theme.muted)
+              ForEach(manager.repository.availableLists) { list in
+                Text(list.name).tag(String(list.id))
+              }
             }
-          }
+            .labelsHidden()
+            .pickerStyle(.menu)
 
-          if let errorMessage = manager.repository.errorMessage {
-            errorBanner(message: errorMessage) {
-              manager.repository.errorMessage = nil
-            }
+            Text(workspaceCaption(listCount: listCount))
+              .font(theme.captionFont)
+              .foregroundStyle(theme.muted)
           }
         }
-        .padding(.top, theme.space.xs)
+
+        if let errorMessage = manager.repository.errorMessage {
+          errorBanner(message: errorMessage) {
+            manager.repository.errorMessage = nil
+          }
+        }
+      } header: {
+        Text("Connection")
       }
 
       if case .connected = connectionState {
@@ -217,6 +220,7 @@ private struct CheckvistSyncPluginSettingsView: View {
       }
       .buttonStyle(.plain)
       .foregroundStyle(theme.muted)
+      .accessibilityLabel("Dismiss")
     }
     .settingsStatusSurface(theme, tint: theme.danger)
   }
@@ -303,72 +307,59 @@ private struct CheckvistSyncPluginSettingsView: View {
   }
 
   private var offlineSyncAndConflictResolutionSection: some View {
-    Section(header: MicroLabel("Offline sync and conflict resolution")) {
-      VStack(alignment: .leading, spacing: theme.space.sm) {
+    Section {
+      VStack(alignment: .leading, spacing: theme.space.xs) {
         Text("Your offline workspace currently has \(manager.repository.offlineOpenTaskCount) tasks.")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
-
         Text("Select a strategy to synchronize your local offline tasks with the remote Checkvist list:")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
-          .padding(.bottom, theme.space.xs)
-
-        if !manager.repository.availableLists.isEmpty {
-          Picker("Checkvist List", selection: $uploadDestinationListId) {
-            ForEach(manager.repository.availableLists) { list in
-              Text("\(list.name) (\(list.id))").tag(String(list.id))
-            }
-          }
-          .pickerStyle(.menu)
-        }
-
-        VStack(alignment: .leading, spacing: theme.space.md) {
-          // Option 1: Merge
-          VStack(alignment: .leading, spacing: theme.space.xs) {
-            Button("Merge Local Tasks with Remote") {
-              Task {
-                _ = await manager.syncService.uploadOfflineTasksToCheckvist(
-                  destinationListId: uploadDestinationListId
-                )
-              }
-            }
-            .buttonStyle(FocusActionButtonStyle())
-            .disabled(isBusy || manager.repository.offlineOpenTaskCount == 0 || uploadDestinationListId.isEmpty)
-
-            Text("Uploads all local offline tasks to the selected remote list without deleting anything.")
-              .font(theme.captionFont)
-              .foregroundStyle(theme.muted)
-          }
-
-          // Option 2: Overwrite Local (Use Remote)
-          VStack(alignment: .leading, spacing: theme.space.xs) {
-            Button("Keep Remote (Overwrite Local)") {
-              showingOverwriteLocalAlert = true
-            }
-            .buttonStyle(FocusActionButtonStyle())
-            .disabled(isBusy || manager.repository.listId.isEmpty)
-
-            Text("Replaces all local offline tasks with the tasks from the selected remote Checkvist list.")
-              .font(theme.captionFont)
-              .foregroundStyle(theme.muted)
-          }
-
-          // Option 3: Overwrite Remote (Use Local)
-          VStack(alignment: .leading, spacing: theme.space.xs) {
-            Button("Keep Local (Overwrite Remote)", role: .destructive) {
-              showingOverwriteRemoteAlert = true
-            }
-            .buttonStyle(FocusActionButtonStyle())
-            .disabled(isBusy || uploadDestinationListId.isEmpty)
-
-            Text("Deletes all tasks currently on the remote Checkvist list and uploads your local offline tasks.")
-              .font(theme.captionFont)
-              .foregroundStyle(theme.muted)
-          }
-        }
       }
-      .padding(.top, theme.space.xs)
+
+      if !manager.repository.availableLists.isEmpty {
+        Picker("Checkvist List", selection: $uploadDestinationListId) {
+          ForEach(manager.repository.availableLists) { list in
+            Text("\(list.name) (\(list.id))").tag(String(list.id))
+          }
+        }
+        .pickerStyle(.menu)
+      }
+
+      // One strategy per row: the button, and under it what it does.
+      SettingsRow(
+        "Merge Local Tasks with Remote",
+        detail: "Uploads all local offline tasks to the selected remote list without deleting anything."
+      ) {
+        Button("Merge") {
+          Task {
+            _ = await manager.syncService.uploadOfflineTasksToCheckvist(
+              destinationListId: uploadDestinationListId
+            )
+          }
+        }
+        .disabled(isBusy || manager.repository.offlineOpenTaskCount == 0 || uploadDestinationListId.isEmpty)
+      }
+
+      SettingsRow(
+        "Keep Remote (Overwrite Local)",
+        detail: "Replaces all local offline tasks with the tasks from the selected remote Checkvist list."
+      ) {
+        Button("Overwrite Local") {
+          showingOverwriteLocalAlert = true
+        }
+        .disabled(isBusy || manager.repository.listId.isEmpty)
+      }
+
+      SettingsRow(
+        "Keep Local (Overwrite Remote)",
+        detail: "Deletes all tasks currently on the remote Checkvist list and uploads your local offline tasks."
+      ) {
+        Button("Overwrite Remote", role: .destructive) {
+          showingOverwriteRemoteAlert = true
+        }
+        .disabled(isBusy || uploadDestinationListId.isEmpty)
+      }
       .alert("Overwrite Local Tasks?", isPresented: $showingOverwriteLocalAlert) {
         Button("Cancel", role: .cancel) { }
         Button("Overwrite", role: .destructive) {
@@ -391,6 +382,8 @@ private struct CheckvistSyncPluginSettingsView: View {
       } message: {
         Text("Are you sure you want to overwrite the remote list? This will delete all tasks currently on the remote Checkvist list and upload your local tasks.")
       }
+    } header: {
+      Text("Offline sync and conflict resolution")
     }
   }
 
@@ -436,7 +429,7 @@ private struct CheckvistMergeListsSection: View {
   private var lists: [CheckvistList] { manager.repository.availableLists }
 
   var body: some View {
-    Section(header: MicroLabel("Merge lists")) {
+    Section {
       if lists.count >= 2 {
         Picker("From", selection: $sourceListId) {
           ForEach(lists) { list in Text(list.name).tag(String(list.id)) }
@@ -466,6 +459,8 @@ private struct CheckvistMergeListsSection: View {
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
       }
+    } header: {
+      Text("Merge lists")
     }
     .onAppear(perform: seed)
     .onChange(of: lists.map(\.id)) { _, _ in seed() }

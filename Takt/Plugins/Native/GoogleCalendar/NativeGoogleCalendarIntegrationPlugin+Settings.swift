@@ -27,47 +27,43 @@ private struct GoogleCalendarIntegrationPluginSettingsView: View {
   var body: some View {
     @Bindable var manager = manager
     @Bindable var plugin = plugin
-    Section(header: MicroLabel("Google Calendar plugin")) {
-      Toggle(
+    Section {
+      SettingsToggleRow(
         "Enable Google Calendar integration",
-        isOn: $manager.integrations.googleCalendarIntegrationEnabled
-      )
-        .toggleStyle(.themedSwitch)
+        isOn: $manager.integrations.googleCalendarIntegrationEnabled)
 
       if manager.integrations.googleCalendarIntegrationEnabled {
-        VStack(alignment: .leading, spacing: theme.space.sm) {
-          GoogleAccountSettingsSection(
-            account: plugin.account,
-            serviceName: "Google Calendar",
-            requiredScopes: GoogleAPIScope.calendar)
+        GoogleAccountSettingsSection(
+          account: plugin.account,
+          serviceName: "Google Calendar",
+          requiredScopes: GoogleAPIScope.calendar)
 
-          Divider()
-
-          Text("Calendar ID")
+        SettingsRow("Calendar ID") {
           TextField("", text: $plugin.targetCalendarID, prompt: Text("primary"))
             .themedTextField()
             .labelsHidden()
             .autocorrectionDisabled()
-
-          Toggle("Open created event in browser", isOn: $plugin.openCreatedEventInBrowser)
-            .toggleStyle(.themedSwitch)
-
-          Button("Create event from selected task") {
-            manager.integrations.openTaskInGoogleCalendar()
-          }
-          .disabled(!plugin.isAuthenticated)
-
-          Text(
-            "This integration creates Google Calendar events from tasks. OAuth setup and sign-in are required."
-          )
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
+            .frame(maxWidth: 260)
         }
-        .padding(.top, theme.space.xs)
+
+        SettingsToggleRow("Open created event in browser", isOn: $plugin.openCreatedEventInBrowser)
+
+        Button("Create event from selected task") {
+          manager.integrations.openTaskInGoogleCalendar()
+        }
+        .disabled(!plugin.isAuthenticated)
       } else {
         Text("Google Calendar integration is disabled.")
           .foregroundStyle(theme.muted)
           .font(theme.captionFont)
+      }
+    } header: {
+      Text("Google Calendar plugin")
+    } footer: {
+      if manager.integrations.googleCalendarIntegrationEnabled {
+        Text(
+          "This integration creates Google Calendar events from tasks. OAuth setup and sign-in are required."
+        )
       }
     }
   }

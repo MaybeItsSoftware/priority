@@ -37,7 +37,7 @@ private struct DailyLogPluginSettingsView: View {
   var body: some View {
     let dailyLog = manager.dailyLog
 
-    Section(header: MicroLabel("Daily log plugin")) {
+    Section {
       Text(
         "Completions, focus sessions and the day's plan are always recorded locally — "
           + "that's what the Daily view reads. This section controls the Obsidian half."
@@ -47,17 +47,19 @@ private struct DailyLogPluginSettingsView: View {
 
       dailiesEditor
 
-      Picker("Day starts at", selection: rolloverBinding) {
-        ForEach(0..<24, id: \.self) { hour in
-          Text(String(format: "%02d:00", hour)).tag(hour)
-        }
-      }
-      Text(
-        "Work finished before this hour counts towards the previous day. "
+      SettingsRow(
+        "Day starts at",
+        detail: "Work finished before this hour counts towards the previous day. "
           + "Midnight is rarely the right answer."
-      )
-      .font(theme.captionFont)
-      .foregroundStyle(theme.muted)
+      ) {
+        Picker("Day starts at", selection: rolloverBinding) {
+          ForEach(0..<24, id: \.self) { hour in
+            Text(String(format: "%02d:00", hour)).tag(hour)
+          }
+        }
+        .labelsHidden()
+        .fixedSize()
+      }
 
       // Configuration comes before the switch that acts on it. Hiding the folder
       // picker behind the enable toggle would mean turning writing on before
@@ -82,7 +84,6 @@ private struct DailyLogPluginSettingsView: View {
           Spacer()
         }
       }
-      .padding(.top, theme.space.xs)
 
       VStack(alignment: .leading, spacing: theme.space.sm) {
         Text("Note Naming")
@@ -106,39 +107,29 @@ private struct DailyLogPluginSettingsView: View {
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
       }
-      .padding(.top, theme.space.xs)
 
-      Toggle("Create missing notes", isOn: createsMissingNotesBinding)
-        .toggleStyle(.themedSwitch)
-      Text(
-        createsMissingNotesBinding.wrappedValue
+      SettingsToggleRow(
+        "Create missing notes",
+        detail: createsMissingNotesBinding.wrappedValue
           ? "Takt will create the note if it doesn't exist yet. Turn this off if a "
             + "template builds your dailies — otherwise a bare stub can win the race."
           : "Takt only writes into notes that already exist, so it can never beat your "
-            + "daily-note template to the file."
-      )
-      .font(theme.captionFont)
-      .foregroundStyle(theme.muted)
+            + "daily-note template to the file.",
+        isOn: createsMissingNotesBinding)
 
       // The master switch, last: it acts on everything above it. Unreachable
       // until a folder exists, so it can never be on with nowhere to write.
-      Toggle("Write days into Obsidian daily notes", isOn: dailyLogEnabledBinding)
-        .toggleStyle(.themedSwitch)
+      SettingsToggleRow(
+        "Write days into Obsidian daily notes",
+        detail: dailyLog.dailiesFolderPath.isEmpty
+          ? "Choose a dailies folder above to turn this on."
+          : (dailyLog.dailyLogEnabled
+            ? nil : "Days are still recorded locally; nothing is written to your vault."),
+        isOn: dailyLogEnabledBinding)
         .disabled(dailyLog.dailiesFolderPath.isEmpty)
 
-      if dailyLog.dailiesFolderPath.isEmpty {
-        Text("Choose a dailies folder above to turn this on.")
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
-      } else if !dailyLog.dailyLogEnabled {
-        Text("Days are still recorded locally; nothing is written to your vault.")
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
-      }
-
       if dailyLog.dailyLogEnabled {
-        Toggle("Write automatically at day rollover", isOn: writesAutomaticallyBinding)
-          .toggleStyle(.themedSwitch)
+        SettingsToggleRow("Write automatically at day rollover", isOn: writesAutomaticallyBinding)
 
         HStack {
           Button("Write Yesterday's Note Now") {
@@ -148,6 +139,8 @@ private struct DailyLogPluginSettingsView: View {
           Spacer()
         }
       }
+    } header: {
+      Text("Daily log plugin")
     }
     .onAppear {
       fileNameFormat = dailyLog.plugin.noteFormat.fileNameFormat
@@ -207,13 +200,12 @@ private struct DailyLogPluginSettingsView: View {
             .labelsHidden()
             .frame(width: 130)
 
-            Button {
+            WorkspacePaneIconButton(
+              "trash", title: "Delete daily",
+              note: "Delete. Past days keep their record of this daily, and it can be restored below."
+            ) {
               dailyLog.deleteDaily(daily)
-            } label: {
-              Image(systemName: "trash")
             }
-            .buttonStyle(.borderless)
-            .help("Delete. Past days keep their record of this daily, and it can be restored below.")
           }
 
           switch daily.schedule {
@@ -234,7 +226,6 @@ private struct DailyLogPluginSettingsView: View {
 
       archivedDailiesEditor
     }
-    .padding(.top, theme.space.xs)
   }
 
   /// Where a deleted daily goes, and how it comes back.
@@ -247,19 +238,16 @@ private struct DailyLogPluginSettingsView: View {
   private var archivedDailiesEditor: some View {
     let archived = manager.dailyLog.archivedDailies
     if !archived.isEmpty {
-      Divider()
-        .padding(.vertical, theme.space.xs)
       Text("Deleted")
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
+        .padding(.top, theme.space.xs)
       ForEach(archived) { daily in
         HStack(spacing: theme.space.sm) {
           Text(daily.title)
             .foregroundStyle(theme.muted)
           Spacer(minLength: 0)
           Button("Restore") { manager.dailyLog.restoreDaily(daily) }
-            .buttonStyle(.link)
-            .font(theme.captionFont)
         }
       }
     }
@@ -337,13 +325,9 @@ private struct DailyLogPluginSettingsView: View {
       Button("Every day") {
         manager.dailyLog.setDailySchedule(daily, to: .weekdays(Daily.allWeekdays))
       }
-      .buttonStyle(.link)
-      .font(theme.captionFont)
       Button("Weekdays") {
         manager.dailyLog.setDailySchedule(daily, to: .weekdays(Daily.mondayToFriday))
       }
-      .buttonStyle(.link)
-      .font(theme.captionFont)
       Spacer(minLength: 0)
     }
   }

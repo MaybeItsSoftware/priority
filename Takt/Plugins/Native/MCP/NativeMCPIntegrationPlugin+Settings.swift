@@ -23,25 +23,27 @@ private struct MCPIntegrationPluginSettingsView: View {
 
   var body: some View {
     @Bindable var manager = manager
-    Section(header: MicroLabel("MCP Plugin")) {
-      Toggle("Enable MCP integration", isOn: $manager.integrations.mcpIntegrationEnabled)
-        .toggleStyle(.themedSwitch)
+    Section {
+      SettingsToggleRow("Enable MCP integration", isOn: $manager.integrations.mcpIntegrationEnabled)
 
+      // Each step is a row of the panel, divided from the next by its
+      // hairline, rather than a stack with its own spacing.
       if manager.integrations.mcpIntegrationEnabled {
-        VStack(alignment: .leading, spacing: theme.space.md) {
-          credentialsStep
-          serverCommandStep
-          clientStep
-          statusMessage
-          rawConfiguration
-        }
-        .padding(.top, theme.space.xs)
-        .onAppear { integrations.refreshDetectedMCPClients() }
+        credentialsStep
+        serverCommandStep
+        clientStep
+        statusMessage
+        rawConfiguration
       } else {
         Text("MCP integration is disabled.")
           .foregroundStyle(theme.muted)
           .font(theme.captionFont)
       }
+    } header: {
+      Text("MCP Plugin")
+    }
+    .onAppear {
+      if manager.integrations.mcpIntegrationEnabled { integrations.refreshDetectedMCPClients() }
     }
   }
 
@@ -129,7 +131,7 @@ private struct MCPIntegrationPluginSettingsView: View {
                 .font(theme.captionFont)
                 .foregroundStyle(theme.muted)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: theme.space.sm)
             Button(actionTitle(for: client)) { integrations.setUpMCPClient(client) }
               .controlSize(.small)
               .disabled(!integrations.hasMCPCredentials)
