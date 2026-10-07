@@ -26,6 +26,8 @@ extension WorkspaceViewModel {
       matrixPositions = [:]
       return
     }
+    nextCompletionExpiry = nil
+    defer { scheduleCompletionExpiry() }
     do {
       var items: [TaskOutlineItem]
       if isEverythingSelected || folderScopeListIDs != nil {
@@ -40,7 +42,8 @@ extension WorkspaceViewModel {
       } else {
         items = []
       }
-      if hidesCompletedTasks { items.removeAll { $0.task.status != .open } }
+      let now = Date()
+      items.removeAll { hidesCompletion(of: $0.task, now: now) }
       if outline != items { outline = items }
       reloadBoardNow()
       // The rail is a view of the same writes. Hooked in here rather than at
@@ -75,7 +78,10 @@ extension WorkspaceViewModel {
   }
 
   func reloadBoardNow() {
-    defer { rebuildBoardIndex() }
+    defer {
+      rebuildBoardIndex()
+      scheduleCompletionExpiry()
+    }
     guard let store else {
       boardTasks = []
       boardCrossColumnTasks = []
@@ -102,7 +108,8 @@ extension WorkspaceViewModel {
         tasks = []
       }
       if boardParentTaskID != parentTaskID { boardParentTaskID = parentTaskID }
-      tasks.removeAll { ($0.isList && $0.archivedAt != nil) || (hidesCompletedTasks && $0.status != .open) }
+      let now = Date()
+      tasks.removeAll { ($0.isList && $0.archivedAt != nil) || hidesCompletion(of: $0, now: now) }
       let boardIDs = Set(tasks.map(\.id))
       let listIDs = Array(Set(tasks.map(\.listId)))
       let trees = try listTrees(for: listIDs, store: store)
@@ -131,7 +138,7 @@ extension WorkspaceViewModel {
         return column
       }
       let crossColumn = treeTasks.filter { task in
-        if hidesCompletedTasks && task.status != .open { return false }
+        if hidesCompletion(of: task, now: now) { return false }
         guard !task.isList else { return false }
         guard !boardIDs.contains(task.id), let parent = parents[task.id],
           let filed = columnsByTask[task.id]
@@ -152,6 +159,51 @@ extension WorkspaceViewModel {
     } catch {
       errorMessage = error.localizedDescription
     }
+  }
+
+  /// How long a task you have just ticked off stays put before it goes, so
+  /// the tick is seen and a mis-tick can be taken back where it happened.
+  static let completedLingerInterval: TimeInterval = 3
+
+  /// Whether a finished task is kept off the pane. One finished within the
+  /// last few seconds still shows, and the soonest of those to expire is
+  /// noted so a reload can be scheduled for it.
+  func hidesCompletion(of task: WorkspaceTask, now: Date) -> Bool {
+    guard hidesCompletedTasks, task.status != .open else { return false }
+    // Completions from before `completedAt` was recorded are long past.
+    guard let completedAt = task.completedAt else { return true }
+    let expiry = completedAt.addingTimeInterval(Self.completedLingerInterval)
+    guard expiry > now else { return true }
+    nextCompletionExpiry = min(nextCompletionExpiry ?? expiry, expiry)
+    return false
+  }
+
+  /// One pending reload for the soonest lingering completion. Keeping the
+  /// selection on the row's neighbour rather than dropping it: the task you
+  /// were on disappearing should not lose your place in the list.
+  func scheduleCompletionExpiry() {
+    completionExpiryTask?.cancel()
+    guard let expiry = nextCompletionExpiry else {
+      completionExpiryTask = nil
+      return
+    }
+    completionExpiryTask = Task { @MainActor [weak self] in
+      do { try await Task.sleep(for: .seconds(max(expiry.timeIntervalSinceNow, 0) + 0.05)) } catch { return }
+      guard let self else { return }
+      let before = self.visibleNavigationTasks.map(\.id)
+      self.reloadOutline(refreshSidebar: false)
+      self.keepSelectionAfterExpiry(previousOrder: before)
+    }
+  }
+
+  private func keepSelectionAfterExpiry(previousOrder: [String]) {
+    guard let selectedTaskID else { return }
+    let visible = visibleNavigationTasks.map(\.id)
+    guard !visible.contains(selectedTaskID), let index = previousOrder.firstIndex(of: selectedTaskID) else { return }
+    let remaining = Set(visible)
+    let after = previousOrder[(index + 1)...].first { remaining.contains($0) }
+    let before = previousOrder[..<index].last { remaining.contains($0) }
+    self.selectedTaskID = after ?? before
   }
 
   /// The current scope's columns, plus any column a card on it is filed under

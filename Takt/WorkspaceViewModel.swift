@@ -533,7 +533,14 @@ enum WorkspaceSidebarItem: Identifiable {
   }
   /// The first key of a two-letter sequence, held while the second is awaited.
   private(set) var pendingKeyPrefix = ""
-  var hidesCompletedTasks = false
+  /// On by default: a ticked-off task stays where it was for
+  /// `completedLingerInterval`, then leaves the pane — the Done rail is where
+  /// finished work is kept. `hc` turns it off and shows every completion.
+  var hidesCompletedTasks = true
+  /// When the soonest lingering completion is due to go, and the reload that
+  /// takes it away. Not observed: nothing draws them.
+  @ObservationIgnored var nextCompletionExpiry: Date?
+  @ObservationIgnored var completionExpiryTask: Task<Void, Never>?
   var taskInsertionReference: WorkspaceTask?
   var taskInsertionAbove = false
   var taskInsertionIsChild = false

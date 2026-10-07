@@ -187,6 +187,10 @@ Edit menu. Board arrows navigate every column, including empty ones, and
 cards (folded cards are skipped over); `Space` completes the row you are on and
 `Return` adds a task, as Checkvist's do. The sidebar outlines the list you are navigating.
 
+A task you tick off stays where it was for three seconds — long enough to see
+it go and to take it back — and then leaves the list; the Done rail keeps it.
+`hc` shows every completed task again, and toggles back.
+
 Subtasks fold where they stand, as they do in Checkvist, so you can look
 inside a task without opening it: in the outline `→` unfolds a task and steps
 into its subtasks and `←` folds it and steps back out, `za` folds the task you
