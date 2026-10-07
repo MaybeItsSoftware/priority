@@ -131,9 +131,11 @@ extension WorkspaceViewModel {
     switch row.kind {
     case .folder(let id):
       guard let folder = folders.first(where: { $0.id == id }) else { return }
-      if expandOnly {
+      if expandOnly && !isFolderExpanded(folder) {
         setFolderExpanded(folder, expanded: true)
-      } else if enters {
+      } else if enters || expandOnly {
+        // → on a folder already open goes on into it, the way → on a list
+        // goes into the list: there is nothing further to expand.
         // Return goes into the folder: its lists' tasks together, with the
         // keyboard on them, the way Return on a list goes into the list.
         selectFolder(folder)

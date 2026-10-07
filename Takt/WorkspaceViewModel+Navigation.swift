@@ -17,7 +17,7 @@ extension WorkspaceViewModel {
       selectedTaskID = offset < 0 ? rows.last : rows.first
       return
     }
-    selectedTaskID = rows[min(max(0, index + offset), rows.count - 1)]
+    selectedTaskID = rows[CursorStepping.index(from: index, by: offset, count: rows.count)]
   }
 
   /// What up and down walk. On the board that is the active column's cards

@@ -66,7 +66,8 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
     while let id = cursor {
       visited.append(id)
       let next = WorkspaceSidebarOutline.row(after: id, by: 1, in: rows)
-      cursor = next?.id == id ? nil : next?.id
+      // The cursor wraps, so the walk is over when it comes round again.
+      cursor = next?.id == rows.first?.id ? nil : next?.id
     }
     XCTAssertEqual(visited, rows.map(\.id))
   }
@@ -111,12 +112,12 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
     XCTAssertEqual(rows.map(\.kind), [.today, .everything])
   }
 
-  func testTheCursorStopsAtEitherEndRatherThanWrapping() {
+  func testTheCursorWrapsAroundEitherEnd() {
     let rows = outline()
     let first = rows[0].id
     let last = rows[rows.count - 1].id
-    XCTAssertEqual(WorkspaceSidebarOutline.row(after: first, by: -1, in: rows)?.id, first)
-    XCTAssertEqual(WorkspaceSidebarOutline.row(after: last, by: 1, in: rows)?.id, last)
+    XCTAssertEqual(WorkspaceSidebarOutline.row(after: first, by: -1, in: rows)?.id, last)
+    XCTAssertEqual(WorkspaceSidebarOutline.row(after: last, by: 1, in: rows)?.id, first)
   }
 
   func testAnUnknownCursorStartsFromTheNearEnd() {

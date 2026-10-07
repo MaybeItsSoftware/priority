@@ -144,9 +144,8 @@ public enum WorkspaceSidebarOutline {
     return result
   }
 
-  /// The row after `id`, `offset` steps away, stopping at either end rather
-  /// than wrapping — wrapping in a list you are reading turns a held arrow key
-  /// into a loop you have to notice to escape.
+  /// The row after `id`, `offset` steps away. A single step wraps from one end
+  /// to the other; a longer jump stops at the end (see `CursorStepping`).
   public static func row(
     after id: String?, by offset: Int, in rows: [WorkspaceSidebarRow]
   ) -> WorkspaceSidebarRow? {
@@ -154,7 +153,7 @@ public enum WorkspaceSidebarOutline {
     guard let id, let index = rows.firstIndex(where: { $0.id == id }) else {
       return offset < 0 ? rows.last : rows.first
     }
-    return rows[min(max(0, index + offset), rows.count - 1)]
+    return rows[CursorStepping.index(from: index, by: offset, count: rows.count)]
   }
 
   /// The row currently under the cursor, given what the workspace has

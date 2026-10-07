@@ -65,7 +65,7 @@ extension WorkspaceViewModel {
   func moveDoneCursor(by offset: Int) {
     guard !completedTasks.isEmpty else { return }
     let current = doneCursorTask.flatMap { task in completedTasks.firstIndex(where: { $0.id == task.id }) } ?? 0
-    let next = min(max(current + offset, 0), completedTasks.count - 1)
+    let next = CursorStepping.index(from: current, by: offset, count: completedTasks.count)
     doneCursorID = completedTasks[next].id
   }
 
