@@ -289,6 +289,48 @@ final class DailyDefinitionsStoreTests: XCTestCase {
     try Data("not json".utf8).write(to: store.fileURL)
     XCTAssertTrue(store.load().dailies.isEmpty)
   }
+
+  func testAMissingFileIsNotAnErrorEvenWhenReadStrictly() throws {
+    let store = DailyDefinitionsStore(directoryURL: directoryURL)
+    XCTAssertTrue(try store.loadStrict().dailies.isEmpty)
+    XCTAssertTrue(try store.loadLocked().dailies.isEmpty)
+  }
+
+  func testACorruptFileIsAnUnreadableErrorWhenReadStrictly() throws {
+    let store = DailyDefinitionsStore(directoryURL: directoryURL)
+    try Data("{\"dailies\": [}".utf8).write(to: store.fileURL)
+
+    XCTAssertThrowsError(try store.loadStrict()) { error in
+      guard case DailyDefinitionsStore.StoreError.unreadable(let path, _) = error else {
+        return XCTFail("Expected .unreadable, got \(error)")
+      }
+      XCTAssertEqual(path, store.fileURL.path)
+    }
+  }
+
+  /// The file is hand-editable, so a stray comma is a realistic state. The old
+  /// behaviour read it as empty and then saved that emptiness over the user's
+  /// dailies on their next edit. A mutation must refuse instead and leave the
+  /// bytes exactly as they were.
+  func testMutateRefusesToSaveOverAFileThatExistsButDidNotDecode() throws {
+    let store = DailyDefinitionsStore(directoryURL: directoryURL)
+    let corrupt = Data("{\"dailies\": [{\"id\": \"a\", \"title\": \"Read\",}]}".utf8)
+    try corrupt.write(to: store.fileURL)
+
+    XCTAssertThrowsError(try store.mutate { $0.add(Daily(id: "b", title: "Write")) }) { error in
+      guard case DailyDefinitionsStore.StoreError.unreadable = error else {
+        return XCTFail("Expected .unreadable, got \(error)")
+      }
+    }
+    XCTAssertEqual(try Data(contentsOf: store.fileURL), corrupt, "the broken file must be left intact")
+  }
+
+  func testMutateOnAMissingFileStartsFromAnEmptySet() throws {
+    let store = DailyDefinitionsStore(directoryURL: directoryURL)
+    let saved = try store.mutate { $0.add(Daily(id: "a", title: "Read")) }
+    XCTAssertEqual(saved.dailies.map(\.id), ["a"])
+    XCTAssertEqual(try store.loadStrict().dailies.map(\.id), ["a"])
+  }
 }
 
 final class DailyTickAggregationTests: XCTestCase {

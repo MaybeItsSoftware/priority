@@ -14,11 +14,20 @@ import Foundation
 public final class DailyDefinitionsStore {
   public enum StoreError: LocalizedError {
     case writeFailed(underlying: Error)
+    /// The file is there but could not be read or decoded. Distinct from "no
+    /// file" on purpose: a missing file is first launch and an empty set is the
+    /// right answer, whereas a present-but-broken one is somebody's dailies
+    /// behind a typo, and the only safe thing to do with it is leave it alone.
+    case unreadable(path: String, underlying: Error)
 
     public var errorDescription: String? {
       switch self {
       case .writeFailed(let underlying):
         return "Could not save your dailies: \(underlying.localizedDescription)"
+      case .unreadable(let path, let underlying):
+        return
+          "Could not read your dailies at \(path): \(underlying.localizedDescription) "
+          + "Fix or move the file; nothing will be saved over it until it reads."
       }
     }
   }
@@ -43,14 +52,37 @@ public final class DailyDefinitionsStore {
     self.decoder = decoder
   }
 
-  /// A missing or unreadable file is an empty set, not an error — that is first
-  /// launch, and the empty state is a designed screen rather than a failure.
+  /// A missing file is an empty set, not an error — that is first launch, and
+  /// the empty state is a designed screen rather than a failure.
+  ///
+  /// A file that *exists* but will not read or decode is `StoreError.unreadable`.
+  /// This file is hand-editable, so one stray comma is a realistic state, and
+  /// the pre-existing behaviour — treat it as empty — meant the next edit saved
+  /// that emptiness over the user's dailies with no error. Callers that can show
+  /// the error should; callers that can't should fall back to `load()`, which
+  /// reads as empty but is never used as the base for a write.
+  public func loadStrict() throws -> DailyCollection {
+    let data: Data
+    do {
+      data = try Data(contentsOf: fileURL)
+    } catch {
+      guard FileManager.default.fileExists(atPath: fileURL.path) else {
+        return DailyCollection()
+      }
+      throw StoreError.unreadable(path: fileURL.path, underlying: error)
+    }
+    do {
+      return try decoder.decode(DailyCollection.self, from: data)
+    } catch {
+      throw StoreError.unreadable(path: fileURL.path, underlying: error)
+    }
+  }
+
+  /// `loadStrict()` with the error folded into an empty set, for read-only
+  /// callers that have nowhere to show it. Never use the result as the base for
+  /// a save — that is what `mutate` is for, and it refuses an unreadable file.
   public func load() -> DailyCollection {
-    guard
-      let data = try? Data(contentsOf: fileURL),
-      let collection = try? decoder.decode(DailyCollection.self, from: data)
-    else { return DailyCollection() }
-    return collection
+    (try? loadStrict()) ?? DailyCollection()
   }
 
   public func save(_ collection: DailyCollection) throws {
@@ -78,12 +110,15 @@ public final class DailyDefinitionsStore {
   /// *what changed*, which composes with a concurrent one; a snapshot is
   /// *everything*, which cannot.
   ///
+  /// Refuses — with `StoreError.unreadable` — to touch a file that exists but
+  /// did not decode. Saving over it would turn a typo into data loss.
+  ///
   /// Returns the saved collection so callers can refresh their cache from the
   /// authoritative value rather than guessing at it.
   @discardableResult
   public func mutate(_ transform: (inout DailyCollection) -> Void) throws -> DailyCollection {
     try FileLock(protecting: fileURL).withExclusiveLock {
-      var collection = load()
+      var collection = try loadStrict()
       transform(&collection)
       try save(collection)
       return collection
@@ -94,6 +129,6 @@ public final class DailyDefinitionsStore {
   /// progress. `load()` stays lock-free for the hot path where a torn read is
   /// already handled by falling back to an empty collection.
   public func loadLocked() throws -> DailyCollection {
-    try FileLock(protecting: fileURL).withExclusiveLock { load() }
+    try FileLock(protecting: fileURL).withExclusiveLock { try loadStrict() }
   }
 }

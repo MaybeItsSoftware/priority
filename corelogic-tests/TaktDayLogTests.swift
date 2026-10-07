@@ -384,6 +384,43 @@ final class DayLogFileStoreTests: XCTestCase {
     try store.append(.completed(taskId: 2, title: "Later", at: Date()))
     XCTAssertEqual(store.loadAll().map(\.taskId), [1, 2])
   }
+
+  /// A crash between a line's JSON and its newline leaves the file ending
+  /// mid-line. The next append must not be glued onto that fragment, or the
+  /// reader drops both — one bad event taking a good one with it.
+  func testAppendingAfterATornTailWithoutANewlineStartsAFreshLine() throws {
+    let store = DayLogFileStore(directoryURL: directoryURL)
+    try store.append(.completed(taskId: 1, title: "Good", at: Date()))
+
+    let handle = try FileHandle(forWritingTo: store.fileURL)
+    try handle.seekToEnd()
+    try handle.write(contentsOf: Data("{\"kind\":\"comple".utf8))  // no trailing \n
+    try handle.close()
+
+    try store.append(.completed(taskId: 2, title: "Later", at: Date()))
+    XCTAssertEqual(store.loadAll().map(\.taskId), [1, 2])
+
+    let bytes = try Data(contentsOf: store.fileURL)
+    XCTAssertEqual(bytes.split(separator: 0x0A).count, 3, "the fragment got its own line")
+  }
+
+  /// One invalid UTF-8 byte used to fail the whole-file string read and return
+  /// an empty history. Decoding line by line confines it to its own line.
+  func testAnInvalidUTF8ByteCostsOnlyItsOwnLine() throws {
+    let store = DayLogFileStore(directoryURL: directoryURL)
+    try store.append(.completed(taskId: 1, title: "Before", at: Date()))
+
+    let handle = try FileHandle(forWritingTo: store.fileURL)
+    try handle.seekToEnd()
+    var bad = Data("{\"kind\":\"completed\",\"title\":\"".utf8)
+    bad.append(0xFF)
+    bad.append(contentsOf: Data("\"}\n".utf8))
+    try handle.write(contentsOf: bad)
+    try handle.close()
+
+    try store.append(.completed(taskId: 2, title: "After", at: Date()))
+    XCTAssertEqual(store.loadAll().map(\.taskId), [1, 2])
+  }
 }
 
 /// The streak behind `CompletionMilestone.dailyStreak`.

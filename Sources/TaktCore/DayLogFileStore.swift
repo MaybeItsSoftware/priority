@@ -67,8 +67,21 @@ public final class DayLogFileStore {
           return
         }
 
-        let handle = try FileHandle(forWritingTo: fileURL)
+        let handle = try FileHandle(forUpdating: fileURL)
         defer { try? handle.close() }
+        // A torn previous append (crash between the JSON and its newline)
+        // leaves the file ending mid-line. Appending straight after it would
+        // glue this event onto that fragment, and the tolerant reader would
+        // then drop the pair — losing a good event to a bad one. Close the
+        // fragment first; it costs one byte and the reader skips the stub.
+        let end = try handle.seekToEnd()
+        if end > 0 {
+          try handle.seek(toOffset: end - 1)
+          if try handle.read(upToCount: 1) != Data([0x0A]) {
+            try handle.seekToEnd()
+            try handle.write(contentsOf: Data([0x0A]))
+          }
+        }
         try handle.seekToEnd()
         try handle.write(contentsOf: line)
       }
@@ -80,13 +93,18 @@ public final class DayLogFileStore {
   /// Every event in the file, in append order. A missing file is an empty log,
   /// not an error — that is the state on first launch, and it is the state the
   /// "collecting since" empty state is built for.
+  ///
+  /// Split as bytes rather than decoded as one string: a single invalid UTF-8
+  /// byte in one line used to make the whole-file `String` read fail and
+  /// return an empty history, which is exactly the all-or-nothing failure the
+  /// line format exists to rule out. Each line is now decoded on its own, so a
+  /// bad byte costs that line and nothing else.
   public func loadAll() -> [DayLogEvent] {
-    guard let contents = try? String(contentsOf: fileURL, encoding: .utf8) else { return [] }
+    guard let contents = try? Data(contentsOf: fileURL) else { return [] }
     return contents
-      .split(separator: "\n", omittingEmptySubsequences: true)
+      .split(separator: 0x0A, omittingEmptySubsequences: true)
       .compactMap { line in
-        guard let data = line.data(using: .utf8) else { return nil }
-        return try? decoder.decode(DayLogEvent.self, from: data)
+        try? decoder.decode(DayLogEvent.self, from: line)
       }
   }
 }

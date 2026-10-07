@@ -52,7 +52,7 @@ public struct FileLock {
       withIntermediateDirectories: true
     )
 
-    let descriptor = open(lockFileURL.path, O_CREAT | O_RDWR, 0o644)
+    let descriptor = open(lockFileURL.path, O_CREAT | O_RDWR | O_CLOEXEC, 0o644)
     guard descriptor >= 0 else {
       throw LockError.cannotOpen(path: lockFileURL.path, code: errno)
     }
