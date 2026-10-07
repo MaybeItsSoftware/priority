@@ -49,6 +49,78 @@ final class GoogleTasksMirrorTests: XCTestCase {
     XCTAssertTrue(plan.isEmpty)
   }
 
+  /// The ledger is gone but the Google lists are not: the mirror finds its
+  /// own list again by title instead of making a second one beside it.
+  func testAnUnmappedListIsAdoptedByExactTitleBeforeBeingCreated() {
+    let plan = plan(
+      localLists: [list("work", "Work")],
+      localTasks: [],
+      remoteLists: [.init(id: "g-work", title: "Work")])
+
+    XCTAssertEqual(plan.operations, [.adoptRemoteList(localListID: "work", remoteListID: "g-work")])
+  }
+
+  func testAnUnmappedListStillCreatesWhenNoGoogleListSharesItsTitle() {
+    let plan = plan(
+      localLists: [list("work", "Work")],
+      localTasks: [],
+      remoteLists: [.init(id: "g-personal", title: "Shopping"), .init(id: "g-w", title: "work")])
+
+    XCTAssertEqual(plan.operations, [.createList(localListID: "work", title: "Work")])
+  }
+
+  /// A Google list the ledger already maps is spoken for, whatever it is
+  /// called: a second local list with the same title gets its own.
+  func testAMappedGoogleListIsNotAdoptedByASecondLocalListWithTheSameTitle() {
+    let plan = plan(
+      localLists: [list("work", "Work"), list("work-2", "Work")],
+      localTasks: [],
+      remoteLists: [.init(id: "g-work", title: "Work")],
+      ledger: .init(tasks: [:], lists: ["work": "g-work"]))
+
+    XCTAssertEqual(plan.operations, [.createList(localListID: "work-2", title: "Work")])
+  }
+
+  /// Two unmapped local lists sharing a title cannot both adopt the one
+  /// Google list: the first takes it and the second is created.
+  func testOneGoogleListIsAdoptedOnce() {
+    let plan = plan(
+      localLists: [list("work", "Work"), list("work-2", "Work")],
+      localTasks: [],
+      remoteLists: [.init(id: "g-work", title: "Work")])
+
+    XCTAssertEqual(
+      plan.operations,
+      [
+        .adoptRemoteList(localListID: "work", remoteListID: "g-work"),
+        .createList(localListID: "work-2", title: "Work"),
+      ])
+  }
+
+  /// A mapped list whose Google copy was deleted falls back to the same
+  /// search: a surviving Google list with its title is adopted, not duplicated.
+  func testAListWhoseGoogleCopyWasDeletedAdoptsAnotherWithItsTitle() {
+    let plan = plan(
+      localLists: [list("work", "Work")],
+      localTasks: [],
+      remoteLists: [.init(id: "g-work-2", title: "Work")],
+      ledger: .init(tasks: [:], lists: ["work": "g-work-old"]))
+
+    XCTAssertEqual(
+      plan.operations, [.adoptRemoteList(localListID: "work", remoteListID: "g-work-2")])
+  }
+
+  /// Tasks in an adopted list wait a pass, like tasks in a created one: the
+  /// executor has not read that list's remote side yet.
+  func testTasksInAnAdoptedListWaitForTheNextPass() {
+    let plan = plan(
+      localLists: [list("work", "Work")],
+      localTasks: [task("t1", list: "work", title: "Write the brief")],
+      remoteLists: [.init(id: "g-work", title: "Work")])
+
+    XCTAssertEqual(plan.operations, [.adoptRemoteList(localListID: "work", remoteListID: "g-work")])
+  }
+
   // MARK: - Pushing local state out
 
   func testANewLocalTaskIsCreatedRemotely() {
@@ -277,6 +349,32 @@ final class GoogleTasksMirrorTests: XCTestCase {
           payload: .init(
             title: "Called from the train", notes: "", due: nil, isCompleted: false))
       ])
+  }
+
+  /// Google allows a task with no title; Priority does not. A blank row is
+  /// left where it is rather than adopted under a name nobody gave it, and is
+  /// picked up on the pass after it gets one.
+  func testABlankTitledRemoteTaskIsNotAdopted() {
+    let plan = plan(
+      localLists: [list("work", "Work")],
+      localTasks: [],
+      remoteLists: [.init(id: "g-work", title: "Work")],
+      remoteTasks: [
+        .init(id: "g-blank", listID: "g-work", title: ""),
+        .init(id: "g-spaces", listID: "g-work", title: "  \n"),
+        .init(id: "g-9", listID: "g-work", title: "Called from the train"),
+      ],
+      ledger: .init(tasks: [:], lists: ["work": "g-work"]))
+
+    XCTAssertEqual(
+      plan.operations,
+      [
+        .adoptRemoteTask(
+          remoteID: "g-9", remoteListID: "g-work", localListID: "work",
+          payload: .init(
+            title: "Called from the train", notes: "", due: nil, isCompleted: false))
+      ])
+    XCTAssertTrue(plan.conflicts.isEmpty)
   }
 
   // MARK: - Shape

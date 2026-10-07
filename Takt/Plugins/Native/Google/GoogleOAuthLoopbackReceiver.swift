@@ -129,13 +129,14 @@ final class GoogleOAuthLoopbackReceiver: @unchecked Sendable {
     connection.receive(minimumIncompleteLength: 1, maximumLength: 4_096) { [weak self] data, _, _, receiveError in
       guard let self else { return }
 
-      if let receiveError {
-        self.sendResponse(
-          connection: connection,
-          status: "500 Internal Server Error",
-          body: "OAuth callback failed: \(receiveError.localizedDescription)"
-        )
-        self.resolveCallback(with: receiveError)
+      if receiveError != nil {
+        // A browser opens more connections than the one that carries the
+        // callback — a speculative preconnect it then drops, a favicon probe
+        // that resets — and the first of those to fail used to fail the whole
+        // sign-in before the real redirect had arrived. This connection is
+        // nobody's; drop it and keep listening for the one that matters. The
+        // timeout in `waitForCallback` still bounds how long that can go on.
+        connection.cancel()
         return
       }
 

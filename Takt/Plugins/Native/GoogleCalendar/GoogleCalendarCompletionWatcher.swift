@@ -30,6 +30,11 @@ import os
   private var pollTask: Task<Void, Never>?
   private var isRunning = false
 
+  /// Called on the main actor after a check has completed a task. The view
+  /// model's external-write poller ignores this process's own commits, so
+  /// without this the completion would not show until the next local edit.
+  var onWroteLocally: (() -> Void)?
+
   private(set) var watchedEventCount: Int
 
   init(
@@ -76,6 +81,7 @@ import os
     guard !ledger.isEmpty else { return }
     isRunning = true
     defer { isRunning = false }
+    var wroteLocally = false
 
     for (taskID, eventID) in ledger {
       // A task that is already finished, or gone from the workspace entirely,
@@ -89,6 +95,7 @@ import os
         guard try await plugin.eventState(id: eventID) == .gone else { continue }
         try workspaceStore.setStatus(.completed, for: taskID)
         ledger.removeValue(forKey: taskID)
+        wroteLocally = true
         logger.info("Completed a task whose calendar event was cleared")
       } catch {
         // A transient failure leaves the entry alone: the next pass asks again
@@ -99,6 +106,7 @@ import os
 
     try? store.save(ledger)
     watchedEventCount = ledger.count
+    if wroteLocally { onWroteLocally?() }
   }
 }
 

@@ -64,6 +64,11 @@ enum GoogleAPIScope {
   private let makeCallbackReceiver: () -> GoogleOAuthLoopbackReceiver
   private var tokenPayload: GoogleOAuthTokenPayload?
   private var hasLoadedStoredToken = false
+  /// The refresh currently on the wire, if any. Calendar and Tasks share the
+  /// token and tend to wake together, so without this a spent token would be
+  /// refreshed once per caller — and the last response to land, not the
+  /// freshest, would be the one stored.
+  private var refreshInFlight: Task<GoogleOAuthTokenPayload, Error>?
   /// Scopes asked for at sign-in: the union of what every registered
   /// integration declared, so one consent covers all of them.
   private var requestedScopes: Set<String> = []
@@ -151,15 +156,44 @@ enum GoogleAPIScope {
       return payload.accessToken
     }
 
-    let refreshed = try await refreshAccessToken(refreshToken: payload.refreshToken)
-    payload = GoogleOAuthTokenPayload(
-      accessToken: refreshed.accessToken,
-      refreshToken: payload.refreshToken,
-      expiryDate: Date().addingTimeInterval(TimeInterval(refreshed.expiresIn)),
-      grantedScopes: refreshed.scope ?? payload.grantedScopes,
-      clientID: normalizedClientID)
-    store(payload)
+    payload = try await refreshedPayload(replacing: payload)
     return payload.accessToken
+  }
+
+  /// One refresh for however many callers find the token spent at once.
+  private func refreshedPayload(replacing stale: GoogleOAuthTokenPayload) async throws
+    -> GoogleOAuthTokenPayload
+  {
+    if let inFlight = refreshInFlight {
+      return try await inFlight.value
+    }
+    let refreshToken = stale.refreshToken
+    let clientID = normalizedClientID
+    let task = Task { () throws -> GoogleOAuthTokenPayload in
+      // Taken before the request leaves, not after the reply lands: `expires_in`
+      // counts from when Google issued the token, and a slow round trip
+      // measured from the far end would have the token believed fresh for a
+      // while after it had already expired.
+      let issuedAt = Date()
+      let refreshed = try await refreshAccessToken(refreshToken: refreshToken)
+      // A `disconnect()` while the request was on the wire has to stick. The
+      // reply belongs to a refresh token that is no longer ours, so storing it
+      // would sign the user straight back in with a grant they just revoked.
+      guard tokenPayload?.refreshToken == refreshToken else {
+        throw GoogleAccountError.authenticationRequired
+      }
+      let payload = GoogleOAuthTokenPayload(
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshToken,
+        expiryDate: issuedAt.addingTimeInterval(TimeInterval(refreshed.expiresIn)),
+        grantedScopes: refreshed.scope ?? stale.grantedScopes,
+        clientID: clientID)
+      store(payload)
+      return payload
+    }
+    refreshInFlight = task
+    defer { refreshInFlight = nil }
+    return try await task.value
   }
 
   /// Sends the user through Google's consent screen and keeps what comes back.
@@ -185,9 +219,11 @@ enum GoogleAPIScope {
       try makeAuthorizationURL(redirectURI: redirectURI, state: state, codeChallenge: challenge))
     let callbackURL = try await receiver.waitForCallback(timeout: 180)
     let code = try Self.extractAuthorizationCode(from: callbackURL, expectedState: state)
+    // Before the exchange, for the same reason as in `refreshedPayload`.
+    let issuedAt = Date()
     let response = try await exchangeAuthorizationCode(
       authorizationCode: code, redirectURI: redirectURI, codeVerifier: verifier)
-    try storeTokenResponse(response)
+    try storeTokenResponse(response, issuedAt: issuedAt)
   }
 
   /// Forgets the sign-in. Also clears the pre-shared-account keychain item, so
@@ -292,11 +328,22 @@ enum GoogleAPIScope {
   }
 
   private func refreshAccessToken(refreshToken: String) async throws -> GoogleOAuthRefreshResponse {
-    let data = try await postForm([
-      ("client_id", normalizedClientID),
-      ("refresh_token", refreshToken),
-      ("grant_type", "refresh_token"),
-    ])
+    let data: Data
+    do {
+      data = try await postForm([
+        ("client_id", normalizedClientID),
+        ("refresh_token", refreshToken),
+        ("grant_type", "refresh_token"),
+      ])
+    } catch GoogleAccountError.invalidGrant {
+      // The refresh token itself has been rejected: revoked from the Google
+      // account page, expired through disuse, or the password changed. No
+      // retry fixes that, and a mirror that kept trying would show the same
+      // raw error every five minutes for ever. Signing out is what makes the
+      // settings page say "sign in again" instead.
+      disconnect()
+      throw GoogleAccountError.authenticationRequired
+    }
     return try JSONDecoder().decode(GoogleOAuthRefreshResponse.self, from: data)
   }
 
@@ -308,13 +355,20 @@ enum GoogleAPIScope {
     let (data, response) = try await session.data(for: request)
     guard let http = response as? HTTPURLResponse else { throw GoogleAccountError.invalidResponse }
     guard (200...299).contains(http.statusCode) else {
-      throw GoogleAccountError.tokenEndpoint(
-        String(data: data, encoding: .utf8) ?? "Unknown OAuth error.")
+      // Google's failures are `{"error": "...", "error_description": "..."}`.
+      // The code is what callers act on; the description is what a person
+      // reads, so neither is thrown away.
+      let failure = try? JSONDecoder().decode(GoogleOAuthErrorResponse.self, from: data)
+      if failure?.error == "invalid_grant" { throw GoogleAccountError.invalidGrant }
+      let message =
+        failure.map { [$0.error, $0.errorDescription].compactMap { $0 }.joined(separator: ": ") }
+        ?? String(data: data, encoding: .utf8) ?? "Unknown OAuth error (HTTP \(http.statusCode))."
+      throw GoogleAccountError.tokenEndpoint(message)
     }
     return data
   }
 
-  private func storeTokenResponse(_ response: GoogleOAuthTokenResponse) throws {
+  private func storeTokenResponse(_ response: GoogleOAuthTokenResponse, issuedAt: Date) throws {
     // Google returns a refresh token on first consent only; a re-authentication
     // that widens scopes may omit it, and dropping the old one would sign the
     // user out the next time the access token expired.
@@ -328,7 +382,7 @@ enum GoogleAPIScope {
       GoogleOAuthTokenPayload(
         accessToken: response.accessToken,
         refreshToken: refreshToken,
-        expiryDate: Date().addingTimeInterval(TimeInterval(response.expiresIn)),
+        expiryDate: issuedAt.addingTimeInterval(TimeInterval(response.expiresIn)),
         grantedScopes: response.scope ?? requestedScopes.sorted().joined(separator: " "),
         clientID: normalizedClientID))
   }
@@ -377,16 +431,11 @@ enum GoogleAPIScope {
   }
 
   static func formEncodedData(_ pairs: [(String, String)]) -> Data? {
-    pairs.map { "\(percentEncode($0.0))=\(percentEncode($0.1))" }
+    pairs.map { "\(FormURLEncoding.percentEncodeFormValue($0.0))=\(FormURLEncoding.percentEncodeFormValue($0.1))" }
       .joined(separator: "&")
       .data(using: .utf8)
   }
 
-  private static func percentEncode(_ value: String) -> String {
-    let allowed = CharacterSet(
-      charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
-    return value.addingPercentEncoding(withAllowedCharacters: allowed)!
-  }
 }
 
 struct GoogleOAuthTokenResponse: Decodable {
@@ -415,6 +464,17 @@ struct GoogleOAuthRefreshResponse: Decodable {
   }
 }
 
+/// What the token endpoint sends with a non-2xx status.
+struct GoogleOAuthErrorResponse: Decodable {
+  let error: String
+  let errorDescription: String?
+
+  enum CodingKeys: String, CodingKey {
+    case error
+    case errorDescription = "error_description"
+  }
+}
+
 enum GoogleAccountError: LocalizedError, Equatable {
   case missingClientID
   case invalidAuthorizationURL
@@ -426,6 +486,11 @@ enum GoogleAccountError: LocalizedError, Equatable {
   case missingRefreshToken
   case invalidResponse
   case tokenEndpoint(String)
+  /// The token endpoint's `invalid_grant`: the refresh token or authorization
+  /// code it was given is no longer good. On a refresh this becomes
+  /// `authenticationRequired` after signing out; on a code exchange it
+  /// surfaces as itself, since there is no sign-in to revoke yet.
+  case invalidGrant
   case randomGenerationFailed
 
   var errorDescription: String? {
@@ -450,6 +515,8 @@ enum GoogleAccountError: LocalizedError, Equatable {
       return "Received an invalid response from Google."
     case .tokenEndpoint(let message):
       return "Google OAuth error: \(message)"
+    case .invalidGrant:
+      return "Google no longer accepts this sign-in. Sign in again."
     case .randomGenerationFailed:
       return "Could not generate secure OAuth parameters."
     }

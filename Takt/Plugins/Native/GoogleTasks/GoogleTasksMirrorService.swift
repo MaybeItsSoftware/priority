@@ -8,14 +8,19 @@ import os
 ///
 /// Reads both sides, asks `GoogleTasksMirror` what should happen, and carries
 /// it out — against Google through the plugin, against the workspace through
-/// the store. The order matters and is the one thing worth knowing about this
-/// file: lists are created before the tasks that go in them, and the ledger is
-/// written last, so a pass that dies halfway leaves the next one able to work
-/// out where it got to rather than duplicating what it already did.
+/// the store. Two orderings matter and are the things worth knowing about
+/// this file. Lists are created before the tasks that go in them, because the
+/// ids Google hands back are what the task operations need. And the ledger is
+/// saved whether or not the pass finishes: every Google write lands in the
+/// in-memory ledger as it happens, and a pass that dies halfway saves what it
+/// has before reporting the error, so the next pass finds the tasks it already
+/// created rather than creating them again and adopting the orphans back.
 ///
 /// A pass is never concurrent with itself. Google Tasks has no transactions,
 /// and two passes racing would each see the other's half-finished work as
-/// remote edits to argue with.
+/// remote edits to argue with. A change that arrives mid-pass is not dropped,
+/// though: the running pass has already read its snapshot, so the flag it
+/// sets makes the loop in `sync()` go round once more.
 @MainActor
 @Observable final class GoogleTasksMirrorService {
   enum State: Equatable {
@@ -43,6 +48,13 @@ import os
   private let isEnabled: () -> Bool
   private let logger = Logger(
     subsystem: "uk.co.maybeitssoftware.takt", category: "GoogleTasksMirrorService")
+
+  /// Called on the main actor after a pass has written to the workspace — a
+  /// completion ticked on a phone, notes merged in, a task adopted. The view
+  /// model's external-write poller deliberately ignores this process's own
+  /// commits, so without this a phone tick would not show until the next
+  /// local edit happened to reload the screen.
+  var onWroteLocally: (() -> Void)?
 
   private var pendingSync: Task<Void, Never>?
   private var pollTask: Task<Void, Never>?
@@ -117,23 +129,30 @@ import os
       return
     }
     isRunning = true
-    state = .syncing
     defer { isRunning = false }
 
-    do {
-      try await runPass()
-      state = .idle
-      lastSyncedAt = .now
-    } catch {
-      let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-      logger.error("Google Tasks mirror failed: \(message, privacy: .public)")
-      state = .failed(message)
-    }
+    // A loop rather than a recursive call: `isRunning` is still set here, so a
+    // recursive `sync()` would only ever set the flag again and return.
+    repeat {
+      state = .syncing
+      do {
+        try await runPass()
+        state = .idle
+        lastSyncedAt = .now
+      } catch {
+        let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        logger.error("Google Tasks mirror failed: \(message, privacy: .public)")
+        state = .failed(message)
+      }
+    } while consumeWantsAnotherPass()
+  }
 
-    if wantsAnotherPass {
-      wantsAnotherPass = false
-      await sync()
-    }
+  /// Whether a change arrived during the pass that just finished, clearing
+  /// the flag either way. False once the integration has been switched off or
+  /// signed out mid-pass, whatever the flag says.
+  private func consumeWantsAnotherPass() -> Bool {
+    defer { wantsAnotherPass = false }
+    return wantsAnotherPass && isEnabled() && plugin.isAuthenticated
   }
 
   private func runPass() async throws {
@@ -169,11 +188,29 @@ import os
 
     let titlesByLocalID = Dictionary(
       localTasks.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
-    try await apply(plan.operations, ledger: &ledger, store: store)
+    var wroteLocally = false
+    do {
+      try await apply(plan.operations, ledger: &ledger, store: store, wroteLocally: &wroteLocally)
+    } catch {
+      // The ledger already holds every Google write that landed before the
+      // failure, and it has to reach disk before the error reaches anyone:
+      // otherwise the next pass, reading the old ledger, would create those
+      // tasks in Google a second time and then adopt the first copies back as
+      // if a phone had typed them. The save's own failure is not allowed to
+      // mask the one that stopped the pass.
+      try? await save(ledger)
+      if wroteLocally { onWroteLocally?() }
+      throw error
+    }
     record(plan.conflicts, titles: titlesByLocalID)
 
-    let finished = ledger
-    try await Task.detached(priority: .utility) { try ledgerStore.save(finished) }.value
+    try await save(ledger)
+    if wroteLocally { onWroteLocally?() }
+  }
+
+  private func save(_ ledger: GoogleTasksMirror.Ledger) async throws {
+    let ledgerStore = self.ledgerStore
+    try await Task.detached(priority: .utility) { try ledgerStore.save(ledger) }.value
     mirroredTaskCount = ledger.tasks.count
   }
 
@@ -217,10 +254,14 @@ import os
 
   // MARK: - Carrying out a plan
 
+  /// Carries the plan out. `ledger` is updated after each Google write rather
+  /// than at the end, and `wroteLocally` is set by the first workspace write,
+  /// so both are accurate at the point a throw leaves this function.
   private func apply(
     _ operations: [GoogleTasksMirror.Operation],
     ledger: inout GoogleTasksMirror.Ledger,
-    store: WorkspaceStore
+    store: WorkspaceStore,
+    wroteLocally: inout Bool
   ) async throws {
     // Lists first: a task cannot be created in a list that does not exist yet,
     // and the ids handed back are what the task operations need.
@@ -228,6 +269,10 @@ import os
       switch operation {
       case .createList(let localListID, let title):
         ledger.lists[localListID] = try await plugin.createTaskList(title: title)
+      case .adoptRemoteList(let localListID, let remoteListID):
+        // Nothing to send: the list is already there, and the ledger learning
+        // its id is the whole of the adoption.
+        ledger.lists[localListID] = remoteListID
       case .renameList(let remoteListID, let title):
         try await forgiving { try await plugin.renameTaskList(id: remoteListID, title: title) }
       case .deleteList(let remoteListID, let localListID):
@@ -243,7 +288,7 @@ import os
 
     for operation in operations {
       switch operation {
-      case .createList, .renameList, .deleteList:
+      case .createList, .adoptRemoteList, .renameList, .deleteList:
         continue
 
       case .createTask(let localID, let remoteListID, let payload):
@@ -260,25 +305,66 @@ import os
         try await forgiving { try await plugin.deleteTask(id: remoteID, inList: remoteListID) }
         ledger.tasks.removeValue(forKey: localID)
 
+      // Workspace writes are per-operation rather than pass-fatal. The store
+      // has opinions the planner cannot check against its snapshot — a task
+      // deleted locally since the read, a list that has just gone — and one
+      // row it refuses must not stop every other row from syncing, or the
+      // mirror would fail at the same place five minutes from now, forever.
+      // What the ledger records is only what actually landed, so a skipped
+      // write is retried next pass rather than believed.
       case .completeLocalTask(let localID):
-        try store.setStatus(.completed, for: localID)
-        ledger.tasks[localID]?.pushedCompleted = true
+        if locally("complete", localID, { try store.setStatus(.completed, for: localID) }) {
+          ledger.tasks[localID]?.pushedCompleted = true
+          wroteLocally = true
+        }
 
       case .mergeNotesIntoLocalTask(let localID, let notes):
-        try mergeNotes(notes, into: localID, store: store)
-        ledger.tasks[localID]?.pushedNotes = notes
+        if locally("merge notes into", localID, { try mergeNotes(notes, into: localID, store: store) }) {
+          ledger.tasks[localID]?.pushedNotes = notes
+          wroteLocally = true
+        }
 
       case .adoptRemoteTask(let remoteID, let remoteListID, let localListID, let payload):
-        let created = try store.createTask(listId: localListID, title: payload.title)
-        if !payload.notes.isEmpty || payload.due != nil {
-          try store.updateTask(
-            id: created.id, title: payload.title, notes: payload.notes,
-            dueAt: payload.due.flatMap { GoogleTasksMirror.parseDueDate($0) },
-            estimateSeconds: nil)
+        let created: WorkspaceTask
+        do {
+          created = try store.createTask(listId: localListID, title: payload.title)
+        } catch {
+          logger.error(
+            "Google Tasks mirror could not adopt \(remoteID, privacy: .public): \(error.localizedDescription, privacy: .public)")
+          continue
         }
-        ledger.tasks[created.id] = entry(
-          remoteID: remoteID, listID: remoteListID, payload: payload)
+        wroteLocally = true
+        // The ledger entry is written against what the local task really has
+        // in it, so if the notes and due date fail to land the entry says they
+        // were never pushed, and the next pass merges them in again instead of
+        // reading the gap as a local decision to clear them.
+        var landed = GoogleTasksMirror.TaskPayload(
+          title: payload.title, notes: "", due: nil, isCompleted: false)
+        if !payload.notes.isEmpty || payload.due != nil,
+          locally("fill in", created.id, {
+            try store.updateTask(
+              id: created.id, title: payload.title, notes: payload.notes,
+              dueAt: payload.due.flatMap { GoogleTasksMirror.parseDueDate($0) },
+              estimateSeconds: nil)
+          })
+        {
+          landed = payload
+        }
+        ledger.tasks[created.id] = entry(remoteID: remoteID, listID: remoteListID, payload: landed)
       }
+    }
+  }
+
+  /// Runs one workspace write, logging a failure instead of throwing it.
+  /// Returns whether it landed, so the caller can keep the ledger honest.
+  private func locally(_ verb: String, _ localID: String, _ work: () throws -> Void) -> Bool {
+    do {
+      try work()
+      return true
+    } catch {
+      logger.error(
+        "Google Tasks mirror could not \(verb, privacy: .public) local task \(localID, privacy: .public): \(error.localizedDescription, privacy: .public)")
+      return false
     }
   }
 

@@ -170,6 +170,11 @@ public enum GoogleTasksMirror {
 
   public enum Operation: Equatable, Sendable {
     case createList(localListID: String, title: String)
+    /// A Google list the ledger has no record of, with the same title as a
+    /// local one that has no Google copy. Most often the ledger file has been
+    /// lost, and this is the mirror finding its own lists again rather than
+    /// making a second set. Carried out as a ledger entry and nothing more.
+    case adoptRemoteList(localListID: String, remoteListID: String)
     case renameList(remoteListID: String, title: String)
     /// A list archived or deleted in Priority. Its Google copy goes with it.
     case deleteList(remoteListID: String, localListID: String)
@@ -232,9 +237,11 @@ public enum GoogleTasksMirror {
   /// Works out what has to happen for the two sides to agree.
   ///
   /// `remoteTasks` and `remoteLists` are what Google currently holds;
-  /// `ledger` is what Priority last pushed. A list Priority knows nothing
-  /// about is left entirely alone — the mirror owns the lists it created and
-  /// nothing else, so an unrelated Google Tasks list is never touched.
+  /// `ledger` is what Priority last pushed. A Google list the ledger does not
+  /// map is left entirely alone unless a local list without a Google copy has
+  /// exactly its title, in which case it is adopted as that list's copy — the
+  /// mirror owns the lists it created and nothing else, and a title match is
+  /// how it recognises one of its own after the ledger has been lost.
   public static func plan(
     localLists: [LocalList],
     localTasks: [LocalTask],
@@ -250,18 +257,40 @@ public enum GoogleTasksMirror {
     let localListsByID = Dictionary(localLists.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
     // --- Lists -------------------------------------------------------------
-    // A mapped list whose Google copy has been deleted is remapped by being
-    // created again: Priority says which lists exist.
+    // A local list with no usable mapping — never mirrored, or mapped to a
+    // Google list that has since been deleted — first looks for an unmapped
+    // Google list with exactly its title and adopts that; only when there is
+    // none does it create one. Without the adoption step, losing the ledger
+    // file would mean a second copy of every list in Google, and then every
+    // task in those copies being adopted back as a duplicate. The match is
+    // exact and case-sensitive: the mirror pushes names verbatim, so its own
+    // lists match verbatim, and a looser match would start claiming lists it
+    // never made.
     var listMapping: [String: String] = [:]
+    // Google lists already spoken for, by the ledger or by an adoption earlier
+    // in this pass, so two local lists with one title cannot both take the
+    // same Google list.
+    var claimedRemoteListIDs = Set(ledger.lists.values)
     for list in localLists {
-      guard let remoteListID = ledger.lists[list.id], remoteListsByID[remoteListID] != nil else {
-        operations.append(.createList(localListID: list.id, title: list.name))
+      if let remoteListID = ledger.lists[list.id], remoteListsByID[remoteListID] != nil {
+        listMapping[list.id] = remoteListID
+        if remoteListsByID[remoteListID]?.title != list.name {
+          operations.append(.renameList(remoteListID: remoteListID, title: list.name))
+        }
         continue
       }
-      listMapping[list.id] = remoteListID
-      if remoteListsByID[remoteListID]?.title != list.name {
-        operations.append(.renameList(remoteListID: remoteListID, title: list.name))
+      // Adopted lists, like created ones, wait a pass before their tasks are
+      // mirrored: the executor only reads tasks from lists the ledger knew
+      // about when the pass began, so planning tasks against this list now
+      // would be planning against a remote side it has not seen.
+      if let match = remoteLists.first(where: {
+        $0.title == list.name && !claimedRemoteListIDs.contains($0.id)
+      }) {
+        claimedRemoteListIDs.insert(match.id)
+        operations.append(.adoptRemoteList(localListID: list.id, remoteListID: match.id))
+        continue
       }
+      operations.append(.createList(localListID: list.id, title: list.name))
     }
     // Mapped to a list Priority no longer has: archived, deleted, or renamed
     // into nothing. The Google copy follows it.
@@ -380,11 +409,22 @@ public enum GoogleTasksMirror {
 
     // Typed into Google Tasks directly: adopted rather than deleted, because
     // authority decides who wins an argument, not who is allowed to write.
+    //
+    // A blank title is skipped rather than adopted. Google lets a task exist
+    // with no title — it is what a new row looks like before anything is
+    // typed into it — and Priority does not, so there is nothing to adopt yet.
+    // Giving it a placeholder name instead would be worse than nothing: the
+    // next pass would see "Untitled" locally against "" in Google and push the
+    // placeholder back as a title conflict, turning a blank row somebody was
+    // still typing into a task called Untitled on both sides. Left alone, it
+    // is adopted on the pass after it gets a name.
     let mirroredRemoteIDs = Set(ledger.tasks.values.map(\.remoteID))
     let localListIDsByRemoteListID = Dictionary(
       listMapping.map { ($0.value, $0.key) }, uniquingKeysWith: { a, _ in a })
     for remote in remoteTasks
-    where !remote.isDeleted && !remote.isCompleted && !mirroredRemoteIDs.contains(remote.id) {
+    where !remote.isDeleted && !remote.isCompleted && !mirroredRemoteIDs.contains(remote.id)
+      && !remote.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    {
       guard let localListID = localListIDsByRemoteListID[remote.listID] else { continue }
       operations.append(
         .adoptRemoteTask(

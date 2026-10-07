@@ -6,8 +6,11 @@ import TaktCore
 /// Whole-file and atomically replaced, like `dailies.json` and unlike
 /// `daylog.jsonl`: this is not history, it is the mirror's current belief
 /// about the far side, and a torn tail would make it lie. Losing the file is
-/// survivable — the next pass sees an empty ledger, and adopts whatever is
-/// already in the mirrored Google lists rather than duplicating it.
+/// survivable but not free. The next pass sees an empty ledger, finds the
+/// Google lists again by exact title match (`adoptRemoteList`) instead of
+/// creating a second set, and from the pass after that adopts whatever is in
+/// them — but it has no way to pair a Google task with the local one it was
+/// pushed from, so each mirrored task comes back once as a duplicate.
 struct GoogleTasksMirrorLedgerStore {
   private let url: URL
 
