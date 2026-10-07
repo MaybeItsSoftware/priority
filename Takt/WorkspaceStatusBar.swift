@@ -91,6 +91,7 @@ struct WorkspaceStatusBar: View {
     case .tasks: "the tasks"
     case .inspector: "the inspector"
     case .done: "the done rail"
+    case .timeline: "the timeline"
     }
   }
 }

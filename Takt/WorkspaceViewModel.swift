@@ -44,6 +44,8 @@ enum WorkspaceFocusArea: Hashable {
   /// with a click target, because the app's premise is that anything you can
   /// reach you can reach from the keyboard.
   case done
+  /// The timeline, as a tab of the right dock.
+  case timeline
 }
 
 /// Views of the same local task model, rather than separate applications.
@@ -598,7 +600,7 @@ enum WorkspaceSidebarItem: Identifiable {
   /// have no entry, which is the difference the timeline draws.
   private(set) var focusHistoryAwards: [String: FocusAward] = [:]
   /// Whether the timeline has the main pane.
-  var showsTimelineScreen = false
+
   var errorMessage: String?
 
   /// Told after rows changed under the app — a sync pull or another

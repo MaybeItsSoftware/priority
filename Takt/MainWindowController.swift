@@ -209,6 +209,18 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       // view: an approval card holding the keyboard answers Return itself,
       // and a Return that fell through to the workspace would open whatever
       // task was selected behind it instead.
+      // Tab in the row a new task is typed into indents it under the task
+      // above, ⇧Tab takes it back out. The field editor would otherwise take
+      // Tab to move focus before the row's own handler ever heard it.
+      if event.keyCode == 48, self.isEditingText(in: window), self.workspace.isDraftingTask,
+        event.modifierFlags.isDisjoint(with: [.command, .option, .control]) {
+        if event.modifierFlags.contains(.shift) {
+          self.workspace.outdentTaskDraft()
+        } else {
+          self.workspace.indentTaskDraft()
+        }
+        return nil
+      }
       if self.isEditingText(in: window) || self.workspace.agentHoldsKeyboard {
         self.workspace.desktopShortcutSequence.reset()
         // Only the chords that are how you leave a field to do something else

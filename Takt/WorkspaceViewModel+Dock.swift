@@ -6,6 +6,7 @@ import TaktWorkspace
 enum WorkspaceDockTab: String, CaseIterable, Identifiable {
   case inspector
   case done
+  case timeline
 
   var id: String { rawValue }
 
@@ -13,6 +14,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     switch self {
     case .inspector: "Inspector"
     case .done: "Done"
+    case .timeline: "Timeline"
     }
   }
 
@@ -20,6 +22,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     switch self {
     case .inspector: "sidebar.trailing"
     case .done: "checkmark.circle"
+    case .timeline: "clock"
     }
   }
 
@@ -28,6 +31,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     switch self {
     case .inspector: .inspector
     case .done: .done
+    case .timeline: .timeline
     }
   }
 
@@ -36,6 +40,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     switch self {
     case .inspector: .windowToggleInspectorPane
     case .done: .windowToggleDoneRail
+    case .timeline: .goTimeline
     }
   }
 
@@ -43,6 +48,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     switch area {
     case .inspector: self = .inspector
     case .done: self = .done
+    case .timeline: self = .timeline
     case .sidebar, .tasks: return nil
     }
   }
@@ -61,6 +67,9 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
 extension WorkspaceViewModel {
   var isInspectorVisible: Bool { isRightDockVisible && rightDockTab == .inspector }
   var isDoneRailVisible: Bool { isRightDockVisible && rightDockTab == .done }
+  /// The timeline is the dock's third tab. Kept under its old name because
+  /// the toolbar, the menu and the keys all ask it.
+  var showsTimelineScreen: Bool { isRightDockVisible && rightDockTab == .timeline }
 
   /// Shows the dock on `tab`, loading what the tab needs. Does not move the
   /// keyboard; the callers that mean to do that say so.
@@ -69,13 +78,17 @@ extension WorkspaceViewModel {
     if rightDockTab != tab { rightDockTab = tab }
     if !isRightDockVisible { isRightDockVisible = true }
     if tab == .done && !wasShowingDone { reloadCompleted() }
+    if tab == .timeline {
+      focusHistoryDate = min(focusHistoryDate, .now)
+      reloadFocus()
+    }
   }
 
   /// Puts the dock away, handing the keyboard back to the tasks if it had it.
   func hideRightDock() {
     isRightDockVisible = false
     completedTasks = []
-    if keyboardFocusArea == .inspector || keyboardFocusArea == .done {
+    if keyboardFocusArea == .inspector || keyboardFocusArea == .done || keyboardFocusArea == .timeline {
       requestKeyboardFocus(.tasks)
     }
   }

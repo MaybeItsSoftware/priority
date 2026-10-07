@@ -60,30 +60,22 @@ extension WorkspaceViewModel {
     focusFloatRequest += 1
   }
 
-  /// Opens the timeline over the main pane.
-  ///
-  /// It is a mode rather than a sheet because reading back a day's work means
-  /// comparing what you meant to do with what you actually did, and a panel
-  /// floating over the board gives you a slot the size of a dialog to do that in.
+  /// Opens the timeline in the right dock, beside whatever you are working
+  /// on, with the keyboard on it. It used to take the whole main pane, which
+  /// meant leaving the list to look at the day.
   func presentTimelineScreen() {
-    focusHistoryDate = min(focusHistoryDate, .now)
-    reloadFocus()
-    showsTimelineScreen = true
+    showRightDock(.timeline)
+    requestKeyboardFocus(.timeline)
   }
 
   func dismissTimelineScreen() {
-    showsTimelineScreen = false
+    guard showsTimelineScreen else { return }
+    hideRightDock()
   }
 
-  /// Leaves the full-pane screen, which is now only ever the timeline.
-  ///
-  /// The timeline takes the whole main pane, so anything that *navigates* —
-  /// choosing a list, entering a folder, revealing a search hit — has to leave
-  /// it, or the destination is drawn underneath a screen that is still
-  /// covering it.
-  func leaveFullPaneScreens() {
-    dismissTimelineScreen()
-  }
+  /// There is no full-pane screen any more: the timeline sits in the dock
+  /// beside the work, so navigating leaves it where it is.
+  func leaveFullPaneScreens() {}
 
   /// Steps the day the timeline is showing. Never past today: the future holds
   /// no logged work, so a day ahead is an empty screen with nothing to say.

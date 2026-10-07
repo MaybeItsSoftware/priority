@@ -38,7 +38,6 @@ extension WorkspaceViewModel {
   /// showing the day at all.
   var arrangesDayOnMove: Bool {
     viewMode == .today && keyboardFocusArea == .tasks
-      && !showsTimelineScreen
   }
 
   /// Moves the selected task `offset` places through the planned part of the

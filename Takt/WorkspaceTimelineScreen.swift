@@ -13,6 +13,9 @@ struct WorkspaceTimelineScreen: View {
   @Environment(\.theme) private var theme
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(AppCoordinator.self) private var manager
+  /// In the right dock: a narrow column under the dock's own tab bar, so the
+  /// day controls stand alone and the breakdown goes under the chart.
+  var inDock = false
 
   /// Points per hour of ruler. Tall enough that a ten-minute block is still a
   /// visible bar rather than a rule, which is what makes a fragmented morning
@@ -26,7 +29,21 @@ struct WorkspaceTimelineScreen: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      header
+      if inDock {
+        HStack {
+          Text(model.timelineShowsToday ? "Today" : dayTitle)
+            .font(theme.bodyFont())
+            .foregroundStyle(theme.ink)
+            .lineLimit(1)
+          Spacer(minLength: theme.space.xs)
+          dayControls
+        }
+        .padding(.horizontal, theme.space.sm)
+        .padding(.vertical, theme.space.xs)
+        FocusRule()
+      } else {
+        header
+      }
       // No footer. It was a second strip along the bottom, above the status
       // bar: two key hints the reference and the palette already carry, and a
       // note about pauses that is now the subtitle's tooltip.
@@ -114,16 +131,25 @@ struct WorkspaceTimelineScreen: View {
     VStack(spacing: 0) {
       summary(day)
       FocusRule()
-      HStack(spacing: 0) {
+      if inDock {
         chart(day)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-        Rectangle()
-          .fill(theme.border)
-          .frame(width: theme.hairline)
+        FocusRule()
         breakdown(day)
-          .frame(width: 260)
+          .frame(maxWidth: .infinity)
+          .frame(maxHeight: 220)
+      } else {
+        HStack(spacing: 0) {
+          chart(day)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+          Rectangle()
+            .fill(theme.border)
+            .frame(width: theme.hairline)
+          breakdown(day)
+            .frame(width: 260)
+        }
+        .frame(maxHeight: .infinity)
       }
-      .frame(maxHeight: .infinity)
     }
   }
 

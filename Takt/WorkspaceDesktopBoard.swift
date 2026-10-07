@@ -283,13 +283,6 @@ struct WorkspaceKanbanColumnView: View {
               .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
             }
 
-            if !model.isDraftingTask {
-              TaskComposer(focusRequest: 0) { title in
-                model.createBoardTask(named: title, in: column)
-              }
-              .accessibilityLabel("Add task to \(column.title)")
-              .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
-            }
           }
           .scrollTargetLayout()
           .padding(.bottom, theme.space.xxs)

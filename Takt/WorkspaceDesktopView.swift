@@ -54,7 +54,7 @@ struct WorkspaceDesktopView: View {
       // the side docks run the window's full height beside it.
       VStack(spacing: 0) {
         mainPane
-        if model.isBottomDockVisible && !model.showsTimelineScreen {
+        if model.isBottomDockVisible {
           WorkspaceHeightHandle(
             height: Bindable(model).bottomDockHeight,
             range: WorkspaceViewModel.minBottomDockHeight...WorkspaceViewModel.maxBottomDockHeight)
@@ -62,10 +62,7 @@ struct WorkspaceDesktopView: View {
             .frame(height: model.bottomDockHeight)
         }
       }
-      // Gone while a full-pane screen is up, without forgetting that it was
-      // open: focus is the one place the app should not be showing you a
-      // tally, and the timeline is already a reading of the same day.
-      if model.isRightDockVisible && !model.showsTimelineScreen {
+      if model.isRightDockVisible {
         WorkspaceResizeHandle(
           width: Bindable(model).rightDockWidth, grows: .leading,
           range: WorkspaceViewModel.minRightDockWidth...WorkspaceViewModel.maxRightDockWidth)
@@ -95,23 +92,15 @@ struct WorkspaceDesktopView: View {
   }
 
   private var mainPane: some View {
-    // Focus mode takes the main pane rather than floating over it. A sheet
-    // leaves the board visible round the edges, which is the one thing the
-    // screen exists to stop. The timeline is the same kind of surface and
-    // takes the pane the same way — it is read at the scale of a day.
+    // The work. The timeline used to take this pane over; it is a tab of
+    // the right dock now, read beside the list rather than instead of it.
     Group {
-      if model.showsTimelineScreen {
-        WorkspaceTimelineScreen()
-          .environment(model)
-      } else {
-        taskPane
-          .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let pending = model.pendingTaskDeletion { TaskDeletionPrompt(task: pending) }
-          }
-          .onChange(of: model.selectedTaskID) { _, _ in model.cancelPendingTaskDeletion() }
-      }
+      taskPane
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+          if let pending = model.pendingTaskDeletion { TaskDeletionPrompt(task: pending) }
+        }
+        .onChange(of: model.selectedTaskID) { _, _ in model.cancelPendingTaskDeletion() }
     }
-    .animation(WorkspaceMotion.quick, value: model.showsTimelineScreen)
     // Switching outline, board, matrix or Today fades rather than cuts. Only
     // the swap is animated: the pane's own reloads stay instant.
     .animation(WorkspaceMotion.quick, value: model.viewMode)
@@ -231,55 +220,6 @@ struct WorkspaceItemActions: View {
       Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
       Button("Archive list") { model.archiveNestedList(task) }
     }
-  }
-}
-
-struct TaskComposer: View {
-  @Environment(\.theme) private var theme
-  @State private var title = ""
-  @FocusState private var isFocused: Bool
-  let focusRequest: Int
-  let onCancel: () -> Void
-  let onSubmit: (String) -> Void
-
-  init(focusRequest: Int, onCancel: @escaping () -> Void = {}, onSubmit: @escaping (String) -> Void) {
-    self.focusRequest = focusRequest
-    self.onCancel = onCancel
-    self.onSubmit = onSubmit
-  }
-
-  var body: some View {
-    HStack(spacing: theme.space.sm) {
-      Image(systemName: "plus")
-        .foregroundStyle(theme.muted)
-      TextField("Add a task", text: $title)
-        .textFieldStyle(.plain)
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.ink)
-        .focused($isFocused)
-        .onSubmit { submit() }
-        .onExitCommand { title = ""; isFocused = false; onCancel() }
-      // The field you type into most often, and the only way to know you could
-      // have got here with a key was to find it in the palette.
-      if !isFocused, title.isEmpty {
-        KeyCap(WorkspaceCommandHelpText.firstKey(for: .taskNew))
-      }
-    }
-    .padding(.horizontal, theme.space.sm)
-    .padding(.vertical, theme.space.xs)
-    // An input on the page: a hairline, no fill. It was a filled well, which
-    // on a board of columns read as one more card rather than a place to type.
-    .overlay(
-      RoundedRectangle(cornerRadius: theme.controlRadius)
-        .strokeBorder(isFocused ? theme.focusRing : theme.inputBorder,
-          lineWidth: isFocused ? theme.focusRingWidth : theme.hairline))
-    .onChange(of: focusRequest) { _, _ in isFocused = true }
-  }
-
-  private func submit() {
-    guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-    onSubmit(title)
-    title = ""
   }
 }
 

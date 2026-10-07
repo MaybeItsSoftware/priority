@@ -17,7 +17,7 @@ extension WorkspaceViewModel {
   /// What is in the main pane, as the catalogue names it. Drives which rows
   /// the palette puts at the top and which keys the reference calls current.
   var commandSurface: WorkspaceCommandSurface {
-    if showsTimelineScreen { return .timeline }
+    if keyboardFocusArea == .timeline { return .timeline }
     if keyboardFocusArea == .done { return .done }
     if keyboardFocusArea == .sidebar { return .sidebar }
     if keyboardFocusArea == .inspector { return .inspector }

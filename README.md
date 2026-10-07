@@ -49,7 +49,7 @@ to filter them, walk them with `↑`/`↓`, or jump with `⌘1`–`⌘9`:
 | General | Launch at login, confirming deletes, and the completion celebration with a preview |
 | Focus | Where a started block runs, and whether each block is scored |
 | Appearance | The theme gallery, light/dark/system, the interface, heading and numeral fonts, and the text size |
-| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘N`), the list Quick Add captures into, and `keymap.json` |
+| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘D`), the list Quick Add captures into, and `keymap.json` |
 | Integrations | One page per integration — Checkvist, Obsidian, AFFiNE, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
 | Sync | The account that keeps the Mac and phones on one workspace, on Takt's server or [your own](docs/self-hosting.md) |
 | Advanced | Export the workspace as Markdown or JSON, diagnostics, and the app's data folder |
@@ -70,7 +70,7 @@ something you already have to know.
 | Key | Action |
 | --- | --- |
 | `Cmd+1`–`Cmd+4` | Today, Board, Outline, Matrix |
-| `Cmd+8` / `Cmd+9` | The focus panel / the timeline, which takes the main pane |
+| `Cmd+8` / `Cmd+9` | The focus panel / the timeline, a tab in the right dock |
 | `Cmd+0` | Everything, across all active lists |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
 | `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
@@ -121,8 +121,10 @@ time and asking for another replaces it (`Cmd+K` from search opens the
 palette); `Esc` or a click outside closes it, and `Return` confirms — in a
 notes edit too, where `Shift+Return` is the new line.
 
-The arrows read by modifier. Bare, they move the cursor; with `Cmd`, they move
-it to the ends. `Alt` moves the *task* within its list — up and down among its
+The arrows read by modifier. Bare, they move the cursor, and past the last row
+it wraps to the first (and back from the first to the last); with `Cmd`, they
+move it to the ends. In the sidebar, `→` on a folder that is already open
+enters its tasks, as `Return` does. `Alt` moves the *task* within its list — up and down among its
 siblings, out and in a level. `Shift+Alt` carries it somewhere else — another
 board column, another list. `Ctrl` is left to macOS, which gives it and the
 arrows to Spaces and Mission Control.
@@ -243,8 +245,8 @@ genuinely finished, and ticking off such a task records the contribution rather
 than closing it.
 
 The window also carries a strip naming which of the four modes is up, then
-Focus, which raises the focus panel, and Timeline, which takes the pane away
-from them — so none of it is reachable only by a key you have to already know.
+Focus, which raises the focus panel, and Timeline, which opens in the right
+dock beside them — so none of it is reachable only by a key you have to already know.
 
 | Key | Action |
 | --- | --- |
@@ -288,8 +290,9 @@ carries pause, log and done, so closing the main window while a block is running
 leaves the clock up rather than taking it away. It appears on its own whenever
 the last window closes on a running block.
 
-`Cmd+9` gives the main pane to the day's **timeline**: every block drawn against
-an hour ruler, with the running one growing live. `Esc` gives it back.
+`Cmd+9` opens the day's **timeline** as a tab in the right dock, beside the
+inspector and the done rail: every block drawn against an hour ruler, with the
+running one growing live, and the day's breakdown under it. `Esc` puts it away.
 
 ### The focus panel
 

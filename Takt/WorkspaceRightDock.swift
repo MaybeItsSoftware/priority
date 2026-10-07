@@ -27,6 +27,11 @@ struct WorkspaceRightDock: View {
           .focusable()
           .focusEffectDisabled()
           .focused(focusedArea, equals: .done)
+      case .timeline:
+        WorkspaceTimelineScreen(inDock: true)
+          .focusable()
+          .focusEffectDisabled()
+          .focused(focusedArea, equals: .timeline)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

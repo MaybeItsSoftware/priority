@@ -25,9 +25,10 @@ struct WorkspaceTaskDraftRow: View {
   var body: some View {
     let capture = TaskCapture.parse(title)
     HStack(spacing: theme.space.sm) {
-      Image(systemName: "plus")
-        .foregroundStyle(theme.primary)
-        .frame(width: WorkspaceRowMetrics.iconWidth)
+      // The glyph column left empty, so the text starts where a task's title
+      // does; the ring around the row is what says it is a place to type.
+      Color.clear
+        .frame(width: WorkspaceRowMetrics.iconWidth, height: 1)
       TextField("New task", text: $title)
         .textFieldStyle(.plain)
         .foregroundStyle(theme.ink)

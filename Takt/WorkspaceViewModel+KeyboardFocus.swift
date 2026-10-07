@@ -116,7 +116,13 @@ extension WorkspaceViewModel {
   /// Tab in a draft row: the task being typed goes inside the one it was
   /// to follow. Only in the outline, where depth is something you can see.
   func indentTaskDraft() {
-    guard viewMode == .outline, taskInsertionReference != nil, !taskInsertionAbove else { return }
+    guard viewMode == .outline, !taskInsertionAbove else { return }
+    // A draft at the foot of the list follows the last row on screen, so Tab
+    // there puts it inside that one.
+    if taskInsertionReference == nil {
+      guard let last = outlineRows.last?.task else { return }
+      taskInsertionReference = last
+    }
     taskInsertionIsChild = true
   }
 

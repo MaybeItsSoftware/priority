@@ -79,11 +79,6 @@ struct WorkspaceTitleBarAddField: View {
           .help("← → the day it starts")
       }
       destination(width: capture.hasDetails ? Self.compactDestinationWidth : Self.destinationWidth)
-      // Only for an empty, idle field, which never has chips, so the keycap
-      // and the preview never compete for the field's fixed width.
-      if !isEditing, title.isEmpty {
-        KeyCap(WorkspaceCommandHelpText.firstKey(for: .taskNew))
-      }
     }
     .font(theme.monoFont(size: theme.type.microLabel.size))
     .lineLimit(1)
