@@ -49,7 +49,7 @@ to filter them, walk them with `↑`/`↓`, or jump with `⌘1`–`⌘9`:
 | General | Launch at login, confirming deletes, and the completion celebration with a preview |
 | Focus | Where a started block runs, and whether each block is scored |
 | Appearance | The theme gallery, light/dark/system, the interface, heading and numeral fonts, and the text size |
-| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘D`), the list Quick Add captures into, and `keymap.json` |
+| Keyboard | The three global hotkeys (show the window, focus panel `⌃⌥⇧⌘F`, Quick Add `⌃⌥⇧⌘D`, which opens a small window of its own over whatever app you are in — `↑`/`↓` pick the list, `←`/`→` the start day, `Return` files it, `Esc` or a click away drops it), the list Quick Add captures into, and `keymap.json` |
 | Integrations | One page per integration — Checkvist, Obsidian, AFFiNE, Google Calendar, Google Tasks, MCP, Daily Log — and your installed plugins |
 | Sync | The account that keeps the Mac and phones on one workspace, on Takt's server or [your own](docs/self-hosting.md) |
 | Advanced | Export the workspace as Markdown or JSON, diagnostics, and the app's data folder |

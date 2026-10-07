@@ -3,7 +3,8 @@ import TaktCore
 import TaktWorkspace
 import SwiftUI
 
-/// Quick capture's field, in the title bar.
+/// Quick capture's field, in the window the global hotkey brings up
+/// (`QuickCapturePanelController`). It used to sit in the title bar.
 ///
 /// Only while quick capture runs. Every other new task is typed in a draft
 /// row at the place it will land (`WorkspaceTaskDraftRow`); a capture is the

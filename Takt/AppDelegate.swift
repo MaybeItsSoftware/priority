@@ -30,6 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private(set) var shortcutManager: GlobalShortcutManager!
   private(set) var mainWindowController: MainWindowController!
   private(set) var focusPanelController = FocusPanelController()
+  private let quickCapturePanelController = QuickCapturePanelController()
   /// True while ⌘Q is putting the window away, so the close it causes does
   /// not summon the focus panel in its place.
   private var isPuttingAway = false
@@ -420,12 +421,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     NSApp.terminate(nil)
   }
 
-  /// The global hotkey is capture, not navigation: wherever the user was, and
-  /// whatever they were looking at, what they type next has to land somewhere
-  /// they will find it again.
+  /// The global hotkey is capture, not navigation: a window of its own over
+  /// whatever app the user is in, leaving the main window as it was.
   private func triggerQuickAddFromHotkey() {
-    showMainWindow()
-    workspace.beginQuickCapture()
+    quickCapturePanelController.show(model: workspace)
   }
 
   /// `takt://auth-callback`, from the links in Supabase's emails:

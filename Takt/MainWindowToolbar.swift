@@ -22,7 +22,6 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
 
   private enum ItemID {
     static let modes = NSToolbarItem.Identifier("PriorityModes")
-    static let add = NSToolbarItem.Identifier("PriorityAddTask")
   }
 
   private let workspace: WorkspaceViewModel
@@ -48,7 +47,7 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
   // MARK: - NSToolbarDelegate
 
   func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    [.flexibleSpace, ItemID.modes, .flexibleSpace, ItemID.add]
+    [.flexibleSpace, ItemID.modes, .flexibleSpace]
   }
 
   func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -62,7 +61,6 @@ final class MainWindowToolbarController: NSObject, NSToolbarDelegate {
   ) -> NSToolbarItem? {
     switch itemIdentifier {
     case ItemID.modes: return item(itemIdentifier, label: "View", WorkspaceModeStrip())
-    case ItemID.add: return item(itemIdentifier, label: "Add Task", WorkspaceTitleBarAddField())
     default: return nil
     }
   }

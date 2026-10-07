@@ -14,14 +14,11 @@ extension WorkspaceViewModel {
   /// Selecting the capture list rather than typing into whatever list happened
   /// to be open is the point — a thought caught mid-task belongs in the inbox,
   /// not filed into the project the user was looking at by accident.
+  ///
+  /// It types in its own window (`QuickCapturePanelController`), so the main
+  /// window's list and selection are left alone.
   func beginQuickCapture() {
-    // Explicitly, rather than relying on `selectList` to do it: the focus
-    // screen can be up while the capture list is already the selected list.
-    leaveFullPaneScreens()
     let target = quickCaptureHomeList
-    if let target, selectedListID != target.id || isEverythingSelected {
-      selectList(target.id)
-    }
     isQuickCaptureActive = true
     quickCaptureDestinationID = target?.id ?? lists.first?.id
     quickCaptureStartDayOffset = nil
