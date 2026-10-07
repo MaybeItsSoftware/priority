@@ -173,7 +173,7 @@ struct WorkspaceOverlayFooter: View {
         Spacer(minLength: theme.space.sm)
         if let trailing { Text(trailing) }
       }
-      .font(theme.monoFont(size: theme.type.microLabel.size))
+      .font(theme.monoCaptionFont)
       .foregroundStyle(theme.dim)
       .padding(.horizontal, theme.listGutter)
       .padding(.vertical, theme.space.xs)

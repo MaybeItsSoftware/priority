@@ -68,9 +68,9 @@
             "microLabel" : {
               "role" : "mutedText",
               "size" : 12,
-              "tracking" : 0.02,
+              "tracking" : 0,
               "uppercase" : false,
-              "weight" : "semibold"
+              "weight" : "regular"
             },
             "mono" : {
               "design" : "monospaced",
@@ -157,9 +157,9 @@
             "microLabel" : {
               "role" : "mutedText",
               "size" : 12,
-              "tracking" : 0.02,
+              "tracking" : 0,
               "uppercase" : false,
-              "weight" : "semibold"
+              "weight" : "regular"
             },
             "mono" : {
               "design" : "monospaced",
@@ -248,9 +248,9 @@
             "microLabel" : {
               "role" : "mutedText",
               "size" : 13,
-              "tracking" : 0.02,
+              "tracking" : 0,
               "uppercase" : false,
-              "weight" : "semibold"
+              "weight" : "regular"
             },
             "mono" : {
               "design" : "monospaced",
@@ -337,9 +337,9 @@
             "microLabel" : {
               "role" : "mutedText",
               "size" : 13,
-              "tracking" : 0.02,
+              "tracking" : 0,
               "uppercase" : false,
-              "weight" : "semibold"
+              "weight" : "regular"
             },
             "mono" : {
               "design" : "monospaced",
@@ -428,9 +428,9 @@
             "microLabel" : {
               "role" : "mutedText",
               "size" : 11,
-              "tracking" : 0.02,
+              "tracking" : 0,
               "uppercase" : false,
-              "weight" : "semibold"
+              "weight" : "regular"
             },
             "mono" : {
               "design" : "monospaced",
@@ -517,9 +517,9 @@
             "microLabel" : {
               "role" : "mutedText",
               "size" : 11,
-              "tracking" : 0.02,
+              "tracking" : 0,
               "uppercase" : false,
-              "weight" : "semibold"
+              "weight" : "regular"
             },
             "mono" : {
               "design" : "monospaced",

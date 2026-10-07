@@ -148,14 +148,8 @@ private struct FocusPanelStrip: View {
   private func stripButton(
     _ title: String, systemImage: String, key: String, action: @escaping () -> Void
   ) -> some View {
-    Button(action: action) {
-      Image(systemName: systemImage)
-        .frame(width: 24, height: 24)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .foregroundStyle(theme.muted)
-    .help("\(title) (\(key))")
-    .accessibilityLabel(title)
+    // The pane header's icon button, so the strip's controls are the same
+    // square, glyph and hover as the window's.
+    WorkspacePaneIconButton(systemImage, title: title, note: "\(title) (\(key))", action: action)
   }
 }

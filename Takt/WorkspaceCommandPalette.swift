@@ -13,11 +13,11 @@ struct KeyCapRow: View {
       if keys.isEmpty {
         // Blank would read as "we forgot to print it". One command really has
         // no key of its own, and saying so is the honest answer.
-        Text("no key").font(theme.monoFont(size: theme.type.microLabel.size)).foregroundStyle(theme.dim)
+        Text("no key").font(theme.monoCaptionFont).foregroundStyle(theme.dim)
       }
       ForEach(Array(keys.enumerated()), id: \.offset) { index, key in
         if index > 0 {
-          Text("or").font(theme.monoFont(size: theme.type.microLabel.size)).foregroundStyle(theme.dim)
+          Text("or").font(theme.monoCaptionFont).foregroundStyle(theme.dim)
         }
         KeyCap(key)
       }

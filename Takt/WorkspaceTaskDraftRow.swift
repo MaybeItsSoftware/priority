@@ -47,11 +47,11 @@ struct WorkspaceTaskDraftRow: View {
         }
       if capture.hasDetails {
         TaskCapturePreview(capture: capture)
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
       }
       if namesDestination {
         Text(model.addFieldDestinationTitle)
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
           .lineLimit(1)
           .truncationMode(.tail)

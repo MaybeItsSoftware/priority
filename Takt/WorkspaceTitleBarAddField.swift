@@ -81,7 +81,7 @@ struct WorkspaceTitleBarAddField: View {
       }
       destination(width: capture.hasDetails ? Self.compactDestinationWidth : Self.destinationWidth)
     }
-    .font(theme.monoFont(size: theme.type.microLabel.size))
+    .font(theme.monoCaptionFont)
     .lineLimit(1)
     .fixedSize(horizontal: false, vertical: true)
   }
@@ -262,7 +262,7 @@ struct TaskCapturePreview: View {
     HStack(spacing: theme.space.xxs) {
       ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
         Text(label)
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.primary)
           .lineLimit(1)
           .padding(.horizontal, theme.space.xxs)

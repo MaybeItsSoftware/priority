@@ -176,7 +176,7 @@ private struct FontFamilyList: View {
       }
       .font(theme.bodyFont())
       .padding(theme.space.sm)
-      Rectangle().fill(theme.border).frame(height: theme.hairline)
+      FocusRule()
       ScrollViewReader { proxy in
         ScrollView {
           LazyVStack(alignment: .leading, spacing: 0) {

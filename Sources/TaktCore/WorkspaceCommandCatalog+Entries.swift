@@ -315,7 +315,7 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .windowToggleInspectorPane, title: "Show or hide the inspector", group: "Window",
       keys: ["cmd+ctrl+i", "cmd+option+b"],
-      note: "Same pane as ⌘I on a task, without selecting one. ⌥⌘B is Zed's toggle right dock"),
+      note: "Same pane as ⌥⌘I on a task, without selecting one. ⌥⌘B is Zed's toggle right dock"),
     .init(
       id: .windowToggleDoneRail, title: "Show or hide what you have finished", group: "Window",
       keys: ["cmd+ctrl+d"],

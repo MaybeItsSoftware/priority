@@ -43,13 +43,10 @@ struct WorkspaceAgentPane: View {
 
   /// Said in the middle of the panel, the way every empty pane says it.
   private var emptyState: some View {
-    VStack(spacing: theme.space.sm) {
-      Text("Ask about your tasks…")
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.muted)
-      Text("It can read your lists freely. Every change it wants to make is shown here first, and runs only if you approve it.")
-        .font(theme.captionFont)
-        .foregroundStyle(theme.dim)
+    WorkspaceEmptyMessage(
+      "Ask about your tasks…",
+      detail: "It can read your lists freely. Every change it wants to make is shown here first, and runs only if you approve it."
+    ) {
       HStack(spacing: theme.space.xs) {
         KeyCap(WorkspaceCommandHelpText.firstKey(for: .windowToggleAgentPanel))
         Text("opens and closes this panel")
@@ -57,9 +54,6 @@ struct WorkspaceAgentPane: View {
           .foregroundStyle(theme.dim)
       }
     }
-    .multilineTextAlignment(.center)
-    .padding(theme.space.xl)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
   private var transcript: some View {
@@ -72,7 +66,7 @@ struct WorkspaceAgentPane: View {
           }
           if agent.isWorking && agent.pendingApproval == nil {
             Text("Working…")
-              .font(theme.monoFont(size: theme.type.microLabel.size))
+              .font(theme.monoCaptionFont)
               .foregroundStyle(theme.dim)
               .id("working")
           }
@@ -119,7 +113,7 @@ struct WorkspaceAgentPane: View {
           Text("failed").foregroundStyle(theme.danger)
         }
       }
-      .font(theme.monoFont(size: theme.type.microLabel.size))
+      .font(theme.monoCaptionFont)
       .foregroundStyle(theme.muted)
       .help(use.input.jsonString(pretty: true))
     case .write(let approval):
@@ -165,7 +159,7 @@ struct WorkspaceAgentPane: View {
             inputHasFocus ? theme.focusRing : theme.inputBorder,
             lineWidth: inputHasFocus ? theme.focusRingWidth : theme.hairline))
       Text(hint)
-        .font(theme.monoFont(size: theme.type.microLabel.size))
+        .font(theme.monoCaptionFont)
         .foregroundStyle(theme.dim)
         .lineLimit(1)
     }
@@ -266,13 +260,13 @@ struct WorkspaceAgentApprovalCard: View {
       }
       DisclosureGroup(isExpanded: $showsInput) {
         Text(approval.request.input.jsonString(pretty: true))
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.muted)
           .textSelection(.enabled)
           .frame(maxWidth: .infinity, alignment: .leading)
       } label: {
         Text(AgentToolPolicy.priorityToolName(approval.request.toolName) ?? approval.request.toolName)
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
       }
       footer(isDestructive: summary.isDestructive)
@@ -301,12 +295,12 @@ struct WorkspaceAgentApprovalCard: View {
   private var borderColor: Color {
     if isFocused { return theme.focusRing }
     switch approval.state {
-    case .pending: return theme.warning.opacity(0.6)
+    case .pending: return theme.warning.opacity(Theme.statusBorderOpacity)
     case .approved:
       switch approval.outcome {
       case nil: return theme.border
-      case .applied: return theme.success.opacity(0.4)
-      case .failed: return theme.danger.opacity(0.4)
+      case .applied: return theme.success.opacity(Theme.statusBorderOpacity)
+      case .failed: return theme.danger.opacity(Theme.statusBorderOpacity)
       }
     case .denied, .withdrawn: return theme.border
     }
@@ -326,7 +320,7 @@ struct WorkspaceAgentApprovalCard: View {
         Spacer(minLength: 0)
         if isFocused {
           Text("return approves · esc denies")
-            .font(theme.monoFont(size: theme.type.microLabel.size))
+            .font(theme.monoCaptionFont)
             .foregroundStyle(theme.dim)
             .lineLimit(1)
         }
@@ -346,7 +340,7 @@ struct WorkspaceAgentApprovalCard: View {
 
   private func status(_ text: String, _ color: Color) -> some View {
     Text(text)
-      .font(theme.monoFont(size: theme.type.microLabel.size))
+      .font(theme.monoCaptionFont)
       .foregroundStyle(color)
       .lineLimit(3)
       .textSelection(.enabled)
@@ -379,8 +373,13 @@ private struct WorkspaceAgentCardButtonBody: View {
       .foregroundStyle(tint ?? theme.ink)
       .padding(.horizontal, theme.space.sm)
       .padding(.vertical, theme.space.xxs)
-      .background(tint.map { $0.opacity(lit ? 0.18 : 0.1) } ?? (lit ? theme.hover : Color.clear), in: shape)
-      .overlay(shape.strokeBorder(tint.map { $0.opacity(0.4) } ?? theme.inputBorder, lineWidth: theme.hairline))
+      .background(
+        tint.map { $0.opacity(lit ? Theme.statusFillOpacity * 2 : Theme.statusFillOpacity) }
+          ?? (lit ? theme.hover : Color.clear), in: shape
+      )
+      .overlay(
+        shape.strokeBorder(
+          tint.map { $0.opacity(Theme.statusBorderOpacity) } ?? theme.inputBorder, lineWidth: theme.hairline))
       .contentShape(shape)
       .onHover { isHovering = $0 }
   }
@@ -405,7 +404,7 @@ struct WorkspaceAgentSetup: View {
         MicroLabel("Looked in")
         ForEach(model.agent.executableCandidates, id: \.self) { candidate in
           Text(candidate)
-            .font(theme.monoFont(size: theme.type.microLabel.size))
+            .font(theme.monoCaptionFont)
             .foregroundStyle(theme.dim)
             .lineLimit(1)
             .truncationMode(.middle)

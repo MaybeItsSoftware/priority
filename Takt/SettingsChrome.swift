@@ -49,7 +49,7 @@ private struct SettingsSectionPanel: View {
           VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
               if index > 0 {
-                Rectangle().fill(theme.borderMuted).frame(height: theme.hairline)
+                FocusRule(muted: true)
               }
               row
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,31 +181,6 @@ struct SettingsPageHeader: View {
         .fixedSize(horizontal: false, vertical: true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-  }
-}
-
-/// A status tag: a squarish 6px-radius rectangle in the status convention
-/// (tinted fill, border and text of one hue), never a capsule.
-struct SettingsTag: View {
-  @Environment(\.theme) private var theme
-  let text: String
-  var tint: Color?
-
-  var body: some View {
-    let hue = tint ?? theme.muted
-    Text(text)
-      .font(theme.microLabelFont)
-      .tracking(theme.microLabelTracking)
-      .textCase(theme.microLabelIsUppercased ? .uppercase : nil)
-      .foregroundStyle(hue)
-      .lineLimit(1)
-      .padding(.horizontal, theme.space.xs)
-      .padding(.vertical, theme.space.xxs / 2)
-      .themedSurface(
-        theme,
-        fill: hue.opacity(Theme.statusFillOpacity),
-        radius: theme.controlRadius,
-        stroke: hue.opacity(Theme.statusBorderOpacity))
   }
 }
 

@@ -223,7 +223,7 @@ public enum BuiltInThemeSpecifications {
         bodySize: 13,
         scale: ThemeTypeScale(caption: 12, body: 13, title: 16, display: 30, hero: 64),
         microLabel: ThemeMicroLabel(
-          size: 11, weight: .semibold, tracking: 0.02, isUppercased: false, role: .mutedText)
+          size: 11, weight: .regular, tracking: 0, isUppercased: false, role: .mutedText)
       )
     )
   )

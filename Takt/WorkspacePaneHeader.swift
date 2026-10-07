@@ -232,7 +232,7 @@ private struct WorkspacePaneIconButtonBody: View {
       .background(
         isOn || isHovering || configuration.isPressed ? theme.hover : Color.clear,
         in: RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous))
-      .opacity(isEnabled ? 1 : 0.4)
+      .opacity(isEnabled ? 1 : Theme.disabledOpacity)
       .onHover { isHovering = $0 }
   }
 }
@@ -263,14 +263,49 @@ struct WorkspaceEmptyPane: View {
   var body: some View {
     VStack(spacing: 0) {
       WorkspacePaneHeader(title: title)
-      Text(message)
-        .font(theme.bodyFont())
-        .foregroundStyle(theme.muted)
-        .multilineTextAlignment(.center)
-        .padding(theme.space.xl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      WorkspaceEmptyMessage(message)
     }
     .background(theme.paper)
+  }
+}
+
+/// The empty state without the header: one line of muted body text, centred
+/// on whatever surface it is given, with an optional quieter line under it.
+/// Every pane, rail and dock with nothing to show says so through this, so
+/// "nothing here" looks the same wherever it appears.
+struct WorkspaceEmptyMessage<Trailing: View>: View {
+  @Environment(\.theme) private var theme
+  let text: String
+  var detail: String?
+  @ViewBuilder var trailing: Trailing
+
+  init(_ text: String, detail: String? = nil, @ViewBuilder trailing: () -> Trailing) {
+    self.text = text
+    self.detail = detail
+    self.trailing = trailing()
+  }
+
+  var body: some View {
+    VStack(spacing: theme.space.sm) {
+      Text(text)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.muted)
+      if let detail {
+        Text(detail)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.dim)
+      }
+      trailing
+    }
+    .multilineTextAlignment(.center)
+    .padding(theme.space.xl)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+}
+
+extension WorkspaceEmptyMessage where Trailing == EmptyView {
+  init(_ text: String, detail: String? = nil) {
+    self.init(text, detail: detail) { EmptyView() }
   }
 }
 
@@ -283,7 +318,7 @@ struct WorkspacePaneCount: View {
 
   var body: some View {
     Text("\(count) \(noun)")
-      .font(theme.monoFont(size: theme.type.microLabel.size))
+      .font(theme.monoCaptionFont)
       .foregroundStyle(theme.dim)
       .monospacedDigit()
   }

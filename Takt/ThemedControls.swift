@@ -232,7 +232,7 @@ private struct ThemedSwitch: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .opacity(isEnabled ? 1 : 0.45)
+    .opacity(isEnabled ? 1 : Theme.disabledOpacity)
     .accessibilityValue(isOn ? "On" : "Off")
     .accessibilityAddTraits(isOn ? .isSelected : [])
   }
@@ -384,5 +384,37 @@ struct ThemedSegmentedPicker<Value: Hashable>: View {
           .accessibilityAddTraits(option.value == selection ? .isSelected : [])
       }
     }
+  }
+}
+
+/// A tag: a squarish rectangle at the control radius, never a capsule, in the
+/// caption face. Tinted, it is the status convention — fill, border and text
+/// of one hue at the status opacities; untinted, it is a quiet well with a
+/// hairline, for a plain label such as a name or a file's origin.
+///
+/// The same geometry as `FocusChipButtonStyle`, so a tag beside a chip reads
+/// as the same kind of thing that happens not to be pressable.
+struct ThemedTag: View {
+  @Environment(\.theme) private var theme
+  let text: String
+  var tint: Color?
+
+  init(_ text: String, tint: Color? = nil) {
+    self.text = text
+    self.tint = tint
+  }
+
+  var body: some View {
+    let shape = RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
+    Text(text)
+      .font(theme.captionFont)
+      .foregroundStyle(tint ?? theme.muted)
+      .lineLimit(1)
+      .padding(.horizontal, theme.space.sm)
+      .padding(.vertical, theme.space.xxs)
+      .background(shape.fill(tint.map { $0.opacity(Theme.statusFillOpacity) } ?? theme.well))
+      .overlay(
+        shape.strokeBorder(
+          tint.map { $0.opacity(Theme.statusBorderOpacity) } ?? theme.border, lineWidth: theme.hairline))
   }
 }

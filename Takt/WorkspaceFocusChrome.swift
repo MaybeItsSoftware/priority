@@ -47,7 +47,7 @@ struct KeyCap: View {
   // so a key reads as belonging to the label beside it.
   var body: some View {
     Text(key)
-      .font(theme.monoFont(size: theme.type.microLabel.size))
+      .font(theme.monoCaptionFont)
       .foregroundStyle(theme.muted)
       .padding(.horizontal, theme.space.xs)
       .padding(.vertical, theme.space.xxs)
@@ -84,12 +84,15 @@ struct KeyHint: View {
 
 /// The hairline that separates one band of a focus surface from the next.
 /// Separation is a 1px rule here, never a shadow and never a nested card.
+/// `muted` is the quieter rule between rows that already sit inside a
+/// bordered panel, where the full border would read as a grid.
 struct FocusRule: View {
   @Environment(\.theme) private var theme
+  var muted = false
 
   var body: some View {
     Rectangle()
-      .fill(theme.border)
+      .fill(muted ? theme.borderMuted : theme.border)
       .frame(height: theme.hairline)
   }
 }
@@ -182,7 +185,7 @@ private struct FocusActionButtonBody: View {
         shape.strokeBorder(
           prominent ? theme.primary.opacity(Theme.statusBorderOpacity) : theme.border,
           lineWidth: theme.hairline))
-      .opacity(isEnabled ? 1 : 0.45)
+      .opacity(isEnabled ? 1 : Theme.disabledOpacity)
       .contentShape(shape)
       .onHover { isHovering = $0 }
   }

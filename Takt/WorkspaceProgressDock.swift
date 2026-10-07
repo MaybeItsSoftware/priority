@@ -47,7 +47,7 @@ struct WorkspaceProgressDock: View {
         ForEach(TaskProgressPeriod.allCases) { period in
           Button(period.shortTitle) { model.progressPeriod = period }
             .buttonStyle(WorkspacePaneIconButtonStyle(isOn: model.progressPeriod == period))
-            .font(theme.monoFont(size: theme.type.microLabel.size))
+            .font(theme.monoCaptionFont)
             .accessibilityLabel("Last \(period.days) days")
         }
       }
@@ -76,7 +76,7 @@ struct WorkspaceProgressDock: View {
           .foregroundStyle(series.net >= 0 ? theme.success : theme.muted)
       }
     }
-    .font(theme.monoFont(size: theme.type.microLabel.size))
+    .font(theme.monoCaptionFont)
     .monospacedDigit()
   }
 
@@ -114,7 +114,7 @@ struct WorkspaceProgressDock: View {
       AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
         AxisGridLine(stroke: StrokeStyle(lineWidth: theme.hairline)).foregroundStyle(theme.borderMuted)
         AxisValueLabel(format: .dateTime.day().month(.abbreviated))
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
       }
     }
@@ -122,7 +122,7 @@ struct WorkspaceProgressDock: View {
       AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in
         AxisGridLine(stroke: StrokeStyle(lineWidth: theme.hairline)).foregroundStyle(theme.borderMuted)
         AxisValueLabel()
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
       }
     }

@@ -302,7 +302,7 @@ private struct ThemeGalleryCard: View {
             .foregroundStyle(theme.ink)
             .lineLimit(1)
           Spacer(minLength: 0)
-          if isUserTheme { SettingsTag(text: "File") }
+          if isUserTheme { ThemedTag("File") }
           if isSelected {
             Image(systemName: "checkmark")
               .font(theme.captionFont)

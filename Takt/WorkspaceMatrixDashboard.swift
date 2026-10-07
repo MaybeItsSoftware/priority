@@ -144,7 +144,7 @@ struct WorkspaceMatrixQuadrant: View {
         MicroLabel(title, tint: tint)
         Spacer(minLength: 0)
         Text("\(tasks.count)")
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
           .monospacedDigit()
       }

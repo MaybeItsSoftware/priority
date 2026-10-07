@@ -55,22 +55,19 @@ struct WorkspaceSelectionBackground: View {
   /// read as a box jammed inside a box.
   private var border: Color { hasKeyboard && !isSelected ? theme.focusRing : .clear }
 
-  /// How far the band sits in from the row's edges, so it never meets the
-  /// pane's border and lines up with the inset fields and chips around it.
-  static let inset: CGFloat = 4
-
-  /// Rounded like the controls beside it — the add field, the chips — and
-  /// inset from the row, so a selection is a soft band inside the pane rather
-  /// than a square cut across it. A theme with a row radius keeps its own.
+  /// Rounded at the theme's row radius and inset from the row — the theme's
+  /// smallest step at the sides, half of it top and bottom — so a selection is
+  /// a soft band inside the pane rather than a square cut across it, and
+  /// never meets the pane's border.
   var body: some View {
-    let shape = RoundedRectangle(cornerRadius: radius ?? max(theme.rowRadius, theme.controlRadius), style: .continuous)
+    let shape = RoundedRectangle(cornerRadius: radius ?? theme.rowRadius, style: .continuous)
     shape
       .fill(theme.color(.primary, opacity: fill))
       .overlay(
         shape.strokeBorder(border, lineWidth: theme.hairline)
       )
-      .padding(.horizontal, Self.inset)
-      .padding(.vertical, 1)
+      .padding(.horizontal, theme.space.xs)
+      .padding(.vertical, theme.space.xxs / 2)
       .animation(WorkspaceMotion.quick, value: fill)
   }
 }

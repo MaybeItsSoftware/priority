@@ -171,7 +171,7 @@ struct SettingsView: View {
     HStack(spacing: 0) {
       sidebar
         .frame(width: 228)
-        .background(theme.altRow.ignoresSafeArea())
+        .background(theme.paper.ignoresSafeArea())
       Rectangle().fill(theme.border).frame(width: theme.hairline).ignoresSafeArea()
       detail
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -351,13 +351,13 @@ struct SettingsView: View {
       navState.destination = destination
       focus = .list
     } label: {
+      // The main window's sidebar row, geometry and selection band alike, so
+      // the two sidebars read as one kind of thing.
       HStack(spacing: theme.space.sm) {
         Image(systemName: systemImage)
-          .font(theme.bodyFont())
           .foregroundStyle(isSelected ? theme.primary : theme.muted)
           .frame(width: WorkspaceSidebarMetrics.iconWidth)
         Text(title)
-          .font(theme.bodyFont(weight: isSelected ? .medium : .regular))
           .foregroundStyle(theme.ink)
           .lineLimit(1)
         Spacer(minLength: theme.space.xs)
@@ -368,16 +368,8 @@ struct SettingsView: View {
             .lineLimit(1)
         }
       }
-      .padding(.horizontal, theme.space.sm)
-      .padding(.vertical, theme.space.xs + 1)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .background(
-        RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
-          .fill(isSelected ? theme.selectionFill : Color.clear))
-      .overlay(
-        RoundedRectangle(cornerRadius: theme.controlRadius, style: .continuous)
-          .strokeBorder(showsFocus ? theme.focusRing : Color.clear, lineWidth: theme.hairline))
-      .contentShape(Rectangle())
+      .sidebarRowPadding(theme)
+      .background(WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: showsFocus))
     }
     .buttonStyle(.plain)
     .accessibilityAddTraits(isSelected ? .isSelected : [])

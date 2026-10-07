@@ -353,7 +353,7 @@ struct WorkspaceTimelineScreen: View {
       VStack(alignment: .leading, spacing: theme.space.sm) {
         MicroLabel("By task")
         if day.summaries.isEmpty {
-          Text("Nothing logged.").font(theme.bodyFont()).foregroundStyle(theme.muted)
+          WorkspaceEmptyMessage("Nothing logged.")
         }
         ForEach(day.summaries) { summary in
           HStack(alignment: .top, spacing: theme.space.sm) {

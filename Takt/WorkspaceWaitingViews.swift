@@ -161,7 +161,10 @@ struct WorkspaceWaitingBadges: View {
     if let details = model.waitingDetails[task.id], details.waitingOn != nil || details.followUpAt != nil {
       HStack(spacing: theme.space.xs) {
         if let tag = details.waitingOn {
-          WorkspaceWaitingChip(tag: tag)
+          // "Sam": a squarish, muted tag — a status-tag rectangle, not a capsule.
+          ThemedTag(tag)
+            .help("Waiting on \(tag)")
+            .accessibilityLabel("Waiting on \(tag)")
         }
         if let at = details.followUpAt, task.status == .open {
           Text(WaitingFollowUp.label(at))
@@ -174,27 +177,6 @@ struct WorkspaceWaitingBadges: View {
       }
       .accessibilityElement(children: .combine)
     }
-  }
-}
-
-/// "Sam": a squarish, muted tag — a status-tag rectangle, not a capsule.
-struct WorkspaceWaitingChip: View {
-  @Environment(\.theme) private var theme
-  let tag: String
-
-  var body: some View {
-    Text(tag)
-      .font(theme.captionFont)
-      .foregroundStyle(theme.muted)
-      .lineLimit(1)
-      .padding(.horizontal, theme.space.xs)
-      .padding(.vertical, 1)
-      .background(theme.well, in: RoundedRectangle(cornerRadius: theme.controlRadius))
-      .overlay(
-        RoundedRectangle(cornerRadius: theme.controlRadius)
-          .strokeBorder(theme.border, lineWidth: theme.hairline))
-      .help("Waiting on \(tag)")
-      .accessibilityLabel("Waiting on \(tag)")
   }
 }
 

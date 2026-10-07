@@ -36,12 +36,7 @@ struct WorkspaceDoneRail: View {
 
   /// Centred muted text on the empty surface, like every other empty pane.
   private var empty: some View {
-    Text("Nothing finished yet. Tasks you tick off appear here, newest first.")
-      .font(theme.bodyFont())
-      .foregroundStyle(theme.muted)
-      .multilineTextAlignment(.center)
-      .padding(theme.space.xl)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+    WorkspaceEmptyMessage("Nothing finished yet. Tasks you tick off appear here, newest first.")
   }
 
   private var rows: some View {
@@ -88,7 +83,7 @@ struct WorkspaceDoneSummary: View {
     }
     // The pane counts' face, since it now sits where they do: on the end of a
     // header band.
-    .font(theme.monoFont(size: theme.type.microLabel.size))
+    .font(theme.monoCaptionFont)
     .monospacedDigit()
     .help("Tasks finished today, and this week")
   }
@@ -141,7 +136,7 @@ private struct WorkspaceDoneRow: View {
   var body: some View {
     HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
       Image(systemName: wasCancelled ? "xmark" : "checkmark")
-        .font(theme.bodyFont(size: theme.type.microLabel.size))
+        .font(theme.microLabelFont)
         .foregroundStyle(wasCancelled ? theme.dim : theme.success)
         .frame(width: 11)
       VStack(alignment: .leading, spacing: 0) {

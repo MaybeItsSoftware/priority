@@ -22,10 +22,7 @@ struct WorkspaceFocusContextControls: View {
               .buttonStyle(FocusChipButtonStyle(isOn: model.focusContext.conditionIDs.contains(condition.id)))
               .help(condition.isLocation ? "Current location" : "Available capability")
           }
-          Button { showsConditions = true } label: { Image(systemName: "slider.horizontal.3") }
-            .buttonStyle(.plain)
-            .foregroundStyle(theme.muted)
-            .help("Manage conditions")
+          WorkspacePaneIconButton("slider.horizontal.3", title: "Manage conditions") { showsConditions = true }
         }
       }
       if !model.suggestedContextIDs.isEmpty {
@@ -193,6 +190,7 @@ struct WorkspaceTaskPlanningEditor: View {
               Spacer()
               Button { remove(id, from: index) } label: { Image(systemName: "minus.circle") }
                 .buttonStyle(.plain).foregroundStyle(theme.muted).help("Remove requirement")
+                .accessibilityLabel("Remove requirement")
             }.font(theme.captionFont)
           }
           ThemedMenu("Or…") {

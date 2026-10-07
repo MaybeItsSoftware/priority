@@ -196,7 +196,7 @@ struct WorkspaceKanbanColumnView: View {
           .truncationMode(.tail)
           .help(column.title)
         Text("\(tasks.count)")
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
           .monospacedDigit()
         Spacer()
@@ -402,9 +402,9 @@ struct WorkspaceKanbanCard: View {
         Rectangle().strokeBorder(theme.primary, lineWidth: theme.emphasisBorder)
       } else {
         VStack(spacing: 0) {
-          Rectangle().fill(theme.border).frame(height: theme.hairline)
+          FocusRule()
           Spacer(minLength: 0)
-          Rectangle().fill(theme.border).frame(height: theme.hairline)
+          FocusRule()
         }
         .allowsHitTesting(false)
       }

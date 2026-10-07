@@ -169,7 +169,7 @@ struct DayView: View {
       // morning is a figure that says nothing.
       if forecast.loggedSeconds > 0 || forecast.remainingSeconds > 0 {
         Text(forecast.tallyText)
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.muted)
           .monospacedDigit()
           .lineLimit(1)
@@ -444,7 +444,7 @@ struct DayView: View {
             .font(theme.captionFont)
             .foregroundStyle(theme.dim)
             .expandsWhenSelected(isExpanded)
-            .padding(.leading, 14 + theme.space.sm)
+            .padding(.leading, WorkspaceRowMetrics.indent(theme))
         }
       }
     } action: {
@@ -491,7 +491,7 @@ struct DayView: View {
             .foregroundStyle(theme.dim)
         }
       }
-      .frame(width: 14, alignment: .trailing)
+      .frame(width: WorkspaceRowMetrics.iconWidth, alignment: .trailing)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -552,7 +552,7 @@ struct DayView: View {
               .font(theme.numeralFont(theme.scale.caption))
               .monospacedDigit()
               .foregroundStyle(theme.primary)
-              .frame(minWidth: 12, alignment: .trailing)
+              .frame(minWidth: WorkspaceRowMetrics.iconWidth, alignment: .trailing)
           }
           Text(task.title)
             .font(theme.titleFont)
@@ -1010,9 +1010,9 @@ struct DailyBadge: View {
       model.toggleDailyProgress(task)
     } label: {
       Image(systemName: isDoneToday ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
-        .font(theme.bodyFont(size: theme.type.microLabel.size))
+        .font(theme.microLabelFont)
         .foregroundStyle(isDoneToday ? theme.success : theme.muted)
-        .frame(width: 16, height: 16)
+        .frame(width: theme.paneIconButtonSize, height: theme.paneIconButtonSize)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)

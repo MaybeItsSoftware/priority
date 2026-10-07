@@ -122,7 +122,7 @@ private struct WorkspaceStatusMessage: View {
       HStack(spacing: theme.space.xs) {
         KeyCap("\(model.pendingKeyPrefix)…")
         Text("waiting for the second key")
-          .font(theme.monoFont(size: theme.type.microLabel.size))
+          .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
       }
     } else if let error = model.errorMessage {
@@ -146,7 +146,7 @@ private struct WorkspaceStatusMessage: View {
       .foregroundStyle(theme.danger)
     } else if let message = manager.statusMessage {
       Text(message)
-        .font(theme.monoFont(size: theme.type.microLabel.size))
+        .font(theme.monoCaptionFont)
         .foregroundStyle(theme.muted)
         .lineLimit(1)
     }
@@ -170,7 +170,7 @@ private struct WorkspaceStatusTrailing: View {
       tally
       sync
     }
-    .font(theme.monoFont(size: theme.type.microLabel.size))
+    .font(theme.monoCaptionFont)
     .foregroundStyle(theme.muted)
     .lineLimit(1)
   }

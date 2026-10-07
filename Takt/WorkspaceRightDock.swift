@@ -129,12 +129,7 @@ struct WorkspaceInspectorPane: View {
       } else {
         // Said rather than vanished. The pane going away when nothing was
         // selected is how it used to close itself behind your back.
-        Text("Select a task to edit its notes, plan and schedule here.")
-          .font(theme.bodyFont())
-          .foregroundStyle(theme.muted)
-          .multilineTextAlignment(.center)
-          .padding(theme.space.xl)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+        WorkspaceEmptyMessage("Select a task to edit its notes, plan and schedule here.")
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

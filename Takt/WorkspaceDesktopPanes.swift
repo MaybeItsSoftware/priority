@@ -37,9 +37,7 @@ struct WorkspaceOutlinePane: View {
               Section {
                 let items = model.outlineByList[list.id] ?? []
                 if items.isEmpty {
-                  Text("No tasks").font(theme.bodyFont()).foregroundStyle(theme.dim)
-                    .padding(.horizontal, theme.paneGutter)
-                    .padding(.vertical, theme.rowVerticalPadding)
+                  WorkspaceEmptyMessage("No tasks")
                     .outlineRowChrome()
                 } else {
                   ForEach(items) { item in
@@ -245,11 +243,13 @@ struct WorkspaceFoldButton: View {
   var body: some View {
     Button(action: action) {
       Image(systemName: isFolded ? "chevron.right" : "chevron.down")
-        .font(.system(size: 8, weight: .semibold))
+        .font(theme.captionFont)
         .foregroundStyle(theme.muted)
         .frame(width: Self.width)
         .frame(maxHeight: .infinity)
-        .contentShape(Rectangle())
+        // The glyph stays its 12pt column; the target it sits in grows to the
+        // pane icon button's size so it can be hit without aiming.
+        .contentShape(Rectangle().inset(by: -(theme.paneIconButtonSize - Self.width) / 2))
     }
     .buttonStyle(.plain)
     .accessibilityLabel(isFolded ? "Show the subtasks of \(title)" : "Hide the subtasks of \(title)")

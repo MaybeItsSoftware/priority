@@ -32,6 +32,9 @@ struct Theme: Equatable {
   static let statusFillOpacity = 0.10
   /// The border of that chip.
   static let statusBorderOpacity = 0.40
+  /// How far a disabled control fades. One figure for every button, chip and
+  /// toggle, so "can't be pressed" reads the same everywhere.
+  static let disabledOpacity = 0.45
 
   var paper: Color { color(.paper) }
   var raised: Color { color(.raised) }
@@ -132,6 +135,8 @@ struct Theme: Equatable {
   /// further than medium. Heavier is kept for something that is *live*, such
   /// as the running timer, where it says "this is the one moving".
   var captionFont: Font { bodyFont(size: scale.caption) }
+  /// Monospace at the micro-label's size: keycaps, counts and status readouts.
+  var monoCaptionFont: Font { monoFont(size: type.microLabel.size) }
   var titleFont: Font { displayFont(size: scale.title, weight: .medium) }
   func numeralFont(_ size: CGFloat, weight: ThemeFontWeight = .regular) -> Font {
     monoFont(size: size, weight: weight)
