@@ -20,6 +20,11 @@ public final class WorkspaceStore: @unchecked Sendable {
     let directory = databaseURL.deletingLastPathComponent()
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     var configuration = Configuration()
+    // The CLI writes this file too, under `BEGIN IMMEDIATE`, and sets a
+    // five-second busy timeout of its own (`cli/src/workspace_tasks.rs`).
+    // GRDB's default is to fail at once, so without this an app write that
+    // lands while the CLI holds the lock throws and the keystroke is lost.
+    configuration.busyMode = .timeout(5)
     configuration.prepareDatabase { db in
       try db.execute(sql: "PRAGMA foreign_keys = ON")
     }
