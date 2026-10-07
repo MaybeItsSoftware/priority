@@ -75,9 +75,20 @@ struct PendingTaskUpdate: Sendable, Codable {
   var username: String {
     didSet {
       preferencesStore.set(username, for: .checkvistUsername)
+      // The settings field writes this on every keystroke. The Checkvist
+      // token belongs to the name it was fetched with, so it is dropped once,
+      // when the name first departs from the one the session has been using —
+      // not on every character, which left nothing signed in while typing.
+      let typed = CheckvistCredentials(username: username, remoteKey: "").normalizedUsername
+      guard let inUse = usernameInUse, typed != inUse else { return }
+      usernameInUse = nil
       onUsernameChanged?()
     }
   }
+  /// The username the Checkvist session was last handed, as
+  /// `activeCredentials` normalises it; nil until a request has gone out with
+  /// the current name.
+  @ObservationIgnored private var usernameInUse: String?
   var remoteKey: String {
     didSet {
       guard remoteKey != oldValue else { return }
@@ -423,8 +434,12 @@ struct PendingTaskUpdate: Sendable, Codable {
     checkvistIntegrationEnabled && hasListSelection && hasCredentials
   }
   var offlineOpenTaskCount: Int { localTaskStore.load().openTasks.count }
+  /// Every Checkvist request reads this, which is what makes it the place to
+  /// note which name the session is signed in under; see `username`.
   var activeCredentials: CheckvistCredentials {
-    CheckvistCredentials(username: username, remoteKey: remoteKey)
+    let credentials = CheckvistCredentials(username: username, remoteKey: remoteKey)
+    usernameInUse = credentials.normalizedUsername
+    return credentials
   }
   var activeSyncPlugin: any CheckvistSyncPlugin {
     canSyncRemotely ? checkvistSyncPlugin : offlineSyncPlugin

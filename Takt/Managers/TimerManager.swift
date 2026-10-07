@@ -12,12 +12,21 @@ import TaktCore
   @ObservationIgnored private var sleepObserver: NSObjectProtocol?
   
   var timedTaskId: Int?
+  /// Persisted, and the task cache invalidated, when the set of timed tasks
+  /// changes — not on every tick. A running timer used to write this
+  /// dictionary to disk and rebuild the whole task cache once a second; the
+  /// elapsed figure is saved by `pauseTimer()`, which every stop goes through.
   var timerByTaskId: [Int: TimeInterval] = [:] {
     didSet {
-      let encoded = Dictionary(uniqueKeysWithValues: timerByTaskId.map { (String($0.key), $0.value) })
-      preferencesStore.set(encoded, for: .timerByTaskId)
+      guard Set(timerByTaskId.keys) != Set(oldValue.keys) else { return }
+      persistTimers()
       cacheInvalidationBus.invalidate()
     }
+  }
+
+  private func persistTimers() {
+    let encoded = Dictionary(uniqueKeysWithValues: timerByTaskId.map { (String($0.key), $0.value) })
+    preferencesStore.set(encoded, for: .timerByTaskId)
   }
   var timerRunning: Bool = false
   @ObservationIgnored var timerTask: Task<Void, Never>?
@@ -72,9 +81,11 @@ import TaktCore
   }
 
   func pauseTimer() {
+    let wasRunning = timerRunning
     timerRunning = false
     timerTask?.cancel()
     timerTask = nil
+    if wasRunning { persistTimers() }
   }
 
   func resumeTimer() {

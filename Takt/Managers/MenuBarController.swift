@@ -17,10 +17,17 @@ class MenuBarController: NSObject {
   /// reports. Weak because the workspace outlives nothing here.
   weak var workspace: WorkspaceViewModel? {
     didSet {
-      observeForTitleUpdates()
+      // One chain. It reads `workspace` afresh on every pass, so it is started
+      // once and not again if the workspace is ever swapped; a second chain
+      // here used to redraw the title twice for every change.
+      if !isObservingTitleUpdates {
+        isObservingTitleUpdates = true
+        observeForTitleUpdates()
+      }
       updateTitle()
     }
   }
+  private var isObservingTitleUpdates = false
   /// Drives the once-a-second redraw, and exists only while a session runs.
   private var focusTicker: Timer?
 
@@ -28,7 +35,6 @@ class MenuBarController: NSObject {
     self.manager = manager
     super.init()
     setupStatusItem()
-    observeForTitleUpdates()
   }
 
   deinit {
@@ -78,11 +84,8 @@ class MenuBarController: NSObject {
     statusItem?.button?.layer?.mask = nil
   }
 
+  /// Either button opens the same menu.
   @objc private func clicked(_ sender: NSStatusBarButton) {
-    if isSecondaryStatusItemClickEvent(NSApp.currentEvent) {
-      showStatusItemContextMenu()
-      return
-    }
     showStatusItemContextMenu()
   }
 
@@ -218,12 +221,6 @@ class MenuBarController: NSObject {
   /// Past this the menu is a list you scan rather than a day you read, and the
   /// focus panel is the better surface for it.
   private static let dayMenuLimit = 8
-
-  private func isSecondaryStatusItemClickEvent(_ event: NSEvent?) -> Bool {
-    guard let event else { return false }
-    if event.type == .rightMouseUp || event.type == .rightMouseDown { return true }
-    return event.type == .leftMouseUp && event.modifierFlags.contains(.control)
-  }
 
   @objc private func menuSettings() {
     onShowSettings?()

@@ -24,6 +24,10 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
 
   func show(model: WorkspaceViewModel) {
     self.model = model
+    // Read before the panel is ordered front: the observation chain below
+    // lives for as long as the panel is visible, so a second `show` while it
+    // is up must not start a second one.
+    let wasVisible = isVisible
     let panel = makePanelIfNeeded(model: model)
     if !NSApp.isActive { interruptedApp = NSWorkspace.shared.frontmostApplication }
     position(panel)
@@ -37,7 +41,7 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
       guard let panel, panel.isVisible, !panel.isKeyWindow else { return }
       panel.makeKeyAndOrderFront(nil)
     }
-    observeCapture(model: model)
+    if !wasVisible { observeCapture(model: model) }
   }
 
   /// Puts the panel away and hands the keyboard back to whatever the hotkey
