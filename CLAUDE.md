@@ -14,7 +14,7 @@ Takt (formerly Priority) is a keyboard-first macOS desktop app (macOS 15.6+, Xco
 # Full app build (the canonical "does it compile" check)
 xcodebuild -project 'Takt.xcodeproj' -scheme 'Takt' -configuration Debug -destination 'platform=macOS' build
 
-# Run all SPM unit tests (TaktCoreTests + TaktPluginTests + TaktAppLogicTests)
+# Run all SPM unit tests (six test targets, one per library)
 swift test
 
 # Run a single test by filter (XCTest style)
@@ -33,17 +33,20 @@ cargo fmt --manifest-path cli/Cargo.toml --check
 ./scripts/install_cli.sh            # release build + a `takt` symlink onto PATH
 ```
 
-`README.md` is authoritative for keybindings and command palette syntax — consult it when editing `KeyboardShortcutRouter.swift` or `CommandEngine.swift` so behaviour stays in sync.
+`README.md` is authoritative for keybindings and command palette syntax — consult it when editing `Sources/TaktCore/WorkspaceCommandCatalog+Entries.swift`, `Sources/TaktCore/WorkspaceKeyBindings.swift` or `CommandEngine.swift` so behaviour stays in sync.
 
 ## Architectural Layout (Two Build Systems, One Source Tree)
 
 The same files are compiled by two different systems, which is the most important thing to know before editing:
 
 1. **Xcode project** (`Takt.xcodeproj`) — builds the actual macOS app from everything under `Takt/`.
-2. **Swift Package** (`Package.swift`) — builds three libraries from curated subsets:
+2. **Swift Package** (`Package.swift`) — builds six libraries, three from real directories and three from curated subsets of `Takt/`:
    - `TaktCore` — sources rooted at `Sources/TaktCore/`. Pure, headless logic only (command parser, recurrence, timer policies, the visibility/kanban/shortcut engines). This is what `corelogic-tests/` exercises. **The app links this one** rather than compiling its sources, so everything it uses across that boundary is `public`.
    - `TaktPlugins` — explicit `sources:` list of plugin files plus `plugin-tests-support/PluginModelStubs.swift` (which provides minimal stub models so plugin code compiles without the app shell). Tested by `plugin-tests/`.
    - `TaktAppLogic` — explicit `sources:` list of the app-bound state machines (`TaskRepository`, `TaskMutationService`, `SyncService`, `UndoService`, the offline/priority stores) plus `applogic-support/AppLogicSharedTypes.swift`, which re-declares the Checkvist models rather than making `TaktPlugins` publish them. Tested by `applogic-tests/`.
+   - `TaktWorkspace` — sources rooted at `Sources/TaktWorkspace/`: `WorkspaceStore` and its `+*.swift` extensions, the GRDB schema and migrations (`WorkspaceStore+Migrations.swift`), the models. **The app links this one too.** Tested by `workspace-tests/`.
+   - `TaktWorkspaceEditing` — `Takt/Editing/`, the task editor drafts. Tested by `workspace-editing-tests/`.
+   - `TaktSync` — `Sources/TaktSync/`, the client of `sync-server/`. Linked by the app. Tested by `sync-tests/`.
 
 Consequences when editing:
 
@@ -77,9 +80,7 @@ Conventions enforced by `docs/plugins.md`:
 
 ## Conventions and Tooling
 
-- SwiftLint config (`.swiftlint.yml`) is intentionally permissive: many style-only rules disabled, `file_length` warning at 800 / error at 1500, `function_body_length` warning at 150, `cyclomatic_complexity` warning at 25. Don't gratuitously split files just to satisfy stricter defaults. CI runs `swiftlint lint` (not `--strict`), so **warnings are advisory and errors block**; there is a standing backlog of ~13 warnings on the large files, tracked in `ARCHITECTURE_IMPROVEMENT_PLAN.md` rather than suppressed. Don't add to it.
-- `check_braces.py` and `check_indent.py` are throwaway diagnostic scripts hard-coded to `Takt/KanbanBoardView.swift`. Not part of CI; ignore unless debugging that file.
-- `FocusCore/` is a separate Swift package (sibling, not consumed by the main package) — leave it alone unless explicitly asked.
+- SwiftLint config (`.swiftlint.yml`) is intentionally permissive: many style-only rules disabled, `file_length` warning at 800 / error at 1500, `function_body_length` warning at 150, `cyclomatic_complexity` warning at 25. Don't gratuitously split files just to satisfy stricter defaults. CI runs `swiftlint lint` (not `--strict`), so **warnings are advisory and errors block**; the standing backlog is a handful of length and complexity warnings on the large files, counted in `TODO.md` rather than suppressed. Don't add to it. Run it as `swiftlint lint` from the root; it is a `--quiet` run of `Takt` and `Sources` that matters, and the config excludes `.claude` and the iOS build folder, which otherwise crash SourceKit.
 - Logging uses `os.Logger` with subsystem `uk.co.maybeitssoftware.takt`; reuse this subsystem with a category that matches the type. `AppIdentity.bundleIdentifier` in `Sources/TaktCore/AppIdentity.swift` holds it, alongside `AppIdentity.applicationSupportDirectory()`, which every Application Support path should go through rather than spelling out `Takt/`. Keychain service names deliberately keep the old `uk.co.maybeitsadam.priority` prefix: they are storage keys, not identity.
 
 ## Verifying Changes
