@@ -14,16 +14,14 @@ enum FocusCompletionSurface {
 extension WorkspaceViewModel {
   /// `plannedSeconds` is the estimate committed to, if any. Without one the
   /// task's own estimate is used, and failing that a default block.
-  func startFocus(on task: WorkspaceTask, plannedSeconds: Int? = nil, automatic: Bool = false, override: Bool = false) {
+  func startFocus(on task: WorkspaceTask, plannedSeconds: Int? = nil, override: Bool = false) {
     guard !task.isList else { openItemList(task); return }
     guard let store else { return }
     perform {
       let now = Date.now
       let candidate = try store.nextUpCandidates(now: now).first { $0.id == task.id }
       let reasons = candidate.map { TaskAvailabilityPolicy.reasons(for: $0, context: effectiveFocusContext, now: now) }
-      let requested = plannedSeconds ?? candidate.map { TaskAvailabilityPolicy.suggestedSeconds(for: $0, context: effectiveFocusContext, now: now) } ?? 1500
-      let window = effectiveFocusContext.endsAt.map { max(0, Int($0.timeIntervalSince(now))) } ?? Int.max
-      let planned = automatic ? min(requested, window) : requested
+      let planned = plannedSeconds ?? candidate.map { TaskAvailabilityPolicy.suggestedSeconds(for: $0, context: effectiveFocusContext, now: now) } ?? 1500
       var explanations = reasons?.map { unavailableDescription($0) } ?? ["This task is not currently available for automatic focus."]
       if let end = effectiveFocusContext.endsAt, Double(planned) > end.timeIntervalSince(now) {
         explanations.append("The planned block exceeds your available time.")
@@ -33,12 +31,7 @@ extension WorkspaceViewModel {
         explanations.append("The block is shorter than this task needs.")
       }
       if !override && !explanations.isEmpty {
-        if automatic {
-          errorMessage = explanations.joined(separator: "\n")
-          reloadNextUp()
-        } else {
-          focusStartOverride = FocusStartOverride(task: task, plannedSeconds: planned, explanation: explanations.joined(separator: "\n"))
-        }
+        focusStartOverride = FocusStartOverride(task: task, plannedSeconds: planned, explanation: explanations.joined(separator: "\n"))
         return
       }
       allowsQueueResume = true
@@ -48,7 +41,7 @@ extension WorkspaceViewModel {
       reloadNextUp()
       // Where the block runs is the panel or the menu bar, never a pane of
       // the window: a deliberate start hands over to it and closes the window.
-      if !automatic { focusHandoffRequest += 1 }
+      focusHandoffRequest += 1
     }
   }
 
@@ -74,7 +67,8 @@ extension WorkspaceViewModel {
   }
 
   /// There is no full-pane screen any more: the timeline sits in the dock
-  /// beside the work, so navigating leaves it where it is.
+  /// beside the work, so navigating leaves it where it is. Nothing left to
+  /// do here; the remaining callers in the views can drop it.
   func leaveFullPaneScreens() {}
 
   /// Steps the day the timeline is showing. Never past today: the future holds
@@ -182,9 +176,20 @@ extension WorkspaceViewModel {
   func confirmFocusCompletion(multiplier: Double) {
     guard let store, let pending = pendingFocusCompletion else { return }
     perform {
-      let completion = try store.completeActiveFocusTask(
-        sessionId: pending.sessionID, elapsedSeconds: pending.seconds, qualityMultiplier: multiplier,
-        completeTask: pending.completeTask, expectedBlockId: pending.blockID, context: effectiveFocusContext)
+      let completion: WorkspaceStore.FocusCompletion
+      do {
+        completion = try store.completeActiveFocusTask(
+          sessionId: pending.sessionID, elapsedSeconds: pending.seconds, qualityMultiplier: multiplier,
+          completeTask: pending.completeTask, expectedBlockId: pending.blockID, context: effectiveFocusContext)
+      } catch WorkspaceStoreError.noActiveFocusTask {
+        // The block the question was about has gone — advanced or ended by
+        // the CLI, or settled as stale — so there is nothing left to score.
+        // Left up, the prompt could never be answered.
+        pendingFocusCompletion = nil
+        reloadFocus()
+        onStatusMessage?("That block had already ended.")
+        return
+      }
       pendingFocusCompletion = nil
       if pending.completeTask, let task = task(withID: pending.taskID) {
         celebrateCompletion(of: task)

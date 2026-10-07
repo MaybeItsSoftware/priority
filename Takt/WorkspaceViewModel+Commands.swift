@@ -91,7 +91,6 @@ extension WorkspaceViewModel {
     case .goEverything:
       // A place to be, like ⌘1–⌘4, so it leaves a full-pane screen the same
       // way rather than changing the list behind one.
-      leaveFullPaneScreens()
       selectEverything()
       requestKeyboardFocus(.tasks)
     case .goInbox:
@@ -261,7 +260,6 @@ extension WorkspaceViewModel {
   /// Asking for a mode is also asking to leave whatever full-pane surface is
   /// up — the same reasoning as ⌘1 on the timeline meaning "show me today".
   private func goToMode(_ mode: WorkspaceViewMode) {
-    leaveFullPaneScreens()
     selectViewMode(mode)
     requestKeyboardFocus(.tasks)
   }

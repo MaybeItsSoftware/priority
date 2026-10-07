@@ -22,9 +22,8 @@ struct WorkspaceDesktopView: View {
       // Over the whole window content, so it sits above every pane. A click
       // outside the panel is caught by the window's mouse monitor.
       .overlay(alignment: .top) { WorkspaceOverlayHost() }
-      .task { await model.monitorFocus() }
-      .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in model.reloadNextUp() }
-      .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.willSleepNotification)) { _ in model.pauseFocus() }
+      // The focus clock's housekeeping is not here: the model runs it from
+      // `startFocusMonitor()`, because starting a block closes this window.
   }
 
   private var workspaceLayout: some View {

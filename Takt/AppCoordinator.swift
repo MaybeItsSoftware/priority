@@ -61,13 +61,15 @@ import SwiftUI
 
   var orderedRootTaskViews: [RootTaskView] { Self.storedRootTaskViewOrder }
 
-  /// The legacy tab order, read straight from `UserDefaults`.
+  /// The legacy tab order, read from `UserDefaults` once.
   ///
   /// Nothing writes the key any more: the settings pane that reordered these
   /// tabs went with the tabs themselves, and the `View` menu lists
   /// `WorkspaceViewMode` instead. The read stays so an order saved by an
-  /// earlier build still drives what is left of root-tab cycling.
-  static var storedRootTaskViewOrder: [RootTaskView] {
+  /// earlier build still drives what is left of root-tab cycling — and since
+  /// nothing changes it while the app runs, it is decoded once rather than on
+  /// every keystroke that cycles a tab.
+  static let storedRootTaskViewOrder: [RootTaskView] = {
     if let data = UserDefaults.standard.data(forKey: "rootTaskViewOrder"),
       let rawValues = try? JSONDecoder().decode([Int].self, from: data)
     {
@@ -79,7 +81,7 @@ import SwiftUI
       }
     }
     return RootTaskView.allCases
-  }
+  }()
 
   enum CarbonKey {
     static let space = 49
@@ -613,9 +615,6 @@ extension AppCoordinator {
     quickEntry.dismissDueDatePicker()
     Task { await taskMutationService.updateTask(task: task, due: due) }
   }
-
-  // Setup is non-blocking: the app can always run in offline-first mode.
-  var needsInitialSetup: Bool { false }
 
   var activePluginSettingsPages: [any PluginSettingsPageProviding] {
     [

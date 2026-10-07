@@ -45,7 +45,8 @@ extension WorkspaceViewModel {
       let now = Date()
       items.removeAll { hidesCompletion(of: $0.task, now: now) }
       if outline != items { outline = items }
-      reloadBoardNow()
+      // The `defer` above schedules the expiry once for both.
+      reloadBoardNow(schedulesCompletionExpiry: false)
       // The rail is a view of the same writes. Hooked in here rather than at
       // every mutation because this is the one funnel they all pass through,
       // and it costs nothing while the rail is closed.
@@ -77,10 +78,12 @@ extension WorkspaceViewModel {
     return "\(selectedListID ?? "none")/\(scopeTaskID ?? "root")"
   }
 
-  func reloadBoardNow() {
+  /// - Parameter schedulesCompletionExpiry: false when the outline reload
+  ///   that called this schedules it itself, so one reload arms one timer.
+  func reloadBoardNow(schedulesCompletionExpiry: Bool = true) {
     defer {
       rebuildBoardIndex()
-      scheduleCompletionExpiry()
+      if schedulesCompletionExpiry { scheduleCompletionExpiry() }
     }
     guard let store else {
       boardTasks = []

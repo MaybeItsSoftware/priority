@@ -175,6 +175,16 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var externalWriteToken: Int?
   @ObservationIgnored var externalWriteTimer: Timer?
   @ObservationIgnored var externalWriteCheckInFlight = false
+  /// The focus clock's housekeeping, and the sleep and activation observers
+  /// beside it. Owned here, started once from `init`, because it has to outlive
+  /// the window: starting a block closes the window, and a checkpoint that
+  /// stopped with it was a block that lost its time at the next quit. See
+  /// `startFocusMonitor()`.
+  @ObservationIgnored var focusMonitorTask: Task<Void, Never>?
+  @ObservationIgnored var focusMonitorObservers: [NSObjectProtocol] = []
+  /// Whether an ordinary window is up, so a prompt the clock raises goes to
+  /// the panel when the window is away. Set by the app shell.
+  @ObservationIgnored var hasOrdinaryWindow: (() -> Bool)?
   let taskEditor = WorkspaceTaskEditor()
 
   private(set) var workspace: Workspace?
@@ -222,6 +232,10 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var refreshDepth = 0
   @ObservationIgnored var performFailed = false
   @ObservationIgnored var performShouldMirror = false
+  /// `errorMessage` as the outermost `perform` found it, so a successful write
+  /// clears only a message that was already there — never one its own work
+  /// has just put up.
+  @ObservationIgnored var performPriorErrorMessage: String?
   /// Moves on every refresh, so a ranking read before it knows it is stale.
   @ObservationIgnored var writeEpoch = 0
   @ObservationIgnored var nextUpRequested = false
@@ -631,9 +645,20 @@ enum WorkspaceSidebarItem: Identifiable {
       restoreSuggestedContext()
       watchForExternalWrites()
       startSync()
+      startFocusMonitor()
     } catch {
       self.store = nil
       self.errorMessage = error.localizedDescription
+    }
+  }
+
+  deinit {
+    externalWriteTimer?.invalidate()
+    completionExpiryTask?.cancel()
+    focusMonitorTask?.cancel()
+    for observer in focusMonitorObservers {
+      NSWorkspace.shared.notificationCenter.removeObserver(observer)
+      NotificationCenter.default.removeObserver(observer)
     }
   }
 

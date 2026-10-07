@@ -7,7 +7,6 @@ import TaktWorkspace
 @MainActor
 extension WorkspaceViewModel {
   func presentSearch() {
-    leaveFullPaneScreens()
     searchQuery = ""
     searchResults = []
     selectedSearchResultID = nil

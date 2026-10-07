@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import TaktCore
 import TaktWorkspace
@@ -125,28 +126,59 @@ extension WorkspaceViewModel {
     return clockChanged
   }
 
-  func monitorFocus() async {
-    while !Task.isCancelled {
-      let now = Date.now
-      if let expiry = contextExpiresAt, expiry <= now {
-        focusContext.conditionIDs = []; contextExpiresAt = nil; saveCurrentContext(); reloadNextUp()
+  /// Starts the focus clock's housekeeping for the life of the model.
+  ///
+  /// This used to be the window's `.task`, with the sleep and activation
+  /// notifications received by the same view. Starting a block closes the
+  /// window on purpose, which cancelled the task the moment it was most
+  /// needed: no 30-second checkpoint, so the block's time was lost at the next
+  /// quit; no clock-jump rebase after a sleep; no context expiry; and the
+  /// "planned length reached" prompt never came.
+  func startFocusMonitor() {
+    guard focusMonitorTask == nil, store != nil else { return }
+    // Weak across the sleep, so the loop does not hold the model alive.
+    focusMonitorTask = Task { @MainActor [weak self] in
+      while !Task.isCancelled, self != nil {
+        self?.tickFocusMonitor(now: .now)
+        do { try await Task.sleep(for: .seconds(1)) } catch { return }
       }
-      let clockJump = synchroniseFocusClock(now: now)
-      let zoneChanged = lastFocusTimeZone != TimeZone.current.identifier
-      if clockJump || zoneChanged || (nextFocusEvaluationAt.map { $0 <= now } ?? false) { reloadNextUp() }
-      lastFocusTimeZone = TimeZone.current.identifier
-      if let session = activeFocusSession, session.pausedAt == nil, session.activeTaskId != nil {
-        if now.timeIntervalSince(lastFocusCheckpointAt) >= 30 {
-          perform(mirrors: false) { try store?.checkpointFocusSession(id: session.id, now: now); reloadFocus() }
-          lastFocusCheckpointAt = now
-        }
-        if session.elapsedSeconds(now: now) >= session.workDurationSeconds,
-          focusExpiryPromptedBlockID != session.activeBlockId {
-          focusExpiryPromptedBlockID = session.activeBlockId
-          requestFocusCompletion(now: now, completeTask: false)
-        }
-      }
-      do { try await Task.sleep(for: .seconds(1)) } catch { return }
+    }
+    let workspaceCenter = NSWorkspace.shared.notificationCenter
+    focusMonitorObservers.append(workspaceCenter.addObserver(
+      forName: NSWorkspace.willSleepNotification, object: nil, queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated { self?.pauseFocus() }
+    })
+    focusMonitorObservers.append(NotificationCenter.default.addObserver(
+      forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated { self?.reloadNextUp() }
+    })
+  }
+
+  /// One pass of the focus clock's housekeeping: context expiry, the
+  /// clock-jump rebase, the re-ranking the ladder asked for, the 30-second
+  /// checkpoint, and the prompt when a block reaches its planned length.
+  func tickFocusMonitor(now: Date) {
+    if let expiry = contextExpiresAt, expiry <= now {
+      focusContext.conditionIDs = []; contextExpiresAt = nil; saveCurrentContext(); reloadNextUp()
+    }
+    let clockJump = synchroniseFocusClock(now: now)
+    let zoneChanged = lastFocusTimeZone != TimeZone.current.identifier
+    if clockJump || zoneChanged || (nextFocusEvaluationAt.map { $0 <= now } ?? false) { reloadNextUp() }
+    lastFocusTimeZone = TimeZone.current.identifier
+    guard let session = activeFocusSession, session.pausedAt == nil, session.activeTaskId != nil else { return }
+    if now.timeIntervalSince(lastFocusCheckpointAt) >= 30 {
+      perform(mirrors: false) { try store?.checkpointFocusSession(id: session.id, now: now); reloadFocus() }
+      lastFocusCheckpointAt = now
+    }
+    if session.elapsedSeconds(now: now) >= session.workDurationSeconds,
+      focusExpiryPromptedBlockID != session.activeBlockId {
+      focusExpiryPromptedBlockID = session.activeBlockId
+      // Asked where the block is being watched: the panel, once the window
+      // has been put away, which is where a running block lives.
+      let surface: FocusCompletionSurface = hasOrdinaryWindow?() == true ? .window : .panel
+      requestFocusCompletion(now: now, completeTask: false, from: surface)
     }
   }
 }

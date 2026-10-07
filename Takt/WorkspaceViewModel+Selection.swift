@@ -15,7 +15,6 @@ extension WorkspaceViewModel {
     guard lists.contains(where: { $0.id == id }) else { return }
     noteListVisit(leaving: isMultiListScope ? nil : selectedListID, arriving: id)
     taskEditor.flush()
-    leaveFullPaneScreens()
     isEverythingSelected = false
     UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
     selectedListID = id
@@ -38,7 +37,6 @@ extension WorkspaceViewModel {
     sidebarCursorID = nil
 
     taskEditor.flush()
-    leaveFullPaneScreens()
     if let selectedListID { newTaskListID = selectedListID }
     isEverythingSelected = true
     UserDefaults.standard.set(true, forKey: Self.everythingScopeKey)

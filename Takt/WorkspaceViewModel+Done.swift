@@ -74,7 +74,6 @@ extension WorkspaceViewModel {
   /// — what it was part of, what is still open beside it.
   func revealDoneTask(_ task: WorkspaceTask) {
     doneCursorID = task.id
-    leaveFullPaneScreens()
     batchingRefreshes {
       if task.listId != selectedListID || isEverythingSelected { selectList(task.listId) }
       scopeTaskID = nil

@@ -120,19 +120,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // running where the user said they want it: the panel, or the menu bar
     // alone. Hiding first, so `applyActivationPolicy` has already dropped the
     // app to `.accessory` by the time the panel takes key — otherwise the Dock
-    // icon flickers back as the panel activates the app.
+    // icon flickers back as the panel activates the app. Closing the window
+    // is what raises the panel, through `applyActivationPolicy`; the show here
+    // is for a block started with the window already away.
     workspace.onFocusHandoffRequested = { [weak self] in
       guard let self, let workspace = self.workspace else { return }
       self.mainWindowController.hide()
-      if self.checkvistManager.preferences.focusRunSurface.showsPanel {
-        self.focusPanelController.show(model: workspace)
-      } else {
+      if !self.checkvistManager.preferences.focusRunSurface.showsPanel {
         // The status item already shows the task and its clock. A panel the
         // block was started from goes too, handing the keyboard back to
         // whatever the hotkey interrupted.
         self.focusPanelController.dismiss(.back)
+      } else if !self.focusPanelController.isVisible {
+        self.focusPanelController.show(model: workspace)
       }
     }
+    workspace.hasOrdinaryWindow = { [weak self] in self?.mainWindowController?.isVisible ?? false }
     // Finishing something is finishing something, whichever surface it
     // happened on. Before this the flourish only ever played on the focus
     // ladder, so the day list — the screen the app now opens on — was the one
@@ -186,9 +189,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // The status item reports the focus session, which is the one thing worth
     // showing there while you are working in another app.
     menuBarController.workspace = workspace
-    mainWindowController.onUpdateMenuBarTitle = { [weak self] in
-      self?.menuBarController.updateTitle()
-    }
     mainWindowController.onVisibilityChanged = { [weak self] isVisible in
       self?.applyActivationPolicy(hasOrdinaryWindow: isVisible)
     }
@@ -232,19 +232,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       }
       .store(in: &cancellables)
 
+    // The first pass is the same as every later one; it just waits for the
+    // window to be up first. If activation has already run it, the throttle
+    // makes this a no-op rather than a second round of fetches.
     Task { [weak self] in
       try? await Task.sleep(nanoseconds: 500_000_000)
-      guard let self else { return }
-      let listsLoaded = await self.checkvistManager.syncService.loadCheckvistLists()
-      await self.checkvistManager.syncService.fetchTopTask()
-      self.workspace.importLegacyCheckvistTasks(
-        self.checkvistManager.repository.tasks,
-        sourceListID: self.checkvistManager.repository.listId)
-      if listsLoaded {
-        let snapshots = await self.checkvistWorkspaceSnapshots()
-        self.workspace.importCheckvistLists(snapshots)
-      }
-      self.menuBarController.updateTitle()
+      self?.scheduleAutoRefresh()
     }
   }
 
@@ -335,15 +328,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
   }
 
+  /// Brings in whatever Checkvist has that the workspace does not, at launch
+  /// and whenever the app comes to the front, throttled.
+  ///
+  /// Only with the integration on and a list chosen. This used to run on
+  /// every activation regardless, logging in to Checkvist — and, in Release,
+  /// where the remote key is deliberately not read until asked for, writing a
+  /// "Username or Remote Key is missing." failure to Diagnostics each time.
   private func scheduleAutoRefresh() {
+    guard checkvistManager.repository.canSyncRemotely else { return }
     let now = Date()
-    guard
-      AutoRefreshThrottlePolicy.shouldRefresh(
-        needsInitialSetup: checkvistManager.needsInitialSetup,
-        now: now,
-        lastRefreshAt: lastAutoRefreshTime
-      )
-    else { return }
+    guard AutoRefreshThrottlePolicy.shouldRefresh(now: now, lastRefreshAt: lastAutoRefreshTime) else { return }
     lastAutoRefreshTime = now
     Task { [weak self] in
       guard let self else { return }
@@ -360,15 +355,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
   }
 
-  /// Fetch every discovered list without changing the user's active legacy
-  /// Checkvist selection. The workspace receives a local snapshot only; its
-  /// regular task editing remains independent from the remote service.
+  /// Fetches each discovered list the workspace has not yet got a copy of,
+  /// without changing the user's active legacy Checkvist selection. The
+  /// workspace receives a local snapshot only; its regular task editing
+  /// remains independent from the remote service.
+  ///
+  /// A list whose fetch fails is left out rather than handed over empty: an
+  /// empty snapshot used to become an empty local list, mapped to the remote
+  /// one, and so never imported again.
   private func checkvistWorkspaceSnapshots() async -> [(list: CheckvistList, tasks: [CheckvistTask])] {
     let repository = checkvistManager.repository
+    let imported = workspace.importedCheckvistListIDs
     var snapshots: [(list: CheckvistList, tasks: [CheckvistTask])] = []
-    for list in repository.availableLists {
-      let tasks = (try? await repository.fetchCheckvistOpenTasks(listId: String(list.id))) ?? []
-      snapshots.append((list: list, tasks: tasks))
+    for list in repository.availableLists where !imported.contains(String(list.id)) {
+      do {
+        let tasks = try await repository.fetchCheckvistOpenTasks(listId: String(list.id))
+        snapshots.append((list: list, tasks: tasks))
+      } catch {
+        checkvistManager.diagnosticsLog.record(
+          category: "Checkvist",
+          message: "Could not fetch list “\(list.name)” for import: \(error.localizedDescription)",
+          isFailure: true)
+      }
     }
     return snapshots
   }
@@ -397,9 +405,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // Only a block that is ticking, though. A paused one — or one left over
     // with nothing on it — is not focus mode, and ⌘Q is putting the app away,
     // not asking for a panel: both used to bring it up on every quit.
+    //
+    // And only where the user said a block runs. Someone who chose the menu
+    // bar alone has said they do not want a panel; this used to raise one
+    // anyway, and the handoff then had to take it straight down again.
     if let workspace, let session = workspace.activeFocusSession,
       session.phase == .running, session.pausedAt == nil, !isPuttingAway,
-      !hasOrdinaryWindow, !focusPanelController.isVisible {
+      !hasOrdinaryWindow, !focusPanelController.isVisible,
+      checkvistManager.preferences.focusRunSurface.showsPanel {
       focusPanelController.show(model: workspace)
     }
     let desired: NSApplication.ActivationPolicy = hasOrdinaryWindow ? .regular : .accessory

@@ -61,6 +61,7 @@ extension WorkspaceViewModel {
   ///   has to hear about. A focus clock checkpoint is a write, but not to
   ///   anything the mirror carries.
   func perform(mirrors: Bool = true, _ work: () throws -> Void) {
+    if refreshDepth == 0 { performPriorErrorMessage = errorMessage }
     refreshDepth += 1
     do {
       try work()
@@ -76,7 +77,10 @@ extension WorkspaceViewModel {
     let shouldMirror = performShouldMirror
     performFailed = false
     performShouldMirror = false
-    if !failed { errorMessage = nil }
+    // A write that went through clears the message a failed one left, and
+    // only that: a message the work itself put up is the work's to show.
+    if !failed, errorMessage == performPriorErrorMessage { errorMessage = nil }
+    performPriorErrorMessage = nil
     // After clearing the error, so a reload that fails still says so.
     flushPendingRefresh(afterWrite: true)
     if let store { taskEditor.refresh(store: store) }
@@ -140,8 +144,8 @@ extension WorkspaceViewModel {
   /// The history menu's labels, read after a write rather than on every
   /// render of the menu that shows them.
   func refreshHistoryLabels() {
-    let undo = (try? store?.undoableLabel()) ?? nil
-    let redo = (try? store?.redoableLabel()) ?? nil
+    let undo = store.flatMap { try? $0.undoableLabel() }
+    let redo = store.flatMap { try? $0.redoableLabel() }
     if undoLabel != undo { undoLabel = undo }
     if redoLabel != redo { redoLabel = redo }
   }
@@ -266,12 +270,27 @@ extension WorkspaceViewModel {
     dayTaskSnapshot = snapshot.dayTasks
     for (id, task) in snapshot.dayTasks { taskCache[id] = task }
     rebuildDayItems()
-    if allowsQueueResume && activeFocusSession != nil && activeFocusSession?.activeTaskId == nil, let store {
-      let context = effectiveFocusContext
-      perform(mirrors: false) {
-        try store.resumeEligibleFocusQueue(context: context, now: .now)
-        reloadFocus()
-      }
+    resumeBlockedFocusQueueIfEligible()
+  }
+
+  /// Hands a session whose queue was blocked at the last handoff its next
+  /// task, once one is eligible.
+  ///
+  /// Asked first, as a read. The resume is a write, and every write through
+  /// `perform` re-ranks the day, which lands back here: while every queued task
+  /// stayed blocked, that was a resume that resumed nothing, a refresh, a
+  /// ranking, and round again for as long as the session lasted.
+  private func resumeBlockedFocusQueueIfEligible() {
+    guard allowsQueueResume, let session = activeFocusSession, session.activeTaskId == nil, let store else { return }
+    let context = effectiveFocusContext
+    let now = Date.now
+    guard (try? store.hasResumableFocusQueueTask(context: context, now: now)) == true else { return }
+    // One resume per permission. The next handoff picks its own successor,
+    // and a context change or a queued task grants it again.
+    allowsQueueResume = false
+    perform(mirrors: false) {
+      try store.resumeEligibleFocusQueue(context: context, now: now)
+      reloadFocus()
     }
   }
 }

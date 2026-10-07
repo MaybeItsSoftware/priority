@@ -131,19 +131,11 @@ final class CoreLogicRegressionTests: XCTestCase {
     XCTAssertEqual(secondAttempt.nextState, state)
   }
 
-  func testAutoRefreshThrottlePolicyBlocksSetupAndThrottlesBurstRefreshes() {
+  func testAutoRefreshThrottlePolicyThrottlesBurstRefreshes() {
     let now = Date(timeIntervalSince1970: 1_000)
 
     XCTAssertFalse(
       AutoRefreshThrottlePolicy.shouldRefresh(
-        needsInitialSetup: true,
-        now: now,
-        lastRefreshAt: now.addingTimeInterval(-100)
-      ))
-
-    XCTAssertFalse(
-      AutoRefreshThrottlePolicy.shouldRefresh(
-        needsInitialSetup: false,
         now: now,
         lastRefreshAt: now.addingTimeInterval(-3),
         minimumInterval: 8
@@ -151,7 +143,6 @@ final class CoreLogicRegressionTests: XCTestCase {
 
     XCTAssertTrue(
       AutoRefreshThrottlePolicy.shouldRefresh(
-        needsInitialSetup: false,
         now: now,
         lastRefreshAt: now.addingTimeInterval(-12),
         minimumInterval: 8

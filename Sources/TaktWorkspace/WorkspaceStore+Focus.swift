@@ -206,6 +206,26 @@ extension WorkspaceStore {
     }
   }
 
+  /// Whether a running session that has handed off to nothing — every queued
+  /// task was blocked at the last handoff — now has a queued task that is
+  /// eligible under `context`. A read, so the app can ask before writing:
+  /// `resumeEligibleFocusQueue` is a write whether or not it resumes anything,
+  /// and a write re-ranks the day, which asked this again, forever, while the
+  /// queue stayed blocked.
+  public func hasResumableFocusQueueTask(context: FocusContext, now: Date = .now) throws -> Bool {
+    try database.read { db in
+      guard let session = try FocusSession.filter(Column("phase") == FocusSessionPhase.running.rawValue)
+        .filter(Column("activeTaskId") == nil).fetchOne(db) else { return false }
+      let queue = try FocusQueueItem.filter(Column("sessionId") == session.id)
+        .filter(Column("state") == FocusQueueState.queued.rawValue).fetchAll(db)
+      guard !queue.isEmpty else { return false }
+      let candidates = Dictionary(uniqueKeysWithValues: try Self.focusCandidates(db, now: now, calendar: .current).map { ($0.id, $0) })
+      return queue.contains { item in
+        candidates[item.taskId].map { TaskAvailabilityPolicy.reasons(for: $0, context: context, now: now).isEmpty } ?? false
+      }
+    }
+  }
+
   public func finishFocusSession(id: String, now: Date = .now) throws {
     try database.write { db in
       guard var session = try FocusSession.fetchOne(db, key: id) else { return }

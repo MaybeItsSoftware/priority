@@ -188,7 +188,6 @@ extension WorkspaceViewModel {
     sidebarCursorID = nil
 
     taskEditor.flush()
-    leaveFullPaneScreens()
     selectedFolderID = nil
     batchingRefreshes {
       enterTask(task)

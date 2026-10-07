@@ -73,6 +73,9 @@ extension WorkspaceViewModel {
     taskEditor.flush()
     // Themes and the choice of one are rows too, and arrive the same way.
     onWorkspaceChangedElsewhere?()
+    // Through `perform` with the mirror on, deliberately: a task ticked off on
+    // a phone, or added by the CLI, is a change the Google Tasks mirror has to
+    // carry too, and this is the one place such a change passes through.
     perform {
       try load()
       // Same clean-up as after undo: whatever was selected may be gone.

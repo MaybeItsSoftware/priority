@@ -206,6 +206,30 @@ final class WorkspaceConditionsTests: XCTestCase {
     XCTAssertEqual(try store.activeFocusSession()?.workDurationSeconds, 1200)
   }
 
+  /// The app asks before it writes: a resume that resumes nothing is still a
+  /// write, and a write re-ranks the day, which asked again — a loop for as
+  /// long as the queue stayed blocked.
+  func testBlockedQueueReportsNothingResumableAndResumingWritesNothing() throws {
+    let first = try task("Laptop"), second = try task("Home")
+    let home = try XCTUnwrap(store.conditions(in: workspace.id).first { $0.name == "Home" })
+    var draft = try edit(second.id); draft.values.requirementGroups = [[home.id]]; try store.saveTaskEditor(draft)
+    let session = try store.startFocusSession(taskId: first.id, now: now)
+    try store.addToFocusQueue(sessionId: session.id, taskId: second.id, plannedSeconds: 1200, now: now)
+    _ = try store.completeActiveFocusTask(sessionId: session.id, now: now)
+    let blocked = try XCTUnwrap(store.activeFocusSession())
+    XCTAssertNil(blocked.activeTaskId)
+
+    let elsewhere = FocusContext()
+    XCTAssertFalse(try store.hasResumableFocusQueueTask(context: elsewhere, now: now))
+    let later = now.addingTimeInterval(60)
+    try store.resumeEligibleFocusQueue(context: elsewhere, now: later)
+    XCTAssertEqual(try store.activeFocusSession(), blocked)
+    XCTAssertEqual(try store.focusQueue(for: session.id).last?.item.state, .queued)
+
+    XCTAssertTrue(try store.hasResumableFocusQueueTask(context: FocusContext(conditionIDs: [home.id]), now: now))
+    XCTAssertNil(try store.activeFocusSession()?.activeTaskId, "asking is a read")
+  }
+
   func testDailyPartialProgressUsesTodaysTargetWithoutDoubleCountingAwards() throws {
     let task = try task()
     let daily = try store.makeDaily(taskId: task.id, targetSeconds: 1800, now: now)

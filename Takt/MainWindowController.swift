@@ -22,9 +22,6 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   private var shortcutShiftTap = DoubleTapModifier()
   private var toolbarController: MainWindowToolbarController?
 
-  /// Refreshes the menu bar title. Shared state means the window moving the
-  /// cursor has to move the status item's label too, exactly as the panel does.
-  var onUpdateMenuBarTitle: (() -> Void)?
   /// Told when the window opens and closes, so the activation policy — a
   /// process-wide setting, not a per-window one — is decided in one place.
   var onVisibilityChanged: ((Bool) -> Void)?
@@ -61,6 +58,8 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       show()
     }
   }
+
+  var isVisible: Bool { window?.isVisible ?? false }
 
   /// Puts the window away without ending the session. The counterpart to
   /// `show()` for a quit that is meant to leave the menu bar behind.
@@ -157,14 +156,6 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   @objc private func screenParametersDidChange(_ notification: Notification) {
     guard let window else { return }
     clampToVisibleScreens(window)
-  }
-
-  private func refresh() {
-    Task { [weak self] in
-      guard let self else { return }
-      await self.manager.syncService.fetchTopTask()
-      self.onUpdateMenuBarTitle?()
-    }
   }
 
   // MARK: - Keyboard

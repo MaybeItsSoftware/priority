@@ -88,6 +88,15 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// The remote ids of the Checkvist lists this workspace already holds a copy
+  /// of, so the app fetches only the rest. A mapping whose local list has since
+  /// been deleted does not count: that list is imported again.
+  var importedCheckvistListIDs: Set<String> {
+    let localIDs = UserDefaults.standard.dictionary(forKey: Self.checkvistWorkspaceListIDsKey) as? [String: String] ?? [:]
+    let present = Set(lists.map(\.id))
+    return Set(localIDs.filter { present.contains($0.value) }.keys)
+  }
+
   /// Mirrors newly discovered Checkvist lists into the desktop sidebar once.
   ///
   /// The desktop workspace deliberately remains local-first: this creates a
