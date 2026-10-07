@@ -170,10 +170,7 @@ struct WorkspaceKanbanColumnView: View {
   /// redraw this one.
   let selectedRowID: String?
   @State private var isDropTargeted = false
-  @State private var isAddingAtTop = false
-  @State private var topTaskTitle = ""
   @State private var visibleCardIDs: Set<String> = []
-  @FocusState private var topComposerFocused: Bool
 
   /// Nothing at rest — the hairline between columns is the strip's, not the
   /// column's. An edge appears only to say something: the keyboard is here, or
@@ -203,17 +200,6 @@ struct WorkspaceKanbanColumnView: View {
           .foregroundStyle(theme.dim)
           .monospacedDigit()
         Spacer()
-        Button {
-          isAddingAtTop = true
-          topComposerFocused = true
-        } label: {
-          Image(systemName: "plus")
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(theme.muted)
-        .focusable()
-        .accessibilityLabel("Add task at top of \(column.title)")
-        .commandHelp(.taskNew, note: "Add highest-priority task in \(column.title)")
         if model.boardColumns.count > 1 {
           Button(role: .destructive) {
             model.removeKanbanColumn(column)
@@ -227,28 +213,6 @@ struct WorkspaceKanbanColumnView: View {
         }
       }
 
-      if isAddingAtTop {
-        TextField("Add at top", text: $topTaskTitle)
-          .textFieldStyle(.plain)
-          .font(theme.bodyFont())
-          .padding(theme.space.xs)
-          .overlay(
-            Rectangle()
-              .strokeBorder(theme.focusRing, lineWidth: theme.hairline))
-          .focused($topComposerFocused)
-          .onSubmit {
-            let title = topTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !title.isEmpty else { return }
-            model.createBoardTask(named: title, in: column, atTop: true)
-            topTaskTitle = ""
-            isAddingAtTop = false
-          }
-          .onExitCommand {
-            topTaskTitle = ""
-            isAddingAtTop = false
-          }
-          .accessibilityLabel("New task at top of \(column.title)")
-      }
       }
       .padding([.horizontal, .top], WorkspaceBoardMetrics.columnPadding(theme))
 
@@ -349,11 +313,8 @@ struct WorkspaceKanbanCard: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   @FocusState private var isCardFocused: Bool
-  @FocusState private var subtaskComposerFocused: Bool
-  @State private var isAddingSubtask = false
   @State private var isDropTargeted = false
   @State private var isHovered = false
-  @State private var newSubtaskTitle = ""
   let task: WorkspaceTask
   let column: WorkspaceKanbanColumn
   /// The selected row when it is this card or one of the subtask rows drawn
@@ -521,41 +482,6 @@ struct WorkspaceKanbanCard: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       .help(task.title)
       .strikethrough(task.status != .open)
-      if !task.isList {
-      Button {
-        if model.activeFocusSession == nil {
-          model.startFocus(on: task)
-        } else if model.activeFocusSession?.activeTaskId == task.id {
-          model.openFocusPanel()
-        } else {
-          model.addToFocusQueue(task)
-        }
-      } label: {
-        Image(systemName: model.activeFocusSession?.activeTaskId == task.id ? "bolt.fill" :
-          model.activeFocusSession == nil ? "bolt" : "plus")
-          .font(theme.captionFont)
-          .foregroundStyle(model.activeFocusSession?.activeTaskId == task.id ? theme.primary : theme.muted)
-      }
-      .buttonStyle(.plain)
-      .focusable()
-      .accessibilityLabel(model.activeFocusSession == nil ? "Focus on \(task.title)" : "Add \(task.title) to focus")
-      .commandHelp(
-        .taskStartFocus,
-        note: model.activeFocusSession == nil ? "Start focus" : "Add to focus queue")
-      }
-      Button {
-        isAddingSubtask = true
-        if isTreeCollapsed { model.toggleFold(of: task) }
-        subtaskComposerFocused = true
-      } label: {
-        Image(systemName: "plus")
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
-      }
-      .buttonStyle(.plain)
-      .focusable()
-      .accessibilityLabel("Add subtask under \(task.title)")
-      .help("Add a subtask")
       if !model.descendants(of: task).isEmpty {
         Button {
           model.toggleFold(of: task)
@@ -594,7 +520,7 @@ struct WorkspaceKanbanCard: View {
   /// card and every task inside one, so drawing it is a dictionary lookup.
   @ViewBuilder private var subtaskTree: some View {
     let items = model.boardTreeUnfoldedRows(of: task)
-    if !items.isEmpty || isAddingSubtask {
+    if !items.isEmpty {
       let limit = WorkspaceBoardMetrics.visibleSubtaskRows
       let parents = TaskOutlineFolding.parentIDs(model.descendants(of: task))
       VStack(alignment: .leading, spacing: 0) {
@@ -616,29 +542,9 @@ struct WorkspaceKanbanCard: View {
           .padding(.vertical, theme.space.xxs)
           .help("Open \(task.title) to see every subtask")
         }
-        if isAddingSubtask { subtaskComposer }
       }
       .padding(.leading, Self.treeInset(theme))
     }
-  }
-
-  private var subtaskComposer: some View {
-    HStack(spacing: 0) {
-      Image(systemName: "plus")
-        .foregroundStyle(theme.muted)
-        .frame(width: Self.indentStep(theme))
-      TextField("Add subtask", text: $newSubtaskTitle)
-        .textFieldStyle(.plain)
-        .focused($subtaskComposerFocused)
-        .onSubmit { submitSubtask() }
-        .onExitCommand {
-          newSubtaskTitle = ""
-          isAddingSubtask = false
-        }
-        .accessibilityLabel("Add subtask under \(task.title)")
-    }
-    .font(theme.captionFont)
-    .padding(.vertical, theme.space.xxs)
   }
 
   private func subtaskRow(_ item: TaskOutlineItem, isFolded: Bool?) -> some View {
@@ -713,13 +619,6 @@ struct WorkspaceKanbanCard: View {
         model.moveDroppedItem(payload, toListID: item.task.listId, parentTaskID: item.task.id)
       }
     }
-  }
-
-  private func submitSubtask() {
-    let title = newSubtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !title.isEmpty else { return }
-    model.createSubtask(named: title, under: task)
-    newSubtaskTitle = ""
   }
 }
 

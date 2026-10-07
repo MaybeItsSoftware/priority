@@ -44,7 +44,7 @@ extension WorkspaceViewModel {
   /// `boardParentTaskID`), where a new card belongs alongside the visible
   /// children rather than appearing above them as a second wrapper.
   @discardableResult
-  func createBoardTask(named title: String, in column: WorkspaceKanbanColumn? = nil, atTop: Bool = false)
+  func createBoardTask(named title: String, in column: WorkspaceKanbanColumn? = nil)
     -> WorkspaceTask?
   {
     if column == nil && taskInsertionReference != nil { createRelativeTask(named: title); return nil }
@@ -58,22 +58,12 @@ extension WorkspaceViewModel {
       let parentID = isMultiListScope
         ? try visibleRootParentTaskID(for: destinationList, store: store) : boardParentTaskID
       let task = try store.createTask(capturing: title, listId: destinationID, parentTaskId: parentID,
-        kanbanColumn: column?.id, atTop: atTop, defaultDueAt: addedTodayDueAt)
+        kanbanColumn: column?.id, defaultDueAt: addedTodayDueAt)
       created = task
       selectedTaskID = task.id
       reloadOutline()
     }
     return created
-  }
-
-  func createSubtask(named title: String, under parent: WorkspaceTask) {
-    guard let store else { return }
-    let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return }
-    perform {
-      _ = try store.createTask(capturing: trimmed, listId: parent.listId, parentTaskId: parent.id)
-      reloadOutline()
-    }
   }
 
   func descendants(of task: WorkspaceTask) -> [TaskOutlineItem] {
