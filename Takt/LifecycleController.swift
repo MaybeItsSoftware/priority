@@ -47,11 +47,17 @@ final class LifecycleController {
     repository.onUsernameChanged = { [weak coordinator] in
       guard let coordinator else { return }
       coordinator.repository.checkvistSyncPlugin.clearAuthentication()
+      // The CLI's copy names the old account; leave it blank until Add.
+      coordinator.integrations.clearSeededCLICredentials()
     }
     repository.onRemoteKeyChanged = { [weak coordinator] newKey in
       guard let coordinator else { return }
       if coordinator.isLoadingStoredRemoteKey { return }
       coordinator.repository.checkvistSyncPlugin.clearAuthentication()
+      // Clearing the key is signing out: the CLI's plaintext copy goes too.
+      if newKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        coordinator.integrations.clearSeededCLICredentials()
+      }
       if let failure = coordinator.repository.checkvistSyncPlugin.persistRemoteKey(
         newKey, useKeychainStorage: coordinator.usesKeychainStorage)
       {

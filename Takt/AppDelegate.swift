@@ -150,6 +150,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     workspace.onLocalWrite = { [weak checkvistManager] in
       checkvistManager?.googleTasksMirror.scheduleSync()
     }
+    // The mirror and the calendar watcher write through the store directly,
+    // and the external-write poll ignores this process's own commits, so
+    // without this a phone tick would wait for the next edit to show.
+    checkvistManager.googleTasksMirror.onWroteLocally = { [weak workspace] in
+      workspace?.reloadAfterExternalWrite()
+    }
+    checkvistManager.googleCalendarCompletions.onWroteLocally = { [weak workspace] in
+      workspace?.reloadAfterExternalWrite()
+    }
     workspace.onGoogleCalendarEventCreated = { [weak checkvistManager] taskID, eventID in
       checkvistManager?.googleCalendarCompletions.watch(eventID: eventID, forTask: taskID)
     }
@@ -498,6 +507,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   func applicationWillTerminate(_ notification: Notification) {
     workspace?.taskEditor.flush()
     workspace?.pauseFocus()
+    // The agent's child process would otherwise learn of the quit only from
+    // its stdin closing; end it here, escalating if it ignores SIGTERM.
+    workspace?.agent.shutdown()
     // Optional because termination can arrive before the manager is built —
     // reaching through an implicitly-unwrapped optional here used to crash the
     // MCP server on shutdown, back when `--mcp-server` ran inside this app.

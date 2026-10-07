@@ -54,7 +54,15 @@ final class DailyLogService {
   /// case, so these are not fatal — but they are the user's history and their
   /// configuration silently not being kept, which they need to hear about
   /// rather than discover at the next launch. Set by `DailyLogManager`.
-  var onPersistenceError: ((Error) -> Void)?
+  var onPersistenceError: ((Error) -> Void)? {
+    didSet {
+      // A dailies file that was already broken at launch is reported as soon
+      // as there is someone to tell.
+      if onPersistenceError != nil, reportedDailiesLoadFailure == nil {
+        loadDailiesReportingFailure()
+      }
+    }
+  }
 
   private var directoryWatcher: DispatchSourceFileSystemObject?
   private var logFileWatcher: DispatchSourceFileSystemObject?
@@ -95,9 +103,12 @@ final class DailyLogService {
     } catch {
       let description = error.localizedDescription
       logger.error("Dailies file unreadable: \(description, privacy: .public)")
-      if reportedDailiesLoadFailure != description {
+      // Only counted as reported once somebody heard it: the first load runs
+      // in `init`, before `DailyLogManager` has set the callback, and marking
+      // it reported then would swallow a file that was broken at launch.
+      if reportedDailiesLoadFailure != description, let onPersistenceError {
         reportedDailiesLoadFailure = description
-        onPersistenceError?(error)
+        onPersistenceError(error)
       }
     }
   }

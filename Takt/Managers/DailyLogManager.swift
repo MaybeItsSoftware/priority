@@ -93,6 +93,11 @@ protocol DailyLogDataSource: AnyObject {
       self.cachedCompletedDailyIds = nil
       self.revision &+= 1
     }
+    // A write that failed is still applied in memory; say so rather than let
+    // the screen and the file quietly disagree.
+    self.plugin.onPersistenceError = { [weak self] error in
+      self?.onError?(error.localizedDescription)
+    }
   }
 
   // MARK: - Recording

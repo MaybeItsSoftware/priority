@@ -551,6 +551,7 @@ extension AppCoordinator {
   @MainActor func resetOnboardingForDebug() {
     #if DEBUG
       repository.checkvistSyncPlugin.clearAuthentication()
+      integrations.clearSeededCLICredentials()
       repository.errorMessage = nil
       let resetState = OnboardingResetPolicy.reset(
         OnboardingResetState(

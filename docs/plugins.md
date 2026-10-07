@@ -10,6 +10,10 @@ Takt ships with native plugins only. Plugins are self-contained and live under:
 - `Takt/Plugins/Native/DailyLog/`
 - `Takt/Plugins/Native/Celebration/`
 - `Takt/Plugins/Native/Theme/`
+- `Takt/Plugins/Native/Google/`, `GoogleTasks/` — the shared Google account and the Tasks mirror
+- `Takt/Plugins/Native/Offline/` — the offline task store the sync plugin falls back to (`OfflineTaskSyncPlugin`, `LocalTaskStore`)
+
+Helpers two or more plugins share, and that belong to none of them, live in `Takt/Plugins/Support/` (`FormURLEncoding`, `SecurityScopedFolderBookmark`). Nothing plugin-specific goes there.
 
 `SettingsView` renders plugin settings from active native plugins through shared protocols.
 

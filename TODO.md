@@ -182,9 +182,10 @@ Worth an eye from someone who owns the palette:
 ### Known-good backlog, not yet claimed
 
 - SwiftLint's standing warnings. After the 2026-10-07 cleanup the count over
-  `Takt/` and `Sources/` is **6 warnings, 0 errors**: four `type_body_length`
-  / `function_body_length`, one `file_length`, one `cyclomatic_complexity`,
-  all on the known large files. **This is the single place that number
+  `Takt/` and `Sources/` is **5 warnings, 0 errors**: three
+  `type_body_length` (`TaskMutationService`, `DayView`, `WorkspaceStore`), one
+  `function_body_length` (`AppCoordinator`'s init) and one
+  `cyclomatic_complexity` (`TaskVisibilityEngine`). **This is the single place that number
   lives** — `ci.yml` and `ARCHITECTURE_IMPROVEMENT_PLAN.md` point here rather
   than carrying their own copy. Do not add to it;
   `ARCHITECTURE_IMPROVEMENT_PLAN.md` tracks the decomposition that would clear
