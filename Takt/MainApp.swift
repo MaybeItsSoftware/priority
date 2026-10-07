@@ -100,6 +100,10 @@ struct MainApp: App {
           AppDelegate.shared.workspace.requestKeyboardFocus(.tasks)
         }
         .commandShortcut(.goEverything)
+        Button("Inbox") {
+          AppDelegate.shared.workspace.run(.goInbox)
+        }
+        .commandShortcut(.goInbox)
         Button("Inspector") {
           AppDelegate.shared.workspace.toggleInspector()
         }

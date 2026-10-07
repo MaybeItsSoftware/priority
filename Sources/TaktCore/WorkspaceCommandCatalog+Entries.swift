@@ -42,7 +42,7 @@ public enum WorkspaceCommandCatalog {
   // MARK: - Go
 
   private static let go: [WorkspaceCommand] = [
-    .init(id: .goToday, title: "Go to Today", group: "Go", keys: ["cmd+1"]),
+    .init(id: .goToday, title: "Go to Today", group: "Go", keys: ["cmd+1", "cmd+t"]),
     // Up and down the sidebar's lists without going to the sidebar, and
     // Zed's previous / next tab (`cmd-{` / `cmd-}`), a list being what a tab is.
     .init(
@@ -60,8 +60,11 @@ public enum WorkspaceCommandCatalog {
     .init(id: .goOutline, title: "Go to Outline", group: "Go", keys: ["cmd+3"]),
     .init(id: .goMatrix, title: "Go to Matrix", group: "Go", keys: ["cmd+4"]),
     .init(
-      id: .goEverything, title: "Open Everything", group: "Go", keys: ["cmd+0", "gh"],
+      id: .goEverything, title: "Open Everything", group: "Go", keys: ["cmd+e", "cmd+0", "gh"],
       note: "Every task across all active lists"),
+    .init(
+      id: .goInbox, title: "Open the Inbox", group: "Go", keys: ["cmd+i"],
+      note: "Where quick capture lands"),
     .init(
       id: .goFocus, title: "Open the focus panel", group: "Go", keys: ["cmd+8"],
       note: "Pick a task and start it, or bring back the block already running"),
@@ -125,7 +128,7 @@ public enum WorkspaceCommandCatalog {
     .init(id: .taskEditRecurrence, title: "Edit how it repeats", group: "Task", keys: ["dr", "cmd+ctrl+r"]),
     .init(id: .taskEditStart, title: "Edit the start date", group: "Task", keys: ["option+s"]),
     .init(id: .taskEditEstimate, title: "Edit the time estimate", group: "Task", keys: ["option+t"]),
-    .init(id: .taskDueToday, title: "Due today", group: "Task", keys: ["td", "cmd+t"]),
+    .init(id: .taskDueToday, title: "Due today", group: "Task", keys: ["td", "cmd+option+t"]),
     .init(id: .taskDueTomorrow, title: "Due tomorrow", group: "Task", keys: ["tm", "cmd+shift+t"]),
     .init(id: .taskClearDue, title: "Clear the due date", group: "Task", keys: ["cd"]),
     .init(id: .taskClearNotes, title: "Clear the notes", group: "Task", keys: ["cn"]),
@@ -146,8 +149,8 @@ public enum WorkspaceCommandCatalog {
       id: .taskWaiting, title: "Waiting on: who, and when to follow up", group: "Task",
       keys: ["ww"],
       note: "Moves the task to Waiting on. At the follow-up time, if it is still waiting, a follow-up lands in Today"),
-    // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T is
-    // already "due today", which is a date rather than a choice.
+    // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T goes to
+    // Today.
     .init(
       id: .taskTogglePlannedToday, title: "Plan for today, or take it off", group: "Task",
       keys: ["ctrl+t"],
@@ -256,7 +259,7 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .listRename, title: "Rename the list or folder", group: "Lists", keys: ["cmd+r"],
       surfaceKeys: [.sidebar: ["f2", "shift+r"]], note: "From a task pane, the list you are in"),
-    .init(id: .listSettings, title: "Open list settings", group: "Lists", keys: ["cmd+i", "oo"]),
+    .init(id: .listSettings, title: "Open list settings", group: "Lists", keys: ["oo", "cmd+option+i"]),
     .init(id: .listArchive, title: "Archive the current list", group: "Lists", keys: ["cmd+option+a"]),
     .init(
       id: .listRestore, title: "Restore the last archived list", group: "Lists",

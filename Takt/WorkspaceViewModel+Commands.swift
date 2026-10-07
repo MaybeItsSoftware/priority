@@ -94,6 +94,10 @@ extension WorkspaceViewModel {
       leaveFullPaneScreens()
       selectEverything()
       requestKeyboardFocus(.tasks)
+    case .goInbox:
+      // selectList leaves a full-pane screen itself.
+      if let inbox = inboxList { selectList(inbox.id) }
+      requestKeyboardFocus(.tasks)
     case .goFocus: openFocusPanel()
     case .goTimeline:
       if showsTimelineScreen { dismissTimelineScreen() } else { presentTimelineScreen() }

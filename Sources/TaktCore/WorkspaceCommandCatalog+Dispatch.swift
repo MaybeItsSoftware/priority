@@ -32,7 +32,7 @@ extension WorkspaceCommandCatalog {
   /// it would make `l` a sequence starter on the timeline, where `l` steps a
   /// day forward on its own — so it would wait out the timeout.
   public static let reachableFromFullPaneScreens: Set<WorkspaceCommandID> = [
-    .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline,
+    .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goInbox, .goFocus, .goTimeline,
     .goSearch, .goCommandPalette, .goKeyboardReference,
     .windowUndo, .windowRedo, .windowToggleSidebar, .windowToggleInspectorPane,
     .windowToggleDoneRail, .windowToggleAgentPanel, .windowToggleProgressDock,
@@ -43,7 +43,7 @@ extension WorkspaceCommandCatalog {
   /// each is how you leave the field to do something else. Undo is not one of
   /// them: inside a field `⌘Z` belongs to the text being typed.
   public static let reachableFromTextField: Set<WorkspaceCommandID> = [
-    .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goFocus, .goTimeline,
+    .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goInbox, .goFocus, .goTimeline,
     .goSidebarRegion, .goTaskRegion, .goInspectorRegion, .goCycleRegion,
     .taskNew, .listNew, .folderNew, .listNewTaskDestination,
     .goKeyboardReference, .goCommandPalette, .goSearch, .goListNavigator,
