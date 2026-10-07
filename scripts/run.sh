@@ -1,11 +1,14 @@
-#!/bin/bash
-set -o pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Configuration
+# Configuration. Resolved from the script's own location, like the other
+# scripts, so this works from any directory rather than only the repo root.
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+XCODEPROJ="$ROOT_DIR/Takt.xcodeproj"
 SCHEME="Takt"
 PRODUCT="Takt"
 CONFIG="Debug"
-BUILD_DIR="$(pwd)/build"
+BUILD_DIR="$ROOT_DIR/build"
 
 # `SYMROOT` puts products at $BUILD_DIR/$CONFIG, so the binary's location is
 # known up front. It used to be discovered with
@@ -21,6 +24,7 @@ echo "🚀 Building $PRODUCT ($CONFIG)..."
 
 # Using -quiet to keep it clean since xcpretty is missing
 if ! xcodebuild build \
+    -project "$XCODEPROJ" \
     -scheme "$SCHEME" \
     -configuration "$CONFIG" \
     -destination "platform=macOS" \
@@ -39,7 +43,7 @@ fi
 
 # Guard against launching something older than the sources. Cheap insurance
 # against an incremental build that quietly no-op'd.
-NEWER_SOURCE=$(find Takt -name '*.swift' -newer "$BINARY_PATH" -print -quit 2>/dev/null)
+NEWER_SOURCE=$(find "$ROOT_DIR/Takt" "$ROOT_DIR/Sources" -name '*.swift' -newer "$BINARY_PATH" -print -quit 2>/dev/null || true)
 if [ -n "$NEWER_SOURCE" ]; then
     echo "❌ Error: $NEWER_SOURCE is newer than the built binary."
     echo "   The build did not pick up your changes. Try: rm -rf \"$BUILD_DIR/$CONFIG\""
@@ -53,8 +57,8 @@ echo "   Built:  $(date -r "$BINARY_PATH" '+%Y-%m-%d %H:%M:%S')"
 # Kill any running instance, including one launched from a different path (a
 # previously-installed copy in /Applications, or an older build directory).
 # The old name too, for an install of the app from before it was Takt.
-pkill -f "$PRODUCT.app/Contents/MacOS/$PRODUCT" 2>/dev/null
-pkill -f "Priority.app/Contents/MacOS/Priority" 2>/dev/null
+pkill -f "$PRODUCT.app/Contents/MacOS/$PRODUCT" 2>/dev/null || true
+pkill -f "Priority.app/Contents/MacOS/Priority" 2>/dev/null || true
 sleep 0.5
 
 echo "Running: $BINARY_PATH"

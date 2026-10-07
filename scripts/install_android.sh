@@ -40,5 +40,8 @@ if ! "$adb" install -r "$apk"; then
   "$adb" uninstall uk.co.maybeitssoftware.takt >/dev/null || true
   "$adb" install "$apk"
 fi
+# The applicationId (uk.co.maybeitssoftware.takt) and the Kotlin namespace
+# (uk.co.maybeitsadam.takt) differ on purpose — the package name is stored
+# data on the Play Console, the namespace is source — so this is not a rename miss.
 "$adb" shell am start -n uk.co.maybeitssoftware.takt/uk.co.maybeitsadam.takt.MainActivity >/dev/null
 echo "Installed."

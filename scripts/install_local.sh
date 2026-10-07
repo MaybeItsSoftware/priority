@@ -97,8 +97,12 @@ echo "==> Launching…"
 open "$INSTALL_PATH"
 
 echo
-echo "Installed. Previous version kept at:"
-echo "  $BACKUP_PATH"
-echo
-echo "To roll back:"
-echo "  killall '$PROCESS_NAME'; rm -rf '$INSTALL_PATH' && ditto '$BACKUP_PATH' '$INSTALL_PATH' && open '$INSTALL_PATH'"
+if [[ -d "$BACKUP_PATH" ]]; then
+  echo "Installed. Previous version kept at:"
+  echo "  $BACKUP_PATH"
+  echo
+  echo "To roll back:"
+  echo "  killall '$PROCESS_NAME'; rm -rf '$INSTALL_PATH' && ditto '$BACKUP_PATH' '$INSTALL_PATH' && open '$INSTALL_PATH'"
+else
+  echo "Installed. (No previous Takt.app was found in /Applications, so there is no backup to roll back to.)"
+fi

@@ -31,34 +31,34 @@ jobs:
       - name: Run swift tests with coverage
         run: swift test --enable-code-coverage
 
+      # The previous step ran with --enable-code-coverage, so a missing
+      # profile or bundle here means the report is silently absent, not that
+      # coverage is optional. Fail the step rather than print a warning nobody
+      # reads in a green run.
       - name: Report code coverage
         run: |
           BIN_PATH=$(swift build --show-bin-path)
           XCTEST_PATH=$(find "${BIN_PATH}" -name '*.xctest' -type d | head -1)
-          if [ -n "$XCTEST_PATH" ]; then
-            EXECUTABLE="${XCTEST_PATH}/Contents/MacOS/$(basename "${XCTEST_PATH}" .xctest)"
-            COV_DIR=$(dirname "${BIN_PATH}")/codecov
-            PROFDATA=$(find "${COV_DIR}" -name 'default.profdata' 2>/dev/null | head -1)
-            if [ -n "$PROFDATA" ]; then
-              xcrun llvm-cov report "${EXECUTABLE}" -instr-profile="${PROFDATA}" \
-                -ignore-filename-regex='(Tests|\.build)'
-            else
-              echo "::warning::No profdata found — code coverage report skipped."
-            fi
-          else
-            echo "::warning::No xctest bundle found — code coverage report skipped."
+          if [ -z "$XCTEST_PATH" ]; then
+            echo "::error::No .xctest bundle under ${BIN_PATH} — coverage report cannot run."
+            exit 1
           fi
+          EXECUTABLE="${XCTEST_PATH}/Contents/MacOS/$(basename "${XCTEST_PATH}" .xctest)"
+          COV_DIR=$(dirname "${BIN_PATH}")/codecov
+          PROFDATA=$(find "${COV_DIR}" -name 'default.profdata' 2>/dev/null | head -1)
+          if [ -z "$PROFDATA" ]; then
+            echo "::error::No default.profdata under ${COV_DIR} — swift test ran without producing coverage."
+            exit 1
+          fi
+          xcrun llvm-cov report "${EXECUTABLE}" -instr-profile="${PROFDATA}" \
+            -ignore-filename-regex='(Tests|\.build)'
 
-  # `.swiftlint.yml` has existed since the start but nothing ever ran it, so
-  # the limits it sets — notably the 1,500-line file-length *error* that
-  # `ARCHITECTURE_IMPROVEMENT_PLAN.md` calls "the constraint" — were never
-  # enforced, and `PopoverView.swift` grew back past 1,400 lines with no signal.
-  #
-  # Deliberately not `--strict`: the config's warning thresholds flag a handful
-  # of genuinely large functions that are tracked in the plan rather than fixed
-  # in passing. Failing on warnings would mean either churn or a suppression
-  # spree. SwiftLint exits non-zero on *errors* only, which is exactly the line
-  # the config draws.
+  # `.swiftlint.yml` sets a 1,500-line file-length *error* and a handful of
+  # length/complexity *warnings*. Deliberately not `--strict`: SwiftLint exits
+  # non-zero on errors only, so an oversize file blocks the merge while the
+  # remaining warnings — all type/function/file length or complexity on the
+  # known large files — stay advisory. Their count and the list of files is
+  # tracked in TODO.md, the single place that number lives; don't add to it.
   lint:
     runs-on: macos-15
     timeout-minutes: 10

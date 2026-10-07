@@ -34,7 +34,7 @@ else
 fi
 
 BUILD_DIR="$PROJECT_DIR/build"
-DERIVED_DIR="/tmp/priority-derived-release"
+DERIVED_DIR="/tmp/takt-derived-release"
 STAGE_DIR="$BUILD_DIR/dmg-stage"
 RW_DMG="$BUILD_DIR/${DMG_BASENAME}-rw.dmg"
 FINAL_DMG="$BUILD_DIR/${DMG_BASENAME}.dmg"
@@ -42,13 +42,22 @@ FINAL_DMG="$BUILD_DIR/${DMG_BASENAME}.dmg"
 rm -rf "$DERIVED_DIR" "$STAGE_DIR" "$RW_DMG" "$FINAL_DMG"
 mkdir -p "$BUILD_DIR" "$STAGE_DIR"
 
+# The version the DMG is named after is also the version the bundle reports,
+# the way scripts/build_app_store.sh does it for the phone: MARKETING_VERSION
+# from the argument (when given) and CURRENT_PROJECT_VERSION from the commit
+# count, so two DMGs built from different commits never share a build number.
+BUILD_NUMBER="$(git -C "$ROOT_DIR" rev-list --count HEAD)"
 XCODEBUILD_ARGS=(
   -project "$XCODEPROJ"
   -scheme "$SCHEME"
   -configuration Release
   -derivedDataPath "$DERIVED_DIR"
   -quiet
+  "CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
 )
+if [[ -n "$VERSION" ]]; then
+  XCODEBUILD_ARGS+=("MARKETING_VERSION=$VERSION")
+fi
 if [[ $DISTRIBUTABLE -eq 1 ]]; then
   XCODEBUILD_ARGS+=("CODE_SIGN_IDENTITY=$SIGN_IDENTITY")
 fi
@@ -75,8 +84,9 @@ fi
 cp -R "$APP_PATH" "$STAGE_DIR/"
 ln -s /Applications "$STAGE_DIR/Applications"
 
+# No fixed -size: hdiutil sizes the image from -srcfolder, so a bigger app
+# (the bundled CLI alone is tens of MB) can't overflow a hard-coded 64m.
 hdiutil create \
-  -size 64m \
   -fs HFS+ \
   -volname "$VOL_NAME" \
   -srcfolder "$STAGE_DIR" \

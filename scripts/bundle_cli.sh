@@ -54,9 +54,17 @@ mkdir -p "$HELPERS_DIR"
 cp -p "$BINARY" "$DEST"
 
 # Nested binaries have to be signed before Xcode signs the bundle around them;
-# an unsigned one fails notarisation under the hardened runtime.
+# an unsigned one fails notarisation under the hardened runtime. So does one
+# signed without a secure timestamp, so a real identity gets --timestamp (a
+# network round trip to Apple's timestamp server); only the ad-hoc "-"
+# identity, which can't be notarised anyway, uses --timestamp=none.
 IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:--}"
 [[ -z "$IDENTITY" ]] && IDENTITY="-"
-codesign --force --sign "$IDENTITY" --options runtime --timestamp=none "$DEST"
+if [[ "$IDENTITY" == "-" ]]; then
+  TIMESTAMP_FLAG="--timestamp=none"
+else
+  TIMESTAMP_FLAG="--timestamp"
+fi
+codesign --force --sign "$IDENTITY" --options runtime "$TIMESTAMP_FLAG" "$DEST"
 
 echo "note: bundled $(basename "$BINARY") -> $DEST"
