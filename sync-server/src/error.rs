@@ -17,8 +17,6 @@ pub enum AppError {
     #[error("missing, expired or unknown access token")]
     Unauthorized,
     #[error("{0}")]
-    Forbidden(String),
-    #[error("{0}")]
     Unavailable(String),
     #[error("internal error: {0}")]
     Internal(String),
@@ -33,7 +31,6 @@ impl IntoResponse for AppError {
         let status = match &self {
             AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
-            AppError::Forbidden(_) => StatusCode::FORBIDDEN,
             AppError::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,

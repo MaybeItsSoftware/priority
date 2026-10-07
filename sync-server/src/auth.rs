@@ -157,7 +157,14 @@ impl Verifier {
                 Some(found) => Some(found),
                 None => {
                     // A key we haven't seen: the project may have rotated.
-                    self.refresh().await?;
+                    // A failed fetch is logged and answered 401, not 500: the
+                    // token is unverifiable either way, and 401 is what sends
+                    // a client to refresh it and try again, where a 5xx would
+                    // leave it retrying the same token.
+                    if let Err(error) = self.refresh().await {
+                        tracing::warn!(%error, "could not refresh the signing keys");
+                        return Err(AppError::Unauthorized);
+                    }
                     self.keys.read().expect("keys lock").get(&kid).cloned()
                 }
             };
@@ -205,7 +212,8 @@ fn device_id(headers: &HeaderMap) -> Result<Option<Uuid>> {
 
 /// Middleware for every route that needs a signed-in user. Touches the
 /// device's `last_seen_at` on the way, so the device list shows which are
-/// still syncing.
+/// still syncing — at most every five minutes, since every long-poll passes
+/// through here and the list only needs to be roughly right.
 pub async fn require_user(
     State(state): State<AppState>,
     mut request: Request,
@@ -215,11 +223,14 @@ pub async fn require_user(
     let (account, email) = state.verifier.verify(token).await?;
     let device = device_id(request.headers())?;
     if let Some(device) = device {
-        sqlx::query("UPDATE devices SET last_seen_at = now() WHERE id = $1 AND account_id = $2")
-            .bind(device)
-            .bind(account)
-            .execute(&state.pool)
-            .await?;
+        sqlx::query(
+            "UPDATE devices SET last_seen_at = now() WHERE id = $1 AND account_id = $2 \
+             AND (last_seen_at IS NULL OR last_seen_at < now() - interval '5 minutes')",
+        )
+        .bind(device)
+        .bind(account)
+        .execute(&state.pool)
+        .await?;
     }
     request.extensions_mut().insert(Caller {
         account,

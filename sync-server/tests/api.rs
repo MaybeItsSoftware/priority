@@ -460,6 +460,43 @@ async fn an_idle_long_poll_returns_empty_when_its_wait_runs_out(pool: PgPool) {
 /// The token in a reset email's link.
 
 #[sqlx::test(migrator = "MIGRATOR")]
+async fn a_device_registers_only_itself(pool: PgPool) {
+    // The victim's device, on their account.
+    let server = server(pool).await;
+    let (victim_device, victim) = server.sign_up("victim@example.com", "Mac").await;
+    let (_, attacker) = server.sign_up("attacker@example.com", "Mac").await;
+
+    // Naming someone else's device id from your own device is refused...
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/devices",
+            Some(&attacker),
+            Some(json!({"id": victim_device, "name": "Mine now", "platform": "macos"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    // ...as is registering with no device header to compare against.
+    let bare = attacker.split_once('|').expect("jwt|device").0;
+    let (status, _) = server
+        .call(
+            "POST",
+            "/v1/devices",
+            Some(bare),
+            Some(json!({"id": victim_device, "name": "Mine now", "platform": "macos"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    // And the device stayed where it was.
+    let (_, body) = server.call("GET", "/v1/account", Some(&victim), None).await;
+    let devices = body["devices"].as_array().expect("devices");
+    assert_eq!(devices.len(), 1);
+    assert_eq!(devices[0]["name"], "Mac");
+}
+
+#[sqlx::test(migrator = "MIGRATOR")]
 async fn the_account_lists_its_devices_and_signing_out_drops_one(pool: PgPool) {
     let server = server(pool).await;
     let (_, mac) = server.sign_up("me@example.com", "Mac").await;

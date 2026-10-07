@@ -45,9 +45,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .acquire_timeout(Duration::from_secs(10))
         .after_connect(|connection, _| {
             Box::pin(async move {
-                sqlx::query("CREATE SCHEMA IF NOT EXISTS sync")
-                    .execute(&mut *connection)
-                    .await?;
+                // Postgres resolves the path when it is used, not when it is
+                // set, so this holds on the first connection too, before the
+                // schema below exists.
                 sqlx::query("SET search_path TO sync")
                     .execute(&mut *connection)
                     .await?;
@@ -55,6 +55,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
         })
         .connect(&config.database_url)
+        .await?;
+    // Once, before the migrations, rather than on every new connection.
+    sqlx::query("CREATE SCHEMA IF NOT EXISTS sync")
+        .execute(&pool)
         .await?;
     MIGRATOR.run(&pool).await?;
     tracing::info!("migrations applied");

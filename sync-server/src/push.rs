@@ -89,7 +89,7 @@ fn validate(change: WireChange) -> Result<Change> {
     let op = match change.op {
         WireOp::Delete => Op::Delete,
         WireOp::Upsert => {
-            let values = change.values.clone().unwrap_or_default();
+            let values = change.values.unwrap_or_default();
             // SQLite stores null, numbers and text; anything else would
             // arrive on another device as something it cannot write back.
             if let Some((column, _)) = values.iter().find(|(_, value)| {

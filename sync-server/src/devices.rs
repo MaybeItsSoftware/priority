@@ -4,7 +4,7 @@
 //! server only learns of a device when it registers itself after signing in.
 
 use crate::AppState;
-use crate::auth::Caller;
+use crate::auth::{Caller, DEVICE_HEADER};
 use crate::error::{AppError, Result};
 use axum::extract::State;
 use axum::{Extension, Json};
@@ -25,11 +25,29 @@ pub struct RegisterRequest {
 
 /// `POST /v1/devices`: records the calling device on the account, after each
 /// sign-in. A device that was on another account moves to this one.
+///
+/// The body's `id` must be the device the request comes from — the
+/// `X-Priority-Device` header, which every client already sends with the same
+/// value. Otherwise any signed-in user could name an arbitrary id here and
+/// move that device off whichever account it was on.
 pub async fn register(
     State(state): State<AppState>,
     Extension(caller): Extension<Caller>,
     Json(request): Json<RegisterRequest>,
 ) -> Result<Json<Value>> {
+    match caller.device {
+        Some(device) if device == request.id => {}
+        Some(_) => {
+            return Err(AppError::BadRequest(format!(
+                "id does not match the {DEVICE_HEADER} header"
+            )));
+        }
+        None => {
+            return Err(AppError::BadRequest(format!(
+                "registering a device needs the {DEVICE_HEADER} header"
+            )));
+        }
+    }
     sqlx::query(
         "INSERT INTO devices (id, account_id, name, platform, created_at, last_seen_at) \
          VALUES ($1, $2, $3, $4, now(), now()) \
