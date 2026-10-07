@@ -541,6 +541,9 @@ struct WorkspaceKeyboardReference: View {
   @Environment(\.theme) private var theme
   let overlayID: String
   @State private var query = ""
+  /// The row ↑↓ walk and ↩ runs. A reference you could filter but not act on
+  /// left you typing a name and then having to go and press the key it named.
+  @State private var selection: WorkspaceCommandID?
 
   /// What the typed text does as a key, ahead of every title it appears in:
   /// `m` should answer "what does m do" before it lists "Move", "Mark"…
@@ -563,38 +566,60 @@ struct WorkspaceKeyboardReference: View {
     return order.map { ($0, byGroup[$0] ?? []) }
   }
 
+  /// Every row in the order drawn, less the motions: as in the palette, ↑↓
+  /// skip rows that ↩ would do nothing to.
+  private var runnable: [WorkspaceCommandID] {
+    (keyMatches + groups.flatMap(\.commands)).filter { $0.kind == .action }.map(\.id)
+  }
+
   var body: some View {
     VStack(spacing: 0) {
       WorkspaceOverlayField(symbol: "keyboard", prompt: "Filter the keyboard reference", text: $query)
       FocusRule()
-      ScrollView {
-        LazyVStack(alignment: .leading, spacing: theme.space.md) {
-          let keyed = keyMatches
-          if !keyed.isEmpty {
-            VStack(alignment: .leading, spacing: theme.space.xs) {
-              MicroLabel("Pressing \(query.trimmingCharacters(in: .whitespaces))")
-              ForEach(keyed) { command in
-                row(command)
+      ScrollViewReader { proxy in
+        ScrollView {
+          LazyVStack(alignment: .leading, spacing: theme.space.md) {
+            let keyed = keyMatches
+            if !keyed.isEmpty {
+              VStack(alignment: .leading, spacing: theme.space.xs) {
+                MicroLabel("Pressing \(query.trimmingCharacters(in: .whitespaces))")
+                ForEach(keyed) { command in
+                  row(command)
+                }
+              }
+            }
+            ForEach(groups, id: \.name) { group in
+              VStack(alignment: .leading, spacing: theme.space.xs) {
+                MicroLabel(group.name)
+                ForEach(group.commands) { command in
+                  row(command)
+                }
               }
             }
           }
-          ForEach(groups, id: \.name) { group in
-            VStack(alignment: .leading, spacing: theme.space.xs) {
-              MicroLabel(group.name)
-              ForEach(group.commands) { command in
-                row(command)
-              }
-            }
-          }
+          .padding(theme.space.md)
         }
-        .padding(theme.space.md)
+        .frame(height: WorkspaceOverlayMetrics.listHeight)
+        .onChange(of: selection) { _, id in
+          guard let id else { return }
+          proxy.scrollTo(id, anchor: .center)
+        }
       }
-      .frame(height: WorkspaceOverlayMetrics.listHeight)
-      WorkspaceOverlayFooter(hints: "⌘K runs any of these · ↩ or esc close")
+      WorkspaceOverlayFooter(hints: "↑↓ choose · ↩ run · esc close")
     }
+    .onAppear { selection = runnable.first }
+    .onChange(of: query) { _, _ in selection = runnable.first }
     .overlayKeys(model, id: overlayID) { key in
+      if let step = WorkspaceOverlayStep.offset(for: key) {
+        move(by: step)
+        return true
+      }
       guard key == "enter" else { return false }
-      model.dismissOverlay()
+      if let id = selection, let command = WorkspaceCommandCatalog.byID[id] {
+        run(command)
+      } else {
+        model.dismissOverlay()
+      }
       return true
     }
   }
@@ -604,7 +629,7 @@ struct WorkspaceKeyboardReference: View {
       VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text(command.title)
           .font(theme.bodyFont())
-          .foregroundStyle(theme.ink)
+          .foregroundStyle(command.kind == .motion ? theme.muted : theme.ink)
         if let note = command.note {
           Text(note).font(theme.captionFont).foregroundStyle(theme.dim)
         }
@@ -615,5 +640,27 @@ struct WorkspaceKeyboardReference: View {
       }
       KeyCapRow(keys: command.displayKeys)
     }
+    .overlayRow(isSelected: selection == command.id)
+    .id(command.id)
+    .contentShape(Rectangle())
+    .onTapGesture { run(command) }
+  }
+
+  private func move(by offset: Int) {
+    let ids = runnable
+    guard !ids.isEmpty else { return }
+    guard let current = selection, let index = ids.firstIndex(of: current) else {
+      selection = ids.first
+      return
+    }
+    selection = ids[min(max(index + offset, 0), ids.count - 1)]
+  }
+
+  /// Closed first, for the palette's reason: what runs may open an overlay
+  /// or move the caret, and this one still being up would undo that.
+  private func run(_ command: WorkspaceCommand) {
+    guard command.kind == .action else { return }
+    model.dismissOverlay()
+    model.run(command.id)
   }
 }
