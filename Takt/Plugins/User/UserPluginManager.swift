@@ -50,6 +50,7 @@ import UniformTypeIdentifiers
     case invalidEntrypointPath(String)
     case missingEntrypoint(String)
     case archiveExtractionFailed
+    case archiveTooLarge(bytes: Int, limit: Int)
 
     var errorDescription: String? {
       switch self {
@@ -86,6 +87,11 @@ import UniformTypeIdentifiers
         return "Entrypoint '\(path)' does not exist in the plugin folder."
       case .archiveExtractionFailed:
         return "Failed to extract plugin archive."
+      case .archiveTooLarge(let bytes, let limit):
+        let formatter = ByteCountFormatter()
+        return
+          "Plugin package is \(formatter.string(fromByteCount: Int64(bytes))); the limit is "
+          + "\(formatter.string(fromByteCount: Int64(limit)))."
       }
     }
   }
@@ -98,6 +104,15 @@ import UniformTypeIdentifiers
   private static let knownPluginIdentifiersDefaultsKey = "userPluginKnownIdentifiers"
   private static let pluginSettingValuesDefaultsKey = "userPluginSettingValuesByPluginIdentifier"
   private static let supportedPluginAPIVersion = UserPluginManifest.defaultPluginAPIVersion
+
+  /// A plugin is a manifest, a script and maybe an icon. Fifty megabytes
+  /// compressed is already generous; without a cap, choosing the wrong file
+  /// in the open panel would hand `ditto` a multi-gigabyte archive to
+  /// unpack into the temporary directory.
+  nonisolated static let maximumArchiveByteCount = 50 * 1_024 * 1_024
+  /// The cap on what the archive unpacks *to*, which is the one that matters
+  /// for a zip bomb — a few kilobytes that inflate without limit.
+  nonisolated static let maximumExtractedByteCount = 250 * 1_024 * 1_024
 
   private static let allowedCapabilities: Set<String> = [
     "checkvist-sync",
@@ -188,6 +203,13 @@ import UniformTypeIdentifiers
       var resolvedPlugins: [InstalledUserPlugin] = []
       var resolvedIssues: [PluginValidationIssue] = []
       var identifiersSeen = Set<String>()
+      // Every plugin that is *on disk*, valid or not. The bookkeeping below —
+      // what is known, what is enabled, whose settings to keep — has to be
+      // done against this set rather than the valid one: a plugin that fails
+      // validation (an app downgrade, a half-edited manifest) used to read as
+      // "uninstalled", so its settings were deleted and, once it validated
+      // again, it was "new" and switched itself back on.
+      var presentIdentifiers = Set<String>()
 
       for folderURL in folderURLs {
         let pluginFolderName = folderURL.lastPathComponent
@@ -199,6 +221,9 @@ import UniformTypeIdentifiers
 
         do {
           let manifest = try loadManifest(at: manifestURL)
+          // Installed folders are named for the id, so the folder name is the
+          // best guess when the manifest itself will not decode (below).
+          presentIdentifiers.insert(manifest.id)
           try validateManifest(manifest, pluginRootURL: folderURL)
 
           if identifiersSeen.contains(manifest.id) {
@@ -213,6 +238,7 @@ import UniformTypeIdentifiers
           identifiersSeen.insert(manifest.id)
           resolvedPlugins.append(InstalledUserPlugin(manifest: manifest, folderURL: folderURL))
         } catch {
+          presentIdentifiers.insert(pluginFolderName)
           resolvedIssues.append(
             PluginValidationIssue(
               pluginFolderName: pluginFolderName,
@@ -222,8 +248,7 @@ import UniformTypeIdentifiers
         }
       }
 
-      let installedIdentifiers = Set(resolvedPlugins.map(\.manifest.id))
-      var normalizedEnabled = enabledPluginIdentifiers.intersection(installedIdentifiers)
+      var normalizedEnabled = enabledPluginIdentifiers.intersection(presentIdentifiers)
       // Auto-enable only plugins we have never seen before. Testing against
       // `enabledPluginIdentifiers` here (as this used to) re-enabled anything
       // the user had switched off, because "disabled" and "newly discovered"
@@ -232,7 +257,7 @@ import UniformTypeIdentifiers
         normalizedEnabled.insert(plugin.manifest.id)
       }
       // Forget uninstalled plugins so a later reinstall counts as new again.
-      knownPluginIdentifiers = installedIdentifiers
+      knownPluginIdentifiers = presentIdentifiers
       persistKnownPluginIdentifiers()
 
       installedPlugins = resolvedPlugins
@@ -242,7 +267,7 @@ import UniformTypeIdentifiers
       }
       enabledPluginIdentifiers = normalizedEnabled
       persistEnabledPluginIdentifiers()
-      cleanupStalePluginSettingValues(activePluginIdentifiers: installedIdentifiers)
+      cleanupStalePluginSettingValues(activePluginIdentifiers: presentIdentifiers)
       if !validationIssues.isEmpty {
         lastErrorMessage = "Some plugins failed validation. Open Plugins settings for details."
       }
@@ -279,32 +304,41 @@ import UniformTypeIdentifiers
   func installPluginPackageInteractively() {
     do {
       try ensurePluginsDirectoryExists()
-      let panel = NSOpenPanel()
-      panel.canChooseDirectories = true
-      panel.canChooseFiles = true
-      panel.allowsMultipleSelection = false
-      panel.allowedContentTypes = {
-        var contentTypes: [UTType] = [.zip]
-        if let pluginArchiveType = UTType(filenameExtension: "priority-plugin") {
-          contentTypes.append(pluginArchiveType)
-        }
-        return contentTypes
-      }()
-      panel.prompt = "Install Plugin"
-      panel.message =
-        "Choose a plugin folder, .zip, or .priority-plugin package containing plugin.json."
-
-      guard panel.runModal() == .OK, let sourceURL = panel.url else { return }
-      try installPlugin(from: sourceURL)
-      reloadInstalledPlugins()
     } catch {
       lastErrorMessage = "Failed to install plugin: \(error.localizedDescription)"
+      return
+    }
+    let panel = NSOpenPanel()
+    panel.canChooseDirectories = true
+    panel.canChooseFiles = true
+    panel.allowsMultipleSelection = false
+    panel.allowedContentTypes = {
+      var contentTypes: [UTType] = [.zip]
+      if let pluginArchiveType = UTType(filenameExtension: "priority-plugin") {
+        contentTypes.append(pluginArchiveType)
+      }
+      return contentTypes
+    }()
+    panel.prompt = "Install Plugin"
+    panel.message =
+      "Choose a plugin folder, .zip, or .priority-plugin package containing plugin.json."
+
+    guard panel.runModal() == .OK, let sourceURL = panel.url else { return }
+    Task {
+      do {
+        try await installPlugin(from: sourceURL)
+        reloadInstalledPlugins()
+      } catch {
+        lastErrorMessage = "Failed to install plugin: \(error.localizedDescription)"
+      }
     }
   }
 
-  func installPlugin(from sourceURL: URL) throws {
+  /// `async` because an archive is unpacked by `ditto`, off the main actor;
+  /// a folder source never suspends.
+  func installPlugin(from sourceURL: URL) async throws {
     try ensurePluginsDirectoryExists()
-    let resolvedPackage = try resolvePluginPackage(from: sourceURL)
+    let resolvedPackage = try await resolvePluginPackage(from: sourceURL)
     defer {
       for temporaryURL in resolvedPackage.temporaryURLs {
         try? fileManager.removeItem(at: temporaryURL)
@@ -468,7 +502,12 @@ import UniformTypeIdentifiers
     let trimmedName = manifest.name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedID.isEmpty else { throw PluginInstallError.invalidPluginID }
     guard !trimmedName.isEmpty else { throw PluginInstallError.invalidPluginName }
-    guard trimmedID.range(of: #"^[A-Za-z0-9._-]+$"#, options: .regularExpression) != nil else {
+    // The id becomes the install folder's name, so it must be a safe single
+    // path component: no leading dot (hidden, and `.`/`..` are not names at
+    // all), no separators.
+    guard trimmedID != ".", trimmedID != "..",
+      trimmedID.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]*$"#, options: .regularExpression) != nil
+    else {
       throw PluginInstallError.invalidPluginID
     }
 
@@ -506,17 +545,27 @@ import UniformTypeIdentifiers
         throw PluginInstallError.invalidEntrypointPath(entrypoint)
       }
       let entrypointURL = pluginRootURL.appendingPathComponent(entrypoint).standardizedFileURL
-      guard entrypointURL.path.hasPrefix(pluginRootURL.standardizedFileURL.path) else {
-        throw PluginInstallError.invalidEntrypointPath(entrypoint)
-      }
       guard fileManager.fileExists(atPath: entrypointURL.path) else {
         throw PluginInstallError.missingEntrypoint(entrypoint)
+      }
+      // Both sides canonicalised, and the root carries a trailing separator:
+      // `../plugin-two/run.sh` standardises to a sibling path that a bare
+      // prefix test on ".../plugin" accepts, and a symlink inside the folder
+      // can point anywhere at all.
+      let canonicalRoot = pluginRootURL.resolvingSymlinksInPath().standardizedFileURL.path
+      let rootPrefix = canonicalRoot.hasSuffix("/") ? canonicalRoot : canonicalRoot + "/"
+      let canonicalEntrypoint = entrypointURL.resolvingSymlinksInPath().standardizedFileURL.path
+      guard canonicalEntrypoint.hasPrefix(rootPrefix) else {
+        throw PluginInstallError.invalidEntrypointPath(entrypoint)
       }
     }
   }
 
-  private func resolvePluginPackage(from sourceURL: URL) throws -> ResolvedPluginPackage {
-    if sourceURL.hasDirectoryPath {
+  private func resolvePluginPackage(from sourceURL: URL) async throws -> ResolvedPluginPackage {
+    // `isDirectoryKey` asks the filesystem; `hasDirectoryPath` only asks
+    // whether the URL string ends in a slash, which a folder dropped from the
+    // open panel or a test's `URL(fileURLWithPath:)` need not.
+    if (try? sourceURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
       let manifestURL = sourceURL.appendingPathComponent("plugin.json")
       guard fileManager.fileExists(atPath: manifestURL.path) else {
         throw PluginInstallError.pluginManifestNotFound
@@ -529,15 +578,24 @@ import UniformTypeIdentifiers
       throw PluginInstallError.unsupportedSource
     }
 
+    if let size = try? sourceURL.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+      size > Self.maximumArchiveByteCount
+    {
+      throw PluginInstallError.archiveTooLarge(bytes: size, limit: Self.maximumArchiveByteCount)
+    }
+
     let extractionRoot = fileManager.temporaryDirectory.appendingPathComponent(
       UUID().uuidString,
       isDirectory: true
     )
     try fileManager.createDirectory(at: extractionRoot, withIntermediateDirectories: true)
 
-    guard try extractArchive(sourceURL, into: extractionRoot) else {
+    do {
+      try await Self.extractArchive(sourceURL, into: extractionRoot)
+      try validateExtraction(in: extractionRoot)
+    } catch {
       try? fileManager.removeItem(at: extractionRoot)
-      throw PluginInstallError.archiveExtractionFailed
+      throw error
     }
 
     let directManifestURL = extractionRoot.appendingPathComponent("plugin.json")
@@ -582,24 +640,41 @@ import UniformTypeIdentifiers
     return stagingURL
   }
 
-  private func extractArchive(_ sourceURL: URL, into destinationURL: URL) throws -> Bool {
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-    process.arguments = ["-x", "-k", sourceURL.path, destinationURL.path]
-    try process.run()
-    process.waitUntilExit()
-    guard process.terminationStatus == 0 else { return false }
+  /// Unpacks with `ditto`, off the main actor: this used to block the UI for
+  /// the length of the extraction, with no bound on how long that was. What
+  /// came out is checked by `validateExtraction` once back on the actor.
+  private nonisolated static func extractArchive(
+    _ sourceURL: URL, into destinationURL: URL
+  ) async throws {
+    let status: Int32 = try await withCheckedThrowingContinuation { continuation in
+      let process = Process()
+      process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+      process.arguments = ["-x", "-k", sourceURL.path, destinationURL.path]
+      process.terminationHandler = { finished in
+        continuation.resume(returning: finished.terminationStatus)
+      }
+      do {
+        try process.run()
+      } catch {
+        continuation.resume(throwing: error)
+      }
+    }
+    guard status == 0 else { throw PluginInstallError.archiveExtractionFailed }
+  }
 
+  private func validateExtraction(in destinationURL: URL) throws {
     // Validate that no extracted paths escape the destination via path traversal.
     // Both sides are symlink-resolved so the comparison comes from the same
     // namespace, and the prefix carries a trailing separator so a sibling
     // directory whose name merely starts with the destination's (".../abc" vs
-    // ".../abcdef") can't slip through a bare `hasPrefix`.
+    // ".../abcdef") can't slip through a bare `hasPrefix`. The same walk adds
+    // up what was unpacked, which is where a zip bomb is caught.
     let canonicalDestination = destinationURL.resolvingSymlinksInPath().standardizedFileURL.path
     let containmentPrefix =
       canonicalDestination.hasSuffix("/") ? canonicalDestination : canonicalDestination + "/"
+    var extractedBytes = 0
     if let enumerator = fileManager.enumerator(
-      at: destinationURL, includingPropertiesForKeys: [.isSymbolicLinkKey])
+      at: destinationURL, includingPropertiesForKeys: [.isSymbolicLinkKey, .fileSizeKey])
     {
       for case let fileURL as URL in enumerator {
         // Resolve symlinks so we catch links pointing outside the destination.
@@ -608,11 +683,16 @@ import UniformTypeIdentifiers
         else {
           // Path traversal detected — clean up and fail.
           try? fileManager.removeItem(at: destinationURL)
-          return false
+          throw PluginInstallError.archiveExtractionFailed
+        }
+        extractedBytes += (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        if extractedBytes > Self.maximumExtractedByteCount {
+          try? fileManager.removeItem(at: destinationURL)
+          throw PluginInstallError.archiveTooLarge(
+            bytes: extractedBytes, limit: Self.maximumExtractedByteCount)
         }
       }
     }
-    return true
   }
 
   private static func defaultPluginsDirectoryURL(fileManager: FileManager) -> URL {

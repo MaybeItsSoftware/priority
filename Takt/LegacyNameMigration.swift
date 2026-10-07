@@ -21,9 +21,14 @@ import TaktCore
 /// initialiser anywhere in the object graph can open a file at the new
 /// location ahead of it. It is deliberately:
 ///
-/// - **idempotent** — it stops the moment the new location has data, so it is
-///   safe on every launch rather than needing a "have I migrated yet?" flag,
-///   which is itself state that can be lost or wrong;
+/// - **idempotent** — the Application Support copy stops the moment the new
+///   location has an entry, so it is safe on every launch without a "have I
+///   migrated yet?" flag. The preferences copy is the exception and *does*
+///   keep a marker per legacy domain, because for preferences "the new
+///   location has no value" is not a safe signal: a key the app has since
+///   deliberately removed (the Checkvist remote key, once it moved to the
+///   keychain) looks exactly like a key never copied, and re-copying it on
+///   every launch resurrected it;
 /// - **non-destructive** — the old preferences domain and the old directory are
 ///   left exactly where they are. If anything about the new name turns out to
 ///   be wrong, the previous state is still on disk. They are safe to delete by
@@ -61,15 +66,27 @@ enum LegacyNameMigration {
 
   // MARK: - Preferences
 
-  /// Copies keys the current domain does not already have.
+  /// The key under which a legacy domain is marked as already copied.
+  static func preferencesMigrationMarkerKey(for identifier: String) -> String {
+    "legacyPreferencesCopied.\(identifier)"
+  }
+
+  /// Copies keys the current domain does not already have, once per legacy
+  /// domain.
   ///
-  /// Key-by-key rather than wholesale so a re-run can never clobber a newer
-  /// value with a stale one — which matters because this runs on every launch,
-  /// and the old domain is never cleared.
+  /// Key-by-key rather than wholesale so the copy can never clobber a value
+  /// the new domain already holds. One-shot because the old domain is never
+  /// cleared: without the marker this ran on every launch, and any key the
+  /// app had removed on purpose in the meantime came straight back from the
+  /// old plist. The marker is written in the *new* domain, so wiping the
+  /// app's preferences wipes it too and the next launch migrates again —
+  /// which is the right behaviour for a reset.
   private static func migratePreferences() {
     let defaults = UserDefaults.standard
 
     for identifier in legacyBundleIdentifiers {
+      let markerKey = preferencesMigrationMarkerKey(for: identifier)
+      guard defaults.object(forKey: markerKey) == nil else { continue }
       guard let legacy = defaults.persistentDomain(forName: identifier), !legacy.isEmpty else {
         continue
       }
@@ -79,12 +96,11 @@ enum LegacyNameMigration {
         defaults.set(value, forKey: key)
         copied += 1
       }
+      defaults.set(true, forKey: markerKey)
 
-      if copied > 0 {
-        logger.notice(
-          "Carried \(copied, privacy: .public) preference(s) forward from \(identifier, privacy: .public)"
-        )
-      }
+      logger.notice(
+        "Carried \(copied, privacy: .public) preference(s) forward from \(identifier, privacy: .public)"
+      )
     }
   }
 

@@ -140,7 +140,7 @@ final class UserPluginManagerCompatibilityTests: XCTestCase {
     )
   }
 
-  func testInstallRejectsUnsupportedPluginAPIVersion() throws {
+  func testInstallRejectsUnsupportedPluginAPIVersion() async throws {
     let pluginsRoot = try makeTemporaryPluginsRoot()
     defer { try? FileManager.default.removeItem(at: pluginsRoot) }
 
@@ -165,7 +165,10 @@ final class UserPluginManagerCompatibilityTests: XCTestCase {
       defaults: makeIsolatedDefaults()
     )
 
-    XCTAssertThrowsError(try manager.installPlugin(from: sourcePluginFolder)) { error in
+    do {
+      try await manager.installPlugin(from: sourcePluginFolder)
+      XCTFail("Expected the install to be rejected")
+    } catch {
       guard let installError = error as? UserPluginManager.PluginInstallError else {
         return XCTFail("Expected PluginInstallError, got \(error)")
       }

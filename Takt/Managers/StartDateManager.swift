@@ -26,11 +26,17 @@ import OSLog
     self.preferencesStore = preferencesStore
     self.cacheInvalidationBus = cacheInvalidationBus
     let storedStartDates = preferencesStore.stringDictionary(.taskStartDatesByTaskId)
+    // `uniquingKeysWith:` rather than `uniqueKeysWithValues:`: the stored keys
+    // are strings, and "7" and "07" both parse to 7. A hand-edited plist or a
+    // key written by an older build in a different format would trap at
+    // launch under the strict initialiser. Last one wins; there is no better
+    // tiebreak, and either beats a crash.
     self.taskStartDatesByTaskId = Dictionary(
-      uniqueKeysWithValues: storedStartDates.compactMap { key, value in
+      storedStartDates.compactMap { key, value -> (Int, String)? in
         guard let id = Int(key) else { return nil }
         return (id, value)
-      }
+      },
+      uniquingKeysWith: { _, last in last }
     )
   }
 

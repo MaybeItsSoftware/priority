@@ -196,10 +196,6 @@ protocol IntegrationDataSource: AnyObject {
 
   // MARK: - Google Calendar Event Links
 
-  private func integrationTaskStorageKey(taskId: Int, listId: String) -> String {
-    IntegrationLinkStore.storageKey(taskId: taskId, listId: listId)
-  }
-
   func hasGoogleCalendarEventLink(taskId: Int, listId: String) -> Bool {
     IntegrationLinkStore.hasEventLink(
       taskId: taskId, listId: listId, in: googleCalendarEventLinksByTaskKey)
@@ -304,55 +300,6 @@ protocol IntegrationDataSource: AnyObject {
     }
   }
 
-  /// Async version that returns error message (used internally).
-  private func openTaskInGoogleCalendarAsync(taskId explicitTaskId: Int? = nil) async -> String? {
-    guard googleCalendarIntegrationEnabled else {
-      return "Enable Google Calendar integration in Preferences first."
-    }
-    guard let ds = dataSource else { return "Internal error: no data source." }
-
-    let selectedTask: CheckvistTask?
-    if let explicitTaskId {
-      selectedTask = ds.tasks.first(where: { $0.id == explicitTaskId })
-    } else {
-      selectedTask = ds.currentTask
-    }
-    guard let selectedTask else {
-      return "No task selected."
-    }
-
-    let listId = ds.listId
-
-    do {
-      let outcome = try await googleCalendarPlugin.createEvent(
-        task: selectedTask,
-        listId: listId,
-        now: Date()
-      )
-      recordGoogleCalendarEventLink(
-        taskId: selectedTask.id,
-        listId: listId,
-        eventURL: outcome.urlToOpen
-      )
-      if let url = outcome.urlToOpen, url.scheme?.lowercased() == "https" {
-        NSWorkspace.shared.open(url)
-      }
-      if !outcome.usedGoogleCalendarAPI && outcome.urlToOpen == nil {
-        return "Could not create Google Calendar event."
-      } else if outcome.usedGoogleCalendarAPI && outcome.urlToOpen == nil {
-        return "Google Calendar event created."
-      }
-      return nil
-    } catch {
-      if let localizedError = error as? LocalizedError,
-        let message = localizedError.errorDescription
-      {
-        return message
-      }
-      return "Google Calendar action failed: \(error.localizedDescription)"
-    }
-  }
-
   func openSavedGoogleCalendarEventLink(taskId explicitTaskId: Int? = nil) {
     guard googleCalendarIntegrationEnabled else {
       onError?("Enable Google Calendar integration in Preferences first.")
@@ -389,17 +336,12 @@ protocol IntegrationDataSource: AnyObject {
 
     refreshMCPServerCommandPath()
 
-    // The copied config carries no credentials, so the server will look for
-    // them in the CLI's own store. Seed that first, or the paste produces a
-    // client that connects and then fails every tool call.
-    do {
-      try seedPriorityCLICredentials(credentials: ds.activeCredentials, listId: ds.listId)
-    } catch {
-      logger.error("Seeding the takt CLI's credentials failed: \(error)")
-      onError?(error.localizedDescription)
-      return
-    }
-
+    // The copied config carries no credentials; the server reads them from the
+    // CLI's own store, which the explicit "Add to <client>" step seeds. Copying
+    // a snippet is not that step — it used to write the remote key to
+    // `~/.config/takt/config.json` as a side effect of putting text on the
+    // clipboard, which nobody asked for and which is not undone by clearing
+    // the clipboard.
     let config = mcpIntegrationPlugin.makeClientConfigurationJSON(listId: ds.listId)
     copyToPasteboard(config)
 
@@ -567,32 +509,85 @@ protocol IntegrationDataSource: AnyObject {
     // and there is no reason to bump the modification date to say so.
     guard seeded.outcome != .unchanged else { return }
 
+    try writeCLIConfig(seeded.contents, to: configURL)
+
+    logger.info(
+      "Seeded the takt CLI's credentials: \(String(describing: seeded.outcome), privacy: .public)"
+    )
+  }
+
+  /// Blanks the username and remote key the app seeded into the CLI's config,
+  /// leaving every other key (`base_url`, `list_id`) alone. The counterpart of
+  /// `seedPriorityCLICredentials`: signing out of Checkvist in the app used to
+  /// leave the remote key sitting in `~/.config/takt/config.json`, where every
+  /// MCP client the app had set up kept using it.
+  ///
+  /// Only the current path is touched — the legacy `priority` config is read
+  /// by the seeding step but never written, and that stays true here.
+  func clearSeededCLICredentials() {
+    let home = MCPClientInstaller.realHomeDirectory.path
+    let configPath = TaktCLIConfigWriter.defaultConfigPath(inHomeDirectory: home)
+    let configURL = URL(fileURLWithPath: configPath)
+    guard FileManager.default.fileExists(atPath: configPath) else { return }
+
+    do {
+      let data = try Data(contentsOf: configURL)
+      guard var values = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        return
+      }
+      let keys = [TaktCLIConfigWriter.usernameKey, TaktCLIConfigWriter.remoteKeyKey]
+      guard keys.contains(where: { (values[$0] as? String)?.isEmpty == false }) else { return }
+      for key in keys where values[key] != nil {
+        values[key] = ""
+      }
+      let json = try JSONSerialization.data(
+        withJSONObject: values,
+        options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+      )
+      try writeCLIConfig(String(decoding: json, as: UTF8.self) + "\n", to: configURL)
+      logger.info("Cleared the takt CLI's seeded credentials")
+    } catch {
+      logger.error("Clearing the takt CLI's credentials failed: \(error)")
+    }
+  }
+
+  /// Writes the CLI config so that at no instant is there a readable file
+  /// with the remote key in it and a mode wider than 0600, and at no instant
+  /// is there a truncated one.
+  ///
+  /// `createFile` on the existing path truncated it and then wrote, so a
+  /// crash — or the CLI reading at the wrong moment — saw an empty or partial
+  /// file. A plain atomic write lands a fresh inode at whatever the umask
+  /// allows, which can be world-readable. So: a sibling temporary, created
+  /// 0600 and written in full, then renamed over the target. The rename is
+  /// atomic and carries the mode with it. Mirrors `Config::save` in
+  /// `cli/src/config.rs`.
+  private func writeCLIConfig(_ contents: String, to configURL: URL) throws {
+    let fileManager = FileManager.default
+    let directoryURL = configURL.deletingLastPathComponent()
     try fileManager.createDirectory(
       at: directoryURL,
       withIntermediateDirectories: true,
       attributes: [.posixPermissions: 0o700]
     )
 
-    // Created with the mode rather than written and then chmod-ed: the gap
-    // between the two is a window in which the remote key sits world-readable.
-    // This is why it isn't an atomic write — that lands a fresh inode at
-    // whatever the umask allows. Mirrors `Config::save` in `cli/src/config.rs`.
+    let temporaryURL = directoryURL.appendingPathComponent(
+      ".\(configURL.lastPathComponent).\(UUID().uuidString).tmp")
     guard
       fileManager.createFile(
-        atPath: configURL.path,
-        contents: Data(seeded.contents.utf8),
+        atPath: temporaryURL.path,
+        contents: Data(contents.utf8),
         attributes: [.posixPermissions: 0o600]
       )
     else {
-      throw TaktCLIConfigError.writeFailed(path: configPath)
+      throw TaktCLIConfigError.writeFailed(path: configURL.path)
     }
-    // `createFile` leaves an existing file's mode alone, and one written before
-    // this code existed may be wider than 0600.
-    try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: configURL.path)
-
-    logger.info(
-      "Seeded the takt CLI's credentials: \(String(describing: seeded.outcome), privacy: .public)"
-    )
+    // `rename(2)` rather than `FileManager.replaceItemAt`, which wants the
+    // target to exist already; this is also the first write on a fresh setup.
+    guard rename(temporaryURL.path, configURL.path) == 0 else {
+      try? fileManager.removeItem(at: temporaryURL)
+      throw TaktCLIConfigError.writeFailed(path: configURL.path)
+    }
   }
 
   private func setMCPSetupStatus(_ message: String, isError: Bool) {
@@ -694,11 +689,6 @@ protocol IntegrationDataSource: AnyObject {
     obsidianPlugin.hasLinkedFolder(forTaskId: taskId)
   }
 
-  func hasObsidianSyncedNote(task: CheckvistTask, tasks: [CheckvistTask]) -> Bool {
-    let linkedFolderTaskId = obsidianLinkedFolderAncestorTaskId(for: task, taskList: tasks)
-    return obsidianPlugin.hasSyncedNote(task: task, linkedFolderTaskId: linkedFolderTaskId)
-  }
-
   func obsidianLinkedFolderAncestorTaskId(
     for task: CheckvistTask, taskList: [CheckvistTask]
   ) -> Int? {
@@ -786,17 +776,20 @@ protocol IntegrationDataSource: AnyObject {
           syncDate: Date()
         )
         dequeuePendingObsidianSync(taskId: taskId, listId: listId)
+      } catch ObsidianSyncError.inboxFolderNotConfigured {
+        // Nothing in the queue can succeed without a folder, and retrying the
+        // rest would only log the same thing once per task. Say so once and
+        // leave the queue for when there is one.
+        logger.notice("Pending Obsidian syncs are waiting for an inbox folder to be chosen.")
+        onError?(ObsidianSyncError.inboxFolderNotConfigured.localizedDescription)
+        return
       } catch {
-        // Keep queued; we'll retry on the next connectivity transition.
+        // Keep queued; we'll retry on the next connectivity transition. Logged
+        // rather than swallowed, so a note that never lands is diagnosable.
+        logger.error(
+          "Pending Obsidian sync for task \(taskId, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
+        )
       }
     }
-  }
-}
-
-private enum WorkspaceGoogleCalendarError: LocalizedError {
-  case integrationDisabled
-
-  var errorDescription: String? {
-    "Enable Google Calendar in Preferences → Integrations first."
   }
 }
