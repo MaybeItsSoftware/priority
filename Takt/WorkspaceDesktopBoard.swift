@@ -117,12 +117,20 @@ private struct WorkspaceKanbanColumnStrip: View {
                 tasksHaveKeyboard: tasksHaveKeyboard,
                 selectedRowID: column.id == selectedColumnID ? selectedID : nil)
                 .environment(model)
+                // The hairline is drawn on the column rather than beside it.
+                // As a sibling it was a scroll target answering to the same
+                // id, so a column scrolled almost out to the left still
+                // counted as visible by its right-hand rule, and ← to it
+                // never scrolled back.
+                .padding(.trailing, column.id == model.boardColumns.last?.id ? 0 : theme.hairline)
+                .overlay(alignment: .trailing) {
+                  if column.id != model.boardColumns.last?.id {
+                    Rectangle()
+                      .fill(theme.border)
+                      .frame(width: theme.hairline, height: viewport.size.height)
+                  }
+                }
                 .id(column.id)
-              if column.id != model.boardColumns.last?.id {
-                Rectangle()
-                  .fill(theme.border)
-                  .frame(width: theme.hairline, height: viewport.size.height)
-              }
             }
           }
           .scrollTargetLayout()
