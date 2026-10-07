@@ -186,10 +186,11 @@ elsewhere for a CLI-only setup.
   tasks       Show a list's tasks as a tree
   search      Search a list by content, tag and/or due date
   add         Add a task
-  update      Change a task's content and/or due date
+  update      Change a task's content, due date and/or tags
   note        Append a note to a task
   move        Reorder a task among its siblings. Position is 1-based
   reparent    Move a task under a different parent, or to the list root
+  move-project  Move a root task and its whole subtree to another list
   done        Complete a task
   reopen      Reopen a completed task
   invalidate  Mark a task "won't do"
@@ -223,6 +224,8 @@ takt search -t work --limit 10
 takt add Draft the release notes --due friday
 takt add Check the numbers --parent 12345
 takt note 12345 Waiting on the design review
+takt update 12345 --tags work,urgent        # --tags "" removes every tag
+takt move-project 12345 --to 678901         # the subtree comes too; --from defaults to --list-id
 takt done 12345
 
 takt log --days 7

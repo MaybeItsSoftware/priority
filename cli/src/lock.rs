@@ -16,10 +16,10 @@ const LOCK_UN: i32 = 8;
 /// A cross-process advisory lock, via `flock(2)`.
 ///
 /// The same protocol, and the same lock file, as Swift's `FileLock`
-/// (`Takt/CoreLogic/FileLock.swift`) and the Python server's
-/// `_exclusive_lock`, so all three writers genuinely exclude each other. Getting
-/// the path wrong here would not fail loudly — it would simply stop excluding
-/// anything, and show up much later as a daily that vanished.
+/// (`Sources/TaktCore/FileLock.swift`), so the app and this CLI genuinely
+/// exclude each other. Getting the path wrong here would not fail loudly — it
+/// would simply stop excluding anything, and show up much later as a daily
+/// that vanished.
 ///
 /// The lock is taken on a sibling `.lock` file rather than the data file, and
 /// that detail is load-bearing: `dailies.json` is saved atomically (write a
@@ -32,7 +32,7 @@ pub struct FileLock {
 impl FileLock {
     pub fn protecting(path: &Path) -> Self {
         // Append, never `set_extension`, which would replace `.json` and leave
-        // this locking a different file from the other two implementations.
+        // this locking a different file from the one the app locks.
         let mut name = path.as_os_str().to_os_string();
         name.push(".lock");
         FileLock {

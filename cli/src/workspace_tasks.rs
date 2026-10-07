@@ -749,15 +749,26 @@ impl Workspace {
 
             if destination_list != task.list_id || destination_parent != task.parent_task_id {
                 if destination_list != task.list_id {
+                    // One statement over the subtree, as `WorkspaceStore.moveTask`
+                    // writes it. The change_log triggers are per row either
+                    // way, so the undo step records the same rows; sorting
+                    // the ids gives them the same order too.
                     let mut ids: Vec<&str> = descendants.iter().map(String::as_str).collect();
                     ids.push(&task.id);
-                    for id in ids {
-                        tx.execute(
-                            "UPDATE tasks SET listId = ?1, updatedAt = ?2 WHERE id = ?3",
-                            params![destination_list, now, id],
-                        )
-                        .map_err(map_write_error)?;
-                    }
+                    ids.sort_unstable();
+                    let placeholders = (0..ids.len())
+                        .map(|index| format!("?{}", index + 3))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    let mut values: Vec<&dyn rusqlite::ToSql> = vec![&destination_list, &now];
+                    values.extend(ids.iter().map(|id| id as &dyn rusqlite::ToSql));
+                    tx.execute(
+                        &format!(
+                            "UPDATE tasks SET listId = ?1, updatedAt = ?2 WHERE id IN ({placeholders})"
+                        ),
+                        values.as_slice(),
+                    )
+                    .map_err(map_write_error)?;
                 }
                 let order = next_task_order(tx, &destination_list, destination_parent.as_deref())?;
                 tx.execute(
@@ -1055,13 +1066,9 @@ impl Workspace {
         connection
             .execute_batch("PRAGMA foreign_keys = ON")
             .map_err(map_write_error)?;
-        let migrated: bool = connection
-            .query_row(
-                "SELECT EXISTS(SELECT 1 FROM grdb_migrations WHERE identifier = ?1)",
-                [REQUIRED_MIGRATION],
-                |row| row.get(0),
-            )
-            .unwrap_or(false);
+        // An error here (no `grdb_migrations` table at all) is the same
+        // answer as a missing row: this is not a database the app has made.
+        let migrated = has_migration(&connection, REQUIRED_MIGRATION).unwrap_or(false);
         if !migrated {
             return Err(ToolError::new(format!(
                 "The workspace at {} predates the schema this build of takt writes \
@@ -1411,11 +1418,7 @@ fn parse_follow_up(text: &str) -> Result<String> {
 /// out of the column the habit put it in. A no-op on a database the app has
 /// not yet migrated to `v19_habit_options`.
 fn expire_habits(tx: &Transaction, source_id: &str, now: &str) -> Result<()> {
-    if !exists(
-        tx,
-        "SELECT EXISTS(SELECT 1 FROM grdb_migrations WHERE identifier = ?1)",
-        "v19_habit_options",
-    )? {
+    if !has_migration(tx, "v19_habit_options")? {
         return Ok(());
     }
     tx.execute(

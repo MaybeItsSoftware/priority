@@ -1,8 +1,8 @@
 //! A direct Checkvist API client.
 //!
 //! Talks to the API rather than to the running app, so every command here works
-//! whether or not Priority is open. Mirrors `CheckvistClient`, the client
-//! embedded in `Takt/Plugins/MCP/MCPServer.swift`.
+//! whether or not Takt is open. It descends from the client in the app's
+//! former in-process MCP server, which this binary replaced (see `mcp.rs`).
 
 use crate::config::Config;
 use crate::error::{Result, ToolError};
@@ -173,6 +173,7 @@ impl CheckvistClient {
                 "Missing list ID. Set CHECKVIST_LIST_ID or pass list_id.",
             ));
         }
+        validate_list_id(list_id)?;
         Ok(list_id.to_string())
     }
 
@@ -314,6 +315,10 @@ impl CheckvistClient {
         target_list_id: &str,
         root_task_id: i64,
     ) -> Result<Value> {
+        // The one entry point that takes list ids straight from the caller
+        // rather than through `resolve_list_id`, so they are checked here.
+        validate_list_id(source_list_id)?;
+        validate_list_id(target_list_id)?;
         if source_list_id == target_list_id {
             return Err(ToolError::new(
                 "source_list_id and target_list_id must be different.",
@@ -578,8 +583,21 @@ fn parse_body(response: ureq::Response) -> Value {
     serde_json::from_str(trimmed).unwrap_or_else(|_| Value::String(trimmed.to_string()))
 }
 
+/// A Checkvist checklist id is a decimal integer, and it is spliced into a
+/// request path. Checked once where a list id enters — `resolve_list_id` and
+/// `move_project_to_list` — rather than at each of the seven `format!`s, so a
+/// stray `../` or `?` can neither reach the URL nor be answered confusingly.
+pub fn validate_list_id(list_id: &str) -> Result<()> {
+    if !list_id.is_empty() && list_id.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Ok(());
+    }
+    Err(ToolError::new(format!(
+        "Invalid list ID {list_id:?}: a Checkvist list ID is a number."
+    )))
+}
+
 /// Some endpoints answer with a bare `true` or an empty body. Wrapping keeps
-/// every tool result an object, matching the other two servers.
+/// every tool result an object, so a client can always index into one.
 fn ok_or_wrapped(response: Value) -> Value {
     if response.is_object() {
         response

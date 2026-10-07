@@ -17,6 +17,7 @@ use crate::workspace::Workspace;
 use chrono::Local;
 use serde_json::{Map, Value, json};
 
+#[derive(Debug)]
 pub struct ToolOutcome {
     pub title: String,
     pub payload: Value,
@@ -175,6 +176,16 @@ impl Tools {
             }
 
             "task_search" => {
+                // 0 reads as "unset", as `days` does elsewhere here; anything
+                // below that is a request for a negative number of results.
+                // Checked before the fetch, so a bad call costs no request.
+                let limit = as_optional_int(arguments.get("limit"))?
+                    .filter(|n| *n != 0)
+                    .unwrap_or(50);
+                if limit < 1 {
+                    return Err(ToolError::new("limit must be 1 or greater."));
+                }
+                let shown = limit as usize;
                 let list_id = list_id()?;
                 let include_closed = as_bool(arguments.get("include_closed"), false)?;
                 let tasks = self.client.fetch_tasks(&list_id, include_closed, false)?;
@@ -184,10 +195,6 @@ impl Tools {
                     as_string(arguments.get("tag")).as_deref(),
                     as_string(arguments.get("due_before")).as_deref(),
                 );
-                let limit = as_optional_int(arguments.get("limit"))?
-                    .filter(|n| *n != 0)
-                    .unwrap_or(50);
-                let shown = limit.max(0) as usize;
                 let suffix = if matches.len() > shown {
                     format!(", showing {limit}")
                 } else {
@@ -599,10 +606,10 @@ fn value_text(value: &Value) -> String {
 
 // -- argument coercion -------------------------------------------------------
 //
-// Tolerant in the same places as the other two servers: a client that sends
-// `"5"` where the schema says integer, or `"true"` where it says boolean, is
-// answered rather than rejected. Booleans are the one place tolerance is
-// wrong — an earlier Swift bug accepted JSON `1` as `true` and so rejected
+// Tolerant where clients are loose: one that sends `"5"` where the schema
+// says integer, or `"true"` where it says boolean, is answered rather than
+// rejected. Booleans are the one place tolerance is wrong — a bug in the
+// app's former in-process server accepted JSON `1` as `true` and so rejected
 // `position: 1` outright.
 
 pub fn as_string(value: Option<&Value>) -> Option<String> {

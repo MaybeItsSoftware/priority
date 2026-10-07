@@ -1,10 +1,9 @@
 //! Unit tests for the parts of the CLI that are logic rather than plumbing.
 //!
-//! Deliberately not a re-run of `scripts/mcp_parity_check.py`: that check
-//! compares this implementation against the other two from the outside, and is
-//! the authority on whether they agree. These tests cover what it cannot —
-//! the CLI's own argument handling, and the invariants that would let this
-//! implementation drift *before* anyone runs a comparison.
+//! The server's behaviour is tested here; `scripts/mcp_smoke_check.py` covers
+//! only the seam between the app and this binary. These cover the CLI's own
+//! argument handling too, and the invariants that keep the tool table, the
+//! subcommands and the files the app reads in step.
 
 use crate::checkvist::{CheckvistClient, CheckvistConfig, depth_first_tasks};
 use crate::cli::{Cli, parse_weekdays, resolve};
@@ -591,6 +590,62 @@ fn weekdays_must_be_calendar_numbers_in_range() {
     assert!(as_optional_weekdays(Some(&json!("mon"))).is_err());
 }
 
+// -- dailies.json and the day log, written beside the app --------------------
+
+#[test]
+fn a_dailies_file_that_does_not_decode_is_not_saved_over() {
+    // The app refuses to save over it too. Overwriting would replace every
+    // daily it held with the one being added.
+    let local = scratch();
+    let damaged = "{\"version\": 1, \"dailies\": [{\"id\": \"A\", ";
+    std::fs::write(local.dailies_path(), damaged).unwrap();
+
+    let error = local.add_daily("New", None, None).expect_err("refused");
+    assert!(error.message.contains("dailies.json"), "{}", error.message);
+    assert_eq!(
+        std::fs::read_to_string(local.dailies_path()).unwrap(),
+        damaged
+    );
+
+    // Reading stays tolerant: the damaged file is simply no dailies.
+    assert_eq!(local.dailies_snapshot(Local::now())["dailies"], json!([]));
+
+    // A missing file is the ordinary first-run state, not damage.
+    let fresh = scratch();
+    fresh.add_daily("First", None, None).expect("created");
+    assert_eq!(stored_dailies(&fresh).len(), 1);
+}
+
+#[test]
+fn a_day_log_event_starts_its_own_line_even_after_a_torn_one() {
+    let local = scratch();
+    let path = local.daylog_path();
+    // A writer that died mid-line, and a line that is not even UTF-8.
+    let mut damaged = b"{\"kind\":\"dailyCompleted\",\"dailyId\":\"A\"}\n".to_vec();
+    damaged.extend_from_slice(b"\xff\xfe not utf8\n{\"kind\":\"dailyComp");
+    std::fs::write(&path, &damaged).unwrap();
+
+    crate::local::append_event(&path, &json!({"kind": "dailyCompleted", "dailyId": "B"}))
+        .expect("append");
+
+    let bytes = std::fs::read(&path).unwrap();
+    assert!(bytes.ends_with(b"}\n"));
+    let events = crate::local::parse_event_lines(&bytes);
+    // The torn line and the invalid one cost themselves only: the events
+    // either side of them both survive.
+    let ids: Vec<&str> = events
+        .iter()
+        .filter_map(|event| event["dailyId"].as_str())
+        .collect();
+    assert_eq!(ids, vec!["A", "B"]);
+
+    // Into a file that already ends cleanly, no blank line is added.
+    let clean = scratch().daylog_path();
+    crate::local::append_event(&clean, &json!({"n": 1})).unwrap();
+    crate::local::append_event(&clean, &json!({"n": 2})).unwrap();
+    assert_eq!(std::fs::read(&clean).unwrap(), b"{\"n\":1}\n{\"n\":2}\n");
+}
+
 // -- the CLI's own surface ---------------------------------------------------
 
 #[test]
@@ -630,6 +685,121 @@ fn subcommands_map_onto_the_tools_they_claim_to_be() {
     let (_, args) = resolved(&["priority", "add", "sub", "--parent", "7"]);
     assert_eq!(args["location"], json!("specific"));
     assert_eq!(args["parent_task_id"], json!(7));
+}
+
+#[test]
+fn update_sends_tags_including_an_empty_string_that_clears_them() {
+    let (name, args) = resolved(&["priority", "update", "5", "--tags", "work,urgent"]);
+    assert_eq!(name, "task_update");
+    assert_eq!(args["tags"], json!("work,urgent"));
+    // Empty is meaningful to the tool (remove every tag), so it is sent.
+    let (_, args) = resolved(&["priority", "update", "5", "--tags", ""]);
+    assert_eq!(args["tags"], json!(""));
+    assert!(
+        !resolved(&["priority", "update", "5", "-c", "x"])
+            .1
+            .contains_key("tags")
+    );
+}
+
+#[test]
+fn move_project_names_both_lists_and_defaults_the_source_to_the_global_list() {
+    let (name, args) = resolved(&["priority", "move-project", "5", "--from", "1", "--to", "2"]);
+    assert_eq!(name, "project_move");
+    assert_eq!(args["task_id"], json!(5));
+    assert_eq!(args["source_list_id"], json!("1"));
+    assert_eq!(args["target_list_id"], json!("2"));
+    // The tool has no `list_id`, and its schema refuses unknown keys.
+    assert!(!args.contains_key("list_id"));
+
+    let (_, args) = resolved(&["priority", "-l", "7", "move-project", "5", "--to", "2"]);
+    assert_eq!(args["source_list_id"], json!("7"));
+    assert!(!args.contains_key("list_id"));
+
+    assert!(
+        resolve(&Cli::parse_from([
+            "priority",
+            "move-project",
+            "5",
+            "--to",
+            "2"
+        ]))
+        .is_err()
+    );
+}
+
+/// One invocation per subcommand that names a tool. A new subcommand belongs
+/// here; a new tool with no subcommand fails the test below.
+const EVERY_SUBCOMMAND: &[&[&str]] = &[
+    &["lists"],
+    &["new-list", "L"],
+    &["matrix", "1:2:3"],
+    &["tasks"],
+    &["search", "-q", "x"],
+    &["add", "x"],
+    &["update", "1", "-c", "x"],
+    &["note", "1", "x"],
+    &["move", "1", "2"],
+    &["reparent", "1"],
+    &["move-project", "1", "--from", "2", "--to", "3"],
+    &["done", "1"],
+    &["reopen", "1"],
+    &["invalidate", "1"],
+    &["rm", "1"],
+    &["log"],
+    &["focus"],
+    &["focused"],
+    &["dailies"],
+    &["daily", "add", "x"],
+    &["daily", "update", "d", "--title", "x"],
+    &["daily", "tick", "d"],
+    &["metadata"],
+    &["ws", "tree"],
+    &["ws", "tasks", "L"],
+    &["ws", "add", "x", "--list", "L"],
+    &["ws", "update", "T", "--title", "x"],
+    &["ws", "done", "T"],
+    &["ws", "move", "T", "--position", "1"],
+    &["ws", "to-list", "T"],
+    &["ws", "rm", "T"],
+    &["ws", "new-folder", "F"],
+    &["ws", "new-list", "L"],
+    &["ws", "move-list", "L"],
+    &["ws", "rm-list", "L"],
+];
+
+/// Tools a terminal reaches only through `takt call`, each with the reason.
+/// Empty today; an entry here is a decision, not an oversight.
+const CALL_ONLY_TOOLS: &[(&str, &str)] = &[];
+
+#[test]
+fn every_tool_has_a_subcommand() {
+    // The reverse of `subcommands_map_onto_the_tools_they_claim_to_be`: the
+    // shared tool table exists so a terminal can reach anything an assistant
+    // can. A tool added to `tool_definitions` without a `Command` and a
+    // `resolve` arm fails here (project_move and task_update's tags once did).
+    let mut reached: Vec<String> = EVERY_SUBCOMMAND
+        .iter()
+        .map(|argv| {
+            let mut full = vec!["priority"];
+            full.extend_from_slice(argv);
+            resolved(&full).0
+        })
+        .collect();
+    reached.sort_unstable();
+    reached.dedup();
+
+    for definition in tool_definitions() {
+        let name = definition["name"].as_str().expect("tool name");
+        if CALL_ONLY_TOOLS.iter().any(|(tool, _)| *tool == name) {
+            continue;
+        }
+        assert!(
+            reached.iter().any(|tool| tool == name),
+            "{name} has no subcommand: add a `Command` case and `resolve` arm, \
+             or list it in CALL_ONLY_TOOLS with a reason"
+        );
+    }
 }
 
 #[test]
@@ -750,6 +920,49 @@ fn the_tool_surface_is_thirty_four_uniquely_named_tools() {
         );
         assert_eq!(definition["inputSchema"]["type"], json!("object"));
     }
+}
+
+#[test]
+fn a_search_limit_below_one_is_refused_before_any_request() {
+    // The schema says minimum 1. The base URL is unreachable, so getting the
+    // limit error rather than a network one also shows nothing was sent.
+    let tools = tools_for(scratch());
+    let mut arguments = Map::new();
+    arguments.insert("limit".into(), json!(-5));
+    let error = tools.call("task_search", &arguments).expect_err("refused");
+    assert_eq!(error.message, "limit must be 1 or greater.");
+}
+
+#[test]
+fn a_list_id_must_be_a_number_before_it_reaches_a_url() {
+    use crate::checkvist::validate_list_id;
+    assert!(validate_list_id("945183").is_ok());
+    for bad in ["", "../checklists", "12?x=1", "12/tasks", " 12", "-3"] {
+        assert!(validate_list_id(bad).is_err(), "{bad:?} accepted");
+    }
+
+    // Checked where the id enters: the explicit argument, the configured
+    // default, and both ends of project_move.
+    let tools = tools_for(scratch());
+    let mut arguments = Map::new();
+    arguments.insert("list_id".into(), json!("1/../2"));
+    let error = tools.call("task_fetch", &arguments).expect_err("refused");
+    assert!(
+        error.message.starts_with("Invalid list ID"),
+        "{}",
+        error.message
+    );
+
+    let mut arguments = Map::new();
+    arguments.insert("source_list_id".into(), json!("1"));
+    arguments.insert("target_list_id".into(), json!("x"));
+    arguments.insert("task_id".into(), json!(5));
+    let error = tools.call("project_move", &arguments).expect_err("refused");
+    assert!(
+        error.message.starts_with("Invalid list ID"),
+        "{}",
+        error.message
+    );
 }
 
 #[test]
@@ -889,9 +1102,9 @@ fn scratch_config(contents: Option<&str>) -> Config {
 fn the_environment_beats_the_config_file() {
     // An MCP client config that sets CHECKVIST_REMOTE_KEY must keep working
     // untouched, and a one-off `CHECKVIST_LIST_ID=... priority tasks` must
-    // override the stored default. This ordering is also what keeps
-    // `scripts/mcp_parity_check.py` honest, since it drives every server with
-    // the credentials in the environment.
+    // override the stored default. It is also what lets
+    // `scripts/mcp_smoke_check.py` drive the server with fake credentials in
+    // the environment.
     let (value, source) = choose(
         Some("from-env".into()),
         "CHECKVIST_LIST_ID",
@@ -933,6 +1146,52 @@ fn a_malformed_config_file_is_tolerated_rather_than_fatal() {
     // A JSON document that isn't an object is equally not a config.
     let config = scratch_config(Some("[1, 2, 3]"));
     assert_eq!(config.resolve("NOT_A_REAL_VARIABLE", "username").0, None);
+}
+
+#[test]
+fn a_malformed_config_file_is_not_overwritten() {
+    // Read as empty so local commands still work, but saving would replace
+    // whatever the person had with only the value just set.
+    let mut config = scratch_config(Some("{ \"username\": \"me\", oops"));
+    assert!(config.is_malformed());
+    config.set("list_id", Some("1"));
+    let error = config.save().expect_err("refused");
+    assert!(
+        error.message.contains(&config.path.display().to_string()),
+        "{}",
+        error.message
+    );
+    assert_eq!(
+        std::fs::read_to_string(&config.path).unwrap(),
+        "{ \"username\": \"me\", oops"
+    );
+
+    // Not JSON-object-shaped counts too; a missing file does not.
+    assert!(scratch_config(Some("[1]")).is_malformed());
+    assert!(!scratch_config(None).is_malformed());
+}
+
+#[test]
+fn only_a_directory_the_cli_created_is_tightened() {
+    use std::os::unix::fs::PermissionsExt;
+    let mode =
+        |path: &std::path::Path| std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
+
+    // A directory that already existed — one named by PRIORITY_CONFIG_PATH or
+    // XDG_CONFIG_HOME, say — keeps the mode its owner gave it.
+    let mut config = scratch_config(None);
+    let parent = config.path.parent().unwrap().to_path_buf();
+    std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o755)).unwrap();
+    config.set("username", Some("me"));
+    config.save().expect("save");
+    assert_eq!(mode(&parent), 0o755);
+
+    // One the CLI had to make is private from the start.
+    let fresh = parent.join("made-here");
+    let mut config = Config::load_from(fresh.join("config.json"));
+    config.set("username", Some("me"));
+    config.save().expect("save");
+    assert_eq!(mode(&fresh), 0o700);
 }
 
 #[test]
@@ -1077,7 +1336,7 @@ fn the_lock_file_is_a_sibling_of_the_file_it_protects() {
     // A lock on `dailies.json` itself would guard nothing: the save is atomic
     // (temp + rename), so the inode is replaced and the next process opens a
     // different file with a free lock. The path is also the interface with the
-    // other two implementations — get it wrong and it stops excluding them
+    // app's `FileLock` — get it wrong and it stops excluding it
     // without ever failing.
     // A directory of its own rather than a fixed path: `/tmp/x` was whatever
     // the machine happened to have there, and a stray file of that name failed
@@ -1192,6 +1451,26 @@ fn utc(text: &str) -> chrono::DateTime<chrono::Utc> {
     chrono::NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S")
         .map(|naive| chrono::TimeZone::from_utc_datetime(&chrono::Utc, &naive))
         .expect("timestamp")
+}
+
+#[test]
+fn a_focus_query_that_fails_is_an_error_not_no_session() {
+    // Only "no such row" means not running. A row the query cannot read
+    // must say so rather than report an idle timer.
+    let workspace = workspace_fixture(&[
+        "INSERT INTO focus_sessions (id, startedAt, phase, workDurationSeconds, activeTaskStartedAt)
+         VALUES ('s1', '2026-09-25 15:21:38.349', 'running', 'not a number',
+           '2026-09-25 15:21:38.349');",
+    ]);
+    assert!(workspace.focus_status(utc("2026-09-26 10:00:00")).is_err());
+
+    let empty = workspace_fixture(&[]);
+    assert_eq!(
+        empty
+            .focus_status(utc("2026-09-26 10:00:00"))
+            .expect("status")["running"],
+        json!(false)
+    );
 }
 
 /// The reading that started all this. A block paused seconds after it started

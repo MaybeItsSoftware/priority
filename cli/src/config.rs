@@ -71,6 +71,10 @@ impl Source {
 pub struct Config {
     pub path: PathBuf,
     values: Map<String, Value>,
+    /// The file exists but is not a JSON object. Read as empty so the local
+    /// commands keep working; refused by [`Config::save`] so a typo in a
+    /// hand-edited file is not quietly replaced with whatever was in memory.
+    malformed: bool,
 }
 
 impl Config {
@@ -83,7 +87,7 @@ impl Config {
     /// rename keeps working rather than being silently forgotten. Running
     /// `takt auth login` against a fresh machine writes the new path.
     ///
-    /// The explicit override exists for tests and for the parity check, which
+    /// The explicit override exists for tests and for the smoke check, which
     /// must not read whatever the developer happens to have configured.
     pub fn default_path() -> PathBuf {
         if let Some(path) = non_empty_env("PRIORITY_CONFIG_PATH") {
@@ -106,25 +110,34 @@ impl Config {
     /// the state before `priority auth login`, and every local command works
     /// there. A *malformed* file is also tolerated rather than fatal, because
     /// the dailies and day-log commands have no business failing over a
-    /// credential file they never consult.
+    /// credential file they never consult. It is remembered as malformed,
+    /// though, so that saving refuses to overwrite it.
     pub fn load() -> Self {
         Self::load_from(Self::default_path())
     }
 
     pub fn load_from(path: PathBuf) -> Self {
-        let values = std::fs::read_to_string(&path)
-            .ok()
-            .and_then(|text| serde_json::from_str::<Value>(&text).ok())
-            .and_then(|value| match value {
-                Value::Object(values) => Some(values),
-                _ => None,
-            })
-            .unwrap_or_default();
-        Config { path, values }
+        let (values, malformed) = match std::fs::read_to_string(&path) {
+            Err(_) => (Map::new(), false),
+            Ok(text) => match serde_json::from_str::<Value>(&text) {
+                Ok(Value::Object(values)) => (values, false),
+                _ => (Map::new(), true),
+            },
+        };
+        Config {
+            path,
+            values,
+            malformed,
+        }
     }
 
     pub fn exists(&self) -> bool {
         self.path.exists()
+    }
+
+    /// Whether the file on disk was unreadable as a JSON object.
+    pub fn is_malformed(&self) -> bool {
+        self.malformed
     }
 
     fn string(&self, key: &str) -> Option<String> {
@@ -170,14 +183,31 @@ impl Config {
     /// Created with the mode rather than chmod-ed afterwards: the gap between
     /// the two is a window in which the remote key sits world-readable, and it
     /// only has to be lost once.
+    ///
+    /// Refuses to overwrite a file that exists but could not be read as a
+    /// JSON object: the values in memory are empty plus whatever was just
+    /// set, and writing them would silently discard whatever the file held.
     pub fn save(&self) -> Result<()> {
+        if self.malformed {
+            return Err(ToolError::new(format!(
+                "{} is not valid JSON, so it has not been overwritten. Fix it by hand or \
+                 delete it (`takt auth logout --all`) and sign in again.",
+                self.path.display()
+            )));
+        }
+
         if let Some(parent) = self.path.parent() {
+            // Tightened only when this CLI made the directory. One a person
+            // chose (PRIORITY_CONFIG_PATH, XDG_CONFIG_HOME) or that already
+            // existed keeps whatever mode they gave it. Best effort: failing
+            // here would be worse than a slightly open directory.
+            let created_here = !parent.exists();
             std::fs::create_dir_all(parent).map_err(|err| {
                 ToolError::new(format!("Could not create {}: {err}", parent.display()))
             })?;
-            // Best effort: an existing directory keeps whatever mode it has,
-            // and failing here would be worse than a slightly open directory.
-            let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
+            if created_here {
+                let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
+            }
         }
 
         let encoded = serde_json::to_string_pretty(&Value::Object(self.values.clone()))

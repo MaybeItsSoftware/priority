@@ -113,13 +113,17 @@ pub enum Command {
         due: Option<String>,
     },
 
-    /// Change a task's content and/or due date.
+    /// Change a task's content, due date and/or tags.
     Update {
         task_id: i64,
         #[arg(long, short = 'c', value_name = "TEXT")]
         content: Option<String>,
         #[arg(long, short = 'd', value_name = "DUE")]
         due: Option<String>,
+        /// Comma-separated tags, replacing the task's. An empty string removes
+        /// every tag.
+        #[arg(long, short = 't', value_name = "TAGS")]
+        tags: Option<String>,
     },
 
     /// Append a note to a task.
@@ -138,6 +142,20 @@ pub enum Command {
         /// New parent. Omit to promote the task to the list root.
         #[arg(long, short = 'p', value_name = "TASK_ID")]
         parent: Option<i64>,
+    },
+
+    /// Move a root task and its whole subtree to another list.
+    ///
+    /// The copy is verified in the destination before the source is deleted,
+    /// and the result maps every old task id to its new one.
+    MoveProject {
+        task_id: i64,
+        /// The list the task is in now. Defaults to the global --list-id.
+        #[arg(long = "from", value_name = "LIST_ID")]
+        source_list_id: Option<String>,
+        /// The list to move it to.
+        #[arg(long = "to", value_name = "LIST_ID")]
+        target_list_id: String,
     },
 
     /// Complete a task.
@@ -571,10 +589,12 @@ pub fn resolve(cli: &Cli) -> Result<(String, Map<String, Value>)> {
             task_id,
             content,
             due,
+            tags,
         } => {
             arguments.insert("task_id".into(), json!(task_id));
             insert_if_some(&mut arguments, "content", content.as_deref());
             insert_if_some(&mut arguments, "due", due.as_deref());
+            insert_if_some(&mut arguments, "tags", tags.as_deref());
             "task_update"
         }
 
@@ -597,6 +617,30 @@ pub fn resolve(cli: &Cli) -> Result<(String, Map<String, Value>)> {
                 arguments.insert("parent_task_id".into(), json!(parent));
             }
             "task_reparent"
+        }
+
+        Command::MoveProject {
+            task_id,
+            source_list_id,
+            target_list_id,
+        } => {
+            // The tool names both lists itself, so the global --list-id only
+            // serves as the source's default and is not sent as `list_id`.
+            let source = source_list_id
+                .clone()
+                .or_else(|| {
+                    arguments
+                        .remove("list_id")
+                        .and_then(|id| id.as_str().map(String::from))
+                })
+                .ok_or_else(|| {
+                    ToolError::new("Give the source list with --from (or the global --list-id).")
+                })?;
+            arguments.remove("list_id");
+            arguments.insert("task_id".into(), json!(task_id));
+            arguments.insert("source_list_id".into(), json!(source));
+            arguments.insert("target_list_id".into(), json!(target_list_id));
+            "project_move"
         }
 
         Command::Done { task_id } => {
@@ -1487,10 +1531,12 @@ fn print_auth_status(config: &Config) {
     println!(
         "config file  {}{}",
         config.path.display(),
-        if config.exists() {
-            ""
-        } else {
+        if !config.exists() {
             "   (not created yet)"
+        } else if config.is_malformed() {
+            "   (not valid JSON: ignored, and not overwritten until fixed)"
+        } else {
+            ""
         }
     );
     println!();

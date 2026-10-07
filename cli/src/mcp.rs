@@ -1,8 +1,9 @@
 //! Takt's MCP stdio server.
 //!
-//! This is now the only one. There were three — a Swift server embedded in the
-//! app and a Python fallback script alongside this — and holding them equal
-//! from the outside cost more than it bought, since none could import another.
+//! This is the only one. There used to be three — a Swift server embedded in
+//! the app and a Python fallback script alongside this — and holding them
+//! equal from the outside cost more than it bought, since none could import
+//! another.
 //! The app ships this binary instead (`Takt.app/Contents/Helpers/takt`)
 //! and `Takt --mcp-server` hands the process over to it, which is why the
 //! bare flag is accepted in `main.rs` and why the environment outranks the
@@ -23,11 +24,17 @@ const DEFAULT_PROTOCOL_VERSION: &str = "2024-11-05";
 const SERVER_NAME: &str = "takt";
 const SERVER_VERSION: &str = "0.3.0";
 
+/// The most a header-framed message may claim to be. The body is allocated up
+/// front to the declared size, so without a ceiling one line of input could
+/// ask for any amount of memory. 64 MiB is far beyond any real request.
+const MAX_CONTENT_LENGTH: usize = 64 * 1024 * 1024;
+
 const JSONRPC_PARSE_ERROR: i64 = -32700;
 const JSONRPC_INVALID_REQUEST: i64 = -32600;
 const JSONRPC_METHOD_NOT_FOUND: i64 = -32601;
 const JSONRPC_INVALID_PARAMS: i64 = -32602;
 
+#[derive(Debug)]
 struct JsonRpcError {
     code: i64,
     message: String,
@@ -42,7 +49,7 @@ impl JsonRpcError {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum Framing {
     /// The MCP stdio transport: one JSON object per line, no headers.
     Newline,
@@ -136,7 +143,9 @@ impl Server {
                 json!({
                     "protocolVersion": self.protocol_version,
                     "serverInfo": { "name": SERVER_NAME, "version": SERVER_VERSION },
-                    "capabilities": { "tools": {} },
+                    // `logging` because `logging/setLevel` is answered below;
+                    // a client only sends it to a server that advertises it.
+                    "capabilities": { "tools": {}, "logging": {} },
                 })
             }
             "ping" | "logging/setLevel" => json!({}),
@@ -203,73 +212,12 @@ impl Server {
     // -- framing -------------------------------------------------------------
 
     fn read_message(&mut self) -> Result<Option<Value>, JsonRpcError> {
-        loop {
-            let Some(line) = self.read_line()? else {
-                return Ok(None);
-            };
-            let trimmed = line.trim().to_string();
-            if trimmed.is_empty() {
-                continue;
-            }
-            if trimmed.to_lowercase().starts_with("content-length:") {
-                return self.read_header_framed(&trimmed).map(Some);
-            }
-            self.framing = Framing::Newline;
-            return parse_body(trimmed.as_bytes()).map(Some);
-        }
-    }
-
-    fn read_line(&mut self) -> Result<Option<String>, JsonRpcError> {
-        let mut buffer = Vec::new();
-        match self.reader.read_until(b'\n', &mut buffer) {
-            Ok(0) => Ok(None),
-            Ok(_) => Ok(Some(String::from_utf8_lossy(&buffer).into_owned())),
-            Err(err) => Err(JsonRpcError::new(
-                JSONRPC_PARSE_ERROR,
-                format!("Could not read input: {err}"),
-            )),
-        }
-    }
-
-    fn read_header_framed(&mut self, first_line: &str) -> Result<Value, JsonRpcError> {
-        self.framing = Framing::ContentLength;
-
-        let mut content_length: Option<usize> = None;
-        let mut line = first_line.to_string();
-        loop {
-            let trimmed = line.trim();
-            if !trimmed.is_empty() {
-                let Some((name, value)) = trimmed.split_once(':') else {
-                    return Err(JsonRpcError::new(
-                        JSONRPC_PARSE_ERROR,
-                        "Malformed header line.",
-                    ));
-                };
-                if name.trim().eq_ignore_ascii_case("content-length") {
-                    content_length = Some(value.trim().parse().map_err(|_| {
-                        JsonRpcError::new(JSONRPC_PARSE_ERROR, "Invalid Content-Length header.")
-                    })?);
-                }
-            }
-            match self.read_line()? {
-                None => break,
-                Some(next) if next == "\r\n" || next == "\n" => break,
-                Some(next) => line = next,
-            }
-        }
-
-        let content_length = content_length.ok_or_else(|| {
-            JsonRpcError::new(JSONRPC_PARSE_ERROR, "Missing Content-Length header.")
-        })?;
-
-        let mut body = vec![0_u8; content_length];
-        self.reader.read_exact(&mut body).map_err(|_| {
-            JsonRpcError::new(
-                JSONRPC_PARSE_ERROR,
-                "Unexpected EOF while reading message body.",
-            )
-        })?;
-        parse_body(&body)
+        let (message, framing) = match read_framed(&mut self.reader)? {
+            None => return Ok(None),
+            Some(read) => read,
+        };
+        self.framing = framing;
+        Ok(Some(message))
     }
 
     fn send(&self, payload: Value) {
@@ -284,6 +232,93 @@ impl Server {
         }
         let _ = stdout.flush();
     }
+}
+
+/// One message off the stream, and the framing it arrived in. `Ok(None)` is a
+/// clean end of input. Free of `Server` so the framing can be tested against a
+/// buffer rather than stdin.
+fn read_framed(reader: &mut impl BufRead) -> Result<Option<(Value, Framing)>, JsonRpcError> {
+    loop {
+        let Some(line) = read_line(reader)? else {
+            return Ok(None);
+        };
+        let trimmed = line.trim().to_string();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.to_lowercase().starts_with("content-length:") {
+            // Decided before the body is read, so a reply to a bad header
+            // goes back in the framing the peer is speaking.
+            return read_header_framed(reader, &trimmed)
+                .map(|message| Some((message, Framing::ContentLength)));
+        }
+        return parse_body(trimmed.as_bytes()).map(|message| Some((message, Framing::Newline)));
+    }
+}
+
+fn read_line(reader: &mut impl BufRead) -> Result<Option<String>, JsonRpcError> {
+    let mut buffer = Vec::new();
+    match reader.read_until(b'\n', &mut buffer) {
+        Ok(0) => Ok(None),
+        Ok(_) => Ok(Some(String::from_utf8_lossy(&buffer).into_owned())),
+        Err(err) => Err(JsonRpcError::new(
+            JSONRPC_PARSE_ERROR,
+            format!("Could not read input: {err}"),
+        )),
+    }
+}
+
+fn read_header_framed(reader: &mut impl BufRead, first_line: &str) -> Result<Value, JsonRpcError> {
+    let mut content_length: Option<usize> = None;
+    let mut line = first_line.to_string();
+    loop {
+        let trimmed = line.trim();
+        if !trimmed.is_empty() {
+            let Some((name, value)) = trimmed.split_once(':') else {
+                return Err(JsonRpcError::new(
+                    JSONRPC_PARSE_ERROR,
+                    "Malformed header line.",
+                ));
+            };
+            if name.trim().eq_ignore_ascii_case("content-length") {
+                content_length = Some(value.trim().parse().map_err(|_| {
+                    JsonRpcError::new(JSONRPC_PARSE_ERROR, "Invalid Content-Length header.")
+                })?);
+            }
+        }
+        match read_line(reader)? {
+            None => break,
+            Some(next) if next == "\r\n" || next == "\n" => break,
+            Some(next) => line = next,
+        }
+    }
+
+    let content_length = content_length
+        .ok_or_else(|| JsonRpcError::new(JSONRPC_PARSE_ERROR, "Missing Content-Length header."))?;
+    if content_length > MAX_CONTENT_LENGTH {
+        // Skipped rather than allocated, so the stream stays aligned on the
+        // next message and the peer gets an error instead of a dead server.
+        let _ = std::io::copy(
+            &mut reader.take(content_length as u64),
+            &mut std::io::sink(),
+        );
+        return Err(JsonRpcError::new(
+            JSONRPC_PARSE_ERROR,
+            format!(
+                "Content-Length {content_length} exceeds the {} MiB limit.",
+                MAX_CONTENT_LENGTH / (1024 * 1024)
+            ),
+        ));
+    }
+
+    let mut body = vec![0_u8; content_length];
+    reader.read_exact(&mut body).map_err(|_| {
+        JsonRpcError::new(
+            JSONRPC_PARSE_ERROR,
+            "Unexpected EOF while reading message body.",
+        )
+    })?;
+    parse_body(&body)
 }
 
 fn parse_body(body: &[u8]) -> Result<Value, JsonRpcError> {
@@ -491,7 +526,7 @@ pub fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "task_metadata",
-            "description": "Takt-only per-task state that Checkvist does not store: priority ranks, recurrence rules, and start dates. Read-only.",
+            "description": "Takt-only per-task state that Checkvist does not store: priority ranks (scoped and absolute), recurrence rules, start dates, Eisenhower matrix placements, and the kanban board's columns. Read-only.",
             "inputSchema": {
                 "type": "object",
                 "properties": { "list_id": list_id() },
@@ -788,4 +823,59 @@ fn workspace_tool_definitions() -> Vec<Value> {
             },
         }),
     ]
+}
+
+#[cfg(test)]
+mod framing_tests {
+    use super::*;
+    use std::io::Cursor;
+
+    fn read(input: &[u8]) -> Result<Option<(Value, Framing)>, JsonRpcError> {
+        read_framed(&mut Cursor::new(input.to_vec()))
+    }
+
+    #[test]
+    fn a_bare_line_is_a_newline_framed_message() {
+        let (message, framing) = read(b"{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1}\n")
+            .expect("read")
+            .expect("a message");
+        assert_eq!(message["method"], json!("ping"));
+        assert!(framing == Framing::Newline);
+    }
+
+    #[test]
+    fn a_content_length_header_frames_exactly_that_many_bytes() {
+        let body = br#"{"jsonrpc":"2.0","method":"ping","id":1}"#;
+        let mut input = format!("Content-Length: {}\r\n\r\n", body.len()).into_bytes();
+        input.extend_from_slice(body);
+        let (message, framing) = read(&input).expect("read").expect("a message");
+        assert_eq!(message["id"], json!(1));
+        assert!(framing == Framing::ContentLength);
+    }
+
+    #[test]
+    fn an_oversized_or_unparsable_content_length_is_a_parse_error_not_a_crash() {
+        // The size is a claim made by the peer; it must not be allocated on
+        // trust. Both failures answer -32700, the code the run loop already
+        // reports without an id, rather than ending the server.
+        let huge = format!("Content-Length: {}\r\n\r\n{{}}", usize::MAX);
+        let error = read(huge.as_bytes()).expect_err("refused");
+        assert_eq!(error.code, JSONRPC_PARSE_ERROR);
+        assert!(error.message.contains("exceeds"), "{}", error.message);
+
+        let error = read(b"Content-Length: lots\r\n\r\n{}").expect_err("refused");
+        assert_eq!(error.code, JSONRPC_PARSE_ERROR);
+    }
+
+    #[test]
+    fn an_oversized_body_is_skipped_so_the_next_message_still_reads() {
+        let body = vec![b' '; 16];
+        let mut input = format!("Content-Length: {}\r\n\r\n", MAX_CONTENT_LENGTH + 1).into_bytes();
+        input.extend_from_slice(&body);
+        // Shorter than claimed: skipping consumes what there is and stops at
+        // EOF, after which the stream is simply finished.
+        let mut cursor = Cursor::new(input);
+        assert!(read_framed(&mut cursor).is_err());
+        assert!(read_framed(&mut cursor).expect("eof").is_none());
+    }
 }

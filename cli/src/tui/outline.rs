@@ -27,7 +27,7 @@ impl OutlineStore {
     }
 
     /// Alongside `config.json`, so `$PRIORITY_CONFIG_PATH` moves both together
-    /// and a test or the parity check can't touch the real one.
+    /// and a test or the smoke check can't touch the real one.
     pub fn beside_config(config_path: &std::path::Path, list_id: &str) -> Self {
         if list_id.trim().is_empty() {
             return Self::disabled();

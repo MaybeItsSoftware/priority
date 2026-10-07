@@ -533,6 +533,36 @@ fn reparenting_carries_the_subtree_and_refuses_a_cycle() {
 }
 
 #[test]
+fn a_move_across_lists_journals_every_row_of_the_subtree() {
+    // The subtree's listId is rewritten in one `UPDATE … WHERE id IN (…)`, as
+    // the app does. The change_log triggers are per row, so the undo step
+    // must still hold one entry per moved task plus the root's reparent.
+    let fixture = Fixture::new();
+    let root = fixture.add(PROJECTS, "Root", None);
+    let child = fixture.add(PROJECTS, "Child", Some(&root));
+    let grandchild = fixture.add(PROJECTS, "Grandchild", Some(&child));
+    fixture.call(
+        "workspace_task_move",
+        json!({ "task_id": root, "list_id": INBOX }),
+    );
+
+    let (label, entries) = fixture.journal().pop().expect("an undo step");
+    assert!(label.starts_with("MCP: "), "{label}");
+    // Three listId rewrites, then the root's parent and order.
+    assert_eq!(entries, 4);
+    for id in [&root, &child, &grandchild] {
+        let list: String = fixture.scalar("SELECT listId FROM tasks WHERE id = ?1", id);
+        assert_eq!(list, INBOX);
+        let rows: i64 = fixture.scalar(
+            "SELECT COUNT(*) FROM change_log WHERE rowId = ?1 AND operation = 'update' \
+             AND json_extract(afterJSON, '$.listId') = '827DF788-0000-4000-8000-000000000002'",
+            id,
+        );
+        assert!(rows >= 1, "no journalled listId change for {id}");
+    }
+}
+
+#[test]
 fn position_reorders_among_siblings() {
     let fixture = Fixture::new();
     for title in ["A", "B", "C", "D"] {

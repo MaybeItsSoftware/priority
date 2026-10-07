@@ -27,7 +27,7 @@
 
 use crate::error::{Result, ToolError};
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{Connection, OpenFlags, OptionalExtension};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 
@@ -124,9 +124,12 @@ impl Workspace {
                     })
                 },
             )
-            .map_err(map_query_error)
-            .ok();
+            .optional()
+            .map_err(map_query_error)?;
 
+        // Only "no such row" is "not running". A locked file, a missing table
+        // or a changed column is an error, and saying "no focus session" for
+        // it would be a confident wrong answer.
         let Some(session) = session else {
             return Ok(json!({ "running": false }));
         };

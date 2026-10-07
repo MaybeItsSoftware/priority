@@ -7,7 +7,9 @@ Takt ships an MCP stdio server so an AI assistant can work directly with your Ch
   to it; see [One server, two ways to name it](#one-server-two-ways-to-name-it)
 - Transport: stdio, newline-delimited JSON — one JSON-RPC object per line, as the
   MCP stdio transport specifies. LSP-style `Content-Length` framing is also
-  accepted, and replies mirror whichever framing the client used.
+  accepted, and replies mirror whichever framing the client used. A
+  `Content-Length` over 64 MiB, or one that isn't a number, gets a `-32700`
+  parse error rather than a body that size.
 - Dependencies: none beyond Takt itself — the server ships inside the app
 
 ## What It Can Do
@@ -219,7 +221,7 @@ lists, answers, files written, and HTTP requests, because neither could import
 the other.
 
 What kept the Swift one alive was never a capability the CLI lacked; the parity
-check proved that every one of the nineteen tools agreed. It was that MCP client
+check proved that every tool the two shared agreed. It was that MCP client
 configurations already written to users' disks name
 `/Applications/Priority.app/Contents/MacOS/Priority --mcp-server`. Bundling the
 CLI and turning that path into a shim removed the reason, so:
@@ -240,7 +242,7 @@ python3 scripts/mcp_smoke_check.py   # needs a Debug app build
 ```
 
 It drives both spellings above and checks they answer `initialize` and expose
-the same nineteen tools — in particular that an old-style invocation, with
+the same 34 tools — in particular that an old-style invocation, with
 credentials in `env`, still reaches a working server. It reads no real data and
 needs no Checkvist credentials.
 

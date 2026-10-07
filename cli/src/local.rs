@@ -4,7 +4,7 @@
 //! Checkvist representation, so anything limited to the API cannot see them.
 //!
 //! This is a second reading of the same files the app writes — the Swift side
-//! (`Takt/CoreLogic/`) is the original. The two are not held together by a
+//! (`Sources/TaktCore/`) is the original. The two are not held together by a
 //! shared type but by the serialised format, which `docs/mcp-server.md`
 //! describes and `DailyDefinitionsStoreFormatTests` pins on the Swift side.
 //! Change a rule here and that format is the contract to check it against.
@@ -14,7 +14,7 @@ use crate::error::{Result, ToolError};
 use crate::lock::FileLock;
 use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, TimeZone, Utc};
 use serde_json::{Map, Value, json};
-use std::io::{BufRead, BufReader, Write};
+use std::io::Write;
 use std::path::PathBuf;
 
 pub const BUNDLE_ID: &str = "uk.co.maybeitssoftware.takt";
@@ -206,15 +206,15 @@ impl LocalState {
 
     /// A damaged line costs that event, not the whole history — the same
     /// tolerance as `DayLogFileStore.loadAll`.
+    ///
+    /// Read as bytes and split on `\n` rather than with `lines()`: a line
+    /// that is not valid UTF-8 would end a `lines()` iteration there, losing
+    /// every event after it rather than just its own.
     fn events(&self) -> Vec<Value> {
-        let Ok(file) = std::fs::File::open(self.daylog_path()) else {
+        let Ok(bytes) = std::fs::read(self.daylog_path()) else {
             return Vec::new();
         };
-        BufReader::new(file)
-            .lines()
-            .map_while(std::result::Result::ok)
-            .filter_map(|line| serde_json::from_str::<Value>(line.trim()).ok())
-            .collect()
+        parse_event_lines(&bytes)
     }
 
     fn dailies(&self) -> Vec<Value> {
@@ -555,7 +555,7 @@ impl LocalState {
         let dailies = self.dailies();
 
         let mut summaries = Vec::new();
-        // Newest first, as the other two servers report it.
+        // Newest first, as the app reports it.
         for day in self.days_ending_on(ending_on, count).into_iter().rev() {
             let mut summary = self.summary(&events, day);
             let ticked = self.completed_daily_ids(&events, day);
@@ -616,18 +616,42 @@ impl LocalState {
     // memory and rewrites on its own schedule, so there is no equivalent of the
     // file lock that would let an external write survive.
 
+    /// For reading: a missing or undecodable file is no dailies.
     fn load_collection(&self) -> Value {
-        let empty = || json!({ "version": 1, "dailies": [] });
-        let Ok(text) = std::fs::read_to_string(self.dailies_path()) else {
-            return empty();
+        self.read_collection()
+            .unwrap_or_else(|_| json!({ "version": 1, "dailies": [] }))
+    }
+
+    /// For writing: a missing file is an empty collection, but one that
+    /// exists and does not decode is an error. Saving over it would replace
+    /// every daily it held with only the one being added — the same rule as
+    /// `DailyDefinitionsStore`, which refuses rather than overwrite.
+    fn read_collection(&self) -> Result<Value> {
+        let path = self.dailies_path();
+        let bytes = match std::fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(json!({ "version": 1, "dailies": [] }));
+            }
+            Err(err) => {
+                return Err(ToolError::new(format!(
+                    "Could not read {}: {err}",
+                    path.display()
+                )));
+            }
         };
-        let Ok(collection) = serde_json::from_str::<Value>(&text) else {
-            return empty();
+        let refused = || {
+            ToolError::new(format!(
+                "{} exists but could not be read as a list of dailies, so it has not been \
+                 changed. Fix or move it aside, then try again.",
+                path.display()
+            ))
         };
+        let collection = serde_json::from_slice::<Value>(&bytes).map_err(|_| refused())?;
         if !collection.get("dailies").is_some_and(Value::is_array) {
-            return empty();
+            return Err(refused());
         }
-        collection
+        Ok(collection)
     }
 
     fn save_collection(&self, collection: &Value) -> Result<()> {
@@ -662,7 +686,7 @@ impl LocalState {
     fn mutate_dailies(&self, transform: impl FnOnce(&mut Vec<Value>)) -> Result<Value> {
         let path = self.dailies_path();
         FileLock::protecting(&path).with_exclusive(|| {
-            let mut collection = self.load_collection();
+            let mut collection = self.read_collection()?;
             let mut dailies = collection
                 .get("dailies")
                 .and_then(Value::as_array)
@@ -856,26 +880,7 @@ impl LocalState {
             "dailyId": daily_id,
         });
 
-        let path = self.daylog_path();
-        // Locked so a concurrent append from the app or the other servers
-        // cannot splice a line — a spliced line is dropped by the tolerant
-        // reader, losing both events.
-        FileLock::protecting(&path).with_exclusive(|| {
-            if let Some(parent) = path.parent() {
-                std::fs::create_dir_all(parent).map_err(|err| {
-                    ToolError::new(format!("Could not create {}: {err}", parent.display()))
-                })?;
-            }
-            let mut file = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&path)
-                .map_err(|err| {
-                    ToolError::new(format!("Could not open {}: {err}", path.display()))
-                })?;
-            writeln!(file, "{event}")
-                .map_err(|err| ToolError::new(format!("Could not append to the day log: {err}")))
-        })?;
+        append_event(&self.daylog_path(), &event)?;
 
         Ok(json!({
             "id": daily_id, "title": title, "done": done,
@@ -979,6 +984,56 @@ impl LocalState {
             "kanban_columns": kanban_columns(&prefs),
         })
     }
+}
+
+/// Appends one event to the day log as a single `write_all` of the line and
+/// its newline, under the lock the app takes too.
+///
+/// One write rather than `writeln!`'s several, so the line cannot be split
+/// around another writer's. And if the file does not end in a newline — an
+/// earlier writer died mid-line — one is written first, so this event starts
+/// a line of its own rather than being glued onto the damaged one and lost
+/// with it.
+pub fn append_event(path: &std::path::Path, event: &Value) -> Result<()> {
+    use std::io::{Read, Seek, SeekFrom};
+    let line = serde_json::to_string(event)
+        .map_err(|err| ToolError::new(format!("Could not encode the event: {err}")))?
+        + "\n";
+    FileLock::protecting(path).with_exclusive(|| {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|err| {
+                ToolError::new(format!("Could not create {}: {err}", parent.display()))
+            })?;
+        }
+        let failed =
+            |err: std::io::Error| ToolError::new(format!("Could not append to the day log: {err}"));
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .read(true)
+            .append(true)
+            .open(path)
+            .map_err(|err| ToolError::new(format!("Could not open {}: {err}", path.display())))?;
+        let length = file.metadata().map_err(failed)?.len();
+        let mut bytes = line.into_bytes();
+        if length > 0 {
+            let mut last = [0_u8; 1];
+            file.seek(SeekFrom::Start(length - 1)).map_err(failed)?;
+            file.read_exact(&mut last).map_err(failed)?;
+            if last[0] != b'\n' {
+                bytes.insert(0, b'\n');
+            }
+        }
+        file.write_all(&bytes).map_err(failed)
+    })
+}
+
+/// One event per `\n`-separated line, each decoded on its own: a damaged
+/// line, invalid UTF-8 included, costs that event and no other.
+pub fn parse_event_lines(bytes: &[u8]) -> Vec<Value> {
+    bytes
+        .split(|byte| *byte == b'\n')
+        .filter_map(|line| serde_json::from_slice::<Value>(line.trim_ascii()).ok())
+        .collect()
 }
 
 /// `RootDueBucket` in the app, by raw value.

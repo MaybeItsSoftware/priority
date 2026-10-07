@@ -2,7 +2,7 @@
 name = "takt-cli"
 version = "0.3.0"
 edition = "2024"
-description = "Command-line access to Takt's Checkvist lists, dailies and day log, plus a third MCP server implementation."
+description = "Command-line access to Takt's Checkvist lists, dailies, day log and workspace, and the MCP server the app bundles."
 publish = false
 
 [[bin]]
