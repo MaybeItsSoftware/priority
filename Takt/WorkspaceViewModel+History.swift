@@ -61,8 +61,11 @@ extension WorkspaceViewModel {
   func applyHistoryFromMenu(redo: Bool) {
     if let text = NSApp.keyWindow?.firstResponder as? NSTextView {
       if let manager = text.undoManager {
-        if redo && manager.canRedo { manager.redo() }
-        else if !redo && manager.canUndo { manager.undo() }
+        if redo && manager.canRedo {
+          manager.redo()
+        } else if !redo && manager.canUndo {
+          manager.undo()
+        }
       }
     } else {
       if redo { redoLastUndoneChange() } else { undoLastChange() }

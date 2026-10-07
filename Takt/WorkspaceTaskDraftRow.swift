@@ -38,7 +38,11 @@ struct WorkspaceTaskDraftRow: View {
         // Checkvist's indent while typing: Tab puts the new task inside the
         // one above it, ⇧Tab back out to that task's level.
         .onKeyPress(.tab, phases: .down) { press in
-          press.modifiers.contains(.shift) ? model.outdentTaskDraft() : model.indentTaskDraft()
+          if press.modifiers.contains(.shift) {
+            model.outdentTaskDraft()
+          } else {
+            model.indentTaskDraft()
+          }
           return .handled
         }
       if capture.hasDetails {

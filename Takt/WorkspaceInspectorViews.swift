@@ -192,29 +192,29 @@ struct LocalTaskInspector: View {
             $0.dueAt = nil
             $0.dueDate = nil
           }
-        }
-      ) {
-        if let dueAt = draft.values.dueAt {
-          ThemedDateField(
-            selection: Binding(
-              get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
-              set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }),
-            includesTime: true)
-        } else if let day = draft.values.dueDate {
-          ThemedDateField(
-            selection: Binding(
-              get: {
-                TaskCalendarDate.date(model.taskEditor.draft(for: task.id)?.values.dueDate ?? day)
-                  ?? .now
-              },
-              set: { date in
-                model.taskEditor.edit(task.id) {
-                  $0.dueDate = TaskCalendarDate.string(date)
-                  $0.dueAt = nil
-                }
-              }))
-        }
-      }
+        },
+        value: {
+          if let dueAt = draft.values.dueAt {
+            ThemedDateField(
+              selection: Binding(
+                get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
+                set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }),
+              includesTime: true)
+          } else if let day = draft.values.dueDate {
+            ThemedDateField(
+              selection: Binding(
+                get: {
+                  TaskCalendarDate.date(model.taskEditor.draft(for: task.id)?.values.dueDate ?? day)
+                    ?? .now
+                },
+                set: { date in
+                  model.taskEditor.edit(task.id) {
+                    $0.dueDate = TaskCalendarDate.string(date)
+                    $0.dueAt = nil
+                  }
+                }))
+          }
+      })
       if hasDue {
         Toggle(
           "At a set time",

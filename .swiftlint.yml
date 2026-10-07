@@ -3,6 +3,9 @@ excluded:
   - build
   - DerivedData
   - FocusCore/.build
+  - .claude
+  - mobile/ios/build
+  - "**/SourcePackages"
   - "**/*.derived"
 
 disabled_rules:
@@ -13,6 +16,9 @@ disabled_rules:
   - trailing_whitespace
   - trailing_newline
   - non_optional_string_data_conversion
+  # `String(decoding:as:)` on an encoder's own output is the right call; the
+  # failable form would only add an unreachable branch.
+  - optional_data_string_conversion
   - duplicate_imports
   - todo
 

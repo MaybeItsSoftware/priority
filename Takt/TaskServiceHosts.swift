@@ -1,24 +1,24 @@
 import Foundation
 import TaktCore
 
-/// The coordinator-shaped surface that `TaskMutationService` and `SyncService`
-/// need, expressed without AppKit, SwiftUI, or any app-only model type.
-///
-/// Both services used to hold a `weak var coordinator: AppCoordinator?` and
-/// reach through it into `taskListViewModel`, `quickEntry`, `kanban`, `timer`,
-/// `integrations`, and friends. That made them impossible to compile — let
-/// alone test — outside the Xcode app target, so the two files carrying the
-/// optimistic-mutation and offline-replay logic had no unit coverage at all.
-///
-/// These protocols are the seam. Everything that genuinely needs the UI layer
-/// (haptics, the completion animation, kanban column maths, the recurrence
-/// rule store) is expressed as a *behaviour* the host performs rather than as a
-/// manager object the service pokes at, so the services can move into
-/// `TaktAppLogic` and run against a test double. `AppCoordinator` provides
-/// the production conformance in `AppCoordinator+ServiceHosts.swift`.
-///
-/// Neither service holds the host strongly: `AppCoordinator` owns the services,
-/// so a strong back-reference would be a retain cycle.
+// The coordinator-shaped surface that `TaskMutationService` and `SyncService`
+// need, expressed without AppKit, SwiftUI, or any app-only model type.
+//
+// Both services used to hold a `weak var coordinator: AppCoordinator?` and
+// reach through it into `taskListViewModel`, `quickEntry`, `kanban`, `timer`,
+// `integrations`, and friends. That made them impossible to compile — let
+// alone test — outside the Xcode app target, so the two files carrying the
+// optimistic-mutation and offline-replay logic had no unit coverage at all.
+//
+// These protocols are the seam. Everything that genuinely needs the UI layer
+// (haptics, the completion animation, kanban column maths, the recurrence
+// rule store) is expressed as a *behaviour* the host performs rather than as a
+// manager object the service pokes at, so the services can move into
+// `TaktAppLogic` and run against a test double. `AppCoordinator` provides
+// the production conformance in `AppCoordinator+ServiceHosts.swift`.
+//
+// Neither service holds the host strongly: `AppCoordinator` owns the services,
+// so a strong back-reference would be a retain cycle.
 
 // MARK: - Shared
 

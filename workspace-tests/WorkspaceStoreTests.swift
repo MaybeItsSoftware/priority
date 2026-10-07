@@ -468,7 +468,6 @@ final class WorkspaceStoreTests: XCTestCase {
   }
 }
 
-
 extension WorkspaceStoreTests {
   func testBatchedBoardMetadataMatchesIndividualReadsAcrossBatchBoundaries() throws {
     let workspace = try store.bootstrapIfNeeded()
@@ -514,7 +513,6 @@ extension WorkspaceStoreTests {
     XCTAssertNil(try store.boardMetadata(for: [ids[0]]).columns[ids[0]])
   }
 }
-
 
 extension WorkspaceStoreTests {
   func testBulkColumnMovePreservesMetadataAndIsOneAtomicUndoStep() throws {

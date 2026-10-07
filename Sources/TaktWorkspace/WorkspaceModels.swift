@@ -91,7 +91,7 @@ public struct WorkspaceTask: Codable, FetchableRecord, PersistableRecord, Identi
   /// When the task was closed, kept separately from `updatedAt` because
   /// editing a finished task must not move the day it was finished on.
   /// Nil whenever `status` is open, and cleared on reopening.
-  public var completedAt: Date? = nil
+  public var completedAt: Date?
   public let createdAt: Date
   public var updatedAt: Date
 

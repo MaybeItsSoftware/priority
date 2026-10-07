@@ -222,8 +222,11 @@ extension WorkspaceViewModel {
   }
 
   func toggleCurrentListCompletion() {
-    if let scope = scopeTask, scope.isList { toggleTask(scope) }
-    else if let list = selectedList, !list.isSystemList { toggleListCompletion(list) }
+    if let scope = scopeTask, scope.isList {
+      toggleTask(scope)
+    } else if let list = selectedList, !list.isSystemList {
+      toggleListCompletion(list)
+    }
   }
 
   func toggleListPromotion(_ task: WorkspaceTask) {

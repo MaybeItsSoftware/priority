@@ -170,14 +170,14 @@ struct WorkspaceTaskPlanningEditor: View {
       ThemedOptionalRow(
         "Start", isSet: values.startAt != nil,
         add: { edit { $0.startAt = $0.startAt ?? .now } },
-        clear: { edit { $0.startAt = nil } }
-      ) {
-        if let start = values.startAt {
-          ThemedDateField(
-            selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
-            includesTime: true)
-        }
-      }
+        clear: { edit { $0.startAt = nil } },
+        value: {
+          if let start = values.startAt {
+            ThemedDateField(
+              selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
+              includesTime: true)
+          }
+      })
       MicroLabel("Conditions")
       if (values.requirementGroups ?? []).isEmpty {
         Text("Anytime, on your laptop").font(theme.captionFont).foregroundStyle(theme.muted)

@@ -201,14 +201,13 @@ protocol GoogleTasksIntegrationPlugin: Plugin {
   func disconnectAuthentication()
 }
 
-
 struct GoogleCalendarEventCreationOutcome: Sendable {
   let urlToOpen: URL?
   let usedGoogleCalendarAPI: Bool
   /// Google's id for the created event, when one was really created through
   /// the API. It is what lets Priority ask later whether the event is still
   /// there — which is how clearing it off a calendar completes the task.
-  var eventID: String? = nil
+  var eventID: String?
 }
 
 /// What became of an event Priority created.

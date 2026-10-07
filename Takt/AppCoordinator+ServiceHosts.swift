@@ -3,14 +3,14 @@ import Foundation
 import TaktCore
 import SwiftUI
 
-/// `AppCoordinator`'s production conformance to the seams that
-/// `TaskMutationService` and `SyncService` talk through.
-///
-/// This is deliberately the *only* app-only half of the split: everything here
-/// is either a forward into a manager the coordinator already owns, or a piece
-/// of genuinely UI-bound behaviour (haptics, the completion animation, the
-/// kanban column maths, the recurrence rule store) that has no business in
-/// `TaktAppLogic`. The services themselves are now testable without it.
+// `AppCoordinator`'s production conformance to the seams that
+// `TaskMutationService` and `SyncService` talk through.
+//
+// This is deliberately the *only* app-only half of the split: everything here
+// is either a forward into a manager the coordinator already owns, or a piece
+// of genuinely UI-bound behaviour (haptics, the completion animation, the
+// kanban column maths, the recurrence rule store) that has no business in
+// `TaktAppLogic`. The services themselves are now testable without it.
 
 // MARK: - Shared
 
@@ -36,7 +36,6 @@ extension AppCoordinator: TaskServiceHost {
 
 extension AppCoordinator: TaskMutationHost {
   var currentTask: CheckvistTask? { taskListViewModel.currentTask }
-
 
   func isDescendant(_ task: CheckvistTask, of ancestorId: Int) -> Bool {
     taskListViewModel.isDescendant(task, of: ancestorId)

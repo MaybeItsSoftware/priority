@@ -49,7 +49,9 @@ extension SettingsView {
       SettingsToggleRow(
         "Focus points",
         detail:
-          "Finishing a block asks how it went — a multiplier from ×1.0, nudged a tenth at a time — and minutes times that is the block's points. Turn this off to drop scoring altogether: no question at the end of a block, and no points anywhere.",
+          "Finishing a block asks how it went — a multiplier from ×1.0, nudged a tenth at a time — "
+            + "and minutes times that is the block's points. Turn this off to drop scoring altogether: "
+            + "no question at the end of a block, and no points anywhere.",
         isOn: preferenceBinding(\.scoresEachFocusBlock))
     } header: {
       Text("Running a block")

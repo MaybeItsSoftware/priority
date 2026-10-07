@@ -211,7 +211,6 @@ extension WorkspaceStore {
   }
 }
 
-
 extension WorkspaceStore {
   /// Import the old preferences as a baseline, without creating undo steps.
   public func kanbanBoardConfigurations(legacy: [String: Data], currentKey: String) throws -> [String: Data] {
