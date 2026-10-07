@@ -12,14 +12,27 @@ ad-hoc `-` ("Sign to Run Locally") identity the project used previously:
 | `CODE_SIGN_IDENTITY[sdk=macosx*]` | `Apple Development` | `Apple Development` |
 | `CODE_SIGN_STYLE` | `Manual` | `Manual` |
 | `DEVELOPMENT_TEAM` | `6NQNU5YSC2` | `6NQNU5YSC2` |
-| `ENABLE_APP_SANDBOX` | `NO` | `YES` |
+| `ENABLE_APP_SANDBOX` | `NO` | `NO` |
 | `ENABLE_HARDENED_RUNTIME` | — | `YES` |
-| Entitlements | `Priority.entitlements` | `Priority.release.entitlements` |
+| Entitlements | `Takt/Takt.entitlements` | `Takt/Takt.release.entitlements` |
 
-No provisioning profile is needed. The app's entitlements — sandbox,
-user-selected files, network client/server — are all profile-free on macOS, so
+No provisioning profile is needed. The app's entitlements — user-selected
+files, network client/server — are all profile-free on macOS, so
 `PROVISIONING_PROFILE_REQUIRED` resolves to `NO`. Adding a profile-backed
 capability later (app groups, iCloud, push) changes that.
+
+The sandbox is deliberately **off** in both configurations, and
+`.github/workflows/ci.yml` fails the build if either the release entitlements
+or `ENABLE_APP_SANDBOX` turn it back on. Sandboxing is only mandatory for Mac
+App Store distribution; this app ships as a notarized DMG, which does not need
+it. It also cannot simply be re-enabled: under the sandbox, keychain access is
+scoped to an access group that comes from `com.apple.application-identifier`,
+which only an embedded provisioning profile grants, and the project signs
+manually with none — so the sandboxed build had no access group, every
+`SecItemAdd` failed, and the app silently forgot the Checkvist remote key on
+every relaunch. Turning it on again means provisioning a profile and adding
+`keychain-access-groups` first; the long comment in
+`Takt/Takt.release.entitlements` is the authoritative account.
 
 ### Why a real identity rather than ad-hoc
 

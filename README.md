@@ -69,9 +69,10 @@ something you already have to know.
 
 | Key | Action |
 | --- | --- |
-| `Cmd+1`–`Cmd+4` | Today, Board, Outline, Matrix |
+| `Cmd+1`–`Cmd+4` | Today, Board, Outline, Matrix (`Cmd+T` is Today too) |
 | `Cmd+8` / `Cmd+9` | The focus panel / the timeline, a tab in the right dock |
-| `Cmd+0` | Everything, across all active lists |
+| `Cmd+0` / `Cmd+E` / `gh` | Everything, across all active lists |
+| `Cmd+I` | The Inbox |
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
 | `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
 | `j` / `k` / `↑` / `↓` | Move the selection |
@@ -79,7 +80,7 @@ something you already have to know.
 | `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) — on Today, earlier or later in the day |
 | `Alt+←` / `Alt+→` | Outdent / indent the task — out of, or under, the task above |
 | `Cmd+←` / `Cmd+→`, or `Shift+Alt+←` / `Shift+Alt+→` | Move the card a board column left / right (in the outline `Cmd+←` / `Cmd+→` still fold and unfold everything) |
-| `Cmd+Alt+←` / `Cmd+Alt+→`, `Cmd+Alt+↑` / `Cmd+Alt+↓`, or `Cmd+{` / `Cmd+}` | The list above / below in the sidebar — Zed's previous / next tab (in the sidebar itself `Cmd+Alt+↑` / `↓` still move a folder) |
+| `Cmd+Alt+↑` / `Cmd+Alt+↓`, or `Cmd+Shift+{` / `Cmd+Shift+}` | The list above / below in the sidebar — Zed's previous / next tab (in the sidebar itself `Cmd+Alt+↑` / `↓` still move a folder; `Cmd+Alt+←` / `→` outdent and indent the task, as `Alt+←` / `→` do) |
 | `Ctrl+-` / `Ctrl+Shift+-` | Back / forward through the lists you have been in — Zed's go back / go forward |
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |
 | `Ctrl+T` | Plan the task for today, or take it off |
@@ -88,11 +89,15 @@ something you already have to know.
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection in the outline and the matrix, into the list you are in elsewhere |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
+| `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
+| `hc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `hc` shows them all again |
 | `f` | Start a focus block on the task — on Today, queue it behind a running block |
 | `l` / `]` | Open the task's subtasks |
 | `→` / `←` | In the outline, show a task's subtasks and step into them / hide them and step out — without opening the task. Elsewhere, open and leave it. At the top level of a list, `←` goes back to the list in the sidebar |
 | `za` / `Cmd+←` / `Cmd+→` | Fold or unfold the task you are on (outline or board) / fold / unfold the whole outline |
+| `Cmd+Shift+C` / `Cmd+Ctrl+C` | On the board, add a column / remove the one you are in |
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
+| `Cmd+R` | Rename the list you are in (`F2` and `Shift+R` in the sidebar) |
 | `Shift+Return` / `Alt+Shift+Return` | New task above the selection (Checkvist's) / new subtask |
 | `Cmd+F` / `Cmd+Shift+F` | Search |
 | `Cmd+P` / `ll` | Go to a list — opened empty, it lists the ones you were in most recently first. Every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
@@ -100,8 +105,8 @@ something you already have to know.
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
 | `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock / close all docks (Zed's) |
-| `Cmd+I` | List settings |
-| `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
+| `oo` / `Cmd+Alt+I` | List settings |
+| `Cmd+Z` / `Cmd+Shift+Z`, or `Ctrl+Z` / `Ctrl+Shift+Z`, or `uu` | Undo / redo |
 | `Cmd+Shift+P` / `Cmd+K` | The command palette — everything the workspace can do, and its key |
 | `Cmd+/` | The same commands, grouped as a reference |
 | `Esc` | Cancel what you are typing, or leave the surface you are in |
@@ -109,7 +114,7 @@ something you already have to know.
 In the sidebar the keys are Zed's project panel's, lists standing in for files
 and folders for directories: `Cmd+N` new list and `Cmd+Alt+N` new folder beside
 the row you are on, `F2` rename, `Delete` delete (it asks), `Cmd+←` / `Cmd+→`
-collapse / expand every folder, `→` opens the row. `Return` on a folder **enters** it: its lists' tasks together on one board or outline, with the keyboard on them, so you can work through the folder without opening each list. On a list, `Return` goes into its tasks the same way. Its vim panel's netrw
+collapse / expand every folder, `→` (or `l`) opens the row. On a folder that is already open, `→` **enters** it: its lists' tasks together on one board or outline, with the keyboard on them, so you can work through the folder without opening each list. On a list, `→` goes into its tasks the same way. `Return` is not "open" anywhere, the sidebar included — it adds a task to the list you are on, as it does everywhere else. Its vim panel's netrw
 keys work too: `d` new folder, `%` new list, `Shift+D` delete, `Shift+R`
 rename, `h` / `l` / `-` collapse, expand and go up, `gg` / `Shift+G` the ends,
 `{` / `}` the previous / next folder and `:` the palette.
@@ -124,7 +129,7 @@ notes edit too, where `Shift+Return` is the new line.
 The arrows read by modifier. Bare, they move the cursor, and past the last row
 it wraps to the first (and back from the first to the last); with `Cmd`, they
 move it to the ends. In the sidebar, `→` on a folder that is already open
-enters its tasks, as `Return` does. `Alt` moves the *task* within its list — up and down among its
+enters its tasks (`Return` adds a task there, as everywhere). `Alt` moves the *task* within its list — up and down among its
 siblings, out and in a level. `Shift+Alt` carries it somewhere else — another
 board column, another list. `Ctrl` is left to macOS, which gives it and the
 arrows to Spaces and Mission Control.
@@ -254,7 +259,7 @@ dock beside them — so none of it is reachable only by a key you have to alread
 
 | Key | Action |
 | --- | --- |
-| `Cmd+1` | Today |
+| `Cmd+1` / `Cmd+T` | Today |
 | `Cmd+2` | Board |
 | `Cmd+3` | Outline |
 | `Cmd+4` | Matrix |
@@ -425,15 +430,13 @@ repeat`, `remove repeat` and `clear repeat` all do the same thing.
 | --- | --- |
 | **Status** | `done`, `undone`, `invalidate`, `delete`, `undo` |
 | **Due** | `due <value>`, `clear due` |
-| **Start date** | `start <value>`, `edit start`, `clear start` |
+| **Start date** | `start <value>`, `clear start` (`edit start` is unrelated: it opens the title for editing with the cursor at its start) |
 | **Repeat** | `repeat <rule>`, `repeat daily`, `repeat every <n> <unit>`, `clear repeat` |
 | **Tags** | `tag <name>`, `untag <name>` |
 | **Priority** | `priority <1-9>`, `priority back`, `clear priority` |
-| **Matrix** | `matrix do` / `schedule` / `delegate` / `eliminate`, `matrix <u> <i>`, `importance <value>`, `urgency <value>`, `clear matrix` |
-| **Kanban** | `kanban left` / `right`, `kanban move left` / `right`, `kanban enter`, `kanban exit`, `kanban show in all`, `kanban focus mode`, `kanban swimlanes` |
-| **Outline** | `expand`, `collapse`, `expand all`, `collapse all`, `enter children`, `exit parent` |
-| **View** | `list <name>`, `tab <name>`, `cycle tab next` / `prev`, `cycle filter next` / `prev`, `toggle children`, `toggle subtree`, `toggle context`, `toggle hide future` |
-| **Timer** | `focus mode`, `toggle timer`, `pause timer` |
+| **Outline** | `expand`, `collapse`, `expand all`, `collapse all`, `enter children`, `exit parent`, `move up`, `move down`, `add sibling`, `add child`, `open link`, `edit` |
+| **View** | `list <name>`, `toggle children` / `toggle subtree`, `toggle context`, `toggle hide future`, `command palette` |
+| **Timer** | `toggle timer`, `pause timer` |
 | **Obsidian** | `sync obsidian`, `open obsidian new window`, `link` / `create` / `clear obsidian folder`, `choose obsidian inbox` |
 | **AFFiNE** | `sync affine`, `open affine`, `affine daily` |
 | **Calendar** | `sync google calendar`, `open google calendar` |
@@ -442,10 +445,12 @@ repeat`, `remove repeat` and `clear repeat` all do the same thing.
 
 Due values understand natural language and times: `due today 14:30`, `due tomorrow 9am`, `due next week`, `due 4pm fri`, `due next monday morning`. The time words `morning`, `noon`, `afternoon`, `evening`, `midnight`, `eod` and `cob` all resolve to configurable named times.
 
-The **Kanban**, **Matrix** and **View** families act on the Checkvist-side state
-the removed menu bar panel rendered. What they change no longer has a surface
-either, so they are doubly stranded — a workspace that has not finished
-migrating, reachable by nothing.
+There is no typed-command family for the matrix or the board: the parser never
+grew one, and the keys (`Alt+1`–`Alt+4`, `Cmd+←` / `Cmd+→`) are the only way to
+place a task in a quadrant or move a card. The **View** and **Timer** families
+act on the Checkvist-side state the removed menu bar panel rendered. What they
+change no longer has a surface either, so they are doubly stranded — a workspace
+that has not finished migrating, reachable by nothing.
 
 ## Views
 
@@ -876,10 +881,10 @@ python3 scripts/mcp_smoke_check.py
 | `Sources/TaktCore/` | Pure, headless, UI-free logic. The app links it as a package product. |
 | `Takt/Plugins/` | Integration plugins, one folder each, behind protocols |
 | `cli/` | The Rust CLI crate — shares no source with the Swift side |
-| `scripts/` | Build, install, the Python MCP fallback, and the parity check |
+| `scripts/` | Build, install, bundle the CLI into the app, and the MCP smoke check |
 | `docs/` | [CLI](docs/cli.md) · [MCP](docs/mcp-server.md) · [plugins](docs/plugins.md) · [state ownership](docs/state-ownership.md) · [sync](docs/sync.md) · [self-hosting sync](docs/self-hosting.md) |
 
-The same source tree is compiled by two build systems: the Xcode project builds the app, and `Package.swift` exposes `TaktCore`, `TaktPlugins` and `TaktAppLogic` as SPM libraries so the headless logic can be tested without the app shell. Adding or moving a file often means updating `Package.swift` too — see [CLAUDE.md](CLAUDE.md).
+The same source tree is compiled by two build systems: the Xcode project builds the app, and `Package.swift` exposes six SPM libraries so the headless logic can be tested without the app shell — `TaktCore` (pure logic), `TaktWorkspace` (the GRDB workspace store), `TaktWorkspaceEditing` (the outline editing engine), `TaktSync` (the client half of multi-device sync), `TaktPlugins` (integration plugins) and `TaktAppLogic` (the app-bound state machines) — each with a test target of the same name plus `Tests` (`TaktCoreTests`, `TaktWorkspaceTests`, `TaktWorkspaceEditingTests`, `TaktSyncTests`, `TaktPluginTests`, `TaktAppLogicTests`). The first four are real single-directory targets under `Sources/` and `Takt/Editing`; the last two are curated `sources:` lists over `Takt/`, so adding or moving a file there means updating `Package.swift` too — see [CLAUDE.md](CLAUDE.md).
 
 ## Where your data lives
 

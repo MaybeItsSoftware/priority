@@ -28,8 +28,8 @@ code is right; fix this section.
 | `KeyboardShortcutRouter.swift` | 1,011 LOC | 923 LOC across 2 files; gates, sequences and guards in `TaktCore` |
 | MCP implementations | 3 (Swift, Python, Rust) | **1** (the Rust CLI, bundled in the app) |
 | How the app gets `TaktCore` | compiled its sources | **links the package product** |
-| Test count | — | **570 SPM + 92 cargo** |
-| SwiftLint in CI | never ran | runs (non-strict); 11 standing warnings |
+| Test count | — | **1,441 SPM + 129 cargo** (last audited 2026-10-07) |
+| SwiftLint in CI | never ran | runs (non-strict); the standing warning count lives in `TODO.md` |
 
 Phases 0–5 are complete. What follows is the open list.
 
@@ -166,18 +166,16 @@ view.
 
 ### 4. SwiftLint's standing warnings
 
-Down from thirteen to **nine**, without suppressing any: `MCPServer.swift` took
-two with it when it was deleted, and `KeyboardShortcutRouter.swift`'s
-file-length warning went when its performing half moved to
-`+Support.swift`. What remains is `CommandEngine` (884 lines, one 161-line
-function), `TaskVisibilityEngine.compute` (complexity 28), `AppCoordinator.init`
-(177 lines), `TaskMutationService` (type body 721),
-`PopoverView+TaskRow.taskRow` (165), `SettingsView` nesting, and two orphaned
-doc comments.
+The live count, and what each warning is, is kept in **`TODO.md`** ("Known-good
+backlog"), the single place the number lives; the figures that used to sit here
+(thirteen, then nine, then the workspace files' arrival) are now history and
+the per-file list went stale every time one was fixed. What remains after the
+2026-10-07 cleanup is length and complexity on the known large files only —
+none of them a new kind, none suppressed.
 
 CI runs `swiftlint lint` without `--strict`, so these are advisory and errors
-block. Don't add to the list; don't suppress it either — three warnings
-introduced while doing the work above were fixed rather than accepted.
+block. Don't add to the list; don't suppress it either — every warning
+introduced while doing the work above was fixed rather than accepted.
 
 ### 5. Day-log rotation
 
@@ -202,7 +200,7 @@ requests made. It was that MCP client configurations already on users' disks nam
 `/Applications/Priority.app/Contents/MacOS/Priority --mcp-server`.
 
 So the app ships the CLI instead. `scripts/bundle_cli.sh`, from an Xcode build
-phase, cargo-builds it and installs it at `Contents/Helpers/priority`, signed
+phase, cargo-builds it and installs it at `Contents/Helpers/takt`, signed
 with the app. `TaktEntryPoint.main()` checks for `--mcp-server` before
 `MainApp.main()` and hands the process to `MCPServerShim.run()`, which `execv`s
 the helper — so a process that only speaks JSON-RPC on stdio never initialises
@@ -275,7 +273,7 @@ Target shape:
     - **Undo half (step 3.2):** split out into `Takt/UndoService.swift` (owns `lastAction` and the rewind switch, replacing the misplaced `TaskRepository.lastUndo` slot). Depends on the new `UndoActionPerforming` protocol rather than `AppCoordinator` directly, which let it move into `TaktAppLogic` — `applogic-tests/UndoServiceTests.swift` covers record/clear and the rewind dispatch for every `UndoableAction` case (10 new tests). `+Undo.swift` is deleted.
     - **Mutation half (step 3.4):** new `Takt/TaskMutationService.swift` owns mark-done / reopen / invalidate / `taskAction`, `updateTask`, `addTask`, `addTaskAsChild`, `deleteTask`, `createNextOccurrence`, and the QuickAdd flow (`beginQuickAddEntry`, `setQuickAddSpecificLocationToCurrentTask`, `submitQuickAddTask`). `+TaskMutations.swift` and `+QuickAdd.swift` are forwarding shims; the recurrence convenience accessors (`recurrenceRule(for:)`, `setRecurrenceRule`, `clearRecurrenceRule`) stay in `+TaskMutations.swift` since they're already one-liners over `recurrence`.
     - **Promoted to AppLogic (step 3.8).** Both `TaskMutationService` and `SyncService` now depend on `TaskMutationHost` / `SyncHost` (`Takt/TaskServiceHosts.swift`) instead of holding a `weak var coordinator: AppCoordinator?`. The UI-bound behaviour they used to inline — the `NSHapticFeedbackManager` + `withAnimation` completion sequence, the kanban column maths, the recurrence rule store, the `TimerElapsedReassignmentPolicy` remap — is expressed as behaviour the host performs, so it lives in `AppCoordinator+ServiceHosts.swift` (the only app-only half of the split) while the services compile into `TaktAppLogic`. `applogic-tests/TaskMutationServiceTests.swift` (20 tests) and `applogic-tests/SyncServiceTests.swift` (14 tests) drive them against `StubTaskServiceHost`, covering `taskAction` rollback, the optimistic add/delete paths, offline queueing, the recurrence hand-off, and offline replay. Writing them surfaced a real defect: `TaskRepository.init`'s `pendingOfflineWorkStore` default ignored the injected `defaults`, so the offline queue always went to `UserDefaults.standard`.
-      - `OfflineReplayPolicy.swift` moved out of `CoreLogic/` to the app root in the same step: SPM forbids one file belonging to two targets, and `TaktAppLogic` can't `import TaktCore` (the same sources are also compiled straight into the Xcode app, where `TaktCore` isn't a module). Its tests moved to `applogic-tests/` unchanged.
+      - `OfflineReplayPolicy.swift` lives at `Sources/TaktCore/OfflineReplayPolicy.swift`. It spent a while at the app root because `TaktAppLogic` could not `import TaktCore` then (its sources were also compiled straight into the Xcode app, where `TaktCore` wasn't a module); once the app started *linking* the package product instead, the import resolved on both sides and the file moved back into `TaktCore`, where `corelogic-tests` covers it.
     - AppCoordinator still exposes the original method names as forwarding shims so existing keybindings, `CommandExecutor`, and view call sites keep working — those move in the forwarding cull.
   - `TaskNavigationService` ← `+Navigation`, `+TaskScoping`. **Partly done (step 3.3):** new `Takt/TaskNavigationService.swift` owns the navigation actions (next/prev, enter/exit, navigate-to, clamp) and the four root-task view-switch operations (`setRootTaskView`, `cycleRootTaskView`, `cycleRootScopeFilter`, `selectRootScopeFilter`), wrapping the pure-logic `TaskNavigationCoordinator` struct. `+Navigation.swift` is now a forwarding shim; the four moved methods in `+TaskScoping.swift` are forwarders too. `TaskRepository.navigationCoordinator` is gone — the service holds its own logic instance. **Not yet moved out of `+TaskScoping.swift`:** the connection-state derivations (`hasCredentials`, `canAttemptLogin`, `checkvistConnectionState`, `canSyncRemotely`), priority-on-current-task mutations (`setPriorityForCurrentTask` etc.), plugin/MCP view-helpers, and the cache/badge accessors. Those belong to later steps (`SyncService`, `TaskMutationService`) or to view-side cleanup.
   - `SyncService` ← `+TaskSync`, `+ReorderingAndTiming` reorder-flush logic. **Done (step 3.5):** new `Takt/SyncService.swift` owns the network-facing surface — login, `fetchTopTask`, list management (`fetchLists`, `loadCheckvistLists`, `switchCheckvistList`, `createCheckvistListAndSwitch`, `mergeOpenTasksBetweenLists`, `selectList`, `uploadOfflineTasksToCheckvist`), the offline-mutation flush, and the reorder/move surface (`moveTask` + per-view strategies, the reorder queue lifecycle, `indentTask`, `unindentTask`). `+TaskSync.swift` is now a 45-line forwarding shim. `+ReorderingAndTiming.swift` is a mixed file: forwarders for the reorder/indent surface, plus the helpers that *didn't* move because other services still call them through the coordinator (`subtreeBlockRange`, the timer/cache roll-up accessors, `executeCommandInput`, the date-resolver helpers). Renaming or splitting that residual file belongs to the post-cull cleanup.
@@ -322,7 +320,7 @@ Internal callers in services also retargeted: `TaskMutationService` calls `coord
 
 ### Phase 5 — MCP isolation (optional, lower priority)
 
-- [x] **Done, differently.** The plan here was to extract `MCPServer` into a separate executable target and have the app invoke it. What happened instead is that the server was *deleted*: the Rust CLI already implemented every tool identically, so the app bundles that binary at `Contents/Helpers/priority` and `--mcp-server` `execv`s it. The concern recorded below — that extraction would either strand installed client configurations or add a child-process indirection for little benefit — was the right concern and is what the shim answers: configurations keep working, and there is no supervision because the process is replaced rather than spawned. See finding 6.
+- [x] **Done, differently.** The plan here was to extract `MCPServer` into a separate executable target and have the app invoke it. What happened instead is that the server was *deleted*: the Rust CLI already implemented every tool identically, so the app bundles that binary at `Contents/Helpers/takt` and `--mcp-server` `execv`s it. The concern recorded below — that extraction would either strand installed client configurations or add a child-process indirection for little benefit — was the right concern and is what the shim answers: configurations keep working, and there is no supervision because the process is replaced rather than spawned. See finding 6.
 
 - [x] **Done (step 5.2):** Promoted the canonical Checkvist data types (`CheckvistNote`, `CheckvistTask`, `CheckvistList`, plus the freshly-extracted `CheckvistTaskCachePayload`, `CheckvistSessionError`, `ObsidianOpenMode`) into `TaktPlugins` sources by un-excluding `CheckvistModels.swift` and splitting `CheckvistTaskCachePayload` / `CheckvistSessionError` / `ObsidianOpenMode` into focused files under their plugin folders. Removed the six duplicate type definitions from `plugin-tests-support/PluginModelStubs.swift`; what remains there is the four genuine app-service fakes (`ObsidianSyncService`, `CheckvistSession`, `CheckvistTaskRepository`, `GoogleOAuthLoopbackReceiver`) the plugin code reaches into directly — the file header now describes that accurately.
 
@@ -373,9 +371,11 @@ An external audit of the whole tree. What it changed:
 - **The Python MCP server is gone.** `scripts/priority_mcp_server.py` (1,897
   LOC) existed as a fallback for when the app binary could not be resolved,
   which the Rust CLI already covers. It made every tool change a three-way edit.
-  `scripts/mcp_parity_check.py` now drives two implementations and *fails* on a
-  missing build of either, rather than skipping — with only two left, a skip
-  would leave it comparing Swift to itself.
+  `scripts/mcp_parity_check.py` then drove the two remaining implementations
+  and *failed* on a missing build of either, rather than skipping — with only
+  two left, a skip would have left it comparing Swift to itself. It went when
+  the Swift server did: with one implementation there is nothing to hold
+  equal, and `scripts/mcp_smoke_check.py` checks the handover seam instead.
 - **SwiftLint runs in CI.** It never had, so the file-length *error* limit this
   document calls "the constraint" was never enforced. Non-strict, so errors
   block and the 13 standing warnings don't. See Open Finding 4.
@@ -468,6 +468,9 @@ follow. Recorded here rather than silently left stale:
   `+Loading`, `+Selection`, `+KeyboardFocus`, `+ListManagement`,
   `+TaskMutations`), leaving ~690 lines of stored state, init and `load()`.
   Its `file_length` and `type_body_length` warnings are gone: 24 → **22**.
+- 2026-10-07: a lint pass cleared everything that was not a tracked length or
+  complexity warning. The counts above are history from here on; the live
+  number is in `TODO.md` and nowhere else.
 
 ## Out of Scope
 

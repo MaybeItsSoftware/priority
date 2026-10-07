@@ -53,7 +53,7 @@ directory. Its keys act on the sidebar row, never on a task behind it:
 | Collapse / expand all | `Cmd+←` / `Cmd+→` | Every folder |
 | Collapse / expand | `←` `h` / `→` `l` | The folder; ← and `h` go up a level from a list |
 | Select parent | `-` (vim) | Up a level |
-| Open | `Space`, `Return` | Open the row |
+| Open | `→`, `l` | Open the row — a folder expands (and, already open, enters), a list takes the keyboard. `Return` adds a task to the list you are on, here as everywhere |
 | First / last | `gg` / `Shift+G` (vim) | The sidebar's ends |
 | Previous / next directory | `{` / `}` (vim) | The previous / next folder |
 | Command palette | `:` (vim) | The palette |
@@ -160,8 +160,8 @@ not fall through to open the task selected behind it. See
 
 ## Surfaces own the keyboard
 
-The timeline takes the main pane, and while it is up it owns the keyboard
-outright. A key the screen does not answer to does not fall
+The timeline is a tab in the right dock (`Cmd+9`), and while it has the
+keyboard it owns it outright. A key the screen does not answer to does not fall
 through to the task surface behind it — `Delete`, a digit or `i` there used to
 act on a task nobody could see. The only workspace keys that stay live are the
 window's own (`reachableFromFullPaneScreens` in the catalogue): the view keys,
@@ -180,15 +180,18 @@ and `Esc`, and the sidebar and done rail keep the two-letter sequences.
 
 They mean the same thing on every task surface:
 
-- **Return opens the task you are on.** On Today that is starting its card —
-  a task on the day *is* a block to run — and, on the card that is running,
-  finishing it. On the board, the outline and the matrix it opens the task's
-  subtasks as a board of their own. With nothing selected — an empty column,
-  an empty list — Return adds a task instead, so it is never dead.
-- **Shift-Return ticks the task off** without running a block, as Space and
-  `x` do.
-- Adding is `Cmd+N` (below the selected task in the outline and the matrix),
-  `Option+Return` (above it) and `Option+Shift+Return` (a subtask).
+- **Return always adds a task**, as in Checkvist — below the selected task in
+  the outline and the matrix, into the list you are in elsewhere — and so does
+  `Cmd+N`. `Shift+Return` and `Option+Return` add one above the selection,
+  `Option+Shift+Return` a subtask. Return is never "open": with nothing
+  selected it still adds, so it is never dead.
+- **Space and `x` tick the task off** (or reopen it); `Shift+Space` cancels it
+  instead — it stopped mattering, rather than got done. On Today, starting a
+  card — a task on the day *is* a block to run — is `f`, and `f` again on the
+  running card finishes it.
+- **`→`, `l` and `]` open the task** — its subtasks as a board of their own
+  on the board and the matrix; in the outline `→` folds and unfolds instead
+  (below). `←`, `h` and `[` leave again.
 
 The outline used to add a task on Return and a subtask on Shift-Return, while
 Today started and ticked. One key meaning two things depending on the pane is
@@ -210,8 +213,9 @@ subtasks fold and unfold where they stand:
 - **In the outline, `→` and `←` fold.** `→` on a folded task shows its
   subtasks, and on an open one steps onto the first of them. `←` on an open
   task folds it, and on anything else steps up to the task it hangs from; at
-  the top level it leaves, as `←` does everywhere else. A task with no
-  subtasks ignores `→` — Return, `l` and `]` still open it.
+  the top level it leaves, as `←` does everywhere else. On a task with no
+  subtasks `→` goes to the inspector instead; `l` and `]` still open it, and
+  Return adds a task below it.
 - **`Cmd+←` / `Cmd+→` fold and unfold the whole outline**, as they do every
   folder in the sidebar. Folding leaves the selection on the top-level task
   it was inside.
@@ -228,8 +232,9 @@ Escape cancels task entry and returns to navigation.
 
 `Ctrl+T` puts the selected task on today — the Today board column — or takes
 it off, from any task surface, and the status bar says which it did. It is not
-`Cmd+T`, which sets the due date to today: a date is a fact about the task, a
-plan is a choice about the day, and Today treats them differently.
+`td` / `Cmd+Alt+T`, which set the due date to today (`Cmd+T` itself goes to
+Today): a date is a fact about the task, a plan is a choice about the day, and
+Today treats them differently.
 
 On Today, `Alt+↑` / `Alt+↓` stop meaning "move among siblings", because the
 day's cards come from every list and are siblings of nothing. They move the

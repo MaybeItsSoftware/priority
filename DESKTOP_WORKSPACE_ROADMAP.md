@@ -1,8 +1,8 @@
-# Priority desktop workspace roadmap
+# Takt desktop workspace roadmap
 
 ## Purpose
 
-Turn Priority from its original Checkvist-first menu-bar utility into a local-first macOS planning app: fast list outlines and focus flow in the spirit of Blitzit, with the planning, time-tracking, reporting, and project capabilities associated with Super Productivity.
+Turn Takt from its original Checkvist-first menu-bar utility into a local-first macOS planning app: fast list outlines and focus flow in the spirit of Blitzit, with the planning, time-tracking, reporting, and project capabilities associated with Super Productivity.
 
 The local SQLite workspace is the source of truth. Checkvist and other services are optional import/export/integration edges, never a requirement for opening, editing, or focusing work.
 
@@ -11,7 +11,7 @@ The local SQLite workspace is the source of truth. Checkvist and other services 
 Already implemented and committed:
 
 - Main app opens as a normal desktop macOS app (`LSUIElement = NO`), with a simple menu-bar launcher.
-- SQLite + GRDB workspace database at `~/Library/Application Support/Priority/priority.sqlite`.
+- SQLite + GRDB workspace database at `~/Library/Application Support/Takt/priority.sqlite` (the file keeps its pre-rename name; a `Priority/` folder from an older install is copied across on first launch and left in place).
 - Workspace, folders, lists, nested task outlines, notes, completion, basic inspector.
 - Manual focus queue, persisted focus session, focus panel, floating timer.
 - Desktop keyboard navigation: task selection/tree traversal, completion, focus, list switching, task/list/folder creation, shortcut reference.
@@ -24,7 +24,7 @@ Relevant implementation locations:
 | Local schema and persistence | `Sources/TaktWorkspace/WorkspaceModels.swift`, `Sources/TaktWorkspace/WorkspaceStore.swift` |
 | Desktop state and migration | `Takt/WorkspaceViewModel.swift` |
 | Desktop UI | `Takt/WorkspaceDesktopView.swift`, `Takt/MainWindowController.swift` |
-| Focus floating timer | `Takt/LocalFloatingFocusTimer.swift` |
+| Focus floating timer | `Takt/FocusPanelController.swift` (the floating `NSPanel`), `Takt/FocusPanelView.swift` (its contents) |
 | Startup and legacy import trigger | `Takt/AppDelegate.swift` |
 
 ## Non-negotiable product rules
@@ -267,4 +267,4 @@ Each item should land as a coherent, tested commit. Do not combine schema change
 
 ## Definition of done
 
-Priority is done with this transition when a new user can create and organize local work, plan Today, focus, track time, export/restore safely, and optionally import/sync integrations — all from the desktop workspace — with no legacy menu-bar task interface or Checkvist account required.
+Takt is done with this transition when a new user can create and organize local work, plan Today, focus, track time, export/restore safely, and optionally import/sync integrations — all from the desktop workspace — with no legacy menu-bar task interface or Checkvist account required.

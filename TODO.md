@@ -31,17 +31,18 @@ mode, or delete it.
 **Recommendation: the `:` prefix.** The parser is good and the due-date
 language is genuinely faster than a picker.
 
-### The theme branch worktree
+### Agent worktrees — remove them
 
-`.claude/worktrees/agent-abbc9291be63498f4` still exists, holding branch
-`worktree-agent-abbc9291be63498f4`. Four of its five commits are on `main`; the
-fifth was a migration of `EisenhowerMatrixView` and `PopoverView+Dock`, both of
-which were deleted from `main` before the branch landed, so it was dropped
-rather than merged. Nothing is lost by removing the worktree and the branch.
+The three `.claude/worktrees/agent-*` checkouts (about 4.2 GB) and the five
+`worktree-agent-*` branches hold nothing that is not already on `main` by
+patch (`git cherry main <branch>` lists no `+` for any of them, checked
+2026-10-07). Removing them is a one-liner that only you can run here:
 
-It also means `swiftlint lint` run from the repository root reports the
-worktree's copies of everything, roughly doubling the count. Filter with
-`grep -v '\.claude/worktrees'` until it is gone.
+```bash
+for w in .claude/worktrees/agent-*; do git worktree remove --force "$w"; done
+git worktree prune
+git branch -D $(git branch --list 'worktree-agent-*' | tr -d ' *+')
+```
 
 ## Checks that need a pair of hands
 
@@ -64,8 +65,7 @@ These cannot be verified from a build; they need someone to click.
   `theme.paper` now, told apart only by the hairline in each resize handle and
   the rule over the status bar — the Zed arrangement. Check the sidebar still
   reads as its own pane without the `altRow` tint, and that the selection wash
-  reads on paper. The right dock and done rail still paint `altRow`
-  (`WorkspaceRightDock.swift`, `WorkspaceDoneRail.swift`) and should follow.
+  reads on paper.
 - **Timeline then a list.** Click Timeline, then click any list. The list should
   open. This was silently broken.
 
@@ -181,6 +181,11 @@ Worth an eye from someone who owns the palette:
 
 ### Known-good backlog, not yet claimed
 
-- `WorkspaceViewModel.swift` is past SwiftLint's `type_body_length` warning.
-  The standing count is 35 violations, 0 errors; do not add to it.
-  `ARCHITECTURE_IMPROVEMENT_PLAN.md` tracks the decomposition.
+- SwiftLint's standing warnings. After the 2026-10-07 cleanup the count over
+  `Takt/` and `Sources/` is **6 warnings, 0 errors**: four `type_body_length`
+  / `function_body_length`, one `file_length`, one `cyclomatic_complexity`,
+  all on the known large files. **This is the single place that number
+  lives** — `ci.yml` and `ARCHITECTURE_IMPROVEMENT_PLAN.md` point here rather
+  than carrying their own copy. Do not add to it;
+  `ARCHITECTURE_IMPROVEMENT_PLAN.md` tracks the decomposition that would clear
+  it.
