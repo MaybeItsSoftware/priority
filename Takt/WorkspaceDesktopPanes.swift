@@ -287,9 +287,14 @@ struct WorkspaceTaskTitleField: View {
 
   var body: some View {
     let capture = TaskCapture.parse(text)
-    HStack(spacing: theme.space.xs) {
-      TextField("Title", text: $text)
+    // In the title's own place: no inset, so the text does not jump sideways
+    // off the title column, and wrapping as the selected title does rather
+    // than scrolling one line. A rule under it says it is being edited — a
+    // box drawn tight round the text read as a stray form field in the list.
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
+      TextField("Title", text: $text, axis: .vertical)
         .textFieldStyle(.plain)
+        .lineLimit(1...6)
         .font(theme.bodyFont())
         .foregroundStyle(theme.ink)
         .focused($isFocused)
@@ -300,10 +305,10 @@ struct WorkspaceTaskTitleField: View {
         TaskCapturePreview(capture: capture)
       }
     }
-    .padding(.horizontal, theme.space.xxs)
-    .background(
-      RoundedRectangle(cornerRadius: theme.controlRadius)
-        .strokeBorder(theme.focusRing, lineWidth: theme.hairline))
+    .padding(.bottom, theme.space.xxs)
+    .overlay(alignment: .bottom) {
+      Rectangle().fill(theme.focusRing).frame(height: theme.hairline)
+    }
     .onAppear { isFocused = true }
     .onChange(of: isFocused) { wasFocused, nowFocused in
       if nowFocused { placeCaret() }
