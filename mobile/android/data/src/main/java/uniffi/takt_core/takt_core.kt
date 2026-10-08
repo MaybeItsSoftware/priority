@@ -30,6 +30,7 @@ import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -680,6 +681,20 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_redo(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_redoable_label(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_undo_history(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_undoable_label(
+    ): Int
+    external fun uniffi_takt_core_checksum_constructor_coreworkspace_open(
+    ): Int
     external fun ffi_takt_core_uniffi_contract_version(
     ): Int
 
@@ -688,6 +703,11 @@ internal object IntegrityCheckingUniffiLib {
 
 internal object UniffiLib {
     
+    // The Cleaner for the whole library
+    internal val CLEANER: UniffiCleaner by lazy {
+        UniffiCleaner.create()
+    }
+    
 
     init {
         Native.register(UniffiLib::class.java, findLibraryName(componentName = "takt_core"))
@@ -695,6 +715,24 @@ internal object UniffiLib {
     }
 
     internal fun ensureInitialized() = Unit
+    external fun uniffi_takt_core_fn_clone_coreworkspace(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_free_coreworkspace(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_redo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_redoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_undo_history(`ptr`: Long,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_undoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -823,10 +861,31 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_core_version() and 0xFFFF) != 3784) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_migrate_workspace() and 0xFFFF) != 65179) {
+    if ((lib.uniffi_takt_core_checksum_func_migrate_workspace() and 0xFFFF) != 222) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_history_target() and 0xFFFF) != 25210) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redo() and 0xFFFF) != 49682) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redoable_label() and 0xFFFF) != 40840) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo_history() and 0xFFFF) != 28985) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undoable_label() and 0xFFFF) != 37156) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_constructor_coreworkspace_open() and 0xFFFF) != 50515) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -921,6 +980,70 @@ object UniffiWithHandle
  * @suppress
  * */
 object NoHandle
+/**
+ * The cleaner interface for Object finalization code to run.
+ * This is the entry point to any implementation that we're using.
+ *
+ * The cleaner registers objects and returns cleanables, so now we are
+ * defining a `UniffiCleaner` with a `UniffiClenaer.Cleanable` to abstract the
+ * different implmentations available at compile time.
+ *
+ * @suppress
+ */
+interface UniffiCleaner {
+    interface Cleanable {
+        fun clean()
+    }
+
+    fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable
+
+    companion object
+}
+
+// The fallback Jna cleaner, which is available for both Android, and the JVM.
+private class UniffiJnaCleaner : UniffiCleaner {
+    private val cleaner = com.sun.jna.internal.Cleaner.getCleaner()
+
+    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
+        UniffiJnaCleanable(cleaner.register(value, cleanUpTask))
+}
+
+private class UniffiJnaCleanable(
+    private val cleanable: com.sun.jna.internal.Cleaner.Cleanable,
+) : UniffiCleaner.Cleanable {
+    override fun clean() = cleanable.clean()
+}
+
+
+// We decide at uniffi binding generation time whether we were
+// using Android or not.
+// There are further runtime checks to chose the correct implementation
+// of the cleaner.
+private fun UniffiCleaner.Companion.create(): UniffiCleaner =
+    try {
+        // For safety's sake: if the library hasn't been run in android_cleaner = true
+        // mode, but is being run on Android, then we still need to think about
+        // Android API versions.
+        // So we check if java.lang.ref.Cleaner is there, and use that…
+        java.lang.Class.forName("java.lang.ref.Cleaner")
+        JavaLangRefCleaner()
+    } catch (e: ClassNotFoundException) {
+        // … otherwise, fallback to the JNA cleaner.
+        UniffiJnaCleaner()
+    }
+
+private class JavaLangRefCleaner : UniffiCleaner {
+    val cleaner = java.lang.ref.Cleaner.create()
+
+    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
+        JavaLangRefCleanable(cleaner.register(value, cleanUpTask))
+}
+
+private class JavaLangRefCleanable(
+    val cleanable: java.lang.ref.Cleaner.Cleanable
+) : UniffiCleaner.Cleanable {
+    override fun clean() = cleanable.clean()
+}
 
 /**
  * @suppress
@@ -942,6 +1065,29 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 
     override fun write(value: UInt, buf: ByteBuffer) {
         buf.putInt(value.toInt())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
+    override fun lift(value: Byte): Boolean {
+        return value.toInt() != 0
+    }
+
+    override fun read(buf: ByteBuffer): Boolean {
+        return lift(buf.get())
+    }
+
+    override fun lower(value: Boolean): Byte {
+        return if (value) 1.toByte() else 0.toByte()
+    }
+
+    override fun allocationSize(value: Boolean) = 1UL
+
+    override fun write(value: Boolean, buf: ByteBuffer) {
+        buf.put(lower(value))
     }
 }
 
@@ -1003,18 +1149,523 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 }
 
 
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * An open workspace database.
+ */
+public interface CoreWorkspaceInterface {
+    
+    /**
+     * The task and list the next undo (`for_undo`) or redo affects.
+     */
+    fun `historyTarget`(`forUndo`: kotlin.Boolean): HistoryTarget
+    
+    /**
+     * Puts back the most recently undone step.
+     */
+    fun `redo`(): kotlin.String?
+    
+    /**
+     * What redo would put back.
+     */
+    fun `redoableLabel`(): kotlin.String?
+    
+    /**
+     * Reverses the most recent step; returns its label, or nothing when there
+     * was nothing to undo.
+     */
+    fun `undo`(): kotlin.String?
+    
+    /**
+     * The journal's named steps, newest first.
+     */
+    fun `undoHistory`(`limit`: kotlin.UInt): List<UndoStep>
+    
+    /**
+     * What undo would take back, phrased for a menu item.
+     */
+    fun `undoableLabel`(): kotlin.String?
+    
+    companion object
+}
+
+/**
+ * An open workspace database.
+ */
+open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_takt_core_fn_free_coreworkspace(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
+        }
+    }
+
+    
+    /**
+     * The task and list the next undo (`for_undo`) or redo affects.
+     */
+    @Throws(CoreException::class)override fun `historyTarget`(`forUndo`: kotlin.Boolean): HistoryTarget {
+            return FfiConverterTypeHistoryTarget.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_history_target(
+        it,
+        
+        FfiConverterBoolean.lower(`forUndo`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Puts back the most recently undone step.
+     */
+    @Throws(CoreException::class)override fun `redo`(): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_redo(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * What redo would put back.
+     */
+    @Throws(CoreException::class)override fun `redoableLabel`(): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_redoable_label(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Reverses the most recent step; returns its label, or nothing when there
+     * was nothing to undo.
+     */
+    @Throws(CoreException::class)override fun `undo`(): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_undo(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The journal's named steps, newest first.
+     */
+    @Throws(CoreException::class)override fun `undoHistory`(`limit`: kotlin.UInt): List<UndoStep> {
+            return FfiConverterSequenceTypeUndoStep.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_undo_history(
+        it,
+        
+        FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * What undo would take back, phrased for a menu item.
+     */
+    @Throws(CoreException::class)override fun `undoableLabel`(): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_undoable_label(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    companion object {
+        
+    /**
+     * Opens the database at `path`, which must already be migrated
+     * ([`crate::schema::migrate_workspace`]).
+     */
+    @Throws(CoreException::class) fun `open`(`path`: kotlin.String): CoreWorkspace {
+            return FfiConverterTypeCoreWorkspace.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_constructor_coreworkspace_open(
+    
+        
+        FfiConverterString.lower(`path`),_status)
+}
+    )
+    }
+    
+
+        
+    }
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
+    override fun lower(value: CoreWorkspace): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): CoreWorkspace {
+        return CoreWorkspace(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): CoreWorkspace {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: CoreWorkspace) = 8UL
+
+    override fun write(value: CoreWorkspace, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
 
 
 
 /**
- * What went wrong bringing a database up to date.
+ * The task and list the next undo (or redo) affects, so a client can reveal
+ * the work that comes back.
  */
-sealed class SchemaException: kotlin.Exception() {
+data class HistoryTarget (
+    var `taskId`: kotlin.String?
+    , 
+    var `listId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeHistoryTarget: FfiConverterRustBuffer<HistoryTarget> {
+    override fun read(buf: ByteBuffer): HistoryTarget {
+        return HistoryTarget(
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: HistoryTarget) = (
+            FfiConverterOptionalString.allocationSize(value.`taskId`) +
+            FfiConverterOptionalString.allocationSize(value.`listId`)
+    )
+
+    override fun write(value: HistoryTarget, buf: ByteBuffer) {
+            FfiConverterOptionalString.write(value.`taskId`, buf)
+            FfiConverterOptionalString.write(value.`listId`, buf)
+    }
+}
+
+
+
+/**
+ * One named step in the journal, as [`history`] reports it.
+ */
+data class UndoStep (
+    /**
+     * The journal group the step's changes share.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * What the step is offered back as: "New Task", "Delete List".
+     */
+    var `label`: kotlin.String
+    , 
+    /**
+     * Undone steps are the redo stack.
+     */
+    var `isUndone`: kotlin.Boolean
+    , 
+    /**
+     * How many rows the step touched.
+     */
+    var `changeCount`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeUndoStep: FfiConverterRustBuffer<UndoStep> {
+    override fun read(buf: ByteBuffer): UndoStep {
+        return UndoStep(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: UndoStep) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`label`) +
+            FfiConverterBoolean.allocationSize(value.`isUndone`) +
+            FfiConverterUInt.allocationSize(value.`changeCount`)
+    )
+
+    override fun write(value: UndoStep, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`label`, buf)
+            FfiConverterBoolean.write(value.`isUndone`, buf)
+            FfiConverterUInt.write(value.`changeCount`, buf)
+    }
+}
+
+
+
+
+
+/**
+ * What went wrong in the core, as a client sees it.
+ *
+ * The field is `detail` rather than `message`: Kotlin's generated exception
+ * would otherwise clash with `Throwable.message`.
+ */
+sealed class CoreException: kotlin.Exception() {
     
     class Database(
         
         val `detail`: kotlin.String
-        ) : SchemaException() {
+        ) : CoreException() {
         override val message
             get() = "detail=${ `detail` }"
     }
@@ -1024,17 +1675,23 @@ sealed class SchemaException: kotlin.Exception() {
         val `identifier`: kotlin.String, 
         
         val `count`: kotlin.UInt
-        ) : SchemaException() {
+        ) : CoreException() {
         override val message
             get() = "identifier=${ `identifier` }, count=${ `count` }"
+    }
+    
+    class NoJournal(
+        ) : CoreException() {
+        override val message
+            get() = ""
     }
     
 
     
 
 
-    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<SchemaException> {
-        override fun lift(error_buf: RustBuffer.ByValue): SchemaException = FfiConverterTypeSchemaError.lift(error_buf)
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<CoreException> {
+        override fun lift(error_buf: RustBuffer.ByValue): CoreException = FfiConverterTypeCoreError.lift(error_buf)
     }
 
     
@@ -1043,54 +1700,95 @@ sealed class SchemaException: kotlin.Exception() {
 /**
  * @suppress
  */
-public object FfiConverterTypeSchemaError : FfiConverterRustBuffer<SchemaException> {
-    override fun read(buf: ByteBuffer): SchemaException {
+public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> {
+    override fun read(buf: ByteBuffer): CoreException {
         
 
         return when(buf.getInt()) {
-            1 -> SchemaException.Database(
+            1 -> CoreException.Database(
                 FfiConverterString.read(buf),
                 )
-            2 -> SchemaException.ForeignKeys(
+            2 -> CoreException.ForeignKeys(
                 FfiConverterString.read(buf),
                 FfiConverterUInt.read(buf),
                 )
+            3 -> CoreException.NoJournal()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
 
-    override fun allocationSize(value: SchemaException): ULong {
+    override fun allocationSize(value: CoreException): ULong {
         return when(value) {
-            is SchemaException.Database -> (
+            is CoreException.Database -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 + FfiConverterString.allocationSize(value.`detail`)
             )
-            is SchemaException.ForeignKeys -> (
+            is CoreException.ForeignKeys -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 + FfiConverterString.allocationSize(value.`identifier`)
                 + FfiConverterUInt.allocationSize(value.`count`)
             )
+            is CoreException.NoJournal -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
-    override fun write(value: SchemaException, buf: ByteBuffer) {
+    override fun write(value: CoreException, buf: ByteBuffer) {
         when(value) {
-            is SchemaException.Database -> {
+            is CoreException.Database -> {
                 buf.putInt(1)
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
-            is SchemaException.ForeignKeys -> {
+            is CoreException.ForeignKeys -> {
                 buf.putInt(2)
                 FfiConverterString.write(value.`identifier`, buf)
                 FfiConverterUInt.write(value.`count`, buf)
                 Unit
             }
+            is CoreException.NoJournal -> {
+                buf.putInt(3)
+                Unit
+            }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
 }
 
 
@@ -1120,6 +1818,34 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
         }
     }
 }
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer<List<UndoStep>> {
+    override fun read(buf: ByteBuffer): List<UndoStep> {
+        val len = buf.getInt()
+        return List<UndoStep>(len) {
+            FfiConverterTypeUndoStep.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<UndoStep>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeUndoStep.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<UndoStep>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeUndoStep.write(it, buf)
+        }
+    }
+}
         /**
          * The version of this crate, as compiled into the library a client loaded.
          *
@@ -1145,9 +1871,9 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
          * before the client opens the file. Waits up to five seconds for another
          * writer, as every client does.
          */
-    @Throws(SchemaException::class) fun `migrateWorkspace`(`path`: kotlin.String): kotlin.String {
+    @Throws(CoreException::class) fun `migrateWorkspace`(`path`: kotlin.String): kotlin.String {
             return FfiConverterString.lift(
-    uniffiRustCallWithError(SchemaException) { _status ->
+    uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_takt_core_fn_func_migrate_workspace(
     
         

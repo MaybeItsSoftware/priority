@@ -13,10 +13,10 @@ use rusqlite::{Transaction, params};
 use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
 
-use super::SchemaError;
+use crate::CoreError;
 
 /// Runs the row-level part of `identifier`, if it has one.
-pub(super) fn apply(transaction: &Transaction, identifier: &str) -> Result<(), SchemaError> {
+pub(super) fn apply(transaction: &Transaction, identifier: &str) -> Result<(), CoreError> {
     match identifier {
         "v11_stable_visible_roots" => register_visible_roots(transaction, true),
         "v12_task_conditions_and_work" => seed_conditions_everywhere(transaction),
@@ -33,7 +33,7 @@ pub(super) fn apply(transaction: &Transaction, identifier: &str) -> Result<(), S
 /// recognises early bulk imports, which predate source identity: the root has
 /// no source system, so it must also have been created in the same batch as
 /// the list, with at least one child from that batch.
-fn register_visible_roots(transaction: &Transaction, imported: bool) -> Result<(), SchemaError> {
+fn register_visible_roots(transaction: &Transaction, imported: bool) -> Result<(), CoreError> {
     let mut lists = transaction.prepare(if imported {
         "SELECT id, name, createdAt FROM task_lists"
     } else {
@@ -91,7 +91,7 @@ fn register_visible_roots(transaction: &Transaction, imported: bool) -> Result<(
 
 /// v12: every existing workspace gets the four starting conditions a new one
 /// is given (`WorkspaceStore.seedConditions`).
-fn seed_conditions_everywhere(transaction: &Transaction) -> Result<(), SchemaError> {
+fn seed_conditions_everywhere(transaction: &Transaction) -> Result<(), CoreError> {
     let mut workspaces = transaction.prepare("SELECT id FROM workspaces")?;
     let workspaces: Vec<String> = workspaces
         .query_map([], |row| row.get(0))?

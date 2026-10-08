@@ -1,0 +1,23 @@
+//! The one error every call into the core can return.
+
+/// What went wrong in the core, as a client sees it.
+///
+/// The field is `detail` rather than `message`: Kotlin's generated exception
+/// would otherwise clash with `Throwable.message`.
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum CoreError {
+    #[error("The workspace database failed: {detail}")]
+    Database { detail: String },
+    #[error("Migration {identifier} left {count} broken foreign key(s); nothing was saved.")]
+    ForeignKeys { identifier: String, count: u32 },
+    #[error("The workspace has no undo journal to record into.")]
+    NoJournal,
+}
+
+impl From<rusqlite::Error> for CoreError {
+    fn from(error: rusqlite::Error) -> Self {
+        CoreError::Database {
+            detail: error.to_string(),
+        }
+    }
+}

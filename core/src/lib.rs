@@ -9,7 +9,12 @@
 
 uniffi::setup_scaffolding!();
 
+pub mod error;
+pub mod journal;
 pub mod schema;
+pub mod workspace;
+
+pub use error::CoreError;
 
 /// The version of this crate, as compiled into the library a client loaded.
 ///

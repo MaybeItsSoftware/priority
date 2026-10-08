@@ -481,6 +481,30 @@ fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -525,11 +549,392 @@ fileprivate struct FfiConverterString: FfiConverter {
 }
 
 
+
+
 /**
- * What went wrong bringing a database up to date.
+ * An open workspace database.
+ */
+public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
+    
+    /**
+     * The task and list the next undo (`for_undo`) or redo affects.
+     */
+    func historyTarget(forUndo: Bool) throws  -> HistoryTarget
+    
+    /**
+     * Puts back the most recently undone step.
+     */
+    func redo() throws  -> String?
+    
+    /**
+     * What redo would put back.
+     */
+    func redoableLabel() throws  -> String?
+    
+    /**
+     * Reverses the most recent step; returns its label, or nothing when there
+     * was nothing to undo.
+     */
+    func undo() throws  -> String?
+    
+    /**
+     * The journal's named steps, newest first.
+     */
+    func undoHistory(limit: UInt32) throws  -> [UndoStep]
+    
+    /**
+     * What undo would take back, phrased for a menu item.
+     */
+    func undoableLabel() throws  -> String?
+    
+}
+/**
+ * An open workspace database.
+ */
+open class CoreWorkspace: CoreWorkspaceProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_takt_core_fn_clone_coreworkspace(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_takt_core_fn_free_coreworkspace(handle, $0) }
+    }
+
+    
+    /**
+     * Opens the database at `path`, which must already be migrated
+     * ([`crate::schema::migrate_workspace`]).
+     */
+public static func `open`(path: String)throws  -> CoreWorkspace  {
+    return try  FfiConverterTypeCoreWorkspace_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_constructor_coreworkspace_open(
+        FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+    /**
+     * The task and list the next undo (`for_undo`) or redo affects.
+     */
+open func historyTarget(forUndo: Bool)throws  -> HistoryTarget  {
+    return try  FfiConverterTypeHistoryTarget_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_history_target(
+            self.uniffiCloneHandle(),
+        FfiConverterBool.lower(forUndo),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Puts back the most recently undone step.
+     */
+open func redo()throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_redo(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * What redo would put back.
+     */
+open func redoableLabel()throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_redoable_label(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Reverses the most recent step; returns its label, or nothing when there
+     * was nothing to undo.
+     */
+open func undo()throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_undo(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The journal's named steps, newest first.
+     */
+open func undoHistory(limit: UInt32)throws  -> [UndoStep]  {
+    return try  FfiConverterSequenceTypeUndoStep.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_undo_history(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt32.lower(limit),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * What undo would take back, phrased for a menu item.
+     */
+open func undoableLabel()throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_undoable_label(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreWorkspace: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = CoreWorkspace
+
+    public static func lift(_ handle: UInt64) throws -> CoreWorkspace {
+        return CoreWorkspace(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: CoreWorkspace) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreWorkspace {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: CoreWorkspace, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreWorkspace_lift(_ handle: UInt64) throws -> CoreWorkspace {
+    return try FfiConverterTypeCoreWorkspace.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt64 {
+    return FfiConverterTypeCoreWorkspace.lower(value)
+}
+
+
+
+
+/**
+ * The task and list the next undo (or redo) affects, so a client can reveal
+ * the work that comes back.
+ */
+public struct HistoryTarget: Equatable, Hashable {
+    public var taskId: String?
+    public var listId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String?, listId: String?) {
+        self.taskId = taskId
+        self.listId = listId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension HistoryTarget: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeHistoryTarget: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HistoryTarget {
+        return
+            try HistoryTarget(
+                taskId: FfiConverterOptionString.read(from: &buf), 
+                listId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: HistoryTarget, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.taskId, into: &buf)
+        FfiConverterOptionString.write(value.listId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHistoryTarget_lift(_ buf: RustBuffer) throws -> HistoryTarget {
+    return try FfiConverterTypeHistoryTarget.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHistoryTarget_lower(_ value: HistoryTarget) -> RustBuffer {
+    return FfiConverterTypeHistoryTarget.lower(value)
+}
+
+
+/**
+ * One named step in the journal, as [`history`] reports it.
+ */
+public struct UndoStep: Equatable, Hashable {
+    /**
+     * The journal group the step's changes share.
+     */
+    public var id: String
+    /**
+     * What the step is offered back as: "New Task", "Delete List".
+     */
+    public var label: String
+    /**
+     * Undone steps are the redo stack.
+     */
+    public var isUndone: Bool
+    /**
+     * How many rows the step touched.
+     */
+    public var changeCount: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The journal group the step's changes share.
+         */id: String, 
+        /**
+         * What the step is offered back as: "New Task", "Delete List".
+         */label: String, 
+        /**
+         * Undone steps are the redo stack.
+         */isUndone: Bool, 
+        /**
+         * How many rows the step touched.
+         */changeCount: UInt32) {
+        self.id = id
+        self.label = label
+        self.isUndone = isUndone
+        self.changeCount = changeCount
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UndoStep: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUndoStep: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UndoStep {
+        return
+            try UndoStep(
+                id: FfiConverterString.read(from: &buf), 
+                label: FfiConverterString.read(from: &buf), 
+                isUndone: FfiConverterBool.read(from: &buf), 
+                changeCount: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UndoStep, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.label, into: &buf)
+        FfiConverterBool.write(value.isUndone, into: &buf)
+        FfiConverterUInt32.write(value.changeCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUndoStep_lift(_ buf: RustBuffer) throws -> UndoStep {
+    return try FfiConverterTypeUndoStep.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUndoStep_lower(_ value: UndoStep) -> RustBuffer {
+    return FfiConverterTypeUndoStep.lower(value)
+}
+
+
+/**
+ * What went wrong in the core, as a client sees it.
+ *
+ * The field is `detail` rather than `message`: Kotlin's generated exception
+ * would otherwise clash with `Throwable.message`.
  */
 public 
-enum SchemaError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
 
     
     
@@ -537,6 +942,7 @@ enum SchemaError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     )
     case ForeignKeys(identifier: String, count: UInt32
     )
+    case NoJournal
 
     
 
@@ -550,16 +956,16 @@ enum SchemaError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
 }
 
 #if compiler(>=6)
-extension SchemaError: Sendable {}
+extension CoreError: Sendable {}
 #endif
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public struct FfiConverterTypeSchemaError: FfiConverterRustBuffer {
-    typealias SwiftType = SchemaError
+public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
+    typealias SwiftType = CoreError
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SchemaError {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
 
@@ -573,12 +979,13 @@ public struct FfiConverterTypeSchemaError: FfiConverterRustBuffer {
             identifier: try FfiConverterString.read(from: &buf), 
             count: try FfiConverterUInt32.read(from: &buf)
             )
+        case 3: return .NoJournal
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
-    public static func write(_ value: SchemaError, into buf: inout [UInt8]) {
+    public static func write(_ value: CoreError, into buf: inout [UInt8]) {
         switch value {
 
         
@@ -595,6 +1002,10 @@ public struct FfiConverterTypeSchemaError: FfiConverterRustBuffer {
             FfiConverterString.write(identifier, into: &buf)
             FfiConverterUInt32.write(count, into: &buf)
             
+        
+        case .NoJournal:
+            writeInt(&buf, Int32(3))
+        
         }
     }
 }
@@ -603,15 +1014,39 @@ public struct FfiConverterTypeSchemaError: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeSchemaError_lift(_ buf: RustBuffer) throws -> SchemaError {
-    return try FfiConverterTypeSchemaError.lift(buf)
+public func FfiConverterTypeCoreError_lift(_ buf: RustBuffer) throws -> CoreError {
+    return try FfiConverterTypeCoreError.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeSchemaError_lower(_ value: SchemaError) -> RustBuffer {
-    return FfiConverterTypeSchemaError.lower(value)
+public func FfiConverterTypeCoreError_lower(_ value: CoreError) -> RustBuffer {
+    return FfiConverterTypeCoreError.lower(value)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
 }
 
 #if swift(>=5.8)
@@ -634,6 +1069,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
+    typealias SwiftType = [UndoStep]
+
+    public static func write(_ value: [UndoStep], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUndoStep.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UndoStep] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UndoStep]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUndoStep.read(from: &buf))
         }
         return seq
     }
@@ -661,7 +1121,7 @@ public func coreVersion() -> String  {
  * writer, as every client does.
  */
 public func migrateWorkspace(path: String)throws  -> String  {
-    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeSchemaError_lift) {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_migrate_workspace(
         FfiConverterString.lower(path),uniffiCallStatus
@@ -697,10 +1157,31 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_core_version() != 3784) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_migrate_workspace() != 65179) {
+    if (uniffi_takt_core_checksum_func_migrate_workspace() != 222) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_history_target() != 25210) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_redo() != 49682) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_redoable_label() != 40840) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_undo_history() != 28985) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_undoable_label() != 37156) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_constructor_coreworkspace_open() != 50515) {
         return InitializationResult.apiChecksumMismatch
     }
 

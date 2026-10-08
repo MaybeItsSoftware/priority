@@ -20,6 +20,8 @@ use std::time::Duration;
 
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior};
 
+use crate::CoreError;
+
 /// Every migration, oldest first: its identifier and the SQL GRDB ran for it.
 pub const MIGRATIONS: &[(&str, &str)] = &[
     (
@@ -101,24 +103,6 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     ),
 ];
 
-/// What went wrong bringing a database up to date.
-#[derive(Debug, thiserror::Error, uniffi::Error)]
-pub enum SchemaError {
-    // Not `message`: Kotlin's bindings make this a Throwable, which has one.
-    #[error("Could not open or migrate the workspace database: {detail}")]
-    Database { detail: String },
-    #[error("Migration {identifier} left {count} broken foreign key(s); nothing was saved.")]
-    ForeignKeys { identifier: String, count: u32 },
-}
-
-impl From<rusqlite::Error> for SchemaError {
-    fn from(error: rusqlite::Error) -> Self {
-        SchemaError::Database {
-            detail: error.to_string(),
-        }
-    }
-}
-
 /// Brings the database at `path` up to date, creating it if it does not
 /// exist, and returns the identifier of the newest migration it now has.
 ///
@@ -126,7 +110,7 @@ impl From<rusqlite::Error> for SchemaError {
 /// before the client opens the file. Waits up to five seconds for another
 /// writer, as every client does.
 #[uniffi::export]
-pub fn migrate_workspace(path: String) -> Result<String, SchemaError> {
+pub fn migrate_workspace(path: String) -> Result<String, CoreError> {
     let mut connection = Connection::open(&path)?;
     connection.busy_timeout(Duration::from_secs(5))?;
     migrate(&mut connection)
@@ -144,7 +128,7 @@ pub fn workspace_migrations() -> Vec<String> {
 /// keys off, the steps in one immediate transaction, then a full foreign key
 /// check before the commit, so a step that leaves a dangling reference saves
 /// nothing.
-pub fn migrate(connection: &mut Connection) -> Result<String, SchemaError> {
+pub fn migrate(connection: &mut Connection) -> Result<String, CoreError> {
     migrate_through(connection, None)
 }
 
@@ -153,7 +137,7 @@ pub fn migrate(connection: &mut Connection) -> Result<String, SchemaError> {
 pub(crate) fn migrate_through(
     connection: &mut Connection,
     last: Option<&str>,
-) -> Result<String, SchemaError> {
+) -> Result<String, CoreError> {
     connection.execute_batch(
         "CREATE TABLE IF NOT EXISTS grdb_migrations (identifier TEXT NOT NULL PRIMARY KEY)",
     )?;
@@ -166,7 +150,7 @@ pub(crate) fn migrate_through(
     result
 }
 
-fn apply_pending(connection: &mut Connection, last: Option<&str>) -> Result<String, SchemaError> {
+fn apply_pending(connection: &mut Connection, last: Option<&str>) -> Result<String, CoreError> {
     let mut latest = String::new();
     for (identifier, sql) in MIGRATIONS {
         if last == Some(latest.as_str()) {
@@ -201,7 +185,7 @@ fn apply_pending(connection: &mut Connection, last: Option<&str>) -> Result<Stri
                 row.get(0)
             })?;
         if broken > 0 {
-            return Err(SchemaError::ForeignKeys {
+            return Err(CoreError::ForeignKeys {
                 identifier: identifier.to_string(),
                 count: broken,
             });
@@ -236,7 +220,7 @@ fn statements(sql: &str) -> Vec<String> {
 /// The schema as `scripts/dump_workspace_schema.sh` writes it into
 /// `cli/src/fixtures/workspace_schema.sql`: DDL in creation order, then the
 /// rows a migrated database starts with. Never a row of the user's data.
-pub fn dump_schema(connection: &Connection) -> Result<String, SchemaError> {
+pub fn dump_schema(connection: &Connection) -> Result<String, CoreError> {
     let latest: String = connection.query_row(
         "SELECT identifier FROM grdb_migrations ORDER BY rowid DESC LIMIT 1",
         [],

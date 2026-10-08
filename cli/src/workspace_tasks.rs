@@ -10,14 +10,14 @@
 //!
 //! What a second writer has to get right:
 //!
-//! - **Undo.** Every write runs inside [`Workspace::journalled`], the same
-//!   protocol as `journalledWrite` in `WorkspaceStore+Undo.swift`. It arms
-//!   `undo_control` with a fresh group and a label, lets the database's own
-//!   `change_log` triggers record the rows, and disarms again inside the same
-//!   transaction. The app's Undo menu then offers the step as "Undo MCP: New
-//!   Task", and undoing it replays those rows exactly as it would its own. A
-//!   write that changes something clears the redo stack, and the journal is
-//!   trimmed to the same depth, as the app does.
+//! - **Undo.** Every write runs inside [`Workspace::journalled`], which brackets
+//!   it with the Rust core's `journal::begin` and `journal::finish`
+//!   (core/src/journal.rs). The core arms `undo_control` with a fresh group and
+//!   a label, the database's own `change_log` triggers record the rows, and it
+//!   disarms again inside the same transaction. The app's Undo menu then offers
+//!   the step as "Undo MCP: New Task", and the app undoes it through the same
+//!   core code. A write that changes something clears the redo stack, and the
+//!   journal is trimmed to the core's depth.
 //! - **Concurrency.** `BEGIN IMMEDIATE` takes the write lock up front, and a
 //!   busy timeout waits out the app's own writes rather than failing on them.
 //!   The app waits out ours the same way. Foreign keys are switched on, as
@@ -50,9 +50,6 @@ use std::time::Duration;
 /// older database is missing columns they name; a newer one is fine, because
 /// `WorkspaceStore` only ever adds nullable columns.
 const REQUIRED_MIGRATION: &str = "v16_task_completion_time";
-
-/// `journalDepth` in `WorkspaceStore+Undo.swift`.
-const JOURNAL_DEPTH: i64 = 100;
 
 /// What the app's Undo menu shows ahead of the action, so that a step an
 /// assistant took is recognisable as one before it is taken back.
@@ -1002,42 +999,12 @@ impl Workspace {
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(map_write_error)?;
         let now = stored_string(Utc::now());
-        let group = new_id();
-        let armed = tx
-            .execute(
-                "UPDATE undo_control SET groupId = ?1, label = ?2, suppressed = 0 WHERE id = 0",
-                params![group, format!("{LABEL_PREFIX}{label}")],
-            )
-            .map_err(map_write_error)?;
-        if armed != 1 {
-            return Err(ToolError::new(
-                "The workspace has no undo journal to record into. Open Takt once, then try again.",
-            ));
-        }
-
+        // The journal's bookkeeping is the Rust core's (core/src/journal.rs),
+        // the same code the app's undo replays these steps with.
+        let group = takt_core::journal::begin(&tx, &format!("{LABEL_PREFIX}{label}"))
+            .map_err(map_core_error)?;
         let result = work(&tx, &now)?;
-
-        tx.execute("UPDATE undo_control SET suppressed = 1 WHERE id = 0", [])
-            .map_err(map_write_error)?;
-        let changed: bool = tx
-            .query_row(
-                "SELECT EXISTS(SELECT 1 FROM change_log WHERE groupId = ?1)",
-                [&group],
-                |row| row.get(0),
-            )
-            .map_err(map_query_error)?;
-        // Only an actual change starts a new branch of history.
-        if changed {
-            tx.execute("DELETE FROM change_log WHERE undone = 1", [])
-                .map_err(map_write_error)?;
-        }
-        tx.execute(
-            "DELETE FROM change_log WHERE groupId IN ( \
-             SELECT groupId FROM change_log GROUP BY groupId \
-             ORDER BY MAX(id) DESC LIMIT -1 OFFSET ?1)",
-            [JOURNAL_DEPTH],
-        )
-        .map_err(map_write_error)?;
+        takt_core::journal::finish(&tx, &group).map_err(map_core_error)?;
         tx.commit().map_err(map_write_error)?;
         Ok(result)
     }
@@ -1480,6 +1447,15 @@ fn normalized_column(column: Option<&str>) -> Option<String> {
         .map(str::trim)
         .filter(|column| !column.is_empty())
         .map(str::to_string)
+}
+
+fn map_core_error(error: takt_core::CoreError) -> ToolError {
+    match error {
+        takt_core::CoreError::NoJournal => ToolError::new(
+            "The workspace has no undo journal to record into. Open Takt once, then try again.",
+        ),
+        other => ToolError::new(format!("Workspace write failed: {other}")),
+    }
 }
 
 fn map_write_error(error: rusqlite::Error) -> ToolError {
