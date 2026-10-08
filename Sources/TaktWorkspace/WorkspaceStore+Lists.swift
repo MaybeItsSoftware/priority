@@ -109,22 +109,12 @@ extension WorkspaceStore {
 extension WorkspaceStore {
   /// Import the old preferences as a baseline, without creating undo steps.
   public func kanbanBoardConfigurations(legacy: [String: Data], currentKey: String) throws -> [String: Data] {
-    try database.write { db in
-      var baseline = legacy
-      if baseline[currentKey] == nil {
-        baseline[currentKey] = try JSONEncoder().encode(WorkspaceKanbanColumn.blitzitDefaults)
-      }
-      for (key, data) in baseline {
-        guard let columns = try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: data),
-          !columns.isEmpty, let json = String(data: data, encoding: .utf8) else { continue }
-        try db.execute(sql: "INSERT OR IGNORE INTO kanban_boards(id, columnsJSON) VALUES (?, ?)", arguments: [key, json])
-      }
-      return Dictionary(uniqueKeysWithValues: try Row.fetchAll(db, sql: "SELECT id, columnsJSON FROM kanban_boards").map { row in
-        let key: String = row["id"]
-        let json: String = row["columnsJSON"]
-        return (key, Data(json.utf8))
-      })
+    // The Rust core's `imports::kanban_board_baseline`.
+    let seeds = legacy.compactMap { key, data in
+      String(data: data, encoding: .utf8).map { BoardBaseline(key: key, columnsJson: $0) }
     }
+    let boards = try coreWrite { try core.kanbanBoardBaseline(legacy: seeds, currentKey: currentKey) }
+    return Dictionary(boards.map { ($0.key, Data($0.columnsJson.utf8)) }, uniquingKeysWith: { first, _ in first })
   }
 
   /// A removed column and the cards moved out of it form one undo step.

@@ -467,7 +467,7 @@ pub fn set_board_columns(
 
 /// Columns as Swift's `JSONEncoder` wrote `[WorkspaceKanbanColumn]`: id then
 /// title, `/` escaped.
-fn columns_json(columns: &[BoardColumn]) -> String {
+pub(crate) fn columns_json(columns: &[BoardColumn]) -> String {
     let items: Vec<String> = columns
         .iter()
         .map(|column| {

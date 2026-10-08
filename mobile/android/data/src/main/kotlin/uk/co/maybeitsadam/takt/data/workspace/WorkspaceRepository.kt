@@ -490,17 +490,12 @@ class WorkspaceRepository(
     suspend fun kanbanBoardConfigurations(
         legacy: Map<String, String> = emptyMap(),
         currentKey: String,
-    ): Map<String, List<WorkspaceKanbanColumn>> = database.write { db ->
-        val baseline = legacy.toMutableMap()
-        if (currentKey !in baseline) baseline[currentKey] = KanbanColumnsCodec.encode(WorkspaceKanbanColumn.blitzitDefaults)
-        for ((key, json) in baseline) {
-            val columns = KanbanColumnsCodec.decode(json)
-            if (columns.isNullOrEmpty()) continue
-            db.execute("INSERT OR IGNORE INTO kanban_boards(id, columnsJSON) VALUES (?, ?)", key, json)
+    ): Map<String, List<WorkspaceKanbanColumn>> {
+        // The Rust core's `imports::kanban_board_baseline`.
+        val boards = coreWrite {
+            it.kanbanBoardBaseline(legacy.map { (key, json) -> uniffi.takt_core.BoardBaseline(key, json) }, currentKey)
         }
-        db.query("SELECT id, columnsJSON FROM kanban_boards") { it.string("id") to it.string("columnsJSON") }
-            .mapNotNull { (key, json) -> KanbanColumnsCodec.decode(json)?.let { key to it } }
-            .toMap()
+        return boards.mapNotNull { board -> KanbanColumnsCodec.decode(board.columnsJson)?.let { board.key to it } }.toMap()
     }
 
     fun observeKanbanBoards(): Flow<Map<String, List<WorkspaceKanbanColumn>>> =

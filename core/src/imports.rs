@@ -191,6 +191,179 @@ pub fn import_tasks(
     }))
 }
 
+/// A daily from before the workspace kept them, as the old plugin stored it.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct LegacyDailySeed {
+    pub id: String,
+    pub title: String,
+    pub weekdays: Vec<u32>,
+    pub interval_days: Option<i64>,
+    pub interval_anchor_ms: Option<i64>,
+    pub target_seconds: Option<i64>,
+    pub archived_at_ms: Option<i64>,
+    pub created_at_ms: i64,
+}
+
+/// Brings the plugin-era dailies in once: each becomes a task in the Habits
+/// list with its daily, keyed by its old id so a second run adds nothing; and
+/// each task in `progress_task_ids` without a daily gets an every-day one.
+/// Returns how many dailies it made. Not an undo step.
+/// `WorkspaceStore.importLegacyDailies`.
+pub fn import_legacy_dailies(
+    transaction: &Transaction,
+    legacy: &[LegacyDailySeed],
+    progress_task_ids: &[String],
+    now_ms: i64,
+) -> Result<u32, CoreError> {
+    let workspace: Option<String> = transaction
+        .query_row("SELECT id FROM workspaces LIMIT 1", [], |row| row.get(0))
+        .optional()?;
+    let Some(workspace) = workspace else {
+        return Ok(0);
+    };
+    let now = stored(now_ms);
+    let mut imported = 0;
+    let mut order: i64 = transaction.query_row(
+        "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM dailies",
+        [],
+        |row| row.get(0),
+    )?;
+    for task_id in progress_task_ids {
+        let wanted: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1)
+                    AND NOT EXISTS(SELECT 1 FROM dailies WHERE taskId = ?1)",
+            [task_id],
+            |row| row.get(0),
+        )?;
+        if !wanted {
+            continue;
+        }
+        transaction.execute(
+            "INSERT INTO dailies (id, taskId, activeWeekdaysMask, sortOrder, createdAt, updatedAt)
+             VALUES (?1, ?2, 127, ?3, ?4, ?4)",
+            params![new_id(), task_id, order, now],
+        )?;
+        order += 1;
+        imported += 1;
+    }
+    let mut pending = Vec::new();
+    for seed in legacy {
+        let known: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM dailies WHERE legacyDailyId = ?1)",
+            [&seed.id],
+            |row| row.get(0),
+        )?;
+        if !known {
+            pending.push(seed);
+        }
+    }
+    if pending.is_empty() {
+        return Ok(imported);
+    }
+    let habits = crate::habits::habits_list(transaction, &workspace, now_ms)?;
+    let first_task_order: i64 = transaction.query_row(
+        "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM tasks WHERE listId = ?1",
+        [&habits],
+        |row| row.get(0),
+    )?;
+    for (offset, seed) in pending.into_iter().enumerate() {
+        let task_order = first_task_order + offset as i64;
+        let task_id = new_id();
+        transaction.execute(
+            "INSERT INTO tasks (id, listId, parentTaskId, title, notes, status, sortOrder, dueAt, estimateSeconds,
+                                sourceSystem, sourceId, itemKind, isPromoted, archivedAt, completedAt, createdAt, updatedAt)
+             VALUES (?1, ?2, NULL, ?3, '', 'open', ?4, NULL, ?5, NULL, NULL, 'task', NULL, NULL, NULL, ?6, ?7)",
+            params![task_id, habits, seed.title, task_order, seed.target_seconds, stored(seed.created_at_ms), now],
+        )?;
+        transaction.execute(
+            "INSERT INTO dailies (id, taskId, activeWeekdaysMask, intervalDays, intervalAnchor, targetSeconds,
+                                  sortOrder, archivedAt, legacyDailyId, createdAt, updatedAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            params![
+                new_id(),
+                task_id,
+                crate::dailies::weekday_mask(&seed.weekdays),
+                seed.interval_days,
+                seed.interval_anchor_ms.map(stored),
+                seed.target_seconds,
+                order,
+                seed.archived_at_ms.map(stored),
+                seed.id,
+                stored(seed.created_at_ms),
+                now
+            ],
+        )?;
+        order += 1;
+        imported += 1;
+    }
+    Ok(imported)
+}
+
+/// One board's saved columns, as `kanban_boards` holds them.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct BoardBaseline {
+    pub key: String,
+    pub columns_json: String,
+}
+
+/// Seeds `kanban_boards` from the boards the old preferences held, plus the
+/// default columns for `current_key` if it had none, without replacing a
+/// board already there; returns every board. Not an undo step.
+/// `WorkspaceStore.kanbanBoardConfigurations`.
+pub fn kanban_board_baseline(
+    transaction: &Transaction,
+    legacy: &[BoardBaseline],
+    current_key: &str,
+) -> Result<Vec<BoardBaseline>, CoreError> {
+    let mut boards: Vec<BoardBaseline> = legacy.to_vec();
+    if !boards.iter().any(|board| board.key == current_key) {
+        let defaults: Vec<crate::conversions::BoardColumn> = [
+            ("backlog", "Backlog"),
+            ("in-progress", "In progress"),
+            ("this-week", "This week"),
+            ("waiting-on", "Waiting on"),
+            ("today", "Today"),
+        ]
+        .iter()
+        .map(|(id, title)| crate::conversions::BoardColumn {
+            id: id.to_string(),
+            title: title.to_string(),
+        })
+        .collect();
+        boards.push(BoardBaseline {
+            key: current_key.to_string(),
+            columns_json: crate::conversions::columns_json(&defaults),
+        });
+    }
+    for board in &boards {
+        // Only a non-empty array of columns with ids and titles is a board.
+        let valid = serde_json::from_str::<Vec<serde_json::Value>>(&board.columns_json).is_ok_and(
+            |columns| {
+                !columns.is_empty()
+                    && columns
+                        .iter()
+                        .all(|c| c["id"].is_string() && c["title"].is_string())
+            },
+        );
+        if valid {
+            transaction.execute(
+                "INSERT OR IGNORE INTO kanban_boards (id, columnsJSON) VALUES (?1, ?2)",
+                params![board.key, board.columns_json],
+            )?;
+        }
+    }
+    let mut statement = transaction.prepare("SELECT id, columnsJSON FROM kanban_boards")?;
+    let all = statement
+        .query_map([], |row| {
+            Ok(BoardBaseline {
+                key: row.get(0)?,
+                columns_json: row.get(1)?,
+            })
+        })?
+        .collect::<Result<_, _>>()?;
+    Ok(all)
+}
+
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
@@ -269,6 +442,58 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM task_lists", [], |row| row.get(0))
             .unwrap();
         assert_eq!(lists, 1);
+    }
+
+    #[test]
+    fn legacy_dailies_come_in_once_and_boards_seed_without_replacing() {
+        let mut connection = database();
+        let seed = LegacyDailySeed {
+            id: "old-1".into(),
+            title: "Stretch".into(),
+            weekdays: vec![2, 4, 6],
+            interval_days: None,
+            interval_anchor_ms: None,
+            target_seconds: Some(600),
+            archived_at_ms: None,
+            created_at_ms: 1_600_000_000_000,
+        };
+        let tx = connection.transaction().unwrap();
+        assert_eq!(
+            import_legacy_dailies(&tx, std::slice::from_ref(&seed), &[], 1).unwrap(),
+            1
+        );
+        assert_eq!(import_legacy_dailies(&tx, &[seed], &[], 2).unwrap(), 0);
+        let (mask, legacy): (i64, String) = tx
+            .query_row(
+                "SELECT activeWeekdaysMask, legacyDailyId FROM dailies",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!((mask, legacy.as_str()), (42, "old-1"));
+
+        tx.execute("INSERT INTO kanban_boards (id, columnsJSON) VALUES ('kept', '[{\"id\":\"a\",\"title\":\"A\"}]')", [])
+            .unwrap();
+        let legacy_boards = vec![
+            BoardBaseline {
+                key: "kept".into(),
+                columns_json: "[{\"id\":\"b\",\"title\":\"B\"}]".into(),
+            },
+            BoardBaseline {
+                key: "bad".into(),
+                columns_json: "[]".into(),
+            },
+        ];
+        let mut boards = kanban_board_baseline(&tx, &legacy_boards, "workspace").unwrap();
+        boards.sort_by(|a, b| a.key.cmp(&b.key));
+        let keys: Vec<&str> = boards.iter().map(|b| b.key.as_str()).collect();
+        assert_eq!(keys, ["kept", "workspace"]);
+        assert_eq!(boards[0].columns_json, "[{\"id\":\"a\",\"title\":\"A\"}]");
+        assert!(
+            boards[1]
+                .columns_json
+                .starts_with("[{\"id\":\"backlog\",\"title\":\"Backlog\"}")
+        );
     }
 
     #[test]

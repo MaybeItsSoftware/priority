@@ -717,6 +717,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func historyTarget(forUndo: Bool) throws  -> HistoryTarget
     
     /**
+     * Brings the plugin-era dailies in once; how many it made.
+     */
+    func importLegacyDailies(legacy: [LegacyDailySeed], progressTaskIds: [String], nowMs: Int64) throws  -> UInt32
+    
+    /**
      * Copies tasks from an outside service into the workspace, safely re-run,
      * outside the undo journal.
      */
@@ -726,6 +731,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     func indentTask(id: String, nowMs: Int64) throws 
+    
+    /**
+     * Seeds the saved boards from the old preferences and the defaults;
+     * returns every board.
+     */
+    func kanbanBoardBaseline(legacy: [BoardBaseline], currentKey: String) throws  -> [BoardBaseline]
     
     /**
      * Logs progress on a daily as one "Log Daily" step; returns the
@@ -1391,6 +1402,21 @@ open func historyTarget(forUndo: Bool)throws  -> HistoryTarget  {
 }
     
     /**
+     * Brings the plugin-era dailies in once; how many it made.
+     */
+open func importLegacyDailies(legacy: [LegacyDailySeed], progressTaskIds: [String], nowMs: Int64)throws  -> UInt32  {
+    return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_import_legacy_dailies(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeLegacyDailySeed.lower(legacy),
+        FfiConverterSequenceString.lower(progressTaskIds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Copies tasks from an outside service into the workspace, safely re-run,
      * outside the undo journal.
      */
@@ -1419,6 +1445,21 @@ open func indentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(Ff
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Seeds the saved boards from the old preferences and the defaults;
+     * returns every board.
+     */
+open func kanbanBoardBaseline(legacy: [BoardBaseline], currentKey: String)throws  -> [BoardBaseline]  {
+    return try  FfiConverterSequenceTypeBoardBaseline.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_kanban_board_baseline(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeBoardBaseline.lower(legacy),
+        FfiConverterString.lower(currentKey),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -2345,6 +2386,63 @@ public func FfiConverterTypeBlockFinished_lift(_ buf: RustBuffer) throws -> Bloc
 #endif
 public func FfiConverterTypeBlockFinished_lower(_ value: BlockFinished) -> RustBuffer {
     return FfiConverterTypeBlockFinished.lower(value)
+}
+
+
+/**
+ * One board's saved columns, as `kanban_boards` holds them.
+ */
+public struct BoardBaseline: Equatable, Hashable {
+    public var key: String
+    public var columnsJson: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(key: String, columnsJson: String) {
+        self.key = key
+        self.columnsJson = columnsJson
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BoardBaseline: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBoardBaseline: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BoardBaseline {
+        return
+            try BoardBaseline(
+                key: FfiConverterString.read(from: &buf), 
+                columnsJson: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BoardBaseline, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterString.write(value.columnsJson, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardBaseline_lift(_ buf: RustBuffer) throws -> BoardBaseline {
+    return try FfiConverterTypeBoardBaseline.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardBaseline_lower(_ value: BoardBaseline) -> RustBuffer {
+    return FfiConverterTypeBoardBaseline.lower(value)
 }
 
 
@@ -3362,6 +3460,87 @@ public func FfiConverterTypeImportedTaskSeed_lower(_ value: ImportedTaskSeed) ->
 
 
 /**
+ * A daily from before the workspace kept them, as the old plugin stored it.
+ */
+public struct LegacyDailySeed: Equatable, Hashable {
+    public var id: String
+    public var title: String
+    public var weekdays: [UInt32]
+    public var intervalDays: Int64?
+    public var intervalAnchorMs: Int64?
+    public var targetSeconds: Int64?
+    public var archivedAtMs: Int64?
+    public var createdAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String, weekdays: [UInt32], intervalDays: Int64?, intervalAnchorMs: Int64?, targetSeconds: Int64?, archivedAtMs: Int64?, createdAtMs: Int64) {
+        self.id = id
+        self.title = title
+        self.weekdays = weekdays
+        self.intervalDays = intervalDays
+        self.intervalAnchorMs = intervalAnchorMs
+        self.targetSeconds = targetSeconds
+        self.archivedAtMs = archivedAtMs
+        self.createdAtMs = createdAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension LegacyDailySeed: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLegacyDailySeed: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LegacyDailySeed {
+        return
+            try LegacyDailySeed(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                weekdays: FfiConverterSequenceUInt32.read(from: &buf), 
+                intervalDays: FfiConverterOptionInt64.read(from: &buf), 
+                intervalAnchorMs: FfiConverterOptionInt64.read(from: &buf), 
+                targetSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                archivedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: LegacyDailySeed, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterSequenceUInt32.write(value.weekdays, into: &buf)
+        FfiConverterOptionInt64.write(value.intervalDays, into: &buf)
+        FfiConverterOptionInt64.write(value.intervalAnchorMs, into: &buf)
+        FfiConverterOptionInt64.write(value.targetSeconds, into: &buf)
+        FfiConverterOptionInt64.write(value.archivedAtMs, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLegacyDailySeed_lift(_ buf: RustBuffer) throws -> LegacyDailySeed {
+    return try FfiConverterTypeLegacyDailySeed.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLegacyDailySeed_lower(_ value: LegacyDailySeed) -> RustBuffer {
+    return FfiConverterTypeLegacyDailySeed.lower(value)
+}
+
+
+/**
  * What the list settings sheet saves.
  */
 public struct ListSettings: Equatable, Hashable {
@@ -4358,6 +4537,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeBoardBaseline: FfiConverterRustBuffer {
+    typealias SwiftType = [BoardBaseline]
+
+    public static func write(_ value: [BoardBaseline], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBoardBaseline.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [BoardBaseline] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [BoardBaseline]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBoardBaseline.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer {
     typealias SwiftType = [BoardColumn]
 
@@ -4400,6 +4604,31 @@ fileprivate struct FfiConverterSequenceTypeImportedTaskSeed: FfiConverterRustBuf
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeImportedTaskSeed.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer {
+    typealias SwiftType = [LegacyDailySeed]
+
+    public static func write(_ value: [LegacyDailySeed], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeLegacyDailySeed.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [LegacyDailySeed] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [LegacyDailySeed]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeLegacyDailySeed.read(from: &buf))
         }
         return seq
     }
@@ -4585,10 +4814,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_history_target() != 25210) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_import_legacy_dailies() != 62513) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_import_tasks() != 64382) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_indent_task() != 14168) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline() != 21099) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_log_contribution() != 57143) {

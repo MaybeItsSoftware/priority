@@ -725,9 +725,13 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_import_legacy_dailies(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_import_tasks(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_indent_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_log_contribution(
     ): Int
@@ -911,10 +915,14 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_import_legacy_dailies(`ptr`: Long,`legacy`: RustBuffer.ByValue,`progressTaskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     external fun uniffi_takt_core_fn_method_coreworkspace_import_tasks(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`listName`: RustBuffer.ByValue,`sourceSystem`: RustBuffer.ByValue,`seeds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_indent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_kanban_board_baseline(`ptr`: Long,`legacy`: RustBuffer.ByValue,`currentKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_log_contribution(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`seconds`: Long,`complete`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_make_daily(`ptr`: Long,`taskId`: RustBuffer.ByValue,`weekdays`: RustBuffer.ByValue,`intervalDays`: RustBuffer.ByValue,`targetSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1225,10 +1233,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_history_target() and 0xFFFF) != 25210) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_import_legacy_dailies() and 0xFFFF) != 62513) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_import_tasks() and 0xFFFF) != 64382) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_indent_task() and 0xFFFF) != 14168) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline() and 0xFFFF) != 21099) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_log_contribution() and 0xFFFF) != 57143) {
@@ -1942,6 +1956,11 @@ public interface CoreWorkspaceInterface {
     fun `historyTarget`(`forUndo`: kotlin.Boolean): HistoryTarget
     
     /**
+     * Brings the plugin-era dailies in once; how many it made.
+     */
+    fun `importLegacyDailies`(`legacy`: List<LegacyDailySeed>, `progressTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long): kotlin.UInt
+    
+    /**
      * Copies tasks from an outside service into the workspace, safely re-run,
      * outside the undo journal.
      */
@@ -1951,6 +1970,12 @@ public interface CoreWorkspaceInterface {
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     fun `indentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Seeds the saved boards from the old preferences and the defaults;
+     * returns every board.
+     */
+    fun `kanbanBoardBaseline`(`legacy`: List<BoardBaseline>, `currentKey`: kotlin.String): List<BoardBaseline>
     
     /**
      * Logs progress on a daily as one "Log Daily" step; returns the
@@ -2764,6 +2789,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Brings the plugin-era dailies in once; how many it made.
+     */
+    @Throws(CoreException::class)override fun `importLegacyDailies`(`legacy`: List<LegacyDailySeed>, `progressTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_import_legacy_dailies(
+        it,
+        
+        FfiConverterSequenceTypeLegacyDailySeed.lower(`legacy`),
+        FfiConverterSequenceString.lower(`progressTaskIds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Copies tasks from an outside service into the workspace, safely re-run,
      * outside the undo journal.
      */
@@ -2801,6 +2846,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Seeds the saved boards from the old preferences and the defaults;
+     * returns every board.
+     */
+    @Throws(CoreException::class)override fun `kanbanBoardBaseline`(`legacy`: List<BoardBaseline>, `currentKey`: kotlin.String): List<BoardBaseline> {
+            return FfiConverterSequenceTypeBoardBaseline.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_kanban_board_baseline(
+        it,
+        
+        FfiConverterSequenceTypeBoardBaseline.lower(`legacy`),
+        FfiConverterString.lower(`currentKey`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -3993,6 +4058,47 @@ public object FfiConverterTypeBlockFinished: FfiConverterRustBuffer<BlockFinishe
 
 
 /**
+ * One board's saved columns, as `kanban_boards` holds them.
+ */
+data class BoardBaseline (
+    var `key`: kotlin.String
+    , 
+    var `columnsJson`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBoardBaseline: FfiConverterRustBuffer<BoardBaseline> {
+    override fun read(buf: ByteBuffer): BoardBaseline {
+        return BoardBaseline(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BoardBaseline) = (
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterString.allocationSize(value.`columnsJson`)
+    )
+
+    override fun write(value: BoardBaseline, buf: ByteBuffer) {
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterString.write(value.`columnsJson`, buf)
+    }
+}
+
+
+
+/**
  * One column of a board.
  */
 data class BoardColumn (
@@ -4800,6 +4906,77 @@ public object FfiConverterTypeImportedTaskSeed: FfiConverterRustBuffer<ImportedT
             FfiConverterString.write(value.`notes`, buf)
             FfiConverterString.write(value.`status`, buf)
             FfiConverterLong.write(value.`sortOrder`, buf)
+    }
+}
+
+
+
+/**
+ * A daily from before the workspace kept them, as the old plugin stored it.
+ */
+data class LegacyDailySeed (
+    var `id`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `weekdays`: List<kotlin.UInt>
+    , 
+    var `intervalDays`: kotlin.Long?
+    , 
+    var `intervalAnchorMs`: kotlin.Long?
+    , 
+    var `targetSeconds`: kotlin.Long?
+    , 
+    var `archivedAtMs`: kotlin.Long?
+    , 
+    var `createdAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLegacyDailySeed: FfiConverterRustBuffer<LegacyDailySeed> {
+    override fun read(buf: ByteBuffer): LegacyDailySeed {
+        return LegacyDailySeed(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceUInt.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: LegacyDailySeed) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterSequenceUInt.allocationSize(value.`weekdays`) +
+            FfiConverterOptionalLong.allocationSize(value.`intervalDays`) +
+            FfiConverterOptionalLong.allocationSize(value.`intervalAnchorMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`targetSeconds`) +
+            FfiConverterOptionalLong.allocationSize(value.`archivedAtMs`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`)
+    )
+
+    override fun write(value: LegacyDailySeed, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterSequenceUInt.write(value.`weekdays`, buf)
+            FfiConverterOptionalLong.write(value.`intervalDays`, buf)
+            FfiConverterOptionalLong.write(value.`intervalAnchorMs`, buf)
+            FfiConverterOptionalLong.write(value.`targetSeconds`, buf)
+            FfiConverterOptionalLong.write(value.`archivedAtMs`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
     }
 }
 
@@ -6051,6 +6228,34 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeBoardBaseline: FfiConverterRustBuffer<List<BoardBaseline>> {
+    override fun read(buf: ByteBuffer): List<BoardBaseline> {
+        val len = buf.getInt()
+        return List<BoardBaseline>(len) {
+            FfiConverterTypeBoardBaseline.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<BoardBaseline>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeBoardBaseline.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<BoardBaseline>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeBoardBaseline.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer<List<BoardColumn>> {
     override fun read(buf: ByteBuffer): List<BoardColumn> {
         val len = buf.getInt()
@@ -6097,6 +6302,34 @@ public object FfiConverterSequenceTypeImportedTaskSeed: FfiConverterRustBuffer<L
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeImportedTaskSeed.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer<List<LegacyDailySeed>> {
+    override fun read(buf: ByteBuffer): List<LegacyDailySeed> {
+        val len = buf.getInt()
+        return List<LegacyDailySeed>(len) {
+            FfiConverterTypeLegacyDailySeed.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<LegacyDailySeed>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeLegacyDailySeed.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<LegacyDailySeed>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeLegacyDailySeed.write(it, buf)
         }
     }
 }

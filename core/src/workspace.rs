@@ -18,7 +18,7 @@ use crate::dailies::{self, DailyEdit};
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
 use crate::focus::{self, BlockFinished, FocusContext};
 use crate::habits::{self, HabitDraft};
-use crate::imports::{self, ImportOutcome, ImportedTaskSeed};
+use crate::imports::{self, BoardBaseline, ImportOutcome, ImportedTaskSeed, LegacyDailySeed};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
 use crate::setup;
@@ -856,6 +856,28 @@ impl CoreWorkspace {
                 now_ms,
             )
         })
+    }
+
+    /// Brings the plugin-era dailies in once; how many it made.
+    pub fn import_legacy_dailies(
+        &self,
+        legacy: Vec<LegacyDailySeed>,
+        progress_task_ids: Vec<String>,
+        now_ms: i64,
+    ) -> Result<u32, CoreError> {
+        self.unjournalled(|tx| {
+            imports::import_legacy_dailies(tx, &legacy, &progress_task_ids, now_ms)
+        })
+    }
+
+    /// Seeds the saved boards from the old preferences and the defaults;
+    /// returns every board.
+    pub fn kanban_board_baseline(
+        &self,
+        legacy: Vec<BoardBaseline>,
+        current_key: String,
+    ) -> Result<Vec<BoardBaseline>, CoreError> {
+        self.unjournalled(|tx| imports::kanban_board_baseline(tx, &legacy, &current_key))
     }
 
     /// The workspace, made on first launch with its Inbox and conditions;

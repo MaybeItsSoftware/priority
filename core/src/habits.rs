@@ -527,7 +527,7 @@ fn stored_rule(
 
 /// The Habits list in a workspace, made if it is not there: found by its
 /// derived id, or failing that by name. `WorkspaceStore.habitsList`.
-fn habits_list(
+pub(crate) fn habits_list(
     transaction: &Transaction,
     workspace_id: &str,
     now_ms: i64,

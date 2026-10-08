@@ -311,55 +311,20 @@ extension WorkspaceStore {
   /// daily. Both halves match on identity, so running this twice is a no-op.
   @discardableResult
   public func importLegacyDailies(
-    _ legacy: [LegacyDailySeed], progressTaskIDs: [String] = [], now: Date = .now
+    _ legacy: [TaktWorkspace.LegacyDailySeed], progressTaskIDs: [String] = [], now: Date = .now
   ) throws -> Int {
-    try database.write { db in
-      guard let workspace = try Workspace.fetchOne(db) else { return 0 }
-      var imported = 0
-      var order = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM dailies") ?? 0
-
-      for taskID in progressTaskIDs {
-        guard try WorkspaceTask.fetchOne(db, key: taskID) != nil,
-          try WorkspaceDaily.filter(Column("taskId") == taskID).fetchOne(db) == nil
-        else { continue }
-        try WorkspaceDaily(
-          id: UUID().uuidString, taskId: taskID, activeWeekdaysMask: WorkspaceDaily.allWeekdaysMask,
-          sortOrder: order, createdAt: now, updatedAt: now
-        ).insert(db)
-        order += 1
-        imported += 1
-      }
-
-      let pending = try legacy.filter { seed in
-        try WorkspaceDaily.filter(Column("legacyDailyId") == seed.id).fetchOne(db) == nil
-      }
-      guard !pending.isEmpty else { return imported }
-
-      let habits = try habitsList(db, workspaceId: workspace.id, now: now)
-      var taskOrder = try Int.fetchOne(
-        db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM tasks WHERE listId = ?",
-        arguments: [habits.id]) ?? 0
-
-      for seed in pending {
-        let task = WorkspaceTask(
-          id: UUID().uuidString, listId: habits.id, parentTaskId: nil, title: seed.title, notes: "",
-          status: .open, sortOrder: taskOrder, dueAt: nil, estimateSeconds: seed.targetSeconds,
-          createdAt: seed.createdAt, updatedAt: now)
-        try task.insert(db)
-        var daily = WorkspaceDaily(
-          id: UUID().uuidString, taskId: task.id,
-          activeWeekdaysMask: WorkspaceDaily.mask(forWeekdays: seed.activeWeekdays),
-          intervalDays: seed.intervalDays, intervalAnchor: seed.intervalAnchor,
-          targetSeconds: seed.targetSeconds, sortOrder: order, archivedAt: seed.archivedAt,
-          createdAt: seed.createdAt, updatedAt: now)
-        daily.legacyDailyId = seed.id
-        try daily.insert(db)
-        taskOrder += 1
-        order += 1
-        imported += 1
-      }
-      return imported
+    // The Rust core's `imports::import_legacy_dailies`.
+    let seeds = legacy.map { seed in
+      TaktRustCore.LegacyDailySeed(
+        id: seed.id, title: seed.title, weekdays: seed.activeWeekdays.sorted().map { UInt32(clamping: $0) },
+        intervalDays: seed.intervalDays.map { Int64($0) }, intervalAnchorMs: seed.intervalAnchor?.coreMilliseconds,
+        targetSeconds: seed.targetSeconds.map { Int64($0) }, archivedAtMs: seed.archivedAt?.coreMilliseconds,
+        createdAtMs: seed.createdAt.coreMilliseconds)
     }
+    let imported = try coreWrite {
+      try core.importLegacyDailies(legacy: seeds, progressTaskIds: progressTaskIDs, nowMs: now.coreMilliseconds)
+    }
+    return Int(imported)
   }
 
   func habitsList(_ db: Database, workspaceId: String, now: Date) throws -> TaskList {
