@@ -288,6 +288,68 @@ pub fn outdent_task(transaction: &Transaction, id: &str, now_ms: i64) -> Result<
     Ok(())
 }
 
+/// Puts tasks in a board column (`None`, or blank, clears it), as one step
+/// however many there are. Every id must be a task, or nothing is written.
+/// Ids are written once each, in the order given. Replaces both
+/// `WorkspaceStore.setKanbanColumn` overloads and their Kotlin copies.
+pub fn set_kanban_column(
+    transaction: &Transaction,
+    task_ids: &[String],
+    column: Option<&str>,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let mut ids: Vec<&str> = Vec::with_capacity(task_ids.len());
+    for id in task_ids {
+        if !ids.contains(&id.as_str()) {
+            ids.push(id);
+        }
+    }
+    for id in &ids {
+        let exists: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1)",
+            [id],
+            |row| row.get(0),
+        )?;
+        if !exists {
+            return Err(CoreError::MissingTask { id: id.to_string() });
+        }
+    }
+    let value = column.map(str::trim).filter(|c| !c.is_empty());
+    let now = stored(now_ms);
+    let mut statement = transaction.prepare(
+        "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
+         VALUES (?1, '[]', '[]', ?2, ?3)
+         ON CONFLICT(taskId) DO UPDATE SET kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt",
+    )?;
+    for id in ids {
+        statement.execute(params![id, value, now])?;
+    }
+    Ok(())
+}
+
+/// Places a task on the priority matrix by urgency and importance (either
+/// may be unset). Replaces `WorkspaceStore.setMatrixPosition` and its
+/// Kotlin copy.
+pub fn set_matrix_position(
+    transaction: &Transaction,
+    id: &str,
+    urgency: Option<i64>,
+    importance: Option<i64>,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    task_place(transaction, id)?;
+    transaction.execute(
+        "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, matrixUrgency, matrixImportance, updatedAt)
+         VALUES (?1, '[]', '[]', ?2, ?3, ?4)
+         ON CONFLICT(taskId) DO UPDATE SET
+           matrixUrgency = excluded.matrixUrgency,
+           matrixImportance = excluded.matrixImportance,
+           updatedAt = excluded.updatedAt",
+        params![id, urgency, importance, stored(now_ms)],
+    )?;
+    Ok(())
+}
+
 /// The parent a list shows the children of: its visible root, but only while
 /// that is still the list's single top-level task.
 pub fn visible_root_parent(

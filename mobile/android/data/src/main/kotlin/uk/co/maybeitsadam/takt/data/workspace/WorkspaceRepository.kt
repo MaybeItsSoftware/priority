@@ -430,19 +430,8 @@ class WorkspaceRepository(
 
     /** Moving a whole column is one transaction and one undo step. */
     suspend fun setKanbanColumn(column: String?, taskIds: List<String>, now: Instant = now()) {
-        val ids = taskIds.distinct()
-        if (ids.isEmpty()) return
-        val value = column.trimmedOrNull()
-        journalledWrite("Move Task") { db ->
-            for (chunk in ids.chunked(500)) {
-                val count = db.int(
-                    "SELECT COUNT(*) FROM tasks WHERE id IN (${chunk.joinToString(",") { "?" }})",
-                    *chunk.toTypedArray(),
-                ) ?: 0
-                if (count != chunk.size) fail(WorkspaceStoreError.MISSING_TASK)
-            }
-            for (id in ids) upsertKanbanColumn(db, id, value, now)
-        }
+        if (taskIds.isEmpty()) return
+        coreWrite { it.setKanbanColumn(taskIds, column, now.toEpochMilli()) }
     }
 
     suspend fun matrixPosition(taskId: String): TaskMatrixPosition = database.read { db ->
@@ -450,13 +439,10 @@ class WorkspaceRepository(
         TaskMatrixPosition(metadata?.matrixUrgency, metadata?.matrixImportance)
     }
 
+    /** Places a task on the priority matrix: the Rust core's `tasks::set_matrix_position`. */
     suspend fun setMatrixPosition(position: TaskMatrixPosition, taskId: String, now: Instant = now()) {
-        journalledWrite("Move Task") { db ->
-            db.task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            val record = (db.metadata(taskId) ?: emptyMetadata(taskId, now)).copy(
-                matrixUrgency = position.urgency, matrixImportance = position.importance, updatedAt = now,
-            )
-            db.save(record)
+        coreWrite {
+            it.setMatrixPosition(taskId, position.urgency?.toLong(), position.importance?.toLong(), now.toEpochMilli())
         }
     }
 

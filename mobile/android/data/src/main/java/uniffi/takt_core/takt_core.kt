@@ -725,7 +725,11 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_list(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_list_archived(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
     ): Int
@@ -807,7 +811,11 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(`ptr`: Long,`taskIds`: RustBuffer.ByValue,`column`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_list_archived(`ptr`: Long,`id`: RustBuffer.ByValue,`archived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_matrix_position(`ptr`: Long,`id`: RustBuffer.ByValue,`urgency`: RustBuffer.ByValue,`importance`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1017,7 +1025,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_list() and 0xFFFF) != 3217) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column() and 0xFFFF) != 29324) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_list_archived() and 0xFFFF) != 35767) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position() and 0xFFFF) != 2656) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
@@ -1554,9 +1568,19 @@ public interface CoreWorkspaceInterface {
     fun `renameList`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * Puts tasks in a board column as one "Move Task" step.
+     */
+    fun `setKanbanColumn`(`taskIds`: List<kotlin.String>, `column`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
      * Archives or restores a list as one "Archive List" step.
      */
     fun `setListArchived`(`id`: kotlin.String, `archived`: kotlin.Boolean, `nowMs`: kotlin.Long)
+    
+    /**
+     * Places a task on the priority matrix as one "Move Task" step.
+     */
+    fun `setMatrixPosition`(`id`: kotlin.String, `urgency`: kotlin.Long?, `importance`: kotlin.Long?, `nowMs`: kotlin.Long)
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -2104,6 +2128,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Puts tasks in a board column as one "Move Task" step.
+     */
+    @Throws(CoreException::class)override fun `setKanbanColumn`(`taskIds`: List<kotlin.String>, `column`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(
+        it,
+        
+        FfiConverterSequenceString.lower(`taskIds`),
+        FfiConverterOptionalString.lower(`column`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Archives or restores a list as one "Archive List" step.
      */
     @Throws(CoreException::class)override fun `setListArchived`(`id`: kotlin.String, `archived`: kotlin.Boolean, `nowMs`: kotlin.Long)
@@ -2115,6 +2158,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterString.lower(`id`),
         FfiConverterBoolean.lower(`archived`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Places a task on the priority matrix as one "Move Task" step.
+     */
+    @Throws(CoreException::class)override fun `setMatrixPosition`(`id`: kotlin.String, `urgency`: kotlin.Long?, `importance`: kotlin.Long?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_matrix_position(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterOptionalLong.lower(`urgency`),
+        FfiConverterOptionalLong.lower(`importance`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -2733,6 +2796,38 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
+    override fun read(buf: ByteBuffer): kotlin.Long? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterLong.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Long?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterLong.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Long?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterLong.write(value, buf)
+        }
+    }
 }
 
 

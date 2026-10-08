@@ -261,3 +261,74 @@ fn nudging_dropping_and_placing_reorder_siblings() {
         Err(CoreError::InvalidTaskMove)
     ));
 }
+
+#[test]
+fn a_board_move_writes_each_task_once_and_refuses_a_missing_one() {
+    let mut connection = workspace();
+    let ids = vec!["o".to_string(), "p".to_string(), "o".to_string()];
+    journalled(&mut connection, "Move Task", |tx| {
+        set_kanban_column(tx, &ids, Some(" doing "), NOW)
+    })
+    .unwrap();
+    let columns: Vec<(String, Option<String>)> = {
+        let mut statement = connection
+            .prepare("SELECT taskId, kanbanColumn FROM task_metadata WHERE kanbanColumn IS NOT NULL ORDER BY taskId")
+            .unwrap();
+        statement
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap()
+    };
+    assert_eq!(
+        columns,
+        [
+            ("o".into(), Some("doing".into())),
+            ("p".into(), Some("doing".into()))
+        ]
+    );
+    let missing = vec!["o".to_string(), "nope".to_string()];
+    assert!(matches!(
+        journalled(&mut connection, "Move Task", |tx| set_kanban_column(tx, &missing, None, NOW)),
+        Err(CoreError::MissingTask { ref id }) if id == "nope"
+    ));
+    journalled(&mut connection, "Move Task", |tx| {
+        set_kanban_column(tx, &["o".to_string()], Some("  "), NOW)
+    })
+    .unwrap();
+    let cleared: Option<String> = connection
+        .query_row(
+            "SELECT kanbanColumn FROM task_metadata WHERE taskId = 'o'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(cleared, None);
+}
+
+#[test]
+fn a_matrix_placement_creates_or_updates_the_tasks_metadata() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Move Task", |tx| {
+        set_matrix_position(tx, "o", Some(2), Some(1), NOW)
+    })
+    .unwrap();
+    journalled(&mut connection, "Move Task", |tx| {
+        set_matrix_position(tx, "c", Some(1), None, NOW)
+    })
+    .unwrap();
+    assert_eq!(matrix(&connection, "o"), (Some(2), Some(1)));
+    assert_eq!(matrix(&connection, "c"), (Some(1), None));
+    undo(&mut connection).unwrap();
+    assert_eq!(matrix(&connection, "c"), (None, None));
+}
+
+fn matrix(connection: &Connection, id: &str) -> (Option<i64>, Option<i64>) {
+    connection
+        .query_row(
+            "SELECT matrixUrgency, matrixImportance FROM task_metadata WHERE taskId = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
+}

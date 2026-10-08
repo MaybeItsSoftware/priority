@@ -700,9 +700,19 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func renameList(id: String, name: String, nowMs: Int64) throws 
     
     /**
+     * Puts tasks in a board column as one "Move Task" step.
+     */
+    func setKanbanColumn(taskIds: [String], column: String?, nowMs: Int64) throws 
+    
+    /**
      * Archives or restores a list as one "Archive List" step.
      */
     func setListArchived(id: String, archived: Bool, nowMs: Int64) throws 
+    
+    /**
+     * Places a task on the priority matrix as one "Move Task" step.
+     */
+    func setMatrixPosition(id: String, urgency: Int64?, importance: Int64?, nowMs: Int64) throws 
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -1102,6 +1112,20 @@ open func renameList(id: String, name: String, nowMs: Int64)throws   {try rustCa
 }
     
     /**
+     * Puts tasks in a board column as one "Move Task" step.
+     */
+open func setKanbanColumn(taskIds: [String], column: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(taskIds),
+        FfiConverterOptionString.lower(column),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Archives or restores a list as one "Archive List" step.
      */
 open func setListArchived(id: String, archived: Bool, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1110,6 +1134,21 @@ open func setListArchived(id: String, archived: Bool, nowMs: Int64)throws   {try
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),
         FfiConverterBool.lower(archived),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Places a task on the priority matrix as one "Move Task" step.
+     */
+open func setMatrixPosition(id: String, urgency: Int64?, importance: Int64?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_matrix_position(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterOptionInt64.lower(urgency),
+        FfiConverterOptionInt64.lower(importance),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
@@ -1726,6 +1765,30 @@ public func FfiConverterTypeCoreError_lower(_ value: CoreError) -> RustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
+    typealias SwiftType = Int64?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterInt64.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -1927,7 +1990,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_rename_list() != 3217) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column() != 29324) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_list_archived() != 35767) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position() != 2656) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {

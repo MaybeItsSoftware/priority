@@ -468,24 +468,12 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   /// Moving a whole column is one transaction and one undo step.
+  /// Puts tasks in a board column as one step: the Rust core's
+  /// `tasks::set_kanban_column`.
   public func setKanbanColumn(_ column: String?, for taskIDs: [String], now: Date = .now) throws {
-    let ids = Array(Set(taskIDs))
-    guard !ids.isEmpty else { return }
-    let value = column?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-    try journalledWrite("Move Task") { db in
-      for start in stride(from: 0, to: ids.count, by: 500) {
-        let batch = Array(ids[start..<min(start + 500, ids.count)])
-        let count = try WorkspaceTask.filter(batch.contains(Column("id"))).fetchCount(db)
-        guard count == batch.count else { throw WorkspaceStoreError.missingTask }
-      }
-      for id in ids {
-        try db.execute(sql: """
-          INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
-          VALUES (?, '[]', '[]', ?, ?)
-          ON CONFLICT(taskId) DO UPDATE SET
-            kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt
-          """, arguments: [id, value, now])
-      }
+    guard !taskIDs.isEmpty else { return }
+    try Self.mappingCoreErrors {
+      try core.setKanbanColumn(taskIds: taskIDs, column: column, nowMs: now.coreMilliseconds)
     }
   }
 
@@ -496,24 +484,16 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  /// Places a task on the priority matrix: the Rust core's `tasks::set_matrix_position`.
   public func setMatrixPosition(
     _ position: TaskMatrixPosition,
     for taskId: String,
     now: Date = .now
   ) throws {
-    try journalledWrite("Move Task") { db in
-      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
-      var record = try TaskMetadata.fetchOne(db, key: taskId) ?? TaskMetadata(
-        taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-        matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]", updatedAt: now)
-      record.matrixUrgency = position.urgency
-      record.matrixImportance = position.importance
-      record.updatedAt = now
-      if try TaskMetadata.fetchOne(db, key: taskId) == nil {
-        try record.insert(db)
-      } else {
-        try record.update(db)
-      }
+    try Self.mappingCoreErrors {
+      try core.setMatrixPosition(
+        id: taskId, urgency: position.urgency.map(Int64.init), importance: position.importance.map(Int64.init),
+        nowMs: now.coreMilliseconds)
     }
   }
 

@@ -135,6 +135,31 @@ impl CoreWorkspace {
         })
     }
 
+    /// Puts tasks in a board column as one "Move Task" step.
+    pub fn set_kanban_column(
+        &self,
+        task_ids: Vec<String>,
+        column: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Move Task", |tx| {
+            tasks::set_kanban_column(tx, &task_ids, column.as_deref(), now_ms)
+        })
+    }
+
+    /// Places a task on the priority matrix as one "Move Task" step.
+    pub fn set_matrix_position(
+        &self,
+        id: String,
+        urgency: Option<i64>,
+        importance: Option<i64>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Move Task", |tx| {
+            tasks::set_matrix_position(tx, &id, urgency, importance, now_ms)
+        })
+    }
+
     /// Deletes a task and its subtree as one "Delete Task" step.
     pub fn delete_task(&self, id: String) -> Result<DeletedTask, CoreError> {
         journal::journalled(&mut self.lock(), "Delete Task", |tx| {
