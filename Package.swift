@@ -328,6 +328,8 @@ let package = Package(
       name: "TaktWorkspace",
       dependencies: [
         "TaktCore",
+        // The schema and its migrations live in the Rust core.
+        "TaktRustCore",
         .product(name: "GRDB", package: "GRDB.swift"),
       ],
       path: "Sources/TaktWorkspace"

@@ -20,13 +20,6 @@ public struct TaskWaitingDetails: Sendable, Equatable {
 /// and the follow-up task that lands in Today at that time if the task is
 /// still waiting. `WaitingFollowUp` in TaktCore decides; this file applies it.
 extension WorkspaceStore {
-  /// `v20_waiting_follow_ups`, as raw SQL so Android runs the same text.
-  static let waitingColumns = [
-    "ALTER TABLE task_metadata ADD COLUMN waitingOn TEXT",
-    "ALTER TABLE task_metadata ADD COLUMN waitingFollowUpAt DATETIME",
-    "ALTER TABLE task_metadata ADD COLUMN waitingFollowUpTaskId TEXT",
-    "ALTER TABLE task_metadata ADD COLUMN followUpOfTaskId TEXT",
-  ]
 
   // MARK: - Reading
 

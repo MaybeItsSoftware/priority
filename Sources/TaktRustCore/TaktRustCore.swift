@@ -465,6 +465,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
+    typealias FfiType = UInt32
+    typealias SwiftType = UInt32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -507,6 +523,121 @@ fileprivate struct FfiConverterString: FfiConverter {
         writeBytes(&buf, value.utf8)
     }
 }
+
+
+/**
+ * What went wrong bringing a database up to date.
+ */
+public 
+enum SchemaError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    case Database(message: String
+    )
+    case ForeignKeys(identifier: String, count: UInt32
+    )
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
+}
+
+#if compiler(>=6)
+extension SchemaError: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSchemaError: FfiConverterRustBuffer {
+    typealias SwiftType = SchemaError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SchemaError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Database(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .ForeignKeys(
+            identifier: try FfiConverterString.read(from: &buf), 
+            count: try FfiConverterUInt32.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SchemaError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Database(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .ForeignKeys(identifier,count):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(identifier, into: &buf)
+            FfiConverterUInt32.write(count, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSchemaError_lift(_ buf: RustBuffer) throws -> SchemaError {
+    return try FfiConverterTypeSchemaError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSchemaError_lower(_ value: SchemaError) -> RustBuffer {
+    return FfiConverterTypeSchemaError.lower(value)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
+
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [String]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
 /**
  * The version of this crate, as compiled into the library a client loaded.
  *
@@ -518,6 +649,32 @@ public func coreVersion() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_core_version(uniffiCallStatus
+    )
+})
+}
+/**
+ * Brings the database at `path` up to date, creating it if it does not
+ * exist, and returns the identifier of the newest migration it now has.
+ *
+ * Opens its own connection and closes it before returning, so call it
+ * before the client opens the file. Waits up to five seconds for another
+ * writer, as every client does.
+ */
+public func migrateWorkspace(path: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeSchemaError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_migrate_workspace(
+        FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+/**
+ * The migration identifiers, oldest first.
+ */
+public func workspaceMigrations() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_workspace_migrations(uniffiCallStatus
     )
 })
 }
@@ -538,6 +695,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.contractVersionMismatch
     }
     if (uniffi_takt_core_checksum_func_core_version() != 3784) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_migrate_workspace() != 65179) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
         return InitializationResult.apiChecksumMismatch
     }
 

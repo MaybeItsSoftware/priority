@@ -6,15 +6,6 @@ import TaktCore
 /// the focus screen. Split from `WorkspaceStore.swift` only for size; this is
 /// the same type and the same database.
 extension WorkspaceStore {
-  /// `v19_habit_options`, verbatim. Android's `WorkspaceSchema.kt` runs the
-  /// same five statements.
-  static let habitOptionColumns = [
-    "ALTER TABLE dailies ADD COLUMN sourceTaskId TEXT",
-    "ALTER TABLE dailies ADD COLUMN placementColumn TEXT",
-    "ALTER TABLE dailies ADD COLUMN dropsAtDayEnd BOOLEAN NOT NULL DEFAULT 1",
-    "ALTER TABLE dailies ADD COLUMN expiryRule TEXT NOT NULL DEFAULT 'never'",
-    "ALTER TABLE dailies ADD COLUMN expiresAt DATETIME",
-  ]
 
   // MARK: - Dailies
 

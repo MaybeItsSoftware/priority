@@ -65,39 +65,6 @@ extension WorkspaceStore {
       """)
   }
 
-  /// Writes the outbox triggers. Like `installChangeLogTriggers`, a trigger
-  /// names its columns, so any later migration that adds or removes a column
-  /// on a synced table must call this again.
-  static func installSyncTriggers(_ db: Database) throws {
-    let guardClause = """
-      WHEN (SELECT recording FROM sync_control WHERE id = 0) = 1
-        AND (SELECT applying FROM sync_control WHERE id = 0) = 0
-      """
-    let now = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)"
-    let entry = "INSERT INTO sync_outbox(tableName, rowId, operation, changedJSON, changedAtMs)"
-    for (table, key) in syncedTables {
-      guard try db.tableExists(table) else { continue }
-      let columns = try db.columns(in: table).map(\.name)
-      let changed = "json_array(" + columns.map {
-        "CASE WHEN OLD.\"\($0)\" IS NOT NEW.\"\($0)\" THEN '\($0)' END"
-      }.joined(separator: ", ") + ")"
-      for suffix in ["insert", "update", "delete"] {
-        try db.execute(sql: "DROP TRIGGER IF EXISTS sync_outbox_\(table)_\(suffix)")
-      }
-      try db.execute(sql: """
-        CREATE TRIGGER sync_outbox_\(table)_insert AFTER INSERT ON \(table) \(guardClause)
-        BEGIN \(entry) VALUES ('\(table)', NEW."\(key)", 'insert', NULL, \(now)); END
-        """)
-      try db.execute(sql: """
-        CREATE TRIGGER sync_outbox_\(table)_update AFTER UPDATE ON \(table) \(guardClause)
-        BEGIN \(entry) VALUES ('\(table)', NEW."\(key)", 'update', \(changed), \(now)); END
-        """)
-      try db.execute(sql: """
-        CREATE TRIGGER sync_outbox_\(table)_delete AFTER DELETE ON \(table) \(guardClause)
-        BEGIN \(entry) VALUES ('\(table)', OLD."\(key)", 'delete', NULL, \(now)); END
-        """)
-    }
-  }
 }
 
 // MARK: - Values

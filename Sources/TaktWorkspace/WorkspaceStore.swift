@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import TaktRustCore
 import TaktCore
 
 /// The local source of truth for Priority's desktop workspace.
@@ -28,8 +29,12 @@ public final class WorkspaceStore: @unchecked Sendable {
     configuration.prepareDatabase { db in
       try db.execute(sql: "PRAGMA foreign_keys = ON")
     }
+    // The schema is the Rust core's (core/src/schema, step two of
+    // docs/rust-core-migration.md): it opens the file, brings it up to date
+    // under GRDB's own `grdb_migrations` ledger, and closes it again before
+    // the pool opens, so the two never hold the file at once.
+    _ = try migrateWorkspace(path: databaseURL.path)
     self.database = try DatabasePool(path: databaseURL.path, configuration: configuration)
-    try Self.migrator.migrate(database)
   }
 
   public static func defaultDatabaseURL() -> URL {

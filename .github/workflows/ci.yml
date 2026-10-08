@@ -29,7 +29,7 @@ jobs:
       # the Rust core has to exist before the package can even resolve.
       - name: Build the Rust core
         run: |
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
           scripts/build_core_apple.sh
 
       - name: Build package
@@ -109,7 +109,7 @@ jobs:
       # the Rust core has to exist before the package can even resolve.
       - name: Build the Rust core
         run: |
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
           scripts/build_core_apple.sh
 
       # Both configurations now sign with a real "Apple Development" identity so
@@ -276,7 +276,7 @@ jobs:
       # the Rust core has to exist before the package can even resolve.
       - name: Build the Rust core
         run: |
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
           scripts/build_core_apple.sh
 
       # The build phase runs scripts/bundle_cli.sh, which cargo-builds the CLI

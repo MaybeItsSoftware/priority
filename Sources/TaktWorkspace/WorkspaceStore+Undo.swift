@@ -225,47 +225,6 @@ extension WorkspaceStore {
 
   private static let journalDepth = 100
 
-  /// Writes the recording triggers. Called by the migration that creates the
-  /// journal, and again by any later migration that adds or removes a column on
-  /// a journalled table — a trigger names its columns, so a schema change
-  /// leaves it recording the old shape.
-  static func installChangeLogTriggers(_ db: Database) throws {
-    for (table, keyColumn) in journalledTables {
-      guard try db.tableExists(table) else { continue }
-      let columns = try db.columns(in: table).map(\.name)
-      func json(_ prefix: String) -> String {
-        "json_object(" + columns.map { "'\($0)', \(prefix).\"\($0)\"" }.joined(separator: ", ") + ")"
-      }
-      // Recording is off while an undo is replaying, and off entirely until a
-      // journalled write turns it on, so an import or a migration does not
-      // arrive as thousands of undo steps.
-      let guardClause = "WHEN (SELECT suppressed FROM undo_control WHERE id = 0) = 0"
-      let entry = "INSERT INTO change_log(groupId, label, tableName, rowId, operation, beforeJSON, afterJSON)"
-      let context = "(SELECT groupId FROM undo_control WHERE id = 0), (SELECT label FROM undo_control WHERE id = 0)"
-
-      for suffix in ["insert", "update", "delete"] {
-        try db.execute(sql: "DROP TRIGGER IF EXISTS change_log_\(table)_\(suffix)")
-      }
-      try db.execute(sql: """
-        CREATE TRIGGER change_log_\(table)_insert AFTER INSERT ON \(table) \(guardClause)
-        BEGIN
-          \(entry) VALUES (\(context), '\(table)', NEW."\(keyColumn)", 'insert', NULL, \(json("NEW")));
-        END
-        """)
-      try db.execute(sql: """
-        CREATE TRIGGER change_log_\(table)_update AFTER UPDATE ON \(table) \(guardClause)
-        BEGIN
-          \(entry) VALUES (\(context), '\(table)', NEW."\(keyColumn)", 'update', \(json("OLD")), \(json("NEW")));
-        END
-        """)
-      try db.execute(sql: """
-        CREATE TRIGGER change_log_\(table)_delete AFTER DELETE ON \(table) \(guardClause)
-        BEGIN
-          \(entry) VALUES (\(context), '\(table)', OLD."\(keyColumn)", 'delete', \(json("OLD")), NULL);
-        END
-        """)
-    }
-  }
 }
 
 /// One named step in the undo journal, as `undoHistory(limit:)` reports it.

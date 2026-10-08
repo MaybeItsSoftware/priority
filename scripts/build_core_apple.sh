@@ -35,7 +35,7 @@ fi
 export MACOSX_DEPLOYMENT_TARGET=15.0
 export IPHONEOS_DEPLOYMENT_TARGET=18.0
 
-TARGETS=(aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim)
+TARGETS=(aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios)
 for t in "${TARGETS[@]}"; do
   echo "takt-core: $t"
   cargo build -q $FLAG --manifest-path "$CORE/Cargo.toml" --target "$t" --lib
@@ -64,12 +64,20 @@ lipo -create \
   "$CORE/target/x86_64-apple-darwin/$PROFILE/$LIB" \
   -output "$gen/macos/$LIB"
 
+# One simulator slice for both: a generic simulator build compiles x86_64
+# alongside arm64, and links fail without it.
+mkdir -p "$gen/ios-sim"
+lipo -create \
+  "$CORE/target/aarch64-apple-ios-sim/$PROFILE/$LIB" \
+  "$CORE/target/x86_64-apple-ios/$PROFILE/$LIB" \
+  -output "$gen/ios-sim/$LIB"
+
 mkdir -p "$OUT"
 rm -rf "$XCFRAMEWORK"
 xcodebuild -create-xcframework \
   -library "$gen/macos/$LIB" -headers "$headers" \
   -library "$CORE/target/aarch64-apple-ios/$PROFILE/$LIB" -headers "$headers" \
-  -library "$CORE/target/aarch64-apple-ios-sim/$PROFILE/$LIB" -headers "$headers" \
+  -library "$gen/ios-sim/$LIB" -headers "$headers" \
   -output "$XCFRAMEWORK" >/dev/null
 
 echo "takt-core: $XCFRAMEWORK"
