@@ -17,9 +17,10 @@ use crate::conversions::{self, BoardColumn};
 use crate::dailies::{self, DailyEdit};
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
 use crate::journal::{self, HistoryTarget, UndoStep};
-use crate::lists::{self, CreatedItem, DeletedList};
+use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
 use crate::tasks::{self, DeletedTask, NewTask};
 use crate::today;
+use crate::waiting;
 
 /// An open workspace database.
 #[derive(uniffi::Object)]
@@ -603,6 +604,72 @@ impl CoreWorkspace {
         journal::journalled(&mut self.lock(), "Clear Daily", |tx| {
             dailies::clear_contribution(tx, &daily_id, day_ms, &zone)
         })
+    }
+
+    /// Saves the folder settings sheet as one "Edit Folder" step.
+    pub fn save_folder_settings(
+        &self,
+        id: String,
+        name: String,
+        parent_folder_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Folder", |tx| {
+            lists::save_folder_settings(tx, &id, &name, parent_folder_id.as_deref(), now_ms)
+        })
+    }
+
+    /// Saves the list settings sheet as one "Edit List" step.
+    pub fn save_list_settings(
+        &self,
+        id: String,
+        settings: ListSettings,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Edit List", |tx| {
+            lists::save_list_settings(tx, &id, &settings, now_ms)
+        })
+    }
+
+    /// Puts tasks in Today or takes them out, as one step.
+    pub fn set_planned_for_today(
+        &self,
+        planned: bool,
+        task_ids: Vec<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        let label = if planned {
+            "Plan for Today"
+        } else {
+            "Take off Today"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            today::set_planned_for_today(tx, planned, &task_ids, now_ms)
+        })
+    }
+
+    /// Sets what a task waits on and when to chase it, as one "Waiting On" step.
+    pub fn set_waiting(
+        &self,
+        task_id: String,
+        waiting_on: Option<String>,
+        follow_up_at_ms: Option<i64>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Waiting On", |tx| {
+            waiting::set_waiting(tx, &task_id, waiting_on.as_deref(), follow_up_at_ms, now_ms)
+        })
+    }
+
+    /// Makes every follow-up that has come due, outside the undo journal, and
+    /// returns whether it made any.
+    pub fn reconcile_waiting_follow_ups(&self, now_ms: i64) -> Result<bool, CoreError> {
+        let mut connection = self.lock();
+        let transaction =
+            connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let made = waiting::make_due_follow_ups(&transaction, None, now_ms)?;
+        transaction.commit()?;
+        Ok(made)
     }
 
     /// Ranks tasks in Today's focus order as one "Reorder Today" step.

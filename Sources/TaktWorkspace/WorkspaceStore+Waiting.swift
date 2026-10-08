@@ -49,28 +49,11 @@ extension WorkspaceStore {
   public func setWaiting(
     taskId: String, waitingOn: String?, followUpAt: Date?, now: Date = .now
   ) throws {
-    let tag = WaitingFollowUp.normalizedTag(waitingOn)
-    // Whole minutes: the field takes nothing finer, and the follow-up's id is
-    // derived from this instant.
-    let followUpAt = followUpAt.map { Date(timeIntervalSince1970: ($0.timeIntervalSince1970 / 60).rounded(.down) * 60) }
-    try journalledWrite("Waiting On") { db in
-      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
-      var record = try TaskMetadata.fetchOne(db, key: taskId) ?? TaskMetadata(
-        taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-        matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]",
-        updatedAt: now)
-      if record.kanbanColumn != WaitingFollowUp.waitingColumnID {
-        // Leaving Today drops the place in the day, as `setPlannedForToday` does.
-        if record.kanbanColumn == NextUpSelector.todayColumnID { record.focusRank = nil }
-        record.kanbanColumn = WaitingFollowUp.waitingColumnID
-      }
-      record.waitingOn = tag
-      record.waitingFollowUpAt = followUpAt
-      record.updatedAt = now
-      try record.save(db)
-      for state in try Self.waitingStates(db, taskId: taskId) {
-        try Self.makeFollowUp(db, for: state, now: now)
-      }
+    // The Rust core's `waiting::set_waiting`, which keeps the follow-up time
+    // to the minute and makes a follow-up already due in the same step.
+    try coreWrite {
+      try core.setWaiting(
+        taskId: taskId, waitingOn: waitingOn, followUpAtMs: followUpAt?.coreMilliseconds, nowMs: now.coreMilliseconds)
     }
   }
 
@@ -85,13 +68,8 @@ extension WorkspaceStore {
       try Self.waitingStates(db, taskId: nil).contains { WaitingFollowUp.dueFollowUp(for: $0, now: now) != nil }
     }
     guard due else { return false }
-    return try database.write { db in
-      var made = false
-      for state in try Self.waitingStates(db, taskId: nil) where try Self.makeFollowUp(db, for: state, now: now) {
-        made = true
-      }
-      return made
-    }
+    // The Rust core's `waiting::make_due_follow_ups`, outside the journal.
+    return try coreWrite { try core.reconcileWaitingFollowUps(nowMs: now.coreMilliseconds) }
   }
 
   /// The waiting tasks with a follow-up time, as the policy reads them.
@@ -114,35 +92,4 @@ extension WorkspaceStore {
     }
   }
 
-  /// Makes `state`'s follow-up if it is due: a sibling of the waiting task,
-  /// in Today, due at the follow-up time, linked back by `followUpOfTaskId`.
-  /// A row with the same id already there — another device made it and sync
-  /// brought it — is kept, and only recorded as made.
-  @discardableResult
-  static func makeFollowUp(_ db: Database, for state: WaitingTaskState, now: Date) throws -> Bool {
-    guard let plan = WaitingFollowUp.dueFollowUp(for: state, now: now),
-      let source = try WorkspaceTask.fetchOne(db, key: state.taskId)
-    else { return false }
-    if try WorkspaceTask.fetchOne(db, key: plan.taskId) == nil {
-      let order = try nextOrder(
-        db, table: WorkspaceTask.databaseTableName, whereSQL: "listId = ? AND parentTaskId IS ?",
-        arguments: [source.listId, source.parentTaskId])
-      let task = WorkspaceTask(
-        id: plan.taskId, listId: source.listId, parentTaskId: source.parentTaskId, title: plan.title,
-        notes: "", status: .open, sortOrder: order, dueAt: plan.dueAt, estimateSeconds: nil,
-        itemKind: .task, createdAt: now, updatedAt: now)
-      try task.insert(db)
-      try db.execute(sql: """
-        INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, followUpOfTaskId, updatedAt)
-        VALUES (?, '[]', '[]', ?, ?, ?)
-        ON CONFLICT(taskId) DO UPDATE SET
-          kanbanColumn = excluded.kanbanColumn, followUpOfTaskId = excluded.followUpOfTaskId,
-          updatedAt = excluded.updatedAt
-        """, arguments: [plan.taskId, WaitingFollowUp.followUpColumnID, source.id, now])
-    }
-    try db.execute(
-      sql: "UPDATE task_metadata SET waitingFollowUpTaskId = ?, updatedAt = ? WHERE taskId = ?",
-      arguments: [plan.taskId, now, source.id])
-    return true
-  }
 }

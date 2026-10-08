@@ -751,6 +751,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int64) throws 
     
     /**
+     * Makes every follow-up that has come due, outside the undo journal, and
+     * returns whether it made any.
+     */
+    func reconcileWaitingFollowUps(nowMs: Int64) throws  -> Bool
+    
+    /**
      * Puts back the most recently undone step.
      */
     func redo() throws  -> String?
@@ -780,6 +786,16 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * changed since `baseline`. Returns the task as saved.
      */
     func saveEditor(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int64, zone: String) throws  -> EditorSnapshot
+    
+    /**
+     * Saves the folder settings sheet as one "Edit Folder" step.
+     */
+    func saveFolderSettings(id: String, name: String, parentFolderId: String?, nowMs: Int64) throws 
+    
+    /**
+     * Saves the list settings sheet as one "Edit List" step.
+     */
+    func saveListSettings(id: String, settings: ListSettings, nowMs: Int64) throws 
     
     /**
      * Moves a task's start as one "Schedule Task" step.
@@ -827,10 +843,20 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func setNestedListPromoted(id: String, promoted: Bool, nowMs: Int64) throws 
     
     /**
+     * Puts tasks in Today or takes them out, as one step.
+     */
+    func setPlannedForToday(planned: Bool, taskIds: [String], nowMs: Int64) throws 
+    
+    /**
      * Opens, completes or cancels a task as one "Change Status" step,
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
     func setStatus(taskId: String, status: String, nowMs: Int64, zone: String) throws 
+    
+    /**
+     * Sets what a task waits on and when to chase it, as one "Waiting On" step.
+     */
+    func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, nowMs: Int64) throws 
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -1401,6 +1427,20 @@ open func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int
 }
     
     /**
+     * Makes every follow-up that has come due, outside the undo journal, and
+     * returns whether it made any.
+     */
+open func reconcileWaitingFollowUps(nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_reconcile_waiting_follow_ups(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Puts back the most recently undone step.
      */
 open func redo()throws  -> String?  {
@@ -1483,6 +1523,35 @@ open func saveEditor(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int6
         FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * Saves the folder settings sheet as one "Edit Folder" step.
+     */
+open func saveFolderSettings(id: String, name: String, parentFolderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_save_folder_settings(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(name),
+        FfiConverterOptionString.lower(parentFolderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Saves the list settings sheet as one "Edit List" step.
+     */
+open func saveListSettings(id: String, settings: ListSettings, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_save_list_settings(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterTypeListSettings_lower(settings),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
 }
     
     /**
@@ -1617,6 +1686,20 @@ open func setNestedListPromoted(id: String, promoted: Bool, nowMs: Int64)throws 
 }
     
     /**
+     * Puts tasks in Today or takes them out, as one step.
+     */
+open func setPlannedForToday(planned: Bool, taskIds: [String], nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_planned_for_today(
+            self.uniffiCloneHandle(),
+        FfiConverterBool.lower(planned),
+        FfiConverterSequenceString.lower(taskIds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Opens, completes or cancels a task as one "Change Status" step,
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
@@ -1628,6 +1711,21 @@ open func setStatus(taskId: String, status: String, nowMs: Int64, zone: String)t
         FfiConverterString.lower(status),
         FfiConverterInt64.lower(nowMs),
         FfiConverterString.lower(zone),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Sets what a task waits on and when to chase it, as one "Waiting On" step.
+     */
+open func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_waiting(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterOptionString.lower(waitingOn),
+        FfiConverterOptionInt64.lower(followUpAtMs),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
 }
@@ -2360,6 +2458,81 @@ public func FfiConverterTypeHistoryTarget_lower(_ value: HistoryTarget) -> RustB
 
 
 /**
+ * What the list settings sheet saves.
+ */
+public struct ListSettings: Equatable, Hashable {
+    public var name: String
+    public var colourHex: String?
+    public var folderId: String?
+    public var isArchived: Bool
+    /**
+     * The wrapper task the list shows the children of, if any.
+     */
+    public var visibleRootTaskId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, colourHex: String?, folderId: String?, isArchived: Bool, 
+        /**
+         * The wrapper task the list shows the children of, if any.
+         */visibleRootTaskId: String?) {
+        self.name = name
+        self.colourHex = colourHex
+        self.folderId = folderId
+        self.isArchived = isArchived
+        self.visibleRootTaskId = visibleRootTaskId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ListSettings: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeListSettings: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ListSettings {
+        return
+            try ListSettings(
+                name: FfiConverterString.read(from: &buf), 
+                colourHex: FfiConverterOptionString.read(from: &buf), 
+                folderId: FfiConverterOptionString.read(from: &buf), 
+                isArchived: FfiConverterBool.read(from: &buf), 
+                visibleRootTaskId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ListSettings, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionString.write(value.colourHex, into: &buf)
+        FfiConverterOptionString.write(value.folderId, into: &buf)
+        FfiConverterBool.write(value.isArchived, into: &buf)
+        FfiConverterOptionString.write(value.visibleRootTaskId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeListSettings_lift(_ buf: RustBuffer) throws -> ListSettings {
+    return try FfiConverterTypeListSettings.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeListSettings_lower(_ value: ListSettings) -> RustBuffer {
+    return FfiConverterTypeListSettings.lower(value)
+}
+
+
+/**
  * A task to create: everything any client can set when it adds one.
  */
 public struct NewTask: Equatable, Hashable {
@@ -2702,6 +2875,7 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case EstimateRequired
     case InvalidDate
     case EditorConflict
+    case InvalidVisibleRoot
     case InvalidTaskMove
 
     
@@ -2764,7 +2938,8 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 15: return .EstimateRequired
         case 16: return .InvalidDate
         case 17: return .EditorConflict
-        case 18: return .InvalidTaskMove
+        case 18: return .InvalidVisibleRoot
+        case 19: return .InvalidTaskMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -2853,8 +3028,12 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(17))
         
         
-        case .InvalidTaskMove:
+        case .InvalidVisibleRoot:
             writeInt(&buf, Int32(18))
+        
+        
+        case .InvalidTaskMove:
+            writeInt(&buf, Int32(19))
         
         }
     }
@@ -3304,6 +3483,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_place_list() != 14409) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups() != 63977) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_redo() != 49682) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3320,6 +3502,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_editor() != 10270) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings() != 5349) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_save_list_settings() != 38825) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_schedule_task() != 28936) {
@@ -3349,7 +3537,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_promoted() != 39960) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_planned_for_today() != 8637) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_status() != 17278) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_waiting() != 1116) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {

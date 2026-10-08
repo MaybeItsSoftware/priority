@@ -248,6 +248,190 @@ pub fn place_folder(
     Ok(())
 }
 
+/// Saves the folder settings sheet: a name and a parent, moving the folder
+/// after the folders already there when the parent changes. Replaces
+/// `WorkspaceStore.saveFolderSettings` and its Kotlin copy.
+pub fn save_folder_settings(
+    transaction: &Transaction,
+    id: &str,
+    name: &str,
+    parent_folder_id: Option<&str>,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let name = non_empty_name(name)?;
+    let (workspace_id, current_parent) = folder_place(transaction, id)?;
+    if let Some(parent) = parent_folder_id {
+        if parent == id {
+            return Err(CoreError::InvalidFolderMove);
+        }
+        require_folder_in(transaction, parent, &workspace_id)?;
+        if folder_is_within(transaction, parent, id)? {
+            return Err(CoreError::InvalidFolderMove);
+        }
+    }
+    let current_name: String =
+        transaction.query_row("SELECT name FROM list_folders WHERE id = ?1", [id], |row| {
+            row.get(0)
+        })?;
+    let moves = current_parent.as_deref() != parent_folder_id;
+    if current_name == name && !moves {
+        return Ok(());
+    }
+    let sort_order: Option<i64> = if moves {
+        Some(transaction.query_row(
+            "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM list_folders WHERE workspaceId = ?1 AND parentFolderId IS ?2",
+            rusqlite::params![workspace_id, parent_folder_id],
+            |row| row.get(0),
+        )?)
+    } else {
+        None
+    };
+    transaction.execute(
+        "UPDATE list_folders SET name = ?1, parentFolderId = ?2, sortOrder = COALESCE(?3, sortOrder), updatedAt = ?4
+         WHERE id = ?5",
+        rusqlite::params![name, parent_folder_id, sort_order, stored(now_ms), id],
+    )?;
+    Ok(())
+}
+
+/// What the list settings sheet saves.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct ListSettings {
+    pub name: String,
+    pub colour_hex: Option<String>,
+    pub folder_id: Option<String>,
+    pub is_archived: bool,
+    /// The wrapper task the list shows the children of, if any.
+    pub visible_root_task_id: Option<String>,
+}
+
+/// Saves the list settings sheet. The Inbox cannot be archived, and a
+/// changed visible root must be the list's single root, imported or a list,
+/// with children. Replaces `WorkspaceStore.saveListSettings` and its Kotlin
+/// copy.
+pub fn save_list_settings(
+    transaction: &Transaction,
+    id: &str,
+    settings: &ListSettings,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let name = non_empty_name(&settings.name)?;
+    let colour = settings
+        .colour_hex
+        .as_deref()
+        .map(str::trim)
+        .filter(|colour| !colour.is_empty())
+        .map(str::to_string);
+    let current: Option<StoredListSettings> = transaction
+        .query_row(
+            "SELECT name, colorHex, folderId, isArchived, visibleRootTaskId, systemRole, workspaceId
+             FROM task_lists WHERE id = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?)),
+        )
+        .optional()?;
+    let Some((
+        current_name,
+        current_colour,
+        current_folder,
+        archived,
+        root,
+        system_role,
+        workspace_id,
+    )) = current
+    else {
+        return Err(CoreError::MissingList { id: id.to_string() });
+    };
+    if let Some(folder) = settings.folder_id.as_deref() {
+        require_folder_in(transaction, folder, &workspace_id)?;
+    }
+    if settings.is_archived && system_role.is_some() {
+        return Err(CoreError::SystemListIsPermanent);
+    }
+    if root != settings.visible_root_task_id {
+        validate_visible_root(transaction, id, settings.visible_root_task_id.as_deref())?;
+    }
+    let unchanged = current_name == name
+        && current_colour == colour
+        && current_folder == settings.folder_id
+        && archived == settings.is_archived
+        && root == settings.visible_root_task_id;
+    if unchanged {
+        return Ok(());
+    }
+    let sort_order: Option<i64> = if current_folder != settings.folder_id {
+        Some(transaction.query_row(
+            "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM task_lists WHERE workspaceId = ?1 AND folderId IS ?2",
+            rusqlite::params![workspace_id, settings.folder_id],
+            |row| row.get(0),
+        )?)
+    } else {
+        None
+    };
+    transaction.execute(
+        "UPDATE task_lists SET name = ?1, colorHex = ?2, folderId = ?3, isArchived = ?4, visibleRootTaskId = ?5,
+                               sortOrder = COALESCE(?6, sortOrder), updatedAt = ?7
+         WHERE id = ?8",
+        rusqlite::params![
+            name,
+            colour,
+            settings.folder_id,
+            settings.is_archived,
+            settings.visible_root_task_id,
+            sort_order,
+            stored(now_ms),
+            id
+        ],
+    )?;
+    Ok(())
+}
+
+/// A list's name, colour, folder, archived flag, visible root, system role
+/// and workspace, as stored.
+type StoredListSettings = (
+    String,
+    Option<String>,
+    Option<String>,
+    bool,
+    Option<String>,
+    Option<String>,
+    String,
+);
+
+/// `WorkspaceStore.validateVisibleRoot`.
+fn validate_visible_root(
+    transaction: &Transaction,
+    list_id: &str,
+    root_id: Option<&str>,
+) -> Result<(), CoreError> {
+    let Some(root_id) = root_id else {
+        return Ok(());
+    };
+    let mut statement = transaction.prepare(
+        "SELECT id, sourceSystem IS NOT NULL, COALESCE(itemKind, 'task') = 'list'
+         FROM tasks WHERE listId = ?1 AND parentTaskId IS NULL",
+    )?;
+    let roots: Vec<(String, bool, bool)> = statement
+        .query_map([list_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    let valid = match roots.as_slice() {
+        [(id, imported, is_list)] if id == root_id && (*imported || *is_list) => {
+            *is_list
+                || transaction.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM tasks WHERE parentTaskId = ?1)",
+                    [root_id],
+                    |row| row.get::<_, bool>(0),
+                )?
+        }
+        _ => false,
+    };
+    if valid {
+        Ok(())
+    } else {
+        Err(CoreError::InvalidVisibleRoot)
+    }
+}
+
 /// Moves `id` by `offset` within `ids`, clamped to the ends. False when it
 /// does not move, so nothing is written and redo survives.
 fn nudge(ids: &mut Vec<String>, id: &str, offset: i32) -> bool {

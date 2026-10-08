@@ -21,6 +21,7 @@ pub mod schema;
 pub mod tasks;
 pub mod time;
 pub mod today;
+pub mod waiting;
 pub mod workspace;
 
 pub use error::CoreError;

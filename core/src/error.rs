@@ -40,6 +40,8 @@ pub enum CoreError {
     InvalidDate,
     #[error("This task changed while it was open. Review the latest version before saving.")]
     EditorConflict,
+    #[error("That task cannot be the list's visible root.")]
+    InvalidVisibleRoot,
     #[error("A task cannot be moved into itself or one of its subtasks.")]
     InvalidTaskMove,
 }

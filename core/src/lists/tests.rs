@@ -458,3 +458,71 @@ fn dropping_a_folder_and_nudging_one_reorder_their_siblings() {
     .unwrap();
     assert_eq!(order(&connection, top()), ["f", "sub"]);
 }
+
+#[test]
+fn the_settings_sheets_save_what_changed_and_guard_the_tree_and_the_inbox() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Edit Folder", |tx| {
+        save_folder_settings(tx, "sub", "Clients", None, NOW)
+    })
+    .unwrap();
+    assert_eq!(
+        order(
+            &connection,
+            "SELECT id FROM list_folders WHERE parentFolderId IS NULL ORDER BY sortOrder"
+        ),
+        ["f", "sub"]
+    );
+    assert!(matches!(
+        journalled(&mut connection, "Edit Folder", |tx| save_folder_settings(
+            tx,
+            "f",
+            "Work",
+            Some("f"),
+            NOW
+        )),
+        Err(CoreError::InvalidFolderMove)
+    ));
+    let inbox = ListSettings {
+        name: "Inbox".into(),
+        colour_hex: None,
+        folder_id: None,
+        is_archived: true,
+        visible_root_task_id: None,
+    };
+    assert!(matches!(
+        journalled(&mut connection, "Edit List", |tx| save_list_settings(
+            tx, "inbox", &inbox, NOW
+        )),
+        Err(CoreError::SystemListIsPermanent)
+    ));
+    let bad_root = ListSettings {
+        name: "Proposals".into(),
+        colour_hex: Some(" #FFAA00 ".into()),
+        folder_id: None,
+        is_archived: false,
+        visible_root_task_id: Some("a".into()),
+    };
+    assert!(matches!(
+        journalled(&mut connection, "Edit List", |tx| save_list_settings(
+            tx, "l", &bad_root, NOW
+        )),
+        Err(CoreError::InvalidVisibleRoot)
+    ));
+    let moved = ListSettings {
+        visible_root_task_id: None,
+        ..bad_root
+    };
+    journalled(&mut connection, "Edit List", |tx| {
+        save_list_settings(tx, "l", &moved, NOW)
+    })
+    .unwrap();
+    let (colour, folder): (Option<String>, Option<String>) = connection
+        .query_row(
+            "SELECT colorHex, folderId FROM task_lists WHERE id = 'l'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((colour.as_deref(), folder), (Some("#FFAA00"), None));
+}

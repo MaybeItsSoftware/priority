@@ -453,7 +453,7 @@ class WorkspaceRepository(
      * changed and turning the failures screens react to into the repository's
      * own errors, so they see the same cases whichever side made the write.
      */
-    private suspend fun <T> coreWrite(block: (uniffi.takt_core.CoreWorkspace) -> T): T = try {
+    internal suspend fun <T> coreWrite(block: (uniffi.takt_core.CoreWorkspace) -> T): T = try {
         database.coreWrite(CORE_WRITTEN_TABLES, block)
     } catch (error: CoreException) {
         when (error) {
@@ -470,6 +470,7 @@ class WorkspaceRepository(
             is CoreException.EstimateRequired -> planningFail(TaskPlanningError.ESTIMATE_REQUIRED)
             is CoreException.InvalidDate -> planningFail(TaskPlanningError.INVALID_DATE)
             is CoreException.EditorConflict -> throw TaskEditorException(TaskEditorError.CONFLICTING_CHANGES)
+            is CoreException.InvalidVisibleRoot -> throw TaskEditorException(TaskEditorError.INVALID_VISIBLE_ROOT)
             is CoreException.InvalidTaskMove -> fail(WorkspaceStoreError.INVALID_TASK_MOVE)
             else -> throw error
         }
@@ -621,19 +622,9 @@ class WorkspaceRepository(
         foldersIn(db, folder.workspaceId).filter { it.id !in excluded }
     }
 
+    /** Saves the folder settings sheet: the Rust core's `lists::save_folder_settings`. */
     suspend fun saveFolderSettings(id: String, name: String, parentFolderId: String?, now: Instant = now()) {
-        val trimmed = nonEmptyName(name)
-        journalledWrite("Edit Folder") { db ->
-            val folder = db.folder(id) ?: fail(WorkspaceStoreError.MISSING_FOLDER)
-            validateFolderParent(db, folder, parentFolderId)
-            if (folder.name == trimmed && folder.parentFolderId == parentFolderId) return@journalledWrite
-            val order = if (folder.parentFolderId != parentFolderId) {
-                db.nextOrder("list_folders", "workspaceId = ? AND parentFolderId IS ?", folder.workspaceId, parentFolderId)
-            } else {
-                folder.sortOrder
-            }
-            db.update(folder.copy(name = trimmed, parentFolderId = parentFolderId, sortOrder = order, updatedAt = now))
-        }
+        coreWrite { it.saveFolderSettings(id, name, parentFolderId, now.toEpochMilli()) }
     }
 
     /** The only root that may serve as the list's visible root, if there is one. */
@@ -645,6 +636,7 @@ class WorkspaceRepository(
         listOf(root)
     }
 
+    /** Saves the list settings sheet: the Rust core's `lists::save_list_settings`. */
     suspend fun saveListSettings(
         id: String,
         name: String,
@@ -654,33 +646,8 @@ class WorkspaceRepository(
         visibleRootTaskId: String?,
         now: Instant = now(),
     ) {
-        val trimmed = nonEmptyName(name)
-        val color = colorHex.trimmedOrNull()
-        journalledWrite("Edit List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (folderId != null) {
-                val folder = db.folder(folderId)
-                if (folder == null || folder.workspaceId != list.workspaceId) fail(WorkspaceStoreError.MISSING_FOLDER)
-            }
-            if (isArchived && list.isSystemList) fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
-            if (list.visibleRootTaskId != visibleRootTaskId) validateVisibleRoot(db, id, visibleRootTaskId)
-            if (list.name == trimmed && list.colorHex == color && list.folderId == folderId &&
-                list.isArchived == isArchived && list.visibleRootTaskId == visibleRootTaskId
-            ) {
-                return@journalledWrite
-            }
-            val order = if (list.folderId != folderId) {
-                db.nextOrder("task_lists", "workspaceId = ? AND folderId IS ?", list.workspaceId, folderId)
-            } else {
-                list.sortOrder
-            }
-            db.update(
-                list.copy(
-                    name = trimmed, colorHex = color, folderId = folderId, isArchived = isArchived,
-                    visibleRootTaskId = visibleRootTaskId, sortOrder = order, updatedAt = now,
-                ),
-            )
-        }
+        val settings = uniffi.takt_core.ListSettings(name, colorHex, folderId, isArchived, visibleRootTaskId)
+        coreWrite { it.saveListSettings(id, settings, now.toEpochMilli()) }
     }
 
     private fun validateVisibleRoot(db: Db, listId: String, rootId: String?) {
@@ -889,21 +856,8 @@ class WorkspaceRepository(
     /** Puts each task in the Today column, or takes it out (dropping its hand-placed rank). */
     suspend fun setPlannedForToday(planned: Boolean, taskIds: List<String>, now: Instant = now()) {
         if (taskIds.isEmpty()) return
-        journalledWrite(if (planned) "Plan for Today" else "Take off Today") { db ->
-            for (taskId in taskIds) {
-                db.task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-                val record = db.metadata(taskId) ?: emptyMetadata(taskId, now)
-                val isPlanned = record.kanbanColumn == NextUpSelector.todayColumnID
-                if (isPlanned == planned) continue
-                db.save(
-                    record.copy(
-                        kanbanColumn = if (planned) NextUpSelector.todayColumnID else null,
-                        focusRank = if (planned) record.focusRank else null,
-                        updatedAt = now,
-                    ),
-                )
-            }
-        }
+        // The Rust core's `today::set_planned_for_today`.
+        coreWrite { it.setPlannedForToday(planned, taskIds, now.toEpochMilli()) }
     }
 
     /** Writes the day's hand-made order: each task's position becomes its rank. */

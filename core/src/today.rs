@@ -43,6 +43,43 @@ pub fn pin_task(
     set_rank(transaction, task_id, Some(index.max(0)), now_ms)
 }
 
+/// Puts tasks in Today's column or takes them out of it; taking one out also
+/// drops its place in the day. Tasks already where they are asked to be are
+/// left alone. Replaces `WorkspaceStore.setPlannedForToday` and its Kotlin
+/// copy.
+pub fn set_planned_for_today(
+    transaction: &Transaction,
+    planned: bool,
+    task_ids: &[String],
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let now = stored(now_ms);
+    for task_id in task_ids {
+        require_task(transaction, task_id)?;
+        let column: Option<String> = transaction
+            .query_row(
+                "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?1",
+                [task_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten();
+        if (column.as_deref() == Some("today")) == planned {
+            continue;
+        }
+        transaction.execute(
+            "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
+             VALUES (?1, '[]', '[]', ?2, ?3)
+             ON CONFLICT(taskId) DO UPDATE SET
+               kanbanColumn = excluded.kanbanColumn,
+               focusRank = CASE WHEN excluded.kanbanColumn IS NULL THEN NULL ELSE focusRank END,
+               updatedAt = excluded.updatedAt",
+            params![task_id, planned.then_some("today"), now],
+        )?;
+    }
+    Ok(())
+}
+
 /// Releases one task back to the ranking. A task with no metadata has no
 /// rank to release. Replaces `WorkspaceStore.unpinTask` and its Kotlin copy.
 pub fn unpin_task(transaction: &Transaction, task_id: &str, now_ms: i64) -> Result<(), CoreError> {
@@ -165,6 +202,37 @@ mod tests {
             )),
             Err(CoreError::MissingTask { .. })
         ));
+    }
+
+    #[test]
+    fn planning_for_today_moves_only_what_needs_moving_and_leaving_drops_the_rank() {
+        let mut connection = workspace();
+        let both = ["a".to_string(), "b".to_string()];
+        journalled(&mut connection, "Plan for Today", |tx| {
+            set_planned_for_today(tx, true, &both, 1)
+        })
+        .unwrap();
+        let column = |c: &Connection, id: &str| -> (Option<String>, Option<i64>) {
+            c.query_row(
+                "SELECT kanbanColumn, focusRank FROM task_metadata WHERE taskId = ?1",
+                [id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap()
+        };
+        assert_eq!(column(&connection, "a"), (Some("today".into()), None));
+        assert_eq!(column(&connection, "b"), (Some("today".into()), Some(1)));
+        let before = entries(&connection);
+        journalled(&mut connection, "Plan for Today", |tx| {
+            set_planned_for_today(tx, true, &both, 1)
+        })
+        .unwrap();
+        assert_eq!(entries(&connection), before);
+        journalled(&mut connection, "Take off Today", |tx| {
+            set_planned_for_today(tx, false, &both[1..], 1)
+        })
+        .unwrap();
+        assert_eq!(column(&connection, "b"), (None, None));
     }
 
     #[test]

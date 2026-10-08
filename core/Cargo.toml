@@ -26,6 +26,7 @@ chrono = "0.4"
 chrono-tz = "0.10"
 regex-lite = "0.1"
 serde_json = "1"
+sha2 = "0.10"
 thiserror = "2"
 unicode-normalization = "0.1"
 uuid = { version = "1", features = ["v4"] }

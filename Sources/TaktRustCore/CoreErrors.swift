@@ -21,6 +21,7 @@ public enum CoreFailure: Equatable, Sendable {
   case estimateRequired
   case invalidDate
   case editorConflict
+  case invalidVisibleRoot
   case invalidTaskMove
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
@@ -46,6 +47,7 @@ extension Error {
     case .EstimateRequired: return .estimateRequired
     case .InvalidDate: return .invalidDate
     case .EditorConflict: return .editorConflict
+    case .InvalidVisibleRoot: return .invalidVisibleRoot
     case .InvalidTaskMove: return .invalidTaskMove
     case .NoJournal: return .noJournal
     default: return .other

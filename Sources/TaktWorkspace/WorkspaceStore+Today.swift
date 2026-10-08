@@ -18,23 +18,8 @@ extension WorkspaceStore {
   /// reason for.
   public func setPlannedForToday(_ planned: Bool, taskIds: [String], now: Date = .now) throws {
     guard !taskIds.isEmpty else { return }
-    try journalledWrite(planned ? "Plan for Today" : "Take off Today") { db in
-      for taskId in taskIds {
-        guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
-          throw WorkspaceStoreError.missingTask
-        }
-        var record = try TaskMetadata.fetchOne(db, key: taskId) ?? TaskMetadata(
-          taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-          matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]",
-          updatedAt: now)
-        let isPlanned = record.kanbanColumn == NextUpSelector.todayColumnID
-        guard isPlanned != planned else { continue }
-        record.kanbanColumn = planned ? NextUpSelector.todayColumnID : nil
-        if !planned { record.focusRank = nil }
-        record.updatedAt = now
-        try record.save(db)
-      }
-    }
+    // The Rust core's `today::set_planned_for_today`.
+    try coreWrite { try core.setPlannedForToday(planned: planned, taskIds: taskIds, nowMs: now.coreMilliseconds) }
   }
 
   /// Writes the day's hand-made order: each task takes its position in

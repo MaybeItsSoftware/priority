@@ -2,12 +2,9 @@ package uk.co.maybeitsadam.takt.data.workspace
 
 import java.time.Instant
 import kotlinx.coroutines.flow.Flow
-import uk.co.maybeitsadam.takt.core.NextUpSelector
 import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.core.WaitingFollowUp
 import uk.co.maybeitsadam.takt.core.WaitingTaskState
-import uk.co.maybeitsadam.takt.core.WorkspaceItemKind
-import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.db.Db
 
 // Waiting on (WorkspaceStore+Waiting.swift): a tag naming who or what a task
@@ -53,20 +50,9 @@ suspend fun WorkspaceRepository.setWaiting(
     followUpAt: Instant?,
     now: Instant = now(),
 ) {
-    val tag = WaitingFollowUp.normalizedTag(waitingOn)
-    // Whole minutes: the field takes nothing finer, and the follow-up's id is derived from this instant.
-    val minute = followUpAt?.let { Instant.ofEpochSecond(Math.floorDiv(it.epochSecond, 60L) * 60L) }
-    journalledWrite("Waiting On") { db ->
-        db.task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-        var record = db.metadata(taskId) ?: emptyMetadata(taskId, now)
-        if (record.kanbanColumn != WaitingFollowUp.WAITING_COLUMN_ID) {
-            // Leaving Today drops the place in the day, as `setPlannedForToday` does.
-            val focusRank = if (record.kanbanColumn == NextUpSelector.todayColumnID) null else record.focusRank
-            record = record.copy(kanbanColumn = WaitingFollowUp.WAITING_COLUMN_ID, focusRank = focusRank)
-        }
-        db.save(record.copy(waitingOn = tag, waitingFollowUpAt = minute, updatedAt = now))
-        for (state in waitingStates(db, taskId)) makeFollowUp(db, state, now)
-    }
+    // The Rust core's `waiting::set_waiting`, which keeps the follow-up time
+    // to the minute and makes a follow-up already due in the same step.
+    coreWrite { it.setWaiting(taskId, waitingOn, followUpAt?.toEpochMilli(), now.toEpochMilli()) }
 }
 
 /**
@@ -78,11 +64,8 @@ suspend fun WorkspaceRepository.reconcileWaitingFollowUps(now: Instant = now()):
     // A read first, so the poll that finds nothing due never takes the writer.
     val due = database.read { db -> waitingStates(db, null).any { WaitingFollowUp.dueFollowUp(it, now) != null } }
     if (!due) return false
-    return database.write { db ->
-        var made = false
-        for (state in waitingStates(db, null)) if (makeFollowUp(db, state, now)) made = true
-        made
-    }
+    // The Rust core's `waiting::make_due_follow_ups`, outside the journal.
+    return coreWrite { it.reconcileWaitingFollowUps(now.toEpochMilli()) }
 }
 
 /** The open waiting tasks with a follow-up time, as the engine reads them. */
@@ -108,36 +91,3 @@ private fun waitingStates(db: Db, taskId: String?): List<WaitingTaskState> {
     }
 }
 
-/**
- * Makes [state]'s follow-up if it is due: a sibling of the waiting task, in
- * Today, due at the follow-up time, linked back by `followUpOfTaskId`. A row
- * with the same id already there — another device made it and sync brought
- * it — is kept, and only recorded as made.
- */
-private fun makeFollowUp(db: Db, state: WaitingTaskState, now: Instant): Boolean {
-    val plan = WaitingFollowUp.dueFollowUp(state, now) ?: return false
-    val source = db.task(state.taskId) ?: return false
-    if (db.task(plan.taskId) == null) {
-        val order = db.nextOrder("tasks", "listId = ? AND parentTaskId IS ?", source.listId, source.parentTaskId)
-        db.insert(
-            WorkspaceTask(
-                id = plan.taskId, listId = source.listId, parentTaskId = source.parentTaskId, title = plan.title,
-                notes = "", status = TaskStatus.OPEN, sortOrder = order, dueAt = plan.dueAt, estimateSeconds = null,
-                sourceSystem = null, sourceId = null, itemKind = WorkspaceItemKind.TASK, isPromoted = null,
-                archivedAt = null, completedAt = null, createdAt = now, updatedAt = now,
-            ),
-        )
-        db.execute(
-            "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, followUpOfTaskId, updatedAt) " +
-                "VALUES (?, '[]', '[]', ?, ?, ?) ON CONFLICT(taskId) DO UPDATE SET " +
-                "kanbanColumn = excluded.kanbanColumn, followUpOfTaskId = excluded.followUpOfTaskId, " +
-                "updatedAt = excluded.updatedAt",
-            plan.taskId, WaitingFollowUp.FOLLOW_UP_COLUMN_ID, source.id, now,
-        )
-    }
-    db.execute(
-        "UPDATE task_metadata SET waitingFollowUpTaskId = ?, updatedAt = ? WHERE taskId = ?",
-        plan.taskId, now, source.id,
-    )
-    return true
-}

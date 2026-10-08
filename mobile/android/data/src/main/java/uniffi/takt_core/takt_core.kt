@@ -745,6 +745,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_list(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redo(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redoable_label(
@@ -756,6 +758,10 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_condition(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_editor(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_save_list_settings(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_schedule_task(
     ): Int
@@ -775,7 +781,11 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_promoted(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_planned_for_today(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_status(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_waiting(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
     ): Int
@@ -885,6 +895,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_list(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_reconcile_waiting_follow_ups(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_redo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_redoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -897,6 +909,10 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_save_editor(`ptr`: Long,`edit`: RustBuffer.ByValue,`baseline`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_save_folder_settings(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_save_list_settings(`ptr`: Long,`id`: RustBuffer.ByValue,`settings`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_schedule_task(`ptr`: Long,`id`: RustBuffer.ByValue,`startAtMs`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,`columns`: RustBuffer.ByValue,`movingTaskIds`: RustBuffer.ByValue,`toColumn`: RustBuffer.ByValue,`label`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -915,7 +931,11 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_nested_list_promoted(`ptr`: Long,`id`: RustBuffer.ByValue,`promoted`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_planned_for_today(`ptr`: Long,`planned`: Byte,`taskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_status(`ptr`: Long,`taskId`: RustBuffer.ByValue,`status`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_waiting(`ptr`: Long,`taskId`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`followUpAtMs`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1163,6 +1183,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_list() and 0xFFFF) != 14409) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups() and 0xFFFF) != 63977) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redo() and 0xFFFF) != 49682) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1179,6 +1202,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_editor() and 0xFFFF) != 10270) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings() and 0xFFFF) != 5349) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_list_settings() and 0xFFFF) != 38825) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_schedule_task() and 0xFFFF) != 28936) {
@@ -1208,7 +1237,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_promoted() and 0xFFFF) != 39960) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_planned_for_today() and 0xFFFF) != 8637) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_status() and 0xFFFF) != 17278) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_waiting() and 0xFFFF) != 1116) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
@@ -1808,6 +1843,12 @@ public interface CoreWorkspaceInterface {
     fun `placeList`(`id`: kotlin.String, `beforeId`: kotlin.String?, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
     
     /**
+     * Makes every follow-up that has come due, outside the undo journal, and
+     * returns whether it made any.
+     */
+    fun `reconcileWaitingFollowUps`(`nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
      * Puts back the most recently undone step.
      */
     fun `redo`(): kotlin.String?
@@ -1837,6 +1878,16 @@ public interface CoreWorkspaceInterface {
      * changed since `baseline`. Returns the task as saved.
      */
     fun `saveEditor`(`edit`: EditorSnapshot, `baseline`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): EditorSnapshot
+    
+    /**
+     * Saves the folder settings sheet as one "Edit Folder" step.
+     */
+    fun `saveFolderSettings`(`id`: kotlin.String, `name`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Saves the list settings sheet as one "Edit List" step.
+     */
+    fun `saveListSettings`(`id`: kotlin.String, `settings`: ListSettings, `nowMs`: kotlin.Long)
     
     /**
      * Moves a task's start as one "Schedule Task" step.
@@ -1884,10 +1935,20 @@ public interface CoreWorkspaceInterface {
     fun `setNestedListPromoted`(`id`: kotlin.String, `promoted`: kotlin.Boolean, `nowMs`: kotlin.Long)
     
     /**
+     * Puts tasks in Today or takes them out, as one step.
+     */
+    fun `setPlannedForToday`(`planned`: kotlin.Boolean, `taskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
+    
+    /**
      * Opens, completes or cancels a task as one "Change Status" step,
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
     fun `setStatus`(`taskId`: kotlin.String, `status`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+    
+    /**
+     * Sets what a task waits on and when to chase it, as one "Waiting On" step.
+     */
+    fun `setWaiting`(`taskId`: kotlin.String, `waitingOn`: kotlin.String?, `followUpAtMs`: kotlin.Long?, `nowMs`: kotlin.Long)
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -2656,6 +2717,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Makes every follow-up that has come due, outside the undo journal, and
+     * returns whether it made any.
+     */
+    @Throws(CoreException::class)override fun `reconcileWaitingFollowUps`(`nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_reconcile_waiting_follow_ups(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Puts back the most recently undone step.
      */
     @Throws(CoreException::class)override fun `redo`(): kotlin.String? {
@@ -2767,6 +2847,45 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Saves the folder settings sheet as one "Edit Folder" step.
+     */
+    @Throws(CoreException::class)override fun `saveFolderSettings`(`id`: kotlin.String, `name`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_folder_settings(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`name`),
+        FfiConverterOptionalString.lower(`parentFolderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Saves the list settings sheet as one "Edit List" step.
+     */
+    @Throws(CoreException::class)override fun `saveListSettings`(`id`: kotlin.String, `settings`: ListSettings, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_list_settings(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterTypeListSettings.lower(`settings`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
     
 
     
@@ -2947,6 +3066,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Puts tasks in Today or takes them out, as one step.
+     */
+    @Throws(CoreException::class)override fun `setPlannedForToday`(`planned`: kotlin.Boolean, `taskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_planned_for_today(
+        it,
+        
+        FfiConverterBoolean.lower(`planned`),
+        FfiConverterSequenceString.lower(`taskIds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Opens, completes or cancels a task as one "Change Status" step,
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
@@ -2961,6 +3099,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`status`),
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Sets what a task waits on and when to chase it, as one "Waiting On" step.
+     */
+    @Throws(CoreException::class)override fun `setWaiting`(`taskId`: kotlin.String, `waitingOn`: kotlin.String?, `followUpAtMs`: kotlin.Long?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_waiting(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterOptionalString.lower(`waitingOn`),
+        FfiConverterOptionalLong.lower(`followUpAtMs`),
+        FfiConverterLong.lower(`nowMs`),_status)
 }
     }
     
@@ -3604,6 +3762,65 @@ public object FfiConverterTypeHistoryTarget: FfiConverterRustBuffer<HistoryTarge
 
 
 /**
+ * What the list settings sheet saves.
+ */
+data class ListSettings (
+    var `name`: kotlin.String
+    , 
+    var `colourHex`: kotlin.String?
+    , 
+    var `folderId`: kotlin.String?
+    , 
+    var `isArchived`: kotlin.Boolean
+    , 
+    /**
+     * The wrapper task the list shows the children of, if any.
+     */
+    var `visibleRootTaskId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeListSettings: FfiConverterRustBuffer<ListSettings> {
+    override fun read(buf: ByteBuffer): ListSettings {
+        return ListSettings(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ListSettings) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterOptionalString.allocationSize(value.`colourHex`) +
+            FfiConverterOptionalString.allocationSize(value.`folderId`) +
+            FfiConverterBoolean.allocationSize(value.`isArchived`) +
+            FfiConverterOptionalString.allocationSize(value.`visibleRootTaskId`)
+    )
+
+    override fun write(value: ListSettings, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterOptionalString.write(value.`colourHex`, buf)
+            FfiConverterOptionalString.write(value.`folderId`, buf)
+            FfiConverterBoolean.write(value.`isArchived`, buf)
+            FfiConverterOptionalString.write(value.`visibleRootTaskId`, buf)
+    }
+}
+
+
+
+/**
  * A task to create: everything any client can set when it adds one.
  */
 data class NewTask (
@@ -3980,6 +4197,12 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class InvalidVisibleRoot(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
     class InvalidTaskMove(
         ) : CoreException() {
         override val message
@@ -4037,7 +4260,8 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             15 -> CoreException.EstimateRequired()
             16 -> CoreException.InvalidDate()
             17 -> CoreException.EditorConflict()
-            18 -> CoreException.InvalidTaskMove()
+            18 -> CoreException.InvalidVisibleRoot()
+            19 -> CoreException.InvalidTaskMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -4117,6 +4341,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
             )
             is CoreException.EditorConflict -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.InvalidVisibleRoot -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
@@ -4205,8 +4433,12 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 buf.putInt(17)
                 Unit
             }
-            is CoreException.InvalidTaskMove -> {
+            is CoreException.InvalidVisibleRoot -> {
                 buf.putInt(18)
+                Unit
+            }
+            is CoreException.InvalidTaskMove -> {
+                buf.putInt(19)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

@@ -60,15 +60,6 @@ internal fun listsIn(db: Db, workspaceId: String, includingArchived: Boolean): L
     workspaceId,
 ) { it.toList() }
 
-internal fun validateFolderParent(db: Db, folder: ListFolder, parentFolderId: String?) {
-    if (parentFolderId == folder.id) fail(WorkspaceStoreError.INVALID_FOLDER_MOVE)
-    if (parentFolderId != null) {
-        val parent = db.folder(parentFolderId)
-        if (parent == null || parent.workspaceId != folder.workspaceId) fail(WorkspaceStoreError.MISSING_FOLDER)
-        if (parentFolderId in db.folderDescendantIDs(folder.id)) fail(WorkspaceStoreError.INVALID_FOLDER_MOVE)
-    }
-}
-
 internal fun rootTaskIds(db: Db, listId: String): List<String> =
     db.strings("SELECT id FROM tasks WHERE listId = ? AND parentTaskId IS NULL", listId)
 
