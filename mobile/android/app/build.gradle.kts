@@ -95,6 +95,9 @@ android {
     }
     packaging {
         resources.excludes += setOf("META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/*.kotlin_module")
+        // JNA's desktop natives arrive with the test jar; the app needs only the
+        // Android ones from the AAR.
+        resources.excludes += setOf("com/sun/jna/**/*.dylib", "com/sun/jna/**/*.dll", "com/sun/jna/**/*.so")
     }
 }
 

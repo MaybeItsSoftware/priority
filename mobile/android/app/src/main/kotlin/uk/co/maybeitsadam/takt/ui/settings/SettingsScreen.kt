@@ -182,6 +182,11 @@ private fun AboutSection(model: SettingsViewModel) {
             Text("Version", style = TaktTheme.type.body, color = TaktTheme.colors.ink, modifier = Modifier.weight(1f))
             MonoText(remember { model.versionName() })
         }
+        Hairline(color = TaktTheme.colors.borderMuted)
+        Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touchTarget).padding(horizontal = Metrics.md), verticalAlignment = Alignment.CenterVertically) {
+            Text("Core", style = TaktTheme.type.body, color = TaktTheme.colors.ink, modifier = Modifier.weight(1f))
+            MonoText(remember { model.coreVersionName() })
+        }
         licences.forEach { (name, text) ->
             Hairline(color = TaktTheme.colors.borderMuted)
             ChoiceRowLike(name, if (open == name) "Hide" else "Licence") { open = if (open == name) null else name }

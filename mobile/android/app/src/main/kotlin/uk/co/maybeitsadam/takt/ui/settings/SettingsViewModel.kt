@@ -24,6 +24,7 @@ import uk.co.maybeitsadam.takt.core.WorkspaceExportFormat
 import uk.co.maybeitsadam.takt.core.theme.ThemeTypographyOverride
 import uk.co.maybeitsadam.takt.data.workspace.exportSnapshot
 import uk.co.maybeitsadam.takt.ui.theme.ThemeMode
+import uniffi.takt_core.coreVersion
 
 /** `Synced just now`, `Synced at 14:05`, `Couldn't sync: …`. */
 object SyncStatusText {
@@ -142,6 +143,13 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun versionName(): String = runCatching {
         container.context.packageManager.getPackageInfo(container.context.packageName, 0).versionName
     }.getOrNull() ?: "?"
+
+    /**
+     * The Rust core's version, read across the UniFFI boundary. On screen it is
+     * the proof a minified release still reaches the native library; a failure
+     * shows as "unavailable" rather than taking Settings down with it.
+     */
+    fun coreVersionName(): String = runCatching { coreVersion() }.getOrNull() ?: "unavailable"
 
     /** The bundled licence files, by name. */
     suspend fun licences(): List<Pair<String, String>> = withContext(Dispatchers.IO) {

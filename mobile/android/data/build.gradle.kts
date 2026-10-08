@@ -77,9 +77,29 @@ val unpackSqliteHostNatives = tasks.register<Sync>("unpackSqliteHostNatives") {
     into(layout.buildDirectory.dir("sqliteHostNatives"))
 }
 
+// The Rust core (core/): its Android libraries, the Kotlin bindings and the
+// host library the JVM unit tests load are all produced by one script. Gradle
+// runs it whenever core/ has changed, so Android Studio, the scripts and CI
+// cannot build against a stale core.
+val coreDir = rootProject.file("../../core")
+val buildRustCore by tasks.registering(Exec::class) {
+    description = "Builds takt-core for Android and regenerates its Kotlin bindings."
+    inputs.dir(coreDir.resolve("src"))
+    inputs.file(coreDir.resolve("Cargo.toml"))
+    inputs.file(coreDir.resolve("Cargo.lock"))
+    outputs.dir(layout.projectDirectory.dir("src/main/jniLibs"))
+    outputs.dir(layout.projectDirectory.dir("src/main/java/uniffi"))
+    outputs.dir(coreDir.resolve("target/release"))
+    commandLine(rootProject.file("../../scripts/build_core_android.sh").absolutePath)
+}
+tasks.named("preBuild") { dependsOn(buildRustCore) }
+
 tasks.withType<Test>().configureEach {
-    dependsOn(unpackSqliteHostNatives)
+    dependsOn(unpackSqliteHostNatives, buildRustCore)
     systemProperty("java.library.path", layout.buildDirectory.dir("sqliteHostNatives").get().asFile.absolutePath)
+    // The Rust core's UniFFI bindings load it through JNA. On the JVM that is
+    // the host build scripts/build_core_android.sh leaves in core/target.
+    systemProperty("jna.library.path", rootProject.file("../../core/target/release").absolutePath)
 }
 
 dependencies {
@@ -89,6 +109,11 @@ dependencies {
     implementation(libs.androidx.sqlite.bundled)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    // The Rust core (core/, docs/rust-core-migration.md): the AAR carries
+    // JNA's Android natives; the plain jar carries the desktop ones the JVM
+    // unit tests need.
+    implementation("${libs.jna.get()}@aar")
+    testImplementation(libs.jna)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     sqliteHostNatives(libs.androidx.sqlite.bundled.jvm)
