@@ -23,6 +23,7 @@ public enum CoreFailure: Equatable, Sendable {
   case editorConflict
   case invalidVisibleRoot
   case noActiveFocusTask
+  case duplicateSourceId
   case unavailable
   case invalidTaskMove
   case noJournal
@@ -51,6 +52,7 @@ extension Error {
     case .EditorConflict: return .editorConflict
     case .InvalidVisibleRoot: return .invalidVisibleRoot
     case .NoActiveFocusTask: return .noActiveFocusTask
+    case .DuplicateSourceId: return .duplicateSourceId
     case .Unavailable: return .unavailable
     case .InvalidTaskMove: return .invalidTaskMove
     case .NoJournal: return .noJournal

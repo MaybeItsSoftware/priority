@@ -259,20 +259,6 @@ public final class WorkspaceStore: @unchecked Sendable {
     return rootID
   }
 
-  /// Recognise wrappers once, at import or migration, rather than during edits.
-  static func registerVisibleRoot(_ db: Database, for list: TaskList) throws {
-    let roots = try WorkspaceTask
-      .filter(Column("listId") == list.id && Column("parentTaskId") == nil).fetchAll(db)
-    let listName = normalizedVisibleRootName(list.name)
-    guard roots.count == 1, let root = roots.first, root.sourceSystem != nil,
-      !listName.isEmpty, normalizedVisibleRootName(root.title) == listName,
-      try WorkspaceTask.filter(Column("parentTaskId") == root.id).fetchCount(db) > 0
-    else { return }
-    var updated = list
-    updated.visibleRootTaskId = root.id
-    try updated.update(db)
-  }
-
   /// The virtual Everything scope aggregates active lists without changing
   /// any task's real list or parent.
   public func visibleRootTasks(in workspaceId: String) throws -> [WorkspaceTask] {
@@ -280,12 +266,6 @@ public final class WorkspaceStore: @unchecked Sendable {
       let parentID = try visibleRootParentTaskID(for: list)
       return try tasks(in: list.id, parentTaskId: parentID)
     }
-  }
-
-  static func normalizedVisibleRootName(_ name: String) -> String {
-    name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-      .replacingOccurrences(of: "[^\\p{L}\\p{N}]+", with: "", options: .regularExpression)
   }
 
   /// Creates a task, with whatever the add field read off its title, as one
@@ -500,18 +480,12 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .editorConflict: throw TaskEditorError.conflictingChanges
       case .invalidVisibleRoot: throw TaskEditorError.invalidVisibleRoot
       case .noActiveFocusTask: throw WorkspaceStoreError.noActiveFocusTask
+      case .duplicateSourceId: throw WorkspaceStoreError.duplicateLegacySourceID
       case .unavailable: throw TaskPlanningError.unavailable
       case .invalidTaskMove: throw WorkspaceStoreError.invalidTaskMove
       case .noJournal, .other, nil: throw error
       }
     }
-  }
-
-  static func nextOrder(
-    _ db: Database, table: String, whereSQL: String, arguments: StatementArguments
-  ) throws -> Int {
-    let sql = "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM \(table) WHERE \(whereSQL)"
-    return try Int.fetchOne(db, sql: sql, arguments: arguments) ?? 0
   }
 
   static func persistTaskOrder(_ tasks: [WorkspaceTask], db: Database, now: Date) throws {

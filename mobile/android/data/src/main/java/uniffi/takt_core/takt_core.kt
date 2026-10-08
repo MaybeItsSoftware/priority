@@ -725,6 +725,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_import_tasks(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_indent_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_log_contribution(
@@ -908,6 +910,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_has_resumable_focus_queue_task(`ptr`: Long,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_import_tasks(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`listName`: RustBuffer.ByValue,`sourceSystem`: RustBuffer.ByValue,`seeds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_indent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -1219,6 +1223,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_history_target() and 0xFFFF) != 25210) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_import_tasks() and 0xFFFF) != 64382) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_indent_task() and 0xFFFF) != 14168) {
@@ -1933,6 +1940,12 @@ public interface CoreWorkspaceInterface {
      * The task and list the next undo (`for_undo`) or redo affects.
      */
     fun `historyTarget`(`forUndo`: kotlin.Boolean): HistoryTarget
+    
+    /**
+     * Copies tasks from an outside service into the workspace, safely re-run,
+     * outside the undo journal.
+     */
+    fun `importTasks`(`workspaceId`: kotlin.String, `listName`: kotlin.String, `sourceSystem`: kotlin.String, `seeds`: List<ImportedTaskSeed>, `nowMs`: kotlin.Long): ImportOutcome?
     
     /**
      * Indents a task under the sibling above as one "Indent Task" step.
@@ -2743,6 +2756,29 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterBoolean.lower(`forUndo`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Copies tasks from an outside service into the workspace, safely re-run,
+     * outside the undo journal.
+     */
+    @Throws(CoreException::class)override fun `importTasks`(`workspaceId`: kotlin.String, `listName`: kotlin.String, `sourceSystem`: kotlin.String, `seeds`: List<ImportedTaskSeed>, `nowMs`: kotlin.Long): ImportOutcome? {
+            return FfiConverterOptionalTypeImportOutcome.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_import_tasks(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterString.lower(`listName`),
+        FfiConverterString.lower(`sourceSystem`),
+        FfiConverterSequenceTypeImportedTaskSeed.lower(`seeds`),
+        FfiConverterLong.lower(`nowMs`),_status)
 }
     }
     )
@@ -4655,6 +4691,121 @@ public object FfiConverterTypeHistoryTarget: FfiConverterRustBuffer<HistoryTarge
 
 
 /**
+ * What an import did.
+ */
+data class ImportOutcome (
+    var `listId`: kotlin.String
+    , 
+    var `insertedTaskIds`: List<kotlin.String>
+    , 
+    var `updatedTaskIds`: List<kotlin.String>
+    , 
+    var `createdList`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeImportOutcome: FfiConverterRustBuffer<ImportOutcome> {
+    override fun read(buf: ByteBuffer): ImportOutcome {
+        return ImportOutcome(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ImportOutcome) = (
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterSequenceString.allocationSize(value.`insertedTaskIds`) +
+            FfiConverterSequenceString.allocationSize(value.`updatedTaskIds`) +
+            FfiConverterBoolean.allocationSize(value.`createdList`)
+    )
+
+    override fun write(value: ImportOutcome, buf: ByteBuffer) {
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterSequenceString.write(value.`insertedTaskIds`, buf)
+            FfiConverterSequenceString.write(value.`updatedTaskIds`, buf)
+            FfiConverterBoolean.write(value.`createdList`, buf)
+    }
+}
+
+
+
+/**
+ * One task as the outside service has it.
+ */
+data class ImportedTaskSeed (
+    var `sourceId`: kotlin.String
+    , 
+    var `parentSourceId`: kotlin.String?
+    , 
+    var `title`: kotlin.String
+    , 
+    var `notes`: kotlin.String
+    , 
+    /**
+     * "open", "completed" or "cancelled".
+     */
+    var `status`: kotlin.String
+    , 
+    var `sortOrder`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeImportedTaskSeed: FfiConverterRustBuffer<ImportedTaskSeed> {
+    override fun read(buf: ByteBuffer): ImportedTaskSeed {
+        return ImportedTaskSeed(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ImportedTaskSeed) = (
+            FfiConverterString.allocationSize(value.`sourceId`) +
+            FfiConverterOptionalString.allocationSize(value.`parentSourceId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`notes`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`)
+    )
+
+    override fun write(value: ImportedTaskSeed, buf: ByteBuffer) {
+            FfiConverterString.write(value.`sourceId`, buf)
+            FfiConverterOptionalString.write(value.`parentSourceId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`notes`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
+    }
+}
+
+
+
+/**
  * What the list settings sheet saves.
  */
 data class ListSettings (
@@ -5096,6 +5247,12 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class DuplicateSourceId(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
     class NoActiveFocusTask(
         ) : CoreException() {
         override val message
@@ -5166,9 +5323,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             16 -> CoreException.InvalidDate()
             17 -> CoreException.EditorConflict()
             18 -> CoreException.InvalidVisibleRoot()
-            19 -> CoreException.NoActiveFocusTask()
-            20 -> CoreException.Unavailable()
-            21 -> CoreException.InvalidTaskMove()
+            19 -> CoreException.DuplicateSourceId()
+            20 -> CoreException.NoActiveFocusTask()
+            21 -> CoreException.Unavailable()
+            22 -> CoreException.InvalidTaskMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -5252,6 +5410,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
             )
             is CoreException.InvalidVisibleRoot -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.DuplicateSourceId -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
@@ -5352,16 +5514,20 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 buf.putInt(18)
                 Unit
             }
-            is CoreException.NoActiveFocusTask -> {
+            is CoreException.DuplicateSourceId -> {
                 buf.putInt(19)
                 Unit
             }
-            is CoreException.Unavailable -> {
+            is CoreException.NoActiveFocusTask -> {
                 buf.putInt(20)
                 Unit
             }
-            is CoreException.InvalidTaskMove -> {
+            is CoreException.Unavailable -> {
                 buf.putInt(21)
+                Unit
+            }
+            is CoreException.InvalidTaskMove -> {
+                buf.putInt(22)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -5701,6 +5867,38 @@ public object FfiConverterOptionalTypeFocusContext: FfiConverterRustBuffer<Focus
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeImportOutcome: FfiConverterRustBuffer<ImportOutcome?> {
+    override fun read(buf: ByteBuffer): ImportOutcome? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeImportOutcome.read(buf)
+    }
+
+    override fun allocationSize(value: ImportOutcome?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeImportOutcome.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ImportOutcome?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeImportOutcome.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypePlanning: FfiConverterRustBuffer<Planning?> {
     override fun read(buf: ByteBuffer): Planning? {
         if (buf.get().toInt() == 0) {
@@ -5871,6 +6069,34 @@ public object FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer<List<B
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeBoardColumn.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeImportedTaskSeed: FfiConverterRustBuffer<List<ImportedTaskSeed>> {
+    override fun read(buf: ByteBuffer): List<ImportedTaskSeed> {
+        val len = buf.getInt()
+        return List<ImportedTaskSeed>(len) {
+            FfiConverterTypeImportedTaskSeed.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ImportedTaskSeed>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeImportedTaskSeed.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ImportedTaskSeed>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeImportedTaskSeed.write(it, buf)
         }
     }
 }

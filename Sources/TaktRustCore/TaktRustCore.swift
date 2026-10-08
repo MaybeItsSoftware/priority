@@ -717,6 +717,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func historyTarget(forUndo: Bool) throws  -> HistoryTarget
     
     /**
+     * Copies tasks from an outside service into the workspace, safely re-run,
+     * outside the undo journal.
+     */
+    func importTasks(workspaceId: String, listName: String, sourceSystem: String, seeds: [ImportedTaskSeed], nowMs: Int64) throws  -> ImportOutcome?
+    
+    /**
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     func indentTask(id: String, nowMs: Int64) throws 
@@ -1380,6 +1386,24 @@ open func historyTarget(forUndo: Bool)throws  -> HistoryTarget  {
     uniffi_takt_core_fn_method_coreworkspace_history_target(
             self.uniffiCloneHandle(),
         FfiConverterBool.lower(forUndo),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Copies tasks from an outside service into the workspace, safely re-run,
+     * outside the undo journal.
+     */
+open func importTasks(workspaceId: String, listName: String, sourceSystem: String, seeds: [ImportedTaskSeed], nowMs: Int64)throws  -> ImportOutcome?  {
+    return try  FfiConverterOptionTypeImportOutcome.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_import_tasks(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterString.lower(listName),
+        FfiConverterString.lower(sourceSystem),
+        FfiConverterSequenceTypeImportedTaskSeed.lower(seeds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 })
 }
@@ -3194,6 +3218,150 @@ public func FfiConverterTypeHistoryTarget_lower(_ value: HistoryTarget) -> RustB
 
 
 /**
+ * What an import did.
+ */
+public struct ImportOutcome: Equatable, Hashable {
+    public var listId: String
+    public var insertedTaskIds: [String]
+    public var updatedTaskIds: [String]
+    public var createdList: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(listId: String, insertedTaskIds: [String], updatedTaskIds: [String], createdList: Bool) {
+        self.listId = listId
+        self.insertedTaskIds = insertedTaskIds
+        self.updatedTaskIds = updatedTaskIds
+        self.createdList = createdList
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ImportOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeImportOutcome: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ImportOutcome {
+        return
+            try ImportOutcome(
+                listId: FfiConverterString.read(from: &buf), 
+                insertedTaskIds: FfiConverterSequenceString.read(from: &buf), 
+                updatedTaskIds: FfiConverterSequenceString.read(from: &buf), 
+                createdList: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ImportOutcome, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterSequenceString.write(value.insertedTaskIds, into: &buf)
+        FfiConverterSequenceString.write(value.updatedTaskIds, into: &buf)
+        FfiConverterBool.write(value.createdList, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeImportOutcome_lift(_ buf: RustBuffer) throws -> ImportOutcome {
+    return try FfiConverterTypeImportOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeImportOutcome_lower(_ value: ImportOutcome) -> RustBuffer {
+    return FfiConverterTypeImportOutcome.lower(value)
+}
+
+
+/**
+ * One task as the outside service has it.
+ */
+public struct ImportedTaskSeed: Equatable, Hashable {
+    public var sourceId: String
+    public var parentSourceId: String?
+    public var title: String
+    public var notes: String
+    /**
+     * "open", "completed" or "cancelled".
+     */
+    public var status: String
+    public var sortOrder: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(sourceId: String, parentSourceId: String?, title: String, notes: String, 
+        /**
+         * "open", "completed" or "cancelled".
+         */status: String, sortOrder: Int64) {
+        self.sourceId = sourceId
+        self.parentSourceId = parentSourceId
+        self.title = title
+        self.notes = notes
+        self.status = status
+        self.sortOrder = sortOrder
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ImportedTaskSeed: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeImportedTaskSeed: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ImportedTaskSeed {
+        return
+            try ImportedTaskSeed(
+                sourceId: FfiConverterString.read(from: &buf), 
+                parentSourceId: FfiConverterOptionString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                notes: FfiConverterString.read(from: &buf), 
+                status: FfiConverterString.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ImportedTaskSeed, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.sourceId, into: &buf)
+        FfiConverterOptionString.write(value.parentSourceId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.notes, into: &buf)
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeImportedTaskSeed_lift(_ buf: RustBuffer) throws -> ImportedTaskSeed {
+    return try FfiConverterTypeImportedTaskSeed.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeImportedTaskSeed_lower(_ value: ImportedTaskSeed) -> RustBuffer {
+    return FfiConverterTypeImportedTaskSeed.lower(value)
+}
+
+
+/**
  * What the list settings sheet saves.
  */
 public struct ListSettings: Equatable, Hashable {
@@ -3612,6 +3780,7 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case InvalidDate
     case EditorConflict
     case InvalidVisibleRoot
+    case DuplicateSourceId
     case NoActiveFocusTask
     case Unavailable
     case InvalidTaskMove
@@ -3677,9 +3846,10 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 16: return .InvalidDate
         case 17: return .EditorConflict
         case 18: return .InvalidVisibleRoot
-        case 19: return .NoActiveFocusTask
-        case 20: return .Unavailable
-        case 21: return .InvalidTaskMove
+        case 19: return .DuplicateSourceId
+        case 20: return .NoActiveFocusTask
+        case 21: return .Unavailable
+        case 22: return .InvalidTaskMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -3772,16 +3942,20 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(18))
         
         
-        case .NoActiveFocusTask:
+        case .DuplicateSourceId:
             writeInt(&buf, Int32(19))
         
         
-        case .Unavailable:
+        case .NoActiveFocusTask:
             writeInt(&buf, Int32(20))
         
         
-        case .InvalidTaskMove:
+        case .Unavailable:
             writeInt(&buf, Int32(21))
+        
+        
+        case .InvalidTaskMove:
+            writeInt(&buf, Int32(22))
         
         }
     }
@@ -4038,6 +4212,30 @@ fileprivate struct FfiConverterOptionTypeFocusContext: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeImportOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = ImportOutcome?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeImportOutcome.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeImportOutcome.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypePlanning: FfiConverterRustBuffer {
     typealias SwiftType = Planning?
 
@@ -4177,6 +4375,31 @@ fileprivate struct FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeBoardColumn.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeImportedTaskSeed: FfiConverterRustBuffer {
+    typealias SwiftType = [ImportedTaskSeed]
+
+    public static func write(_ value: [ImportedTaskSeed], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeImportedTaskSeed.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ImportedTaskSeed] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ImportedTaskSeed]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeImportedTaskSeed.read(from: &buf))
         }
         return seq
     }
@@ -4360,6 +4583,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_history_target() != 25210) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_import_tasks() != 64382) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_indent_task() != 14168) {

@@ -34,13 +34,26 @@ pub(super) fn apply(transaction: &Transaction, identifier: &str) -> Result<(), C
 /// no source system, so it must also have been created in the same batch as
 /// the list, with at least one child from that batch.
 fn register_visible_roots(transaction: &Transaction, imported: bool) -> Result<(), CoreError> {
+    register_visible_roots_in(transaction, imported, None)
+}
+
+/// [`register_visible_roots`] for one list, or every list. The importer runs
+/// the imported form on a list it has just made.
+/// `WorkspaceStore.registerVisibleRoot`.
+pub(crate) fn register_visible_roots_in(
+    transaction: &Transaction,
+    imported: bool,
+    only_list: Option<&str>,
+) -> Result<(), CoreError> {
     let mut lists = transaction.prepare(if imported {
-        "SELECT id, name, createdAt FROM task_lists"
+        "SELECT id, name, createdAt FROM task_lists WHERE (?1 IS NULL OR id = ?1)"
     } else {
-        "SELECT id, name, createdAt FROM task_lists WHERE visibleRootTaskId IS NULL"
+        "SELECT id, name, createdAt FROM task_lists WHERE visibleRootTaskId IS NULL AND (?1 IS NULL OR id = ?1)"
     })?;
     let lists: Vec<(String, String, String)> = lists
-        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+        .query_map([only_list], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?
         .collect::<Result<_, _>>()?;
 
     for (list_id, list_name, list_created_at) in lists {

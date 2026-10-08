@@ -16,6 +16,7 @@ pub mod editor;
 pub mod error;
 pub mod focus;
 pub mod habits;
+pub mod imports;
 pub mod journal;
 pub mod lists;
 pub mod periodic;

@@ -42,6 +42,8 @@ pub enum CoreError {
     EditorConflict,
     #[error("That task cannot be the list's visible root.")]
     InvalidVisibleRoot,
+    #[error("The tasks to import contain the same source id twice.")]
+    DuplicateSourceId,
     #[error("There is no task in focus to finish.")]
     NoActiveFocusTask,
     #[error("That task is not available to focus on now.")]

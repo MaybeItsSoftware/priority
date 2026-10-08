@@ -18,6 +18,7 @@ use crate::dailies::{self, DailyEdit};
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
 use crate::focus::{self, BlockFinished, FocusContext};
 use crate::habits::{self, HabitDraft};
+use crate::imports::{self, ImportOutcome, ImportedTaskSeed};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
 use crate::setup;
@@ -833,6 +834,28 @@ impl CoreWorkspace {
         zone: String,
     ) -> Result<bool, CoreError> {
         self.unjournalled(|tx| focus::resume_eligible_queue(tx, &context, now_ms, &zone))
+    }
+
+    /// Copies tasks from an outside service into the workspace, safely re-run,
+    /// outside the undo journal.
+    pub fn import_tasks(
+        &self,
+        workspace_id: String,
+        list_name: String,
+        source_system: String,
+        seeds: Vec<ImportedTaskSeed>,
+        now_ms: i64,
+    ) -> Result<Option<ImportOutcome>, CoreError> {
+        self.unjournalled(|tx| {
+            imports::import_tasks(
+                tx,
+                &workspace_id,
+                &list_name,
+                &source_system,
+                &seeds,
+                now_ms,
+            )
+        })
     }
 
     /// The workspace, made on first launch with its Inbox and conditions;
