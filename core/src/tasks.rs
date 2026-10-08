@@ -651,6 +651,36 @@ pub fn set_status(
         schedule_next_occurrence(transaction, task_id, now_ms, crate::periodic::zone(zone))?;
         expire_habits(transaction, task_id, now_ms)?;
     }
+    if status != "open" {
+        close_open_descendants(transaction, task_id, status, &now, now_ms)?;
+    }
+    Ok(())
+}
+
+/// Closing a task closes what is still open beneath it, the same way, in the
+/// same step, so one undo brings the branch back. Subtasks already closed
+/// keep their own status and stamp, and reopening never cascades: a subtask
+/// finished before its parent was reopened stays finished. A repeating
+/// subtask does not write its next occurrence — its parent is closed, so the
+/// occurrence would only be hidden under it — but its habits end, since the
+/// task they were made of has.
+fn close_open_descendants(
+    transaction: &Transaction,
+    task_id: &str,
+    status: &str,
+    now: &str,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    for id in descendant_ids(transaction, task_id)? {
+        let closed = transaction.execute(
+            "UPDATE tasks SET status = ?1, completedAt = ?2, updatedAt = ?2
+             WHERE id = ?3 AND completedAt IS NULL",
+            params![status, now, id],
+        )?;
+        if closed > 0 {
+            expire_habits(transaction, &id, now_ms)?;
+        }
+    }
     Ok(())
 }
 

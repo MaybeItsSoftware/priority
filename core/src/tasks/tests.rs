@@ -501,6 +501,46 @@ fn closing_stamps_a_task_once_and_reopening_clears_it() {
 }
 
 #[test]
+fn closing_a_task_closes_its_open_subtree_and_one_undo_reopens_it() {
+    let mut connection = workspace();
+    let earlier = 1_699_000_000_000;
+    let first = 1_700_000_000_000;
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "g", "cancelled", earlier, "UTC")
+    })
+    .unwrap();
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "p", "completed", first, "UTC")
+    })
+    .unwrap();
+    let stamp = Some("2023-11-14 22:13:20.000".to_string());
+    assert_eq!(
+        status_of(&connection, "c"),
+        ("completed".into(), stamp.clone())
+    );
+    // Already closed: its own status and stamp stand.
+    assert_eq!(status_of(&connection, "g").0, "cancelled");
+    assert_ne!(status_of(&connection, "g").1, stamp);
+    assert_eq!(status_of(&connection, "o"), ("open".into(), None));
+
+    undo(&mut connection).unwrap();
+    assert_eq!(status_of(&connection, "p"), ("open".into(), None));
+    assert_eq!(status_of(&connection, "c"), ("open".into(), None));
+    assert_eq!(status_of(&connection, "g").0, "cancelled");
+
+    // Reopening does not cascade.
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "p", "completed", first, "UTC")
+    })
+    .unwrap();
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "p", "open", first, "UTC")
+    })
+    .unwrap();
+    assert_eq!(status_of(&connection, "c").0, "completed");
+}
+
+#[test]
 fn closing_a_repeating_task_writes_the_next_one_just_after_it() {
     let mut connection = workspace();
     connection
