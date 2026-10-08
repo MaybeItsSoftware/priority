@@ -24,32 +24,6 @@ internal fun inbox(db: Db, workspaceId: String): TaskList? = db.queryOne(
     "SELECT * FROM task_lists WHERE workspaceId = ? AND systemRole = ?", workspaceId, TaskListRole.INBOX.raw,
 ) { it.toList() }
 
-/** The Inbox, created (or un-archived) when a workspace lacks one. */
-internal fun ensureInbox(db: Db, workspaceId: String, now: Instant): TaskList {
-    inbox(db, workspaceId)?.let { existing ->
-        if (existing.isArchived) {
-            val restored = existing.copy(isArchived = false, updatedAt = now)
-            db.update(restored)
-            return restored
-        }
-        return existing
-    }
-    val order = db.nextOrder("task_lists", "workspaceId = ? AND folderId IS ?", workspaceId, null)
-    val inbox = TaskList(
-        id = newId(), workspaceId = workspaceId, folderId = null, name = "Inbox", colorHex = null, sortOrder = order,
-        isArchived = false, systemRole = TaskListRole.INBOX, visibleRootTaskId = null, completedAt = null,
-        createdAt = now, updatedAt = now,
-    )
-    db.insert(inbox)
-    return inbox
-}
-
-internal fun seedConditions(db: Db, workspaceId: String, now: Instant) {
-    for ((name, location) in listOf("Home" to true, "Campus" to true, "Private" to false, "Floor space" to false)) {
-        db.insert(TaskCondition(newId(), workspaceId, name, location, false, now, now))
-    }
-}
-
 internal fun foldersIn(db: Db, workspaceId: String): List<ListFolder> = db.query(
     "SELECT * FROM list_folders WHERE workspaceId = ? ORDER BY sortOrder, createdAt, id", workspaceId,
 ) { it.toFolder() }

@@ -106,20 +106,11 @@ class WorkspaceRepository(
 
     /** The workspace, created with its Inbox and default conditions on first launch. */
     suspend fun bootstrapIfNeeded(now: Instant = now()): Workspace {
-        val existing = database.read { db ->
-            db.queryOne("SELECT * FROM workspaces LIMIT 1") { it.toWorkspace() }
-        }
-        if (existing != null) {
-            database.write { db -> ensureInbox(db, existing.id, now) }
-            return existing
-        }
-        val workspace = Workspace(newId(), "My Workspace", now, now)
-        database.write { db ->
-            db.insert(workspace)
-            ensureInbox(db, workspace.id, now)
-            seedConditions(db, workspace.id, now)
-        }
-        return workspace
+        // The Rust core's `setup::bootstrap`, outside the journal.
+        val id = coreWrite { it.bootstrap(now.toEpochMilli()) }
+        return database.read { db ->
+            db.queryOne("SELECT * FROM workspaces WHERE id = ?", id) { it.toWorkspace() }
+        } ?: fail(WorkspaceStoreError.MISSING_LIST)
     }
 
     /** The list quick capture lands in, found by its role rather than its name. */

@@ -56,18 +56,10 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   @discardableResult
   public func bootstrapIfNeeded(now: Date = .now) throws -> Workspace {
-    if let workspace = try database.read({ db in try Workspace.fetchOne(db) }) {
-      // A workspace whose inbox was deleted before the role existed would
-      // otherwise have nowhere for quick capture to land.
-      try database.write { db in try Self.ensureInbox(db, workspaceId: workspace.id, now: now) }
-      return workspace
-    }
-
-    let workspace = Workspace(id: UUID().uuidString, name: "My Workspace", createdAt: now, updatedAt: now)
-    try database.write { db in
-      try workspace.insert(db)
-      try Self.ensureInbox(db, workspaceId: workspace.id, now: now)
-      try Self.seedConditions(db, workspaceId: workspace.id, now: now)
+    // The Rust core's `setup::bootstrap`, outside the journal.
+    let id = try coreWrite { try core.bootstrap(nowMs: now.coreMilliseconds) }
+    guard let workspace = try database.read({ db in try Workspace.fetchOne(db, key: id) }) else {
+      throw WorkspaceStoreError.missingList
     }
     return workspace
   }
@@ -85,27 +77,6 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   @discardableResult
-  private static func ensureInbox(_ db: Database, workspaceId: String, now: Date) throws -> TaskList {
-    if var existing = try inbox(db, workspaceId: workspaceId) {
-      // Archiving is blocked, but a database from before the role existed can
-      // still arrive with the inbox out of sight.
-      if existing.isArchived {
-        existing.isArchived = false
-        existing.updatedAt = now
-        try existing.update(db)
-      }
-      return existing
-    }
-    let order = try nextOrder(
-      db, table: TaskList.databaseTableName, whereSQL: "workspaceId = ? AND folderId IS ?",
-      arguments: [workspaceId, nil])
-    let inbox = TaskList(
-      id: UUID().uuidString, workspaceId: workspaceId, folderId: nil, name: "Inbox",
-      colorHex: nil, sortOrder: order, isArchived: false, systemRole: .inbox,
-      createdAt: now, updatedAt: now)
-    try inbox.insert(db)
-    return inbox
-  }
 
   public func workspaces() throws -> [Workspace] {
     try database.read { db in

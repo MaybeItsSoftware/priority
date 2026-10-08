@@ -20,6 +20,7 @@ pub mod journal;
 pub mod lists;
 pub mod periodic;
 pub mod schema;
+pub mod setup;
 pub mod tasks;
 pub mod time;
 pub mod today;

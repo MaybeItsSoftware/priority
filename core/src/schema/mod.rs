@@ -13,7 +13,7 @@
 //! CLI's and Android's tests read. Identifiers are permanent: a database in
 //! the wild records which ones it ran.
 
-mod data;
+pub(crate) mod data;
 pub use data::grdb_timestamp;
 pub mod triggers;
 

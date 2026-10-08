@@ -67,27 +67,13 @@ extension WorkspaceStore {
   /// the row already holds exactly that text.
   @discardableResult
   public func upsertTheme(id: String, json: String, now: Date = .now) throws -> Bool {
-    try database.write { db in
-      let current = try String.fetchOne(db, sql: "SELECT json FROM themes WHERE id = ?", arguments: [id])
-      if current == json { return false }
-      if current == nil {
-        try db.execute(
-          sql: "INSERT INTO themes (id, json, updatedAt) VALUES (?, ?, ?)", arguments: [id, json, now])
-      } else {
-        try db.execute(
-          sql: "UPDATE themes SET json = ?, updatedAt = ? WHERE id = ?", arguments: [json, now, id])
-      }
-      return true
-    }
+    try coreWrite { try core.upsertTheme(id: id, json: json, nowMs: now.coreMilliseconds) }
   }
 
   /// Removes the theme `id`. Returns false when there was none.
   @discardableResult
   public func deleteTheme(id: String) throws -> Bool {
-    try database.write { db in
-      try db.execute(sql: "DELETE FROM themes WHERE id = ?", arguments: [id])
-      return db.changesCount > 0
-    }
+    try coreWrite { try core.deleteTheme(id: id) }
   }
 
   // MARK: - Preferences
@@ -116,20 +102,6 @@ extension WorkspaceStore {
   /// and writes nothing, when the row already holds that value.
   @discardableResult
   public func setPreference(_ key: String, _ value: String?, now: Date = .now) throws -> Bool {
-    try database.write { db in
-      let existing = try Row.fetchOne(
-        db, sql: "SELECT value FROM preferences WHERE key = ?", arguments: [key])
-      if let existing {
-        if (existing["value"] as String?) == value { return false }
-        try db.execute(
-          sql: "UPDATE preferences SET value = ?, updatedAt = ? WHERE key = ?",
-          arguments: [value, now, key])
-      } else {
-        try db.execute(
-          sql: "INSERT INTO preferences (key, value, updatedAt) VALUES (?, ?, ?)",
-          arguments: [key, value, now])
-      }
-      return true
-    }
+    try coreWrite { try core.setPreference(key: key, value: value, nowMs: now.coreMilliseconds) }
   }
 }

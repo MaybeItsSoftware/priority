@@ -20,6 +20,7 @@ use crate::focus::{self, BlockFinished, FocusContext};
 use crate::habits::{self, HabitDraft};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
+use crate::setup;
 use crate::tasks::{self, DeletedTask, NewTask};
 use crate::today;
 use crate::waiting;
@@ -832,6 +833,32 @@ impl CoreWorkspace {
         zone: String,
     ) -> Result<bool, CoreError> {
         self.unjournalled(|tx| focus::resume_eligible_queue(tx, &context, now_ms, &zone))
+    }
+
+    /// The workspace, made on first launch with its Inbox and conditions;
+    /// returns its id.
+    pub fn bootstrap(&self, now_ms: i64) -> Result<String, CoreError> {
+        self.unjournalled(|tx| setup::bootstrap(tx, now_ms))
+    }
+
+    /// Stores a theme's JSON; whether it changed anything.
+    pub fn upsert_theme(&self, id: String, json: String, now_ms: i64) -> Result<bool, CoreError> {
+        self.unjournalled(|tx| setup::upsert_theme(tx, &id, &json, now_ms))
+    }
+
+    /// Removes a theme; whether there was one.
+    pub fn delete_theme(&self, id: String) -> Result<bool, CoreError> {
+        self.unjournalled(|tx| setup::delete_theme(tx, &id))
+    }
+
+    /// Stores a preference, keeping a cleared one as null; whether it changed.
+    pub fn set_preference(
+        &self,
+        key: String,
+        value: Option<String>,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        self.unjournalled(|tx| setup::set_preference(tx, &key, value.as_deref(), now_ms))
     }
 
     /// Ranks tasks in Today's focus order as one "Reorder Today" step.

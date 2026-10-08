@@ -625,6 +625,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func arrangeDay(orderedTaskIds: [String], nowMs: Int64) throws 
     
     /**
+     * The workspace, made on first launch with its Inbox and conditions;
+     * returns its id.
+     */
+    func bootstrap(nowMs: Int64) throws  -> String
+    
+    /**
      * Banks a running block's time.
      */
     func checkpointFocusSession(id: String, nowMs: Int64) throws 
@@ -678,6 +684,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Deletes a task and its subtree as one "Delete Task" step.
      */
     func deleteTask(id: String) throws  -> DeletedTask
+    
+    /**
+     * Removes a theme; whether there was one.
+     */
+    func deleteTheme(id: String) throws  -> Bool
     
     /**
      * A task's editable state, as the editor opens it.
@@ -927,6 +938,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func setPlannedForToday(planned: Bool, taskIds: [String], nowMs: Int64) throws 
     
     /**
+     * Stores a preference, keeping a cleared one as null; whether it changed.
+     */
+    func setPreference(key: String, value: String?, nowMs: Int64) throws  -> Bool
+    
+    /**
      * Opens, completes or cancels a task as one "Change Status" step,
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
@@ -982,6 +998,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Sets a task's title, notes, due time and estimate as one "Edit Task" step.
      */
     func updateTask(id: String, title: String, notes: String, dueAtMs: Int64?, estimateSeconds: Int64?, nowMs: Int64, zone: String) throws 
+    
+    /**
+     * Stores a theme's JSON; whether it changed anything.
+     */
+    func upsertTheme(id: String, json: String, nowMs: Int64) throws  -> Bool
     
 }
 /**
@@ -1106,6 +1127,20 @@ open func arrangeDay(orderedTaskIds: [String], nowMs: Int64)throws   {try rustCa
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * The workspace, made on first launch with its Inbox and conditions;
+     * returns its id.
+     */
+open func bootstrap(nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_bootstrap(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -1255,6 +1290,19 @@ open func deleteTask(id: String)throws  -> DeletedTask  {
     return try  FfiConverterTypeDeletedTask_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_delete_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Removes a theme; whether there was one.
+     */
+open func deleteTheme(id: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_delete_theme(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),uniffiCallStatus
     )
@@ -1959,6 +2007,21 @@ open func setPlannedForToday(planned: Bool, taskIds: [String], nowMs: Int64)thro
 }
     
     /**
+     * Stores a preference, keeping a cleared one as null; whether it changed.
+     */
+open func setPreference(key: String, value: String?, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_preference(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),
+        FfiConverterOptionString.lower(value),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Opens, completes or cancels a task as one "Change Status" step,
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
@@ -2119,6 +2182,21 @@ open func updateTask(id: String, title: String, notes: String, dueAtMs: Int64?, 
         FfiConverterString.lower(zone),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Stores a theme's JSON; whether it changed anything.
+     */
+open func upsertTheme(id: String, json: String, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_upsert_theme(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(json),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
 }
     
 
@@ -4230,6 +4308,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_arrange_day() != 44382) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_bootstrap() != 4874) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() != 13264) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4261,6 +4342,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_delete_task() != 40901) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_delete_theme() != 30938) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() != 20106) {
@@ -4407,6 +4491,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_set_planned_for_today() != 8637) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_preference() != 49254) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_status() != 17278) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4438,6 +4525,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_update_task() != 10215) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_upsert_theme() != 43674) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_constructor_coreworkspace_open() != 50515) {

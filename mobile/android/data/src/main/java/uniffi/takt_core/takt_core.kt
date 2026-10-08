@@ -689,6 +689,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_arrange_day(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_bootstrap(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_clear_contribution(
@@ -710,6 +712,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_delete_theme(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot(
     ): Int
@@ -807,6 +811,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_planned_for_today(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_preference(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_status(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_waiting(
@@ -828,6 +834,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_upsert_theme(
     ): Int
     external fun uniffi_takt_core_checksum_constructor_coreworkspace_open(
     ): Int
@@ -865,6 +873,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_arrange_day(`ptr`: Long,`orderedTaskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_bootstrap(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_checkpoint_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_clear_contribution(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -887,6 +897,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_delete_theme(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_finish_focus_block(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`elapsedSeconds`: Long,`qualityMultiplier`: RustBuffer.ByValue,`completeTask`: Byte,`expectedBlockId`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -983,6 +995,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_planned_for_today(`ptr`: Long,`planned`: Byte,`taskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_preference(`ptr`: Long,`key`: RustBuffer.ByValue,`value`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_set_status(`ptr`: Long,`taskId`: RustBuffer.ByValue,`status`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_waiting(`ptr`: Long,`taskId`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`followUpAtMs`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1005,6 +1019,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_update_task(`ptr`: Long,`id`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,`notes`: RustBuffer.ByValue,`dueAtMs`: RustBuffer.ByValue,`estimateSeconds`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_upsert_theme(`ptr`: Long,`id`: RustBuffer.ByValue,`json`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1151,6 +1167,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_arrange_day() and 0xFFFF) != 44382) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_bootstrap() and 0xFFFF) != 4874) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() and 0xFFFF) != 13264) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1182,6 +1201,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_task() and 0xFFFF) != 40901) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_theme() and 0xFFFF) != 30938) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() and 0xFFFF) != 20106) {
@@ -1328,6 +1350,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_planned_for_today() and 0xFFFF) != 8637) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_preference() and 0xFFFF) != 49254) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_status() and 0xFFFF) != 17278) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1359,6 +1384,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_task() and 0xFFFF) != 10215) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_upsert_theme() and 0xFFFF) != 43674) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_constructor_coreworkspace_open() and 0xFFFF) != 50515) {
@@ -1815,6 +1843,12 @@ public interface CoreWorkspaceInterface {
     fun `arrangeDay`(`orderedTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
     
     /**
+     * The workspace, made on first launch with its Inbox and conditions;
+     * returns its id.
+     */
+    fun `bootstrap`(`nowMs`: kotlin.Long): kotlin.String
+    
+    /**
      * Banks a running block's time.
      */
     fun `checkpointFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
@@ -1868,6 +1902,11 @@ public interface CoreWorkspaceInterface {
      * Deletes a task and its subtree as one "Delete Task" step.
      */
     fun `deleteTask`(`id`: kotlin.String): DeletedTask
+    
+    /**
+     * Removes a theme; whether there was one.
+     */
+    fun `deleteTheme`(`id`: kotlin.String): kotlin.Boolean
     
     /**
      * A task's editable state, as the editor opens it.
@@ -2117,6 +2156,11 @@ public interface CoreWorkspaceInterface {
     fun `setPlannedForToday`(`planned`: kotlin.Boolean, `taskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
     
     /**
+     * Stores a preference, keeping a cleared one as null; whether it changed.
+     */
+    fun `setPreference`(`key`: kotlin.String, `value`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
      * Opens, completes or cancels a task as one "Change Status" step,
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
@@ -2172,6 +2216,11 @@ public interface CoreWorkspaceInterface {
      * Sets a task's title, notes, due time and estimate as one "Edit Task" step.
      */
     fun `updateTask`(`id`: kotlin.String, `title`: kotlin.String, `notes`: kotlin.String, `dueAtMs`: kotlin.Long?, `estimateSeconds`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+    
+    /**
+     * Stores a theme's JSON; whether it changed anything.
+     */
+    fun `upsertTheme`(`id`: kotlin.String, `json`: kotlin.String, `nowMs`: kotlin.Long): kotlin.Boolean
     
     companion object
 }
@@ -2353,6 +2402,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * The workspace, made on first launch with its Inbox and conditions;
+     * returns its id.
+     */
+    @Throws(CoreException::class)override fun `bootstrap`(`nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_bootstrap(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -2554,6 +2622,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     callWithHandle {
     uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_takt_core_fn_method_coreworkspace_delete_task(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Removes a theme; whether there was one.
+     */
+    @Throws(CoreException::class)override fun `deleteTheme`(`id`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_delete_theme(
         it,
         
         FfiConverterString.lower(`id`),_status)
@@ -3502,6 +3588,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Stores a preference, keeping a cleared one as null; whether it changed.
+     */
+    @Throws(CoreException::class)override fun `setPreference`(`key`: kotlin.String, `value`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_preference(
+        it,
+        
+        FfiConverterString.lower(`key`),
+        FfiConverterOptionalString.lower(`value`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Opens, completes or cancels a task as one "Change Status" step,
      * writing a repeating task's next occurrence in `zone` (an IANA name).
      */
@@ -3716,6 +3822,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Stores a theme's JSON; whether it changed anything.
+     */
+    @Throws(CoreException::class)override fun `upsertTheme`(`id`: kotlin.String, `json`: kotlin.String, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_upsert_theme(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`json`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
     
 
     

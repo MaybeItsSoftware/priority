@@ -98,25 +98,35 @@ fn seed_conditions_everywhere(transaction: &Transaction) -> Result<(), CoreError
         .collect::<Result<_, _>>()?;
     let now = grdb_timestamp(SystemTime::now());
     for workspace_id in workspaces {
-        for (name, is_location) in [
-            ("Home", true),
-            ("Campus", true),
-            ("Private", false),
-            ("Floor space", false),
-        ] {
-            transaction.execute(
-                "INSERT INTO task_conditions
-                   (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt)
-                 VALUES (?1, ?2, ?3, ?4, 0, ?5, ?5)",
-                params![
-                    uuid::Uuid::new_v4().to_string().to_uppercase(),
-                    workspace_id,
-                    name,
-                    is_location,
-                    now
-                ],
-            )?;
-        }
+        seed_conditions(transaction, &workspace_id, &now)?;
+    }
+    Ok(())
+}
+
+/// The four starting conditions a workspace is given: `WorkspaceStore.seedConditions`.
+pub(crate) fn seed_conditions(
+    transaction: &Transaction,
+    workspace_id: &str,
+    now: &str,
+) -> Result<(), CoreError> {
+    for (name, is_location) in [
+        ("Home", true),
+        ("Campus", true),
+        ("Private", false),
+        ("Floor space", false),
+    ] {
+        transaction.execute(
+            "INSERT INTO task_conditions
+               (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt)
+             VALUES (?1, ?2, ?3, ?4, 0, ?5, ?5)",
+            params![
+                uuid::Uuid::new_v4().to_string().to_uppercase(),
+                workspace_id,
+                name,
+                is_location,
+                now
+            ],
+        )?;
     }
     Ok(())
 }

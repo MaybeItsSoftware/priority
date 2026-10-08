@@ -3,12 +3,6 @@ import GRDB
 import TaktCore
 
 extension WorkspaceStore {
-  static func seedConditions(_ db: Database, workspaceId: String, now: Date) throws {
-    for (name, location) in [("Home", true), ("Campus", true), ("Private", false), ("Floor space", false)] {
-      try TaskCondition(id: UUID().uuidString, workspaceId: workspaceId, name: name,
-                        isLocation: location, isArchived: false, createdAt: now, updatedAt: now).insert(db)
-    }
-  }
 
   public func conditions(in workspaceId: String) throws -> [TaskCondition] {
     try database.read { db in

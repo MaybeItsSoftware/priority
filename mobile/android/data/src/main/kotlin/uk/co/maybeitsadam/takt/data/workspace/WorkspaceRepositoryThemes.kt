@@ -34,26 +34,10 @@ fun WorkspaceRepository.observeThemes(): Flow<List<StoredTheme>> = database.obse
 
 /** Stores [json] as the theme [id]. False, with nothing written, when the row already holds exactly that text. */
 suspend fun WorkspaceRepository.upsertTheme(id: String, json: String, now: Instant = now()): Boolean =
-    database.write { db ->
-        val current = db.string("SELECT json FROM themes WHERE id = ?", id)
-        when {
-            current == json -> false
-            !db.exists("SELECT 1 FROM themes WHERE id = ?", id) -> {
-                db.execute("INSERT INTO themes (id, json, updatedAt) VALUES (?, ?, ?)", id, json, now)
-                true
-            }
-            else -> {
-                db.execute("UPDATE themes SET json = ?, updatedAt = ? WHERE id = ?", json, now, id)
-                true
-            }
-        }
-    }
+    coreWrite { it.upsertTheme(id, json, now.toEpochMilli()) }
 
 /** Removes the theme [id]. False when there was none. */
-suspend fun WorkspaceRepository.deleteTheme(id: String): Boolean = database.write { db ->
-    db.execute("DELETE FROM themes WHERE id = ?", id)
-    db.changes() > 0
-}
+suspend fun WorkspaceRepository.deleteTheme(id: String): Boolean = coreWrite { it.deleteTheme(id) }
 
 /** The value under [key]; null when it is unset or stored as null. */
 suspend fun WorkspaceRepository.preference(key: String): String? =
@@ -71,21 +55,7 @@ fun WorkspaceRepository.observePreferences(): Flow<Map<String, String?>> =
  * nothing written, when the row already holds that value.
  */
 suspend fun WorkspaceRepository.setPreference(key: String, value: String?, now: Instant = now()): Boolean =
-    database.write { db ->
-        val existing = db.queryOne("SELECT value FROM preferences WHERE key = ?", key) { it.stringOrNull("value") }
-        val exists = db.exists("SELECT 1 FROM preferences WHERE key = ?", key)
-        when {
-            exists && existing == value -> false
-            exists -> {
-                db.execute("UPDATE preferences SET value = ?, updatedAt = ? WHERE key = ?", value, now, key)
-                true
-            }
-            else -> {
-                db.execute("INSERT INTO preferences (key, value, updatedAt) VALUES (?, ?, ?)", key, value, now)
-                true
-            }
-        }
-    }
+    coreWrite { it.setPreference(key, value, now.toEpochMilli()) }
 
 private fun readThemes(db: Db): List<StoredTheme> =
     db.query("SELECT id, json, updatedAt FROM themes ORDER BY id") {
