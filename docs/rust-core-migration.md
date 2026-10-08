@@ -84,8 +84,19 @@ covered the old copies pass against it.
    opened an existing install through it and saved a task.
    `core/src/schema/triggers.rs` generates the journal and outbox triggers,
    matching all 69 in the fixture, for the next migration that needs them.
-3. **Undo journal.** `undo_control` and `change_log` triggers, undo and redo.
-   The CLI already holds a Rust copy, so it becomes the core one.
+3. **Undo journal. Done 2026-10-08.** `core/src/journal.rs` holds undo,
+   redo, the labels, the history and the history target, and `begin` and
+   `finish`, which arm and settle a step inside a caller's transaction. The
+   Mac, iPhone and Android call undo, redo and the reads through
+   `CoreWorkspace`, the handle `core/src/workspace.rs` exports: one
+   connection beside the client's own, on the same SQLite library. The CLI
+   links the core and brackets its writes with `begin` and `finish`. The
+   triggers moved in step two. What stays duplicated is `journalledWrite` in
+   Swift and Kotlin: it has to run inside the client's own transaction, so it
+   goes when the writes it wraps move in step four. Because the core writes
+   on its own connection, the Mac takes in the new `data_version` after each
+   `perform`, and Android's `WorkspaceDatabase.coreWrite` announces the
+   changed tables itself.
 4. **Task writes.** add, update, complete/reopen, move, reparent, delete,
    one at a time, each replacing `WorkspaceStore+Editing`/`+Work` methods,
    `cli/src/workspace_tasks.rs`, and the Kotlin repository method together.
