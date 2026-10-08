@@ -139,24 +139,6 @@ extension WorkspaceStore {
       sourceCompleted: sourceCompleted, calendar: calendar) != nil
   }
 
-  /// Ends every habit made from `sourceTaskId` that ends with it. Called from
-  /// each place a task is closed, inside that write, so undoing the
-  /// completion brings the habits back with it.
-  static func expireHabits(_ db: Database, sourceTaskId: String, now: Date) throws {
-    let habits = try WorkspaceDaily.filter(
-      Column("sourceTaskId") == sourceTaskId && Column("archivedAt") == nil
-        && Column("expiryRule") == HabitExpiry.whenSourceCompleted.rule
-    ).fetchAll(db)
-    for var habit in habits {
-      habit.archivedAt = now
-      habit.updatedAt = now
-      try habit.update(db)
-      if let column = habit.placementColumn, try kanbanColumn(db, taskId: habit.taskId) == column {
-        try writeKanbanColumn(db, taskId: habit.taskId, column: nil, now: now)
-      }
-    }
-  }
-
   // MARK: - Helpers
 
   /// A source that is closed or gone has ended.
@@ -180,16 +162,4 @@ extension WorkspaceStore {
     try String.fetchOne(db, sql: "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?", arguments: [taskId])
   }
 
-  /// Taking a card out of a column also drops its place in the day, as
-  /// `setPlannedForToday` does.
-  static func writeKanbanColumn(_ db: Database, taskId: String, column: String?, now: Date) throws {
-    try db.execute(sql: """
-      INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
-      VALUES (?, '[]', '[]', ?, ?)
-      ON CONFLICT(taskId) DO UPDATE SET
-        kanbanColumn = excluded.kanbanColumn,
-        focusRank = CASE WHEN excluded.kanbanColumn IS NULL THEN NULL ELSE focusRank END,
-        updatedAt = excluded.updatedAt
-      """, arguments: [taskId, column, now])
-  }
 }

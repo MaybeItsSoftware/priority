@@ -98,37 +98,6 @@ internal fun dailiesOn(db: Db, day: Instant, zone: ZoneId): List<DailyItem> {
     }
 }
 
-internal fun dueDaily(db: Db, taskId: String, day: Instant, zone: ZoneId): WorkspaceDaily? =
-    db.queryOne("SELECT * FROM dailies WHERE taskId = ? AND archivedAt IS NULL", taskId) { it.toDaily() }
-        ?.takeIf { it.isDue(day, zone) }
-
-internal fun recordContribution(
-    db: Db,
-    daily: WorkspaceDaily,
-    seconds: Int,
-    complete: Boolean,
-    now: Instant,
-    zone: ZoneId,
-): DailyContribution {
-    val key = DailyContribution.dayKey(now, zone)
-    db.queryOne(
-        "SELECT * FROM daily_contributions WHERE dailyId = ? AND dayKey = ?", daily.id, key,
-    ) { it.toContribution() }?.let { existing ->
-        val updated = existing.copy(
-            secondsLogged = existing.secondsLogged + maxOf(0, seconds),
-            completedAt = if (complete) existing.completedAt ?: now else existing.completedAt,
-        )
-        db.update(updated)
-        return updated
-    }
-    val contribution = DailyContribution(
-        id = newId(), dailyId = daily.id, taskId = daily.taskId, dayKey = key, secondsLogged = maxOf(0, seconds),
-        completedAt = if (complete) now else null, createdAt = now,
-    )
-    db.insert(contribution)
-    return contribution
-}
-
 /**
  * Every open task that could be done now, shaped for `NextUpSelector`. Parents
  * with open children, lists, wrappers and tasks in closed containers are left
@@ -182,41 +151,6 @@ internal fun focusCandidates(db: Db, now: Instant, zone: ZoneId): List<NextUpCan
     }
 }
 
-/**
- * Writes the next occurrence of a repeating task after one is closed. Nil when
- * the rule is missing or unreadable, which must not stop the completion.
- */
-internal fun scheduleNextOccurrence(db: Db, task: WorkspaceTask, now: Instant, zone: ZoneId): WorkspaceTask? {
-    if (task.isList) return null
-    val metadata = db.metadata(task.id) ?: return null
-    val schedule = metadata.recurrenceRule?.let { PeriodicSchedule.parse(it) } ?: return null
-    fun rolled(date: Instant?) = date?.let { schedule.nextOccurrence(it, now, zone) }
-    val dueAt = rolled(task.dueAt)
-    val startAt = rolled(metadata.startAt) ?: if (dueAt == null) schedule.nextOccurrence(now, now, zone) else null
-    if (startAt == null && dueAt == null) return null
-
-    val next = WorkspaceTask(
-        id = newId(), listId = task.listId, parentTaskId = task.parentTaskId, title = task.title, notes = task.notes,
-        status = TaskStatus.OPEN, sortOrder = task.sortOrder, dueAt = dueAt, estimateSeconds = task.estimateSeconds,
-        sourceSystem = null, sourceId = null, itemKind = task.itemKind, isPromoted = task.isPromoted,
-        archivedAt = null, completedAt = null, createdAt = now, updatedAt = now,
-    )
-    db.insert(next)
-    // What describes the work carries over; what describes this sitting does not.
-    db.insert(
-        metadata.copy(
-            taskId = next.id, startAt = startAt, kanbanColumn = null, focusRank = null, updatedAt = now,
-        ),
-    )
-    val siblings = db.taskSiblings(task.listId, task.parentTaskId).filter { it.id != next.id }.toMutableList()
-    val index = siblings.indexOfFirst { it.id == task.id }
-    if (index >= 0) {
-        siblings.add(index + 1, next)
-        db.persistTaskOrder(siblings, now)
-    }
-    return db.task(next.id) ?: next
-}
-
 internal fun activeSession(db: Db, newestFirst: Boolean = true): FocusSession? = db.queryOne(
     "SELECT * FROM focus_sessions WHERE phase != 'finished'" + if (newestFirst) " ORDER BY startedAt DESC" else "",
 ) { it.toSession() }
@@ -232,99 +166,6 @@ internal fun finishSession(db: Db, id: String, now: Instant) {
 }
 
 @Suppress("LongParameterList")
-internal fun completeActiveFocusTask(
-    db: Db,
-    sessionId: String,
-    elapsedSeconds: Int,
-    qualityMultiplier: Double?,
-    completeTask: Boolean,
-    expectedBlockId: String?,
-    context: FocusContext,
-    now: Instant,
-    zone: ZoneId,
-): FocusCompletion {
-    var session = db.session(sessionId) ?: fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
-    if (expectedBlockId != null && db.workBlockExists(expectedBlockId)) {
-        return FocusCompletion(session, FocusCompletionOutcome.ProgressLogged(0), null)
-    }
-    val activeId = session.activeTaskId ?: fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
-    val blockId = expectedBlockId ?: session.activeBlockId ?: "legacy-${session.id}/$activeId"
-    if (db.workBlockExists(blockId)) return FocusCompletion(session, FocusCompletionOutcome.ProgressLogged(0), null)
-    if (expectedBlockId != null && expectedBlockId != session.activeBlockId) fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
-
-    var outcome: FocusCompletionOutcome = if (completeTask) {
-        FocusCompletionOutcome.TaskCompleted
-    } else {
-        FocusCompletionOutcome.ProgressLogged(maxOf(0, elapsedSeconds))
-    }
-    val activeTask = db.task(activeId)
-    val daily = dueDaily(db, activeId, now, zone)
-    if (daily != null) {
-        val credited = maxOf(0, elapsedSeconds)
-        val metTarget = daily.targetSeconds?.let { target ->
-            val logged = db.int(
-                "SELECT secondsLogged FROM daily_contributions WHERE dailyId = ? AND dayKey = ?",
-                daily.id, DailyContribution.dayKey(now, zone),
-            ) ?: 0
-            target > 0 && logged + credited >= target
-        } ?: false
-        recordContribution(db, daily, credited, completeTask || metTarget, now, zone)
-        outcome = FocusCompletionOutcome.ContributionLogged(credited)
-    } else if (completeTask && activeTask != null) {
-        val wasOpen = activeTask.completedAt == null
-        val closed = activeTask.copy(
-            status = TaskStatus.COMPLETED, completedAt = activeTask.completedAt ?: now, updatedAt = now,
-        )
-        db.update(closed)
-        if (wasOpen) {
-            scheduleNextOccurrence(db, closed, now, zone)
-            expireHabits(db, closed.id, now)
-        }
-    }
-    db.insert(
-        FocusWorkBlock(
-            id = blockId, sessionId = session.id, taskId = activeTask?.id,
-            taskTitle = activeTask?.title ?: "Deleted task", seconds = maxOf(0, elapsedSeconds), recordedAt = now,
-            originalTaskId = activeTask?.id,
-        ),
-    )
-    var award: FocusAward? = null
-    if (qualityMultiplier != null && elapsedSeconds > 0) {
-        award = FocusAward.earned(
-            id = blockId, sessionId = sessionId, taskId = activeTask?.id,
-            taskTitle = activeTask?.title ?: "Untitled task", seconds = elapsedSeconds,
-            multiplier = qualityMultiplier, awardedAt = now,
-        ).also { db.insert(it) }
-    }
-    db.queryOne(
-        "SELECT * FROM focus_queue_items WHERE sessionId = ? AND taskId = ? AND state = 'queued'", sessionId, activeId,
-    ) { it.toQueueItem() }?.let { item ->
-        db.update(item.copy(state = FocusQueueState.COMPLETED, completedAt = now))
-    }
-    val candidates = focusCandidates(db, now, zone).associateBy { it.id }
-    val pending = db.query(
-        "SELECT * FROM focus_queue_items WHERE sessionId = ? AND state = 'queued' ORDER BY sortOrder", sessionId,
-    ) { it.toQueueItem() }
-    val next = pending.firstOrNull { item ->
-        candidates[item.taskId]?.let { TaskAvailabilityPolicy.reasons(it, context, now).isEmpty() } ?: false
-    }
-    session = session.copy(
-        activeTaskId = next?.taskId, activeTaskStartedAt = now, accumulatedSeconds = 0, pausedAt = null,
-        checkpointAt = now, activeBlockId = if (next == null) null else newId(),
-    )
-    val nextCandidate = next?.let { candidates[it.taskId] }
-    session = when {
-        next != null && nextCandidate != null -> session.copy(
-            workDurationSeconds = TaskAvailabilityPolicy.plannedSeconds(nextCandidate, next.plannedSeconds, context, now),
-        )
-        next != null -> session
-        pending.isEmpty() -> session.copy(phase = FocusSessionPhase.FINISHED, endedAt = now)
-        // Keep the blocked queue available; never fabricate a new running task.
-        else -> session.copy(pausedAt = now)
-    }
-    db.update(session)
-    return FocusCompletion(session, outcome, award)
-}
 
 internal fun workBlocksIn(db: Db, start: Instant, end: Instant): List<FocusWorkBlock> = db.query(
     "SELECT * FROM focus_work_blocks WHERE recordedAt >= ? AND recordedAt < ? ORDER BY recordedAt, id", start, end,

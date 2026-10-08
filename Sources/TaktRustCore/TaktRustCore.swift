@@ -513,6 +513,22 @@ fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
+    typealias FfiType = Double
+    typealias SwiftType = Double
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Double {
+        return try lift(readDouble(&buf))
+    }
+
+    public static func write(_ value: Double, into buf: inout [UInt8]) {
+        writeDouble(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -589,6 +605,11 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Queues a task in a focus session.
+     */
+    func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64) throws 
+    
+    /**
      * Copies a task's planning onto its subtasks as one step.
      */
     func applyPlanningToDescendants(taskId: String, nowMs: Int64, zone: String) throws 
@@ -602,6 +623,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Ranks tasks in Today's focus order as one "Reorder Today" step.
      */
     func arrangeDay(orderedTaskIds: [String], nowMs: Int64) throws 
+    
+    /**
+     * Banks a running block's time.
+     */
+    func checkpointFocusSession(id: String, nowMs: Int64) throws 
     
     /**
      * Un-ticks a day of a daily as one "Clear Daily" step.
@@ -657,6 +683,22 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * A task's editable state, as the editor opens it.
      */
     func editorSnapshot(taskId: String) throws  -> EditorSnapshot
+    
+    /**
+     * Finishes the block in hand as one step: "Complete Task", or "Log Daily
+     * Progress" when the task stays open.
+     */
+    func finishFocusBlock(sessionId: String, elapsedSeconds: Int64, qualityMultiplier: Double?, completeTask: Bool, expectedBlockId: String?, context: FocusContext, nowMs: Int64, zone: String) throws  -> BlockFinished
+    
+    /**
+     * Ends a focus session.
+     */
+    func finishFocusSession(id: String, nowMs: Int64) throws 
+    
+    /**
+     * Whether a session waiting on a blocked queue can resume in `context`.
+     */
+    func hasResumableFocusQueueTask(context: FocusContext, nowMs: Int64, zone: String) throws  -> Bool
     
     /**
      * The task and list the next undo (`for_undo`) or redo affects.
@@ -736,6 +778,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func outdentTask(id: String, nowMs: Int64) throws 
     
     /**
+     * Pauses a running block.
+     */
+    func pauseFocusSession(id: String, nowMs: Int64) throws 
+    
+    /**
      * Pins a task in the focus order as one "Pin Task" step.
      */
     func pinTask(taskId: String, index: Int64, nowMs: Int64) throws 
@@ -751,6 +798,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int64) throws 
     
     /**
+     * Resets a running block's clock after the system clock jumped.
+     */
+    func rebaseFocusClock(id: String, elapsedSeconds: Int64, nowMs: Int64) throws 
+    
+    /**
      * Applies every placed habit's options for `now`, outside the undo
      * journal; returns whether anything changed.
      */
@@ -761,6 +813,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * returns whether it made any.
      */
     func reconcileWaitingFollowUps(nowMs: Int64) throws  -> Bool
+    
+    /**
+     * Pauses every running session at its last checkpoint, on reopening.
+     */
+    func recoverInterruptedFocus() throws 
     
     /**
      * Puts back the most recently undone step.
@@ -781,6 +838,16 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Renames a list as one "Rename List" step.
      */
     func renameList(id: String, name: String, nowMs: Int64) throws 
+    
+    /**
+     * Resumes a session waiting on a blocked queue; whether it did.
+     */
+    func resumeEligibleFocusQueue(context: FocusContext, nowMs: Int64, zone: String) throws  -> Bool
+    
+    /**
+     * Resumes a paused block.
+     */
+    func resumeFocusSession(id: String, nowMs: Int64) throws 
     
     /**
      * Saves a condition as one "Edit Condition" step.
@@ -869,6 +936,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Sets what a task waits on and when to chase it, as one "Waiting On" step.
      */
     func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, nowMs: Int64) throws 
+    
+    /**
+     * Starts a focus session on a task, or returns the one running.
+     */
+    func startFocusSession(taskId: String, plannedSeconds: Int64?, workSeconds: Int64, breakSeconds: Int64, context: FocusContext?, overrideAvailability: Bool, nowMs: Int64, zone: String) throws  -> String
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -982,6 +1054,21 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 
     
     /**
+     * Queues a task in a focus session.
+     */
+open func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(sessionId),
+        FfiConverterString.lower(taskId),
+        FfiConverterOptionInt64.lower(plannedSeconds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Copies a task's planning onto its subtasks as one step.
      */
 open func applyPlanningToDescendants(taskId: String, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1016,6 +1103,19 @@ open func arrangeDay(orderedTaskIds: [String], nowMs: Int64)throws   {try rustCa
     uniffi_takt_core_fn_method_coreworkspace_arrange_day(
             self.uniffiCloneHandle(),
         FfiConverterSequenceString.lower(orderedTaskIds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Banks a running block's time.
+     */
+open func checkpointFocusSession(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_checkpoint_focus_session(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
@@ -1170,6 +1270,55 @@ open func editorSnapshot(taskId: String)throws  -> EditorSnapshot  {
     uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Finishes the block in hand as one step: "Complete Task", or "Log Daily
+     * Progress" when the task stays open.
+     */
+open func finishFocusBlock(sessionId: String, elapsedSeconds: Int64, qualityMultiplier: Double?, completeTask: Bool, expectedBlockId: String?, context: FocusContext, nowMs: Int64, zone: String)throws  -> BlockFinished  {
+    return try  FfiConverterTypeBlockFinished_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_finish_focus_block(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(sessionId),
+        FfiConverterInt64.lower(elapsedSeconds),
+        FfiConverterOptionDouble.lower(qualityMultiplier),
+        FfiConverterBool.lower(completeTask),
+        FfiConverterOptionString.lower(expectedBlockId),
+        FfiConverterTypeFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Ends a focus session.
+     */
+open func finishFocusSession(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_finish_focus_session(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Whether a session waiting on a blocked queue can resume in `context`.
+     */
+open func hasResumableFocusQueueTask(context: FocusContext, nowMs: Int64, zone: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_has_resumable_focus_queue_task(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
 }
@@ -1395,6 +1544,19 @@ open func outdentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(F
 }
     
     /**
+     * Pauses a running block.
+     */
+open func pauseFocusSession(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_pause_focus_session(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Pins a task in the focus order as one "Pin Task" step.
      */
 open func pinTask(taskId: String, index: Int64, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1439,6 +1601,20 @@ open func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int
 }
     
     /**
+     * Resets a running block's clock after the system clock jumped.
+     */
+open func rebaseFocusClock(id: String, elapsedSeconds: Int64, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_rebase_focus_clock(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt64.lower(elapsedSeconds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Applies every placed habit's options for `now`, outside the undo
      * journal; returns whether anything changed.
      */
@@ -1465,6 +1641,17 @@ open func reconcileWaitingFollowUps(nowMs: Int64)throws  -> Bool  {
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * Pauses every running session at its last checkpoint, on reopening.
+     */
+open func recoverInterruptedFocus()throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_recover_interrupted_focus(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
 }
     
     /**
@@ -1514,6 +1701,34 @@ open func renameList(id: String, name: String, nowMs: Int64)throws   {try rustCa
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),
         FfiConverterString.lower(name),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Resumes a session waiting on a blocked queue; whether it did.
+     */
+open func resumeEligibleFocusQueue(context: FocusContext, nowMs: Int64, zone: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_resume_eligible_focus_queue(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Resumes a paused block.
+     */
+open func resumeFocusSession(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_resume_focus_session(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
@@ -1775,6 +1990,26 @@ open func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, n
 }
     
     /**
+     * Starts a focus session on a task, or returns the one running.
+     */
+open func startFocusSession(taskId: String, plannedSeconds: Int64?, workSeconds: Int64, breakSeconds: Int64, context: FocusContext?, overrideAvailability: Bool, nowMs: Int64, zone: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_start_focus_session(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterOptionInt64.lower(plannedSeconds),
+        FfiConverterInt64.lower(workSeconds),
+        FfiConverterInt64.lower(breakSeconds),
+        FfiConverterOptionTypeFocusContext.lower(context),
+        FfiConverterBool.lower(overrideAvailability),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -1935,6 +2170,83 @@ public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt6
 
 
 /**
+ * What finishing a block did. `WorkspaceStore.FocusCompletion`.
+ */
+public struct BlockFinished: Equatable, Hashable {
+    public var sessionId: String
+    /**
+     * "taskCompleted", "progressLogged" or "contributionLogged".
+     */
+    public var outcome: String
+    public var seconds: Int64
+    /**
+     * The award's id when the block was scored.
+     */
+    public var awardId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(sessionId: String, 
+        /**
+         * "taskCompleted", "progressLogged" or "contributionLogged".
+         */outcome: String, seconds: Int64, 
+        /**
+         * The award's id when the block was scored.
+         */awardId: String?) {
+        self.sessionId = sessionId
+        self.outcome = outcome
+        self.seconds = seconds
+        self.awardId = awardId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BlockFinished: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBlockFinished: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BlockFinished {
+        return
+            try BlockFinished(
+                sessionId: FfiConverterString.read(from: &buf), 
+                outcome: FfiConverterString.read(from: &buf), 
+                seconds: FfiConverterInt64.read(from: &buf), 
+                awardId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BlockFinished, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.sessionId, into: &buf)
+        FfiConverterString.write(value.outcome, into: &buf)
+        FfiConverterInt64.write(value.seconds, into: &buf)
+        FfiConverterOptionString.write(value.awardId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBlockFinished_lift(_ buf: RustBuffer) throws -> BlockFinished {
+    return try FfiConverterTypeBlockFinished.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBlockFinished_lower(_ value: BlockFinished) -> RustBuffer {
+    return FfiConverterTypeBlockFinished.lower(value)
+}
+
+
+/**
  * One column of a board.
  */
 public struct BoardColumn: Equatable, Hashable {
@@ -1988,6 +2300,141 @@ public func FfiConverterTypeBoardColumn_lift(_ buf: RustBuffer) throws -> BoardC
 #endif
 public func FfiConverterTypeBoardColumn_lower(_ value: BoardColumn) -> RustBuffer {
     return FfiConverterTypeBoardColumn.lower(value)
+}
+
+
+/**
+ * An open task the next-up engine can choose. `NextUpCandidate`.
+ */
+public struct Candidate: Equatable, Hashable {
+    public var id: String
+    public var title: String
+    public var isDailyDueToday: Bool
+    public var dueAtMs: Int64?
+    public var startAtMs: Int64?
+    public var matrixUrgency: Int64?
+    public var matrixImportance: Int64?
+    public var priority: Int64?
+    public var estimateSeconds: Int64?
+    public var kanbanColumn: String?
+    public var focusRank: Int64?
+    public var sortOrder: Int64
+    public var createdAtMs: Int64
+    public var dueDate: String?
+    public var requirementGroups: [[String]]
+    public var loggedSeconds: Int64
+    public var minimumBlockSeconds: Int64?
+    public var requiresSingleSitting: Bool
+    public var dailyRemainingSeconds: Int64?
+    /**
+     * "dailyNotScheduled" or "dailyAlreadyMet" when its daily rules it out.
+     */
+    public var dailyUnavailable: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String, isDailyDueToday: Bool, dueAtMs: Int64?, startAtMs: Int64?, matrixUrgency: Int64?, matrixImportance: Int64?, priority: Int64?, estimateSeconds: Int64?, kanbanColumn: String?, focusRank: Int64?, sortOrder: Int64, createdAtMs: Int64, dueDate: String?, requirementGroups: [[String]], loggedSeconds: Int64, minimumBlockSeconds: Int64?, requiresSingleSitting: Bool, dailyRemainingSeconds: Int64?, 
+        /**
+         * "dailyNotScheduled" or "dailyAlreadyMet" when its daily rules it out.
+         */dailyUnavailable: String?) {
+        self.id = id
+        self.title = title
+        self.isDailyDueToday = isDailyDueToday
+        self.dueAtMs = dueAtMs
+        self.startAtMs = startAtMs
+        self.matrixUrgency = matrixUrgency
+        self.matrixImportance = matrixImportance
+        self.priority = priority
+        self.estimateSeconds = estimateSeconds
+        self.kanbanColumn = kanbanColumn
+        self.focusRank = focusRank
+        self.sortOrder = sortOrder
+        self.createdAtMs = createdAtMs
+        self.dueDate = dueDate
+        self.requirementGroups = requirementGroups
+        self.loggedSeconds = loggedSeconds
+        self.minimumBlockSeconds = minimumBlockSeconds
+        self.requiresSingleSitting = requiresSingleSitting
+        self.dailyRemainingSeconds = dailyRemainingSeconds
+        self.dailyUnavailable = dailyUnavailable
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension Candidate: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCandidate: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Candidate {
+        return
+            try Candidate(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                isDailyDueToday: FfiConverterBool.read(from: &buf), 
+                dueAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                startAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                matrixUrgency: FfiConverterOptionInt64.read(from: &buf), 
+                matrixImportance: FfiConverterOptionInt64.read(from: &buf), 
+                priority: FfiConverterOptionInt64.read(from: &buf), 
+                estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                kanbanColumn: FfiConverterOptionString.read(from: &buf), 
+                focusRank: FfiConverterOptionInt64.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                dueDate: FfiConverterOptionString.read(from: &buf), 
+                requirementGroups: FfiConverterSequenceSequenceString.read(from: &buf), 
+                loggedSeconds: FfiConverterInt64.read(from: &buf), 
+                minimumBlockSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                requiresSingleSitting: FfiConverterBool.read(from: &buf), 
+                dailyRemainingSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                dailyUnavailable: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Candidate, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterBool.write(value.isDailyDueToday, into: &buf)
+        FfiConverterOptionInt64.write(value.dueAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.startAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.matrixUrgency, into: &buf)
+        FfiConverterOptionInt64.write(value.matrixImportance, into: &buf)
+        FfiConverterOptionInt64.write(value.priority, into: &buf)
+        FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
+        FfiConverterOptionString.write(value.kanbanColumn, into: &buf)
+        FfiConverterOptionInt64.write(value.focusRank, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterOptionString.write(value.dueDate, into: &buf)
+        FfiConverterSequenceSequenceString.write(value.requirementGroups, into: &buf)
+        FfiConverterInt64.write(value.loggedSeconds, into: &buf)
+        FfiConverterOptionInt64.write(value.minimumBlockSeconds, into: &buf)
+        FfiConverterBool.write(value.requiresSingleSitting, into: &buf)
+        FfiConverterOptionInt64.write(value.dailyRemainingSeconds, into: &buf)
+        FfiConverterOptionString.write(value.dailyUnavailable, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCandidate_lift(_ buf: RustBuffer) throws -> Candidate {
+    return try FfiConverterTypeCandidate.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCandidate_lower(_ value: Candidate) -> RustBuffer {
+    return FfiConverterTypeCandidate.lower(value)
 }
 
 
@@ -2440,6 +2887,74 @@ public func FfiConverterTypeEditorSnapshot_lift(_ buf: RustBuffer) throws -> Edi
 #endif
 public func FfiConverterTypeEditorSnapshot_lower(_ value: EditorSnapshot) -> RustBuffer {
     return FfiConverterTypeEditorSnapshot.lower(value)
+}
+
+
+/**
+ * The circumstances a sitting is planned in: which conditions hold, when the
+ * time available ends, and whether the aim is progress or finishing.
+ */
+public struct FocusContext: Equatable, Hashable {
+    public var conditionIds: [String]
+    public var endsAtMs: Int64?
+    /**
+     * "progress" or "finish".
+     */
+    public var mode: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(conditionIds: [String], endsAtMs: Int64?, 
+        /**
+         * "progress" or "finish".
+         */mode: String) {
+        self.conditionIds = conditionIds
+        self.endsAtMs = endsAtMs
+        self.mode = mode
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FocusContext: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFocusContext: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FocusContext {
+        return
+            try FocusContext(
+                conditionIds: FfiConverterSequenceString.read(from: &buf), 
+                endsAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                mode: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FocusContext, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.conditionIds, into: &buf)
+        FfiConverterOptionInt64.write(value.endsAtMs, into: &buf)
+        FfiConverterString.write(value.mode, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFocusContext_lift(_ buf: RustBuffer) throws -> FocusContext {
+    return try FfiConverterTypeFocusContext.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFocusContext_lower(_ value: FocusContext) -> RustBuffer {
+    return FfiConverterTypeFocusContext.lower(value)
 }
 
 
@@ -3019,6 +3534,8 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case InvalidDate
     case EditorConflict
     case InvalidVisibleRoot
+    case NoActiveFocusTask
+    case Unavailable
     case InvalidTaskMove
 
     
@@ -3082,7 +3599,9 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 16: return .InvalidDate
         case 17: return .EditorConflict
         case 18: return .InvalidVisibleRoot
-        case 19: return .InvalidTaskMove
+        case 19: return .NoActiveFocusTask
+        case 20: return .Unavailable
+        case 21: return .InvalidTaskMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -3175,8 +3694,16 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(18))
         
         
-        case .InvalidTaskMove:
+        case .NoActiveFocusTask:
             writeInt(&buf, Int32(19))
+        
+        
+        case .Unavailable:
+            writeInt(&buf, Int32(20))
+        
+        
+        case .InvalidTaskMove:
+            writeInt(&buf, Int32(21))
         
         }
     }
@@ -3197,6 +3724,119 @@ public func FfiConverterTypeCoreError_lower(_ value: CoreError) -> RustBuffer {
     return FfiConverterTypeCoreError.lower(value)
 }
 
+
+/**
+ * Why a candidate cannot be worked on now. `TaskUnavailableReason`.
+ */
+
+public enum Unavailable: Equatable, Hashable {
+    
+    case startsLater(atMs: Int64
+    )
+    case missingConditions(groups: [[String]]
+    )
+    case insufficientTime(seconds: Int64
+    )
+    case needsEstimate
+    case expiredWindow
+    case dailyNotScheduled
+    case dailyAlreadyMet
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension Unavailable: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUnavailable: FfiConverterRustBuffer {
+    typealias SwiftType = Unavailable
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Unavailable {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .startsLater(atMs: try FfiConverterInt64.read(from: &buf)
+        )
+        
+        case 2: return .missingConditions(groups: try FfiConverterSequenceSequenceString.read(from: &buf)
+        )
+        
+        case 3: return .insufficientTime(seconds: try FfiConverterInt64.read(from: &buf)
+        )
+        
+        case 4: return .needsEstimate
+        
+        case 5: return .expiredWindow
+        
+        case 6: return .dailyNotScheduled
+        
+        case 7: return .dailyAlreadyMet
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: Unavailable, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .startsLater(atMs):
+            writeInt(&buf, Int32(1))
+            FfiConverterInt64.write(atMs, into: &buf)
+            
+        
+        case let .missingConditions(groups):
+            writeInt(&buf, Int32(2))
+            FfiConverterSequenceSequenceString.write(groups, into: &buf)
+            
+        
+        case let .insufficientTime(seconds):
+            writeInt(&buf, Int32(3))
+            FfiConverterInt64.write(seconds, into: &buf)
+            
+        
+        case .needsEstimate:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .expiredWindow:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .dailyNotScheduled:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .dailyAlreadyMet:
+            writeInt(&buf, Int32(7))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnavailable_lift(_ buf: RustBuffer) throws -> Unavailable {
+    return try FfiConverterTypeUnavailable.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnavailable_lower(_ value: Unavailable) -> RustBuffer {
+    return FfiConverterTypeUnavailable.lower(value)
+}
+
+
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -3216,6 +3856,30 @@ fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionDouble: FfiConverterRustBuffer {
+    typealias SwiftType = Double?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterDouble.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterDouble.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -3264,6 +3928,30 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeFocusContext: FfiConverterRustBuffer {
+    typealias SwiftType = FocusContext?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFocusContext.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFocusContext.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -3530,6 +4218,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() != 31877) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants() != 40638) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3537,6 +4228,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_arrange_day() != 44382) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() != 13264) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_clear_contribution() != 5187) {
@@ -3570,6 +4264,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() != 20106) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_finish_focus_block() != 58580) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session() != 58295) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_has_resumable_focus_queue_task() != 48787) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_history_target() != 25210) {
@@ -3617,6 +4320,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_outdent_task() != 3744) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session() != 59685) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_pin_task() != 37334) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3626,10 +4332,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_place_list() != 14409) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_rebase_focus_clock() != 28872) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_reconcile_habits() != 20214) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups() != 63977) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus() != 45527) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_redo() != 49682) {
@@ -3642,6 +4354,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_rename_list() != 3217) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_resume_eligible_focus_queue() != 26062) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_resume_focus_session() != 21689) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_condition() != 40969) {
@@ -3693,6 +4411,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_waiting() != 1116) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() != 4001) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {

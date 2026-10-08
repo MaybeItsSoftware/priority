@@ -42,6 +42,10 @@ pub enum CoreError {
     EditorConflict,
     #[error("That task cannot be the list's visible root.")]
     InvalidVisibleRoot,
+    #[error("There is no task in focus to finish.")]
+    NoActiveFocusTask,
+    #[error("That task is not available to focus on now.")]
+    Unavailable,
     #[error("A task cannot be moved into itself or one of its subtasks.")]
     InvalidTaskMove,
 }

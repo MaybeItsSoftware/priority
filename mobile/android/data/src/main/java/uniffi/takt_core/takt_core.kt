@@ -681,11 +681,15 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_archive_daily(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_arrange_day(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_clear_contribution(
     ): Int
@@ -708,6 +712,12 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_finish_focus_block(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_has_resumable_focus_queue_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
     ): Int
@@ -739,15 +749,21 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_outdent_task(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_pin_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_list(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_rebase_focus_clock(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_reconcile_habits(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redo(
     ): Int
@@ -756,6 +772,10 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_resume_eligible_focus_queue(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_resume_focus_session(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_condition(
     ): Int
@@ -790,6 +810,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_status(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_waiting(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_start_focus_session(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
     ): Int
@@ -835,11 +857,15 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_apply_planning_to_descendants(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_archive_daily(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_arrange_day(`ptr`: Long,`orderedTaskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_checkpoint_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_clear_contribution(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -863,6 +889,12 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_finish_focus_block(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`elapsedSeconds`: Long,`qualityMultiplier`: RustBuffer.ByValue,`completeTask`: Byte,`expectedBlockId`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_finish_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_has_resumable_focus_queue_task(`ptr`: Long,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_indent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -893,16 +925,22 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_outdent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_pause_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_pin_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,`index`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_list(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_rebase_focus_clock(`ptr`: Long,`id`: RustBuffer.ByValue,`elapsedSeconds`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_reconcile_habits(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_reconcile_waiting_follow_ups(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_recover_interrupted_focus(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_redo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_redoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -910,6 +948,10 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_resume_eligible_focus_queue(`ptr`: Long,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_resume_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_save_condition(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`isArchived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -945,6 +987,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_waiting(`ptr`: Long,`taskId`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`followUpAtMs`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_start_focus_session(`ptr`: Long,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`workSeconds`: Long,`breakSeconds`: Long,`context`: RustBuffer.ByValue,`overrideAvailability`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undo_history(`ptr`: Long,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
@@ -1095,6 +1139,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() and 0xFFFF) != 31877) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants() and 0xFFFF) != 40638) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1102,6 +1149,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_arrange_day() and 0xFFFF) != 44382) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() and 0xFFFF) != 13264) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_clear_contribution() and 0xFFFF) != 5187) {
@@ -1135,6 +1185,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() and 0xFFFF) != 20106) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_finish_focus_block() and 0xFFFF) != 58580) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session() and 0xFFFF) != 58295) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_has_resumable_focus_queue_task() and 0xFFFF) != 48787) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_history_target() and 0xFFFF) != 25210) {
@@ -1182,6 +1241,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_outdent_task() and 0xFFFF) != 3744) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session() and 0xFFFF) != 59685) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_pin_task() and 0xFFFF) != 37334) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1191,10 +1253,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_list() and 0xFFFF) != 14409) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rebase_focus_clock() and 0xFFFF) != 28872) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_reconcile_habits() and 0xFFFF) != 20214) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups() and 0xFFFF) != 63977) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus() and 0xFFFF) != 45527) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redo() and 0xFFFF) != 49682) {
@@ -1207,6 +1275,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_list() and 0xFFFF) != 3217) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_resume_eligible_focus_queue() and 0xFFFF) != 26062) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_resume_focus_session() and 0xFFFF) != 21689) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_condition() and 0xFFFF) != 40969) {
@@ -1258,6 +1332,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_waiting() and 0xFFFF) != 1116) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() and 0xFFFF) != 4001) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
@@ -1516,6 +1593,29 @@ public object FfiConverterLong: FfiConverter<Long, Long> {
 /**
  * @suppress
  */
+public object FfiConverterDouble: FfiConverter<Double, Double> {
+    override fun lift(value: Double): Double {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Double {
+        return buf.getDouble()
+    }
+
+    override fun lower(value: Double): Double {
+        return value
+    }
+
+    override fun allocationSize(value: Double) = 8UL
+
+    override fun write(value: Double, buf: ByteBuffer) {
+        buf.putDouble(value)
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
     override fun lift(value: Byte): Boolean {
         return value.toInt() != 0
@@ -1695,6 +1795,11 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Queues a task in a focus session.
+     */
+    fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
+    
+    /**
      * Copies a task's planning onto its subtasks as one step.
      */
     fun `applyPlanningToDescendants`(`taskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
@@ -1708,6 +1813,11 @@ public interface CoreWorkspaceInterface {
      * Ranks tasks in Today's focus order as one "Reorder Today" step.
      */
     fun `arrangeDay`(`orderedTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
+    
+    /**
+     * Banks a running block's time.
+     */
+    fun `checkpointFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
      * Un-ticks a day of a daily as one "Clear Daily" step.
@@ -1763,6 +1873,22 @@ public interface CoreWorkspaceInterface {
      * A task's editable state, as the editor opens it.
      */
     fun `editorSnapshot`(`taskId`: kotlin.String): EditorSnapshot
+    
+    /**
+     * Finishes the block in hand as one step: "Complete Task", or "Log Daily
+     * Progress" when the task stays open.
+     */
+    fun `finishFocusBlock`(`sessionId`: kotlin.String, `elapsedSeconds`: kotlin.Long, `qualityMultiplier`: kotlin.Double?, `completeTask`: kotlin.Boolean, `expectedBlockId`: kotlin.String?, `context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): BlockFinished
+    
+    /**
+     * Ends a focus session.
+     */
+    fun `finishFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Whether a session waiting on a blocked queue can resume in `context`.
+     */
+    fun `hasResumableFocusQueueTask`(`context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean
     
     /**
      * The task and list the next undo (`for_undo`) or redo affects.
@@ -1842,6 +1968,11 @@ public interface CoreWorkspaceInterface {
     fun `outdentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * Pauses a running block.
+     */
+    fun `pauseFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
      * Pins a task in the focus order as one "Pin Task" step.
      */
     fun `pinTask`(`taskId`: kotlin.String, `index`: kotlin.Long, `nowMs`: kotlin.Long)
@@ -1857,6 +1988,11 @@ public interface CoreWorkspaceInterface {
     fun `placeList`(`id`: kotlin.String, `beforeId`: kotlin.String?, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
     
     /**
+     * Resets a running block's clock after the system clock jumped.
+     */
+    fun `rebaseFocusClock`(`id`: kotlin.String, `elapsedSeconds`: kotlin.Long, `nowMs`: kotlin.Long)
+    
+    /**
      * Applies every placed habit's options for `now`, outside the undo
      * journal; returns whether anything changed.
      */
@@ -1867,6 +2003,11 @@ public interface CoreWorkspaceInterface {
      * returns whether it made any.
      */
     fun `reconcileWaitingFollowUps`(`nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
+     * Pauses every running session at its last checkpoint, on reopening.
+     */
+    fun `recoverInterruptedFocus`()
     
     /**
      * Puts back the most recently undone step.
@@ -1887,6 +2028,16 @@ public interface CoreWorkspaceInterface {
      * Renames a list as one "Rename List" step.
      */
     fun `renameList`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Resumes a session waiting on a blocked queue; whether it did.
+     */
+    fun `resumeEligibleFocusQueue`(`context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean
+    
+    /**
+     * Resumes a paused block.
+     */
+    fun `resumeFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
      * Saves a condition as one "Edit Condition" step.
@@ -1975,6 +2126,11 @@ public interface CoreWorkspaceInterface {
      * Sets what a task waits on and when to chase it, as one "Waiting On" step.
      */
     fun `setWaiting`(`taskId`: kotlin.String, `waitingOn`: kotlin.String?, `followUpAtMs`: kotlin.Long?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Starts a focus session on a task, or returns the one running.
+     */
+    fun `startFocusSession`(`taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `workSeconds`: kotlin.Long, `breakSeconds`: kotlin.Long, `context`: FocusContext?, `overrideAvailability`: kotlin.Boolean, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -2126,6 +2282,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Queues a task in a focus session.
+     */
+    @Throws(CoreException::class)override fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterString.lower(`taskId`),
+        FfiConverterOptionalLong.lower(`plannedSeconds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Copies a task's planning onto its subtasks as one step.
      */
     @Throws(CoreException::class)override fun `applyPlanningToDescendants`(`taskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
@@ -2173,6 +2349,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterSequenceString.lower(`orderedTaskIds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Banks a running block's time.
+     */
+    @Throws(CoreException::class)override fun `checkpointFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_checkpoint_focus_session(
+        it,
+        
+        FfiConverterString.lower(`id`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -2381,6 +2575,70 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Finishes the block in hand as one step: "Complete Task", or "Log Daily
+     * Progress" when the task stays open.
+     */
+    @Throws(CoreException::class)override fun `finishFocusBlock`(`sessionId`: kotlin.String, `elapsedSeconds`: kotlin.Long, `qualityMultiplier`: kotlin.Double?, `completeTask`: kotlin.Boolean, `expectedBlockId`: kotlin.String?, `context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): BlockFinished {
+            return FfiConverterTypeBlockFinished.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_finish_focus_block(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterLong.lower(`elapsedSeconds`),
+        FfiConverterOptionalDouble.lower(`qualityMultiplier`),
+        FfiConverterBoolean.lower(`completeTask`),
+        FfiConverterOptionalString.lower(`expectedBlockId`),
+        FfiConverterTypeFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Ends a focus session.
+     */
+    @Throws(CoreException::class)override fun `finishFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_finish_focus_session(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Whether a session waiting on a blocked queue can resume in `context`.
+     */
+    @Throws(CoreException::class)override fun `hasResumableFocusQueueTask`(`context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_has_resumable_focus_queue_task(
+        it,
+        
+        FfiConverterTypeFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     }
     )
@@ -2684,6 +2942,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Pauses a running block.
+     */
+    @Throws(CoreException::class)override fun `pauseFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_pause_focus_session(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Pins a task in the focus order as one "Pin Task" step.
      */
     @Throws(CoreException::class)override fun `pinTask`(`taskId`: kotlin.String, `index`: kotlin.Long, `nowMs`: kotlin.Long)
@@ -2743,6 +3019,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Resets a running block's clock after the system clock jumped.
+     */
+    @Throws(CoreException::class)override fun `rebaseFocusClock`(`id`: kotlin.String, `elapsedSeconds`: kotlin.Long, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_rebase_focus_clock(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`elapsedSeconds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Applies every placed habit's options for `now`, outside the undo
      * journal; returns whether anything changed.
      */
@@ -2778,6 +3073,22 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Pauses every running session at its last checkpoint, on reopening.
+     */
+    @Throws(CoreException::class)override fun `recoverInterruptedFocus`()
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_recover_interrupted_focus(
+        it,
+        _status)
+}
+    }
+    
     
 
     
@@ -2846,6 +3157,44 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterString.lower(`id`),
         FfiConverterString.lower(`name`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Resumes a session waiting on a blocked queue; whether it did.
+     */
+    @Throws(CoreException::class)override fun `resumeEligibleFocusQueue`(`context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_resume_eligible_focus_queue(
+        it,
+        
+        FfiConverterTypeFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Resumes a paused block.
+     */
+    @Throws(CoreException::class)override fun `resumeFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_resume_focus_session(
+        it,
+        
+        FfiConverterString.lower(`id`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -3194,6 +3543,31 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Starts a focus session on a task, or returns the one running.
+     */
+    @Throws(CoreException::class)override fun `startFocusSession`(`taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `workSeconds`: kotlin.Long, `breakSeconds`: kotlin.Long, `context`: FocusContext?, `overrideAvailability`: kotlin.Boolean, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_start_focus_session(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterOptionalLong.lower(`plannedSeconds`),
+        FfiConverterLong.lower(`workSeconds`),
+        FfiConverterLong.lower(`breakSeconds`),
+        FfiConverterOptionalTypeFocusContext.lower(`context`),
+        FfiConverterBoolean.lower(`overrideAvailability`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -3400,6 +3774,63 @@ public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
 
 
 /**
+ * What finishing a block did. `WorkspaceStore.FocusCompletion`.
+ */
+data class BlockFinished (
+    var `sessionId`: kotlin.String
+    , 
+    /**
+     * "taskCompleted", "progressLogged" or "contributionLogged".
+     */
+    var `outcome`: kotlin.String
+    , 
+    var `seconds`: kotlin.Long
+    , 
+    /**
+     * The award's id when the block was scored.
+     */
+    var `awardId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBlockFinished: FfiConverterRustBuffer<BlockFinished> {
+    override fun read(buf: ByteBuffer): BlockFinished {
+        return BlockFinished(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BlockFinished) = (
+            FfiConverterString.allocationSize(value.`sessionId`) +
+            FfiConverterString.allocationSize(value.`outcome`) +
+            FfiConverterLong.allocationSize(value.`seconds`) +
+            FfiConverterOptionalString.allocationSize(value.`awardId`)
+    )
+
+    override fun write(value: BlockFinished, buf: ByteBuffer) {
+            FfiConverterString.write(value.`sessionId`, buf)
+            FfiConverterString.write(value.`outcome`, buf)
+            FfiConverterLong.write(value.`seconds`, buf)
+            FfiConverterOptionalString.write(value.`awardId`, buf)
+    }
+}
+
+
+
+/**
  * One column of a board.
  */
 data class BoardColumn (
@@ -3435,6 +3866,140 @@ public object FfiConverterTypeBoardColumn: FfiConverterRustBuffer<BoardColumn> {
     override fun write(value: BoardColumn, buf: ByteBuffer) {
             FfiConverterString.write(value.`id`, buf)
             FfiConverterString.write(value.`title`, buf)
+    }
+}
+
+
+
+/**
+ * An open task the next-up engine can choose. `NextUpCandidate`.
+ */
+data class Candidate (
+    var `id`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `isDailyDueToday`: kotlin.Boolean
+    , 
+    var `dueAtMs`: kotlin.Long?
+    , 
+    var `startAtMs`: kotlin.Long?
+    , 
+    var `matrixUrgency`: kotlin.Long?
+    , 
+    var `matrixImportance`: kotlin.Long?
+    , 
+    var `priority`: kotlin.Long?
+    , 
+    var `estimateSeconds`: kotlin.Long?
+    , 
+    var `kanbanColumn`: kotlin.String?
+    , 
+    var `focusRank`: kotlin.Long?
+    , 
+    var `sortOrder`: kotlin.Long
+    , 
+    var `createdAtMs`: kotlin.Long
+    , 
+    var `dueDate`: kotlin.String?
+    , 
+    var `requirementGroups`: List<List<kotlin.String>>
+    , 
+    var `loggedSeconds`: kotlin.Long
+    , 
+    var `minimumBlockSeconds`: kotlin.Long?
+    , 
+    var `requiresSingleSitting`: kotlin.Boolean
+    , 
+    var `dailyRemainingSeconds`: kotlin.Long?
+    , 
+    /**
+     * "dailyNotScheduled" or "dailyAlreadyMet" when its daily rules it out.
+     */
+    var `dailyUnavailable`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCandidate: FfiConverterRustBuffer<Candidate> {
+    override fun read(buf: ByteBuffer): Candidate {
+        return Candidate(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceSequenceString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Candidate) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterBoolean.allocationSize(value.`isDailyDueToday`) +
+            FfiConverterOptionalLong.allocationSize(value.`dueAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`startAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`matrixUrgency`) +
+            FfiConverterOptionalLong.allocationSize(value.`matrixImportance`) +
+            FfiConverterOptionalLong.allocationSize(value.`priority`) +
+            FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
+            FfiConverterOptionalString.allocationSize(value.`kanbanColumn`) +
+            FfiConverterOptionalLong.allocationSize(value.`focusRank`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`dueDate`) +
+            FfiConverterSequenceSequenceString.allocationSize(value.`requirementGroups`) +
+            FfiConverterLong.allocationSize(value.`loggedSeconds`) +
+            FfiConverterOptionalLong.allocationSize(value.`minimumBlockSeconds`) +
+            FfiConverterBoolean.allocationSize(value.`requiresSingleSitting`) +
+            FfiConverterOptionalLong.allocationSize(value.`dailyRemainingSeconds`) +
+            FfiConverterOptionalString.allocationSize(value.`dailyUnavailable`)
+    )
+
+    override fun write(value: Candidate, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterBoolean.write(value.`isDailyDueToday`, buf)
+            FfiConverterOptionalLong.write(value.`dueAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`startAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`matrixUrgency`, buf)
+            FfiConverterOptionalLong.write(value.`matrixImportance`, buf)
+            FfiConverterOptionalLong.write(value.`priority`, buf)
+            FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
+            FfiConverterOptionalString.write(value.`kanbanColumn`, buf)
+            FfiConverterOptionalLong.write(value.`focusRank`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterOptionalString.write(value.`dueDate`, buf)
+            FfiConverterSequenceSequenceString.write(value.`requirementGroups`, buf)
+            FfiConverterLong.write(value.`loggedSeconds`, buf)
+            FfiConverterOptionalLong.write(value.`minimumBlockSeconds`, buf)
+            FfiConverterBoolean.write(value.`requiresSingleSitting`, buf)
+            FfiConverterOptionalLong.write(value.`dailyRemainingSeconds`, buf)
+            FfiConverterOptionalString.write(value.`dailyUnavailable`, buf)
     }
 }
 
@@ -3782,6 +4347,56 @@ public object FfiConverterTypeEditorSnapshot: FfiConverterRustBuffer<EditorSnaps
             FfiConverterTypeEditorMetadata.write(value.`metadata`, buf)
             FfiConverterBoolean.write(value.`dailyProgress`, buf)
             FfiConverterOptionalTypePlanning.write(value.`planning`, buf)
+    }
+}
+
+
+
+/**
+ * The circumstances a sitting is planned in: which conditions hold, when the
+ * time available ends, and whether the aim is progress or finishing.
+ */
+data class FocusContext (
+    var `conditionIds`: List<kotlin.String>
+    , 
+    var `endsAtMs`: kotlin.Long?
+    , 
+    /**
+     * "progress" or "finish".
+     */
+    var `mode`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFocusContext: FfiConverterRustBuffer<FocusContext> {
+    override fun read(buf: ByteBuffer): FocusContext {
+        return FocusContext(
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FocusContext) = (
+            FfiConverterSequenceString.allocationSize(value.`conditionIds`) +
+            FfiConverterOptionalLong.allocationSize(value.`endsAtMs`) +
+            FfiConverterString.allocationSize(value.`mode`)
+    )
+
+    override fun write(value: FocusContext, buf: ByteBuffer) {
+            FfiConverterSequenceString.write(value.`conditionIds`, buf)
+            FfiConverterOptionalLong.write(value.`endsAtMs`, buf)
+            FfiConverterString.write(value.`mode`, buf)
     }
 }
 
@@ -4355,6 +4970,18 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class NoActiveFocusTask(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
+    class Unavailable(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
     class InvalidTaskMove(
         ) : CoreException() {
         override val message
@@ -4413,7 +5040,9 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             16 -> CoreException.InvalidDate()
             17 -> CoreException.EditorConflict()
             18 -> CoreException.InvalidVisibleRoot()
-            19 -> CoreException.InvalidTaskMove()
+            19 -> CoreException.NoActiveFocusTask()
+            20 -> CoreException.Unavailable()
+            21 -> CoreException.InvalidTaskMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -4497,6 +5126,14 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
             )
             is CoreException.InvalidVisibleRoot -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.NoActiveFocusTask -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.Unavailable -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
@@ -4589,14 +5226,188 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 buf.putInt(18)
                 Unit
             }
-            is CoreException.InvalidTaskMove -> {
+            is CoreException.NoActiveFocusTask -> {
                 buf.putInt(19)
+                Unit
+            }
+            is CoreException.Unavailable -> {
+                buf.putInt(20)
+                Unit
+            }
+            is CoreException.InvalidTaskMove -> {
+                buf.putInt(21)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 
 }
+
+
+
+/**
+ * Why a candidate cannot be worked on now. `TaskUnavailableReason`.
+ */
+sealed class Unavailable {
+    
+    data class StartsLater(
+        val `atMs`: kotlin.Long) : Unavailable()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class MissingConditions(
+        val `groups`: List<List<kotlin.String>>) : Unavailable()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class InsufficientTime(
+        val `seconds`: kotlin.Long) : Unavailable()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object NeedsEstimate : Unavailable()
+    
+    
+    object ExpiredWindow : Unavailable()
+    
+    
+    object DailyNotScheduled : Unavailable()
+    
+    
+    object DailyAlreadyMet : Unavailable()
+    
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeUnavailable : FfiConverterRustBuffer<Unavailable>{
+    override fun read(buf: ByteBuffer): Unavailable {
+        return when(buf.getInt()) {
+            1 -> Unavailable.StartsLater(
+                FfiConverterLong.read(buf),
+                )
+            2 -> Unavailable.MissingConditions(
+                FfiConverterSequenceSequenceString.read(buf),
+                )
+            3 -> Unavailable.InsufficientTime(
+                FfiConverterLong.read(buf),
+                )
+            4 -> Unavailable.NeedsEstimate
+            5 -> Unavailable.ExpiredWindow
+            6 -> Unavailable.DailyNotScheduled
+            7 -> Unavailable.DailyAlreadyMet
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: Unavailable): ULong = when(value) {
+        is Unavailable.StartsLater -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterLong.allocationSize(value.`atMs`)
+            )
+        }
+        is Unavailable.MissingConditions -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceSequenceString.allocationSize(value.`groups`)
+            )
+        }
+        is Unavailable.InsufficientTime -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterLong.allocationSize(value.`seconds`)
+            )
+        }
+        is Unavailable.NeedsEstimate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is Unavailable.ExpiredWindow -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is Unavailable.DailyNotScheduled -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is Unavailable.DailyAlreadyMet -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: Unavailable, buf: ByteBuffer) {
+        when(value) {
+            is Unavailable.StartsLater -> {
+                buf.putInt(1)
+                FfiConverterLong.write(value.`atMs`, buf)
+                Unit
+            }
+            is Unavailable.MissingConditions -> {
+                buf.putInt(2)
+                FfiConverterSequenceSequenceString.write(value.`groups`, buf)
+                Unit
+            }
+            is Unavailable.InsufficientTime -> {
+                buf.putInt(3)
+                FfiConverterLong.write(value.`seconds`, buf)
+                Unit
+            }
+            is Unavailable.NeedsEstimate -> {
+                buf.putInt(4)
+                Unit
+            }
+            is Unavailable.ExpiredWindow -> {
+                buf.putInt(5)
+                Unit
+            }
+            is Unavailable.DailyNotScheduled -> {
+                buf.putInt(6)
+                Unit
+            }
+            is Unavailable.DailyAlreadyMet -> {
+                buf.putInt(7)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
 
 
 
@@ -4626,6 +5437,38 @@ public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
         } else {
             buf.put(1)
             FfiConverterLong.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalDouble: FfiConverterRustBuffer<kotlin.Double?> {
+    override fun read(buf: ByteBuffer): kotlin.Double? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterDouble.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Double?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterDouble.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Double?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterDouble.write(value, buf)
         }
     }
 }
@@ -4690,6 +5533,38 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
         } else {
             buf.put(1)
             FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFocusContext: FfiConverterRustBuffer<FocusContext?> {
+    override fun read(buf: ByteBuffer): FocusContext? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFocusContext.read(buf)
+    }
+
+    override fun allocationSize(value: FocusContext?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFocusContext.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FocusContext?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFocusContext.write(value, buf)
         }
     }
 }

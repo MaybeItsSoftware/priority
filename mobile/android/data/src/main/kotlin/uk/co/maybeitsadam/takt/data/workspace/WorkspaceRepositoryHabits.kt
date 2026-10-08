@@ -141,23 +141,6 @@ internal fun habitShows(db: Db, daily: WorkspaceDaily, day: Instant, zone: ZoneI
 internal fun dailyShows(db: Db, daily: WorkspaceDaily, day: Instant, zone: ZoneId): Boolean =
     if (daily.isHabit) habitShows(db, daily, day, zone) else daily.isDue(day, zone)
 
-/**
- * Ends every habit made from [sourceTaskId] that ends with it. Called from
- * each place a task is closed, inside that write, so undoing the completion
- * brings the habits back with it.
- */
-internal fun expireHabits(db: Db, sourceTaskId: String, now: Instant) {
-    val habits = db.query(
-        "SELECT * FROM dailies WHERE sourceTaskId = ? AND archivedAt IS NULL AND expiryRule = ?",
-        sourceTaskId, HabitExpiry.WhenSourceCompleted.rule,
-    ) { it.toDaily() }
-    for (habit in habits) {
-        db.update(habit.copy(archivedAt = now, updatedAt = now))
-        val column = habit.placementColumn
-        if (column != null && kanbanColumn(db, habit.taskId) == column) writeKanbanColumn(db, habit.taskId, null, now)
-    }
-}
-
 /** A source that is closed or gone has ended. */
 private fun isSourceCompleted(db: Db, daily: WorkspaceDaily): Boolean {
     val sourceId = daily.sourceTaskId ?: return false

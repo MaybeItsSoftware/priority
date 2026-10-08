@@ -528,6 +528,8 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .invalidDate: throw TaskPlanningError.invalidDate
       case .editorConflict: throw TaskEditorError.conflictingChanges
       case .invalidVisibleRoot: throw TaskEditorError.invalidVisibleRoot
+      case .noActiveFocusTask: throw WorkspaceStoreError.noActiveFocusTask
+      case .unavailable: throw TaskPlanningError.unavailable
       case .invalidTaskMove: throw WorkspaceStoreError.invalidTaskMove
       case .noJournal, .other, nil: throw error
       }

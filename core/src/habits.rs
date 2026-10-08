@@ -319,6 +319,61 @@ pub fn reconcile_habits(
     Ok(changed)
 }
 
+/// Whether a habit is showing on the local day `now_ms` falls on: scheduled,
+/// or carried from a missed day it does not drop. `WorkspaceStore.habitShows`.
+pub(crate) fn habit_shows(
+    connection: &rusqlite::Connection,
+    daily_id: &str,
+    now_ms: i64,
+    zone: Tz,
+) -> Result<bool, CoreError> {
+    let Some(StoredRule {
+        rule,
+        source_task_id,
+        ..
+    }) = stored_rule(connection, daily_id, zone)?
+    else {
+        return Ok(false);
+    };
+    let source_completed = source_is_completed(connection, source_task_id.as_deref())?;
+    let today = local_day(now_ms, zone);
+    if is_expired(&rule, today, source_completed) {
+        return Ok(false);
+    }
+    if is_scheduled(&rule, today) {
+        return Ok(true);
+    }
+    let last_done = last_done_day(connection, daily_id)?;
+    Ok(appearance(&rule, today, last_done, source_completed).is_some())
+}
+
+fn source_is_completed(
+    connection: &rusqlite::Connection,
+    source: Option<&str>,
+) -> Result<bool, CoreError> {
+    Ok(match source {
+        None => false,
+        Some(source) => connection
+            .query_row("SELECT status FROM tasks WHERE id = ?1", [source], |row| {
+                row.get::<_, String>(0)
+            })
+            .optional()?
+            .is_none_or(|status| status != "open"),
+    })
+}
+
+fn last_done_day(
+    connection: &rusqlite::Connection,
+    daily_id: &str,
+) -> Result<Option<NaiveDate>, CoreError> {
+    let key: Option<String> = connection.query_row(
+        "SELECT MAX(dayKey) FROM daily_contributions WHERE dailyId = ?1 AND completedAt IS NOT NULL",
+        [daily_id],
+        |row| row.get(0),
+    )?;
+    Ok(key.and_then(|key| NaiveDate::parse_from_str(&key, "%Y-%m-%d").ok()))
+}
+
 /// One habit's pass. `WorkspaceStore.reconcileHabit`.
 fn reconcile_habit(
     transaction: &Transaction,
@@ -344,15 +399,7 @@ fn reconcile_habit(
     if open.as_deref() != Some("open") {
         return Ok(false);
     }
-    let source_completed = match &source_task_id {
-        None => false,
-        Some(source) => transaction
-            .query_row("SELECT status FROM tasks WHERE id = ?1", [source], |row| {
-                row.get::<_, String>(0)
-            })
-            .optional()?
-            .is_none_or(|status| status != "open"),
-    };
+    let source_completed = source_is_completed(transaction, source_task_id.as_deref())?;
     let today = local_day(now_ms, zone);
     let current = kanban_column(transaction, &task_id)?;
     if is_expired(&rule, today, source_completed) {
@@ -365,12 +412,7 @@ fn reconcile_habit(
         }
         return Ok(true);
     }
-    let last_done: Option<String> = transaction.query_row(
-        "SELECT MAX(dayKey) FROM daily_contributions WHERE dailyId = ?1 AND completedAt IS NOT NULL",
-        [daily_id],
-        |row| row.get(0),
-    )?;
-    let last_done = last_done.and_then(|key| NaiveDate::parse_from_str(&key, "%Y-%m-%d").ok());
+    let last_done = last_done_day(transaction, daily_id)?;
     let showing = appearance(&rule, today, last_done, source_completed);
     match reconciled_column(current.as_deref(), showing.as_ref(), &rule.placement) {
         Some(target) => {
@@ -389,7 +431,7 @@ struct StoredRule {
 
 /// A placed, unarchived habit's rule as stored; `None` for anything else.
 fn stored_rule(
-    transaction: &Transaction,
+    transaction: &rusqlite::Connection,
     daily_id: &str,
     zone: Tz,
 ) -> Result<Option<StoredRule>, CoreError> {
@@ -550,7 +592,7 @@ fn write_column(
 }
 
 /// The local calendar day a moment falls on in `zone`.
-fn local_day(ms: i64, zone: Tz) -> NaiveDate {
+pub(crate) fn local_day(ms: i64, zone: Tz) -> NaiveDate {
     DateTime::<Utc>::from_timestamp_millis(ms)
         .unwrap_or_default()
         .with_timezone(&zone)

@@ -16,6 +16,7 @@ use crate::conditions;
 use crate::conversions::{self, BoardColumn};
 use crate::dailies::{self, DailyEdit};
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
+use crate::focus::{self, BlockFinished, FocusContext};
 use crate::habits::{self, HabitDraft};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
@@ -703,6 +704,136 @@ impl CoreWorkspace {
         Ok(changed)
     }
 
+    /// Starts a focus session on a task, or returns the one running.
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_focus_session(
+        &self,
+        task_id: String,
+        planned_seconds: Option<i64>,
+        work_seconds: i64,
+        break_seconds: i64,
+        context: Option<FocusContext>,
+        override_availability: bool,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<String, CoreError> {
+        self.unjournalled(|tx| {
+            focus::start_session(
+                tx,
+                &task_id,
+                planned_seconds,
+                work_seconds,
+                break_seconds,
+                context.as_ref(),
+                override_availability,
+                now_ms,
+                &zone,
+            )
+        })
+    }
+
+    /// Queues a task in a focus session.
+    pub fn add_to_focus_queue(
+        &self,
+        session_id: String,
+        task_id: String,
+        planned_seconds: Option<i64>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        self.unjournalled(|tx| {
+            focus::add_to_queue(tx, &session_id, &task_id, planned_seconds, now_ms)
+        })
+    }
+
+    /// Finishes the block in hand as one step: "Complete Task", or "Log Daily
+    /// Progress" when the task stays open.
+    #[allow(clippy::too_many_arguments)]
+    pub fn finish_focus_block(
+        &self,
+        session_id: String,
+        elapsed_seconds: i64,
+        quality_multiplier: Option<f64>,
+        complete_task: bool,
+        expected_block_id: Option<String>,
+        context: FocusContext,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<BlockFinished, CoreError> {
+        let label = if complete_task {
+            "Complete Task"
+        } else {
+            "Log Daily Progress"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            focus::finish_block(
+                tx,
+                &session_id,
+                elapsed_seconds,
+                quality_multiplier,
+                complete_task,
+                expected_block_id.as_deref(),
+                &context,
+                now_ms,
+                &zone,
+            )
+        })
+    }
+
+    /// Ends a focus session.
+    pub fn finish_focus_session(&self, id: String, now_ms: i64) -> Result<(), CoreError> {
+        self.unjournalled(|tx| focus::finish_session(tx, &id, now_ms))
+    }
+
+    /// Pauses a running block.
+    pub fn pause_focus_session(&self, id: String, now_ms: i64) -> Result<(), CoreError> {
+        self.unjournalled(|tx| focus::pause(tx, &id, now_ms))
+    }
+
+    /// Resumes a paused block.
+    pub fn resume_focus_session(&self, id: String, now_ms: i64) -> Result<(), CoreError> {
+        self.unjournalled(|tx| focus::resume(tx, &id, now_ms))
+    }
+
+    /// Banks a running block's time.
+    pub fn checkpoint_focus_session(&self, id: String, now_ms: i64) -> Result<(), CoreError> {
+        self.unjournalled(|tx| focus::checkpoint(tx, &id, now_ms))
+    }
+
+    /// Resets a running block's clock after the system clock jumped.
+    pub fn rebase_focus_clock(
+        &self,
+        id: String,
+        elapsed_seconds: i64,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        self.unjournalled(|tx| focus::rebase(tx, &id, elapsed_seconds, now_ms))
+    }
+
+    /// Pauses every running session at its last checkpoint, on reopening.
+    pub fn recover_interrupted_focus(&self) -> Result<(), CoreError> {
+        self.unjournalled(focus::recover_interrupted)
+    }
+
+    /// Whether a session waiting on a blocked queue can resume in `context`.
+    pub fn has_resumable_focus_queue_task(
+        &self,
+        context: FocusContext,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<bool, CoreError> {
+        focus::has_resumable(&self.lock(), &context, now_ms, &zone)
+    }
+
+    /// Resumes a session waiting on a blocked queue; whether it did.
+    pub fn resume_eligible_focus_queue(
+        &self,
+        context: FocusContext,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<bool, CoreError> {
+        self.unjournalled(|tx| focus::resume_eligible_queue(tx, &context, now_ms, &zone))
+    }
+
     /// Ranks tasks in Today's focus order as one "Reorder Today" step.
     pub fn arrange_day(&self, ordered_task_ids: Vec<String>, now_ms: i64) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Reorder Today", |tx| {
@@ -779,6 +910,20 @@ impl CoreWorkspace {
 }
 
 impl CoreWorkspace {
+    /// Runs a write outside the undo journal, in its own immediate
+    /// transaction: the focus clock, and passes nobody asked for.
+    fn unjournalled<T>(
+        &self,
+        work: impl FnOnce(&rusqlite::Transaction) -> Result<T, CoreError>,
+    ) -> Result<T, CoreError> {
+        let mut connection = self.lock();
+        let transaction =
+            connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let result = work(&transaction)?;
+        transaction.commit()?;
+        Ok(result)
+    }
+
     /// A poisoned lock only means another call panicked mid-way; SQLite rolled
     /// its transaction back, so the connection is still sound to use.
     fn lock(&self) -> MutexGuard<'_, Connection> {

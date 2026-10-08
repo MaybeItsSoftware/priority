@@ -85,77 +85,38 @@ extension WorkspaceStore {
   }
 
   public func pauseFocusSession(id: String, now: Date = .now) throws {
-    try database.write { db in
-      guard var session = try FocusSession.fetchOne(db, key: id), session.phase == .running,
-        session.pausedAt == nil else { return }
-      session.accumulatedSeconds = session.elapsedSeconds(now: now)
-      session.pausedAt = now; session.checkpointAt = now
-      try session.update(db)
-    }
+    try coreWrite { try core.pauseFocusSession(id: id, nowMs: now.coreMilliseconds) }
   }
 
   public func resumeFocusSession(id: String, now: Date = .now) throws {
-    try database.write { db in
-      guard var session = try FocusSession.fetchOne(db, key: id), session.phase == .running,
-        session.pausedAt != nil else { return }
-      session.pausedAt = nil; session.activeTaskStartedAt = now; session.checkpointAt = now
-      try session.update(db)
-    }
+    try coreWrite { try core.resumeFocusSession(id: id, nowMs: now.coreMilliseconds) }
   }
 
   public func checkpointFocusSession(id: String, now: Date = .now) throws {
-    try database.write { db in
-      guard var session = try FocusSession.fetchOne(db, key: id), session.phase == .running,
-        session.pausedAt == nil else { return }
-      session.accumulatedSeconds = session.elapsedSeconds(now: now)
-      session.activeTaskStartedAt = now; session.checkpointAt = now
-      try session.update(db)
-    }
+    try coreWrite { try core.checkpointFocusSession(id: id, nowMs: now.coreMilliseconds) }
   }
 
   /// On reopening, retain only checkpointed active seconds. Closed-app time is
   /// never silently credited, and the user explicitly resumes the paused block.
   public func recoverInterruptedFocus() throws {
-    try database.write { db in
-      for var session in try FocusSession.filter(Column("phase") == FocusSessionPhase.running.rawValue).fetchAll(db) {
-        guard session.pausedAt == nil else { continue }
-        session.pausedAt = session.checkpointAt ?? session.activeTaskStartedAt
-        if session.accumulatedSeconds == nil { session.accumulatedSeconds = 0 }
-        try session.update(db)
-      }
-    }
+    try coreWrite { try core.recoverInterruptedFocus() }
   }
 }
 
 extension WorkspaceStore {
   /// Resume a queue whose remaining entries were blocked at the last handoff.
   public func resumeEligibleFocusQueue(context: FocusContext, now: Date = .now) throws {
-    try database.write { db in
-      guard var session = try FocusSession.filter(Column("phase") == FocusSessionPhase.running.rawValue)
-        .filter(Column("activeTaskId") == nil).fetchOne(db) else { return }
-      let candidates = Dictionary(uniqueKeysWithValues: try Self.focusCandidates(db, now: now, calendar: .current).map { ($0.id, $0) })
-      let queue = try FocusQueueItem.filter(Column("sessionId") == session.id)
-        .filter(Column("state") == FocusQueueState.queued.rawValue).order(Column("sortOrder")).fetchAll(db)
-      guard let next = queue.first(where: { item in
-        candidates[item.taskId].map { TaskAvailabilityPolicy.reasons(for: $0, context: context, now: now).isEmpty } ?? false
-      }), let task = candidates[next.taskId] else { return }
-      session.workDurationSeconds = TaskAvailabilityPolicy.plannedSeconds(for: task, requested: next.plannedSeconds, context: context, now: now)
-      session.activeTaskId = task.id; session.activeTaskStartedAt = now
-      session.activeBlockId = UUID().uuidString; session.accumulatedSeconds = 0
-      session.pausedAt = nil; session.checkpointAt = now
-      try session.update(db)
+    // The Rust core's `focus::resume_eligible_queue`.
+    _ = try coreWrite {
+      try core.resumeEligibleFocusQueue(context: context.core, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
     }
   }
 }
 
 extension WorkspaceStore {
   public func rebaseFocusClock(id: String, elapsedSeconds: Int, now: Date) throws {
-    try database.write { db in
-      guard var session = try FocusSession.fetchOne(db, key: id), session.phase == .running,
-        session.pausedAt == nil else { return }
-      session.accumulatedSeconds = max(0, elapsedSeconds)
-      session.activeTaskStartedAt = now; session.checkpointAt = now
-      try session.update(db)
+    try coreWrite {
+      try core.rebaseFocusClock(id: id, elapsedSeconds: Int64(elapsedSeconds), nowMs: now.coreMilliseconds)
     }
   }
 }

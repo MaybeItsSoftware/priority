@@ -71,32 +71,6 @@ class WorkspaceRepository(
 
     // region Journal (WorkspaceStore+Undo.swift)
 
-    /**
-     * Runs a mutation as one undoable step: recording is switched on for the
-     * transaction, a real change invalidates redo, and the journal is trimmed
-     * to [JOURNAL_DEPTH] whole groups.
-     */
-    internal suspend fun <T> journalledWrite(label: String, block: (Db) -> T): T = database.write { db ->
-        val groupId = newId()
-        db.execute(
-            "UPDATE undo_control SET groupId = ?, label = ?, suppressed = 0 WHERE id = 0",
-            groupId, label,
-        )
-        try {
-            val result = block(db)
-            db.execute("UPDATE undo_control SET suppressed = 1 WHERE id = 0")
-            // A key pressed at the end of a list can be a no-op. Only an actual
-            // change creates a new history branch and invalidates redo.
-            if (db.exists("SELECT 1 FROM change_log WHERE groupId = ?", groupId)) {
-                db.execute("DELETE FROM change_log WHERE undone = 1")
-            }
-            trimJournal(db)
-            result
-        } finally {
-            runCatching { db.execute("UPDATE undo_control SET suppressed = 1 WHERE id = 0") }
-        }
-    }
-
     /** What undo would take back, phrased for a menu item; nil when there is nothing. */
     suspend fun undoableLabel(): String? = database.coreRead { it.undoableLabel() }
 
@@ -125,14 +99,6 @@ class WorkspaceRepository(
         database.coreRead { it.undoHistory(limit.coerceAtLeast(0).toUInt()) }.map {
             HistoryEntry(it.id, it.label, it.isUndone, it.changeCount.toInt())
         }
-
-    private fun trimJournal(db: Db) {
-        db.execute(
-            "DELETE FROM change_log WHERE groupId IN (" +
-                "SELECT groupId FROM change_log GROUP BY groupId " +
-                "ORDER BY MAX(id) DESC LIMIT -1 OFFSET $JOURNAL_DEPTH)",
-        )
-    }
 
     // endregion
 
@@ -471,6 +437,8 @@ class WorkspaceRepository(
             is CoreException.InvalidDate -> planningFail(TaskPlanningError.INVALID_DATE)
             is CoreException.EditorConflict -> throw TaskEditorException(TaskEditorError.CONFLICTING_CHANGES)
             is CoreException.InvalidVisibleRoot -> throw TaskEditorException(TaskEditorError.INVALID_VISIBLE_ROOT)
+            is CoreException.NoActiveFocusTask -> fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
+            is CoreException.Unavailable -> planningFail(TaskPlanningError.UNAVAILABLE)
             is CoreException.InvalidTaskMove -> fail(WorkspaceStoreError.INVALID_TASK_MOVE)
             else -> throw error
         }
@@ -913,6 +881,7 @@ class WorkspaceRepository(
         database.observe(setOf("focus_queue_items", "tasks")) { focusQueue(it, sessionId) }
 
     /** Starts a session on [taskId], or returns the one already running. Not an undo step. */
+    /** Starts a focus session on a task, or returns the one running: the Rust core's `focus::start_session`. */
     suspend fun startFocusSession(
         taskId: String,
         plannedSeconds: Int? = null,
@@ -921,59 +890,18 @@ class WorkspaceRepository(
         context: FocusContext? = null,
         overrideAvailability: Boolean = false,
         now: Instant = now(),
-    ): FocusSession = database.write { db ->
-        activeSession(db, newestFirst = false)?.let { return@write it }
-        validateActionableTask(db, taskId)
-        if (context != null && !overrideAvailability) {
-            val candidate = focusCandidates(db, now, zone).firstOrNull { it.id == taskId }
-            if (candidate == null || TaskAvailabilityPolicy.reasons(candidate, context, now).isNotEmpty()) {
-                planningFail(TaskPlanningError.UNAVAILABLE)
-            }
-            val chosen = plannedSeconds ?: workDurationSeconds
-            val window = context.endsAt?.let { secondsBetween(now, it) }
-            if (chosen < maxOf(60, candidate.minimumBlockSeconds ?: 60) ||
-                (candidate.requiresSingleSitting && chosen < (candidate.remainingSeconds ?: Int.MAX_VALUE)) ||
-                (window != null && chosen.toDouble() > window)
-            ) {
-                planningFail(TaskPlanningError.UNAVAILABLE)
-            }
+    ): FocusSession {
+        val id = coreWrite {
+            it.startFocusSession(
+                taskId, plannedSeconds?.toLong(), workDurationSeconds.toLong(), breakDurationSeconds.toLong(),
+                context?.toCore(), overrideAvailability, now.toEpochMilli(), zone.id,
+            )
         }
-        val session = FocusSession(
-            id = newId(), startedAt = now, endedAt = null, phase = FocusSessionPhase.RUNNING, activeTaskId = taskId,
-            activeTaskStartedAt = now, workDurationSeconds = maxOf(60, plannedSeconds ?: workDurationSeconds),
-            breakDurationSeconds = maxOf(60, breakDurationSeconds), breakEndsAt = null, activeBlockId = newId(),
-            accumulatedSeconds = null, pausedAt = null, checkpointAt = now,
-        )
-        db.insert(session)
-        db.insert(
-            FocusQueueItem(
-                id = newId(), sessionId = session.id, taskId = taskId, sortOrder = 0, state = FocusQueueState.QUEUED,
-                plannedSeconds = plannedSeconds, completedAt = null, skippedAt = null, createdAt = now,
-            ),
-        )
-        session
+        return database.read { it.session(id) } ?: fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
     }
 
     suspend fun addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int? = null, now: Instant = now()) {
-        database.write { db ->
-            if (db.session(sessionId) == null || db.task(taskId) == null) fail(WorkspaceStoreError.MISSING_TASK)
-            validateActionableTask(db, taskId)
-            if (db.exists(
-                    "SELECT 1 FROM focus_queue_items WHERE sessionId = ? AND taskId = ? AND state = 'queued'",
-                    sessionId, taskId,
-                )
-            ) {
-                return@write
-            }
-            val count = db.int("SELECT COUNT(*) FROM focus_queue_items WHERE sessionId = ?", sessionId) ?: 0
-            db.insert(
-                FocusQueueItem(
-                    id = newId(), sessionId = sessionId, taskId = taskId, sortOrder = count,
-                    state = FocusQueueState.QUEUED, plannedSeconds = plannedSeconds, completedAt = null,
-                    skippedAt = null, createdAt = now,
-                ),
-            )
-        }
+        coreWrite { it.addToFocusQueue(sessionId, taskId, plannedSeconds?.toLong(), now.toEpochMilli()) }
     }
 
     /**
@@ -981,6 +909,7 @@ class WorkspaceRepository(
      * keeps its task open and logs a contribution; otherwise the task completes
      * (when [completeTask]). [qualityMultiplier] scores the block.
      */
+    /** Finishes the block in hand: the Rust core's `focus::finish_block`. */
     suspend fun completeActiveFocusTask(
         sessionId: String,
         elapsedSeconds: Int = 0,
@@ -990,91 +919,56 @@ class WorkspaceRepository(
         context: FocusContext = FocusContext(),
         now: Instant = now(),
         zone: ZoneId = this.zone,
-    ): FocusCompletion = journalledWrite(if (completeTask) "Complete Task" else "Log Daily Progress") { db ->
-        completeActiveFocusTask(
-            db, sessionId, elapsedSeconds, qualityMultiplier, completeTask, expectedBlockId, context, now, zone,
-        )
+    ): FocusCompletion {
+        val finished = coreWrite {
+            it.finishFocusBlock(
+                sessionId, elapsedSeconds.toLong(), qualityMultiplier, completeTask, expectedBlockId,
+                context.toCore(), now.toEpochMilli(), zone.id,
+            )
+        }
+        return database.read { db ->
+            val session = db.session(sessionId) ?: fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
+            val award = finished.awardId?.let { id ->
+                db.queryOne("SELECT * FROM focus_awards WHERE id = ?", id) { it.toAward() }
+            }
+            val seconds = finished.seconds.toInt()
+            val outcome = when (finished.outcome) {
+                "taskCompleted" -> FocusCompletionOutcome.TaskCompleted
+                "contributionLogged" -> FocusCompletionOutcome.ContributionLogged(seconds)
+                else -> FocusCompletionOutcome.ProgressLogged(seconds)
+            }
+            FocusCompletion(session, outcome, award)
+        }
     }
 
     suspend fun finishFocusSession(id: String, now: Instant = now()) {
-        database.write { db -> finishSession(db, id, now) }
+        coreWrite { it.finishFocusSession(id, now.toEpochMilli()) }
     }
 
     suspend fun pauseFocusSession(id: String, now: Instant = now()) {
-        database.write { db ->
-            val session = db.session(id) ?: return@write
-            if (session.phase != FocusSessionPhase.RUNNING || session.pausedAt != null) return@write
-            db.update(session.copy(accumulatedSeconds = session.elapsedSeconds(now), pausedAt = now, checkpointAt = now))
-        }
+        coreWrite { it.pauseFocusSession(id, now.toEpochMilli()) }
     }
 
     suspend fun resumeFocusSession(id: String, now: Instant = now()) {
-        database.write { db ->
-            val session = db.session(id) ?: return@write
-            if (session.phase != FocusSessionPhase.RUNNING || session.pausedAt == null) return@write
-            db.update(session.copy(pausedAt = null, activeTaskStartedAt = now, checkpointAt = now))
-        }
+        coreWrite { it.resumeFocusSession(id, now.toEpochMilli()) }
     }
 
     suspend fun checkpointFocusSession(id: String, now: Instant = now()) {
-        database.write { db ->
-            val session = db.session(id) ?: return@write
-            if (session.phase != FocusSessionPhase.RUNNING || session.pausedAt != null) return@write
-            db.update(
-                session.copy(accumulatedSeconds = session.elapsedSeconds(now), activeTaskStartedAt = now, checkpointAt = now),
-            )
-        }
+        coreWrite { it.checkpointFocusSession(id, now.toEpochMilli()) }
     }
 
     /** On reopening, keep only checkpointed seconds; the user resumes the paused block explicitly. */
     suspend fun recoverInterruptedFocus() {
-        database.write { db ->
-            val running = db.query("SELECT * FROM focus_sessions WHERE phase = 'running'") { it.toSession() }
-            for (session in running) {
-                if (session.pausedAt != null) continue
-                db.update(
-                    session.copy(
-                        pausedAt = session.checkpointAt ?: session.activeTaskStartedAt,
-                        accumulatedSeconds = session.accumulatedSeconds ?: 0,
-                    ),
-                )
-            }
-        }
+        coreWrite { it.recoverInterruptedFocus() }
     }
 
     /** Resumes a queue whose remaining entries were blocked at the last handoff. */
     suspend fun resumeEligibleFocusQueue(context: FocusContext, now: Instant = now()) {
-        database.write { db ->
-            val session = db.queryOne(
-                "SELECT * FROM focus_sessions WHERE phase = 'running' AND activeTaskId IS NULL",
-            ) { it.toSession() } ?: return@write
-            val candidates = focusCandidates(db, now, zone).associateBy { it.id }
-            val queue = db.query(
-                "SELECT * FROM focus_queue_items WHERE sessionId = ? AND state = 'queued' ORDER BY sortOrder",
-                session.id,
-            ) { it.toQueueItem() }
-            val next = queue.firstOrNull { item ->
-                candidates[item.taskId]?.let { TaskAvailabilityPolicy.reasons(it, context, now).isEmpty() } ?: false
-            } ?: return@write
-            val task = candidates[next.taskId] ?: return@write
-            db.update(
-                session.copy(
-                    workDurationSeconds = TaskAvailabilityPolicy.plannedSeconds(task, next.plannedSeconds, context, now),
-                    activeTaskId = task.id, activeTaskStartedAt = now, activeBlockId = newId(), accumulatedSeconds = 0,
-                    pausedAt = null, checkpointAt = now,
-                ),
-            )
-        }
+        coreWrite { it.resumeEligibleFocusQueue(context.toCore(), now.toEpochMilli(), zone.id) }
     }
 
     suspend fun rebaseFocusClock(id: String, elapsedSeconds: Int, now: Instant) {
-        database.write { db ->
-            val session = db.session(id) ?: return@write
-            if (session.phase != FocusSessionPhase.RUNNING || session.pausedAt != null) return@write
-            db.update(
-                session.copy(accumulatedSeconds = maxOf(0, elapsedSeconds), activeTaskStartedAt = now, checkpointAt = now),
-            )
-        }
+        coreWrite { it.rebaseFocusClock(id, elapsedSeconds.toLong(), now.toEpochMilli()) }
     }
 
     /** Settles a session left paused on an earlier logical day: closes (crediting) or discards it. */

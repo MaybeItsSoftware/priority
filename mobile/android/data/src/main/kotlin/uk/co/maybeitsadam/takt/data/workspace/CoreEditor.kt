@@ -33,3 +33,9 @@ internal fun TaskEditorSnapshot.toCore() = uniffi.takt_core.EditorSnapshot(
     dailyProgress = dailyProgress,
     planning = planning?.toCore(),
 )
+
+internal fun uk.co.maybeitsadam.takt.core.FocusContext.toCore() = uniffi.takt_core.FocusContext(
+    conditionIds = conditionIDs.sorted(),
+    endsAtMs = endsAt?.toEpochMilli(),
+    mode = mode.raw,
+)

@@ -1,4 +1,5 @@
 import Foundation
+import TaktCore
 import TaktRustCore
 
 // The task editor's values as the Rust core takes them (core/src/editor.rs).
@@ -27,5 +28,12 @@ extension TaskEditorSnapshot {
       workspaceId: workspaceId, taskId: taskId, title: title, notes: notes,
       dueAtMs: dueAt?.coreMilliseconds, estimateSeconds: estimateSeconds.map { Int64($0) },
       metadata: metadata.core, dailyProgress: dailyProgress, planning: planning?.core)
+  }
+}
+
+extension TaktCore.FocusContext {
+  var core: TaktRustCore.FocusContext {
+    TaktRustCore.FocusContext(
+      conditionIds: conditionIDs.sorted(), endsAtMs: endsAt?.coreMilliseconds, mode: mode.rawValue)
   }
 }

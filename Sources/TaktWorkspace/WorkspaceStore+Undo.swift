@@ -61,45 +61,6 @@ extension WorkspaceStore {
     try coreWrite { try core.redo() }
   }
 
-  /// Runs a mutation as one undoable step.
-  ///
-  /// The label is what the user will be offered back, so it names the action
-  /// rather than the table. Every write that touches a journalled table goes
-  /// through here: a write that does not would be recorded against whichever
-  /// step ran before it, and undoing that step would take back both.
-  ///
-  /// The bookkeeping matches `journal::begin` and `journal::finish` in the
-  /// core statement for statement. It stays here until the writes it wraps
-  /// move into the core (step four), because it has to run inside GRDB's
-  /// transaction, which the core's connection cannot join.
-  func journalledWrite<T>(_ label: String, _ block: (Database) throws -> T) throws -> T {
-    try database.write { db in
-      let groupID = UUID().uuidString
-      // Recording is off by default, so a write that has not opted in — a
-      // migration, an import, the focus tables — is not an undo step. It is
-      // switched on here and off again below, inside the one transaction.
-      try db.execute(
-        sql: "UPDATE undo_control SET groupId = ?, label = ?, suppressed = 0 WHERE id = 0",
-        arguments: [groupID, label])
-      defer { try? db.execute(sql: "UPDATE undo_control SET suppressed = 1 WHERE id = 0") }
-      let result = try block(db)
-      try db.execute(sql: "UPDATE undo_control SET suppressed = 1 WHERE id = 0")
-      // A key pressed at the end of a list can be a no-op. Only an actual
-      // change creates a new history branch and invalidates redo.
-      let changed = try Bool.fetchOne(
-        db, sql: "SELECT EXISTS(SELECT 1 FROM change_log WHERE groupId = ?)", arguments: [groupID]) ?? false
-      if changed { try db.execute(sql: "DELETE FROM change_log WHERE undone = 1") }
-      // Whole groups only: half an undo step is worse than none. The depth is
-      // the core's JOURNAL_DEPTH.
-      try db.execute(sql: """
-        DELETE FROM change_log WHERE groupId IN (
-          SELECT groupId FROM change_log GROUP BY groupId
-          ORDER BY MAX(id) DESC LIMIT -1 OFFSET 100
-        )
-        """)
-      return result
-    }
-  }
 }
 
 /// One named step in the undo journal, as `undoHistory(limit:)` reports it.

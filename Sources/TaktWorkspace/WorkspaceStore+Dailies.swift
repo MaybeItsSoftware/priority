@@ -130,35 +130,6 @@ extension WorkspaceStore {
     }
   }
 
-  static func dueDaily(
-    _ db: Database, taskId: String, on day: Date, calendar: Calendar
-  ) throws -> WorkspaceDaily? {
-    guard let daily = try WorkspaceDaily.filter(Column("taskId") == taskId && Column("archivedAt") == nil)
-      .fetchOne(db)
-    else { return nil }
-    return daily.isDue(on: day, calendar: calendar) ? daily : nil
-  }
-
-  @discardableResult
-  static func recordContribution(
-    _ db: Database, daily: WorkspaceDaily, seconds: Int, complete: Bool, now: Date, calendar: Calendar
-  ) throws -> DailyContribution {
-    let key = DailyContribution.dayKey(for: now, calendar: calendar)
-    if var existing = try DailyContribution
-      .filter(Column("dailyId") == daily.id && Column("dayKey") == key).fetchOne(db)
-    {
-      existing.secondsLogged += max(0, seconds)
-      if complete { existing.completedAt = existing.completedAt ?? now }
-      try existing.update(db)
-      return existing
-    }
-    let contribution = DailyContribution(
-      id: UUID().uuidString, dailyId: daily.id, taskId: daily.taskId, dayKey: key,
-      secondsLogged: max(0, seconds), completedAt: complete ? now : nil, createdAt: now)
-    try contribution.insert(db)
-    return contribution
-  }
-
   // MARK: - Completion context
 
   /// What a celebration needs to know about today, in one read.
