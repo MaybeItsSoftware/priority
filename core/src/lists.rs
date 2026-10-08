@@ -88,6 +88,297 @@ pub fn create_list(
     })
 }
 
+/// Moves a folder into `parent_folder_id` (or to the top), after the
+/// folders already there. Refuses a parent inside the folder itself.
+/// Replaces `WorkspaceStore.moveFolder` and `WorkspaceRepository.moveFolder`.
+pub fn move_folder(
+    transaction: &Transaction,
+    id: &str,
+    parent_folder_id: Option<&str>,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let (workspace_id, current_parent) = folder_place(transaction, id)?;
+    if let Some(parent) = parent_folder_id {
+        if parent == id {
+            return Err(CoreError::InvalidFolderMove);
+        }
+        require_folder_in(transaction, parent, &workspace_id)?;
+        if folder_is_within(transaction, parent, id)? {
+            return Err(CoreError::InvalidFolderMove);
+        }
+    }
+    if current_parent.as_deref() == parent_folder_id {
+        return Ok(());
+    }
+    let sort_order: i64 = transaction.query_row(
+        "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM list_folders
+         WHERE workspaceId = ?1 AND parentFolderId IS ?2",
+        rusqlite::params![workspace_id, parent_folder_id],
+        |row| row.get(0),
+    )?;
+    transaction.execute(
+        "UPDATE list_folders SET parentFolderId = ?1, sortOrder = ?2, updatedAt = ?3 WHERE id = ?4",
+        rusqlite::params![parent_folder_id, sort_order, stored(now_ms), id],
+    )?;
+    Ok(())
+}
+
+/// Moves a list into `folder_id` (or to the top), after the lists already
+/// there. Replaces `WorkspaceStore.moveList`, `WorkspaceRepository.moveList`
+/// and the CLI's `move_list`.
+pub fn move_list(
+    transaction: &Transaction,
+    id: &str,
+    folder_id: Option<&str>,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let (workspace_id, current_folder, _) = list_place(transaction, id)?;
+    if let Some(folder) = folder_id {
+        require_folder_in(transaction, folder, &workspace_id)?;
+    }
+    if current_folder.as_deref() == folder_id {
+        return Ok(());
+    }
+    let sort_order: i64 = transaction.query_row(
+        "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM task_lists
+         WHERE workspaceId = ?1 AND folderId IS ?2",
+        rusqlite::params![workspace_id, folder_id],
+        |row| row.get(0),
+    )?;
+    transaction.execute(
+        "UPDATE task_lists SET folderId = ?1, sortOrder = ?2, updatedAt = ?3 WHERE id = ?4",
+        rusqlite::params![folder_id, sort_order, stored(now_ms), id],
+    )?;
+    Ok(())
+}
+
+/// Moves a list `offset` places among its siblings (same folder, same
+/// archived state), stopping at either end. Replaces
+/// `WorkspaceStore.moveListWithinFolder` and its Kotlin copy.
+pub fn move_list_within_folder(
+    transaction: &Transaction,
+    id: &str,
+    offset: i32,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let (workspace_id, folder, archived) = list_place(transaction, id)?;
+    let mut siblings = list_siblings(transaction, &workspace_id, folder.as_deref(), archived)?;
+    if nudge(&mut siblings, id, offset) {
+        persist_order(transaction, "task_lists", &siblings, now_ms)?;
+    }
+    Ok(())
+}
+
+/// Moves a folder `offset` places among its siblings. Replaces
+/// `WorkspaceStore.moveFolderWithinSiblings` and its Kotlin copy.
+pub fn move_folder_within_siblings(
+    transaction: &Transaction,
+    id: &str,
+    offset: i32,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let (workspace_id, parent) = folder_place(transaction, id)?;
+    let mut siblings = folder_siblings(transaction, &workspace_id, parent.as_deref())?;
+    if nudge(&mut siblings, id, offset) {
+        persist_order(transaction, "list_folders", &siblings, now_ms)?;
+    }
+    Ok(())
+}
+
+/// Drops a list before `before_id` (or at the end) in `folder_id`, as a
+/// sidebar drag does. Replaces `WorkspaceStore.placeList` and its Kotlin copy.
+pub fn place_list(
+    transaction: &Transaction,
+    id: &str,
+    before_id: Option<&str>,
+    folder_id: Option<&str>,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let (workspace_id, current_folder, archived) = list_place(transaction, id)?;
+    if before_id == Some(id) {
+        return Ok(());
+    }
+    if let Some(folder) = folder_id {
+        require_folder_in(transaction, folder, &workspace_id)?;
+    }
+    if current_folder.as_deref() != folder_id {
+        transaction.execute(
+            "UPDATE task_lists SET folderId = ?1, updatedAt = ?2 WHERE id = ?3",
+            rusqlite::params![folder_id, stored(now_ms), id],
+        )?;
+    }
+    let mut siblings = list_siblings(transaction, &workspace_id, folder_id, archived)?;
+    if place(&mut siblings, id, before_id) {
+        persist_order(transaction, "task_lists", &siblings, now_ms)?;
+    }
+    Ok(())
+}
+
+/// Drops a folder before `before_id` (or at the end) in `parent_folder_id`.
+/// Walking up from the new parent must not reach the folder itself, or the
+/// tree stops being a tree. Replaces `WorkspaceStore.placeFolder` and its
+/// Kotlin copy.
+pub fn place_folder(
+    transaction: &Transaction,
+    id: &str,
+    before_id: Option<&str>,
+    parent_folder_id: Option<&str>,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let (workspace_id, current_parent) = folder_place(transaction, id)?;
+    if before_id == Some(id) {
+        return Ok(());
+    }
+    if let Some(parent) = parent_folder_id {
+        require_folder_in(transaction, parent, &workspace_id)?;
+        if parent == id || folder_is_within(transaction, parent, id)? {
+            return Err(CoreError::InvalidFolderMove);
+        }
+    }
+    if current_parent.as_deref() != parent_folder_id {
+        transaction.execute(
+            "UPDATE list_folders SET parentFolderId = ?1, updatedAt = ?2 WHERE id = ?3",
+            rusqlite::params![parent_folder_id, stored(now_ms), id],
+        )?;
+    }
+    let mut siblings = folder_siblings(transaction, &workspace_id, parent_folder_id)?;
+    if place(&mut siblings, id, before_id) {
+        persist_order(transaction, "list_folders", &siblings, now_ms)?;
+    }
+    Ok(())
+}
+
+/// Moves `id` by `offset` within `ids`, clamped to the ends. False when it
+/// does not move, so nothing is written and redo survives.
+fn nudge(ids: &mut Vec<String>, id: &str, offset: i32) -> bool {
+    let Some(index) = ids.iter().position(|sibling| sibling == id) else {
+        return false;
+    };
+    let last = ids.len() as i64 - 1;
+    let target = (index as i64 + i64::from(offset)).clamp(0, last) as usize;
+    if target == index {
+        return false;
+    }
+    let moved = ids.remove(index);
+    ids.insert(target, moved);
+    true
+}
+
+/// Puts `id` before `before_id` within `ids`, or last when that is absent.
+/// False only when `id` is not among them.
+fn place(ids: &mut Vec<String>, id: &str, before_id: Option<&str>) -> bool {
+    let Some(index) = ids.iter().position(|sibling| sibling == id) else {
+        return false;
+    };
+    let moved = ids.remove(index);
+    let target = before_id
+        .and_then(|before| ids.iter().position(|sibling| sibling == before))
+        .unwrap_or(ids.len());
+    ids.insert(target, moved);
+    true
+}
+
+/// Numbers `ids` from zero in order and stamps each one, as both clients'
+/// `persistListOrder` and `persistFolderOrder` did: every sibling, moved or
+/// not, so each is one journalled and synced change.
+fn persist_order(
+    transaction: &Transaction,
+    table: &str,
+    ids: &[String],
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let now = stored(now_ms);
+    let mut statement = transaction.prepare(&format!(
+        "UPDATE {table} SET sortOrder = ?1, updatedAt = ?2 WHERE id = ?3"
+    ))?;
+    for (index, id) in ids.iter().enumerate() {
+        statement.execute(rusqlite::params![index as i64, now, id])?;
+    }
+    Ok(())
+}
+
+fn list_place(
+    transaction: &Transaction,
+    id: &str,
+) -> Result<(String, Option<String>, bool), CoreError> {
+    transaction
+        .query_row(
+            "SELECT workspaceId, folderId, isArchived FROM task_lists WHERE id = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?
+        .ok_or_else(|| CoreError::MissingList { id: id.to_string() })
+}
+
+fn folder_place(
+    transaction: &Transaction,
+    id: &str,
+) -> Result<(String, Option<String>), CoreError> {
+    transaction
+        .query_row(
+            "SELECT workspaceId, parentFolderId FROM list_folders WHERE id = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?
+        .ok_or_else(|| CoreError::MissingFolder { id: id.to_string() })
+}
+
+fn list_siblings(
+    transaction: &Transaction,
+    workspace_id: &str,
+    folder_id: Option<&str>,
+    archived: bool,
+) -> Result<Vec<String>, CoreError> {
+    let mut statement = transaction.prepare(
+        "SELECT id FROM task_lists WHERE workspaceId = ?1 AND folderId IS ?2 AND isArchived = ?3
+         ORDER BY sortOrder, createdAt, id",
+    )?;
+    let ids = statement
+        .query_map(
+            rusqlite::params![workspace_id, folder_id, archived],
+            |row| row.get(0),
+        )?
+        .collect::<Result<_, _>>()?;
+    Ok(ids)
+}
+
+fn folder_siblings(
+    transaction: &Transaction,
+    workspace_id: &str,
+    parent_folder_id: Option<&str>,
+) -> Result<Vec<String>, CoreError> {
+    let mut statement = transaction.prepare(
+        "SELECT id FROM list_folders WHERE workspaceId = ?1 AND parentFolderId IS ?2
+         ORDER BY sortOrder, createdAt, id",
+    )?;
+    let ids = statement
+        .query_map(rusqlite::params![workspace_id, parent_folder_id], |row| {
+            row.get(0)
+        })?
+        .collect::<Result<_, _>>()?;
+    Ok(ids)
+}
+
+/// Whether `folder_id` sits somewhere inside `ancestor_id`.
+fn folder_is_within(
+    transaction: &Transaction,
+    folder_id: &str,
+    ancestor_id: &str,
+) -> Result<bool, CoreError> {
+    Ok(transaction.query_row(
+        "WITH RECURSIVE inside(id) AS (
+           SELECT id FROM list_folders WHERE parentFolderId = ?1
+           UNION
+           SELECT list_folders.id FROM list_folders JOIN inside ON list_folders.parentFolderId = inside.id
+         )
+         SELECT EXISTS(SELECT 1 FROM inside WHERE id = ?2)",
+        rusqlite::params![ancestor_id, folder_id],
+        |row| row.get(0),
+    )?)
+}
+
 /// A folder that exists and belongs to `workspace_id`; anything else is a
 /// missing folder, as both clients reported it.
 fn require_folder_in(

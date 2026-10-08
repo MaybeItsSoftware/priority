@@ -113,6 +113,86 @@ impl CoreWorkspace {
         })
     }
 
+    /// Moves a folder into another (or to the top) as one "Move Folder" step.
+    pub fn move_folder(
+        &self,
+        id: String,
+        parent_folder_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Move Folder", |tx| {
+            lists::move_folder(tx, &id, parent_folder_id.as_deref(), now_ms)
+        })
+    }
+
+    /// Moves a list into a folder (or to the top) as one "Move List" step.
+    pub fn move_list(
+        &self,
+        id: String,
+        folder_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Move List", |tx| {
+            lists::move_list(tx, &id, folder_id.as_deref(), now_ms)
+        })
+    }
+
+    /// Moves a list among its siblings as one "Reorder List" step.
+    pub fn move_list_within_folder(
+        &self,
+        id: String,
+        offset: i32,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Reorder List", |tx| {
+            lists::move_list_within_folder(tx, &id, offset, now_ms)
+        })
+    }
+
+    /// Moves a folder among its siblings as one "Reorder Folder" step.
+    pub fn move_folder_within_siblings(
+        &self,
+        id: String,
+        offset: i32,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Reorder Folder", |tx| {
+            lists::move_folder_within_siblings(tx, &id, offset, now_ms)
+        })
+    }
+
+    /// Drops a list before another, in a folder, as one "Reorder List" step.
+    pub fn place_list(
+        &self,
+        id: String,
+        before_id: Option<String>,
+        folder_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Reorder List", |tx| {
+            lists::place_list(tx, &id, before_id.as_deref(), folder_id.as_deref(), now_ms)
+        })
+    }
+
+    /// Drops a folder before another, in a parent, as one "Reorder Folder" step.
+    pub fn place_folder(
+        &self,
+        id: String,
+        before_id: Option<String>,
+        parent_folder_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Reorder Folder", |tx| {
+            lists::place_folder(
+                tx,
+                &id,
+                before_id.as_deref(),
+                parent_folder_id.as_deref(),
+                now_ms,
+            )
+        })
+    }
+
     /// Renames a folder as one "Rename Folder" step.
     pub fn rename_folder(&self, id: String, name: String, now_ms: i64) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Rename Folder", |tx| {

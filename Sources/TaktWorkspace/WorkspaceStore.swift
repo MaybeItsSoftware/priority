@@ -164,18 +164,9 @@ public final class WorkspaceStore: @unchecked Sendable {
     try Self.mappingCoreErrors { try core.renameFolder(id: id, name: name, nowMs: now.coreMilliseconds) }
   }
 
+  /// Moves a folder into another or to the top: the Rust core's `lists::move_folder`.
   public func moveFolder(id: String, toParentFolderId parentFolderId: String?, now: Date = .now) throws {
-    try journalledWrite("Move Folder") { db in
-      guard var folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
-      try Self.validateFolderParent(db, folder: folder, parentFolderId: parentFolderId)
-      guard folder.parentFolderId != parentFolderId else { return }
-      folder.parentFolderId = parentFolderId
-      folder.sortOrder = try Self.nextOrder(
-        db, table: ListFolder.databaseTableName, whereSQL: "workspaceId = ? AND parentFolderId IS ?",
-        arguments: [folder.workspaceId, parentFolderId])
-      folder.updatedAt = now
-      try folder.update(db)
-    }
+    try Self.mappingCoreErrors { try core.moveFolder(id: id, parentFolderId: parentFolderId, nowMs: now.coreMilliseconds) }
   }
 
   /// Deletes a folder as one undo step. Its lists move to the sidebar root
@@ -202,36 +193,15 @@ public final class WorkspaceStore: @unchecked Sendable {
     try Self.mappingCoreErrors { try core.renameList(id: id, name: name, nowMs: now.coreMilliseconds) }
   }
 
+  /// Moves a list into a folder or to the top: the Rust core's `lists::move_list`.
   public func moveList(id: String, toFolderId folderId: String?, now: Date = .now) throws {
-    try journalledWrite("Move List") { db in
-      guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      if let folderId {
-        guard let folder = try ListFolder.fetchOne(db, key: folderId), folder.workspaceId == list.workspaceId else {
-          throw WorkspaceStoreError.missingFolder
-        }
-      }
-      guard list.folderId != folderId else { return }
-      list.folderId = folderId
-      list.sortOrder = try Self.nextOrder(
-        db, table: TaskList.databaseTableName, whereSQL: "workspaceId = ? AND folderId IS ?",
-        arguments: [list.workspaceId, folderId])
-      list.updatedAt = now
-      try list.update(db)
-    }
+    try Self.mappingCoreErrors { try core.moveList(id: id, folderId: folderId, nowMs: now.coreMilliseconds) }
   }
 
+  /// Moves a list among its siblings: the Rust core's `lists::move_list_within_folder`.
   public func moveListWithinFolder(id: String, by offset: Int, now: Date = .now) throws {
-    try journalledWrite("Reorder List") { db in
-      guard let list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      var siblings = try TaskList
-        .filter(Column("workspaceId") == list.workspaceId && Column("folderId") == list.folderId)
-        .filter(Column("isArchived") == list.isArchived)
-        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
-      guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
-      let target = min(max(0, index + offset), siblings.count - 1)
-      guard target != index else { return }
-      siblings.insert(siblings.remove(at: index), at: target)
-      try Self.persistListOrder(siblings, db: db, now: now)
+    try Self.mappingCoreErrors {
+      try core.moveListWithinFolder(id: id, offset: Int32(clamping: offset), nowMs: now.coreMilliseconds)
     }
   }
 
@@ -241,83 +211,30 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// `targetID` of nil means the end of that group, which is what a drop below
   /// the last row means. Reordering is absolute rather than a signed offset
   /// because a drag says where a thing landed, not how far it travelled.
+  /// Drops a list before another in a folder: the Rust core's `lists::place_list`.
   public func placeList(
     id: String, before targetID: String?, inFolderId folderId: String?, now: Date = .now
   ) throws {
-    try journalledWrite("Reorder List") { db in
-      guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      guard id != targetID else { return }
-      if let folderId {
-        guard let folder = try ListFolder.fetchOne(db, key: folderId), folder.workspaceId == list.workspaceId else {
-          throw WorkspaceStoreError.missingFolder
-        }
-      }
-      if list.folderId != folderId {
-        list.folderId = folderId
-        list.updatedAt = now
-        try list.update(db)
-      }
-      var siblings = try TaskList
-        .filter(Column("workspaceId") == list.workspaceId && Column("folderId") == folderId)
-        .filter(Column("isArchived") == list.isArchived)
-        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
-      guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
-      let moved = siblings.remove(at: index)
-      let target = targetID.flatMap { id in siblings.firstIndex { $0.id == id } } ?? siblings.count
-      siblings.insert(moved, at: target)
-      try Self.persistListOrder(siblings, db: db, now: now)
+    try Self.mappingCoreErrors {
+      try core.placeList(id: id, beforeId: targetID, folderId: folderId, nowMs: now.coreMilliseconds)
     }
   }
 
   /// The same placement for folders, which nest, so the parent is checked for
   /// the cycle a folder dropped inside its own descendant would make.
+  /// Drops a folder before another in a parent: the Rust core's `lists::place_folder`.
   public func placeFolder(
     id: String, before targetID: String?, inParentFolderId parentFolderId: String?, now: Date = .now
   ) throws {
-    try journalledWrite("Reorder Folder") { db in
-      guard var folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
-      guard id != targetID else { return }
-      if let parentFolderId {
-        guard let parent = try ListFolder.fetchOne(db, key: parentFolderId),
-          parent.workspaceId == folder.workspaceId else {
-          throw WorkspaceStoreError.missingFolder
-        }
-        // Walking up from the intended parent must not arrive back at the
-        // folder being moved, or the tree stops being a tree.
-        var ancestorID: String? = parentFolderId
-        var visited: Set<String> = []
-        while let current = ancestorID, visited.insert(current).inserted {
-          if current == id { throw WorkspaceStoreError.invalidFolderMove }
-          ancestorID = try ListFolder.fetchOne(db, key: current)?.parentFolderId
-        }
-      }
-      if folder.parentFolderId != parentFolderId {
-        folder.parentFolderId = parentFolderId
-        folder.updatedAt = now
-        try folder.update(db)
-      }
-      var siblings = try ListFolder
-        .filter(Column("workspaceId") == folder.workspaceId && Column("parentFolderId") == parentFolderId)
-        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
-      guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
-      let moved = siblings.remove(at: index)
-      let target = targetID.flatMap { id in siblings.firstIndex { $0.id == id } } ?? siblings.count
-      siblings.insert(moved, at: target)
-      try Self.persistFolderOrder(siblings, db: db, now: now)
+    try Self.mappingCoreErrors {
+      try core.placeFolder(id: id, beforeId: targetID, parentFolderId: parentFolderId, nowMs: now.coreMilliseconds)
     }
   }
 
+  /// Moves a folder among its siblings: the Rust core's `lists::move_folder_within_siblings`.
   public func moveFolderWithinSiblings(id: String, by offset: Int, now: Date = .now) throws {
-    try journalledWrite("Reorder Folder") { db in
-      guard let folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
-      var siblings = try ListFolder
-        .filter(Column("workspaceId") == folder.workspaceId && Column("parentFolderId") == folder.parentFolderId)
-        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
-      guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
-      let target = min(max(0, index + offset), siblings.count - 1)
-      guard target != index else { return }
-      siblings.insert(siblings.remove(at: index), at: target)
-      try Self.persistFolderOrder(siblings, db: db, now: now)
+    try Self.mappingCoreErrors {
+      try core.moveFolderWithinSiblings(id: id, offset: Int32(clamping: offset), nowMs: now.coreMilliseconds)
     }
   }
 
@@ -746,6 +663,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .missingFolder: throw WorkspaceStoreError.missingFolder
       case .systemListIsPermanent: throw WorkspaceStoreError.systemListIsPermanent
       case .emptyName: throw WorkspaceStoreError.emptyName
+      case .invalidFolderMove: throw WorkspaceStoreError.invalidFolderMove
       case .noJournal, .other, nil: throw error
       }
     }
@@ -763,22 +681,6 @@ public final class WorkspaceStore: @unchecked Sendable {
       task.sortOrder = index
       task.updatedAt = now
       try task.update(db)
-    }
-  }
-
-  private static func persistListOrder(_ lists: [TaskList], db: Database, now: Date) throws {
-    for (index, var list) in lists.enumerated() {
-      list.sortOrder = index
-      list.updatedAt = now
-      try list.update(db)
-    }
-  }
-
-  private static func persistFolderOrder(_ folders: [ListFolder], db: Database, now: Date) throws {
-    for (index, var folder) in folders.enumerated() {
-      folder.sortOrder = index
-      folder.updatedAt = now
-      try folder.update(db)
     }
   }
 

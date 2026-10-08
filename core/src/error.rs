@@ -22,6 +22,8 @@ pub enum CoreError {
     SystemListIsPermanent,
     #[error("A workspace item needs a name.")]
     EmptyName,
+    #[error("A folder cannot go inside itself or one of its own folders.")]
+    InvalidFolderMove,
 }
 
 impl From<rusqlite::Error> for CoreError {

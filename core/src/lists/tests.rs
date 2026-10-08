@@ -290,3 +290,171 @@ fn a_new_item_in_a_folder_from_another_workspace_or_none_is_refused() {
         Err(CoreError::EmptyName)
     ));
 }
+
+fn order(connection: &Connection, sql: &str) -> Vec<String> {
+    let mut statement = connection.prepare(sql).unwrap();
+    statement
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+}
+
+fn top_lists(connection: &Connection) -> Vec<String> {
+    order(
+        connection,
+        "SELECT id FROM task_lists WHERE folderId IS NULL AND isArchived = 0 ORDER BY sortOrder, createdAt, id",
+    )
+}
+
+#[test]
+fn a_folder_cannot_move_into_itself_or_below_itself() {
+    let mut connection = workspace();
+    for parent in ["f", "sub"] {
+        assert!(matches!(
+            journalled(&mut connection, "Move Folder", |tx| move_folder(
+                tx,
+                "f",
+                Some(parent),
+                NOW
+            )),
+            Err(CoreError::InvalidFolderMove)
+        ));
+        assert!(matches!(
+            journalled(&mut connection, "Reorder Folder", |tx| place_folder(
+                tx,
+                "f",
+                None,
+                Some(parent),
+                NOW
+            )),
+            Err(CoreError::InvalidFolderMove)
+        ));
+    }
+    journalled(&mut connection, "Move Folder", |tx| {
+        move_folder(tx, "sub", None, NOW)
+    })
+    .unwrap();
+    let parent: Option<String> = connection
+        .query_row(
+            "SELECT parentFolderId FROM list_folders WHERE id = 'sub'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(parent, None);
+    assert_eq!(
+        count(
+            &connection,
+            "SELECT sortOrder FROM list_folders WHERE id = 'sub'"
+        ),
+        1
+    );
+}
+
+#[test]
+fn a_list_moves_to_the_end_of_its_new_folder_and_not_at_all_when_already_there() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Move List", |tx| {
+        move_list(tx, "l", None, NOW)
+    })
+    .unwrap();
+    assert_eq!(top_lists(&connection), ["inbox", "l"]);
+    let before = steps(&connection);
+    journalled(&mut connection, "Move List", |tx| {
+        move_list(tx, "l", None, NOW)
+    })
+    .unwrap();
+    assert_eq!(steps(&connection), before);
+}
+
+#[test]
+fn nudging_a_list_renumbers_every_sibling_and_stops_at_the_ends() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Move List", |tx| {
+        move_list(tx, "l", None, NOW)
+    })
+    .unwrap();
+    journalled(&mut connection, "Move List", |tx| {
+        move_list(tx, "deep", None, NOW)
+    })
+    .unwrap();
+    assert_eq!(top_lists(&connection), ["inbox", "l", "deep"]);
+
+    journalled(&mut connection, "Reorder List", |tx| {
+        move_list_within_folder(tx, "deep", -5, NOW)
+    })
+    .unwrap();
+    assert_eq!(top_lists(&connection), ["deep", "inbox", "l"]);
+    assert_eq!(
+        order(
+            &connection,
+            "SELECT sortOrder || ':' || updatedAt FROM task_lists WHERE folderId IS NULL ORDER BY sortOrder"
+        ),
+        [
+            format!("0:{NOW_TEXT}"),
+            format!("1:{NOW_TEXT}"),
+            format!("2:{NOW_TEXT}")
+        ]
+    );
+    let before = steps(&connection);
+    journalled(&mut connection, "Reorder List", |tx| {
+        move_list_within_folder(tx, "deep", -1, NOW)
+    })
+    .unwrap();
+    assert_eq!(steps(&connection), before);
+}
+
+#[test]
+fn dropping_a_list_before_another_moves_it_into_that_folder_in_that_place() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Reorder List", |tx| {
+        place_list(tx, "deep", Some("l"), Some("f"), NOW)
+    })
+    .unwrap();
+    assert_eq!(
+        order(
+            &connection,
+            "SELECT id FROM task_lists WHERE folderId = 'f' ORDER BY sortOrder"
+        ),
+        ["deep", "l"]
+    );
+    journalled(&mut connection, "Reorder List", |tx| {
+        place_list(tx, "deep", None, Some("f"), NOW)
+    })
+    .unwrap();
+    assert_eq!(
+        order(
+            &connection,
+            "SELECT id FROM task_lists WHERE folderId = 'f' ORDER BY sortOrder"
+        ),
+        ["l", "deep"]
+    );
+    assert_eq!(
+        undo(&mut connection).unwrap().as_deref(),
+        Some("Reorder List")
+    );
+    assert_eq!(
+        order(
+            &connection,
+            "SELECT id FROM task_lists WHERE folderId = 'f' ORDER BY sortOrder"
+        ),
+        ["deep", "l"]
+    );
+}
+
+#[test]
+fn dropping_a_folder_and_nudging_one_reorder_their_siblings() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Reorder Folder", |tx| {
+        place_folder(tx, "sub", Some("f"), None, NOW)
+    })
+    .unwrap();
+    let top = || "SELECT id FROM list_folders WHERE parentFolderId IS NULL ORDER BY sortOrder";
+    assert_eq!(order(&connection, top()), ["sub", "f"]);
+    journalled(&mut connection, "Reorder Folder", |tx| {
+        move_folder_within_siblings(tx, "sub", 1, NOW)
+    })
+    .unwrap();
+    assert_eq!(order(&connection, top()), ["f", "sub"]);
+}

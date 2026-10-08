@@ -213,16 +213,9 @@ class WorkspaceRepository(
         coreWrite { it.renameFolder(id, name, now.toEpochMilli()) }
     }
 
+    /** Moves a folder into another or to the top: the Rust core's `lists::move_folder`. */
     suspend fun moveFolder(id: String, toParentFolderId: String?, now: Instant = now()) {
-        journalledWrite("Move Folder") { db ->
-            val folder = db.folder(id) ?: fail(WorkspaceStoreError.MISSING_FOLDER)
-            validateFolderParent(db, folder, toParentFolderId)
-            if (folder.parentFolderId == toParentFolderId) return@journalledWrite
-            val order = db.nextOrder(
-                "list_folders", "workspaceId = ? AND parentFolderId IS ?", folder.workspaceId, toParentFolderId,
-            )
-            db.update(folder.copy(parentFolderId = toParentFolderId, sortOrder = order, updatedAt = now))
-        }
+        coreWrite { it.moveFolder(id, toParentFolderId, now.toEpochMilli()) }
     }
 
     /** Lists inside are kept (SET NULL moves them to the root); child folders cascade. */
@@ -241,95 +234,29 @@ class WorkspaceRepository(
         coreWrite { it.renameList(id, name, now.toEpochMilli()) }
     }
 
+    /** Moves a list into a folder or to the top: the Rust core's `lists::move_list`. */
     suspend fun moveList(id: String, toFolderId: String?, now: Instant = now()) {
-        journalledWrite("Move List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (toFolderId != null) {
-                val folder = db.folder(toFolderId)
-                if (folder == null || folder.workspaceId != list.workspaceId) fail(WorkspaceStoreError.MISSING_FOLDER)
-            }
-            if (list.folderId == toFolderId) return@journalledWrite
-            val order = db.nextOrder("task_lists", "workspaceId = ? AND folderId IS ?", list.workspaceId, toFolderId)
-            db.update(list.copy(folderId = toFolderId, sortOrder = order, updatedAt = now))
-        }
+        coreWrite { it.moveList(id, toFolderId, now.toEpochMilli()) }
     }
 
+    /** Moves a list among its siblings: the Rust core's `lists::move_list_within_folder`. */
     suspend fun moveListWithinFolder(id: String, by: Int, now: Instant = now()) {
-        journalledWrite("Reorder List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            val siblings = listSiblings(db, list.workspaceId, list.folderId, list.isArchived).toMutableList()
-            val index = siblings.indexOfFirst { it.id == id }
-            if (index < 0) return@journalledWrite
-            val target = (index + by).coerceAtLeast(0).coerceAtMost(siblings.size - 1)
-            if (target == index) return@journalledWrite
-            siblings.add(target, siblings.removeAt(index))
-            db.persistListOrder(siblings, now)
-        }
+        coreWrite { it.moveListWithinFolder(id, by, now.toEpochMilli()) }
     }
 
     /** Puts [id] before [beforeId] (nil: at the end) among its siblings in [inFolderId]. */
     suspend fun placeList(id: String, beforeId: String?, inFolderId: String?, now: Instant = now()) {
-        journalledWrite("Reorder List") { db ->
-            var list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (id == beforeId) return@journalledWrite
-            if (inFolderId != null) {
-                val folder = db.folder(inFolderId)
-                if (folder == null || folder.workspaceId != list.workspaceId) fail(WorkspaceStoreError.MISSING_FOLDER)
-            }
-            if (list.folderId != inFolderId) {
-                list = list.copy(folderId = inFolderId, updatedAt = now)
-                db.update(list)
-            }
-            val siblings = listSiblings(db, list.workspaceId, inFolderId, list.isArchived).toMutableList()
-            val index = siblings.indexOfFirst { it.id == id }
-            if (index < 0) return@journalledWrite
-            val moved = siblings.removeAt(index)
-            val target = beforeId?.let { b -> siblings.indexOfFirst { it.id == b }.takeIf { it >= 0 } } ?: siblings.size
-            siblings.add(target, moved)
-            db.persistListOrder(siblings, now)
-        }
+        coreWrite { it.placeList(id, beforeId, inFolderId, now.toEpochMilli()) }
     }
 
     /** The same placement for folders, refusing a drop inside the folder's own subtree. */
     suspend fun placeFolder(id: String, beforeId: String?, inParentFolderId: String?, now: Instant = now()) {
-        journalledWrite("Reorder Folder") { db ->
-            var folder = db.folder(id) ?: fail(WorkspaceStoreError.MISSING_FOLDER)
-            if (id == beforeId) return@journalledWrite
-            if (inParentFolderId != null) {
-                val parent = db.folder(inParentFolderId)
-                if (parent == null || parent.workspaceId != folder.workspaceId) fail(WorkspaceStoreError.MISSING_FOLDER)
-                var ancestor: String? = inParentFolderId
-                val visited = HashSet<String>()
-                while (ancestor != null && visited.add(ancestor)) {
-                    if (ancestor == id) fail(WorkspaceStoreError.INVALID_FOLDER_MOVE)
-                    ancestor = db.folder(ancestor)?.parentFolderId
-                }
-            }
-            if (folder.parentFolderId != inParentFolderId) {
-                folder = folder.copy(parentFolderId = inParentFolderId, updatedAt = now)
-                db.update(folder)
-            }
-            val siblings = folderSiblings(db, folder.workspaceId, inParentFolderId).toMutableList()
-            val index = siblings.indexOfFirst { it.id == id }
-            if (index < 0) return@journalledWrite
-            val moved = siblings.removeAt(index)
-            val target = beforeId?.let { b -> siblings.indexOfFirst { it.id == b }.takeIf { it >= 0 } } ?: siblings.size
-            siblings.add(target, moved)
-            db.persistFolderOrder(siblings, now)
-        }
+        coreWrite { it.placeFolder(id, beforeId, inParentFolderId, now.toEpochMilli()) }
     }
 
+    /** Moves a folder among its siblings: the Rust core's `lists::move_folder_within_siblings`. */
     suspend fun moveFolderWithinSiblings(id: String, by: Int, now: Instant = now()) {
-        journalledWrite("Reorder Folder") { db ->
-            val folder = db.folder(id) ?: fail(WorkspaceStoreError.MISSING_FOLDER)
-            val siblings = folderSiblings(db, folder.workspaceId, folder.parentFolderId).toMutableList()
-            val index = siblings.indexOfFirst { it.id == id }
-            if (index < 0) return@journalledWrite
-            val target = (index + by).coerceAtLeast(0).coerceAtMost(siblings.size - 1)
-            if (target == index) return@journalledWrite
-            siblings.add(target, siblings.removeAt(index))
-            db.persistFolderOrder(siblings, now)
-        }
+        coreWrite { it.moveFolderWithinSiblings(id, by, now.toEpochMilli()) }
     }
 
     /** Archives or restores a list; the Inbox stays. The Rust core's `lists::set_list_archived`. */
@@ -658,6 +585,7 @@ class WorkspaceRepository(
             is CoreException.MissingFolder -> fail(WorkspaceStoreError.MISSING_FOLDER)
             is CoreException.SystemListIsPermanent -> fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
             is CoreException.EmptyName -> fail(WorkspaceStoreError.EMPTY_NAME)
+            is CoreException.InvalidFolderMove -> fail(WorkspaceStoreError.INVALID_FOLDER_MOVE)
             else -> throw error
         }
     }

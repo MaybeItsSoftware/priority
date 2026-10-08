@@ -60,18 +60,6 @@ internal fun listsIn(db: Db, workspaceId: String, includingArchived: Boolean): L
     workspaceId,
 ) { it.toList() }
 
-internal fun listSiblings(db: Db, workspaceId: String, folderId: String?, archived: Boolean): List<TaskList> =
-    db.query(
-        "SELECT * FROM task_lists WHERE workspaceId = ? AND folderId IS ? AND isArchived = ? " +
-            "ORDER BY sortOrder, createdAt, id",
-        workspaceId, folderId, archived,
-    ) { it.toList() }
-
-internal fun folderSiblings(db: Db, workspaceId: String, parentFolderId: String?): List<ListFolder> = db.query(
-    "SELECT * FROM list_folders WHERE workspaceId = ? AND parentFolderId IS ? ORDER BY sortOrder, createdAt, id",
-    workspaceId, parentFolderId,
-) { it.toFolder() }
-
 internal fun validateFolderParent(db: Db, folder: ListFolder, parentFolderId: String?) {
     if (parentFolderId == folder.id) fail(WorkspaceStoreError.INVALID_FOLDER_MOVE)
     if (parentFolderId != null) {

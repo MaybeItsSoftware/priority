@@ -13,6 +13,7 @@ public enum CoreFailure: Equatable, Sendable {
   case missingFolder(id: String)
   case systemListIsPermanent
   case emptyName
+  case invalidFolderMove
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
   case other
@@ -29,6 +30,7 @@ extension Error {
     case .MissingFolder(let id): return .missingFolder(id: id)
     case .SystemListIsPermanent: return .systemListIsPermanent
     case .EmptyName: return .emptyName
+    case .InvalidFolderMove: return .invalidFolderMove
     case .NoJournal: return .noJournal
     default: return .other
     }

@@ -94,14 +94,6 @@ internal fun Db.persistTaskOrder(tasks: List<WorkspaceTask>, now: Instant) {
     tasks.forEachIndexed { index, task -> update(task.copy(sortOrder = index, updatedAt = now)) }
 }
 
-internal fun Db.persistListOrder(lists: List<TaskList>, now: Instant) {
-    lists.forEachIndexed { index, list -> update(list.copy(sortOrder = index, updatedAt = now)) }
-}
-
-internal fun Db.persistFolderOrder(folders: List<ListFolder>, now: Instant) {
-    folders.forEachIndexed { index, folder -> update(folder.copy(sortOrder = index, updatedAt = now)) }
-}
-
 internal fun Db.taskDescendantIDs(taskId: String): Set<String> = descendantIDs("tasks", "parentTaskId", taskId)
 
 internal fun Db.folderDescendantIDs(folderId: String): Set<String> =

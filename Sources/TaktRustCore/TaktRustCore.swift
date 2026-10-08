@@ -481,6 +481,22 @@ fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
+    typealias FfiType = Int32
+    typealias SwiftType = Int32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int32, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
     typealias FfiType = Int64
     typealias SwiftType = Int64
@@ -601,6 +617,36 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * The task and list the next undo (`for_undo`) or redo affects.
      */
     func historyTarget(forUndo: Bool) throws  -> HistoryTarget
+    
+    /**
+     * Moves a folder into another (or to the top) as one "Move Folder" step.
+     */
+    func moveFolder(id: String, parentFolderId: String?, nowMs: Int64) throws 
+    
+    /**
+     * Moves a folder among its siblings as one "Reorder Folder" step.
+     */
+    func moveFolderWithinSiblings(id: String, offset: Int32, nowMs: Int64) throws 
+    
+    /**
+     * Moves a list into a folder (or to the top) as one "Move List" step.
+     */
+    func moveList(id: String, folderId: String?, nowMs: Int64) throws 
+    
+    /**
+     * Moves a list among its siblings as one "Reorder List" step.
+     */
+    func moveListWithinFolder(id: String, offset: Int32, nowMs: Int64) throws 
+    
+    /**
+     * Drops a folder before another, in a parent, as one "Reorder Folder" step.
+     */
+    func placeFolder(id: String, beforeId: String?, parentFolderId: String?, nowMs: Int64) throws 
+    
+    /**
+     * Drops a list before another, in a folder, as one "Reorder List" step.
+     */
+    func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int64) throws 
     
     /**
      * Puts back the most recently undone step.
@@ -799,6 +845,92 @@ open func historyTarget(forUndo: Bool)throws  -> HistoryTarget  {
         FfiConverterBool.lower(forUndo),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * Moves a folder into another (or to the top) as one "Move Folder" step.
+     */
+open func moveFolder(id: String, parentFolderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_folder(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterOptionString.lower(parentFolderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Moves a folder among its siblings as one "Reorder Folder" step.
+     */
+open func moveFolderWithinSiblings(id: String, offset: Int32, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_folder_within_siblings(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt32.lower(offset),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Moves a list into a folder (or to the top) as one "Move List" step.
+     */
+open func moveList(id: String, folderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterOptionString.lower(folderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Moves a list among its siblings as one "Reorder List" step.
+     */
+open func moveListWithinFolder(id: String, offset: Int32, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_list_within_folder(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt32.lower(offset),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Drops a folder before another, in a parent, as one "Reorder Folder" step.
+     */
+open func placeFolder(id: String, beforeId: String?, parentFolderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_place_folder(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterOptionString.lower(beforeId),
+        FfiConverterOptionString.lower(parentFolderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Drops a list before another, in a folder, as one "Reorder List" step.
+     */
+open func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_place_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterOptionString.lower(beforeId),
+        FfiConverterOptionString.lower(folderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
 }
     
     /**
@@ -1347,6 +1479,7 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     )
     case SystemListIsPermanent
     case EmptyName
+    case InvalidFolderMove
 
     
 
@@ -1395,6 +1528,7 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             )
         case 7: return .SystemListIsPermanent
         case 8: return .EmptyName
+        case 9: return .InvalidFolderMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1443,6 +1577,10 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         
         case .EmptyName:
             writeInt(&buf, Int32(8))
+        
+        
+        case .InvalidFolderMove:
+            writeInt(&buf, Int32(9))
         
         }
     }
@@ -1617,6 +1755,24 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_history_target() != 25210) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_folder() != 35092) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_folder_within_siblings() != 18801) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_list() != 22532) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_list_within_folder() != 53589) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_place_folder() != 1445) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_place_list() != 14409) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_redo() != 49682) {

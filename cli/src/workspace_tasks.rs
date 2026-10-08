@@ -930,21 +930,11 @@ impl Workspace {
     /// `WorkspaceStore.moveList`: into a folder, or to the top level with
     /// `None`. Appended at the end of its new siblings.
     pub fn move_list(&self, list_id: &str, folder_id: Option<&str>) -> Result<Value> {
-        self.journalled("Move List", |tx, now| {
-            let list = list_row(tx, list_id)?;
-            if let Some(folder) = folder_id {
-                folder_in_workspace(tx, folder, &list.workspace_id)?;
-            }
-            if list.folder_id.as_deref() != folder_id {
-                let order = next_list_order(tx, &list.workspace_id, folder_id)?;
-                tx.execute(
-                    "UPDATE task_lists SET folderId = ?1, sortOrder = ?2, updatedAt = ?3 \
-                     WHERE id = ?4",
-                    params![folder_id, order, now, list.id],
-                )
-                .map_err(map_write_error)?;
-            }
-            Ok(list_row(tx, &list.id)?.to_json())
+        self.journalled("Move List", |tx, _now| {
+            // The write is the Rust core's, shared with the apps.
+            takt_core::lists::move_list(tx, list_id, folder_id, Utc::now().timestamp_millis())
+                .map_err(map_core_error)?;
+            Ok(list_row(tx, list_id)?.to_json())
         })
     }
 
@@ -1442,6 +1432,7 @@ fn map_core_error(error: takt_core::CoreError) -> ToolError {
         takt_core::CoreError::MissingFolder { id } => ToolError::new(format!(
             "No folder with id {id}. workspace_tree lists the folders and their ids."
         )),
+        refused @ takt_core::CoreError::InvalidFolderMove => ToolError::new(refused.to_string()),
         permanent @ takt_core::CoreError::SystemListIsPermanent => {
             ToolError::new(permanent.to_string())
         }

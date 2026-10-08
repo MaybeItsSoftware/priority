@@ -693,6 +693,18 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_folder(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_folder_within_siblings(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_list_within_folder(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_place_folder(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_place_list(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redo(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redoable_label(
@@ -751,6 +763,18 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_folder_within_siblings(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_list(`ptr`: Long,`id`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_list_within_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_place_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_place_list(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_redo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_redoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -919,6 +943,24 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_history_target() and 0xFFFF) != 25210) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_folder() and 0xFFFF) != 35092) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_folder_within_siblings() and 0xFFFF) != 18801) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_list() and 0xFFFF) != 22532) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_list_within_folder() and 0xFFFF) != 53589) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_folder() and 0xFFFF) != 1445) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_list() and 0xFFFF) != 14409) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redo() and 0xFFFF) != 49682) {
@@ -1128,6 +1170,29 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 
     override fun write(value: UInt, buf: ByteBuffer) {
         buf.putInt(value.toInt())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterInt: FfiConverter<Int, Int> {
+    override fun lift(value: Int): Int {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Int {
+        return buf.getInt()
+    }
+
+    override fun lower(value: Int): Int {
+        return value
+    }
+
+    override fun allocationSize(value: Int) = 4UL
+
+    override fun write(value: Int, buf: ByteBuffer) {
+        buf.putInt(value)
     }
 }
 
@@ -1364,6 +1429,36 @@ public interface CoreWorkspaceInterface {
      * The task and list the next undo (`for_undo`) or redo affects.
      */
     fun `historyTarget`(`forUndo`: kotlin.Boolean): HistoryTarget
+    
+    /**
+     * Moves a folder into another (or to the top) as one "Move Folder" step.
+     */
+    fun `moveFolder`(`id`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Moves a folder among its siblings as one "Reorder Folder" step.
+     */
+    fun `moveFolderWithinSiblings`(`id`: kotlin.String, `offset`: kotlin.Int, `nowMs`: kotlin.Long)
+    
+    /**
+     * Moves a list into a folder (or to the top) as one "Move List" step.
+     */
+    fun `moveList`(`id`: kotlin.String, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Moves a list among its siblings as one "Reorder List" step.
+     */
+    fun `moveListWithinFolder`(`id`: kotlin.String, `offset`: kotlin.Int, `nowMs`: kotlin.Long)
+    
+    /**
+     * Drops a folder before another, in a parent, as one "Reorder Folder" step.
+     */
+    fun `placeFolder`(`id`: kotlin.String, `beforeId`: kotlin.String?, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Drops a list before another, in a folder, as one "Reorder List" step.
+     */
+    fun `placeList`(`id`: kotlin.String, `beforeId`: kotlin.String?, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
     
     /**
      * Puts back the most recently undone step.
@@ -1629,6 +1724,122 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Moves a folder into another (or to the top) as one "Move Folder" step.
+     */
+    @Throws(CoreException::class)override fun `moveFolder`(`id`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_folder(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterOptionalString.lower(`parentFolderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Moves a folder among its siblings as one "Reorder Folder" step.
+     */
+    @Throws(CoreException::class)override fun `moveFolderWithinSiblings`(`id`: kotlin.String, `offset`: kotlin.Int, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_folder_within_siblings(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterInt.lower(`offset`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Moves a list into a folder (or to the top) as one "Move List" step.
+     */
+    @Throws(CoreException::class)override fun `moveList`(`id`: kotlin.String, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_list(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterOptionalString.lower(`folderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Moves a list among its siblings as one "Reorder List" step.
+     */
+    @Throws(CoreException::class)override fun `moveListWithinFolder`(`id`: kotlin.String, `offset`: kotlin.Int, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_list_within_folder(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterInt.lower(`offset`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Drops a folder before another, in a parent, as one "Reorder Folder" step.
+     */
+    @Throws(CoreException::class)override fun `placeFolder`(`id`: kotlin.String, `beforeId`: kotlin.String?, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_place_folder(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterOptionalString.lower(`beforeId`),
+        FfiConverterOptionalString.lower(`parentFolderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Drops a list before another, in a folder, as one "Reorder List" step.
+     */
+    @Throws(CoreException::class)override fun `placeList`(`id`: kotlin.String, `beforeId`: kotlin.String?, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_place_list(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterOptionalString.lower(`beforeId`),
+        FfiConverterOptionalString.lower(`folderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
     
 
     
@@ -2176,6 +2387,12 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class InvalidFolderMove(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -2214,6 +2431,7 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 )
             7 -> CoreException.SystemListIsPermanent()
             8 -> CoreException.EmptyName()
+            9 -> CoreException.InvalidFolderMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -2258,6 +2476,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is CoreException.InvalidFolderMove -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -2299,6 +2521,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             }
             is CoreException.EmptyName -> {
                 buf.putInt(8)
+                Unit
+            }
+            is CoreException.InvalidFolderMove -> {
+                buf.putInt(9)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
