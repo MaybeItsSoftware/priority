@@ -98,7 +98,9 @@ triggers, guarded by
 They use plain SQL only. They must never call an application-registered
 function, because the CLI and `sqlite3` write to the same file without one. Like the
 undo triggers, they name their columns, so **any later migration that adds or
-removes a column on a synced table must reinstall them**.
+removes a column on a synced table must reinstall them**. Migrations live in
+the Rust core; `core/src/schema/triggers.rs` generates both kinds of trigger
+from a table's current columns.
 
 An undo is ordinary inserts and updates, so it syncs like any other edit.
 

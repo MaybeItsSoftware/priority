@@ -70,10 +70,20 @@ covered the old copies pass against it.
    no root Cargo workspace: `cli/target/release` is where the installed
    `takt` symlink points, and a workspace would move every crate's `target`
    to the root.
-2. **Schema and migrations.** Move the ordered migration list into
-   `core/src/schema.rs`. Swift's and Kotlin's migrators call it.
-   `scripts/dump_workspace_schema.sh` dumps from the core, so the fixture
-   is generated, not hand-kept.
+2. **Schema and migrations. Done 2026-10-08.** `core/src/schema` holds the
+   twenty migrations. Their SQL was captured from GRDB's migrator as it ran,
+   so it was not retyped. The three steps that walk existing rows (v11, v12,
+   v13) are ported by hand and tested. Progress stays in GRDB's
+   `grdb_migrations` table under the same identifiers. The Mac and iPhone
+   call `migrateWorkspace` before GRDB opens its pool. Android calls it
+   before the androidx driver opens the file. The Swift migrator and
+   Kotlin's migration steps are deleted. `scripts/dump_workspace_schema.sh`
+   generates the fixture from the core, and a core test holds a new database
+   to it byte for byte. On a backup of the real database the core applied
+   nothing and changed nothing; on an Android emulator a release build
+   opened an existing install through it and saved a task.
+   `core/src/schema/triggers.rs` generates the journal and outbox triggers,
+   matching all 69 in the fixture, for the next migration that needs them.
 3. **Undo journal.** `undo_control` and `change_log` triggers, undo and redo.
    The CLI already holds a Rust copy, so it becomes the core one.
 4. **Task writes.** add, update, complete/reopen, move, reparent, delete,
@@ -109,6 +119,18 @@ on Android in the same way, so moving them buys less.
 - **Android ABIs.** Build arm64-v8a and x86_64; the user's phone is arm64.
 - **FFI cost on hot reads.** Ranking returns whole snapshots, not
   per-task calls, so the boundary is crossed once per refresh.
+- **Two SQLite libraries in one process.** On Apple the core links the
+  system SQLite that GRDB uses, so there is one. On Android the core bundles
+  its own beside androidx's bundled one. That is safe only while they never
+  hold the same file at once, and today the core opens, migrates and closes
+  before androidx opens. Once writes move (step 4), Android's connection must
+  go through the core, or the core must use androidx's library. Otherwise one
+  library closing the file can release the other's POSIX locks.
+- **Captured triggers are text.** A captured migration's triggers name the
+  columns its table had then. Replaying it on a database where a later
+  migration already ran would install stale triggers. That cannot happen in
+  order, which is the only way migrations apply, but tests that rewind one
+  migration must rewind the later ones too.
 - **Two writers during the move.** Until step 8, Swift's GRDB and the core
   both write the same file. The busy timeout on both sides, added
   2026-10-07, is what keeps that safe. Do not remove it mid-migration.
