@@ -985,36 +985,25 @@ fn list_row(connection: &Connection, id: &str) -> Result<ListRow> {
         })
 }
 
-/// The workspace there is. The app makes exactly one.
+/// The workspace there is. The app makes exactly one. The Rust core's
+/// `records::workspaces`, oldest first.
 fn workspace_row(connection: &Connection) -> Result<(String, String)> {
-    connection
-        .query_row(
-            "SELECT id, name FROM workspaces ORDER BY createdAt LIMIT 1",
-            [],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        )
-        .optional()
-        .map_err(map_query_error)?
+    takt_core::records::workspaces(connection)
+        .map_err(map_core_error)?
+        .into_iter()
+        .next()
+        .map(|workspace| (workspace.id, workspace.name))
         .ok_or_else(|| {
             ToolError::new("The workspace database has no workspace yet. Open Takt once.")
         })
 }
 
 /// `visibleRootParentTaskID`: the imported wrapper whose children the app
-/// shows as the list's top level, while it is still the only root.
+/// shows as the list's top level, while it is still the only root. The Rust
+/// core's `records::visible_root_parent`, after the list's own check.
 fn visible_root_parent(connection: &Connection, list_id: &str) -> Result<Option<String>> {
-    let Some(root) = list_row(connection, list_id)?.visible_root_task_id else {
-        return Ok(None);
-    };
-    let roots: Vec<String> = connection
-        .prepare("SELECT id FROM tasks WHERE listId = ?1 AND parentTaskId IS NULL")
-        .and_then(|mut statement| {
-            statement
-                .query_map([list_id], |row| row.get(0))?
-                .collect::<rusqlite::Result<Vec<_>>>()
-        })
-        .map_err(map_query_error)?;
-    Ok((roots.len() == 1 && roots[0] == root).then_some(root))
+    list_row(connection, list_id)?;
+    takt_core::records::visible_root_parent(connection, list_id).map_err(map_core_error)
 }
 
 fn descendant_ids(connection: &Connection, task_id: &str) -> Result<HashSet<String>> {
