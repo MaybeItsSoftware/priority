@@ -68,31 +68,6 @@ extension WorkspaceStore {
     return daily
   }
 
-  static func makeDailyRecord(
-    _ db: Database, taskId: String, weekdays: Set<Int> = Set(1...7), intervalDays: Int? = nil,
-    targetSeconds: Int?, now: Date
-  ) throws -> WorkspaceDaily {
-    guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
-    if var existing = try WorkspaceDaily.filter(Column("taskId") == taskId).fetchOne(db) {
-      let target = targetSeconds ?? existing.targetSeconds
-      if existing.archivedAt != nil || existing.targetSeconds != target {
-        existing.archivedAt = nil
-        existing.targetSeconds = target
-        existing.updatedAt = now
-        try existing.update(db)
-      }
-      return existing
-    }
-    let order = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM dailies") ?? 0
-    let daily = WorkspaceDaily(
-      id: UUID().uuidString, taskId: taskId,
-      activeWeekdaysMask: WorkspaceDaily.mask(forWeekdays: weekdays),
-      intervalDays: intervalDays, intervalAnchor: intervalDays == nil ? nil : now,
-      targetSeconds: targetSeconds, sortOrder: order, archivedAt: nil, createdAt: now, updatedAt: now)
-    try daily.insert(db)
-    return daily
-  }
-
   /// Archives rather than deletes, so logged contributions keep a parent.
   public func archiveDaily(taskId: String, now: Date = .now) throws {
     try coreWrite { try core.archiveDaily(taskId: taskId, nowMs: now.coreMilliseconds) }

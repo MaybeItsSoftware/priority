@@ -48,31 +48,3 @@ internal fun taskEditorSnapshot(db: Db, taskId: String): TaskEditorSnapshot {
     )
 }
 
-internal fun makeDailyRecord(
-    db: Db,
-    taskId: String,
-    weekdays: Set<Int> = (1..7).toSet(),
-    intervalDays: Int? = null,
-    targetSeconds: Int?,
-    now: Instant,
-): WorkspaceDaily {
-    db.task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-    db.queryOne("SELECT * FROM dailies WHERE taskId = ?", taskId) { it.toDaily() }?.let { existing ->
-        val target = targetSeconds ?: existing.targetSeconds
-        if (existing.archivedAt != null || existing.targetSeconds != target) {
-            val updated = existing.copy(archivedAt = null, targetSeconds = target, updatedAt = now)
-            db.update(updated)
-            return updated
-        }
-        return existing
-    }
-    val order = db.int("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM dailies") ?: 0
-    val daily = WorkspaceDaily.make(
-        id = newId(), taskId = taskId, activeWeekdaysMask = WorkspaceDaily.mask(weekdays), intervalDays = intervalDays,
-        intervalAnchor = if (intervalDays == null) null else now, targetSeconds = targetSeconds, sortOrder = order,
-        archivedAt = null, createdAt = now, updatedAt = now,
-    )
-    db.insert(daily)
-    return daily
-}
-

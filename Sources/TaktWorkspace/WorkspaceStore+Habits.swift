@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import TaktRustCore
 import TaktCore
 
 /// What the habit form edits: a daily with a column to land in, a rule for
@@ -86,61 +87,23 @@ extension WorkspaceStore {
   public func saveHabit(
     _ draft: HabitDraft, habitTaskId: String? = nil, now: Date = .now, calendar: Calendar = .current
   ) throws -> WorkspaceDaily {
-    let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !title.isEmpty else { throw WorkspaceStoreError.emptyName }
-    return try journalledWrite(habitTaskId == nil ? "New Habit" : "Edit Habit") { db in
-      let task: WorkspaceTask
-      if let habitTaskId {
-        guard var existing = try WorkspaceTask.fetchOne(db, key: habitTaskId) else {
-          throw WorkspaceStoreError.missingTask
-        }
-        if existing.title != title || existing.estimateSeconds != draft.estimateSeconds {
-          existing.title = title
-          existing.estimateSeconds = draft.estimateSeconds
-          existing.updatedAt = now
-          try existing.update(db)
-        }
-        task = existing
-      } else {
-        guard let workspace = try Workspace.fetchOne(db) else { throw WorkspaceStoreError.missingList }
-        let habits = try habitsList(db, workspaceId: workspace.id, now: now)
-        let order = try Int.fetchOne(
-          db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM tasks WHERE listId = ? AND parentTaskId IS NULL",
-          arguments: [habits.id]) ?? 0
-        task = WorkspaceTask(
-          id: UUID().uuidString, listId: habits.id, parentTaskId: nil, title: title, notes: "",
-          status: .open, sortOrder: order, dueAt: nil, estimateSeconds: draft.estimateSeconds,
-          createdAt: now, updatedAt: now)
-        try task.insert(db)
-      }
-
-      var daily = try Self.makeDailyRecord(db, taskId: task.id, targetSeconds: draft.estimateSeconds, now: now)
-      let previousPlacement = daily.placementColumn
-      let schedule = draft.frequency.storage
-      daily.activeWeekdaysMask = WorkspaceDaily.mask(forWeekdays: schedule.weekdays)
-      if daily.intervalDays != schedule.intervalDays || daily.intervalAnchor == nil {
-        // A habit is anchored on the day it was made, so "every 3 days" and
-        // "weekly" count from then — and so nothing is owed from before it.
-        daily.intervalAnchor = calendar.startOfDay(for: daily.intervalAnchor ?? now)
-      }
-      daily.intervalDays = schedule.intervalDays
-      daily.targetSeconds = draft.estimateSeconds
-      daily.sourceTaskId = draft.sourceTaskId
-      daily.placementColumn = draft.placement.rawValue
-      daily.dropsAtDayEnd = draft.dropsAtDayEnd
-      daily.expiryRule = draft.expiry.rule
-      daily.expiresAt = draft.expiry.date.map { calendar.startOfDay(for: $0) }
-      daily.updatedAt = now
-      try daily.update(db)
-
-      // Moving a habit to another column takes its card along.
-      if let previousPlacement, previousPlacement != daily.placementColumn,
-        try Self.kanbanColumn(db, taskId: task.id) == previousPlacement {
-        try Self.writeKanbanColumn(db, taskId: task.id, column: nil, now: now)
-      }
-      _ = try Self.reconcileHabit(db, daily: daily, now: now, calendar: calendar)
-      return try WorkspaceDaily.fetchOne(db, key: daily.id) ?? daily
+    // The Rust core's `habits::save_habit`, with the schedule as a daily stores it.
+    let schedule = draft.frequency.storage
+    let weekdays = schedule.weekdays.sorted().map { UInt32(clamping: $0) }
+    let interval = schedule.intervalDays.map { Int64($0) }
+    let estimate = draft.estimateSeconds.map { Int64($0) }
+    let core = TaktRustCore.HabitDraft(
+      title: draft.title, weekdays: weekdays, intervalDays: interval, dropsAtDayEnd: draft.dropsAtDayEnd,
+      estimateSeconds: estimate, expiryRule: draft.expiry.rule, expiresAtMs: draft.expiry.date?.coreMilliseconds,
+      placement: draft.placement.rawValue, sourceTaskId: draft.sourceTaskId)
+    let id = try coreWrite {
+      try self.core.saveHabit(
+        draft: core, habitTaskId: habitTaskId, nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
     }
+    guard let daily = try database.read({ db in try WorkspaceDaily.fetchOne(db, key: id) }) else {
+      throw WorkspaceStoreError.missingDaily
+    }
+    return daily
   }
 
   // MARK: - The engine
@@ -155,42 +118,11 @@ extension WorkspaceStore {
   @discardableResult
   public func reconcileHabits(now: Date = .now, calendar: Calendar = .current) throws -> Bool {
     let pending = try database.read { db in
-      try WorkspaceDaily.filter(Column("archivedAt") == nil && Column("placementColumn") != nil).fetchAll(db)
+      try WorkspaceDaily.filter(Column("archivedAt") == nil && Column("placementColumn") != nil).fetchCount(db)
     }
-    guard !pending.isEmpty else { return false }
-    return try database.write { db in
-      var changed = false
-      for daily in pending {
-        guard let current = try WorkspaceDaily.fetchOne(db, key: daily.id), !current.isArchived else { continue }
-        if try Self.reconcileHabit(db, daily: current, now: now, calendar: calendar) { changed = true }
-      }
-      return changed
-    }
-  }
-
-  /// One habit's pass. See `reconcileHabits`.
-  static func reconcileHabit(_ db: Database, daily: WorkspaceDaily, now: Date, calendar: Calendar) throws -> Bool {
-    guard let placement = daily.placement,
-      let task = try WorkspaceTask.fetchOne(db, key: daily.taskId), task.status == .open
-    else { return false }
-    let rule = daily.habitRule
-    let sourceCompleted = try isSourceCompleted(db, daily: daily)
-    let current = try kanbanColumn(db, taskId: task.id)
-    if HabitPolicy.isExpired(rule, on: now, sourceCompleted: sourceCompleted, calendar: calendar) {
-      var archived = daily
-      archived.archivedAt = now
-      archived.updatedAt = now
-      try archived.update(db)
-      if current == placement.rawValue { try writeKanbanColumn(db, taskId: task.id, column: nil, now: now) }
-      return true
-    }
-    let appearance = HabitPolicy.appearance(
-      rule, on: now, lastDoneDay: try lastDoneDay(db, dailyId: daily.id, calendar: calendar),
-      sourceCompleted: sourceCompleted, calendar: calendar)
-    guard let target = HabitPolicy.reconciledColumn(current: current, appearance: appearance, placement: placement)
-    else { return false }
-    try writeKanbanColumn(db, taskId: task.id, column: target, now: now)
-    return true
+    guard pending > 0 else { return false }
+    // The Rust core's `habits::reconcile_habits`, outside the journal.
+    return try coreWrite { try core.reconcileHabits(nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier) }
   }
 
   /// Whether a habit is showing on `day` — scheduled, or carried over from a

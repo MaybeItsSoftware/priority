@@ -16,6 +16,7 @@ use crate::conditions;
 use crate::conversions::{self, BoardColumn};
 use crate::dailies::{self, DailyEdit};
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
+use crate::habits::{self, HabitDraft};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
 use crate::tasks::{self, DeletedTask, NewTask};
@@ -670,6 +671,36 @@ impl CoreWorkspace {
         let made = waiting::make_due_follow_ups(&transaction, None, now_ms)?;
         transaction.commit()?;
         Ok(made)
+    }
+
+    /// Creates a habit, or rewrites the one on `habit_task_id`, as one step;
+    /// returns the habit's daily id.
+    pub fn save_habit(
+        &self,
+        draft: HabitDraft,
+        habit_task_id: Option<String>,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<String, CoreError> {
+        let label = if habit_task_id.is_none() {
+            "New Habit"
+        } else {
+            "Edit Habit"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            habits::save_habit(tx, &draft, habit_task_id.as_deref(), now_ms, &zone)
+        })
+    }
+
+    /// Applies every placed habit's options for `now`, outside the undo
+    /// journal; returns whether anything changed.
+    pub fn reconcile_habits(&self, now_ms: i64, zone: String) -> Result<bool, CoreError> {
+        let mut connection = self.lock();
+        let transaction =
+            connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let changed = habits::reconcile_habits(&transaction, now_ms, &zone)?;
+        transaction.commit()?;
+        Ok(changed)
     }
 
     /// Ranks tasks in Today's focus order as one "Reorder Today" step.

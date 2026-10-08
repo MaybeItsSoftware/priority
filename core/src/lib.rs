@@ -14,6 +14,7 @@ pub mod conversions;
 pub mod dailies;
 pub mod editor;
 pub mod error;
+pub mod habits;
 pub mod journal;
 pub mod lists;
 pub mod periodic;

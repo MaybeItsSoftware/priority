@@ -92,65 +92,21 @@ suspend fun WorkspaceRepository.saveHabit(
     now: Instant = now(),
     zone: ZoneId = this.zone,
 ): WorkspaceDaily {
-    val title = nonEmptyName(draft.title)
-    return journalledWrite(if (habitTaskId == null) "New Habit" else "Edit Habit") { db ->
-        val task: WorkspaceTask
-        if (habitTaskId != null) {
-            val existing = db.task(habitTaskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            task = if (existing.title != title || existing.estimateSeconds != draft.estimateSeconds) {
-                existing.copy(title = title, estimateSeconds = draft.estimateSeconds, updatedAt = now).also { db.update(it) }
-            } else {
-                existing
-            }
-        } else {
-            val workspaceId = db.strings("SELECT id FROM workspaces LIMIT 1").firstOrNull()
-                ?: fail(WorkspaceStoreError.MISSING_LIST)
-            val habits = habitsList(db, workspaceId, now)
-            val order = db.int(
-                "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM tasks WHERE listId = ? AND parentTaskId IS NULL", habits.id,
-            ) ?: 0
-            task = WorkspaceTask(
-                id = newId(), listId = habits.id, parentTaskId = null, title = title, notes = "",
-                status = TaskStatus.OPEN, sortOrder = order, dueAt = null, estimateSeconds = draft.estimateSeconds,
-                sourceSystem = null, sourceId = null, itemKind = WorkspaceItemKind.TASK, isPromoted = null,
-                archivedAt = null, completedAt = null, createdAt = now, updatedAt = now,
-            )
-            db.insert(task)
-        }
-
-        var daily = makeDailyRecord(db, task.id, targetSeconds = draft.estimateSeconds, now = now)
-        val previousPlacement = daily.placementColumn
-        val schedule = draft.frequency.storage
-        // A habit is anchored on the day it was made, so "every 3 days" and
-        // "weekly" count from then, and nothing is owed from before it.
-        val anchor = if (daily.intervalDays != schedule.intervalDays || daily.intervalAnchor == null) {
-            startOfDay(daily.intervalAnchor ?: now, zone)
-        } else {
-            daily.intervalAnchor
-        }
-        daily = daily.copy(
-            activeWeekdaysMask = WorkspaceDaily.mask(schedule.weekdays),
-            intervalAnchor = anchor,
-            intervalDays = schedule.intervalDays,
-            targetSeconds = draft.estimateSeconds,
-            sourceTaskId = draft.sourceTaskId,
-            placementColumn = draft.placement.raw,
-            dropsAtDayEnd = draft.dropsAtDayEnd,
-            expiryRule = draft.expiry.rule,
-            expiresAt = draft.expiry.date?.let { startOfDay(it, zone) },
-            updatedAt = now,
-        )
-        db.update(daily)
-
-        // Moving a habit to another column takes its card along.
-        if (previousPlacement != null && previousPlacement != daily.placementColumn &&
-            kanbanColumn(db, task.id) == previousPlacement
-        ) {
-            writeKanbanColumn(db, task.id, null, now)
-        }
-        reconcileHabit(db, daily, now, zone)
-        db.daily(daily.id) ?: daily
-    }
+    // The Rust core's `habits::save_habit`, with the schedule as a daily stores it.
+    val schedule = draft.frequency.storage
+    val core = uniffi.takt_core.HabitDraft(
+        title = draft.title,
+        weekdays = schedule.weekdays.sorted().map { it.toUInt() },
+        intervalDays = schedule.intervalDays?.toLong(),
+        dropsAtDayEnd = draft.dropsAtDayEnd,
+        estimateSeconds = draft.estimateSeconds?.toLong(),
+        expiryRule = draft.expiry.rule,
+        expiresAtMs = draft.expiry.date?.toEpochMilli(),
+        placement = draft.placement.raw,
+        sourceTaskId = draft.sourceTaskId,
+    )
+    val id = coreWrite { it.saveHabit(core, habitTaskId, now.toEpochMilli(), zone.id) }
+    return database.read { it.daily(id) } ?: fail(WorkspaceStoreError.MISSING_DAILY)
 }
 
 /**
@@ -168,32 +124,8 @@ suspend fun WorkspaceRepository.reconcileHabits(now: Instant = now(), zone: Zone
         db.strings("SELECT id FROM dailies WHERE archivedAt IS NULL AND placementColumn IS NOT NULL")
     }
     if (pending.isEmpty()) return false
-    return database.write { db ->
-        var changed = false
-        for (id in pending) {
-            val current = db.daily(id)?.takeIf { !it.isArchived } ?: continue
-            if (reconcileHabit(db, current, now, zone)) changed = true
-        }
-        changed
-    }
-}
-
-/** One habit's pass. See [reconcileHabits]. */
-internal fun reconcileHabit(db: Db, daily: WorkspaceDaily, now: Instant, zone: ZoneId): Boolean {
-    val placement = daily.placement ?: return false
-    val task = db.task(daily.taskId)?.takeIf { it.status == TaskStatus.OPEN } ?: return false
-    val rule = daily.habitRule
-    val sourceCompleted = isSourceCompleted(db, daily)
-    val current = kanbanColumn(db, task.id)
-    if (HabitPolicy.isExpired(rule, now, sourceCompleted, zone)) {
-        db.update(daily.copy(archivedAt = now, updatedAt = now))
-        if (current == placement.raw) writeKanbanColumn(db, task.id, null, now)
-        return true
-    }
-    val appearance = HabitPolicy.appearance(rule, now, lastDoneDay(db, daily.id, zone), sourceCompleted, zone)
-    val change = HabitPolicy.reconciledColumn(current, appearance, placement) ?: return false
-    writeKanbanColumn(db, task.id, change.column, now)
-    return true
+    // The Rust core's `habits::reconcile_habits`, outside the journal.
+    return coreWrite { it.reconcileHabits(now.toEpochMilli(), zone.id) }
 }
 
 /** Whether a habit is showing on [day]: scheduled, or carried over from a missed day it does not drop. */
@@ -224,24 +156,6 @@ internal fun expireHabits(db: Db, sourceTaskId: String, now: Instant) {
         val column = habit.placementColumn
         if (column != null && kanbanColumn(db, habit.taskId) == column) writeKanbanColumn(db, habit.taskId, null, now)
     }
-}
-
-/**
- * The Habits list, made if there is none. Looked up by its derived id first,
- * then by name (a list the Mac made before ids were derived).
- */
-internal fun habitsList(db: Db, workspaceId: String, now: Instant): TaskList {
-    val id = HabitPolicy.habitsListId(workspaceId)
-    db.list(id)?.let { return it }
-    db.queryOne(
-        "SELECT * FROM task_lists WHERE workspaceId = ? AND name = ?", workspaceId, HabitPolicy.HABITS_LIST_NAME,
-    ) { it.toList() }?.let { return it }
-    val order = db.int("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM task_lists WHERE workspaceId = ?", workspaceId) ?: 0
-    return TaskList(
-        id = id, workspaceId = workspaceId, folderId = null, name = HabitPolicy.HABITS_LIST_NAME, colorHex = null,
-        sortOrder = order, isArchived = false, systemRole = null, visibleRootTaskId = null, completedAt = null,
-        createdAt = now, updatedAt = now,
-    ).also { db.insert(it) }
 }
 
 /** A source that is closed or gone has ended. */

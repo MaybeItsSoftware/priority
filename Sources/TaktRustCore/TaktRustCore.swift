@@ -751,6 +751,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int64) throws 
     
     /**
+     * Applies every placed habit's options for `now`, outside the undo
+     * journal; returns whether anything changed.
+     */
+    func reconcileHabits(nowMs: Int64, zone: String) throws  -> Bool
+    
+    /**
      * Makes every follow-up that has come due, outside the undo journal, and
      * returns whether it made any.
      */
@@ -791,6 +797,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Saves the folder settings sheet as one "Edit Folder" step.
      */
     func saveFolderSettings(id: String, name: String, parentFolderId: String?, nowMs: Int64) throws 
+    
+    /**
+     * Creates a habit, or rewrites the one on `habit_task_id`, as one step;
+     * returns the habit's daily id.
+     */
+    func saveHabit(draft: HabitDraft, habitTaskId: String?, nowMs: Int64, zone: String) throws  -> String
     
     /**
      * Saves the list settings sheet as one "Edit List" step.
@@ -1427,6 +1439,21 @@ open func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int
 }
     
     /**
+     * Applies every placed habit's options for `now`, outside the undo
+     * journal; returns whether anything changed.
+     */
+open func reconcileHabits(nowMs: Int64, zone: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_reconcile_habits(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Makes every follow-up that has come due, outside the undo journal, and
      * returns whether it made any.
      */
@@ -1538,6 +1565,23 @@ open func saveFolderSettings(id: String, name: String, parentFolderId: String?, 
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Creates a habit, or rewrites the one on `habit_task_id`, as one step;
+     * returns the habit's daily id.
+     */
+open func saveHabit(draft: HabitDraft, habitTaskId: String?, nowMs: Int64, zone: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_save_habit(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeHabitDraft_lower(draft),
+        FfiConverterOptionString.lower(habitTaskId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -2396,6 +2440,105 @@ public func FfiConverterTypeEditorSnapshot_lift(_ buf: RustBuffer) throws -> Edi
 #endif
 public func FfiConverterTypeEditorSnapshot_lower(_ value: EditorSnapshot) -> RustBuffer {
     return FfiConverterTypeEditorSnapshot.lower(value)
+}
+
+
+/**
+ * What the habit form saves. The schedule arrives as the daily stores it
+ * (a weekday mask's days and an interval), which each client derives from
+ * its own frequency type.
+ */
+public struct HabitDraft: Equatable, Hashable {
+    public var title: String
+    public var weekdays: [UInt32]
+    public var intervalDays: Int64?
+    public var dropsAtDayEnd: Bool
+    public var estimateSeconds: Int64?
+    /**
+     * "never", "source" or "date".
+     */
+    public var expiryRule: String
+    public var expiresAtMs: Int64?
+    /**
+     * "today", "this-week" or "waiting-on".
+     */
+    public var placement: String
+    public var sourceTaskId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(title: String, weekdays: [UInt32], intervalDays: Int64?, dropsAtDayEnd: Bool, estimateSeconds: Int64?, 
+        /**
+         * "never", "source" or "date".
+         */expiryRule: String, expiresAtMs: Int64?, 
+        /**
+         * "today", "this-week" or "waiting-on".
+         */placement: String, sourceTaskId: String?) {
+        self.title = title
+        self.weekdays = weekdays
+        self.intervalDays = intervalDays
+        self.dropsAtDayEnd = dropsAtDayEnd
+        self.estimateSeconds = estimateSeconds
+        self.expiryRule = expiryRule
+        self.expiresAtMs = expiresAtMs
+        self.placement = placement
+        self.sourceTaskId = sourceTaskId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension HabitDraft: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeHabitDraft: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HabitDraft {
+        return
+            try HabitDraft(
+                title: FfiConverterString.read(from: &buf), 
+                weekdays: FfiConverterSequenceUInt32.read(from: &buf), 
+                intervalDays: FfiConverterOptionInt64.read(from: &buf), 
+                dropsAtDayEnd: FfiConverterBool.read(from: &buf), 
+                estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                expiryRule: FfiConverterString.read(from: &buf), 
+                expiresAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                placement: FfiConverterString.read(from: &buf), 
+                sourceTaskId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: HabitDraft, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterSequenceUInt32.write(value.weekdays, into: &buf)
+        FfiConverterOptionInt64.write(value.intervalDays, into: &buf)
+        FfiConverterBool.write(value.dropsAtDayEnd, into: &buf)
+        FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
+        FfiConverterString.write(value.expiryRule, into: &buf)
+        FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
+        FfiConverterString.write(value.placement, into: &buf)
+        FfiConverterOptionString.write(value.sourceTaskId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHabitDraft_lift(_ buf: RustBuffer) throws -> HabitDraft {
+    return try FfiConverterTypeHabitDraft.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHabitDraft_lower(_ value: HabitDraft) -> RustBuffer {
+    return FfiConverterTypeHabitDraft.lower(value)
 }
 
 
@@ -3483,6 +3626,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_place_list() != 14409) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_reconcile_habits() != 20214) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups() != 63977) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3505,6 +3651,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings() != 5349) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_save_habit() != 36195) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_save_list_settings() != 38825) {

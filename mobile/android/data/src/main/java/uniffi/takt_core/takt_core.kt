@@ -745,6 +745,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_list(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_reconcile_habits(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redo(
@@ -760,6 +762,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_editor(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_save_habit(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_list_settings(
     ): Int
@@ -895,6 +899,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_list(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_reconcile_habits(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_reconcile_waiting_follow_ups(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_redo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -911,6 +917,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_save_folder_settings(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_save_habit(`ptr`: Long,`draft`: RustBuffer.ByValue,`habitTaskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_save_list_settings(`ptr`: Long,`id`: RustBuffer.ByValue,`settings`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_schedule_task(`ptr`: Long,`id`: RustBuffer.ByValue,`startAtMs`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1183,6 +1191,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_list() and 0xFFFF) != 14409) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_reconcile_habits() and 0xFFFF) != 20214) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups() and 0xFFFF) != 63977) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1205,6 +1216,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_folder_settings() and 0xFFFF) != 5349) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_habit() and 0xFFFF) != 36195) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_list_settings() and 0xFFFF) != 38825) {
@@ -1843,6 +1857,12 @@ public interface CoreWorkspaceInterface {
     fun `placeList`(`id`: kotlin.String, `beforeId`: kotlin.String?, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
     
     /**
+     * Applies every placed habit's options for `now`, outside the undo
+     * journal; returns whether anything changed.
+     */
+    fun `reconcileHabits`(`nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean
+    
+    /**
      * Makes every follow-up that has come due, outside the undo journal, and
      * returns whether it made any.
      */
@@ -1883,6 +1903,12 @@ public interface CoreWorkspaceInterface {
      * Saves the folder settings sheet as one "Edit Folder" step.
      */
     fun `saveFolderSettings`(`id`: kotlin.String, `name`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Creates a habit, or rewrites the one on `habit_task_id`, as one step;
+     * returns the habit's daily id.
+     */
+    fun `saveHabit`(`draft`: HabitDraft, `habitTaskId`: kotlin.String?, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
     
     /**
      * Saves the list settings sheet as one "Edit List" step.
@@ -2717,6 +2743,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Applies every placed habit's options for `now`, outside the undo
+     * journal; returns whether anything changed.
+     */
+    @Throws(CoreException::class)override fun `reconcileHabits`(`nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_reconcile_habits(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Makes every follow-up that has come due, outside the undo journal, and
      * returns whether it made any.
      */
@@ -2867,6 +2913,28 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Creates a habit, or rewrites the one on `habit_task_id`, as one step;
+     * returns the habit's daily id.
+     */
+    @Throws(CoreException::class)override fun `saveHabit`(`draft`: HabitDraft, `habitTaskId`: kotlin.String?, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_habit(
+        it,
+        
+        FfiConverterTypeHabitDraft.lower(`draft`),
+        FfiConverterOptionalString.lower(`habitTaskId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -3714,6 +3782,90 @@ public object FfiConverterTypeEditorSnapshot: FfiConverterRustBuffer<EditorSnaps
             FfiConverterTypeEditorMetadata.write(value.`metadata`, buf)
             FfiConverterBoolean.write(value.`dailyProgress`, buf)
             FfiConverterOptionalTypePlanning.write(value.`planning`, buf)
+    }
+}
+
+
+
+/**
+ * What the habit form saves. The schedule arrives as the daily stores it
+ * (a weekday mask's days and an interval), which each client derives from
+ * its own frequency type.
+ */
+data class HabitDraft (
+    var `title`: kotlin.String
+    , 
+    var `weekdays`: List<kotlin.UInt>
+    , 
+    var `intervalDays`: kotlin.Long?
+    , 
+    var `dropsAtDayEnd`: kotlin.Boolean
+    , 
+    var `estimateSeconds`: kotlin.Long?
+    , 
+    /**
+     * "never", "source" or "date".
+     */
+    var `expiryRule`: kotlin.String
+    , 
+    var `expiresAtMs`: kotlin.Long?
+    , 
+    /**
+     * "today", "this-week" or "waiting-on".
+     */
+    var `placement`: kotlin.String
+    , 
+    var `sourceTaskId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeHabitDraft: FfiConverterRustBuffer<HabitDraft> {
+    override fun read(buf: ByteBuffer): HabitDraft {
+        return HabitDraft(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceUInt.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: HabitDraft) = (
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterSequenceUInt.allocationSize(value.`weekdays`) +
+            FfiConverterOptionalLong.allocationSize(value.`intervalDays`) +
+            FfiConverterBoolean.allocationSize(value.`dropsAtDayEnd`) +
+            FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
+            FfiConverterString.allocationSize(value.`expiryRule`) +
+            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`) +
+            FfiConverterString.allocationSize(value.`placement`) +
+            FfiConverterOptionalString.allocationSize(value.`sourceTaskId`)
+    )
+
+    override fun write(value: HabitDraft, buf: ByteBuffer) {
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterSequenceUInt.write(value.`weekdays`, buf)
+            FfiConverterOptionalLong.write(value.`intervalDays`, buf)
+            FfiConverterBoolean.write(value.`dropsAtDayEnd`, buf)
+            FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
+            FfiConverterString.write(value.`expiryRule`, buf)
+            FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
+            FfiConverterString.write(value.`placement`, buf)
+            FfiConverterOptionalString.write(value.`sourceTaskId`, buf)
     }
 }
 
