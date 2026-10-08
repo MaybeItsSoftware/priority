@@ -20,6 +20,7 @@ pub mod imports;
 pub mod journal;
 pub mod lists;
 pub mod periodic;
+pub mod ranking;
 pub mod schema;
 pub mod setup;
 pub mod sync;

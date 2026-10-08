@@ -16,11 +16,13 @@ use crate::conditions;
 use crate::conversions::{self, BoardColumn};
 use crate::dailies::{self, DailyEdit};
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
-use crate::focus::{self, BlockFinished, FocusContext};
+use crate::focus::Unavailable;
+use crate::focus::{self, BlockFinished, Candidate, FocusContext};
 use crate::habits::{self, HabitDraft};
 use crate::imports::{self, BoardBaseline, ImportOutcome, ImportedTaskSeed, LegacyDailySeed};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
+use crate::ranking::{self, Ranking, Scored};
 use crate::setup;
 use crate::sync::{self, IncomingRow, LocalSyncState, PendingChanges};
 use crate::tasks::{self, DeletedTask, NewTask};
@@ -963,6 +965,15 @@ impl CoreWorkspace {
         self.unjournalled(|tx| sync::record_progress(tx, cursor, hlc.as_deref(), now_ms))
     }
 
+    /// The open tasks the next-up engine and the day choose from.
+    pub fn next_up_candidates(
+        &self,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<Vec<Candidate>, CoreError> {
+        focus::candidates(&self.lock(), now_ms, &zone)
+    }
+
     /// Ranks tasks in Today's focus order as one "Reorder Today" step.
     pub fn arrange_day(&self, ordered_task_ids: Vec<String>, now_ms: i64) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Reorder Today", |tx| {
@@ -1060,4 +1071,49 @@ impl CoreWorkspace {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
+}
+
+/// Orders next-up candidates for `now` in `context`: a pure function, no
+/// database, for clients that already hold the candidates.
+#[uniffi::export]
+pub fn rank_next_up(
+    candidates: Vec<Candidate>,
+    now_ms: i64,
+    zone: String,
+    context: FocusContext,
+) -> Ranking {
+    ranking::evaluate(&candidates, now_ms, &zone, &context)
+}
+
+/// Why a candidate is not available in `context` at `now`; empty when it is.
+#[uniffi::export]
+pub fn availability_reasons(
+    candidate: Candidate,
+    context: FocusContext,
+    now_ms: i64,
+) -> Vec<Unavailable> {
+    focus::reasons(&candidate, &context, now_ms)
+}
+
+/// The block length to offer for a candidate.
+#[uniffi::export]
+pub fn suggested_block_seconds(candidate: Candidate, context: FocusContext, now_ms: i64) -> i64 {
+    focus::suggested_seconds(&candidate, &context, now_ms)
+}
+
+/// The block length to run for a candidate, given what was asked for.
+#[uniffi::export]
+pub fn planned_block_seconds(
+    candidate: Candidate,
+    requested: Option<i64>,
+    context: FocusContext,
+    now_ms: i64,
+) -> i64 {
+    focus::planned_seconds(&candidate, requested, &context, now_ms)
+}
+
+/// Why one available task ranks where it does.
+#[uniffi::export]
+pub fn score_next_up(candidate: Candidate, now_ms: i64, zone: String) -> Scored {
+    ranking::score_one(candidate, now_ms, &zone)
 }

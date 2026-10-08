@@ -831,6 +831,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func nestList(id: String, intoListId: String, parentTaskId: String?, nowMs: Int64) throws  -> String
     
     /**
+     * The open tasks the next-up engine and the day choose from.
+     */
+    func nextUpCandidates(nowMs: Int64, zone: String) throws  -> [Candidate]
+    
+    /**
      * Outdents a task to follow its parent as one "Outdent Task" step.
      */
     func outdentTask(id: String, nowMs: Int64) throws 
@@ -1765,6 +1770,20 @@ open func nestList(id: String, intoListId: String, parentTaskId: String?, nowMs:
 }
     
     /**
+     * The open tasks the next-up engine and the day choose from.
+     */
+open func nextUpCandidates(nowMs: Int64, zone: String)throws  -> [Candidate]  {
+    return try  FfiConverterSequenceTypeCandidate.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_next_up_candidates(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Outdents a task to follow its parent as one "Outdent Task" step.
      */
 open func outdentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -2546,6 +2565,63 @@ public func FfiConverterTypeBlockFinished_lift(_ buf: RustBuffer) throws -> Bloc
 #endif
 public func FfiConverterTypeBlockFinished_lower(_ value: BlockFinished) -> RustBuffer {
     return FfiConverterTypeBlockFinished.lower(value)
+}
+
+
+/**
+ * A task ruled out now, with every reason. `BlockedFocusTask`.
+ */
+public struct Blocked: Equatable, Hashable {
+    public var candidate: Candidate
+    public var reasons: [Unavailable]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(candidate: Candidate, reasons: [Unavailable]) {
+        self.candidate = candidate
+        self.reasons = reasons
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension Blocked: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBlocked: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Blocked {
+        return
+            try Blocked(
+                candidate: FfiConverterTypeCandidate.read(from: &buf), 
+                reasons: FfiConverterSequenceTypeUnavailable.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Blocked, into buf: inout [UInt8]) {
+        FfiConverterTypeCandidate.write(value.candidate, into: &buf)
+        FfiConverterSequenceTypeUnavailable.write(value.reasons, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBlocked_lift(_ buf: RustBuffer) throws -> Blocked {
+    return try FfiConverterTypeBlocked.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBlocked_lower(_ value: Blocked) -> RustBuffer {
+    return FfiConverterTypeBlocked.lower(value)
 }
 
 
@@ -4291,6 +4367,152 @@ public func FfiConverterTypePlanning_lower(_ value: Planning) -> RustBuffer {
 
 
 /**
+ * The day's order. `FocusRanking`.
+ */
+public struct Ranking: Equatable, Hashable {
+    public var ranked: [Scored]
+    public var blocked: [Blocked]
+    /**
+     * The next moment the order could change on its own, if any.
+     */
+    public var nextEvaluationAtMs: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(ranked: [Scored], blocked: [Blocked], 
+        /**
+         * The next moment the order could change on its own, if any.
+         */nextEvaluationAtMs: Int64?) {
+        self.ranked = ranked
+        self.blocked = blocked
+        self.nextEvaluationAtMs = nextEvaluationAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension Ranking: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRanking: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Ranking {
+        return
+            try Ranking(
+                ranked: FfiConverterSequenceTypeScored.read(from: &buf), 
+                blocked: FfiConverterSequenceTypeBlocked.read(from: &buf), 
+                nextEvaluationAtMs: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Ranking, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeScored.write(value.ranked, into: &buf)
+        FfiConverterSequenceTypeBlocked.write(value.blocked, into: &buf)
+        FfiConverterOptionInt64.write(value.nextEvaluationAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRanking_lift(_ buf: RustBuffer) throws -> Ranking {
+    return try FfiConverterTypeRanking.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRanking_lower(_ value: Ranking) -> RustBuffer {
+    return FfiConverterTypeRanking.lower(value)
+}
+
+
+/**
+ * An available task with why it is where it is. `ScoredNextUp`.
+ */
+public struct Scored: Equatable, Hashable {
+    public var candidate: Candidate
+    public var score: Double
+    /**
+     * `NextUpReason`'s raw value: daily, overdue, dueToday, dueSoon, today,
+     * importance, priority, order, condition, started or deadlineRisk.
+     */
+    public var reason: String
+    /**
+     * A specific explanation when there is one; otherwise the reason's own.
+     */
+    public var explanation: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(candidate: Candidate, score: Double, 
+        /**
+         * `NextUpReason`'s raw value: daily, overdue, dueToday, dueSoon, today,
+         * importance, priority, order, condition, started or deadlineRisk.
+         */reason: String, 
+        /**
+         * A specific explanation when there is one; otherwise the reason's own.
+         */explanation: String?) {
+        self.candidate = candidate
+        self.score = score
+        self.reason = reason
+        self.explanation = explanation
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension Scored: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeScored: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Scored {
+        return
+            try Scored(
+                candidate: FfiConverterTypeCandidate.read(from: &buf), 
+                score: FfiConverterDouble.read(from: &buf), 
+                reason: FfiConverterString.read(from: &buf), 
+                explanation: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Scored, into buf: inout [UInt8]) {
+        FfiConverterTypeCandidate.write(value.candidate, into: &buf)
+        FfiConverterDouble.write(value.score, into: &buf)
+        FfiConverterString.write(value.reason, into: &buf)
+        FfiConverterOptionString.write(value.explanation, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeScored_lift(_ buf: RustBuffer) throws -> Scored {
+    return try FfiConverterTypeScored.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeScored_lower(_ value: Scored) -> RustBuffer {
+    return FfiConverterTypeScored.lower(value)
+}
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 public struct UndoStep: Equatable, Hashable {
@@ -5110,6 +5332,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeBlocked: FfiConverterRustBuffer {
+    typealias SwiftType = [Blocked]
+
+    public static func write(_ value: [Blocked], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBlocked.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Blocked] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Blocked]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBlocked.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeBoardBaseline: FfiConverterRustBuffer {
     typealias SwiftType = [BoardBaseline]
 
@@ -5152,6 +5399,31 @@ fileprivate struct FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeBoardColumn.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer {
+    typealias SwiftType = [Candidate]
+
+    public static func write(_ value: [Candidate], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCandidate.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Candidate] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Candidate]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCandidate.read(from: &buf))
         }
         return seq
     }
@@ -5260,6 +5532,31 @@ fileprivate struct FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeScored: FfiConverterRustBuffer {
+    typealias SwiftType = [Scored]
+
+    public static func write(_ value: [Scored], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeScored.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Scored] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Scored]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeScored.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
     typealias SwiftType = [UndoStep]
 
@@ -5277,6 +5574,31 @@ fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeUndoStep.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUnavailable: FfiConverterRustBuffer {
+    typealias SwiftType = [Unavailable]
+
+    public static func write(_ value: [Unavailable], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUnavailable.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Unavailable] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Unavailable]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUnavailable.read(from: &buf))
         }
         return seq
     }
@@ -5372,6 +5694,74 @@ public func workspaceMigrations() -> [String]  {
     )
 })
 }
+/**
+ * Why a candidate is not available in `context` at `now`; empty when it is.
+ */
+public func availabilityReasons(candidate: Candidate, context: FocusContext, nowMs: Int64) -> [Unavailable]  {
+    return try!  FfiConverterSequenceTypeUnavailable.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_availability_reasons(
+        FfiConverterTypeCandidate_lower(candidate),
+        FfiConverterTypeFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * The block length to run for a candidate, given what was asked for.
+ */
+public func plannedBlockSeconds(candidate: Candidate, requested: Int64?, context: FocusContext, nowMs: Int64) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_planned_block_seconds(
+        FfiConverterTypeCandidate_lower(candidate),
+        FfiConverterOptionInt64.lower(requested),
+        FfiConverterTypeFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * Orders next-up candidates for `now` in `context`: a pure function, no
+ * database, for clients that already hold the candidates.
+ */
+public func rankNextUp(candidates: [Candidate], nowMs: Int64, zone: String, context: FocusContext) -> Ranking  {
+    return try!  FfiConverterTypeRanking_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_rank_next_up(
+        FfiConverterSequenceTypeCandidate.lower(candidates),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),
+        FfiConverterTypeFocusContext_lower(context),uniffiCallStatus
+    )
+})
+}
+/**
+ * Why one available task ranks where it does.
+ */
+public func scoreNextUp(candidate: Candidate, nowMs: Int64, zone: String) -> Scored  {
+    return try!  FfiConverterTypeScored_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_score_next_up(
+        FfiConverterTypeCandidate_lower(candidate),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * The block length to offer for a candidate.
+ */
+public func suggestedBlockSeconds(candidate: Candidate, context: FocusContext, nowMs: Int64) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_suggested_block_seconds(
+        FfiConverterTypeCandidate_lower(candidate),
+        FfiConverterTypeFocusContext_lower(context),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -5395,6 +5785,21 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_availability_reasons() != 63153) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_planned_block_seconds() != 17554) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_rank_next_up() != 17521) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_score_next_up() != 16990) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_suggested_block_seconds() != 3786) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() != 39097) {
@@ -5527,6 +5932,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_nest_list() != 38763) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates() != 64441) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_outdent_task() != 3744) {

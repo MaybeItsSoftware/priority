@@ -205,60 +205,10 @@ extension WorkspaceStore {
   /// contributed to today are excluded rather than scored down, so ticking one
   /// visibly removes it from consideration.
   public func nextUpCandidates(now: Date = .now, calendar: Calendar = .current) throws -> [NextUpCandidate] {
-    try database.read { try Self.focusCandidates($0, now: now, calendar: calendar) }
-  }
-
-  static func focusCandidates(_ db: Database, now: Date, calendar: Calendar) throws -> [NextUpCandidate] {
-    let dayKey = DailyContribution.dayKey(for: now, calendar: calendar)
-    let archived = try String.fetchSet(db, sql: "SELECT id FROM task_lists WHERE isArchived OR completedAt IS NOT NULL")
-    let allTasks = try WorkspaceTask.fetchAll(db)
-    let inactive = Self.inactiveContainerItems(allTasks)
-    let wrappers = try String.fetchSet(db, sql: "SELECT visibleRootTaskId FROM task_lists WHERE visibleRootTaskId IS NOT NULL")
-    let parents = try String.fetchSet(db, sql: "SELECT DISTINCT parentTaskId FROM tasks WHERE parentTaskId IS NOT NULL AND status = 'open'")
-    let metadata = Dictionary(uniqueKeysWithValues: try TaskMetadata.fetchAll(db).map { ($0.taskId, $0) })
-    let dailies = Dictionary(try WorkspaceDaily.filter(Column("archivedAt") == nil).fetchAll(db)
-      .map { ($0.taskId, $0) }, uniquingKeysWith: { first, _ in first })
-    let contributions = Dictionary(uniqueKeysWithValues: try DailyContribution.filter(Column("dayKey") == dayKey)
-      .fetchAll(db).map { ($0.dailyId, $0) })
-    let work = Dictionary(uniqueKeysWithValues: try Row.fetchAll(db,
-      sql: """
-        SELECT COALESCE(taskId, originalTaskId) AS taskId, SUM(seconds) AS seconds
-        FROM focus_work_blocks WHERE COALESCE(taskId, originalTaskId) IS NOT NULL
-        GROUP BY COALESCE(taskId, originalTaskId)
-        """)
-      .map { row -> (String, Int) in (row["taskId"], row["seconds"]) })
-    return try allTasks.filter { $0.status == .open }.compactMap { task in
-      guard !task.isList, !inactive.contains(task.id), !wrappers.contains(task.id),
-        !archived.contains(task.listId), !parents.contains(task.id) else { return nil }
-      let record = metadata[task.id]
-      let plan = try planning(record)
-      let daily = dailies[task.id]
-      let contribution = daily.flatMap { contributions[$0.id] }
-      var dailyUnavailable: TaskUnavailableReason?
-      if let daily {
-        let shows = daily.isHabit
-          ? try habitShows(db, daily: daily, on: now, calendar: calendar)
-          : daily.isDue(on: now, calendar: calendar)
-        if !shows {
-          dailyUnavailable = .dailyNotScheduled
-        } else if contribution?.completedAt != nil ||
-          (daily.targetSeconds.map { $0 > 0 && (contribution?.secondsLogged ?? 0) >= $0 } ?? false) {
-          dailyUnavailable = .dailyAlreadyMet
-        }
-        // A completed habit can disappear; a task with a deadline must remain
-        // visible among blocked urgent work even when its daily is unavailable.
-        if dailyUnavailable != nil && task.dueAt == nil && plan?.dueDate == nil { return nil }
-      }
-      return NextUpCandidate(id: task.id, title: task.title, isDailyDueToday: daily != nil && dailyUnavailable == nil,
-        dueAt: task.dueAt, startAt: record?.startAt, matrixUrgency: record?.matrixUrgency,
-        matrixImportance: record?.matrixImportance, priority: record?.priority,
-        estimateSeconds: task.estimateSeconds, kanbanColumn: record?.kanbanColumn,
-        focusRank: record?.focusRank, sortOrder: task.sortOrder, createdAt: task.createdAt,
-        dueDate: plan?.dueDate, requirementGroups: plan?.requirementGroups ?? [], loggedSeconds: work[task.id] ?? 0,
-        minimumBlockSeconds: plan?.minimumBlockSeconds, requiresSingleSitting: plan?.requiresSingleSitting == true,
-        dailyRemainingSeconds: daily?.targetSeconds.map { max(0, $0 - (contribution?.secondsLogged ?? 0)) },
-        dailyUnavailable: dailyUnavailable)
-    }
+    // The Rust core's `focus::candidates`.
+    try Self.mappingCoreErrors {
+      try core.nextUpCandidates(nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
+    }.map(NextUpCandidate.init)
   }
 
   /// Writes a hand-arranged focus order: every task in `orderedTaskIDs` takes

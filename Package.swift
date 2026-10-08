@@ -307,6 +307,8 @@ let package = Package(
   targets: [
     .target(
       name: "TaktCore",
+      // The next-up ranking and the availability rules are the Rust core's.
+      dependencies: ["TaktRustCore"],
       path: "Sources/TaktCore"
     ),
     // The Rust core (`core/`), compiled for every Apple slice by
@@ -322,7 +324,11 @@ let package = Package(
     .target(
       name: "TaktRustCore",
       dependencies: ["takt_coreFFI"],
-      path: "Sources/TaktRustCore"
+      path: "Sources/TaktRustCore",
+      // The core links the system SQLite on Apple platforms, the library GRDB
+      // uses too; say so here, so a product that takes the core without GRDB
+      // still links it.
+      linkerSettings: [.linkedLibrary("sqlite3")]
     ),
     .target(
       name: "TaktWorkspace",

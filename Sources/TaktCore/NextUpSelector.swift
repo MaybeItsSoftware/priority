@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 public enum NextUpReason: String, Sendable, Equatable, CaseIterable {
   case daily, overdue, dueToday, dueSoon, today, importance, priority, order
@@ -125,42 +126,24 @@ public struct FocusRanking: Sendable {
   public let nextEvaluationAt: Date?
 }
 
+/// Whether a task can be worked on now, and for how long: the Rust core's
+/// `focus::reasons`, `planned_seconds` and `suggested_seconds`.
 public enum TaskAvailabilityPolicy {
   public static func reasons(
     for task: NextUpCandidate, context: FocusContext, now: Date
   ) -> [TaskUnavailableReason] {
-    var result: [TaskUnavailableReason] = []
-    if let dailyUnavailable = task.dailyUnavailable { result.append(dailyUnavailable) }
-    if let start = task.startAt, start > now { result.append(.startsLater(start)) }
-    let missing = task.requirementGroups.filter { Set($0).isDisjoint(with: context.conditionIDs) }
-    if !missing.isEmpty { result.append(.missingConditions(missing)) }
-    let window = context.endsAt.map { max(0, $0.timeIntervalSince(now)) }
-    if let window, window < 60 { result.append(.expiredWindow) }
-    if task.requiresSingleSitting || context.mode == .finish {
-      guard let remaining = task.remainingSeconds, remaining > 0 else {
-        result.append(.needsEstimate)
-        return result
-      }
-      let needed = max(60, remaining, task.minimumBlockSeconds ?? 60)
-      if let window, Double(needed) > window { result.append(.insufficientTime(needed)) }
-    } else if let window, Double(max(60, task.minimumBlockSeconds ?? 60)) > window {
-      result.append(.insufficientTime(max(60, task.minimumBlockSeconds ?? 60)))
-    }
-    return result
+    availabilityReasons(candidate: task.core, context: context.coreContext, nowMs: now.rankingMilliseconds)
+      .map(TaskUnavailableReason.init)
   }
 
   public static func plannedSeconds(for task: NextUpCandidate, requested: Int?, context: FocusContext, now: Date) -> Int {
-    let needed = task.requiresSingleSitting ? (task.remainingSeconds ?? 60) : 60
-    let seconds = max(60, needed, task.minimumBlockSeconds ?? 60,
-                      requested ?? suggestedSeconds(for: task, context: context, now: now))
-    return context.endsAt.map { min(seconds, max(0, Int($0.timeIntervalSince(now)))) } ?? seconds
+    Int(plannedBlockSeconds(
+      candidate: task.core, requested: requested.map { Int64($0) }, context: context.coreContext,
+      nowMs: now.rankingMilliseconds))
   }
 
   public static func suggestedSeconds(for task: NextUpCandidate, context: FocusContext, now: Date) -> Int {
-    let remaining = task.remainingSeconds.flatMap { $0 > 0 ? $0 : nil }
-    let suggested = max(60, task.minimumBlockSeconds ?? 60, remaining ?? 25 * 60)
-    guard let end = context.endsAt, !task.requiresSingleSitting else { return suggested }
-    return min(suggested, max(0, Int(end.timeIntervalSince(now))))
+    Int(suggestedBlockSeconds(candidate: task.core, context: context.coreContext, nowMs: now.rankingMilliseconds))
   }
 }
 
@@ -195,135 +178,30 @@ public enum NextUpSelector {
     evaluate(candidates, now: now, calendar: calendar, context: context).ranked
   }
 
+  /// The day's order: the Rust core's `ranking::evaluate`.
   public static func evaluate(_ candidates: [NextUpCandidate], now: Date = .now,
                               calendar: Calendar = .current, context: FocusContext = FocusContext()) -> FocusRanking {
-    var available: [NextUpCandidate] = []
-    var blocked: [BlockedFocusTask] = []
-    for task in candidates {
-      let reasons = TaskAvailabilityPolicy.reasons(for: task, context: context, now: now)
-      if reasons.isEmpty { available.append(task) } else { blocked.append(BlockedFocusTask(candidate: task, reasons: reasons)) }
-    }
-    let sorted = available.sorted { precedes($0, $1, now: now, calendar: calendar) }
-    // Only non-deadline work has positional pins. Deadline ties can use pins,
-    // but a pin cannot reverse lateness or deadline slack.
-    var ranked: [NextUpCandidate] = []
-    var index = 0
-    while index < sorted.count {
-      let key = primary(sorted[index], now: now, calendar: calendar)
-      var end = index + 1
-      while end < sorted.count && primary(sorted[end], now: now, calendar: calendar) == key { end += 1 }
-      ranked += place(Array(sorted[index..<end]))
-      index = end
-    }
-    let nextDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
-    var boundaries = candidates.flatMap { task -> [Date] in
-      var dates = [task.startAt, task.effectiveDeadline(calendar: calendar)].compactMap { $0 }
-      if task.dueDate == nil, let deadline = task.dueAt { dates.append(deadline.addingTimeInterval(0.001)) }
-      if let deadline = task.effectiveDeadline(calendar: calendar), let work = task.remainingSeconds, work > 0 {
-        dates.append(deadline.addingTimeInterval(-Double(work) - buffer(work)))
-      }
-      if let end = context.endsAt {
-        dates.append(end.addingTimeInterval(-Double(max(60, task.minimumBlockSeconds ?? 60)) + 0.001))
-        if let work = task.remainingSeconds, context.mode == .finish || task.requiresSingleSitting {
-          dates.append(end.addingTimeInterval(-Double(max(60, work, task.minimumBlockSeconds ?? 60)) + 0.001))
-        }
-      }
-      return dates
-    }
-    boundaries += [context.endsAt, nextDay].compactMap { $0 }
+    let byID = Dictionary(candidates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let ranking = rankNextUp(
+      candidates: candidates.map(\.core), nowMs: now.rankingMilliseconds, zone: calendar.timeZone.identifier,
+      context: context.coreContext)
     return FocusRanking(
-      ranked: ranked.map { score($0, now: now, calendar: calendar) },
-      blocked: blocked.sorted { precedes($0.candidate, $1.candidate, now: now, calendar: calendar) },
-      nextEvaluationAt: boundaries.filter { $0 > now }.min())
+      ranked: ranking.ranked.compactMap { scored in
+        byID[scored.candidate.id].map { ScoredNextUp(scored, original: $0) }
+      },
+      blocked: ranking.blocked.compactMap { blocked in
+        byID[blocked.candidate.id].map {
+          BlockedFocusTask(candidate: $0, reasons: blocked.reasons.map(TaskUnavailableReason.init))
+        }
+      },
+      nextEvaluationAt: ranking.nextEvaluationAtMs.map { Date(rankingMilliseconds: $0) })
   }
 
-  private static func buffer(_ seconds: Int) -> Double {
-    max(minimumDeadlineBuffer, Double(seconds) * deadlineBufferFraction)
-  }
-
-  private static func primary(_ task: NextUpCandidate, now: Date, calendar: Calendar) -> [Double] {
-    guard let due = task.effectiveDeadline(calendar: calendar) else { return [3, 0] }
-    let late = task.dueDate == nil ? due < now : due <= now
-    if late { return [0, due.timeIntervalSince1970] }
-    let isToday = task.dueDate.map { $0 == TaskCalendarDate.string(now, calendar: calendar) }
-      ?? calendar.isDate(due, inSameDayAs: now)
-    if isToday { return [1, due.timeIntervalSince1970, task.createdAt.timeIntervalSince1970] }
-    if let work = task.remainingSeconds, work > 0 {
-      let slack = due.timeIntervalSince(now) - Double(work) - buffer(work)
-      if slack <= 0 { return [2, slack] }
-    }
-    return [3, 0]
-  }
-
-  private static func precedes(_ left: NextUpCandidate, _ right: NextUpCandidate,
-                               now: Date, calendar: Calendar) -> Bool {
-    let lhs = primary(left, now: now, calendar: calendar)
-    let rhs = primary(right, now: now, calendar: calendar)
-    if lhs != rhs { return lhs.lexicographicallyPrecedes(rhs) }
-    func secondary(_ task: NextUpCandidate) -> [Double] {
-      let commitment = task.isDailyDueToday || task.kanbanColumn == todayColumnID
-      let due = task.effectiveDeadline(calendar: calendar)
-      let days = due.map { max(0, $0.timeIntervalSince(now) / 86_400) } ?? Double.infinity
-      return [task.requirementGroups.isEmpty ? 1 : 0, task.startAt == nil ? 1 : 0,
-              commitment ? 0 : 1, -Double(task.matrixImportance ?? 0), -Double(task.priority ?? 0),
-              days <= Double(dueHorizonDays) ? days : Double.infinity,
-              -Double(task.matrixUrgency ?? 0), task.createdAt.timeIntervalSince1970,
-              Double(task.remainingSeconds ?? Int.max), Double(task.sortOrder)]
-    }
-    let a = secondary(left), b = secondary(right)
-    return a == b ? left.id < right.id : a.lexicographicallyPrecedes(b)
-  }
-
-  private static func place(_ tasks: [NextUpCandidate]) -> [NextUpCandidate] {
-    let pinned = tasks.filter { $0.focusRank != nil }.sorted {
-      ($0.focusRank ?? 0, $0.id) < ($1.focusRank ?? 0, $1.id)
-    }
-    let free = tasks.filter { $0.focusRank == nil }
-    var result: [NextUpCandidate] = []
-    var pin = 0, unpinned = 0
-    while result.count < tasks.count {
-      if pin < pinned.count && ((pinned[pin].focusRank ?? 0) <= result.count || unpinned == free.count) {
-        result.append(pinned[pin]); pin += 1
-      } else { result.append(free[unpinned]); unpinned += 1 }
-    }
-    return result
-  }
-
+  /// Why one task ranks where it does: the Rust core's `ranking::score`.
   public static func score(_ task: NextUpCandidate, now: Date = .now,
                            calendar: Calendar = .current) -> ScoredNextUp {
-    let key = primary(task, now: now, calendar: calendar)
-    let reason: NextUpReason
-    var explanation: String?
-    switch key[0] {
-    case 0:
-      reason = .overdue
-      let days = max(0, Int(now.timeIntervalSince(task.effectiveDeadline(calendar: calendar) ?? now) / 86_400))
-      explanation = days > 0 ? "overdue by \(days) days" : "past its deadline"
-    case 1:
-      reason = .dueToday
-      let age = Int(max(0, now.timeIntervalSince(task.createdAt)) / 86_400)
-      if age >= 30 { explanation = "due today; added \(age) days ago" }
-    case 2: reason = .deadlineRisk
-    default:
-      if !task.requirementGroups.isEmpty {
-        reason = .condition
-      } else if task.startAt != nil {
-        reason = .started
-      } else if task.isDailyDueToday {
-        reason = .daily
-      } else if task.kanbanColumn == todayColumnID {
-        reason = .today
-      } else if (task.matrixImportance ?? 0) > 0 || (task.matrixUrgency ?? 0) > 0 {
-        reason = .importance
-      } else if (task.priority ?? 0) > 0 {
-        reason = .priority
-      } else if let due = task.effectiveDeadline(calendar: calendar),
-                due.timeIntervalSince(now) <= Double(dueHorizonDays) * 86_400 {
-        reason = .dueSoon
-      } else {
-        reason = .order
-      }
-    }
-    return ScoredNextUp(candidate: task, score: (4 - key[0]) * 1000, reason: reason, explanation: explanation)
+    ScoredNextUp(
+      scoreNextUp(candidate: task.core, nowMs: now.rankingMilliseconds, zone: calendar.timeZone.identifier),
+      original: task)
   }
 }
