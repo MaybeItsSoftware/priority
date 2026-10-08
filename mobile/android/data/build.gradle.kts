@@ -24,10 +24,9 @@ kotlin {
 }
 
 /**
- * One source of truth for the schema: the fixture the CLI's tests already
- * regenerate from the Swift app (scripts/dump_workspace_schema.sh). It is
- * copied into the module's Java resources on every build rather than checked
- * in, so a schema change on the Mac reaches Android with the next build.
+ * The schema fixture the Rust core generates (scripts/dump_workspace_schema.sh),
+ * copied into the unit tests' resources, which hold the core's migrations to
+ * it. The app itself never reads it: the core migrates the database.
  */
 abstract class CopyWorkspaceSchema : DefaultTask() {
     @get:InputFile
@@ -50,7 +49,8 @@ val copyWorkspaceSchema = tasks.register<CopyWorkspaceSchema>("copyWorkspaceSche
 
 androidComponents {
     onVariants { variant ->
-        variant.sources.resources?.addGeneratedSourceDirectory(copyWorkspaceSchema, CopyWorkspaceSchema::outputDir)
+        variant.hostTests[com.android.build.api.variant.HostTestBuilder.UNIT_TEST_TYPE]
+            ?.sources?.resources?.addGeneratedSourceDirectory(copyWorkspaceSchema, CopyWorkspaceSchema::outputDir)
     }
 }
 
@@ -82,7 +82,7 @@ val unpackSqliteHostNatives = tasks.register<Sync>("unpackSqliteHostNatives") {
 // runs it whenever core/ has changed, so Android Studio, the scripts and CI
 // cannot build against a stale core.
 val coreDir = rootProject.file("../../core")
-val buildRustCore by tasks.registering(Exec::class) {
+val buildRustCore = tasks.register<Exec>("buildRustCore") {
     description = "Builds takt-core for Android and regenerates its Kotlin bindings."
     inputs.dir(coreDir.resolve("src"))
     inputs.file(coreDir.resolve("Cargo.toml"))

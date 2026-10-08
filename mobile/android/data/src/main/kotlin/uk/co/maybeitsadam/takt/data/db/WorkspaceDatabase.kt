@@ -2,6 +2,7 @@ package uk.co.maybeitsadam.takt.data.db
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import uniffi.takt_core.migrateWorkspace
 import androidx.sqlite.execSQL
 import java.io.Closeable
 import java.io.File
@@ -117,31 +118,23 @@ class WorkspaceDatabase private constructor(
     }
 
     companion object {
-        /**
-         * Opens (creating and migrating if needed) the workspace at [path].
-         * [fixture] overrides the bundled schema script, for tests.
-         */
+        /** Opens (creating and migrating if needed) the workspace at [path]. */
         fun open(
             path: String,
             readerCount: Int = 3,
             dispatcher: CoroutineDispatcher = Dispatchers.IO,
-            fixture: String? = null,
         ): WorkspaceDatabase {
             File(path).absoluteFile.parentFile?.mkdirs()
+            // The schema is the Rust core's (core/src/schema). It opens the file
+            // with its own SQLite, migrates it and closes it before the driver
+            // below opens it, so the two never hold the file at once. This is
+            // the only place the app opens the database, once per process.
+            migrateWorkspace(path)
             val driver = BundledSQLiteDriver()
             val writer = driver.open(path)
             configure(writer)
             writer.execSQL("PRAGMA journal_mode = WAL")
             val db = Db(writer)
-            writer.execSQL("BEGIN IMMEDIATE")
-            try {
-                if (fixture != null) WorkspaceSchema.migrate(db, fixture) else WorkspaceSchema.migrate(db)
-                writer.execSQL("COMMIT")
-            } catch (error: Throwable) {
-                runCatching { writer.execSQL("ROLLBACK") }
-                writer.close()
-                throw error
-            }
             installChangeTracking(db)
             val readerConnections = List(readerCount.coerceAtLeast(1)) {
                 driver.open(path).also { reader ->
