@@ -123,7 +123,9 @@ committed, so **a fresh checkout cannot resolve the Swift package until
 it first (`TAKT_CORE_IF_STALE=1` skips it when `core/` is unchanged). Gradle
 runs `scripts/build_core_android.sh` through `buildRustCore` before
 `preBuild`. The generated bindings are committed: `Sources/TaktRustCore/` and
-`mobile/android/data/src/main/java/uniffi/`. Never edit them by hand.
+`mobile/android/core/src/main/java/uniffi/` (in `:core`, so its ranking
+rules can call the core; `:data` ships the native libraries and JNA). Never
+edit them by hand.
 
 After changing anything under `core/`:
 

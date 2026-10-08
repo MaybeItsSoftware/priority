@@ -29,7 +29,15 @@ sourceSets.main {
     resources.srcDir(copySharedThemes)
 }
 
+// The Rust core's Kotlin bindings (src/main/java/uniffi) are written by
+// :data's buildRustCore, which builds the core's libraries alongside them, so
+// they are regenerated before this module compiles against them.
+tasks.named("compileKotlin") { dependsOn(":data:buildRustCore") }
+
 tasks.withType<Test>().configureEach {
+    // The bindings load the core through JNA; on the JVM that is the host
+    // build scripts/build_core_android.sh leaves in core/target.
+    systemProperty("jna.library.path", rootProject.file("../../core/target/release").absolutePath)
     // The resolution cases the Swift tests write; ThemeConformanceTest reads them in place.
     val conformance = sharedThemes.dir("conformance").asFile
     inputs.files(fileTree(conformance)).withPropertyName("themeConformance")
@@ -38,5 +46,9 @@ tasks.withType<Test>().configureEach {
 
 dependencies {
     api(libs.kotlinx.serialization.json)
+    // The bindings compile against JNA. On Android its classes and natives
+    // come from the AAR :data ships; the JVM tests take the plain jar.
+    compileOnly(libs.jna)
+    testImplementation(libs.jna)
     testImplementation(libs.junit)
 }

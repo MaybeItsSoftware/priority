@@ -779,7 +779,7 @@ class WorkspaceRepository(
 
     /** Every open task that could be done now, shaped for `NextUpSelector`. */
     suspend fun nextUpCandidates(now: Instant = now(), zone: ZoneId = this.zone): List<NextUpCandidate> =
-        database.read { focusCandidates(it, now, zone) }
+        database.coreRead { focusCandidates(it, now, zone) }
 
     /** Pins one task to [atIndex] in the ladder, leaving the rest to the ranking. */
     suspend fun pinTask(taskId: String, atIndex: Int, now: Instant = now()) {
@@ -1106,7 +1106,7 @@ class WorkspaceRepository(
         runningId: String?,
         now: Instant = now(),
         zone: ZoneId = this.zone,
-    ): WorkspaceNextUpSnapshot = database.read { nextUpSnapshot(it, workspaceId, context, runningId, now, zone) }
+    ): WorkspaceNextUpSnapshot = database.read { nextUpSnapshot(it, database.core, workspaceId, context, runningId, now, zone) }
 
     /** The snapshot, rebuilt whenever any of the tables behind it change. */
     fun observeNextUpSnapshot(
@@ -1119,7 +1119,7 @@ class WorkspaceRepository(
             "tasks", "task_lists", "task_metadata", "dailies", "daily_contributions", "focus_work_blocks",
             "task_conditions",
         ),
-    ) { nextUpSnapshot(it, workspaceId, context, runningId, now(), zone) }
+    ) { nextUpSnapshot(it, database.core, workspaceId, context, runningId, now(), zone) }
 
     // endregion
 

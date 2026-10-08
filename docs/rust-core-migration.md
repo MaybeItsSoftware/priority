@@ -122,6 +122,15 @@ covered the old copies pass against it.
 6. **Reads.** Search with FTS, the today and next-up ranking, outline
    folding. These are the hot paths. Benchmark each against the Swift version
    before switching, using `WorkspaceRepositoryBenchmark.kt` on Android.
+   **The next-up ranking is done (2026-10-08).** `core/src/ranking.rs` holds
+   `NextUpSelector.evaluate` and `score`; `focus.rs` holds the candidate read
+   and `TaskAvailabilityPolicy`. Swift's `TaktCore` and Kotlin's `:core`
+   keep their types and wrap the core, so their callers did not change; the
+   Kotlin bindings moved into `:core` for it. On a seeded 5,000-task
+   workspace on the JVM, the whole next-up snapshot went from 37.7 ms to
+   18.2 ms: the core's candidate read is 7.1 ms against Kotlin's 31.9 ms,
+   while ranking 2,496 candidates costs 6.8 ms against 3.8 ms, most of it
+   the crossing.
 7. **Sync engine. The database half done 2026-10-08.** `core/src/sync.rs`
    holds the pairing state, the snapshot, the outbox coalesced per row,
    acknowledging, and applying a pull (local edits win until pushed,

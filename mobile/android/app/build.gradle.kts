@@ -152,6 +152,9 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 
+    // The availability and ranking rules call the Rust core through JNA; the
+    // JVM tests need the desktop jar, since the AAR's natives are Android's.
+    testImplementation(libs.jna)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 
@@ -173,4 +176,10 @@ kotlin {
             "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi",
         )
     }
+}
+
+tasks.withType<Test>().configureEach {
+    dependsOn(":data:buildRustCore")
+    // The host build of the core scripts/build_core_android.sh leaves in core/target.
+    systemProperty("jna.library.path", rootProject.file("../../core/target/release").absolutePath)
 }

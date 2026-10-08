@@ -8,30 +8,26 @@ import uk.co.maybeitsadam.takt.core.DayPlanSelector
 import uk.co.maybeitsadam.takt.core.FocusAward
 import uk.co.maybeitsadam.takt.core.FocusContext
 import uk.co.maybeitsadam.takt.core.FocusPointsSummary
-import uk.co.maybeitsadam.takt.core.FocusQueueState
 import uk.co.maybeitsadam.takt.core.FocusQueueTask
 import uk.co.maybeitsadam.takt.core.FocusSession
 import uk.co.maybeitsadam.takt.core.FocusSessionPhase
 import uk.co.maybeitsadam.takt.core.FocusWorkBlock
 import uk.co.maybeitsadam.takt.core.NextUpCandidate
 import uk.co.maybeitsadam.takt.core.NextUpSelector
-import uk.co.maybeitsadam.takt.core.PeriodicSchedule
-import uk.co.maybeitsadam.takt.core.TaskAvailabilityPolicy
 import uk.co.maybeitsadam.takt.core.TaskCondition
 import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.core.TaskPlanning
-import uk.co.maybeitsadam.takt.core.TaskStatus
-import uk.co.maybeitsadam.takt.core.TaskUnavailableReason
 import uk.co.maybeitsadam.takt.core.WorkBlockTime
 import uk.co.maybeitsadam.takt.core.WorkProgress
 import uk.co.maybeitsadam.takt.core.WorkProgressSummary
-import uk.co.maybeitsadam.takt.core.WorkspaceDaily
-import uk.co.maybeitsadam.takt.core.WorkspaceListTree
 import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
+import uk.co.maybeitsadam.takt.core.coreMillis
+import uk.co.maybeitsadam.takt.core.coreName
 import uk.co.maybeitsadam.takt.core.earned
 import uk.co.maybeitsadam.takt.core.defaultFirstWeekday
 import uk.co.maybeitsadam.takt.data.db.Db
+import uniffi.takt_core.CoreWorkspace
 
 /** A value an edit may leave alone ([Keep]) or set, possibly to null ([To]); Swift's `Int??`. */
 sealed interface FieldEdit<out T> {
@@ -99,57 +95,11 @@ internal fun dailiesOn(db: Db, day: Instant, zone: ZoneId): List<DailyItem> {
 }
 
 /**
- * Every open task that could be done now, shaped for `NextUpSelector`. Parents
- * with open children, lists, wrappers and tasks in closed containers are left
- * out; dailies already met today drop away unless something is due.
+ * Every open task that could be done now, shaped for `NextUpSelector`: the
+ * Rust core's `focus::candidates`, the same query the Mac and iPhone make.
  */
-internal fun focusCandidates(db: Db, now: Instant, zone: ZoneId): List<NextUpCandidate> {
-    val dayKey = DailyContribution.dayKey(now, zone)
-    val archived = db.strings("SELECT id FROM task_lists WHERE isArchived OR completedAt IS NOT NULL").toSet()
-    val allTasks = db.query("SELECT * FROM tasks") { it.toTask() }
-    val inactive = WorkspaceListTree.inactiveContainerItems(allTasks)
-    val wrappers = db.strings("SELECT visibleRootTaskId FROM task_lists WHERE visibleRootTaskId IS NOT NULL").toSet()
-    val parents = db.strings(
-        "SELECT DISTINCT parentTaskId FROM tasks WHERE parentTaskId IS NOT NULL AND status = 'open'",
-    ).toSet()
-    val metadata = db.query("SELECT * FROM task_metadata") { it.toMetadata() }.associateBy { it.taskId }
-    val dailies = LinkedHashMap<String, WorkspaceDaily>()
-    db.query("SELECT * FROM dailies WHERE archivedAt IS NULL") { it.toDaily() }.forEach { dailies.putIfAbsent(it.taskId, it) }
-    val contributions = db.query("SELECT * FROM daily_contributions WHERE dayKey = ?", dayKey) { it.toContribution() }
-        .associateBy { it.dailyId }
-    val work = loggedWorkTotals(db)
-    return allTasks.filter { it.status == TaskStatus.OPEN }.mapNotNull { task ->
-        if (task.isList || task.id in inactive || task.id in wrappers || task.listId in archived || task.id in parents) {
-            return@mapNotNull null
-        }
-        val record = metadata[task.id]
-        val plan = planning(record)
-        val daily = dailies[task.id]
-        val contribution = daily?.let { contributions[it.id] }
-        var dailyUnavailable: TaskUnavailableReason? = null
-        if (daily != null) {
-            if (!dailyShows(db, daily, now, zone)) {
-                dailyUnavailable = TaskUnavailableReason.DailyNotScheduled
-            } else if (contribution?.completedAt != null ||
-                (daily.targetSeconds?.let { it > 0 && (contribution?.secondsLogged ?: 0) >= it } ?: false)
-            ) {
-                dailyUnavailable = TaskUnavailableReason.DailyAlreadyMet
-            }
-            if (dailyUnavailable != null && task.dueAt == null && plan?.dueDate == null) return@mapNotNull null
-        }
-        NextUpCandidate(
-            id = task.id, title = task.title, isDailyDueToday = daily != null && dailyUnavailable == null,
-            dueAt = task.dueAt, startAt = record?.startAt, matrixUrgency = record?.matrixUrgency,
-            matrixImportance = record?.matrixImportance, priority = record?.priority,
-            estimateSeconds = task.estimateSeconds, kanbanColumn = record?.kanbanColumn, focusRank = record?.focusRank,
-            sortOrder = task.sortOrder, createdAt = task.createdAt, dueDate = plan?.dueDate,
-            requirementGroups = plan?.requirementGroups ?: emptyList(), loggedSeconds = work[task.id] ?: 0,
-            minimumBlockSeconds = plan?.minimumBlockSeconds, requiresSingleSitting = plan?.requiresSingleSitting == true,
-            dailyRemainingSeconds = daily?.targetSeconds?.let { maxOf(0, it - (contribution?.secondsLogged ?: 0)) },
-            dailyUnavailable = dailyUnavailable,
-        )
-    }
-}
+internal fun focusCandidates(core: CoreWorkspace, now: Instant, zone: ZoneId): List<NextUpCandidate> =
+    core.nextUpCandidates(now.coreMillis, zone.coreName).map(::NextUpCandidate)
 
 internal fun activeSession(db: Db, newestFirst: Boolean = true): FocusSession? = db.queryOne(
     "SELECT * FROM focus_sessions WHERE phase != 'finished'" + if (newestFirst) " ORDER BY startedAt DESC" else "",
@@ -218,13 +168,14 @@ internal fun pointsSummary(db: Db, now: Instant, zone: ZoneId): FocusPointsSumma
 
 internal fun nextUpSnapshot(
     db: Db,
+    core: CoreWorkspace,
     workspaceId: String?,
     context: FocusContext,
     runningId: String?,
     now: Instant,
     zone: ZoneId,
 ): WorkspaceNextUpSnapshot {
-    val candidates = focusCandidates(db, now, zone)
+    val candidates = focusCandidates(core, now, zone)
     val plan = DayPlanSelector.plan(candidates = candidates, runningID = runningId, now = now, zone = zone)
     val ranking = NextUpSelector.evaluate(candidates, now, zone, context)
     return WorkspaceNextUpSnapshot(

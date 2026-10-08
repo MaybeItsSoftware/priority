@@ -2,7 +2,7 @@
 # Builds the Rust core (core/) for Android and generates its Kotlin bindings:
 #
 #   mobile/android/data/src/main/jniLibs/<abi>/libtakt_core.so   (not committed)
-#   mobile/android/data/src/main/java/uniffi/takt_core/          (committed)
+#   mobile/android/core/src/main/java/uniffi/takt_core/          (committed)
 #
 # plus a host build in core/target/<profile>/ that the data module's JVM unit
 # tests load through JNA. Run after any change to core/;
@@ -68,8 +68,12 @@ gen=$(mktemp -d)
 trap 'rm -rf "$gen" "$link_dir"' EXIT
 (cd "$CORE" && cargo run -q --features bindgen --bin uniffi-bindgen -- \
   generate --library "$host_lib" --language kotlin --no-format --out-dir "$gen")
-rm -rf "$DATA/java/uniffi"
-mkdir -p "$DATA/java"
-cp -R "$gen/uniffi" "$DATA/java/"
+# The bindings live in :core, the plain Kotlin module the rest builds on, so
+# its ranking and availability rules can call the Rust core too. The native
+# libraries stay in :data, the Android library that ships them.
+BINDINGS="$ROOT_DIR/mobile/android/core/src/main/java"
+rm -rf "$BINDINGS/uniffi"
+mkdir -p "$BINDINGS"
+cp -R "$gen/uniffi" "$BINDINGS/"
 
 echo "takt-core: jniLibs, Kotlin bindings, host library at $host_lib"

@@ -681,6 +681,16 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_func_availability_reasons(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_planned_block_seconds(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_rank_next_up(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_score_next_up(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_suggested_block_seconds(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
@@ -768,6 +778,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_within_siblings(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_nest_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_outdent_task(
     ): Int
@@ -977,6 +989,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_nest_list(`ptr`: Long,`id`: RustBuffer.ByValue,`intoListId`: RustBuffer.ByValue,`parentTaskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_next_up_candidates(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_outdent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_pause_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1075,6 +1089,16 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_migrations(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_availability_reasons(`candidate`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_planned_block_seconds(`candidate`: RustBuffer.ByValue,`requested`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_func_rank_next_up(`candidates`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_score_next_up(`candidate`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_suggested_block_seconds(`candidate`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     external fun ffi_takt_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_takt_core_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1201,6 +1225,21 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_availability_reasons() and 0xFFFF) != 63153) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_planned_block_seconds() and 0xFFFF) != 17554) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_rank_next_up() and 0xFFFF) != 17521) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_score_next_up() and 0xFFFF) != 16990) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_suggested_block_seconds() and 0xFFFF) != 3786) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() and 0xFFFF) != 39097) {
@@ -1333,6 +1372,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_nest_list() and 0xFFFF) != 38763) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates() and 0xFFFF) != 64441) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_outdent_task() and 0xFFFF) != 3744) {
@@ -2131,6 +2173,11 @@ public interface CoreWorkspaceInterface {
      * Nests a standalone list inside another list; returns its task's id.
      */
     fun `nestList`(`id`: kotlin.String, `intoListId`: kotlin.String, `parentTaskId`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
+     * The open tasks the next-up engine and the day choose from.
+     */
+    fun `nextUpCandidates`(`nowMs`: kotlin.Long, `zone`: kotlin.String): List<Candidate>
     
     /**
      * Outdents a task to follow its parent as one "Outdent Task" step.
@@ -3325,6 +3372,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * The open tasks the next-up engine and the day choose from.
+     */
+    @Throws(CoreException::class)override fun `nextUpCandidates`(`nowMs`: kotlin.Long, `zone`: kotlin.String): List<Candidate> {
+            return FfiConverterSequenceTypeCandidate.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_next_up_candidates(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Outdents a task to follow its parent as one "Outdent Task" step.
      */
     @Throws(CoreException::class)override fun `outdentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
@@ -4320,6 +4386,47 @@ public object FfiConverterTypeBlockFinished: FfiConverterRustBuffer<BlockFinishe
             FfiConverterString.write(value.`outcome`, buf)
             FfiConverterLong.write(value.`seconds`, buf)
             FfiConverterOptionalString.write(value.`awardId`, buf)
+    }
+}
+
+
+
+/**
+ * A task ruled out now, with every reason. `BlockedFocusTask`.
+ */
+data class Blocked (
+    var `candidate`: Candidate
+    , 
+    var `reasons`: List<Unavailable>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBlocked: FfiConverterRustBuffer<Blocked> {
+    override fun read(buf: ByteBuffer): Blocked {
+        return Blocked(
+            FfiConverterTypeCandidate.read(buf),
+            FfiConverterSequenceTypeUnavailable.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Blocked) = (
+            FfiConverterTypeCandidate.allocationSize(value.`candidate`) +
+            FfiConverterSequenceTypeUnavailable.allocationSize(value.`reasons`)
+    )
+
+    override fun write(value: Blocked, buf: ByteBuffer) {
+            FfiConverterTypeCandidate.write(value.`candidate`, buf)
+            FfiConverterSequenceTypeUnavailable.write(value.`reasons`, buf)
     }
 }
 
@@ -5731,6 +5838,113 @@ public object FfiConverterTypePlanning: FfiConverterRustBuffer<Planning> {
 
 
 /**
+ * The day's order. `FocusRanking`.
+ */
+data class Ranking (
+    var `ranked`: List<Scored>
+    , 
+    var `blocked`: List<Blocked>
+    , 
+    /**
+     * The next moment the order could change on its own, if any.
+     */
+    var `nextEvaluationAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRanking: FfiConverterRustBuffer<Ranking> {
+    override fun read(buf: ByteBuffer): Ranking {
+        return Ranking(
+            FfiConverterSequenceTypeScored.read(buf),
+            FfiConverterSequenceTypeBlocked.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Ranking) = (
+            FfiConverterSequenceTypeScored.allocationSize(value.`ranked`) +
+            FfiConverterSequenceTypeBlocked.allocationSize(value.`blocked`) +
+            FfiConverterOptionalLong.allocationSize(value.`nextEvaluationAtMs`)
+    )
+
+    override fun write(value: Ranking, buf: ByteBuffer) {
+            FfiConverterSequenceTypeScored.write(value.`ranked`, buf)
+            FfiConverterSequenceTypeBlocked.write(value.`blocked`, buf)
+            FfiConverterOptionalLong.write(value.`nextEvaluationAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * An available task with why it is where it is. `ScoredNextUp`.
+ */
+data class Scored (
+    var `candidate`: Candidate
+    , 
+    var `score`: kotlin.Double
+    , 
+    /**
+     * `NextUpReason`'s raw value: daily, overdue, dueToday, dueSoon, today,
+     * importance, priority, order, condition, started or deadlineRisk.
+     */
+    var `reason`: kotlin.String
+    , 
+    /**
+     * A specific explanation when there is one; otherwise the reason's own.
+     */
+    var `explanation`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeScored: FfiConverterRustBuffer<Scored> {
+    override fun read(buf: ByteBuffer): Scored {
+        return Scored(
+            FfiConverterTypeCandidate.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Scored) = (
+            FfiConverterTypeCandidate.allocationSize(value.`candidate`) +
+            FfiConverterDouble.allocationSize(value.`score`) +
+            FfiConverterString.allocationSize(value.`reason`) +
+            FfiConverterOptionalString.allocationSize(value.`explanation`)
+    )
+
+    override fun write(value: Scored, buf: ByteBuffer) {
+            FfiConverterTypeCandidate.write(value.`candidate`, buf)
+            FfiConverterDouble.write(value.`score`, buf)
+            FfiConverterString.write(value.`reason`, buf)
+            FfiConverterOptionalString.write(value.`explanation`, buf)
+    }
+}
+
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 data class UndoStep (
@@ -6888,6 +7102,34 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeBlocked: FfiConverterRustBuffer<List<Blocked>> {
+    override fun read(buf: ByteBuffer): List<Blocked> {
+        val len = buf.getInt()
+        return List<Blocked>(len) {
+            FfiConverterTypeBlocked.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<Blocked>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeBlocked.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<Blocked>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeBlocked.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeBoardBaseline: FfiConverterRustBuffer<List<BoardBaseline>> {
     override fun read(buf: ByteBuffer): List<BoardBaseline> {
         val len = buf.getInt()
@@ -6934,6 +7176,34 @@ public object FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer<List<B
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeBoardColumn.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer<List<Candidate>> {
+    override fun read(buf: ByteBuffer): List<Candidate> {
+        val len = buf.getInt()
+        return List<Candidate>(len) {
+            FfiConverterTypeCandidate.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<Candidate>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCandidate.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<Candidate>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCandidate.write(it, buf)
         }
     }
 }
@@ -7056,6 +7326,34 @@ public object FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffer<Lis
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeScored: FfiConverterRustBuffer<List<Scored>> {
+    override fun read(buf: ByteBuffer): List<Scored> {
+        val len = buf.getInt()
+        return List<Scored>(len) {
+            FfiConverterTypeScored.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<Scored>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeScored.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<Scored>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeScored.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer<List<UndoStep>> {
     override fun read(buf: ByteBuffer): List<UndoStep> {
         val len = buf.getInt()
@@ -7074,6 +7372,34 @@ public object FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer<List<Undo
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeUndoStep.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeUnavailable: FfiConverterRustBuffer<List<Unavailable>> {
+    override fun read(buf: ByteBuffer): List<Unavailable> {
+        val len = buf.getInt()
+        return List<Unavailable>(len) {
+            FfiConverterTypeUnavailable.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<Unavailable>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeUnavailable.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<Unavailable>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeUnavailable.write(it, buf)
         }
     }
 }
@@ -7189,6 +7515,89 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_workspace_migrations(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * Why a candidate is not available in `context` at `now`; empty when it is.
+         */ fun `availabilityReasons`(`candidate`: Candidate, `context`: FocusContext, `nowMs`: kotlin.Long): List<Unavailable> {
+            return FfiConverterSequenceTypeUnavailable.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_availability_reasons(
+    
+        
+        FfiConverterTypeCandidate.lower(`candidate`),
+        FfiConverterTypeFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The block length to run for a candidate, given what was asked for.
+         */ fun `plannedBlockSeconds`(`candidate`: Candidate, `requested`: kotlin.Long?, `context`: FocusContext, `nowMs`: kotlin.Long): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_planned_block_seconds(
+    
+        
+        FfiConverterTypeCandidate.lower(`candidate`),
+        FfiConverterOptionalLong.lower(`requested`),
+        FfiConverterTypeFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Orders next-up candidates for `now` in `context`: a pure function, no
+         * database, for clients that already hold the candidates.
+         */ fun `rankNextUp`(`candidates`: List<Candidate>, `nowMs`: kotlin.Long, `zone`: kotlin.String, `context`: FocusContext): Ranking {
+            return FfiConverterTypeRanking.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_rank_next_up(
+    
+        
+        FfiConverterSequenceTypeCandidate.lower(`candidates`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),
+        FfiConverterTypeFocusContext.lower(`context`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Why one available task ranks where it does.
+         */ fun `scoreNextUp`(`candidate`: Candidate, `nowMs`: kotlin.Long, `zone`: kotlin.String): Scored {
+            return FfiConverterTypeScored.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_score_next_up(
+    
+        
+        FfiConverterTypeCandidate.lower(`candidate`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The block length to offer for a candidate.
+         */ fun `suggestedBlockSeconds`(`candidate`: Candidate, `context`: FocusContext, `nowMs`: kotlin.Long): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_suggested_block_seconds(
+    
+        
+        FfiConverterTypeCandidate.lower(`candidate`),
+        FfiConverterTypeFocusContext.lower(`context`),
+        FfiConverterLong.lower(`nowMs`),_status)
 }
     )
     }

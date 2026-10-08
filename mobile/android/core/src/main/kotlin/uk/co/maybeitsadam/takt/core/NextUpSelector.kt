@@ -3,6 +3,7 @@ package uk.co.maybeitsadam.takt.core
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 enum class NextUpReason(val raw: String, val explanation: String) {
     DAILY("daily", "today's contribution is still outstanding"),
@@ -118,45 +119,16 @@ data class FocusRanking(
     val nextEvaluationAt: Instant?,
 )
 
+/** Availability and block lengths; the rules are the Rust core's (core/src/focus.rs). */
 object TaskAvailabilityPolicy {
-    fun reasons(task: NextUpCandidate, context: FocusContext, now: Instant): List<TaskUnavailableReason> {
-        val result = mutableListOf<TaskUnavailableReason>()
-        task.dailyUnavailable?.let { result += it }
-        task.startAt?.let { if (it > now) result += TaskUnavailableReason.StartsLater(it) }
-        val missing = task.requirementGroups.filter { group -> group.none { it in context.conditionIDs } }
-        if (missing.isNotEmpty()) result += TaskUnavailableReason.MissingConditions(missing)
-        val window = context.endsAt?.let { maxOf(0.0, secondsBetween(now, it)) }
-        if (window != null && window < 60) result += TaskUnavailableReason.ExpiredWindow
-        if (task.requiresSingleSitting || context.mode == FocusTimeMode.FINISH) {
-            val remaining = task.remainingSeconds
-            if (remaining == null || remaining <= 0) {
-                result += TaskUnavailableReason.NeedsEstimate
-                return result
-            }
-            val needed = maxOf(60, remaining, task.minimumBlockSeconds ?: 60)
-            if (window != null && needed.toDouble() > window) result += TaskUnavailableReason.InsufficientTime(needed)
-        } else if (window != null && maxOf(60, task.minimumBlockSeconds ?: 60).toDouble() > window) {
-            result += TaskUnavailableReason.InsufficientTime(maxOf(60, task.minimumBlockSeconds ?: 60))
-        }
-        return result
-    }
+    fun reasons(task: NextUpCandidate, context: FocusContext, now: Instant): List<TaskUnavailableReason> =
+        uniffi.takt_core.availabilityReasons(task.core, context.core, now.coreMillis).map { it.reason }
 
-    fun plannedSeconds(task: NextUpCandidate, requested: Int?, context: FocusContext, now: Instant): Int {
-        val needed = if (task.requiresSingleSitting) (task.remainingSeconds ?: 60) else 60
-        val seconds = maxOf(
-            maxOf(60, needed),
-            maxOf(task.minimumBlockSeconds ?: 60, requested ?: suggestedSeconds(task, context, now)),
-        )
-        return context.endsAt?.let { minOf(seconds, maxOf(0, secondsBetween(now, it).toInt())) } ?: seconds
-    }
+    fun plannedSeconds(task: NextUpCandidate, requested: Int?, context: FocusContext, now: Instant): Int =
+        uniffi.takt_core.plannedBlockSeconds(task.core, requested?.toLong(), context.core, now.coreMillis).toInt()
 
-    fun suggestedSeconds(task: NextUpCandidate, context: FocusContext, now: Instant): Int {
-        val remaining = task.remainingSeconds?.takeIf { it > 0 }
-        val suggested = maxOf(60, task.minimumBlockSeconds ?: 60, remaining ?: (25 * 60))
-        val end = context.endsAt
-        if (end == null || task.requiresSingleSitting) return suggested
-        return minOf(suggested, maxOf(0, secondsBetween(now, end).toInt()))
-    }
+    fun suggestedSeconds(task: NextUpCandidate, context: FocusContext, now: Instant): Int =
+        uniffi.takt_core.suggestedBlockSeconds(task.core, context.core, now.coreMillis).toInt()
 }
 
 data class ScoredNextUp(
@@ -176,13 +148,12 @@ data class ScoredNextUp(
 /**
  * Availability is evaluated before a deterministic precedence tuple. Numeric
  * scores are retained for compatibility; they never override deadline ordering.
- * Port of `NextUpSelector.swift`.
+ * The ranking itself is the Rust core's (core/src/ranking.rs), the same one the
+ * Mac and iPhone call.
  */
 object NextUpSelector {
     const val todayColumnID = "today"
     const val dueHorizonDays = 14
-    const val minimumDeadlineBuffer: Double = 300.0
-    const val deadlineBufferFraction: Double = 0.2
 
     fun next(candidates: List<NextUpCandidate>, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): ScoredNextUp? =
         rank(candidates, now, zone).firstOrNull()
@@ -200,157 +171,113 @@ object NextUpSelector {
         zone: ZoneId = ZoneId.systemDefault(),
         context: FocusContext = FocusContext(),
     ): FocusRanking {
-        val available = mutableListOf<NextUpCandidate>()
-        val blocked = mutableListOf<BlockedFocusTask>()
-        for (task in candidates) {
-            val reasons = TaskAvailabilityPolicy.reasons(task, context, now)
-            if (reasons.isEmpty()) available += task else blocked += BlockedFocusTask(task, reasons)
-        }
-        val order = Comparator<NextUpCandidate> { a, b ->
-            when {
-                precedes(a, b, now, zone) -> -1
-                precedes(b, a, now, zone) -> 1
-                else -> 0
-            }
-        }
-        val sorted = available.sortedWith(order)
-        val ranked = mutableListOf<NextUpCandidate>()
-        var index = 0
-        while (index < sorted.size) {
-            val key = primary(sorted[index], now, zone)
-            var end = index + 1
-            while (end < sorted.size && primary(sorted[end], now, zone) == key) end++
-            ranked += place(sorted.subList(index, end))
-            index = end
-        }
-        val nextDay = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
-        val boundaries = mutableListOf<Instant>()
-        for (task in candidates) {
-            listOfNotNull(task.startAt, task.effectiveDeadline(zone)).forEach { boundaries += it }
-            if (task.dueDate == null) task.dueAt?.let { boundaries += it.plusMillis(1) }
-            val deadline = task.effectiveDeadline(zone)
-            val work = task.remainingSeconds
-            if (deadline != null && work != null && work > 0) {
-                boundaries += deadline.minusSeconds(work.toDouble() + buffer(work))
-            }
-            context.endsAt?.let { end ->
-                boundaries += end.minusSeconds(maxOf(60, task.minimumBlockSeconds ?: 60).toDouble()).plusMillis(1)
-                if (work != null && (context.mode == FocusTimeMode.FINISH || task.requiresSingleSitting)) {
-                    boundaries += end.minusSeconds(maxOf(60, work, task.minimumBlockSeconds ?: 60).toDouble()).plusMillis(1)
-                }
-            }
-        }
-        context.endsAt?.let { boundaries += it }
-        boundaries += nextDay
+        // The core hands back copies; the callers' own candidates go back out.
+        val originals = candidates.associateBy { it.id }
+        fun original(core: uniffi.takt_core.Candidate) = originals[core.id] ?: NextUpCandidate(core)
+        val ranking = uniffi.takt_core.rankNextUp(candidates.map { it.core }, now.coreMillis, zone.coreName, context.core)
         return FocusRanking(
-            ranked = ranked.map { score(it, now, zone) },
-            blocked = blocked.sortedWith { a, b -> order.compare(a.candidate, b.candidate) },
-            nextEvaluationAt = boundaries.filter { it > now }.minOrNull(),
+            ranked = ranking.ranked.map { it.scored(original(it.candidate)) },
+            blocked = ranking.blocked.map { blocked ->
+                BlockedFocusTask(original(blocked.candidate), blocked.reasons.map { it.reason })
+            },
+            nextEvaluationAt = ranking.nextEvaluationAtMs?.let(Instant::ofEpochMilli),
         )
     }
 
-    private fun buffer(seconds: Int): Double = maxOf(minimumDeadlineBuffer, seconds * deadlineBufferFraction)
-
-    private fun primary(task: NextUpCandidate, now: Instant, zone: ZoneId): List<Double> {
-        val due = task.effectiveDeadline(zone) ?: return listOf(3.0, 0.0)
-        val late = if (task.dueDate == null) due < now else due <= now
-        if (late) return listOf(0.0, epochSeconds(due))
-        val isToday = task.dueDate?.let { it == TaskCalendarDate.string(now, zone) }
-            ?: (due.atZone(zone).toLocalDate() == now.atZone(zone).toLocalDate())
-        if (isToday) return listOf(1.0, epochSeconds(due), epochSeconds(task.createdAt))
-        val work = task.remainingSeconds
-        if (work != null && work > 0) {
-            val slack = secondsBetween(now, due) - work - buffer(work)
-            if (slack <= 0) return listOf(2.0, slack)
-        }
-        return listOf(3.0, 0.0)
-    }
-
-    private fun precedes(left: NextUpCandidate, right: NextUpCandidate, now: Instant, zone: ZoneId): Boolean {
-        val lhs = primary(left, now, zone)
-        val rhs = primary(right, now, zone)
-        if (lhs != rhs) return lexicographicallyPrecedes(lhs, rhs)
-        fun secondary(task: NextUpCandidate): List<Double> {
-            val commitment = task.isDailyDueToday || task.kanbanColumn == todayColumnID
-            val due = task.effectiveDeadline(zone)
-            val days = due?.let { maxOf(0.0, secondsBetween(now, it) / 86_400) } ?: Double.POSITIVE_INFINITY
-            return listOf(
-                if (task.requirementGroups.isEmpty()) 1.0 else 0.0,
-                if (task.startAt == null) 1.0 else 0.0,
-                if (commitment) 0.0 else 1.0,
-                -(task.matrixImportance ?: 0).toDouble(),
-                -(task.priority ?: 0).toDouble(),
-                if (days <= dueHorizonDays) days else Double.POSITIVE_INFINITY,
-                -(task.matrixUrgency ?: 0).toDouble(),
-                epochSeconds(task.createdAt),
-                (task.remainingSeconds ?: Int.MAX_VALUE).toDouble(),
-                task.sortOrder.toDouble(),
-            )
-        }
-        val a = secondary(left)
-        val b = secondary(right)
-        return if (a == b) left.id < right.id else lexicographicallyPrecedes(a, b)
-    }
-
-    private fun place(tasks: List<NextUpCandidate>): List<NextUpCandidate> {
-        val pinned = tasks.filter { it.focusRank != null }
-            .sortedWith(compareBy<NextUpCandidate> { it.focusRank ?: 0 }.thenBy { it.id })
-        val free = tasks.filter { it.focusRank == null }
-        val result = mutableListOf<NextUpCandidate>()
-        var pin = 0
-        var unpinned = 0
-        while (result.size < tasks.size) {
-            if (pin < pinned.size && ((pinned[pin].focusRank ?: 0) <= result.size || unpinned == free.size)) {
-                result += pinned[pin]; pin++
-            } else {
-                result += free[unpinned]; unpinned++
-            }
-        }
-        return result
-    }
-
-    fun score(task: NextUpCandidate, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): ScoredNextUp {
-        val key = primary(task, now, zone)
-        var explanation: String? = null
-        val reason: NextUpReason = when (key[0]) {
-            0.0 -> {
-                val days = maxOf(0, (secondsBetween(task.effectiveDeadline(zone) ?: now, now) / 86_400).toInt())
-                explanation = if (days > 0) "overdue by $days days" else "past its deadline"
-                NextUpReason.OVERDUE
-            }
-            1.0 -> {
-                val age = (maxOf(0.0, secondsBetween(task.createdAt, now)) / 86_400).toInt()
-                if (age >= 30) explanation = "due today; added $age days ago"
-                NextUpReason.DUE_TODAY
-            }
-            2.0 -> NextUpReason.DEADLINE_RISK
-            else -> {
-                val due = task.effectiveDeadline(zone)
-                when {
-                    task.requirementGroups.isNotEmpty() -> NextUpReason.CONDITION
-                    task.startAt != null -> NextUpReason.STARTED
-                    task.isDailyDueToday -> NextUpReason.DAILY
-                    task.kanbanColumn == todayColumnID -> NextUpReason.TODAY
-                    (task.matrixImportance ?: 0) > 0 || (task.matrixUrgency ?: 0) > 0 -> NextUpReason.IMPORTANCE
-                    (task.priority ?: 0) > 0 -> NextUpReason.PRIORITY
-                    due != null && secondsBetween(now, due) <= dueHorizonDays * 86_400.0 -> NextUpReason.DUE_SOON
-                    else -> NextUpReason.ORDER
-                }
-            }
-        }
-        return ScoredNextUp.of(task, (4 - key[0]) * 1000, reason, explanation)
-    }
-
-    private fun epochSeconds(instant: Instant): Double = instant.epochSecond + instant.nano / 1_000_000_000.0
-
-    private fun lexicographicallyPrecedes(a: List<Double>, b: List<Double>): Boolean {
-        for (i in 0 until minOf(a.size, b.size)) {
-            if (a[i] < b[i]) return true
-            if (a[i] > b[i]) return false
-        }
-        return a.size < b.size
-    }
+    fun score(task: NextUpCandidate, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): ScoredNextUp =
+        uniffi.takt_core.scoreNextUp(task.core, now.coreMillis, zone.coreName).scored(task)
 }
 
-/** `Instant.minusSeconds` for fractional seconds, at nanosecond precision. */
-internal fun Instant.minusSeconds(seconds: Double): Instant = minusNanos(Math.round(seconds * 1_000_000_000))
+private fun uniffi.takt_core.Scored.scored(candidate: NextUpCandidate): ScoredNextUp =
+    ScoredNextUp.of(candidate, score, NextUpReason.of(reason) ?: NextUpReason.ORDER, explanation)
+
+/** Epoch milliseconds, rounded to the nearest, the way the Swift side sends them. */
+val Instant.coreMillis: Long
+    get() = Math.addExact(Math.multiplyExact(epochSecond, 1000L), Math.round(nano / 1_000_000.0))
+
+/**
+ * The zone's name for the core: an IANA name as it is, and a fixed offset as
+ * `GMT+0100`, which the core reads as the matching `Etc/GMT` zone.
+ */
+val ZoneId.coreName: String
+    get() {
+        val offset = normalized() as? ZoneOffset ?: return id
+        val total = offset.totalSeconds
+        if (total == 0) return "UTC"
+        val magnitude = Math.abs(total)
+        return "GMT%s%02d%02d".format(if (total > 0) "+" else "-", magnitude / 3600, magnitude % 3600 / 60)
+    }
+
+internal val FocusContext.core: uniffi.takt_core.FocusContext
+    get() = uniffi.takt_core.FocusContext(
+        conditionIds = conditionIDs.sorted(),
+        endsAtMs = endsAt?.coreMillis,
+        mode = mode.raw,
+    )
+
+internal val NextUpCandidate.core: uniffi.takt_core.Candidate
+    get() = uniffi.takt_core.Candidate(
+        id = id,
+        title = title,
+        isDailyDueToday = isDailyDueToday,
+        dueAtMs = dueAt?.coreMillis,
+        startAtMs = startAt?.coreMillis,
+        matrixUrgency = matrixUrgency?.toLong(),
+        matrixImportance = matrixImportance?.toLong(),
+        priority = priority?.toLong(),
+        estimateSeconds = estimateSeconds?.toLong(),
+        kanbanColumn = kanbanColumn,
+        focusRank = focusRank?.toLong(),
+        sortOrder = sortOrder.toLong(),
+        createdAtMs = createdAt.coreMillis,
+        dueDate = dueDate,
+        requirementGroups = requirementGroups,
+        loggedSeconds = loggedSeconds.toLong(),
+        minimumBlockSeconds = minimumBlockSeconds?.toLong(),
+        requiresSingleSitting = requiresSingleSitting,
+        dailyRemainingSeconds = dailyRemainingSeconds?.toLong(),
+        dailyUnavailable = when (dailyUnavailable) {
+            TaskUnavailableReason.DailyNotScheduled -> "dailyNotScheduled"
+            TaskUnavailableReason.DailyAlreadyMet -> "dailyAlreadyMet"
+            else -> null
+        },
+    )
+
+/** A candidate the core read from the workspace. */
+fun NextUpCandidate(core: uniffi.takt_core.Candidate): NextUpCandidate = NextUpCandidate(
+    id = core.id,
+    title = core.title,
+    isDailyDueToday = core.isDailyDueToday,
+    dueAt = core.dueAtMs?.let(Instant::ofEpochMilli),
+    startAt = core.startAtMs?.let(Instant::ofEpochMilli),
+    matrixUrgency = core.matrixUrgency?.toInt(),
+    matrixImportance = core.matrixImportance?.toInt(),
+    priority = core.priority?.toInt(),
+    estimateSeconds = core.estimateSeconds?.toInt(),
+    kanbanColumn = core.kanbanColumn,
+    focusRank = core.focusRank?.toInt(),
+    sortOrder = core.sortOrder.toInt(),
+    createdAt = Instant.ofEpochMilli(core.createdAtMs),
+    dueDate = core.dueDate,
+    requirementGroups = core.requirementGroups,
+    loggedSeconds = core.loggedSeconds.toInt(),
+    minimumBlockSeconds = core.minimumBlockSeconds?.toInt(),
+    requiresSingleSitting = core.requiresSingleSitting,
+    dailyRemainingSeconds = core.dailyRemainingSeconds?.toInt(),
+    dailyUnavailable = when (core.dailyUnavailable) {
+        "dailyNotScheduled" -> TaskUnavailableReason.DailyNotScheduled
+        "dailyAlreadyMet" -> TaskUnavailableReason.DailyAlreadyMet
+        else -> null
+    },
+)
+
+private val uniffi.takt_core.Unavailable.reason: TaskUnavailableReason
+    get() = when (this) {
+        is uniffi.takt_core.Unavailable.StartsLater -> TaskUnavailableReason.StartsLater(Instant.ofEpochMilli(atMs))
+        is uniffi.takt_core.Unavailable.MissingConditions -> TaskUnavailableReason.MissingConditions(groups)
+        is uniffi.takt_core.Unavailable.InsufficientTime -> TaskUnavailableReason.InsufficientTime(seconds.toInt())
+        uniffi.takt_core.Unavailable.NeedsEstimate -> TaskUnavailableReason.NeedsEstimate
+        uniffi.takt_core.Unavailable.ExpiredWindow -> TaskUnavailableReason.ExpiredWindow
+        uniffi.takt_core.Unavailable.DailyNotScheduled -> TaskUnavailableReason.DailyNotScheduled
+        uniffi.takt_core.Unavailable.DailyAlreadyMet -> TaskUnavailableReason.DailyAlreadyMet
+    }

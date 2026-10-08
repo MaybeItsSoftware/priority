@@ -106,7 +106,7 @@ val buildRustCore = tasks.register<Exec>("buildRustCore") {
     inputs.file(coreDir.resolve("Cargo.toml"))
     inputs.file(coreDir.resolve("Cargo.lock"))
     outputs.dir(layout.projectDirectory.dir("src/main/jniLibs"))
-    outputs.dir(layout.projectDirectory.dir("src/main/java/uniffi"))
+    outputs.dir(rootProject.layout.projectDirectory.dir("core/src/main/java/uniffi"))
     outputs.dir(coreDir.resolve("target/release"))
     dependsOn(unpackSqliteAndroidNatives)
     val natives = layout.buildDirectory.dir("sqliteAndroidNatives")
