@@ -111,6 +111,35 @@ python3 scripts/mcp_smoke_check.py
 
 There used to be two implementations of the same MCP server — one in Swift inside the app, one in the CLI — held equal from the outside by `scripts/mcp_parity_check.py`, because neither could import the other. The Swift one is gone: the app bundles the CLI and `--mcp-server` execs it, so there is one implementation to be right instead of two to keep equal. `cargo test` covers the server; the smoke check covers the seam, and specifically that a client configuration written before that change — naming the app's executable with `--mcp-server` and credentials in `env` — still reaches a working server. It checks `Takt --mcp-server`; a configuration naming the pre-rename `Priority.app` works only while that bundle exists, and the app's MCP setup replaces such an entry with a `takt` one. Needs a Debug app build; reads no real data and needs no credentials.
 
+### The Rust core
+
+`core/` is `takt-core`, the shared Rust crate the workspace logic is moving
+into (`docs/rust-core-migration.md` is the plan and records which step it is
+on). Every client calls it through UniFFI: the Swift package's
+`TaktRustCore` target wraps `build/core/takt_coreFFI.xcframework`, and the
+Android data module loads `libtakt_core.so` through JNA. Neither library is
+committed, so **a fresh checkout cannot resolve the Swift package until
+`scripts/build_core_apple.sh` has run**. Every build script and CI job calls
+it first (`TAKT_CORE_IF_STALE=1` skips it when `core/` is unchanged). Gradle
+runs `scripts/build_core_android.sh` through `buildRustCore` before
+`preBuild`. The generated bindings are committed: `Sources/TaktRustCore/` and
+`mobile/android/data/src/main/java/uniffi/`. Never edit them by hand.
+
+After changing anything under `core/`:
+
+```bash
+cargo test --manifest-path core/Cargo.toml
+cargo clippy --manifest-path core/Cargo.toml --all-targets -- -D warnings
+cargo fmt --manifest-path core/Cargo.toml --check
+scripts/build_core_apple.sh          # rebuilds the xcframework and Swift bindings
+swift test --filter TaktRustCoreTests
+(cd mobile/android && ./gradlew :data:testDebugUnitTest)   # rebuilds the .so and Kotlin bindings
+```
+
+Then commit the regenerated bindings alongside the Rust change, and run the
+Mac, iPhone and Android gates below. A bindings checksum mismatch fails the
+first call across the boundary, which is what the two version tests catch.
+
 ### Phones and sync
 
 The iPhone app (`mobile/ios`, XcodeGen) and the Android app (`mobile/android`, Gradle) share the workspace with the Mac through `sync-server/` (Railway). The protocol is `docs/sync.md`. The theme format and its per-platform rules are in `docs/themes.md`. The shared fixtures they're held to are `cli/src/fixtures/workspace_schema.sql` and `shared/themes/`.

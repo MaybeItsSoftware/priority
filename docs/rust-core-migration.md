@@ -58,10 +58,18 @@ Each step is one or more green commits. A step is done when the moved
 behaviour has one implementation, and the Swift, Kotlin and cargo tests that
 covered the old copies pass against it.
 
-1. **Scaffold.** Add the Cargo workspace, `core/` with UniFFI, an
-   `xcframework` build script, and the Gradle task that builds the Android
-   `.so`. Ship one trivial call, the schema version, through both bindings,
-   and add it to CI. No behaviour moves yet.
+1. **Scaffold. Done 2026-10-08.** `core/` is the `takt-core` crate with
+   UniFFI. `scripts/build_core_apple.sh` builds the xcframework and the Swift
+   bindings (`Sources/TaktRustCore`). The data module's `buildRustCore`
+   Gradle task runs `scripts/build_core_android.sh` for the `.so` files and
+   the Kotlin bindings (`uniffi.takt_core`). One call, `coreVersion()`,
+   crosses both bindings. It is shown in the Mac's Diagnostics and in
+   Android's Settings, where a minified release on an emulator read it. It is
+   tested by `TaktRustCoreTests` and `TaktCoreTest.kt`. CI builds the core
+   before every Swift job and lints and tests it in a `core` job. There is
+   no root Cargo workspace: `cli/target/release` is where the installed
+   `takt` symlink points, and a workspace would move every crate's `target`
+   to the root.
 2. **Schema and migrations.** Move the ordered migration list into
    `core/src/schema.rs`. Swift's and Kotlin's migrators call it.
    `scripts/dump_workspace_schema.sh` dumps from the core, so the fixture
