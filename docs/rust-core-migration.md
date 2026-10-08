@@ -97,12 +97,20 @@ covered the old copies pass against it.
    on its own connection, the Mac takes in the new `data_version` after each
    `perform`, and Android's `WorkspaceDatabase.coreWrite` announces the
    changed tables itself.
-4. **Task writes.** add, update, complete/reopen, move, reparent, delete,
-   one at a time, each replacing `WorkspaceStore+Editing`/`+Work` methods,
-   `cli/src/workspace_tasks.rs`, and the Kotlin repository method together.
-   This is the step that ends the CLI's "copy row for row" rule in
-   `CLAUDE.md`.
-5. **Lists and folders.** Then dailies, habits, waiting and conditions, then
+4. **Task writes. In progress (2026-10-08).** Each write moves with its tests
+   into `core/src/tasks.rs` or `core/src/lists.rs`, takes the caller's
+   transaction so the CLI can journal it under its "MCP: " label, and is
+   called by the Swift store, the Kotlin repository and the CLI in place of
+   their copies. Moved so far: creating, deleting, moving, nudging, dropping,
+   indenting and outdenting a task; its board column and matrix place;
+   creating, renaming, recolouring, archiving, moving, nudging, dropping and
+   deleting lists and folders. Still in Swift and Kotlin: status changes
+   (they schedule the next occurrence and expire habits), the task editor's
+   save and its planning, conversions between lists and tasks, imports, and
+   the dailies, habits, conditions, waiting, today and focus writes. The
+   apps' own core commits are kept out of the external-change token by
+   `WorkspaceStore.coreWrite` and `WorkspaceDatabase.coreWrite`.
+5. **The rest of the writes.** Lists and folders went with step four. Then dailies, habits, waiting and conditions, then
    focus sessions and points.
 6. **Reads.** Search with FTS, the today and next-up ranking, outline
    folding. These are the hot paths. Benchmark each against the Swift version
