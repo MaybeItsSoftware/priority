@@ -148,8 +148,7 @@ struct WorkspaceOutlineRow: View {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
-        Image(systemName: model.itemSymbol(for: item.task))
-          .foregroundStyle(item.task.status == .open ? theme.muted : theme.success)
+        WorkspaceTaskMarker(task: item.task, isSubtask: item.depth > 0)
           // A fixed column, so titles line up whichever glyph precedes them
           // and each depth's guide hangs from the middle of its parent's.
           .frame(width: WorkspaceRowMetrics.iconWidth)

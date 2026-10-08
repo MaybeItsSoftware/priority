@@ -468,8 +468,9 @@ struct WorkspaceKanbanCard: View {
       Button {
         if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
       } label: {
-        Image(systemName: model.itemSymbol(for: task))
-          .foregroundStyle(task.status == .open ? theme.muted : theme.success)
+        WorkspaceTaskMarker(task: task)
+          .frame(width: theme.space.lg)
+          .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .focusable()
@@ -560,8 +561,7 @@ struct WorkspaceKanbanCard: View {
       Button {
         if item.task.isList { model.openItemList(item.task) } else { model.toggleTask(item.task) }
       } label: {
-        Image(systemName: model.itemSymbol(for: item.task))
-          .foregroundStyle(isOpen ? theme.muted : theme.success)
+        WorkspaceTaskMarker(task: item.task, isSubtask: true)
           .frame(width: step)
           .contentShape(Rectangle())
       }

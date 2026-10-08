@@ -490,9 +490,10 @@ struct DayView: View {
             .monospacedDigit()
             .foregroundStyle(theme.dim)
         } else {
+          // No empty box down the column; the tick shows under the pointer.
           Image(systemName: "circle")
             .font(theme.captionFont)
-            .foregroundStyle(theme.dim)
+            .hidden()
         }
       }
       .frame(width: WorkspaceRowMetrics.iconWidth, alignment: .trailing)

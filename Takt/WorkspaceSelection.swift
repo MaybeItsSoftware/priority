@@ -1,4 +1,5 @@
 import TaktCore
+import TaktWorkspace
 import SwiftUI
 
 /// One way of drawing "this is the thing you have selected", and one way of
@@ -85,6 +86,42 @@ extension View {
         radius: radius
       )
     )
+  }
+}
+
+/// What stands in a task row's glyph column.
+///
+/// A ticked task shows its check until it lingers out. An open one shows
+/// nothing at the top level and `└` beneath a parent, so the column says how
+/// a row hangs rather than repeating an empty box down the page; the circle
+/// comes back under the pointer, where it is a button to tick. A list keeps
+/// its icon, since opening it is what the glyph does.
+struct WorkspaceTaskMarker: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  @State private var isHovered = false
+  let task: WorkspaceTask
+  var isSubtask = false
+
+  var body: some View {
+    Group {
+      if task.isList {
+        Image(systemName: model.itemSymbol(for: task)).foregroundStyle(theme.muted)
+      } else if task.status != .open {
+        Image(systemName: "checkmark.circle.fill").foregroundStyle(theme.success)
+      } else if isHovered {
+        Image(systemName: "circle").foregroundStyle(theme.muted)
+      } else if isSubtask {
+        Text("└").font(theme.monoCaptionFont).foregroundStyle(theme.dim)
+      } else {
+        // Held at the circle's size, so the row's height and the hover
+        // target are the same whichever mark shows.
+        Image(systemName: "circle").hidden()
+      }
+    }
+    .frame(maxWidth: .infinity)
+    .contentShape(Rectangle())
+    .onHover { isHovered = $0 }
   }
 }
 

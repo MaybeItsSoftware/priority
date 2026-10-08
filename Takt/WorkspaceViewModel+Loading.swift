@@ -119,7 +119,12 @@ extension WorkspaceViewModel {
       // Every level beneath every card, the nested cards' own trees included,
       // in one walk of rows already read — never a query per card.
       let board = WorkspaceBoardTrees(cardIDs: boardIDs, trees: listIDs.compactMap { trees[$0] })
-      let descendants = board.descendants
+      // A card's tree loses its finished rows as the outline does, once their
+      // few seconds are up. Row by row, as there: an open task under a closed
+      // one stays on show.
+      let descendants = board.descendants.mapValues { rows in
+        rows.filter { !hidesCompletion(of: $0.task, now: now) }
+      }
       let parents = board.parents
       var treeIDs = Set<String>()
       let treeTasks = (tasks + tasks.flatMap { root in
