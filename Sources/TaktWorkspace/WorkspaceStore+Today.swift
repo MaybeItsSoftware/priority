@@ -45,21 +45,7 @@ extension WorkspaceStore {
   /// and an arrangement that rearranged itself whenever a neighbour's score
   /// moved would not be one.
   public func arrangeDay(orderedTaskIds: [String], now: Date = .now) throws {
-    guard !orderedTaskIds.isEmpty else { return }
-    try journalledWrite("Reorder Today") { db in
-      for (rank, taskId) in orderedTaskIds.enumerated() {
-        guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
-          throw WorkspaceStoreError.missingTask
-        }
-        var record = try TaskMetadata.fetchOne(db, key: taskId) ?? TaskMetadata(
-          taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-          matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]",
-          updatedAt: now)
-        guard record.focusRank != rank else { continue }
-        record.focusRank = rank
-        record.updatedAt = now
-        try record.save(db)
-      }
-    }
+    // The Rust core's `today::arrange_day`.
+    try coreWrite { try core.arrangeDay(orderedTaskIds: orderedTaskIds, nowMs: now.coreMilliseconds) }
   }
 }

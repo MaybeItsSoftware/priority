@@ -335,42 +335,17 @@ extension WorkspaceStore {
   /// entire ladder is what froze it: every task acquired a rank from a single
   /// nudge, after which nothing could ever be re-ranked again.
   public func pinTask(id taskId: String, atIndex index: Int, now: Date = .now) throws {
-    try journalledWrite("Pin Task") { db in
-      guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else {
-        throw WorkspaceStoreError.missingTask
-      }
-      let rank = max(0, index)
-      if var metadata = try TaskMetadata.fetchOne(db, key: taskId) {
-        metadata.focusRank = rank
-        metadata.updatedAt = now
-        try metadata.update(db)
-      } else {
-        try TaskMetadata(
-          taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-          matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]",
-          focusRank: rank, updatedAt: now
-        ).insert(db)
-      }
-    }
+    try coreWrite { try core.pinTask(taskId: taskId, index: Int64(index), nowMs: now.coreMilliseconds) }
   }
 
   /// Releases one task back to the ranking.
   public func unpinTask(id taskId: String, now: Date = .now) throws {
-    try journalledWrite("Unpin Task") { db in
-      guard var metadata = try TaskMetadata.fetchOne(db, key: taskId) else { return }
-      metadata.focusRank = nil
-      metadata.updatedAt = now
-      try metadata.update(db)
-    }
+    try coreWrite { try core.unpinTask(taskId: taskId, nowMs: now.coreMilliseconds) }
   }
 
   /// Hands the ladder back to the ranking.
   public func clearFocusOrder(now: Date = .now) throws {
-    try journalledWrite("Clear Focus Order") { db in
-      try db.execute(
-        sql: "UPDATE task_metadata SET focusRank = NULL, updatedAt = ? WHERE focusRank IS NOT NULL",
-        arguments: [now])
-    }
+    try coreWrite { try core.clearFocusOrder(nowMs: now.coreMilliseconds) }
   }
 
   public func hasManualFocusOrder() throws -> Bool {

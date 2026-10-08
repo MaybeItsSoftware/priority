@@ -16,6 +16,7 @@ use crate::conditions;
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList};
 use crate::tasks::{self, DeletedTask, NewTask};
+use crate::today;
 
 /// An open workspace database.
 #[derive(uniffi::Object)]
@@ -318,6 +319,34 @@ impl CoreWorkspace {
     ) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Edit Condition", |tx| {
             conditions::save_condition(tx, &id, &name, is_location, is_archived, now_ms)
+        })
+    }
+
+    /// Ranks tasks in Today's focus order as one "Reorder Today" step.
+    pub fn arrange_day(&self, ordered_task_ids: Vec<String>, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Reorder Today", |tx| {
+            today::arrange_day(tx, &ordered_task_ids, now_ms)
+        })
+    }
+
+    /// Pins a task in the focus order as one "Pin Task" step.
+    pub fn pin_task(&self, task_id: String, index: i64, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Pin Task", |tx| {
+            today::pin_task(tx, &task_id, index, now_ms)
+        })
+    }
+
+    /// Releases a task to the ranking as one "Unpin Task" step.
+    pub fn unpin_task(&self, task_id: String, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Unpin Task", |tx| {
+            today::unpin_task(tx, &task_id, now_ms)
+        })
+    }
+
+    /// Clears the focus order as one "Clear Focus Order" step.
+    pub fn clear_focus_order(&self, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Clear Focus Order", |tx| {
+            today::clear_focus_order(tx, now_ms)
         })
     }
 

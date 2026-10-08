@@ -969,31 +969,17 @@ class WorkspaceRepository(
 
     /** Pins one task to [atIndex] in the ladder, leaving the rest to the ranking. */
     suspend fun pinTask(taskId: String, atIndex: Int, now: Instant = now()) {
-        journalledWrite("Pin Task") { db ->
-            db.task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            val rank = maxOf(0, atIndex)
-            val metadata = db.metadata(taskId)
-            if (metadata != null) {
-                db.update(metadata.copy(focusRank = rank, updatedAt = now))
-            } else {
-                db.insert(emptyMetadata(taskId, now).copy(focusRank = rank))
-            }
-        }
+        coreWrite { it.pinTask(taskId, atIndex.toLong(), now.toEpochMilli()) }
     }
 
     /** Releases one task back to the ranking. */
     suspend fun unpinTask(taskId: String, now: Instant = now()) {
-        journalledWrite("Unpin Task") { db ->
-            val metadata = db.metadata(taskId) ?: return@journalledWrite
-            db.update(metadata.copy(focusRank = null, updatedAt = now))
-        }
+        coreWrite { it.unpinTask(taskId, now.toEpochMilli()) }
     }
 
     /** Hands the ladder back to the ranking. */
     suspend fun clearFocusOrder(now: Instant = now()) {
-        journalledWrite("Clear Focus Order") { db ->
-            db.execute("UPDATE task_metadata SET focusRank = NULL, updatedAt = ? WHERE focusRank IS NOT NULL", now)
-        }
+        coreWrite { it.clearFocusOrder(now.toEpochMilli()) }
     }
 
     suspend fun hasManualFocusOrder(): Boolean = database.read { hasManualFocusOrder(it) }
@@ -1034,14 +1020,8 @@ class WorkspaceRepository(
     /** Writes the day's hand-made order: each task's position becomes its rank. */
     suspend fun arrangeDay(orderedTaskIds: List<String>, now: Instant = now()) {
         if (orderedTaskIds.isEmpty()) return
-        journalledWrite("Reorder Today") { db ->
-            orderedTaskIds.forEachIndexed { rank, taskId ->
-                db.task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-                val record = db.metadata(taskId) ?: emptyMetadata(taskId, now)
-                if (record.focusRank == rank) return@forEachIndexed
-                db.save(record.copy(focusRank = rank, updatedAt = now))
-            }
-        }
+        // The Rust core's `today::arrange_day`.
+        coreWrite { it.arrangeDay(orderedTaskIds, now.toEpochMilli()) }
     }
 
     // endregion

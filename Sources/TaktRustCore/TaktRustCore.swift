@@ -589,6 +589,16 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Ranks tasks in Today's focus order as one "Reorder Today" step.
+     */
+    func arrangeDay(orderedTaskIds: [String], nowMs: Int64) throws 
+    
+    /**
+     * Clears the focus order as one "Clear Focus Order" step.
+     */
+    func clearFocusOrder(nowMs: Int64) throws 
+    
+    /**
      * Creates a condition as one "New Condition" step; returns its id.
      */
     func createCondition(workspaceId: String, name: String, isLocation: Bool, nowMs: Int64) throws  -> String
@@ -680,6 +690,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func outdentTask(id: String, nowMs: Int64) throws 
     
     /**
+     * Pins a task in the focus order as one "Pin Task" step.
+     */
+    func pinTask(taskId: String, index: Int64, nowMs: Int64) throws 
+    
+    /**
      * Drops a folder before another, in a parent, as one "Reorder Folder" step.
      */
     func placeFolder(id: String, beforeId: String?, parentFolderId: String?, nowMs: Int64) throws 
@@ -744,6 +759,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * What undo would take back, phrased for a menu item.
      */
     func undoableLabel() throws  -> String?
+    
+    /**
+     * Releases a task to the ranking as one "Unpin Task" step.
+     */
+    func unpinTask(taskId: String, nowMs: Int64) throws 
     
     /**
      * Sets a list's name and colour as one "Edit List" step.
@@ -819,6 +839,31 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * Ranks tasks in Today's focus order as one "Reorder Today" step.
+     */
+open func arrangeDay(orderedTaskIds: [String], nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_arrange_day(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(orderedTaskIds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Clears the focus order as one "Clear Focus Order" step.
+     */
+open func clearFocusOrder(nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_clear_focus_order(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
     
     /**
      * Creates a condition as one "New Condition" step; returns its id.
@@ -1075,6 +1120,20 @@ open func outdentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(F
 }
     
     /**
+     * Pins a task in the focus order as one "Pin Task" step.
+     */
+open func pinTask(taskId: String, index: Int64, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_pin_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterInt64.lower(index),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Drops a folder before another, in a parent, as one "Reorder Folder" step.
      */
 open func placeFolder(id: String, beforeId: String?, parentFolderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1251,6 +1310,19 @@ open func undoableLabel()throws  -> String?  {
             self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * Releases a task to the ranking as one "Unpin Task" step.
+     */
+open func unpinTask(taskId: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_unpin_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
 }
     
     /**
@@ -2134,6 +2206,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_arrange_day() != 44382) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order() != 51024) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_create_condition() != 36493) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2188,6 +2266,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_outdent_task() != 3744) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_pin_task() != 37334) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_place_folder() != 1445) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2225,6 +2306,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_undoable_label() != 37156) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_unpin_task() != 59060) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_update_list() != 5208) {

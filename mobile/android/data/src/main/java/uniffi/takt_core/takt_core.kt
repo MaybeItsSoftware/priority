@@ -681,6 +681,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_arrange_day(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_condition(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_folder(
@@ -717,6 +721,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_outdent_task(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_pin_task(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_list(
@@ -742,6 +748,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo_history(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undoable_label(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_unpin_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_list(
     ): Int
@@ -773,6 +781,10 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_arrange_day(`ptr`: Long,`orderedTaskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_clear_focus_order(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_create_condition(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_folder(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -809,6 +821,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_outdent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_pin_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,`index`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_list(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -835,6 +849,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_unpin_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_update_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`colourHex`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
@@ -971,6 +987,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_arrange_day() and 0xFFFF) != 44382) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order() and 0xFFFF) != 51024) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_condition() and 0xFFFF) != 36493) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1025,6 +1047,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_outdent_task() and 0xFFFF) != 3744) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_pin_task() and 0xFFFF) != 37334) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_folder() and 0xFFFF) != 1445) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1062,6 +1087,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undoable_label() and 0xFFFF) != 37156) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_unpin_task() and 0xFFFF) != 59060) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_list() and 0xFFFF) != 5208) {
@@ -1478,6 +1506,16 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Ranks tasks in Today's focus order as one "Reorder Today" step.
+     */
+    fun `arrangeDay`(`orderedTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
+    
+    /**
+     * Clears the focus order as one "Clear Focus Order" step.
+     */
+    fun `clearFocusOrder`(`nowMs`: kotlin.Long)
+    
+    /**
      * Creates a condition as one "New Condition" step; returns its id.
      */
     fun `createCondition`(`workspaceId`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `nowMs`: kotlin.Long): kotlin.String
@@ -1569,6 +1607,11 @@ public interface CoreWorkspaceInterface {
     fun `outdentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * Pins a task in the focus order as one "Pin Task" step.
+     */
+    fun `pinTask`(`taskId`: kotlin.String, `index`: kotlin.Long, `nowMs`: kotlin.Long)
+    
+    /**
      * Drops a folder before another, in a parent, as one "Reorder Folder" step.
      */
     fun `placeFolder`(`id`: kotlin.String, `beforeId`: kotlin.String?, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -1633,6 +1676,11 @@ public interface CoreWorkspaceInterface {
      * What undo would take back, phrased for a menu item.
      */
     fun `undoableLabel`(): kotlin.String?
+    
+    /**
+     * Releases a task to the ranking as one "Unpin Task" step.
+     */
+    fun `unpinTask`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
      * Sets a list's name and colour as one "Edit List" step.
@@ -1745,6 +1793,41 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * Ranks tasks in Today's focus order as one "Reorder Today" step.
+     */
+    @Throws(CoreException::class)override fun `arrangeDay`(`orderedTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_arrange_day(
+        it,
+        
+        FfiConverterSequenceString.lower(`orderedTaskIds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Clears the focus order as one "Clear Focus Order" step.
+     */
+    @Throws(CoreException::class)override fun `clearFocusOrder`(`nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_clear_focus_order(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
 
     
     /**
@@ -2092,6 +2175,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Pins a task in the focus order as one "Pin Task" step.
+     */
+    @Throws(CoreException::class)override fun `pinTask`(`taskId`: kotlin.String, `index`: kotlin.Long, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_pin_task(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterLong.lower(`index`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Drops a folder before another, in a parent, as one "Reorder Folder" step.
      */
     @Throws(CoreException::class)override fun `placeFolder`(`id`: kotlin.String, `beforeId`: kotlin.String?, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -2332,6 +2434,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Releases a task to the ranking as one "Unpin Task" step.
+     */
+    @Throws(CoreException::class)override fun `unpinTask`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_unpin_task(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
     
 
     
