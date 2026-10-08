@@ -220,13 +220,9 @@ class WorkspaceRepository(
 
     fun observeTask(id: String): Flow<WorkspaceTask?> = database.observe(setOf("tasks")) { it.task(id) }
 
+    /** Renames a folder: the Rust core's `lists::rename_folder`. */
     suspend fun updateFolder(id: String, name: String, now: Instant = now()) {
-        val trimmed = nonEmptyName(name)
-        journalledWrite("Rename Folder") { db ->
-            val folder = db.folder(id) ?: fail(WorkspaceStoreError.MISSING_FOLDER)
-            if (folder.name == trimmed) return@journalledWrite
-            db.update(folder.copy(name = trimmed, updatedAt = now))
-        }
+        coreWrite { it.renameFolder(id, name, now.toEpochMilli()) }
     }
 
     suspend fun moveFolder(id: String, toParentFolderId: String?, now: Instant = now()) {
@@ -247,24 +243,14 @@ class WorkspaceRepository(
         coreWrite { it.deleteFolder(id) }
     }
 
+    /** Sets a list's name and colour: the Rust core's `lists::update_list`. */
     suspend fun updateList(id: String, name: String, colorHex: String?, now: Instant = now()) {
-        val trimmed = nonEmptyName(name)
-        val color = colorHex.trimmedOrNull()
-        journalledWrite("Edit List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (list.name == trimmed && list.colorHex == color) return@journalledWrite
-            db.update(list.copy(name = trimmed, colorHex = color, updatedAt = now))
-        }
+        coreWrite { it.updateList(id, name, colorHex, now.toEpochMilli()) }
     }
 
-    /** Renames a list and touches nothing else, so undo offers "Rename List". */
+    /** Renames a list and touches nothing else, so undo offers "Rename List": the Rust core's `lists::rename_list`. */
     suspend fun renameList(id: String, name: String, now: Instant = now()) {
-        val trimmed = nonEmptyName(name)
-        journalledWrite("Rename List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (list.name == trimmed) return@journalledWrite
-            db.update(list.copy(name = trimmed, updatedAt = now))
-        }
+        coreWrite { it.renameList(id, name, now.toEpochMilli()) }
     }
 
     suspend fun moveList(id: String, toFolderId: String?, now: Instant = now()) {
@@ -358,12 +344,9 @@ class WorkspaceRepository(
         }
     }
 
+    /** Archives or restores a list; the Inbox stays. The Rust core's `lists::set_list_archived`. */
     suspend fun setListArchived(archived: Boolean, id: String, now: Instant = now()) {
-        journalledWrite("Archive List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (archived && list.isSystemList) fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
-            db.update(list.copy(isArchived = archived, updatedAt = now))
-        }
+        coreWrite { it.setListArchived(id, archived, now.toEpochMilli()) }
     }
 
     /** Deletes a list and its tasks as one undo step; the Inbox is permanent. The Rust core's `lists::delete_list`. */
@@ -686,6 +669,7 @@ class WorkspaceRepository(
             is CoreException.MissingList -> fail(WorkspaceStoreError.MISSING_LIST)
             is CoreException.MissingFolder -> fail(WorkspaceStoreError.MISSING_FOLDER)
             is CoreException.SystemListIsPermanent -> fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
+            is CoreException.EmptyName -> fail(WorkspaceStoreError.EMPTY_NAME)
             else -> throw error
         }
     }

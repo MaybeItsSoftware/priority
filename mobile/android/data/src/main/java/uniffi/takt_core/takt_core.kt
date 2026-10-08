@@ -693,11 +693,19 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redoable_label(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_rename_folder(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_rename_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_list_archived(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo_history(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undoable_label(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_update_list(
     ): Int
     external fun uniffi_takt_core_checksum_constructor_coreworkspace_open(
     ): Int
@@ -739,12 +747,20 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_redoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_rename_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_rename_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_list_archived(`ptr`: Long,`id`: RustBuffer.ByValue,`archived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undo_history(`ptr`: Long,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_update_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`colourHex`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -897,6 +913,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_redoable_label() and 0xFFFF) != 40840) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_folder() and 0xFFFF) != 13587) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_list() and 0xFFFF) != 3217) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_list_archived() and 0xFFFF) != 35767) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -904,6 +929,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undoable_label() and 0xFFFF) != 37156) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_list() and 0xFFFF) != 5208) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_constructor_coreworkspace_open() and 0xFFFF) != 50515) {
@@ -1086,6 +1114,29 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 
     override fun write(value: UInt, buf: ByteBuffer) {
         buf.putInt(value.toInt())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterLong: FfiConverter<Long, Long> {
+    override fun lift(value: Long): Long {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Long {
+        return buf.getLong()
+    }
+
+    override fun lower(value: Long): Long {
+        return value
+    }
+
+    override fun allocationSize(value: Long) = 8UL
+
+    override fun write(value: Long, buf: ByteBuffer) {
+        buf.putLong(value)
     }
 }
 
@@ -1301,6 +1352,21 @@ public interface CoreWorkspaceInterface {
     fun `redoableLabel`(): kotlin.String?
     
     /**
+     * Renames a folder as one "Rename Folder" step.
+     */
+    fun `renameFolder`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Renames a list as one "Rename List" step.
+     */
+    fun `renameList`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Archives or restores a list as one "Archive List" step.
+     */
+    fun `setListArchived`(`id`: kotlin.String, `archived`: kotlin.Boolean, `nowMs`: kotlin.Long)
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -1315,6 +1381,11 @@ public interface CoreWorkspaceInterface {
      * What undo would take back, phrased for a menu item.
      */
     fun `undoableLabel`(): kotlin.String?
+    
+    /**
+     * Sets a list's name and colour as one "Edit List" step.
+     */
+    fun `updateList`(`id`: kotlin.String, `name`: kotlin.String, `colourHex`: kotlin.String?, `nowMs`: kotlin.Long)
     
     companion object
 }
@@ -1530,6 +1601,63 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Renames a folder as one "Rename Folder" step.
+     */
+    @Throws(CoreException::class)override fun `renameFolder`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_rename_folder(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`name`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Renames a list as one "Rename List" step.
+     */
+    @Throws(CoreException::class)override fun `renameList`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_rename_list(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`name`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Archives or restores a list as one "Archive List" step.
+     */
+    @Throws(CoreException::class)override fun `setListArchived`(`id`: kotlin.String, `archived`: kotlin.Boolean, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_list_archived(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterBoolean.lower(`archived`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -1579,6 +1707,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Sets a list's name and colour as one "Edit List" step.
+     */
+    @Throws(CoreException::class)override fun `updateList`(`id`: kotlin.String, `name`: kotlin.String, `colourHex`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_update_list(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`name`),
+        FfiConverterOptionalString.lower(`colourHex`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
     
 
     
@@ -1903,6 +2051,12 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class EmptyName(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -1940,6 +2094,7 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 FfiConverterString.read(buf),
                 )
             7 -> CoreException.SystemListIsPermanent()
+            8 -> CoreException.EmptyName()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -1980,6 +2135,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is CoreException.EmptyName -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -2017,6 +2176,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             }
             is CoreException.SystemListIsPermanent -> {
                 buf.putInt(7)
+                Unit
+            }
+            is CoreException.EmptyName -> {
+                buf.putInt(8)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

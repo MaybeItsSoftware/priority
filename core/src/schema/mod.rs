@@ -14,6 +14,7 @@
 //! the wild records which ones it ran.
 
 mod data;
+pub use data::grdb_timestamp;
 pub mod triggers;
 
 use std::time::Duration;

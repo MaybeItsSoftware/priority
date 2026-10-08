@@ -481,6 +481,22 @@ fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
+    typealias FfiType = Int64
+    typealias SwiftType = Int64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int64, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -587,6 +603,21 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func redoableLabel() throws  -> String?
     
     /**
+     * Renames a folder as one "Rename Folder" step.
+     */
+    func renameFolder(id: String, name: String, nowMs: Int64) throws 
+    
+    /**
+     * Renames a list as one "Rename List" step.
+     */
+    func renameList(id: String, name: String, nowMs: Int64) throws 
+    
+    /**
+     * Archives or restores a list as one "Archive List" step.
+     */
+    func setListArchived(id: String, archived: Bool, nowMs: Int64) throws 
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -601,6 +632,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * What undo would take back, phrased for a menu item.
      */
     func undoableLabel() throws  -> String?
+    
+    /**
+     * Sets a list's name and colour as one "Edit List" step.
+     */
+    func updateList(id: String, name: String, colourHex: String?, nowMs: Int64) throws 
     
 }
 /**
@@ -748,6 +784,48 @@ open func redoableLabel()throws  -> String?  {
 }
     
     /**
+     * Renames a folder as one "Rename Folder" step.
+     */
+open func renameFolder(id: String, name: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_rename_folder(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(name),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Renames a list as one "Rename List" step.
+     */
+open func renameList(id: String, name: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_rename_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(name),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Archives or restores a list as one "Archive List" step.
+     */
+open func setListArchived(id: String, archived: Bool, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_list_archived(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterBool.lower(archived),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -783,6 +861,21 @@ open func undoableLabel()throws  -> String?  {
             self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * Sets a list's name and colour as one "Edit List" step.
+     */
+open func updateList(id: String, name: String, colourHex: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_update_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(name),
+        FfiConverterOptionString.lower(colourHex),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
 }
     
 
@@ -1137,6 +1230,7 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case MissingFolder(id: String
     )
     case SystemListIsPermanent
+    case EmptyName
 
     
 
@@ -1184,6 +1278,7 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             id: try FfiConverterString.read(from: &buf)
             )
         case 7: return .SystemListIsPermanent
+        case 8: return .EmptyName
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1228,6 +1323,10 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         
         case .SystemListIsPermanent:
             writeInt(&buf, Int32(7))
+        
+        
+        case .EmptyName:
+            writeInt(&buf, Int32(8))
         
         }
     }
@@ -1404,6 +1503,15 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_redoable_label() != 40840) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_rename_folder() != 13587) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_rename_list() != 3217) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_list_archived() != 35767) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1411,6 +1519,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_undoable_label() != 37156) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_update_list() != 5208) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_constructor_coreworkspace_open() != 50515) {

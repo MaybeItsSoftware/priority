@@ -20,6 +20,8 @@ pub enum CoreError {
     MissingFolder { id: String },
     #[error("The Inbox cannot be archived or deleted. You can rename it instead.")]
     SystemListIsPermanent,
+    #[error("A workspace item needs a name.")]
+    EmptyName,
 }
 
 impl From<rusqlite::Error> for CoreError {

@@ -176,15 +176,9 @@ public final class WorkspaceStore: @unchecked Sendable {
     try database.read { db in try WorkspaceTask.fetchOne(db, key: id) }
   }
 
+  /// Renames a folder: the Rust core's `lists::rename_folder`.
   public func updateFolder(id: String, name: String, now: Date = .now) throws {
-    let trimmed = try Self.nonEmptyName(name)
-    try journalledWrite("Rename Folder") { db in
-      guard var folder = try ListFolder.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingFolder }
-      guard folder.name != trimmed else { return }
-      folder.name = trimmed
-      folder.updatedAt = now
-      try folder.update(db)
-    }
+    try Self.mappingCoreErrors { try core.renameFolder(id: id, name: name, nowMs: now.coreMilliseconds) }
   }
 
   public func moveFolder(id: String, toParentFolderId parentFolderId: String?, now: Date = .now) throws {
@@ -208,16 +202,10 @@ public final class WorkspaceStore: @unchecked Sendable {
     try Self.mappingCoreErrors { _ = try core.deleteFolder(id: id) }
   }
 
+  /// Sets a list's name and colour: the Rust core's `lists::update_list`.
   public func updateList(id: String, name: String, colorHex: String?, now: Date = .now) throws {
-    let trimmed = try Self.nonEmptyName(name)
-    let color = colorHex?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-    try journalledWrite("Edit List") { db in
-      guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      guard list.name != trimmed || list.colorHex != color else { return }
-      list.name = trimmed
-      list.colorHex = color
-      list.updatedAt = now
-      try list.update(db)
+    try Self.mappingCoreErrors {
+      try core.updateList(id: id, name: name, colourHex: colorHex, nowMs: now.coreMilliseconds)
     }
   }
 
@@ -226,15 +214,9 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Separate from `updateList` so that renaming from the sidebar cannot carry
   /// a stale colour along with it, and so undo offers "Rename List" rather
   /// than the settings sheet's broader "Edit List".
+  /// Renames a list and nothing else: the Rust core's `lists::rename_list`.
   public func renameList(id: String, name: String, now: Date = .now) throws {
-    let trimmed = try Self.nonEmptyName(name)
-    try journalledWrite("Rename List") { db in
-      guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      guard list.name != trimmed else { return }
-      list.name = trimmed
-      list.updatedAt = now
-      try list.update(db)
-    }
+    try Self.mappingCoreErrors { try core.renameList(id: id, name: name, nowMs: now.coreMilliseconds) }
   }
 
   public func moveList(id: String, toFolderId folderId: String?, now: Date = .now) throws {
@@ -356,15 +338,11 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  /// Archives or restores a list; the Inbox stays. The Rust core's
+  /// `lists::set_list_archived`.
   public func setListArchived(_ archived: Bool, id: String, now: Date = .now) throws {
-    try journalledWrite("Archive List") { db in
-      guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      // A system list is somewhere the app puts things by itself, so it has to
-      // be somewhere the user can still see.
-      if archived, list.isSystemList { throw WorkspaceStoreError.systemListIsPermanent }
-      list.isArchived = archived
-      list.updatedAt = now
-      try list.update(db)
+    try Self.mappingCoreErrors {
+      try core.setListArchived(id: id, archived: archived, nowMs: now.coreMilliseconds)
     }
   }
 
@@ -784,6 +762,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .missingList: throw WorkspaceStoreError.missingList
       case .missingFolder: throw WorkspaceStoreError.missingFolder
       case .systemListIsPermanent: throw WorkspaceStoreError.systemListIsPermanent
+      case .emptyName: throw WorkspaceStoreError.emptyName
       case .noJournal, .other, nil: throw error
       }
     }
@@ -875,4 +854,10 @@ public enum WorkspaceStoreError: LocalizedError, Equatable {
 
 private extension String {
   var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
+extension Date {
+  /// This moment as the Rust core takes "now": whole milliseconds since 1970,
+  /// truncated as GRDB truncates a stored date.
+  var coreMilliseconds: Int64 { Int64((timeIntervalSince1970 * 1000).rounded(.down)) }
 }

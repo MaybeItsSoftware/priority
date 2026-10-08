@@ -137,7 +137,7 @@ pub(crate) fn normalized_visible_root_name(name: &str) -> String {
 }
 
 /// A date as GRDB stores one: UTC, `YYYY-MM-DD HH:MM:SS.SSS`.
-pub(crate) fn grdb_timestamp(time: SystemTime) -> String {
+pub fn grdb_timestamp(time: SystemTime) -> String {
     let since = time.duration_since(UNIX_EPOCH).unwrap_or_default();
     let seconds = since.as_secs() as i64;
     let millis = since.subsec_millis();

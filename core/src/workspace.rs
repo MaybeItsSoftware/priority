@@ -81,6 +81,45 @@ impl CoreWorkspace {
         })
     }
 
+    /// Renames a folder as one "Rename Folder" step.
+    pub fn rename_folder(&self, id: String, name: String, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Rename Folder", |tx| {
+            lists::rename_folder(tx, &id, &name, now_ms)
+        })
+    }
+
+    /// Renames a list as one "Rename List" step.
+    pub fn rename_list(&self, id: String, name: String, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Rename List", |tx| {
+            lists::rename_list(tx, &id, &name, now_ms)
+        })
+    }
+
+    /// Sets a list's name and colour as one "Edit List" step.
+    pub fn update_list(
+        &self,
+        id: String,
+        name: String,
+        colour_hex: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Edit List", |tx| {
+            lists::update_list(tx, &id, &name, colour_hex.as_deref(), now_ms)
+        })
+    }
+
+    /// Archives or restores a list as one "Archive List" step.
+    pub fn set_list_archived(
+        &self,
+        id: String,
+        archived: bool,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Archive List", |tx| {
+            lists::set_list_archived(tx, &id, archived, now_ms)
+        })
+    }
+
     /// Deletes a folder as one "Delete Folder" step; its lists move to the top.
     pub fn delete_folder(&self, id: String) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Delete Folder", |tx| {

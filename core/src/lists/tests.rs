@@ -110,3 +110,110 @@ fn deleting_a_missing_folder_is_named() {
         Err(CoreError::MissingFolder { ref id }) if id == "nope"
     ));
 }
+
+const NOW: i64 = 1_700_000_000_123;
+const NOW_TEXT: &str = "2023-11-14 22:13:20.123";
+
+fn steps(connection: &Connection) -> i64 {
+    count(connection, "SELECT COUNT(DISTINCT groupId) FROM change_log")
+}
+
+#[test]
+fn renaming_a_folder_trims_stamps_and_ignores_its_own_name() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Rename Folder", |tx| {
+        rename_folder(tx, "f", "  Office ", NOW)
+    })
+    .unwrap();
+    let (name, updated): (String, String) = connection
+        .query_row(
+            "SELECT name, updatedAt FROM list_folders WHERE id = 'f'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((name.as_str(), updated.as_str()), ("Office", NOW_TEXT));
+    assert_eq!(steps(&connection), 1);
+
+    journalled(&mut connection, "Rename Folder", |tx| {
+        rename_folder(tx, "f", "Office", NOW)
+    })
+    .unwrap();
+    assert_eq!(steps(&connection), 1);
+    assert!(matches!(
+        journalled(&mut connection, "Rename Folder", |tx| rename_folder(
+            tx, "f", "   ", NOW
+        )),
+        Err(CoreError::EmptyName)
+    ));
+}
+
+#[test]
+fn renaming_a_list_leaves_its_colour_and_editing_sets_both() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Edit List", |tx| {
+        update_list(tx, "l", "Bids", Some(" #ABCDEF "), NOW)
+    })
+    .unwrap();
+    journalled(&mut connection, "Rename List", |tx| {
+        rename_list(tx, "l", "Tenders", NOW)
+    })
+    .unwrap();
+    let (name, colour): (String, Option<String>) = connection
+        .query_row(
+            "SELECT name, colorHex FROM task_lists WHERE id = 'l'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        (name.as_str(), colour.as_deref()),
+        ("Tenders", Some("#ABCDEF"))
+    );
+
+    journalled(&mut connection, "Edit List", |tx| {
+        update_list(tx, "l", "Tenders", Some("  "), NOW)
+    })
+    .unwrap();
+    let colour: Option<String> = connection
+        .query_row(
+            "SELECT colorHex FROM task_lists WHERE id = 'l'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(colour, None);
+    assert_eq!(undo(&mut connection).unwrap().as_deref(), Some("Edit List"));
+}
+
+#[test]
+fn the_inbox_cannot_be_archived_but_can_be_restored() {
+    let mut connection = workspace();
+    assert!(matches!(
+        journalled(&mut connection, "Archive List", |tx| set_list_archived(
+            tx, "inbox", true, NOW
+        )),
+        Err(CoreError::SystemListIsPermanent)
+    ));
+    journalled(&mut connection, "Archive List", |tx| {
+        set_list_archived(tx, "inbox", false, NOW)
+    })
+    .unwrap();
+    journalled(&mut connection, "Archive List", |tx| {
+        set_list_archived(tx, "l", true, NOW)
+    })
+    .unwrap();
+    assert_eq!(
+        count(
+            &connection,
+            "SELECT isArchived FROM task_lists WHERE id = 'l'"
+        ),
+        1
+    );
+    assert!(matches!(
+        journalled(&mut connection, "Archive List", |tx| set_list_archived(
+            tx, "nope", true, NOW
+        )),
+        Err(CoreError::MissingList { .. })
+    ));
+}
