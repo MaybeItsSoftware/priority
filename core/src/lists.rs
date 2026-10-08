@@ -8,6 +8,113 @@ use rusqlite::{OptionalExtension, Transaction};
 use crate::CoreError;
 use crate::time::{non_empty_name, stored};
 
+/// A folder or list [`create_folder`] or [`create_list`] made: what a client
+/// needs to build its own model of it, beside what it already passed in.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct CreatedItem {
+    pub id: String,
+    /// The name as stored, trimmed.
+    pub name: String,
+    /// Its place among its siblings: after the last of them.
+    pub sort_order: i64,
+}
+
+/// Creates a folder at the end of its siblings, inside `parent_folder_id`
+/// or at the top. Replaces `WorkspaceStore.createFolder`,
+/// `WorkspaceRepository.createFolder` and the CLI's `create_folder`.
+pub fn create_folder(
+    transaction: &Transaction,
+    workspace_id: &str,
+    name: &str,
+    parent_folder_id: Option<&str>,
+    now_ms: i64,
+) -> Result<CreatedItem, CoreError> {
+    let name = non_empty_name(name)?;
+    if let Some(parent) = parent_folder_id {
+        require_folder_in(transaction, parent, workspace_id)?;
+    }
+    let sort_order: i64 = transaction.query_row(
+        "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM list_folders
+         WHERE workspaceId = ?1 AND parentFolderId IS ?2",
+        rusqlite::params![workspace_id, parent_folder_id],
+        |row| row.get(0),
+    )?;
+    let id = new_id();
+    let now = stored(now_ms);
+    transaction.execute(
+        "INSERT INTO list_folders (id, workspaceId, parentFolderId, name, sortOrder, createdAt, updatedAt)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
+        rusqlite::params![id, workspace_id, parent_folder_id, name, sort_order, now],
+    )?;
+    Ok(CreatedItem {
+        id,
+        name,
+        sort_order,
+    })
+}
+
+/// Creates a list at the end of its siblings, in `folder_id` or at the top.
+/// Replaces `WorkspaceStore.createList`, `WorkspaceRepository.createList` and
+/// the CLI's `create_list`.
+pub fn create_list(
+    transaction: &Transaction,
+    workspace_id: &str,
+    name: &str,
+    folder_id: Option<&str>,
+    now_ms: i64,
+) -> Result<CreatedItem, CoreError> {
+    let name = non_empty_name(name)?;
+    if let Some(folder) = folder_id {
+        require_folder_in(transaction, folder, workspace_id)?;
+    }
+    let sort_order: i64 = transaction.query_row(
+        "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM task_lists
+         WHERE workspaceId = ?1 AND folderId IS ?2",
+        rusqlite::params![workspace_id, folder_id],
+        |row| row.get(0),
+    )?;
+    let id = new_id();
+    let now = stored(now_ms);
+    transaction.execute(
+        "INSERT INTO task_lists (id, workspaceId, folderId, name, colorHex, sortOrder, isArchived,
+                                 createdAt, updatedAt, systemRole, visibleRootTaskId, completedAt)
+         VALUES (?1, ?2, ?3, ?4, NULL, ?5, 0, ?6, ?6, NULL, NULL, NULL)",
+        rusqlite::params![id, workspace_id, folder_id, name, sort_order, now],
+    )?;
+    Ok(CreatedItem {
+        id,
+        name,
+        sort_order,
+    })
+}
+
+/// A folder that exists and belongs to `workspace_id`; anything else is a
+/// missing folder, as both clients reported it.
+fn require_folder_in(
+    transaction: &Transaction,
+    folder_id: &str,
+    workspace_id: &str,
+) -> Result<(), CoreError> {
+    let owner: Option<String> = transaction
+        .query_row(
+            "SELECT workspaceId FROM list_folders WHERE id = ?1",
+            [folder_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match owner {
+        Some(owner) if owner == workspace_id => Ok(()),
+        _ => Err(CoreError::MissingFolder {
+            id: folder_id.to_string(),
+        }),
+    }
+}
+
+/// An identifier as GRDB's `UUID().uuidString` writes one: uppercase.
+pub(crate) fn new_id() -> String {
+    uuid::Uuid::new_v4().to_string().to_uppercase()
+}
+
 /// What [`delete_list`] removed.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct DeletedList {

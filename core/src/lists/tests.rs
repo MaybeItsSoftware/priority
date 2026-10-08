@@ -217,3 +217,76 @@ fn the_inbox_cannot_be_archived_but_can_be_restored() {
         Err(CoreError::MissingList { .. })
     ));
 }
+
+#[test]
+fn a_new_folder_and_list_go_after_their_siblings_and_undo_as_one_step_each() {
+    let mut connection = workspace();
+    let folder = journalled(&mut connection, "New Folder", |tx| {
+        create_folder(tx, "w", "  Clients ", Some("f"), NOW)
+    })
+    .unwrap();
+    assert_eq!((folder.name.as_str(), folder.sort_order), ("Clients", 1));
+    assert_eq!(folder.id, folder.id.to_uppercase());
+    assert_eq!(folder.id.len(), 36);
+
+    let list = journalled(&mut connection, "New List", |tx| {
+        create_list(tx, "w", "Acme", None, NOW)
+    })
+    .unwrap();
+    assert_eq!((list.name.as_str(), list.sort_order), ("Acme", 1));
+    let (archived, created): (bool, String) = connection
+        .query_row(
+            "SELECT isArchived, createdAt FROM task_lists WHERE id = ?1",
+            [&list.id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((archived, created.as_str()), (false, NOW_TEXT));
+
+    assert_eq!(undo(&mut connection).unwrap().as_deref(), Some("New List"));
+    assert_eq!(
+        undo(&mut connection).unwrap().as_deref(),
+        Some("New Folder")
+    );
+    assert_eq!(count(&connection, "SELECT COUNT(*) FROM list_folders"), 2);
+}
+
+#[test]
+fn a_new_item_in_a_folder_from_another_workspace_or_none_is_refused() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO workspaces (id, name, createdAt, updatedAt) VALUES ('w2', 'Theirs', '{T}', '{T}');
+             INSERT INTO list_folders (id, workspaceId, name, sortOrder, createdAt, updatedAt)
+               VALUES ('elsewhere', 'w2', 'Away', 0, '{T}', '{T}');"
+        ))
+        .unwrap();
+    for folder in ["elsewhere", "nope"] {
+        assert!(matches!(
+            journalled(&mut connection, "New List", |tx| create_list(
+                tx,
+                "w",
+                "X",
+                Some(folder),
+                NOW
+            )),
+            Err(CoreError::MissingFolder { .. })
+        ));
+        assert!(matches!(
+            journalled(&mut connection, "New Folder", |tx| create_folder(
+                tx,
+                "w",
+                "X",
+                Some(folder),
+                NOW
+            )),
+            Err(CoreError::MissingFolder { .. })
+        ));
+    }
+    assert!(matches!(
+        journalled(&mut connection, "New List", |tx| create_list(
+            tx, "w", " ", None, NOW
+        )),
+        Err(CoreError::EmptyName)
+    ));
+}

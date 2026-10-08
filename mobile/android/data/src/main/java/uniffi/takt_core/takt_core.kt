@@ -681,6 +681,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_create_folder(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_create_list(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_list(
@@ -735,6 +739,10 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_create_folder(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_create_list(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_folder(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_list(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -893,6 +901,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_folder() and 0xFFFF) != 9864) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_list() and 0xFFFF) != 11553) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_folder() and 0xFFFF) != 27954) {
@@ -1322,6 +1336,16 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Creates a folder as one "New Folder" step.
+     */
+    fun `createFolder`(`workspaceId`: kotlin.String, `name`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long): CreatedItem
+    
+    /**
+     * Creates a list as one "New List" step.
+     */
+    fun `createList`(`workspaceId`: kotlin.String, `name`: kotlin.String, `folderId`: kotlin.String?, `nowMs`: kotlin.Long): CreatedItem
+    
+    /**
      * Deletes a folder as one "Delete Folder" step; its lists move to the top.
      */
     fun `deleteFolder`(`id`: kotlin.String)
@@ -1493,6 +1517,48 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * Creates a folder as one "New Folder" step.
+     */
+    @Throws(CoreException::class)override fun `createFolder`(`workspaceId`: kotlin.String, `name`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long): CreatedItem {
+            return FfiConverterTypeCreatedItem.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_create_folder(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterString.lower(`name`),
+        FfiConverterOptionalString.lower(`parentFolderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Creates a list as one "New List" step.
+     */
+    @Throws(CoreException::class)override fun `createList`(`workspaceId`: kotlin.String, `name`: kotlin.String, `folderId`: kotlin.String?, `nowMs`: kotlin.Long): CreatedItem {
+            return FfiConverterTypeCreatedItem.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_create_list(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterString.lower(`name`),
+        FfiConverterOptionalString.lower(`folderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
 
     
     /**
@@ -1779,6 +1845,59 @@ public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
 
     override fun write(value: CoreWorkspace, buf: ByteBuffer) {
         buf.putLong(lower(value))
+    }
+}
+
+
+
+/**
+ * A folder or list [`create_folder`] or [`create_list`] made: what a client
+ * needs to build its own model of it, beside what it already passed in.
+ */
+data class CreatedItem (
+    var `id`: kotlin.String
+    , 
+    /**
+     * The name as stored, trimmed.
+     */
+    var `name`: kotlin.String
+    , 
+    /**
+     * Its place among its siblings: after the last of them.
+     */
+    var `sortOrder`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCreatedItem: FfiConverterRustBuffer<CreatedItem> {
+    override fun read(buf: ByteBuffer): CreatedItem {
+        return CreatedItem(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CreatedItem) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`)
+    )
+
+    override fun write(value: CreatedItem, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
     }
 }
 

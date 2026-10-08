@@ -573,6 +573,16 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Creates a folder as one "New Folder" step.
+     */
+    func createFolder(workspaceId: String, name: String, parentFolderId: String?, nowMs: Int64) throws  -> CreatedItem
+    
+    /**
+     * Creates a list as one "New List" step.
+     */
+    func createList(workspaceId: String, name: String, folderId: String?, nowMs: Int64) throws  -> CreatedItem
+    
+    /**
      * Deletes a folder as one "Delete Folder" step; its lists move to the top.
      */
     func deleteFolder(id: String) throws 
@@ -707,6 +717,38 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * Creates a folder as one "New Folder" step.
+     */
+open func createFolder(workspaceId: String, name: String, parentFolderId: String?, nowMs: Int64)throws  -> CreatedItem  {
+    return try  FfiConverterTypeCreatedItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_create_folder(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterString.lower(name),
+        FfiConverterOptionString.lower(parentFolderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Creates a list as one "New List" step.
+     */
+open func createList(workspaceId: String, name: String, folderId: String?, nowMs: Int64)throws  -> CreatedItem  {
+    return try  FfiConverterTypeCreatedItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_create_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterString.lower(name),
+        FfiConverterOptionString.lower(folderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
     
     /**
      * Deletes a folder as one "Delete Folder" step; its lists move to the top.
@@ -924,6 +966,80 @@ public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt6
 }
 
 
+
+
+/**
+ * A folder or list [`create_folder`] or [`create_list`] made: what a client
+ * needs to build its own model of it, beside what it already passed in.
+ */
+public struct CreatedItem: Equatable, Hashable {
+    public var id: String
+    /**
+     * The name as stored, trimmed.
+     */
+    public var name: String
+    /**
+     * Its place among its siblings: after the last of them.
+     */
+    public var sortOrder: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, 
+        /**
+         * The name as stored, trimmed.
+         */name: String, 
+        /**
+         * Its place among its siblings: after the last of them.
+         */sortOrder: Int64) {
+        self.id = id
+        self.name = name
+        self.sortOrder = sortOrder
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CreatedItem: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCreatedItem: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CreatedItem {
+        return
+            try CreatedItem(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CreatedItem, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCreatedItem_lift(_ buf: RustBuffer) throws -> CreatedItem {
+    return try FfiConverterTypeCreatedItem.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCreatedItem_lower(_ value: CreatedItem) -> RustBuffer {
+    return FfiConverterTypeCreatedItem.lower(value)
+}
 
 
 /**
@@ -1483,6 +1599,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_create_folder() != 9864) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_create_list() != 11553) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_delete_folder() != 27954) {

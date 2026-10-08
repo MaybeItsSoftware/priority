@@ -178,42 +178,30 @@ class WorkspaceRepository(
     fun observeLists(workspaceId: String, includingArchived: Boolean = false): Flow<List<TaskList>> =
         database.observe(setOf("task_lists")) { listsIn(it, workspaceId, includingArchived) }
 
+    /** Creates a folder after its siblings: the Rust core's `lists::create_folder`. */
     suspend fun createFolder(
         workspaceId: String,
         name: String,
         parentFolderId: String? = null,
         now: Instant = now(),
     ): ListFolder {
-        val trimmed = nonEmptyName(name)
-        return journalledWrite("New Folder") { db ->
-            if (parentFolderId != null) {
-                val folder = db.folder(parentFolderId)
-                if (folder == null || folder.workspaceId != workspaceId) fail(WorkspaceStoreError.MISSING_FOLDER)
-            }
-            val order = db.nextOrder("list_folders", "workspaceId = ? AND parentFolderId IS ?", workspaceId, parentFolderId)
-            ListFolder(newId(), workspaceId, parentFolderId, trimmed, order, now, now).also { db.insert(it) }
-        }
+        val created = coreWrite { it.createFolder(workspaceId, name, parentFolderId, now.toEpochMilli()) }
+        return ListFolder(created.id, workspaceId, parentFolderId, created.name, created.sortOrder.toInt(), now, now)
     }
 
+    /** Creates a list after its siblings: the Rust core's `lists::create_list`. */
     suspend fun createList(
         workspaceId: String,
         name: String,
         folderId: String? = null,
         now: Instant = now(),
     ): TaskList {
-        val trimmed = nonEmptyName(name)
-        return journalledWrite("New List") { db ->
-            if (folderId != null) {
-                val folder = db.folder(folderId)
-                if (folder == null || folder.workspaceId != workspaceId) fail(WorkspaceStoreError.MISSING_FOLDER)
-            }
-            val order = db.nextOrder("task_lists", "workspaceId = ? AND folderId IS ?", workspaceId, folderId)
-            TaskList(
-                id = newId(), workspaceId = workspaceId, folderId = folderId, name = trimmed, colorHex = null,
-                sortOrder = order, isArchived = false, systemRole = null, visibleRootTaskId = null,
-                completedAt = null, createdAt = now, updatedAt = now,
-            ).also { db.insert(it) }
-        }
+        val created = coreWrite { it.createList(workspaceId, name, folderId, now.toEpochMilli()) }
+        return TaskList(
+            id = created.id, workspaceId = workspaceId, folderId = folderId, name = created.name, colorHex = null,
+            sortOrder = created.sortOrder.toInt(), isArchived = false, systemRole = null, visibleRootTaskId = null,
+            completedAt = null, createdAt = now, updatedAt = now,
+        )
     }
 
     suspend fun task(id: String): WorkspaceTask? = database.read { it.task(id) }

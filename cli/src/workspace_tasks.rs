@@ -889,31 +889,22 @@ impl Workspace {
     /// `WorkspaceStore.createFolder`.
     pub fn create_folder(&self, name: &str, parent_folder_id: Option<&str>) -> Result<Value> {
         let name = non_empty(name, "name")?;
-        self.journalled("New Folder", |tx, now| {
+        self.journalled("New Folder", |tx, _now| {
             let workspace = workspace_row(tx)?.0;
-            if let Some(parent) = parent_folder_id {
-                folder_in_workspace(tx, parent, &workspace)?;
-            }
-            let order: i64 = tx
-                .query_row(
-                    "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM list_folders \
-                     WHERE workspaceId = ?1 AND parentFolderId IS ?2",
-                    params![workspace, parent_folder_id],
-                    |row| row.get(0),
-                )
-                .map_err(map_query_error)?;
-            let id = new_id();
-            tx.execute(
-                "INSERT INTO list_folders (id, workspaceId, parentFolderId, name, sortOrder, \
-                 createdAt, updatedAt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
-                params![id, workspace, parent_folder_id, name, order, now],
+            // The write is the Rust core's, shared with the apps.
+            let created = takt_core::lists::create_folder(
+                tx,
+                &workspace,
+                &name,
+                parent_folder_id,
+                Utc::now().timestamp_millis(),
             )
-            .map_err(map_write_error)?;
+            .map_err(map_core_error)?;
             Ok(json!({
-                "id": id,
-                "name": name,
+                "id": created.id,
+                "name": created.name,
                 "parent_folder_id": parent_folder_id,
-                "sort_order": order,
+                "sort_order": created.sort_order,
             }))
         })
     }
@@ -921,21 +912,18 @@ impl Workspace {
     /// `WorkspaceStore.createList`.
     pub fn create_list(&self, name: &str, folder_id: Option<&str>) -> Result<Value> {
         let name = non_empty(name, "name")?;
-        self.journalled("New List", |tx, now| {
+        self.journalled("New List", |tx, _now| {
             let workspace = workspace_row(tx)?.0;
-            if let Some(folder) = folder_id {
-                folder_in_workspace(tx, folder, &workspace)?;
-            }
-            let order = next_list_order(tx, &workspace, folder_id)?;
-            let id = new_id();
-            tx.execute(
-                "INSERT INTO task_lists (id, workspaceId, folderId, name, colorHex, sortOrder, \
-                 isArchived, createdAt, updatedAt, systemRole, visibleRootTaskId, completedAt) \
-                 VALUES (?1, ?2, ?3, ?4, NULL, ?5, 0, ?6, ?6, NULL, NULL, NULL)",
-                params![id, workspace, folder_id, name, order, now],
+            // The write is the Rust core's, shared with the apps.
+            let created = takt_core::lists::create_list(
+                tx,
+                &workspace,
+                &name,
+                folder_id,
+                Utc::now().timestamp_millis(),
             )
-            .map_err(map_write_error)?;
-            Ok(list_row(tx, &id)?.to_json())
+            .map_err(map_core_error)?;
+            Ok(list_row(tx, &created.id)?.to_json())
         })
     }
 

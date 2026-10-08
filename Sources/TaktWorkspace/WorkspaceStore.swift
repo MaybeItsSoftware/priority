@@ -124,52 +124,35 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  /// Creates a folder after its siblings: the Rust core's `lists::create_folder`.
   public func createFolder(
     workspaceId: String,
     name: String,
     parentFolderId: String? = nil,
     now: Date = .now
   ) throws -> ListFolder {
-    let trimmed = try Self.nonEmptyName(name)
-    return try journalledWrite("New Folder") { db in
-      if let parentFolderId {
-        guard let folder = try ListFolder.fetchOne(db, key: parentFolderId), folder.workspaceId == workspaceId else {
-          throw WorkspaceStoreError.missingFolder
-        }
-      }
-      let nextOrder = try Self.nextOrder(
-        db, table: ListFolder.databaseTableName, whereSQL: "workspaceId = ? AND parentFolderId IS ?",
-        arguments: [workspaceId, parentFolderId])
-      let folder = ListFolder(
-        id: UUID().uuidString, workspaceId: workspaceId, parentFolderId: parentFolderId,
-        name: trimmed, sortOrder: nextOrder, createdAt: now, updatedAt: now)
-      try folder.insert(db)
-      return folder
+    let created = try Self.mappingCoreErrors {
+      try core.createFolder(
+        workspaceId: workspaceId, name: name, parentFolderId: parentFolderId, nowMs: now.coreMilliseconds)
     }
+    return ListFolder(
+      id: created.id, workspaceId: workspaceId, parentFolderId: parentFolderId,
+      name: created.name, sortOrder: Int(created.sortOrder), createdAt: now, updatedAt: now)
   }
 
+  /// Creates a list after its siblings: the Rust core's `lists::create_list`.
   public func createList(
     workspaceId: String,
     name: String,
     folderId: String? = nil,
     now: Date = .now
   ) throws -> TaskList {
-    let trimmed = try Self.nonEmptyName(name)
-    return try journalledWrite("New List") { db in
-      if let folderId {
-        guard let folder = try ListFolder.fetchOne(db, key: folderId), folder.workspaceId == workspaceId else {
-          throw WorkspaceStoreError.missingFolder
-        }
-      }
-      let nextOrder = try Self.nextOrder(
-        db, table: TaskList.databaseTableName, whereSQL: "workspaceId = ? AND folderId IS ?",
-        arguments: [workspaceId, folderId])
-      let list = TaskList(
-        id: UUID().uuidString, workspaceId: workspaceId, folderId: folderId, name: trimmed,
-        colorHex: nil, sortOrder: nextOrder, isArchived: false, createdAt: now, updatedAt: now)
-      try list.insert(db)
-      return list
+    let created = try Self.mappingCoreErrors {
+      try core.createList(workspaceId: workspaceId, name: name, folderId: folderId, nowMs: now.coreMilliseconds)
     }
+    return TaskList(
+      id: created.id, workspaceId: workspaceId, folderId: folderId, name: created.name,
+      colorHex: nil, sortOrder: Int(created.sortOrder), isArchived: false, createdAt: now, updatedAt: now)
   }
 
   public func task(id: String) throws -> WorkspaceTask? {

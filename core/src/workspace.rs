@@ -13,7 +13,7 @@ use rusqlite::Connection;
 
 use crate::CoreError;
 use crate::journal::{self, HistoryTarget, UndoStep};
-use crate::lists::{self, DeletedList};
+use crate::lists::{self, CreatedItem, DeletedList};
 use crate::tasks::{self, DeletedTask};
 
 /// An open workspace database.
@@ -78,6 +78,38 @@ impl CoreWorkspace {
     pub fn delete_list(&self, id: String) -> Result<DeletedList, CoreError> {
         journal::journalled(&mut self.lock(), "Delete List", |tx| {
             lists::delete_list(tx, &id)
+        })
+    }
+
+    /// Creates a folder as one "New Folder" step.
+    pub fn create_folder(
+        &self,
+        workspace_id: String,
+        name: String,
+        parent_folder_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<CreatedItem, CoreError> {
+        journal::journalled(&mut self.lock(), "New Folder", |tx| {
+            lists::create_folder(
+                tx,
+                &workspace_id,
+                &name,
+                parent_folder_id.as_deref(),
+                now_ms,
+            )
+        })
+    }
+
+    /// Creates a list as one "New List" step.
+    pub fn create_list(
+        &self,
+        workspace_id: String,
+        name: String,
+        folder_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<CreatedItem, CoreError> {
+        journal::journalled(&mut self.lock(), "New List", |tx| {
+            lists::create_list(tx, &workspace_id, &name, folder_id.as_deref(), now_ms)
         })
     }
 
