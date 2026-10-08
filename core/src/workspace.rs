@@ -22,6 +22,7 @@ use crate::imports::{self, BoardBaseline, ImportOutcome, ImportedTaskSeed, Legac
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
 use crate::setup;
+use crate::sync::{self, IncomingRow, LocalSyncState, PendingChanges};
 use crate::tasks::{self, DeletedTask, NewTask};
 use crate::today;
 use crate::waiting;
@@ -904,6 +905,62 @@ impl CoreWorkspace {
         now_ms: i64,
     ) -> Result<bool, CoreError> {
         self.unjournalled(|tx| setup::set_preference(tx, &key, value.as_deref(), now_ms))
+    }
+
+    /// The device's sync state, or nothing while it has never been paired.
+    pub fn sync_state(&self) -> Result<Option<LocalSyncState>, CoreError> {
+        sync::state(&self.lock())
+    }
+
+    /// Pairs the store with a sync server.
+    pub fn begin_sync(&self, device_id: String, server_url: String) -> Result<(), CoreError> {
+        self.unjournalled(|tx| sync::begin(tx, &device_id, &server_url))
+    }
+
+    /// The newest outbox entry, or nothing when nothing is waiting.
+    pub fn latest_sync_outbox_seq(&self) -> Result<Option<i64>, CoreError> {
+        sync::latest_outbox_seq(&self.lock())
+    }
+
+    /// Unpairs: stops recording and forgets what was waiting to be sent.
+    pub fn end_sync(&self) -> Result<(), CoreError> {
+        self.unjournalled(sync::end)
+    }
+
+    /// Queues every existing row for the first push after pairing.
+    pub fn enqueue_sync_snapshot(&self, now_ms: i64) -> Result<(), CoreError> {
+        self.unjournalled(|tx| sync::enqueue_snapshot(tx, now_ms))
+    }
+
+    /// The outbox, coalesced per row, up to `limit` rows.
+    pub fn pending_sync_changes(&self, limit: u32) -> Result<PendingChanges, CoreError> {
+        sync::pending_changes(&self.lock(), limit)
+    }
+
+    /// Forgets the outbox entries the server has accepted.
+    pub fn acknowledge_sync_changes(&self, through_seq: i64) -> Result<(), CoreError> {
+        self.unjournalled(|tx| sync::acknowledge(tx, through_seq))
+    }
+
+    /// Writes a pull into the workspace; whether anything changed.
+    pub fn apply_remote_rows(
+        &self,
+        rows: Vec<IncomingRow>,
+        cursor: i64,
+        hlc: Option<String>,
+        now_ms: i64,
+    ) -> Result<bool, CoreError> {
+        self.unjournalled(|tx| sync::apply_remote_rows(tx, &rows, cursor, hlc.as_deref(), now_ms))
+    }
+
+    /// Advances the stored cursor and clock without applying rows.
+    pub fn record_sync_progress(
+        &self,
+        cursor: Option<i64>,
+        hlc: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        self.unjournalled(|tx| sync::record_progress(tx, cursor, hlc.as_deref(), now_ms))
     }
 
     /// Ranks tasks in Today's focus order as one "Reorder Today" step.

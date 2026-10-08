@@ -605,6 +605,11 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Forgets the outbox entries the server has accepted.
+     */
+    func acknowledgeSyncChanges(throughSeq: Int64) throws 
+    
+    /**
      * Queues a task in a focus session.
      */
     func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64) throws 
@@ -615,6 +620,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func applyPlanningToDescendants(taskId: String, nowMs: Int64, zone: String) throws 
     
     /**
+     * Writes a pull into the workspace; whether anything changed.
+     */
+    func applyRemoteRows(rows: [IncomingRow], cursor: Int64, hlc: String?, nowMs: Int64) throws  -> Bool
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
     func archiveDaily(taskId: String, nowMs: Int64) throws 
@@ -623,6 +633,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Ranks tasks in Today's focus order as one "Reorder Today" step.
      */
     func arrangeDay(orderedTaskIds: [String], nowMs: Int64) throws 
+    
+    /**
+     * Pairs the store with a sync server.
+     */
+    func beginSync(deviceId: String, serverUrl: String) throws 
     
     /**
      * The workspace, made on first launch with its Inbox and conditions;
@@ -696,6 +711,16 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func editorSnapshot(taskId: String) throws  -> EditorSnapshot
     
     /**
+     * Unpairs: stops recording and forgets what was waiting to be sent.
+     */
+    func endSync() throws 
+    
+    /**
+     * Queues every existing row for the first push after pairing.
+     */
+    func enqueueSyncSnapshot(nowMs: Int64) throws 
+    
+    /**
      * Finishes the block in hand as one step: "Complete Task", or "Log Daily
      * Progress" when the task stays open.
      */
@@ -737,6 +762,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * returns every board.
      */
     func kanbanBoardBaseline(legacy: [BoardBaseline], currentKey: String) throws  -> [BoardBaseline]
+    
+    /**
+     * The newest outbox entry, or nothing when nothing is waiting.
+     */
+    func latestSyncOutboxSeq() throws  -> Int64?
     
     /**
      * Logs progress on a daily as one "Log Daily" step; returns the
@@ -811,6 +841,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func pauseFocusSession(id: String, nowMs: Int64) throws 
     
     /**
+     * The outbox, coalesced per row, up to `limit` rows.
+     */
+    func pendingSyncChanges(limit: UInt32) throws  -> PendingChanges
+    
+    /**
      * Pins a task in the focus order as one "Pin Task" step.
      */
     func pinTask(taskId: String, index: Int64, nowMs: Int64) throws 
@@ -841,6 +876,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * returns whether it made any.
      */
     func reconcileWaitingFollowUps(nowMs: Int64) throws  -> Bool
+    
+    /**
+     * Advances the stored cursor and clock without applying rows.
+     */
+    func recordSyncProgress(cursor: Int64?, hlc: String?, nowMs: Int64) throws 
     
     /**
      * Pauses every running session at its last checkpoint, on reopening.
@@ -976,6 +1016,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func startFocusSession(taskId: String, plannedSeconds: Int64?, workSeconds: Int64, breakSeconds: Int64, context: FocusContext?, overrideAvailability: Bool, nowMs: Int64, zone: String) throws  -> String
     
     /**
+     * The device's sync state, or nothing while it has never been paired.
+     */
+    func syncState() throws  -> LocalSyncState?
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -1092,6 +1137,18 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 
     
     /**
+     * Forgets the outbox entries the server has accepted.
+     */
+open func acknowledgeSyncChanges(throughSeq: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_acknowledge_sync_changes(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(throughSeq),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Queues a task in a focus session.
      */
 open func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1121,6 +1178,22 @@ open func applyPlanningToDescendants(taskId: String, nowMs: Int64, zone: String)
 }
     
     /**
+     * Writes a pull into the workspace; whether anything changed.
+     */
+open func applyRemoteRows(rows: [IncomingRow], cursor: Int64, hlc: String?, nowMs: Int64)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_apply_remote_rows(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeIncomingRow.lower(rows),
+        FfiConverterInt64.lower(cursor),
+        FfiConverterOptionString.lower(hlc),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
 open func archiveDaily(taskId: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1142,6 +1215,19 @@ open func arrangeDay(orderedTaskIds: [String], nowMs: Int64)throws   {try rustCa
             self.uniffiCloneHandle(),
         FfiConverterSequenceString.lower(orderedTaskIds),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Pairs the store with a sync server.
+     */
+open func beginSync(deviceId: String, serverUrl: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_begin_sync(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(deviceId),
+        FfiConverterString.lower(serverUrl),uniffiCallStatus
     )
 }
 }
@@ -1340,6 +1426,29 @@ open func editorSnapshot(taskId: String)throws  -> EditorSnapshot  {
 }
     
     /**
+     * Unpairs: stops recording and forgets what was waiting to be sent.
+     */
+open func endSync()throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_end_sync(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Queues every existing row for the first push after pairing.
+     */
+open func enqueueSyncSnapshot(nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_enqueue_sync_snapshot(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Finishes the block in hand as one step: "Complete Task", or "Log Daily
      * Progress" when the task stays open.
      */
@@ -1458,6 +1567,18 @@ open func kanbanBoardBaseline(legacy: [BoardBaseline], currentKey: String)throws
             self.uniffiCloneHandle(),
         FfiConverterSequenceTypeBoardBaseline.lower(legacy),
         FfiConverterString.lower(currentKey),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The newest outbox entry, or nothing when nothing is waiting.
+     */
+open func latestSyncOutboxSeq()throws  -> Int64?  {
+    return try  FfiConverterOptionInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_latest_sync_outbox_seq(
+            self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
 }
@@ -1670,6 +1791,19 @@ open func pauseFocusSession(id: String, nowMs: Int64)throws   {try rustCallWithE
 }
     
     /**
+     * The outbox, coalesced per row, up to `limit` rows.
+     */
+open func pendingSyncChanges(limit: UInt32)throws  -> PendingChanges  {
+    return try  FfiConverterTypePendingChanges_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_pending_sync_changes(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt32.lower(limit),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Pins a task in the focus order as one "Pin Task" step.
      */
 open func pinTask(taskId: String, index: Int64, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1754,6 +1888,20 @@ open func reconcileWaitingFollowUps(nowMs: Int64)throws  -> Bool  {
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 })
+}
+    
+    /**
+     * Advances the stored cursor and clock without applying rows.
+     */
+open func recordSyncProgress(cursor: Int64?, hlc: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_record_sync_progress(
+            self.uniffiCloneHandle(),
+        FfiConverterOptionInt64.lower(cursor),
+        FfiConverterOptionString.lower(hlc),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
 }
     
     /**
@@ -2133,6 +2281,18 @@ open func startFocusSession(taskId: String, plannedSeconds: Int64?, workSeconds:
         FfiConverterBool.lower(overrideAvailability),
         FfiConverterInt64.lower(nowMs),
         FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The device's sync state, or nothing while it has never been paired.
+     */
+open func syncState()throws  -> LocalSyncState?  {
+    return try  FfiConverterOptionTypeLocalSyncState.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_sync_state(
+            self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
 }
@@ -3460,6 +3620,75 @@ public func FfiConverterTypeImportedTaskSeed_lower(_ value: ImportedTaskSeed) ->
 
 
 /**
+ * A row as the server holds it.
+ */
+public struct IncomingRow: Equatable, Hashable {
+    public var table: String
+    public var id: String
+    public var deleted: Bool
+    public var values: [String: SyncValue]
+    public var hlc: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(table: String, id: String, deleted: Bool, values: [String: SyncValue], hlc: String?) {
+        self.table = table
+        self.id = id
+        self.deleted = deleted
+        self.values = values
+        self.hlc = hlc
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension IncomingRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeIncomingRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> IncomingRow {
+        return
+            try IncomingRow(
+                table: FfiConverterString.read(from: &buf), 
+                id: FfiConverterString.read(from: &buf), 
+                deleted: FfiConverterBool.read(from: &buf), 
+                values: FfiConverterDictionaryStringTypeSyncValue.read(from: &buf), 
+                hlc: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: IncomingRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.table, into: &buf)
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterBool.write(value.deleted, into: &buf)
+        FfiConverterDictionaryStringTypeSyncValue.write(value.values, into: &buf)
+        FfiConverterOptionString.write(value.hlc, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeIncomingRow_lift(_ buf: RustBuffer) throws -> IncomingRow {
+    return try FfiConverterTypeIncomingRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeIncomingRow_lower(_ value: IncomingRow) -> RustBuffer {
+    return FfiConverterTypeIncomingRow.lower(value)
+}
+
+
+/**
  * A daily from before the workspace kept them, as the old plugin stored it.
  */
 public struct LegacyDailySeed: Equatable, Hashable {
@@ -3616,6 +3845,87 @@ public func FfiConverterTypeListSettings_lower(_ value: ListSettings) -> RustBuf
 
 
 /**
+ * What the device remembers about its sync.
+ */
+public struct LocalSyncState: Equatable, Hashable {
+    public var deviceId: String
+    public var cursor: Int64
+    public var hlc: String?
+    public var serverUrl: String?
+    public var canonicalWorkspaceId: String?
+    public var needsSnapshot: Bool
+    public var lastSyncedAtMs: Int64?
+    public var isRecording: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(deviceId: String, cursor: Int64, hlc: String?, serverUrl: String?, canonicalWorkspaceId: String?, needsSnapshot: Bool, lastSyncedAtMs: Int64?, isRecording: Bool) {
+        self.deviceId = deviceId
+        self.cursor = cursor
+        self.hlc = hlc
+        self.serverUrl = serverUrl
+        self.canonicalWorkspaceId = canonicalWorkspaceId
+        self.needsSnapshot = needsSnapshot
+        self.lastSyncedAtMs = lastSyncedAtMs
+        self.isRecording = isRecording
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension LocalSyncState: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLocalSyncState: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LocalSyncState {
+        return
+            try LocalSyncState(
+                deviceId: FfiConverterString.read(from: &buf), 
+                cursor: FfiConverterInt64.read(from: &buf), 
+                hlc: FfiConverterOptionString.read(from: &buf), 
+                serverUrl: FfiConverterOptionString.read(from: &buf), 
+                canonicalWorkspaceId: FfiConverterOptionString.read(from: &buf), 
+                needsSnapshot: FfiConverterBool.read(from: &buf), 
+                lastSyncedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                isRecording: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: LocalSyncState, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.deviceId, into: &buf)
+        FfiConverterInt64.write(value.cursor, into: &buf)
+        FfiConverterOptionString.write(value.hlc, into: &buf)
+        FfiConverterOptionString.write(value.serverUrl, into: &buf)
+        FfiConverterOptionString.write(value.canonicalWorkspaceId, into: &buf)
+        FfiConverterBool.write(value.needsSnapshot, into: &buf)
+        FfiConverterOptionInt64.write(value.lastSyncedAtMs, into: &buf)
+        FfiConverterBool.write(value.isRecording, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLocalSyncState_lift(_ buf: RustBuffer) throws -> LocalSyncState {
+    return try FfiConverterTypeLocalSyncState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLocalSyncState_lower(_ value: LocalSyncState) -> RustBuffer {
+    return FfiConverterTypeLocalSyncState.lower(value)
+}
+
+
+/**
  * A task to create: everything any client can set when it adds one.
  */
 public struct NewTask: Equatable, Hashable {
@@ -3755,6 +4065,152 @@ public func FfiConverterTypeNewTask_lift(_ buf: RustBuffer) throws -> NewTask {
 #endif
 public func FfiConverterTypeNewTask_lower(_ value: NewTask) -> RustBuffer {
     return FfiConverterTypeNewTask.lower(value)
+}
+
+
+/**
+ * A row's local change, coalesced from its outbox entries and read from the
+ * live row, ready to be stamped and pushed.
+ */
+public struct OutgoingChange: Equatable, Hashable {
+    public var table: String
+    public var rowId: String
+    /**
+     * "upsert" or "delete".
+     */
+    public var operation: String
+    /**
+     * The columns to push and their current values; empty for a delete.
+     */
+    public var values: [String: SyncValue]
+    /**
+     * When the newest of the coalesced edits was made.
+     */
+    public var changedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(table: String, rowId: String, 
+        /**
+         * "upsert" or "delete".
+         */operation: String, 
+        /**
+         * The columns to push and their current values; empty for a delete.
+         */values: [String: SyncValue], 
+        /**
+         * When the newest of the coalesced edits was made.
+         */changedAtMs: Int64) {
+        self.table = table
+        self.rowId = rowId
+        self.operation = operation
+        self.values = values
+        self.changedAtMs = changedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension OutgoingChange: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOutgoingChange: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OutgoingChange {
+        return
+            try OutgoingChange(
+                table: FfiConverterString.read(from: &buf), 
+                rowId: FfiConverterString.read(from: &buf), 
+                operation: FfiConverterString.read(from: &buf), 
+                values: FfiConverterDictionaryStringTypeSyncValue.read(from: &buf), 
+                changedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: OutgoingChange, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.table, into: &buf)
+        FfiConverterString.write(value.rowId, into: &buf)
+        FfiConverterString.write(value.operation, into: &buf)
+        FfiConverterDictionaryStringTypeSyncValue.write(value.values, into: &buf)
+        FfiConverterInt64.write(value.changedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutgoingChange_lift(_ buf: RustBuffer) throws -> OutgoingChange {
+    return try FfiConverterTypeOutgoingChange.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutgoingChange_lower(_ value: OutgoingChange) -> RustBuffer {
+    return FfiConverterTypeOutgoingChange.lower(value)
+}
+
+
+/**
+ * A batch of outgoing changes and the newest outbox entry folded in, which
+ * is what to acknowledge once the server has them.
+ */
+public struct PendingChanges: Equatable, Hashable {
+    public var changes: [OutgoingChange]
+    public var throughSeq: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(changes: [OutgoingChange], throughSeq: Int64?) {
+        self.changes = changes
+        self.throughSeq = throughSeq
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PendingChanges: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePendingChanges: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PendingChanges {
+        return
+            try PendingChanges(
+                changes: FfiConverterSequenceTypeOutgoingChange.read(from: &buf), 
+                throughSeq: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PendingChanges, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeOutgoingChange.write(value.changes, into: &buf)
+        FfiConverterOptionInt64.write(value.throughSeq, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePendingChanges_lift(_ buf: RustBuffer) throws -> PendingChanges {
+    return try FfiConverterTypePendingChanges.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePendingChanges_lower(_ value: PendingChanges) -> RustBuffer {
+    return FfiConverterTypePendingChanges.lower(value)
 }
 
 
@@ -4157,6 +4613,99 @@ public func FfiConverterTypeCoreError_lower(_ value: CoreError) -> RustBuffer {
 
 
 /**
+ * One SQLite value as it travels: null, a number or text, as the column
+ * stores it. A blob travels as base64 text.
+ */
+
+public enum SyncValue: Equatable, Hashable {
+    
+    case null
+    case integer(value: Int64
+    )
+    case real(value: Double
+    )
+    case text(value: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension SyncValue: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncValue: FfiConverterRustBuffer {
+    typealias SwiftType = SyncValue
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncValue {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .null
+        
+        case 2: return .integer(value: try FfiConverterInt64.read(from: &buf)
+        )
+        
+        case 3: return .real(value: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 4: return .text(value: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SyncValue, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .null:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .integer(value):
+            writeInt(&buf, Int32(2))
+            FfiConverterInt64.write(value, into: &buf)
+            
+        
+        case let .real(value):
+            writeInt(&buf, Int32(3))
+            FfiConverterDouble.write(value, into: &buf)
+            
+        
+        case let .text(value):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncValue_lift(_ buf: RustBuffer) throws -> SyncValue {
+    return try FfiConverterTypeSyncValue.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncValue_lower(_ value: SyncValue) -> RustBuffer {
+    return FfiConverterTypeSyncValue.lower(value)
+}
+
+
+
+/**
  * Why a candidate cannot be worked on now. `TaskUnavailableReason`.
  */
 
@@ -4415,6 +4964,30 @@ fileprivate struct FfiConverterOptionTypeImportOutcome: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeLocalSyncState: FfiConverterRustBuffer {
+    typealias SwiftType = LocalSyncState?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeLocalSyncState.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeLocalSyncState.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypePlanning: FfiConverterRustBuffer {
     typealias SwiftType = Planning?
 
@@ -4612,6 +5185,31 @@ fileprivate struct FfiConverterSequenceTypeImportedTaskSeed: FfiConverterRustBuf
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeIncomingRow: FfiConverterRustBuffer {
+    typealias SwiftType = [IncomingRow]
+
+    public static func write(_ value: [IncomingRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeIncomingRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [IncomingRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [IncomingRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeIncomingRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer {
     typealias SwiftType = [LegacyDailySeed]
 
@@ -4629,6 +5227,31 @@ fileprivate struct FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuff
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeLegacyDailySeed.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffer {
+    typealias SwiftType = [OutgoingChange]
+
+    public static func write(_ value: [OutgoingChange], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeOutgoingChange.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [OutgoingChange] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [OutgoingChange]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeOutgoingChange.read(from: &buf))
         }
         return seq
     }
@@ -4681,6 +5304,32 @@ fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
             seq.append(try FfiConverterSequenceString.read(from: &buf))
         }
         return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterDictionaryStringTypeSyncValue: FfiConverterRustBuffer {
+    public static func write(_ value: [String: SyncValue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterTypeSyncValue.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: SyncValue] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: SyncValue]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterTypeSyncValue.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
     }
 }
 /**
@@ -4748,16 +5397,25 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() != 39097) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() != 31877) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants() != 40638) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_apply_remote_rows() != 63863) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_archive_daily() != 52136) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_arrange_day() != 44382) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_begin_sync() != 42313) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_bootstrap() != 4874) {
@@ -4802,6 +5460,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() != 20106) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_end_sync() != 18002) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_enqueue_sync_snapshot() != 31831) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_finish_focus_block() != 58580) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4824,6 +5488,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline() != 21099) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq() != 11156) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_log_contribution() != 57143) {
@@ -4868,6 +5535,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session() != 59685) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_pending_sync_changes() != 44270) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_pin_task() != 37334) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4884,6 +5554,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups() != 63977) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_record_sync_progress() != 46438) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus() != 45527) {
@@ -4962,6 +5635,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() != 4001) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_sync_state() != 5326) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {

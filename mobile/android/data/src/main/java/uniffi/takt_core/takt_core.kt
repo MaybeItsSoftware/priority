@@ -681,13 +681,19 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_apply_remote_rows(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_archive_daily(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_arrange_day(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_begin_sync(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_bootstrap(
     ): Int
@@ -717,6 +723,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_end_sync(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_enqueue_sync_snapshot(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_finish_focus_block(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session(
@@ -732,6 +742,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_indent_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_log_contribution(
     ): Int
@@ -761,6 +773,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_pending_sync_changes(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_pin_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_folder(
@@ -772,6 +786,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_reconcile_habits(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_record_sync_progress(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus(
     ): Int
@@ -825,6 +841,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_start_focus_session(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_sync_state(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo_history(
@@ -871,13 +889,19 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_acknowledge_sync_changes(`ptr`: Long,`throughSeq`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_apply_planning_to_descendants(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_apply_remote_rows(`ptr`: Long,`rows`: RustBuffer.ByValue,`cursor`: Long,`hlc`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_archive_daily(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_arrange_day(`ptr`: Long,`orderedTaskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_begin_sync(`ptr`: Long,`deviceId`: RustBuffer.ByValue,`serverUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_bootstrap(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -907,6 +931,10 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_end_sync(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_enqueue_sync_snapshot(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_finish_focus_block(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`elapsedSeconds`: Long,`qualityMultiplier`: RustBuffer.ByValue,`completeTask`: Byte,`expectedBlockId`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_finish_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -922,6 +950,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_indent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_kanban_board_baseline(`ptr`: Long,`legacy`: RustBuffer.ByValue,`currentKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_latest_sync_outbox_seq(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_log_contribution(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`seconds`: Long,`complete`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -951,6 +981,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_pause_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_pending_sync_changes(`ptr`: Long,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_pin_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,`index`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -963,6 +995,8 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_reconcile_waiting_follow_ups(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_record_sync_progress(`ptr`: Long,`cursor`: RustBuffer.ByValue,`hlc`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_recover_interrupted_focus(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_redo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1014,6 +1048,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_set_waiting(`ptr`: Long,`taskId`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`followUpAtMs`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_start_focus_session(`ptr`: Long,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`workSeconds`: Long,`breakSeconds`: Long,`context`: RustBuffer.ByValue,`overrideAvailability`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_sync_state(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1167,16 +1203,25 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() and 0xFFFF) != 39097) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() and 0xFFFF) != 31877) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants() and 0xFFFF) != 40638) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_apply_remote_rows() and 0xFFFF) != 63863) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_archive_daily() and 0xFFFF) != 52136) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_arrange_day() and 0xFFFF) != 44382) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_begin_sync() and 0xFFFF) != 42313) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_bootstrap() and 0xFFFF) != 4874) {
@@ -1221,6 +1266,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() and 0xFFFF) != 20106) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_end_sync() and 0xFFFF) != 18002) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_enqueue_sync_snapshot() and 0xFFFF) != 31831) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_finish_focus_block() and 0xFFFF) != 58580) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1243,6 +1294,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline() and 0xFFFF) != 21099) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq() and 0xFFFF) != 11156) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_log_contribution() and 0xFFFF) != 57143) {
@@ -1287,6 +1341,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session() and 0xFFFF) != 59685) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_pending_sync_changes() and 0xFFFF) != 44270) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_pin_task() and 0xFFFF) != 37334) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1303,6 +1360,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_reconcile_waiting_follow_ups() and 0xFFFF) != 63977) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_record_sync_progress() and 0xFFFF) != 46438) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_recover_interrupted_focus() and 0xFFFF) != 45527) {
@@ -1381,6 +1441,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() and 0xFFFF) != 4001) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_sync_state() and 0xFFFF) != 5326) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
@@ -1844,6 +1907,11 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Forgets the outbox entries the server has accepted.
+     */
+    fun `acknowledgeSyncChanges`(`throughSeq`: kotlin.Long)
+    
+    /**
      * Queues a task in a focus session.
      */
     fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
@@ -1854,6 +1922,11 @@ public interface CoreWorkspaceInterface {
     fun `applyPlanningToDescendants`(`taskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
     
     /**
+     * Writes a pull into the workspace; whether anything changed.
+     */
+    fun `applyRemoteRows`(`rows`: List<IncomingRow>, `cursor`: kotlin.Long, `hlc`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
     fun `archiveDaily`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
@@ -1862,6 +1935,11 @@ public interface CoreWorkspaceInterface {
      * Ranks tasks in Today's focus order as one "Reorder Today" step.
      */
     fun `arrangeDay`(`orderedTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
+    
+    /**
+     * Pairs the store with a sync server.
+     */
+    fun `beginSync`(`deviceId`: kotlin.String, `serverUrl`: kotlin.String)
     
     /**
      * The workspace, made on first launch with its Inbox and conditions;
@@ -1935,6 +2013,16 @@ public interface CoreWorkspaceInterface {
     fun `editorSnapshot`(`taskId`: kotlin.String): EditorSnapshot
     
     /**
+     * Unpairs: stops recording and forgets what was waiting to be sent.
+     */
+    fun `endSync`()
+    
+    /**
+     * Queues every existing row for the first push after pairing.
+     */
+    fun `enqueueSyncSnapshot`(`nowMs`: kotlin.Long)
+    
+    /**
      * Finishes the block in hand as one step: "Complete Task", or "Log Daily
      * Progress" when the task stays open.
      */
@@ -1976,6 +2064,11 @@ public interface CoreWorkspaceInterface {
      * returns every board.
      */
     fun `kanbanBoardBaseline`(`legacy`: List<BoardBaseline>, `currentKey`: kotlin.String): List<BoardBaseline>
+    
+    /**
+     * The newest outbox entry, or nothing when nothing is waiting.
+     */
+    fun `latestSyncOutboxSeq`(): kotlin.Long?
     
     /**
      * Logs progress on a daily as one "Log Daily" step; returns the
@@ -2050,6 +2143,11 @@ public interface CoreWorkspaceInterface {
     fun `pauseFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * The outbox, coalesced per row, up to `limit` rows.
+     */
+    fun `pendingSyncChanges`(`limit`: kotlin.UInt): PendingChanges
+    
+    /**
      * Pins a task in the focus order as one "Pin Task" step.
      */
     fun `pinTask`(`taskId`: kotlin.String, `index`: kotlin.Long, `nowMs`: kotlin.Long)
@@ -2080,6 +2178,11 @@ public interface CoreWorkspaceInterface {
      * returns whether it made any.
      */
     fun `reconcileWaitingFollowUps`(`nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
+     * Advances the stored cursor and clock without applying rows.
+     */
+    fun `recordSyncProgress`(`cursor`: kotlin.Long?, `hlc`: kotlin.String?, `nowMs`: kotlin.Long)
     
     /**
      * Pauses every running session at its last checkpoint, on reopening.
@@ -2213,6 +2316,11 @@ public interface CoreWorkspaceInterface {
      * Starts a focus session on a task, or returns the one running.
      */
     fun `startFocusSession`(`taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `workSeconds`: kotlin.Long, `breakSeconds`: kotlin.Long, `context`: FocusContext?, `overrideAvailability`: kotlin.Boolean, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
+    
+    /**
+     * The device's sync state, or nothing while it has never been paired.
+     */
+    fun `syncState`(): LocalSyncState?
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -2369,6 +2477,23 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Forgets the outbox entries the server has accepted.
+     */
+    @Throws(CoreException::class)override fun `acknowledgeSyncChanges`(`throughSeq`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_acknowledge_sync_changes(
+        it,
+        
+        FfiConverterLong.lower(`throughSeq`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Queues a task in a focus session.
      */
     @Throws(CoreException::class)override fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
@@ -2408,6 +2533,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Writes a pull into the workspace; whether anything changed.
+     */
+    @Throws(CoreException::class)override fun `applyRemoteRows`(`rows`: List<IncomingRow>, `cursor`: kotlin.Long, `hlc`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_apply_remote_rows(
+        it,
+        
+        FfiConverterSequenceTypeIncomingRow.lower(`rows`),
+        FfiConverterLong.lower(`cursor`),
+        FfiConverterOptionalString.lower(`hlc`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
     @Throws(CoreException::class)override fun `archiveDaily`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
@@ -2437,6 +2583,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterSequenceString.lower(`orderedTaskIds`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Pairs the store with a sync server.
+     */
+    @Throws(CoreException::class)override fun `beginSync`(`deviceId`: kotlin.String, `serverUrl`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_begin_sync(
+        it,
+        
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterString.lower(`serverUrl`),_status)
 }
     }
     
@@ -2707,6 +2871,39 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Unpairs: stops recording and forgets what was waiting to be sent.
+     */
+    @Throws(CoreException::class)override fun `endSync`()
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_end_sync(
+        it,
+        _status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Queues every existing row for the first push after pairing.
+     */
+    @Throws(CoreException::class)override fun `enqueueSyncSnapshot`(`nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_enqueue_sync_snapshot(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Finishes the block in hand as one step: "Complete Task", or "Log Daily
      * Progress" when the task stays open.
      */
@@ -2862,6 +3059,23 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterSequenceTypeBoardBaseline.lower(`legacy`),
         FfiConverterString.lower(`currentKey`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The newest outbox entry, or nothing when nothing is waiting.
+     */
+    @Throws(CoreException::class)override fun `latestSyncOutboxSeq`(): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_latest_sync_outbox_seq(
+        it,
+        _status)
 }
     }
     )
@@ -3147,6 +3361,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * The outbox, coalesced per row, up to `limit` rows.
+     */
+    @Throws(CoreException::class)override fun `pendingSyncChanges`(`limit`: kotlin.UInt): PendingChanges {
+            return FfiConverterTypePendingChanges.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_pending_sync_changes(
+        it,
+        
+        FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Pins a task in the focus order as one "Pin Task" step.
      */
     @Throws(CoreException::class)override fun `pinTask`(`taskId`: kotlin.String, `index`: kotlin.Long, `nowMs`: kotlin.Long)
@@ -3260,6 +3492,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Advances the stored cursor and clock without applying rows.
+     */
+    @Throws(CoreException::class)override fun `recordSyncProgress`(`cursor`: kotlin.Long?, `hlc`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_record_sync_progress(
+        it,
+        
+        FfiConverterOptionalLong.lower(`cursor`),
+        FfiConverterOptionalString.lower(`hlc`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
     
 
     
@@ -3767,6 +4018,23 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterBoolean.lower(`overrideAvailability`),
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The device's sync state, or nothing while it has never been paired.
+     */
+    @Throws(CoreException::class)override fun `syncState`(): LocalSyncState? {
+            return FfiConverterOptionalTypeLocalSyncState.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_sync_state(
+        it,
+        _status)
 }
     }
     )
@@ -4912,6 +5180,62 @@ public object FfiConverterTypeImportedTaskSeed: FfiConverterRustBuffer<ImportedT
 
 
 /**
+ * A row as the server holds it.
+ */
+data class IncomingRow (
+    var `table`: kotlin.String
+    , 
+    var `id`: kotlin.String
+    , 
+    var `deleted`: kotlin.Boolean
+    , 
+    var `values`: Map<kotlin.String, SyncValue>
+    , 
+    var `hlc`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeIncomingRow: FfiConverterRustBuffer<IncomingRow> {
+    override fun read(buf: ByteBuffer): IncomingRow {
+        return IncomingRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterMapStringTypeSyncValue.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: IncomingRow) = (
+            FfiConverterString.allocationSize(value.`table`) +
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterBoolean.allocationSize(value.`deleted`) +
+            FfiConverterMapStringTypeSyncValue.allocationSize(value.`values`) +
+            FfiConverterOptionalString.allocationSize(value.`hlc`)
+    )
+
+    override fun write(value: IncomingRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`table`, buf)
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterBoolean.write(value.`deleted`, buf)
+            FfiConverterMapStringTypeSyncValue.write(value.`values`, buf)
+            FfiConverterOptionalString.write(value.`hlc`, buf)
+    }
+}
+
+
+
+/**
  * A daily from before the workspace kept them, as the old plugin stored it.
  */
 data class LegacyDailySeed (
@@ -5042,6 +5366,77 @@ public object FfiConverterTypeListSettings: FfiConverterRustBuffer<ListSettings>
 
 
 /**
+ * What the device remembers about its sync.
+ */
+data class LocalSyncState (
+    var `deviceId`: kotlin.String
+    , 
+    var `cursor`: kotlin.Long
+    , 
+    var `hlc`: kotlin.String?
+    , 
+    var `serverUrl`: kotlin.String?
+    , 
+    var `canonicalWorkspaceId`: kotlin.String?
+    , 
+    var `needsSnapshot`: kotlin.Boolean
+    , 
+    var `lastSyncedAtMs`: kotlin.Long?
+    , 
+    var `isRecording`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLocalSyncState: FfiConverterRustBuffer<LocalSyncState> {
+    override fun read(buf: ByteBuffer): LocalSyncState {
+        return LocalSyncState(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: LocalSyncState) = (
+            FfiConverterString.allocationSize(value.`deviceId`) +
+            FfiConverterLong.allocationSize(value.`cursor`) +
+            FfiConverterOptionalString.allocationSize(value.`hlc`) +
+            FfiConverterOptionalString.allocationSize(value.`serverUrl`) +
+            FfiConverterOptionalString.allocationSize(value.`canonicalWorkspaceId`) +
+            FfiConverterBoolean.allocationSize(value.`needsSnapshot`) +
+            FfiConverterOptionalLong.allocationSize(value.`lastSyncedAtMs`) +
+            FfiConverterBoolean.allocationSize(value.`isRecording`)
+    )
+
+    override fun write(value: LocalSyncState, buf: ByteBuffer) {
+            FfiConverterString.write(value.`deviceId`, buf)
+            FfiConverterLong.write(value.`cursor`, buf)
+            FfiConverterOptionalString.write(value.`hlc`, buf)
+            FfiConverterOptionalString.write(value.`serverUrl`, buf)
+            FfiConverterOptionalString.write(value.`canonicalWorkspaceId`, buf)
+            FfiConverterBoolean.write(value.`needsSnapshot`, buf)
+            FfiConverterOptionalLong.write(value.`lastSyncedAtMs`, buf)
+            FfiConverterBoolean.write(value.`isRecording`, buf)
+    }
+}
+
+
+
+/**
  * A task to create: everything any client can set when it adds one.
  */
 data class NewTask (
@@ -5162,6 +5557,114 @@ public object FfiConverterTypeNewTask: FfiConverterRustBuffer<NewTask> {
             FfiConverterBoolean.write(value.`atTop`, buf)
             FfiConverterOptionalString.write(value.`adjacentTaskId`, buf)
             FfiConverterBoolean.write(value.`above`, buf)
+    }
+}
+
+
+
+/**
+ * A row's local change, coalesced from its outbox entries and read from the
+ * live row, ready to be stamped and pushed.
+ */
+data class OutgoingChange (
+    var `table`: kotlin.String
+    , 
+    var `rowId`: kotlin.String
+    , 
+    /**
+     * "upsert" or "delete".
+     */
+    var `operation`: kotlin.String
+    , 
+    /**
+     * The columns to push and their current values; empty for a delete.
+     */
+    var `values`: Map<kotlin.String, SyncValue>
+    , 
+    /**
+     * When the newest of the coalesced edits was made.
+     */
+    var `changedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOutgoingChange: FfiConverterRustBuffer<OutgoingChange> {
+    override fun read(buf: ByteBuffer): OutgoingChange {
+        return OutgoingChange(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterMapStringTypeSyncValue.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: OutgoingChange) = (
+            FfiConverterString.allocationSize(value.`table`) +
+            FfiConverterString.allocationSize(value.`rowId`) +
+            FfiConverterString.allocationSize(value.`operation`) +
+            FfiConverterMapStringTypeSyncValue.allocationSize(value.`values`) +
+            FfiConverterLong.allocationSize(value.`changedAtMs`)
+    )
+
+    override fun write(value: OutgoingChange, buf: ByteBuffer) {
+            FfiConverterString.write(value.`table`, buf)
+            FfiConverterString.write(value.`rowId`, buf)
+            FfiConverterString.write(value.`operation`, buf)
+            FfiConverterMapStringTypeSyncValue.write(value.`values`, buf)
+            FfiConverterLong.write(value.`changedAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * A batch of outgoing changes and the newest outbox entry folded in, which
+ * is what to acknowledge once the server has them.
+ */
+data class PendingChanges (
+    var `changes`: List<OutgoingChange>
+    , 
+    var `throughSeq`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePendingChanges: FfiConverterRustBuffer<PendingChanges> {
+    override fun read(buf: ByteBuffer): PendingChanges {
+        return PendingChanges(
+            FfiConverterSequenceTypeOutgoingChange.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: PendingChanges) = (
+            FfiConverterSequenceTypeOutgoingChange.allocationSize(value.`changes`) +
+            FfiConverterOptionalLong.allocationSize(value.`throughSeq`)
+    )
+
+    override fun write(value: PendingChanges, buf: ByteBuffer) {
+            FfiConverterSequenceTypeOutgoingChange.write(value.`changes`, buf)
+            FfiConverterOptionalLong.write(value.`throughSeq`, buf)
     }
 }
 
@@ -5715,6 +6218,131 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
 
 
 /**
+ * One SQLite value as it travels: null, a number or text, as the column
+ * stores it. A blob travels as base64 text.
+ */
+sealed class SyncValue {
+    
+    object Null : SyncValue()
+    
+    
+    data class Integer(
+        val `value`: kotlin.Long) : SyncValue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Real(
+        val `value`: kotlin.Double) : SyncValue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Text(
+        val `value`: kotlin.String) : SyncValue()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncValue : FfiConverterRustBuffer<SyncValue>{
+    override fun read(buf: ByteBuffer): SyncValue {
+        return when(buf.getInt()) {
+            1 -> SyncValue.Null
+            2 -> SyncValue.Integer(
+                FfiConverterLong.read(buf),
+                )
+            3 -> SyncValue.Real(
+                FfiConverterDouble.read(buf),
+                )
+            4 -> SyncValue.Text(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: SyncValue): ULong = when(value) {
+        is SyncValue.Null -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is SyncValue.Integer -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterLong.allocationSize(value.`value`)
+            )
+        }
+        is SyncValue.Real -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterDouble.allocationSize(value.`value`)
+            )
+        }
+        is SyncValue.Text -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`value`)
+            )
+        }
+    }
+
+    override fun write(value: SyncValue, buf: ByteBuffer) {
+        when(value) {
+            is SyncValue.Null -> {
+                buf.putInt(1)
+                Unit
+            }
+            is SyncValue.Integer -> {
+                buf.putInt(2)
+                FfiConverterLong.write(value.`value`, buf)
+                Unit
+            }
+            is SyncValue.Real -> {
+                buf.putInt(3)
+                FfiConverterDouble.write(value.`value`, buf)
+                Unit
+            }
+            is SyncValue.Text -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`value`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
  * Why a candidate cannot be worked on now. `TaskUnavailableReason`.
  */
 sealed class Unavailable {
@@ -6076,6 +6704,38 @@ public object FfiConverterOptionalTypeImportOutcome: FfiConverterRustBuffer<Impo
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeLocalSyncState: FfiConverterRustBuffer<LocalSyncState?> {
+    override fun read(buf: ByteBuffer): LocalSyncState? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeLocalSyncState.read(buf)
+    }
+
+    override fun allocationSize(value: LocalSyncState?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeLocalSyncState.allocationSize(value)
+        }
+    }
+
+    override fun write(value: LocalSyncState?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeLocalSyncState.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypePlanning: FfiConverterRustBuffer<Planning?> {
     override fun read(buf: ByteBuffer): Planning? {
         if (buf.get().toInt() == 0) {
@@ -6312,6 +6972,34 @@ public object FfiConverterSequenceTypeImportedTaskSeed: FfiConverterRustBuffer<L
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeIncomingRow: FfiConverterRustBuffer<List<IncomingRow>> {
+    override fun read(buf: ByteBuffer): List<IncomingRow> {
+        val len = buf.getInt()
+        return List<IncomingRow>(len) {
+            FfiConverterTypeIncomingRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<IncomingRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeIncomingRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<IncomingRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeIncomingRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer<List<LegacyDailySeed>> {
     override fun read(buf: ByteBuffer): List<LegacyDailySeed> {
         val len = buf.getInt()
@@ -6330,6 +7018,34 @@ public object FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeLegacyDailySeed.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffer<List<OutgoingChange>> {
+    override fun read(buf: ByteBuffer): List<OutgoingChange> {
+        val len = buf.getInt()
+        return List<OutgoingChange>(len) {
+            FfiConverterTypeOutgoingChange.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<OutgoingChange>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeOutgoingChange.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<OutgoingChange>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeOutgoingChange.write(it, buf)
         }
     }
 }
@@ -6386,6 +7102,45 @@ public object FfiConverterSequenceSequenceString: FfiConverterRustBuffer<List<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterSequenceString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kotlin.String, SyncValue>> {
+    override fun read(buf: ByteBuffer): Map<kotlin.String, SyncValue> {
+        val len = buf.getInt()
+        return buildMap<kotlin.String, SyncValue>(len) {
+            repeat(len) {
+                val k = FfiConverterString.read(buf)
+                val v = FfiConverterTypeSyncValue.read(buf)
+                this[k] = v
+            }
+        }
+    }
+
+    override fun allocationSize(value: Map<kotlin.String, SyncValue>): ULong {
+        val spaceForMapSize = 4UL
+        val spaceForChildren = value.map { (k, v) ->
+            FfiConverterString.allocationSize(k) +
+            FfiConverterTypeSyncValue.allocationSize(v)
+        }.sum()
+        return spaceForMapSize + spaceForChildren
+    }
+
+    override fun write(value: Map<kotlin.String, SyncValue>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        // The parens on `(k, v)` here ensure we're calling the right method,
+        // which is important for compatibility with older android devices.
+        // Ref https://blog.danlew.net/2017/03/16/kotlin-puzzler-whose-line-is-it-anyways/
+        value.forEach { (k, v) ->
+            FfiConverterString.write(k, buf)
+            FfiConverterTypeSyncValue.write(v, buf)
         }
     }
 }
