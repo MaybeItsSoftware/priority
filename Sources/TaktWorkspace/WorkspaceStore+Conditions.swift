@@ -18,26 +18,25 @@ extension WorkspaceStore {
   }
 
   @discardableResult
+  /// Creates a condition: the Rust core's `conditions::create_condition`.
   public func createCondition(workspaceId: String, name: String, isLocation: Bool = false,
                               now: Date = .now) throws -> TaskCondition {
-    let name = try Self.nonEmptyName(name)
-    return try journalledWrite("New Condition") { db in
-      guard try Workspace.fetchOne(db, key: workspaceId) != nil else { throw TaskPlanningError.invalidCondition }
-      let record = TaskCondition(id: UUID().uuidString, workspaceId: workspaceId, name: name,
-        isLocation: isLocation, isArchived: false, createdAt: now, updatedAt: now)
-      try record.insert(db)
-      return record
+    let id = try coreWrite {
+      try core.createCondition(
+        workspaceId: workspaceId, name: name, isLocation: isLocation, nowMs: now.coreMilliseconds)
     }
+    guard let record = try database.read({ db in try TaskCondition.fetchOne(db, key: id) }) else {
+      throw TaskPlanningError.invalidCondition
+    }
+    return record
   }
 
+  /// Saves a condition: the Rust core's `conditions::save_condition`.
   public func saveCondition(id: String, name: String, isLocation: Bool, isArchived: Bool,
                             now: Date = .now) throws {
-    let name = try Self.nonEmptyName(name)
-    try journalledWrite("Edit Condition") { db in
-      guard var record = try TaskCondition.fetchOne(db, key: id) else { throw TaskPlanningError.invalidCondition }
-      guard record.name != name || record.isLocation != isLocation || record.isArchived != isArchived else { return }
-      record.name = name; record.isLocation = isLocation; record.isArchived = isArchived; record.updatedAt = now
-      try record.update(db)
+    try coreWrite {
+      try core.saveCondition(
+        id: id, name: name, isLocation: isLocation, isArchived: isArchived, nowMs: now.coreMilliseconds)
     }
   }
 

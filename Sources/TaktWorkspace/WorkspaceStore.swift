@@ -531,6 +531,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .systemListIsPermanent: throw WorkspaceStoreError.systemListIsPermanent
       case .emptyName: throw WorkspaceStoreError.emptyName
       case .invalidFolderMove: throw WorkspaceStoreError.invalidFolderMove
+      case .invalidCondition: throw TaskPlanningError.invalidCondition
       case .invalidTaskMove: throw WorkspaceStoreError.invalidTaskMove
       case .noJournal, .other, nil: throw error
       }

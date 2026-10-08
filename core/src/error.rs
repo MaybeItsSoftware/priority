@@ -24,6 +24,8 @@ pub enum CoreError {
     EmptyName,
     #[error("A folder cannot go inside itself or one of its own folders.")]
     InvalidFolderMove,
+    #[error("A required condition is missing, archived or belongs to another workspace.")]
+    InvalidCondition,
     #[error("A task cannot be moved into itself or one of its subtasks.")]
     InvalidTaskMove,
 }

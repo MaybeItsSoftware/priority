@@ -589,6 +589,11 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Creates a condition as one "New Condition" step; returns its id.
+     */
+    func createCondition(workspaceId: String, name: String, isLocation: Bool, nowMs: Int64) throws  -> String
+    
+    /**
      * Creates a folder as one "New Folder" step.
      */
     func createFolder(workspaceId: String, name: String, parentFolderId: String?, nowMs: Int64) throws  -> CreatedItem
@@ -705,6 +710,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func renameList(id: String, name: String, nowMs: Int64) throws 
     
     /**
+     * Saves a condition as one "Edit Condition" step.
+     */
+    func saveCondition(id: String, name: String, isLocation: Bool, isArchived: Bool, nowMs: Int64) throws 
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
     func setKanbanColumn(taskIds: [String], column: String?, nowMs: Int64) throws 
@@ -809,6 +819,22 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * Creates a condition as one "New Condition" step; returns its id.
+     */
+open func createCondition(workspaceId: String, name: String, isLocation: Bool, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_create_condition(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterString.lower(name),
+        FfiConverterBool.lower(isLocation),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
     
     /**
      * Creates a folder as one "New Folder" step.
@@ -1125,6 +1151,22 @@ open func renameList(id: String, name: String, nowMs: Int64)throws   {try rustCa
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),
         FfiConverterString.lower(name),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Saves a condition as one "Edit Condition" step.
+     */
+open func saveCondition(id: String, name: String, isLocation: Bool, isArchived: Bool, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_save_condition(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(name),
+        FfiConverterBool.lower(isLocation),
+        FfiConverterBool.lower(isArchived),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
@@ -1797,6 +1839,7 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case SystemListIsPermanent
     case EmptyName
     case InvalidFolderMove
+    case InvalidCondition
     case InvalidTaskMove
 
     
@@ -1847,7 +1890,8 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 7: return .SystemListIsPermanent
         case 8: return .EmptyName
         case 9: return .InvalidFolderMove
-        case 10: return .InvalidTaskMove
+        case 10: return .InvalidCondition
+        case 11: return .InvalidTaskMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1902,8 +1946,12 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(9))
         
         
-        case .InvalidTaskMove:
+        case .InvalidCondition:
             writeInt(&buf, Int32(10))
+        
+        
+        case .InvalidTaskMove:
+            writeInt(&buf, Int32(11))
         
         }
     }
@@ -2086,6 +2134,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_create_condition() != 36493) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_create_folder() != 9864) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2153,6 +2204,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_rename_list() != 3217) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_save_condition() != 40969) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column() != 29324) {

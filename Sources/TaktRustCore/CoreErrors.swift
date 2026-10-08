@@ -14,6 +14,7 @@ public enum CoreFailure: Equatable, Sendable {
   case systemListIsPermanent
   case emptyName
   case invalidFolderMove
+  case invalidCondition
   case invalidTaskMove
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
@@ -32,6 +33,7 @@ extension Error {
     case .SystemListIsPermanent: return .systemListIsPermanent
     case .EmptyName: return .emptyName
     case .InvalidFolderMove: return .invalidFolderMove
+    case .InvalidCondition: return .invalidCondition
     case .InvalidTaskMove: return .invalidTaskMove
     case .NoJournal: return .noJournal
     default: return .other

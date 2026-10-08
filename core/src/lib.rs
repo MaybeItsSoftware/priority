@@ -9,6 +9,7 @@
 
 uniffi::setup_scaffolding!();
 
+pub mod conditions;
 pub mod error;
 pub mod journal;
 pub mod lists;

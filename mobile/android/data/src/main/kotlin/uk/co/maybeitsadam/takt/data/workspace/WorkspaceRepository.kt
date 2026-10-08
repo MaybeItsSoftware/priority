@@ -481,6 +481,7 @@ class WorkspaceRepository(
             is CoreException.SystemListIsPermanent -> fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
             is CoreException.EmptyName -> fail(WorkspaceStoreError.EMPTY_NAME)
             is CoreException.InvalidFolderMove -> fail(WorkspaceStoreError.INVALID_FOLDER_MOVE)
+            is CoreException.InvalidCondition -> planningFail(TaskPlanningError.INVALID_CONDITION)
             is CoreException.InvalidTaskMove -> fail(WorkspaceStoreError.INVALID_TASK_MOVE)
             else -> throw error
         }
@@ -798,28 +799,20 @@ class WorkspaceRepository(
     fun observeConditions(workspaceId: String): Flow<List<TaskCondition>> =
         database.observe(setOf("task_conditions")) { conditionsIn(it, workspaceId) }
 
+    /** Creates a condition: the Rust core's `conditions::create_condition`. */
     suspend fun createCondition(
         workspaceId: String,
         name: String,
         isLocation: Boolean = false,
         now: Instant = now(),
     ): TaskCondition {
-        val trimmed = nonEmptyName(name)
-        return journalledWrite("New Condition") { db ->
-            db.workspace(workspaceId) ?: planningFail(TaskPlanningError.INVALID_CONDITION)
-            TaskCondition(newId(), workspaceId, trimmed, isLocation, false, now, now).also { db.insert(it) }
-        }
+        val id = coreWrite { it.createCondition(workspaceId, name, isLocation, now.toEpochMilli()) }
+        return database.read { it.condition(id) } ?: planningFail(TaskPlanningError.INVALID_CONDITION)
     }
 
+    /** Saves a condition: the Rust core's `conditions::save_condition`. */
     suspend fun saveCondition(id: String, name: String, isLocation: Boolean, isArchived: Boolean, now: Instant = now()) {
-        val trimmed = nonEmptyName(name)
-        journalledWrite("Edit Condition") { db ->
-            val record = db.condition(id) ?: planningFail(TaskPlanningError.INVALID_CONDITION)
-            if (record.name == trimmed && record.isLocation == isLocation && record.isArchived == isArchived) {
-                return@journalledWrite
-            }
-            db.update(record.copy(name = trimmed, isLocation = isLocation, isArchived = isArchived, updatedAt = now))
-        }
+        coreWrite { it.saveCondition(id, name, isLocation, isArchived, now.toEpochMilli()) }
     }
 
     /** Copies a task's requirements, start and block rules (not due dates) onto every descendant. */

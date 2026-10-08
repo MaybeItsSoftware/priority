@@ -681,6 +681,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_create_condition(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_list(
@@ -727,6 +729,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rename_list(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_save_condition(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_list_archived(
@@ -769,6 +773,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_create_condition(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_folder(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_list(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -814,6 +820,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_rename_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_save_condition(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`isArchived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(`ptr`: Long,`taskIds`: RustBuffer.ByValue,`column`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -963,6 +971,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_condition() and 0xFFFF) != 36493) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_folder() and 0xFFFF) != 9864) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1030,6 +1041,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_list() and 0xFFFF) != 3217) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_condition() and 0xFFFF) != 40969) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column() and 0xFFFF) != 29324) {
@@ -1464,6 +1478,11 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Creates a condition as one "New Condition" step; returns its id.
+     */
+    fun `createCondition`(`workspaceId`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
      * Creates a folder as one "New Folder" step.
      */
     fun `createFolder`(`workspaceId`: kotlin.String, `name`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long): CreatedItem
@@ -1578,6 +1597,11 @@ public interface CoreWorkspaceInterface {
      * Renames a list as one "Rename List" step.
      */
     fun `renameList`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Saves a condition as one "Edit Condition" step.
+     */
+    fun `saveCondition`(`id`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `isArchived`: kotlin.Boolean, `nowMs`: kotlin.Long)
     
     /**
      * Puts tasks in a board column as one "Move Task" step.
@@ -1721,6 +1745,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * Creates a condition as one "New Condition" step; returns its id.
+     */
+    @Throws(CoreException::class)override fun `createCondition`(`workspaceId`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_create_condition(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterString.lower(`name`),
+        FfiConverterBoolean.lower(`isLocation`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
 
     
     /**
@@ -2151,6 +2196,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterString.lower(`id`),
         FfiConverterString.lower(`name`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Saves a condition as one "Edit Condition" step.
+     */
+    @Throws(CoreException::class)override fun `saveCondition`(`id`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `isArchived`: kotlin.Boolean, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_condition(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`name`),
+        FfiConverterBoolean.lower(`isLocation`),
+        FfiConverterBoolean.lower(`isArchived`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -2801,6 +2867,12 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class InvalidCondition(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
     class InvalidTaskMove(
         ) : CoreException() {
         override val message
@@ -2846,7 +2918,8 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             7 -> CoreException.SystemListIsPermanent()
             8 -> CoreException.EmptyName()
             9 -> CoreException.InvalidFolderMove()
-            10 -> CoreException.InvalidTaskMove()
+            10 -> CoreException.InvalidCondition()
+            11 -> CoreException.InvalidTaskMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -2892,6 +2965,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
             )
             is CoreException.InvalidFolderMove -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.InvalidCondition -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
@@ -2946,8 +3023,12 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 buf.putInt(9)
                 Unit
             }
-            is CoreException.InvalidTaskMove -> {
+            is CoreException.InvalidCondition -> {
                 buf.putInt(10)
+                Unit
+            }
+            is CoreException.InvalidTaskMove -> {
+                buf.putInt(11)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

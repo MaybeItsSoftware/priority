@@ -12,6 +12,7 @@ use std::time::Duration;
 use rusqlite::Connection;
 
 use crate::CoreError;
+use crate::conditions;
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList};
 use crate::tasks::{self, DeletedTask, NewTask};
@@ -290,6 +291,33 @@ impl CoreWorkspace {
                 parent_folder_id.as_deref(),
                 now_ms,
             )
+        })
+    }
+
+    /// Creates a condition as one "New Condition" step; returns its id.
+    pub fn create_condition(
+        &self,
+        workspace_id: String,
+        name: String,
+        is_location: bool,
+        now_ms: i64,
+    ) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "New Condition", |tx| {
+            conditions::create_condition(tx, &workspace_id, &name, is_location, now_ms)
+        })
+    }
+
+    /// Saves a condition as one "Edit Condition" step.
+    pub fn save_condition(
+        &self,
+        id: String,
+        name: String,
+        is_location: bool,
+        is_archived: bool,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Condition", |tx| {
+            conditions::save_condition(tx, &id, &name, is_location, is_archived, now_ms)
         })
     }
 
