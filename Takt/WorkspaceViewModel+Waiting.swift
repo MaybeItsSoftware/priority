@@ -16,7 +16,10 @@ extension WorkspaceViewModel {
     guard let store, now >= nextFollowUpCheck else { return }
     nextFollowUpCheck = now.addingTimeInterval(Self.followUpCheckInterval)
     do {
-      if try store.reconcileWaitingFollowUps(now: now) { refresh([.outline, .nextUp]) }
+      if try store.reconcileWaitingFollowUps(now: now) {
+        waitingDetailsAreStale = true
+        refresh([.outline, .nextUp])
+      }
     } catch {
       errorMessage = error.localizedDescription
     }
@@ -24,6 +27,7 @@ extension WorkspaceViewModel {
 
   func reloadWaitingDetails() {
     guard let store, let details = try? store.waitingDetails() else { return }
+    waitingDetailsAreStale = false
     if waitingDetails != details { waitingDetails = details }
   }
 

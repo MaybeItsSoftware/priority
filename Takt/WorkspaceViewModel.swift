@@ -242,6 +242,10 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var nextUpLaunchQueued = false
   @ObservationIgnored var nextUpGeneration = 0
   @ObservationIgnored var listTreeCache: [String: WorkspaceListTree] = [:]
+  /// Whether `waitingDetails` may be behind the database. It is read from
+  /// every task's metadata, so it is read again after a write rather than on
+  /// every refresh — moving between lists changes none of it.
+  @ObservationIgnored var waitingDetailsAreStale = true
   /// The rows behind the day, as the last ranking read them.
   @ObservationIgnored var dayTaskSnapshot: [String: WorkspaceTask] = [:]
   /// The history menu's labels. Read after writes by `refreshHistoryLabels()`

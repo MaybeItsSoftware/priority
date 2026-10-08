@@ -117,6 +117,7 @@ extension WorkspaceViewModel {
       if dirty.contains(.dailies) { reloadDailiesNow() }
       if dirty.contains(.nextUp) { scheduleNextUp() }
     }
+    if wrote { waitingDetailsAreStale = true }
     if reloadedTasks || wrote {
       rebuildTaskCache()
       refreshHistoryLabels()
@@ -173,7 +174,7 @@ extension WorkspaceViewModel {
       for id in missing { dayTaskSnapshot[id] = fetched[id] }
     }
     taskCache = cache
-    reloadWaitingDetails()
+    if waitingDetailsAreStale { reloadWaitingDetails() }
     missingTaskIDs.removeAll(keepingCapacity: true)
     descendantCache.removeAll(keepingCapacity: true)
     taskContentRevision += 1
