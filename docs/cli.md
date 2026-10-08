@@ -281,9 +281,9 @@ takt ws rm-list <LIST_ID>                     # the list and its tasks
 
 These write while the app is open. Each command is one step in the app's Undo
 menu, labelled "MCP: …", and the app picks the change up within about a
-second. `docs/mcp-server.md` explains how that is made safe. The one thing
-refused is completing a repeating task, since only the app can schedule its
-next occurrence.
+second. `docs/mcp-server.md` explains how that is made safe. Completing a
+repeating task writes its next occurrence, stepped in this machine's time
+zone, through the same Rust core code the app uses (`core/src/tasks.rs`).
 
 ### The escape hatch
 
