@@ -98,16 +98,14 @@ The `workspace_*` write tools make the CLI a second writer to a database that
 `WorkspaceStore` (Swift, GRDB) owns. That is safe because of four things
 (`cli/src/workspace_tasks.rs`):
 
-1. **Each write copies a `WorkspaceStore` method, row for row.** The method is
-   named in its doc comment: `createTask`, `setStatus`, `setKanbanColumn`,
-   `moveTask`, `moveTaskToFolder`, `setItemKind`, `setNestedListPromoted`,
-   `createFolder`, `createList`, `moveList`, `deleteTask`. That covers the
-   sort-order conventions (append is `MAX + 1`, a reorder re-numbers densely),
-   uppercase UUIDs, GRDB's UTC `YYYY-MM-DD HH:MM:SS.SSS` timestamps, lazily
-   created `task_metadata` rows with `'[]'` defaults, and the same refusals
-   (no cycles, and no extracting a list's own visible root). The search
-   index is kept level by the schema's own FTS triggers. If you change one of
-   those Swift methods, the Rust one has to follow.
+1. **Each write is the Rust core's.** `cli/src/workspace_tasks.rs` calls
+   the same function in `core/src` that the Mac, iPhone and Android apps
+   call (`tasks::create_task`, `tasks::set_status`, `tasks::move_task`,
+   `conversions::move_task_to_folder`, `lists::create_list` and the rest),
+   so there is one implementation of the sort-order conventions, the
+   uppercase UUIDs, GRDB's UTC `YYYY-MM-DD HH:MM:SS.SSS` timestamps, the
+   lazily created `task_metadata` rows and the refusals. The search index is
+   kept level by the schema's own FTS triggers.
 2. **Every write is one undo step, labelled `MCP: …`.** Each runs inside the
    same protocol as `journalledWrite`: arm `undo_control` with a fresh group
    and label, let the database's `change_log` triggers record the rows, disarm,

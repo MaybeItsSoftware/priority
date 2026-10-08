@@ -2,11 +2,10 @@
 //!
 //! The app's workspace database is its source of truth, and the Checkvist tools
 //! only reach the Checkvist edge of it. These are the tools that edit the tree
-//! the app actually shows. They are a second writer to a database that
-//! `WorkspaceStore` (Swift, GRDB) owns, which is safe only because each one
-//! copies what the matching `WorkspaceStore` method does, row for row. The
-//! method a write copies is named in its doc comment. Change the Swift one and
-//! this one has to follow.
+//! the app actually shows. Every write is the Rust core's (`takt_core`), the
+//! same function the Mac, iPhone and Android apps call, run here inside the
+//! CLI's own journalled step; this file adds only the CLI's named refusals and
+//! its JSON. There is no second copy of a write to keep level.
 //!
 //! What a second writer has to get right:
 //!
@@ -39,9 +38,7 @@
 use crate::error::{Result, ToolError};
 use crate::workspace::{Workspace, local_string, map_query_error, stored_string};
 use chrono::Utc;
-use rusqlite::{
-    Connection, OpenFlags, OptionalExtension, Row, Transaction, TransactionBehavior, params,
-};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, Row, Transaction, TransactionBehavior};
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
@@ -70,9 +67,6 @@ const WAITING_COLUMNS: &str = "m.waitingOn, m.waitingFollowUpAt, m.followUpOfTas
 const NO_WAITING_COLUMNS: &str = "NULL, NULL, NULL";
 const WAITING_MIGRATION: &str = "v20_waiting_follow_ups";
 
-/// The board column a waiting task is filed in (`WaitingFollowUp`).
-const WAITING_COLUMN: &str = "waiting-on";
-
 /// One task row with the metadata the tools show beside it.
 struct TaskRow {
     id: String,
@@ -91,7 +85,6 @@ struct TaskRow {
     kanban_column: Option<String>,
     links_json: Option<String>,
     recurrence_rule: Option<String>,
-    has_metadata: bool,
     waiting_on: Option<String>,
     follow_up_at: Option<String>,
     follow_up_of: Option<String>,
@@ -116,7 +109,6 @@ impl TaskRow {
             kanban_column: row.get(13)?,
             links_json: row.get(14)?,
             recurrence_rule: row.get(15)?,
-            has_metadata: row.get(16)?,
             waiting_on: row.get(17)?,
             follow_up_at: row.get(18)?,
             follow_up_of: row.get(19)?,
@@ -188,10 +180,8 @@ impl TaskRow {
 
 struct ListRow {
     id: String,
-    workspace_id: String,
     folder_id: Option<String>,
     name: String,
-    color_hex: Option<String>,
     sort_order: i64,
     is_archived: bool,
     system_role: Option<String>,
@@ -206,10 +196,8 @@ impl ListRow {
     fn from_row(row: &Row) -> rusqlite::Result<Self> {
         Ok(ListRow {
             id: row.get(0)?,
-            workspace_id: row.get(1)?,
             folder_id: row.get(2)?,
             name: row.get(3)?,
-            color_hex: row.get(4)?,
             sort_order: row.get(5)?,
             is_archived: row.get(6)?,
             system_role: row.get(7)?,
@@ -527,73 +515,77 @@ impl Workspace {
         };
         let label = edit.label();
 
-        self.journalled(label, |tx, now| {
+        self.journalled(label, |tx, _now| {
             let task = task_row(tx, task_id)?;
+            // Every write here is the Rust core's, shared with the apps.
+            let now_ms = Utc::now().timestamp_millis();
+            let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into());
+            let stored_ms = |text: Option<&str>| {
+                text.and_then(takt_core::time::parse_stored)
+                    .map(|at| at.timestamp_millis())
+            };
 
-            let new_title = title.clone().unwrap_or_else(|| task.title.clone());
-            let new_notes = edit.notes.clone().unwrap_or_else(|| task.notes.clone());
-            if new_title != task.title || new_notes != task.notes {
-                tx.execute(
-                    "UPDATE tasks SET title = ?1, notes = ?2, updatedAt = ?3 WHERE id = ?4",
-                    params![new_title, new_notes, now, task.id],
-                )
-                .map_err(map_write_error)?;
-            }
-
-            if let Some(status) = edit.status.as_deref()
-                && status != task.status
-            {
-                // The Rust core's `tasks::set_status`, shared with the apps:
-                // it stamps a newly closed task, writes a repeating task's
-                // next occurrence and ends the habits made from it.
-                let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into());
-                takt_core::tasks::set_status(
+            if title.is_some() || edit.notes.is_some() {
+                takt_core::editor::update_task(
                     tx,
                     &task.id,
-                    status,
-                    Utc::now().timestamp_millis(),
+                    title.as_deref().unwrap_or(&task.title),
+                    edit.notes.as_deref().unwrap_or(&task.notes),
+                    stored_ms(task.due_at.as_deref()),
+                    task.estimate_seconds,
+                    now_ms,
                     &zone,
                 )
                 .map_err(map_core_error)?;
             }
 
+            if let Some(status) = edit.status.as_deref()
+                && status != task.status
+            {
+                takt_core::tasks::set_status(tx, &task.id, status, now_ms, &zone)
+                    .map_err(map_core_error)?;
+            }
+
             if let Some(links) = edit.external_links.as_ref() {
-                let links = normalized_links(links);
-                if links != task.links() {
-                    if task.has_metadata {
-                        tx.execute(
-                            "UPDATE task_metadata SET externalLinksJSON = ?1, updatedAt = ?2 \
-                             WHERE taskId = ?3",
-                            params![encode_links(&links), now, task.id],
-                        )
-                    } else {
-                        tx.execute(
-                            "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, \
-                             updatedAt) VALUES (?1, '[]', ?2, ?3)",
-                            params![task.id, encode_links(&links), now],
-                        )
-                    }
-                    .map_err(map_write_error)?;
-                }
+                let mut metadata = takt_core::editor::snapshot(tx, &task.id)
+                    .map_err(map_core_error)?
+                    .metadata;
+                metadata.external_links = links.clone();
+                takt_core::editor::update_editor_metadata(tx, &task.id, &metadata, now_ms)
+                    .map_err(map_core_error)?;
             }
 
             if let Some(column) = edit.kanban_column.as_ref() {
                 let column = normalized_column(column.as_deref());
                 if column != task.kanban_column {
-                    upsert_kanban_column(tx, &task.id, column.as_deref(), now)?;
+                    takt_core::tasks::set_kanban_column(
+                        tx,
+                        std::slice::from_ref(&task.id),
+                        column.as_deref(),
+                        now_ms,
+                    )
+                    .map_err(map_core_error)?;
                 }
             }
 
             if edit.waiting_on.is_some() || follow_up_at.is_some() {
-                set_waiting(
+                // A field left out keeps what the task already has.
+                let waiting_on = match &edit.waiting_on {
+                    Some(tag) => tag.clone(),
+                    None => task.waiting_on.clone(),
+                };
+                let follow_up = match &follow_up_at {
+                    Some(at) => stored_ms(at.as_deref()),
+                    None => stored_ms(task.follow_up_at.as_deref()),
+                };
+                takt_core::waiting::set_waiting(
                     tx,
                     &task.id,
-                    edit.waiting_on
-                        .as_ref()
-                        .map(|tag| normalized_tag(tag.as_deref())),
-                    follow_up_at.clone(),
-                    now,
-                )?;
+                    waiting_on.as_deref(),
+                    follow_up,
+                    now_ms,
+                )
+                .map_err(map_core_error)?;
             }
 
             // Kind before pinning, so "make this a nested list and pin it" is
@@ -602,8 +594,8 @@ impl Workspace {
             if let Some(kind) = edit.kind.as_deref()
                 && kind != task.item_kind.as_deref().unwrap_or("task")
             {
-                // `setItemKind`'s guards: a transport wrapper is already
-                // represented by its list, and the timer's task stays put.
+                // Named refusals before the core's, which says only that the
+                // change is not allowed.
                 if exists(
                     tx,
                     "SELECT EXISTS(SELECT 1 FROM task_lists WHERE visibleRootTaskId = ?1)",
@@ -625,14 +617,8 @@ impl Workspace {
                         task.title
                     )));
                 }
-                let sql = if kind == "task" {
-                    "UPDATE tasks SET itemKind = 'task', isPromoted = NULL, archivedAt = NULL, \
-                     updatedAt = ?1 WHERE id = ?2"
-                } else {
-                    "UPDATE tasks SET itemKind = 'list', updatedAt = ?1 WHERE id = ?2"
-                };
-                tx.execute(sql, params![now, task.id])
-                    .map_err(map_write_error)?;
+                takt_core::conversions::set_item_kind(tx, &task.id, kind, now_ms)
+                    .map_err(map_core_error)?;
                 is_list = kind == "list";
             }
 
@@ -643,21 +629,8 @@ impl Workspace {
                         task.title
                     )));
                 }
-                // Re-read, since a kind change above can have cleared it.
-                let current: Option<bool> = tx
-                    .query_row(
-                        "SELECT isPromoted FROM tasks WHERE id = ?1",
-                        [&task.id],
-                        |row| row.get(0),
-                    )
-                    .map_err(map_query_error)?;
-                if (current == Some(true)) != pinned {
-                    tx.execute(
-                        "UPDATE tasks SET isPromoted = ?1, updatedAt = ?2 WHERE id = ?3",
-                        params![pinned, now, task.id],
-                    )
-                    .map_err(map_write_error)?;
-                }
+                takt_core::conversions::set_nested_list_promoted(tx, &task.id, pinned, now_ms)
+                    .map_err(map_core_error)?;
             }
 
             Ok(task_row(tx, &task.id)?.to_json())
@@ -743,13 +716,10 @@ impl Workspace {
         } else {
             "Move Item to Top Level"
         };
-        self.journalled(label, |tx, now| {
+        self.journalled(label, |tx, _now| {
             let task = task_row(tx, task_id)?;
             let source = list_row(tx, &task.list_id)?;
-            if let Some(folder) = folder_id {
-                folder_in_workspace(tx, folder, &source.workspace_id)?;
-            }
-            // Do not extract a transport wrapper and leave a broken source list.
+            // Named refusal before the core's generic one.
             if source.visible_root_task_id.as_deref() == Some(task.id.as_str()) {
                 return Err(ToolError::new(format!(
                     "\"{}\" is the visible root of list \"{}\" — it already is that list. \
@@ -757,55 +727,19 @@ impl Workspace {
                     task.title, source.name
                 )));
             }
-
-            let list_id = new_id();
-            let order = next_list_order(tx, &source.workspace_id, folder_id)?;
-            let archived = task.is_list() && task.archived_at.is_some();
-            let completed_at = (task.is_list() && task.status != "open").then_some(now);
-            tx.execute(
-                "INSERT INTO task_lists (id, workspaceId, folderId, name, colorHex, sortOrder, \
-                 isArchived, createdAt, updatedAt, systemRole, visibleRootTaskId, completedAt) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, NULL, ?9, ?10)",
-                params![
-                    list_id,
-                    source.workspace_id,
-                    folder_id,
-                    task.title,
-                    source.color_hex,
-                    order,
-                    archived,
-                    now,
-                    task.id,
-                    completed_at
-                ],
+            let moved = 1 + descendant_ids(tx, &task.id)?.len();
+            // The write is the Rust core's, shared with the apps.
+            let list_id = takt_core::conversions::move_task_to_folder(
+                tx,
+                &task.id,
+                folder_id,
+                Utc::now().timestamp_millis(),
             )
-            .map_err(map_write_error)?;
-
-            let mut ids: Vec<String> = descendant_ids(tx, &task.id)?.into_iter().collect();
-            ids.push(task.id.clone());
-            ids.sort();
-            for id in &ids {
-                tx.execute(
-                    "UPDATE tasks SET listId = ?1, updatedAt = ?2 WHERE id = ?3",
-                    params![list_id, now, id],
-                )
-                .map_err(map_write_error)?;
-            }
-            // Computed at the same point as the Swift, where the task has the
-            // new list but still its old parent.
-            let order = next_task_order(tx, &list_id, None)?;
-            tx.execute(
-                "UPDATE tasks SET parentTaskId = NULL, sortOrder = ?1, itemKind = 'list', \
-                 isPromoted = NULL, archivedAt = NULL, status = 'open', updatedAt = ?2 \
-                 WHERE id = ?3",
-                params![order, now, task.id],
-            )
-            .map_err(map_write_error)?;
-
+            .map_err(map_core_error)?;
             Ok(json!({
                 "list": list_row(tx, &list_id)?.to_json(),
                 "root_task": task_row(tx, &task.id)?.to_json(),
-                "moved_task_count": ids.len(),
+                "moved_task_count": moved,
             }))
         })
     }
@@ -1066,23 +1000,6 @@ fn workspace_row(connection: &Connection) -> Result<(String, String)> {
         })
 }
 
-fn folder_in_workspace(connection: &Connection, folder_id: &str, workspace_id: &str) -> Result<()> {
-    let found: Option<String> = connection
-        .query_row(
-            "SELECT workspaceId FROM list_folders WHERE id = ?1",
-            [folder_id],
-            |row| row.get(0),
-        )
-        .optional()
-        .map_err(map_query_error)?;
-    match found {
-        Some(workspace) if workspace == workspace_id => Ok(()),
-        _ => Err(ToolError::new(format!(
-            "No folder with id {folder_id}. workspace_tree lists the folders and their ids."
-        ))),
-    }
-}
-
 /// `visibleRootParentTaskID`: the imported wrapper whose children the app
 /// shows as the list's top level, while it is still the only root.
 fn visible_root_parent(connection: &Connection, list_id: &str) -> Result<Option<String>> {
@@ -1117,50 +1034,6 @@ fn descendant_ids(connection: &Connection, task_id: &str) -> Result<HashSet<Stri
     Ok(ids)
 }
 
-fn next_task_order(connection: &Connection, list_id: &str, parent: Option<&str>) -> Result<i64> {
-    connection
-        .query_row(
-            "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM tasks \
-             WHERE listId = ?1 AND parentTaskId IS ?2",
-            params![list_id, parent],
-            |row| row.get(0),
-        )
-        .map_err(map_query_error)
-}
-
-fn next_list_order(
-    connection: &Connection,
-    workspace_id: &str,
-    folder: Option<&str>,
-) -> Result<i64> {
-    connection
-        .query_row(
-            "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM task_lists \
-             WHERE workspaceId = ?1 AND folderId IS ?2",
-            params![workspace_id, folder],
-            |row| row.get(0),
-        )
-        .map_err(map_query_error)
-}
-
-/// The SQL `setKanbanColumn` runs.
-fn upsert_kanban_column(
-    tx: &Transaction,
-    task_id: &str,
-    column: Option<&str>,
-    now: &str,
-) -> Result<()> {
-    tx.execute(
-        "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt) \
-         VALUES (?1, '[]', '[]', ?2, ?3) \
-         ON CONFLICT(taskId) DO UPDATE SET \
-           kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt",
-        params![task_id, column, now],
-    )
-    .map_err(map_write_error)?;
-    Ok(())
-}
-
 // -- values -------------------------------------------------------------------
 
 /// Whether the app has run `identifier` on this database.
@@ -1170,60 +1043,6 @@ fn has_migration(connection: &Connection, identifier: &str) -> Result<bool> {
         "SELECT EXISTS(SELECT 1 FROM grdb_migrations WHERE identifier = ?1)",
         identifier,
     )
-}
-
-/// `WorkspaceStore.setWaiting`: the tag and the follow-up time, each only
-/// when given, and the task filed in Waiting on — leaving Today drops its
-/// place in the day. The follow-up task itself is the app's to make, on its
-/// next poll, so that it is made by one engine with one deterministic id.
-fn set_waiting(
-    tx: &Transaction,
-    task_id: &str,
-    waiting_on: Option<Option<String>>,
-    follow_up_at: Option<Option<String>>,
-    now: &str,
-) -> Result<()> {
-    if !has_migration(tx, WAITING_MIGRATION)? {
-        return Err(ToolError::new(
-            "This workspace predates Waiting on. Open an up-to-date Takt once to migrate it.",
-        ));
-    }
-    tx.execute(
-        "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, updatedAt) \
-         VALUES (?1, '[]', '[]', ?2) ON CONFLICT(taskId) DO NOTHING",
-        params![task_id, now],
-    )
-    .map_err(map_write_error)?;
-    tx.execute(
-        "UPDATE task_metadata SET \
-           focusRank = CASE WHEN kanbanColumn = 'today' THEN NULL ELSE focusRank END, \
-           kanbanColumn = ?2, updatedAt = ?3 \
-         WHERE taskId = ?1 AND kanbanColumn IS NOT ?2",
-        params![task_id, WAITING_COLUMN, now],
-    )
-    .map_err(map_write_error)?;
-    if let Some(tag) = waiting_on {
-        tx.execute(
-            "UPDATE task_metadata SET waitingOn = ?2, updatedAt = ?3 WHERE taskId = ?1",
-            params![task_id, tag, now],
-        )
-        .map_err(map_write_error)?;
-    }
-    if let Some(at) = follow_up_at {
-        tx.execute(
-            "UPDATE task_metadata SET waitingFollowUpAt = ?2, updatedAt = ?3 WHERE taskId = ?1",
-            params![task_id, at, now],
-        )
-        .map_err(map_write_error)?;
-    }
-    Ok(())
-}
-
-/// `WaitingFollowUp.normalizedTag`: trimmed, at most 40 characters, and
-/// nothing at all when empty.
-fn normalized_tag(tag: Option<&str>) -> Option<String> {
-    let trimmed = tag?.trim();
-    (!trimmed.is_empty()).then(|| trimmed.chars().take(40).collect())
 }
 
 /// A follow-up time as stored: UTC, whole minutes. Takes `2026-10-08 14:00`
@@ -1258,10 +1077,6 @@ fn parse_follow_up(text: &str) -> Result<String> {
     Ok(stored_string(minute))
 }
 
-fn new_id() -> String {
-    uuid::Uuid::new_v4().to_string().to_uppercase()
-}
-
 /// `WorkspaceStore.nonEmptyName`.
 fn non_empty(raw: &str, field: &str) -> Result<String> {
     let trimmed = raw.trim();
@@ -1288,10 +1103,6 @@ fn decode_links(json: Option<&str>) -> Vec<String> {
         .and_then(|json| serde_json::from_str(json).ok())
         .unwrap_or_default();
     normalized_links(&values)
-}
-
-fn encode_links(links: &[String]) -> String {
-    serde_json::to_string(links).unwrap_or_else(|_| "[]".into())
 }
 
 /// `setKanbanColumn`'s trim-to-nil.
