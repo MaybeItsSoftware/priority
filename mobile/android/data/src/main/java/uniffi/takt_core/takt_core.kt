@@ -681,6 +681,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_delete_folder(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_delete_list(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
@@ -723,6 +727,10 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_delete_folder(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_delete_list(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -869,6 +877,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_folder() and 0xFFFF) != 27954) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_list() and 0xFFFF) != 34244) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_task() and 0xFFFF) != 40901) {
@@ -1257,6 +1271,16 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Deletes a folder as one "Delete Folder" step; its lists move to the top.
+     */
+    fun `deleteFolder`(`id`: kotlin.String)
+    
+    /**
+     * Deletes a list and its tasks as one "Delete List" step.
+     */
+    fun `deleteList`(`id`: kotlin.String): DeletedList
+    
+    /**
      * Deletes a task and its subtree as one "Delete Task" step.
      */
     fun `deleteTask`(`id`: kotlin.String): DeletedTask
@@ -1398,6 +1422,41 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * Deletes a folder as one "Delete Folder" step; its lists move to the top.
+     */
+    @Throws(CoreException::class)override fun `deleteFolder`(`id`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_delete_folder(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Deletes a list and its tasks as one "Delete List" step.
+     */
+    @Throws(CoreException::class)override fun `deleteList`(`id`: kotlin.String): DeletedList {
+            return FfiConverterTypeDeletedList.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_delete_list(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
 
     
     /**
@@ -1572,6 +1631,55 @@ public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
 
     override fun write(value: CoreWorkspace, buf: ByteBuffer) {
         buf.putLong(lower(value))
+    }
+}
+
+
+
+/**
+ * What [`delete_list`] removed.
+ */
+data class DeletedList (
+    var `id`: kotlin.String
+    , 
+    var `name`: kotlin.String
+    , 
+    /**
+     * How many tasks went with it.
+     */
+    var `tasksDeleted`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDeletedList: FfiConverterRustBuffer<DeletedList> {
+    override fun read(buf: ByteBuffer): DeletedList {
+        return DeletedList(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DeletedList) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterUInt.allocationSize(value.`tasksDeleted`)
+    )
+
+    override fun write(value: DeletedList, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterUInt.write(value.`tasksDeleted`, buf)
     }
 }
 
@@ -1773,6 +1881,28 @@ sealed class CoreException: kotlin.Exception() {
             get() = "id=${ `id` }"
     }
     
+    class MissingList(
+        
+        val `id`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "id=${ `id` }"
+    }
+    
+    class MissingFolder(
+        
+        val `id`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "id=${ `id` }"
+    }
+    
+    class SystemListIsPermanent(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -1803,6 +1933,13 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             4 -> CoreException.MissingTask(
                 FfiConverterString.read(buf),
                 )
+            5 -> CoreException.MissingList(
+                FfiConverterString.read(buf),
+                )
+            6 -> CoreException.MissingFolder(
+                FfiConverterString.read(buf),
+                )
+            7 -> CoreException.SystemListIsPermanent()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -1829,6 +1966,20 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
                 + FfiConverterString.allocationSize(value.`id`)
             )
+            is CoreException.MissingList -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`id`)
+            )
+            is CoreException.MissingFolder -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`id`)
+            )
+            is CoreException.SystemListIsPermanent -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -1852,6 +2003,20 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             is CoreException.MissingTask -> {
                 buf.putInt(4)
                 FfiConverterString.write(value.`id`, buf)
+                Unit
+            }
+            is CoreException.MissingList -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`id`, buf)
+                Unit
+            }
+            is CoreException.MissingFolder -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`id`, buf)
+                Unit
+            }
+            is CoreException.SystemListIsPermanent -> {
+                buf.putInt(7)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

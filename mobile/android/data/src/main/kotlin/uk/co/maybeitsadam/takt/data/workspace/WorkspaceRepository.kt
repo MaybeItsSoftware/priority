@@ -242,11 +242,9 @@ class WorkspaceRepository(
     }
 
     /** Lists inside are kept (SET NULL moves them to the root); child folders cascade. */
+    /** Deletes a folder as one undo step; its lists move to the top. The Rust core's `lists::delete_folder`. */
     suspend fun deleteFolder(id: String) {
-        journalledWrite("Delete Folder") { db ->
-            db.folder(id) ?: fail(WorkspaceStoreError.MISSING_FOLDER)
-            db.execute("DELETE FROM list_folders WHERE id = ?", id)
-        }
+        coreWrite { it.deleteFolder(id) }
     }
 
     suspend fun updateList(id: String, name: String, colorHex: String?, now: Instant = now()) {
@@ -368,12 +366,9 @@ class WorkspaceRepository(
         }
     }
 
+    /** Deletes a list and its tasks as one undo step; the Inbox is permanent. The Rust core's `lists::delete_list`. */
     suspend fun deleteList(id: String) {
-        journalledWrite("Delete List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (list.isSystemList) fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
-            db.execute("DELETE FROM task_lists WHERE id = ?", id)
-        }
+        coreWrite { it.deleteList(id) }
     }
 
     // endregion
@@ -675,10 +670,23 @@ class WorkspaceRepository(
 
     /** Deletes a task and its subtree as one undo step: the Rust core's `tasks::delete_task`. */
     suspend fun deleteTask(id: String) {
-        try {
-            database.coreWrite(CORE_WRITTEN_TABLES) { it.deleteTask(id) }
-        } catch (missing: CoreException.MissingTask) {
-            fail(WorkspaceStoreError.MISSING_TASK)
+        coreWrite { it.deleteTask(id) }
+    }
+
+    /**
+     * Runs a write the Rust core makes, announcing every table it could have
+     * changed and turning the failures screens react to into the repository's
+     * own errors, so they see the same cases whichever side made the write.
+     */
+    private suspend fun <T> coreWrite(block: (uniffi.takt_core.CoreWorkspace) -> T): T = try {
+        database.coreWrite(CORE_WRITTEN_TABLES, block)
+    } catch (error: CoreException) {
+        when (error) {
+            is CoreException.MissingTask -> fail(WorkspaceStoreError.MISSING_TASK)
+            is CoreException.MissingList -> fail(WorkspaceStoreError.MISSING_LIST)
+            is CoreException.MissingFolder -> fail(WorkspaceStoreError.MISSING_FOLDER)
+            is CoreException.SystemListIsPermanent -> fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
+            else -> throw error
         }
     }
 

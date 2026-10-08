@@ -557,6 +557,16 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Deletes a folder as one "Delete Folder" step; its lists move to the top.
+     */
+    func deleteFolder(id: String) throws 
+    
+    /**
+     * Deletes a list and its tasks as one "Delete List" step.
+     */
+    func deleteList(id: String) throws  -> DeletedList
+    
+    /**
      * Deletes a task and its subtree as one "Delete Task" step.
      */
     func deleteTask(id: String) throws  -> DeletedTask
@@ -661,6 +671,31 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * Deletes a folder as one "Delete Folder" step; its lists move to the top.
+     */
+open func deleteFolder(id: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_delete_folder(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Deletes a list and its tasks as one "Delete List" step.
+     */
+open func deleteList(id: String)throws  -> DeletedList  {
+    return try  FfiConverterTypeDeletedList_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_delete_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
     
     /**
      * Deletes a task and its subtree as one "Delete Task" step.
@@ -796,6 +831,73 @@ public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt6
 }
 
 
+
+
+/**
+ * What [`delete_list`] removed.
+ */
+public struct DeletedList: Equatable, Hashable {
+    public var id: String
+    public var name: String
+    /**
+     * How many tasks went with it.
+     */
+    public var tasksDeleted: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String, 
+        /**
+         * How many tasks went with it.
+         */tasksDeleted: UInt32) {
+        self.id = id
+        self.name = name
+        self.tasksDeleted = tasksDeleted
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DeletedList: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDeletedList: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DeletedList {
+        return
+            try DeletedList(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                tasksDeleted: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DeletedList, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterUInt32.write(value.tasksDeleted, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeletedList_lift(_ buf: RustBuffer) throws -> DeletedList {
+    return try FfiConverterTypeDeletedList.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeletedList_lower(_ value: DeletedList) -> RustBuffer {
+    return FfiConverterTypeDeletedList.lower(value)
+}
 
 
 /**
@@ -1030,6 +1132,11 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case NoJournal
     case MissingTask(id: String
     )
+    case MissingList(id: String
+    )
+    case MissingFolder(id: String
+    )
+    case SystemListIsPermanent
 
     
 
@@ -1070,6 +1177,13 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 4: return .MissingTask(
             id: try FfiConverterString.read(from: &buf)
             )
+        case 5: return .MissingList(
+            id: try FfiConverterString.read(from: &buf)
+            )
+        case 6: return .MissingFolder(
+            id: try FfiConverterString.read(from: &buf)
+            )
+        case 7: return .SystemListIsPermanent
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1101,6 +1215,20 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(4))
             FfiConverterString.write(id, into: &buf)
             
+        
+        case let .MissingList(id):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(id, into: &buf)
+            
+        
+        case let .MissingFolder(id):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(id, into: &buf)
+            
+        
+        case .SystemListIsPermanent:
+            writeInt(&buf, Int32(7))
+        
         }
     }
 }
@@ -1256,6 +1384,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_delete_folder() != 27954) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_delete_list() != 34244) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_delete_task() != 40901) {

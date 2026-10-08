@@ -964,22 +964,13 @@ impl Workspace {
     /// cascade, and all of it comes back on undo. The Inbox is refused.
     pub fn delete_list(&self, list_id: &str) -> Result<Value> {
         self.journalled("Delete List", |tx, _now| {
-            let list = list_row(tx, list_id)?;
-            if list.system_role.is_some() {
-                return Err(ToolError::new(
-                    "The Inbox cannot be archived or deleted. You can rename it instead.",
-                ));
-            }
-            let tasks: i64 = tx
-                .query_row(
-                    "SELECT COUNT(*) FROM tasks WHERE listId = ?1",
-                    [&list.id],
-                    |row| row.get(0),
-                )
-                .map_err(map_query_error)?;
-            tx.execute("DELETE FROM task_lists WHERE id = ?1", [&list.id])
-                .map_err(map_write_error)?;
-            Ok(json!({ "deleted": list.id, "name": list.name, "tasks_deleted": tasks }))
+            // The write is the Rust core's, shared with the apps.
+            let deleted = takt_core::lists::delete_list(tx, list_id).map_err(map_core_error)?;
+            Ok(json!({
+                "deleted": deleted.id,
+                "name": deleted.name,
+                "tasks_deleted": deleted.tasks_deleted,
+            }))
         })
     }
 
@@ -1457,6 +1448,15 @@ fn map_core_error(error: takt_core::CoreError) -> ToolError {
             "The workspace has no undo journal to record into. Open Takt once, then try again.",
         ),
         missing @ takt_core::CoreError::MissingTask { .. } => ToolError::new(missing.to_string()),
+        takt_core::CoreError::MissingList { id } => ToolError::new(format!(
+            "No list with id {id}. workspace_tree lists the lists and their ids."
+        )),
+        takt_core::CoreError::MissingFolder { id } => ToolError::new(format!(
+            "No folder with id {id}. workspace_tree lists the folders and their ids."
+        )),
+        permanent @ takt_core::CoreError::SystemListIsPermanent => {
+            ToolError::new(permanent.to_string())
+        }
         other => ToolError::new(format!("Workspace write failed: {other}")),
     }
 }

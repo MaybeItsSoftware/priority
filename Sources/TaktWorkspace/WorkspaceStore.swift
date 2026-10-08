@@ -201,13 +201,11 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  /// Deletes a folder as one undo step. Its lists move to the sidebar root
+  /// (the schema's SET NULL) and folders inside it go with it. The write is
+  /// the Rust core's (`lists::delete_folder`).
   public func deleteFolder(id: String) throws {
-    try journalledWrite("Delete Folder") { db in
-      guard try ListFolder.fetchOne(db, key: id) != nil else { throw WorkspaceStoreError.missingFolder }
-      // Lists are intentionally retained: the schema's SET NULL relation moves
-      // them to the sidebar root. Child folders cascade with their parent.
-      try ListFolder.deleteOne(db, key: id)
-    }
+    try Self.mappingCoreErrors { _ = try core.deleteFolder(id: id) }
   }
 
   public func updateList(id: String, name: String, colorHex: String?, now: Date = .now) throws {
@@ -370,12 +368,10 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  /// Deletes a list and its tasks as one undo step; the Inbox is permanent.
+  /// The write is the Rust core's (`lists::delete_list`).
   public func deleteList(id: String) throws {
-    try journalledWrite("Delete List") { db in
-      guard let list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      guard !list.isSystemList else { throw WorkspaceStoreError.systemListIsPermanent }
-      try TaskList.deleteOne(db, key: id)
-    }
+    try Self.mappingCoreErrors { _ = try core.deleteList(id: id) }
   }
 
   public func outline(in listId: String, parentTaskId: String? = nil) throws -> [TaskOutlineItem] {
@@ -773,10 +769,23 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Deletes a task and its subtree as one undo step. The write is the Rust
   /// core's (`tasks::delete_task`), shared with Android and the CLI.
   public func deleteTask(id: String) throws {
+    try Self.mappingCoreErrors { _ = try core.deleteTask(id: id) }
+  }
+
+  /// Runs a call into the Rust core, turning the failures callers react to
+  /// into the store's own errors, so the screens that match on
+  /// `WorkspaceStoreError` see the same cases whichever side made the write.
+  static func mappingCoreErrors<T>(_ call: () throws -> T) throws -> T {
     do {
-      _ = try core.deleteTask(id: id)
-    } catch where error.coreFailure == .missingTask(id: id) {
-      throw WorkspaceStoreError.missingTask
+      return try call()
+    } catch {
+      switch error.coreFailure {
+      case .missingTask: throw WorkspaceStoreError.missingTask
+      case .missingList: throw WorkspaceStoreError.missingList
+      case .missingFolder: throw WorkspaceStoreError.missingFolder
+      case .systemListIsPermanent: throw WorkspaceStoreError.systemListIsPermanent
+      case .noJournal, .other, nil: throw error
+      }
     }
   }
 

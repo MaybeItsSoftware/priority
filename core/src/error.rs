@@ -14,6 +14,12 @@ pub enum CoreError {
     NoJournal,
     #[error("No task with id {id}.")]
     MissingTask { id: String },
+    #[error("No list with id {id}.")]
+    MissingList { id: String },
+    #[error("No folder with id {id}.")]
+    MissingFolder { id: String },
+    #[error("The Inbox cannot be archived or deleted. You can rename it instead.")]
+    SystemListIsPermanent,
 }
 
 impl From<rusqlite::Error> for CoreError {

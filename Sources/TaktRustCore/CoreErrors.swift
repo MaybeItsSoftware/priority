@@ -9,6 +9,9 @@ import Foundation
 /// to a particular failure rather than only report it.
 public enum CoreFailure: Equatable, Sendable {
   case missingTask(id: String)
+  case missingList(id: String)
+  case missingFolder(id: String)
+  case systemListIsPermanent
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
   case other
@@ -21,6 +24,9 @@ extension Error {
     guard let error = self as? CoreError else { return nil }
     switch error {
     case .MissingTask(let id): return .missingTask(id: id)
+    case .MissingList(let id): return .missingList(id: id)
+    case .MissingFolder(let id): return .missingFolder(id: id)
+    case .SystemListIsPermanent: return .systemListIsPermanent
     case .NoJournal: return .noJournal
     default: return .other
     }
