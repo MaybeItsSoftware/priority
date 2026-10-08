@@ -8998,6 +8998,36 @@ public func workspaceMigrations() -> [String]  {
 })
 }
 /**
+ * `clock` moved past `remote`, a stamp another device made, at `wall_ms`.
+ * Absent when either is not a stamp. `HybridLogicalClock.receiving`.
+ */
+public func hlcReceive(clock: String, remote: String, wallMs: Int64) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_hlc_receive(
+        FfiConverterString.lower(clock),
+        FfiConverterString.lower(remote),
+        FfiConverterInt64.lower(wallMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * The stamp for a local edit at `wall_ms`, after `clock` (absent before the
+ * first push, when the clock starts at zero on `device_id`). Absent when
+ * `clock` is not a stamp. `HybridLogicalClock.tick`, shared with the server
+ * through `takt-sync-rules`.
+ */
+public func hlcTick(clock: String?, deviceId: String, wallMs: Int64) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_hlc_tick(
+        FfiConverterOptionString.lower(clock),
+        FfiConverterString.lower(deviceId),
+        FfiConverterInt64.lower(wallMs),uniffiCallStatus
+    )
+})
+}
+/**
  * Why a candidate is not available in `context` at `now`; empty when it is.
  */
 public func availabilityReasons(candidate: Candidate, context: FocusContext, nowMs: Int64) -> [Unavailable]  {
@@ -9088,6 +9118,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_hlc_receive() != 32125) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_hlc_tick() != 54173) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_availability_reasons() != 63153) {

@@ -759,3 +759,25 @@ fn base64(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests;
+
+/// The stamp for a local edit at `wall_ms`, after `clock` (absent before the
+/// first push, when the clock starts at zero on `device_id`). Absent when
+/// `clock` is not a stamp. `HybridLogicalClock.tick`, shared with the server
+/// through `takt-sync-rules`.
+#[uniffi::export]
+pub fn hlc_tick(clock: Option<String>, device_id: String, wall_ms: i64) -> Option<String> {
+    let start = match clock {
+        Some(text) => takt_sync_rules::hlc::Hlc::parse(&text)?,
+        None => takt_sync_rules::hlc::Hlc::new(0, 0, device_id),
+    };
+    Some(start.tick(wall_ms).to_string())
+}
+
+/// `clock` moved past `remote`, a stamp another device made, at `wall_ms`.
+/// Absent when either is not a stamp. `HybridLogicalClock.receiving`.
+#[uniffi::export]
+pub fn hlc_receive(clock: String, remote: String, wall_ms: i64) -> Option<String> {
+    let local = takt_sync_rules::hlc::Hlc::parse(&clock)?;
+    let remote = takt_sync_rules::hlc::Hlc::parse(&remote)?;
+    Some(local.receiving(&remote, wall_ms).to_string())
+}

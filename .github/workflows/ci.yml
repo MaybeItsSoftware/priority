@@ -208,7 +208,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             core/target
-          key: core-${{ runner.os }}-${{ hashFiles('core/Cargo.lock') }}
+          key: core-${{ runner.os }}-${{ hashFiles('core/Cargo.lock', 'sync-server/Cargo.lock') }}
 
       - name: Check formatting
         run: cargo fmt --manifest-path core/Cargo.toml --check
@@ -218,6 +218,14 @@ jobs:
 
       - name: Test
         run: cargo test --manifest-path core/Cargo.toml
+
+      # The clock and merge the core shares with the sync server
+      # (sync-server/rules). Its tests need no database.
+      - name: Sync rules
+        run: |
+          cargo fmt --manifest-path sync-server/rules/Cargo.toml --check
+          cargo clippy --manifest-path sync-server/rules/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path sync-server/rules/Cargo.toml
 
   cli:
     runs-on: macos-15

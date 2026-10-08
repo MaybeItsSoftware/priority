@@ -681,6 +681,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_func_hlc_receive(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_hlc_tick(
+    ): Int
     external fun uniffi_takt_core_checksum_func_availability_reasons(
     ): Int
     external fun uniffi_takt_core_checksum_func_planned_block_seconds(
@@ -1273,6 +1277,10 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_migrations(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_hlc_receive(`clock`: RustBuffer.ByValue,`remote`: RustBuffer.ByValue,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_hlc_tick(`clock`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_availability_reasons(`candidate`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_planned_block_seconds(`candidate`: RustBuffer.ByValue,`requested`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1409,6 +1417,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_hlc_receive() and 0xFFFF) != 32125) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_hlc_tick() and 0xFFFF) != 54173) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_availability_reasons() and 0xFFFF) != 63153) {
@@ -11199,6 +11213,42 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_workspace_migrations(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * `clock` moved past `remote`, a stamp another device made, at `wall_ms`.
+         * Absent when either is not a stamp. `HybridLogicalClock.receiving`.
+         */ fun `hlcReceive`(`clock`: kotlin.String, `remote`: kotlin.String, `wallMs`: kotlin.Long): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_hlc_receive(
+    
+        
+        FfiConverterString.lower(`clock`),
+        FfiConverterString.lower(`remote`),
+        FfiConverterLong.lower(`wallMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The stamp for a local edit at `wall_ms`, after `clock` (absent before the
+         * first push, when the clock starts at zero on `device_id`). Absent when
+         * `clock` is not a stamp. `HybridLogicalClock.tick`, shared with the server
+         * through `takt-sync-rules`.
+         */ fun `hlcTick`(`clock`: kotlin.String?, `deviceId`: kotlin.String, `wallMs`: kotlin.Long): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_hlc_tick(
+    
+        
+        FfiConverterOptionalString.lower(`clock`),
+        FfiConverterString.lower(`deviceId`),
+        FfiConverterLong.lower(`wallMs`),_status)
 }
     )
     }

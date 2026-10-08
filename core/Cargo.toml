@@ -22,6 +22,10 @@ bindgen = ["uniffi/cli"]
 
 [dependencies]
 uniffi = "0.32"
+# The clock and merge the sync server uses, so a stamp is made one way
+# everywhere. It sits inside sync-server/ because Railway builds the server
+# from that directory alone.
+takt-sync-rules = { path = "../sync-server/rules" }
 chrono = "0.4"
 chrono-tz = "0.10"
 regex-lite = "0.1"

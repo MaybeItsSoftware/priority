@@ -2,7 +2,8 @@ package uk.co.maybeitsadam.takt.core
 
 /**
  * A hybrid logical clock: wall time where the devices agree, and a counter to
- * break ties where they do not. Port of Sources/TaktSync/HybridLogicalClock.swift.
+ * break ties where they do not. Its rules are the sync server's (`takt-sync-rules`),
+ * reached through the Rust core, as on the Mac and iPhone.
  *
  * Rendered as `"<ms:013d>-<counter:04d>-<deviceId>"`. Every part is fixed
  * width, so string comparison is clock order; the server compares them as
@@ -16,25 +17,15 @@ data class HybridLogicalClock(
 
     override fun toString(): String = "%013d-%04d-".format(milliseconds, counter) + deviceId
 
-    /** The stamp for a local edit made at [wallMilliseconds]. */
+    /** The stamp for a local edit made at [wallMilliseconds]: the Rust core's `hlc_tick`, the server's own clock. */
     fun tick(wallMilliseconds: Long): HybridLogicalClock =
-        if (wallMilliseconds > milliseconds) {
-            HybridLogicalClock(wallMilliseconds, 0, deviceId)
-        } else {
-            HybridLogicalClock(milliseconds, counter + 1, deviceId)
-        }
+        uniffi.takt_core.hlcTick(toString(), deviceId, wallMilliseconds)?.let(::parse)
+            ?: error("A clock's own text is always a stamp: $this")
 
-    /** Moves past a clock received from another device, so the next local edit sorts after it. */
-    fun receiving(remote: HybridLogicalClock, wallMilliseconds: Long): HybridLogicalClock {
-        val ms = maxOf(milliseconds, remote.milliseconds, wallMilliseconds)
-        val next = when {
-            ms == milliseconds && ms == remote.milliseconds -> maxOf(counter, remote.counter) + 1
-            ms == milliseconds -> counter + 1
-            ms == remote.milliseconds -> remote.counter + 1
-            else -> 0
-        }
-        return HybridLogicalClock(ms, next, deviceId)
-    }
+    /** Moves past a clock received from another device, so the next local edit sorts after it: `hlc_receive`. */
+    fun receiving(remote: HybridLogicalClock, wallMilliseconds: Long): HybridLogicalClock =
+        uniffi.takt_core.hlcReceive(toString(), remote.toString(), wallMilliseconds)?.let(::parse)
+            ?: error("A clock's own text is always a stamp: $this")
 
     override fun compareTo(other: HybridLogicalClock): Int = toString().compareTo(other.toString())
 

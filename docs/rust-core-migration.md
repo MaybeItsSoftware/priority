@@ -138,13 +138,19 @@ covered the old copies pass against it.
    18.2 ms: the core's candidate read is 7.1 ms against Kotlin's 31.9 ms,
    while ranking 2,496 candidates costs 6.8 ms against 3.8 ms, most of it
    the crossing.
-7. **Sync engine. The database half done 2026-10-08.** `core/src/sync.rs`
-   holds the pairing state, the snapshot, the outbox coalesced per row,
-   acknowledging, and applying a pull (local edits win until pushed,
-   unique-key rivals resolved the same way on every device, a second
-   workspace folded in, orphans removed). The Mac, iPhone and Android call
-   it. What is left in the clients is the transport and the HLC stamping of
-   a push; sharing the merge with `sync-server` is the remaining part.
+7. **Sync engine. Done 2026-10-08.** `core/src/sync.rs` holds the pairing
+   state, the snapshot, the outbox coalesced per row, acknowledging, and
+   applying a pull (local edits win until pushed, unique-key rivals resolved
+   the same way on every device, a second workspace folded in, orphans
+   removed). The Mac, iPhone and Android call it. The hybrid logical clock
+   and the server's merge are one crate, `takt-sync-rules`, in
+   `sync-server/rules/`: the server merges with it, and the core depends on
+   it and exports `hlc_tick` and `hlc_receive`, which Swift's and Kotlin's
+   `HybridLogicalClock` wrap. It lives inside `sync-server/` because Railway
+   builds the server from that directory alone; the server's `Cargo.toml`
+   makes it a workspace member, so both share one lockfile. What stays in
+   each client is the transport: HTTP, auth and the long poll, which are
+   platform code by nature.
 8. **Remove the copies.** Delete GRDB from the package, the Kotlin
    repository bodies and the CLI's store code. `TaktWorkspace` becomes a thin
    Swift wrapper over the generated bindings.

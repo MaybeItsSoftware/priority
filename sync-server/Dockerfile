@@ -7,6 +7,9 @@ WORKDIR /build
 # Dependencies first, against stub sources, so a source-only change reuses
 # this layer instead of recompiling sqlx, axum and tokio.
 COPY Cargo.toml Cargo.lock ./
+# The rules the server shares with the clients, a path dependency in this
+# directory, so it is part of the build context.
+COPY rules ./rules
 RUN mkdir src \
  && echo 'fn main() {}' > src/main.rs \
  && touch src/lib.rs \

@@ -1,0 +1,13 @@
+[package]
+name = "takt-sync-rules"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "The sync rules the server and every client share: the hybrid logical clock and the per-column merge. See docs/sync.md."
+
+# It lives inside sync-server/ because Railway builds the server from that
+# directory alone; the Rust core (core/) reaches it by path from outside.
+
+[dependencies]
+serde_json = "1"
+uuid = "1"

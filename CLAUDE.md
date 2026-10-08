@@ -168,10 +168,12 @@ After changing anything under `mobile/android` (Gradle builds share `/tmp/priori
 After changing `sync-server/`:
 
 ```bash
-cargo test --manifest-path sync-server/Cargo.toml   # integration tests need a local Postgres; see sync-server/README.md
-cargo clippy --manifest-path sync-server/Cargo.toml --all-targets -- -D warnings
-cargo fmt --manifest-path sync-server/Cargo.toml --check
+cargo test --manifest-path sync-server/Cargo.toml --workspace   # integration tests need a local Postgres; see sync-server/README.md
+cargo clippy --manifest-path sync-server/Cargo.toml --workspace --all-targets -- -D warnings
+cargo fmt --manifest-path sync-server/Cargo.toml --all --check
 ```
+
+`sync-server/rules/` (`takt-sync-rules`) is the clock and the merge, and the Rust core depends on it, so a change there also needs the core's and clients' gates above. It sits inside `sync-server/` because Railway builds from that directory alone.
 
 ## Working Loop
 

@@ -268,3 +268,25 @@ fn base64_matches_the_standard_alphabet() {
     assert_eq!(base64(b"Ma"), "TWE=");
     assert_eq!(base64(b"M"), "TQ==");
 }
+
+#[test]
+fn the_clock_is_the_servers() {
+    assert_eq!(
+        hlc_tick(None, "MAC".into(), 1_000).as_deref(),
+        Some("0000000001000-0000-MAC")
+    );
+    assert_eq!(
+        hlc_tick(Some("0000000001000-0000-MAC".into()), "MAC".into(), 900).as_deref(),
+        Some("0000000001000-0001-MAC")
+    );
+    assert_eq!(
+        hlc_receive(
+            "0000000001000-0001-MAC".into(),
+            "0000000002000-0005-PHONE".into(),
+            1_500
+        )
+        .as_deref(),
+        Some("0000000002000-0006-MAC")
+    );
+    assert_eq!(hlc_tick(Some("junk".into()), "MAC".into(), 1), None);
+}

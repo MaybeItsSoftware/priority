@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// A hybrid logical clock: wall time where the devices agree, and a counter to
 /// break ties where they do not, so every edit gets a timestamp no other edit
@@ -29,29 +30,23 @@ public struct HybridLogicalClock: Comparable, Sendable, CustomStringConvertible 
     String(format: "%013lld-%04d-", milliseconds, counter) + deviceId
   }
 
-  /// The stamp for a local edit made at `wallMilliseconds`.
+  /// The stamp for a local edit made at `wallMilliseconds`: the Rust core's
+  /// `hlc_tick`, which is the sync server's own clock (`takt-sync-rules`).
   public func tick(wallMilliseconds: Int64) -> HybridLogicalClock {
-    if wallMilliseconds > milliseconds {
-      return HybridLogicalClock(milliseconds: wallMilliseconds, counter: 0, deviceId: deviceId)
-    }
-    return HybridLogicalClock(milliseconds: milliseconds, counter: counter + 1, deviceId: deviceId)
+    guard let next = hlcTick(clock: description, deviceId: deviceId, wallMs: wallMilliseconds).flatMap(Self.init)
+    else { preconditionFailure("A clock's own text is always a stamp: \(description)") }
+    return next
   }
 
   /// This clock moved past one received from another device, so the next local
-  /// edit sorts after everything this device has seen.
+  /// edit sorts after everything this device has seen. The Rust core's
+  /// `hlc_receive`.
   public func receiving(_ remote: HybridLogicalClock, wallMilliseconds: Int64) -> HybridLogicalClock {
-    let ms = max(milliseconds, remote.milliseconds, wallMilliseconds)
-    let counter: Int
-    if ms == milliseconds && ms == remote.milliseconds {
-      counter = max(self.counter, remote.counter) + 1
-    } else if ms == milliseconds {
-      counter = self.counter + 1
-    } else if ms == remote.milliseconds {
-      counter = remote.counter + 1
-    } else {
-      counter = 0
-    }
-    return HybridLogicalClock(milliseconds: ms, counter: counter, deviceId: deviceId)
+    guard
+      let next = hlcReceive(clock: description, remote: remote.description, wallMs: wallMilliseconds)
+        .flatMap(Self.init)
+    else { preconditionFailure("A clock's own text is always a stamp: \(description)") }
+    return next
   }
 
   public static func < (lhs: HybridLogicalClock, rhs: HybridLogicalClock) -> Bool {

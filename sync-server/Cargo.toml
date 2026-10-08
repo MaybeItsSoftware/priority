@@ -9,7 +9,14 @@ publish = false
 name = "takt-sync-server"
 path = "src/main.rs"
 
+# The server and the rules it shares with the clients build as one, against
+# one lockfile and one target directory.
+[workspace]
+members = [".", "rules"]
+
 [dependencies]
+# The rules the server shares with every client, through the Rust core.
+takt-sync-rules = { path = "rules" }
 axum = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

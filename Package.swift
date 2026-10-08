@@ -346,6 +346,8 @@ let package = Package(
       name: "TaktSync",
       dependencies: [
         "TaktWorkspace",
+        // The clock is the Rust core's, shared with the sync server.
+        "TaktRustCore",
         .product(name: "Auth", package: "supabase-swift"),
       ],
       path: "Sources/TaktSync"

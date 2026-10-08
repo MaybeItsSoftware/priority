@@ -13,7 +13,8 @@ pub mod changes;
 pub mod config;
 pub mod devices;
 pub mod error;
-pub mod merge;
+/// The merge rule, shared with every client through `takt-sync-rules`.
+pub use takt_sync_rules::merge;
 pub mod notify;
 pub mod pages;
 pub mod push;

@@ -2114,9 +2114,18 @@ dependencies = [
  "rusqlite",
  "serde_json",
  "sha2",
+ "takt-sync-rules",
  "thiserror 2.0.20",
  "unicode-normalization",
  "uniffi",
+ "uuid",
+]
+
+[[package]]
+name = "takt-sync-rules"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
  "uuid",
 ]
 

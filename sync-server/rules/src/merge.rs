@@ -158,19 +158,9 @@ pub fn row_hlc(col_hlc: &BTreeMap<String, String>, deleted_hlc: Option<&str>) ->
         .map(str::to_owned)
 }
 
-/// Whether `hlc` has the `"<ms:013d>-<counter:04d>-<deviceId>"` shape.
-///
-/// Every comparison above is plain string order, which is only the clock's
-/// order when the numeric parts are fixed width. A malformed stamp would not
-/// fail; it would silently win or lose against everything, so it is refused
-/// at the door instead.
+/// Whether `hlc` is a well-formed stamp. See [`crate::hlc::is_valid`].
 pub fn is_valid_hlc(hlc: &str) -> bool {
-    let bytes = hlc.as_bytes();
-    bytes.len() > 19
-        && bytes[..13].iter().all(u8::is_ascii_digit)
-        && bytes[13] == b'-'
-        && bytes[14..18].iter().all(u8::is_ascii_digit)
-        && bytes[18] == b'-'
+    crate::hlc::is_valid(hlc)
 }
 
 #[cfg(test)]
