@@ -464,6 +464,7 @@ class WorkspaceRepository(
     } catch (error: CoreException) {
         when (error) {
             is CoreException.MissingTask -> fail(WorkspaceStoreError.MISSING_TASK)
+            is CoreException.MissingDaily -> fail(WorkspaceStoreError.MISSING_DAILY)
             is CoreException.MissingList -> fail(WorkspaceStoreError.MISSING_LIST)
             is CoreException.MissingFolder -> fail(WorkspaceStoreError.MISSING_FOLDER)
             is CoreException.SystemListIsPermanent -> fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
@@ -839,25 +840,33 @@ class WorkspaceRepository(
     }
 
     /** Makes the task a daily, or returns (and revives) the one it already has. */
+    /** Makes a task a daily: the Rust core's `dailies::make_daily`. */
     suspend fun makeDaily(
         taskId: String,
         weekdays: Set<Int> = (1..7).toSet(),
         intervalDays: Int? = null,
         targetSeconds: Int? = null,
         now: Instant = now(),
-    ): WorkspaceDaily = journalledWrite("Make Daily") { db ->
-        makeDailyRecord(db, taskId, weekdays, intervalDays, targetSeconds, now)
+    ): WorkspaceDaily {
+        val id = coreWrite {
+            it.makeDaily(
+                taskId, weekdays.sorted().map { day -> day.toUInt() }, intervalDays?.toLong(),
+                targetSeconds?.toLong(), now.toEpochMilli(),
+            )
+        }
+        return database.read { it.daily(id) } ?: fail(WorkspaceStoreError.MISSING_DAILY)
     }
 
     /** Archives rather than deletes, so logged contributions keep a parent. */
     suspend fun archiveDaily(taskId: String, now: Instant = now()) {
-        journalledWrite("Archive Daily") { db -> archiveDailyRecord(db, taskId, now) }
+        coreWrite { it.archiveDaily(taskId, now.toEpochMilli()) }
     }
 
     /**
      * Edits a daily's schedule. An argument left as [FieldEdit.Keep] keeps its value;
      * `intervalDays = FieldEdit.To(null)` switches back to weekdays.
      */
+    /** Edits a daily: the Rust core's `dailies::update_daily`. */
     suspend fun updateDaily(
         id: String,
         weekdays: Set<Int>? = null,
@@ -865,44 +874,34 @@ class WorkspaceRepository(
         targetSeconds: FieldEdit<Int?> = FieldEdit.Keep,
         now: Instant = now(),
     ) {
-        journalledWrite("Edit Daily") { db ->
-            var daily = db.daily(id) ?: return@journalledWrite
-            if (weekdays != null && weekdays.isNotEmpty()) {
-                daily = daily.copy(activeWeekdaysMask = WorkspaceDaily.mask(weekdays))
-            }
-            if (intervalDays is FieldEdit.To) {
-                val interval = intervalDays.value?.coerceIn(1, 366)
-                daily = daily.copy(
-                    intervalDays = interval,
-                    intervalAnchor = if (intervalDays.value == null) null else (daily.intervalAnchor ?: now),
-                )
-            }
-            if (targetSeconds is FieldEdit.To) daily = daily.copy(targetSeconds = targetSeconds.value)
-            db.update(daily.copy(updatedAt = now))
-        }
+        val edit = uniffi.takt_core.DailyEdit(
+            weekdays = weekdays?.sorted()?.map { it.toUInt() },
+            setInterval = intervalDays is FieldEdit.To,
+            intervalDays = (intervalDays as? FieldEdit.To)?.value?.toLong(),
+            setTarget = targetSeconds is FieldEdit.To,
+            targetSeconds = (targetSeconds as? FieldEdit.To)?.value?.toLong(),
+        )
+        coreWrite { it.updateDaily(id, edit, now.toEpochMilli()) }
     }
 
     /** Records progress for today, accumulating onto any contribution already logged. */
+    /** Logs progress on a daily for the day [now] falls on in [zone]: the Rust core's `dailies::log_contribution`. */
     suspend fun logContribution(
         dailyId: String,
         seconds: Int = 0,
         complete: Boolean = true,
         now: Instant = now(),
         zone: ZoneId = this.zone,
-    ): DailyContribution = journalledWrite("Log Daily") { db ->
-        val daily = db.daily(dailyId) ?: fail(WorkspaceStoreError.MISSING_DAILY)
-        recordContribution(db, daily, seconds, complete, now, zone)
+    ): DailyContribution {
+        val id = coreWrite { it.logContribution(dailyId, seconds.toLong(), complete, now.toEpochMilli(), zone.id) }
+        return database.read { db ->
+            db.queryOne("SELECT * FROM daily_contributions WHERE id = ?", id) { it.toContribution() }
+        } ?: fail(WorkspaceStoreError.MISSING_DAILY)
     }
 
     /** Un-ticks a day without discarding the time already logged against it. */
     suspend fun clearContribution(dailyId: String, day: Instant = now(), zone: ZoneId = this.zone) {
-        val key = DailyContribution.dayKey(day, zone)
-        journalledWrite("Clear Daily") { db ->
-            val contribution = db.queryOne(
-                "SELECT * FROM daily_contributions WHERE dailyId = ? AND dayKey = ?", dailyId, key,
-            ) { it.toContribution() } ?: return@journalledWrite
-            db.update(contribution.copy(completedAt = null))
-        }
+        coreWrite { it.clearContribution(dailyId, day.toEpochMilli(), zone.id) }
     }
 
     /** Contributions over the last [days] days ending on [endingOn], oldest first. */

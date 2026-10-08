@@ -13,6 +13,7 @@ use rusqlite::Connection;
 
 use crate::CoreError;
 use crate::conditions;
+use crate::dailies::{self, DailyEdit};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList};
 use crate::tasks::{self, DeletedTask, NewTask};
@@ -333,6 +334,68 @@ impl CoreWorkspace {
     ) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Change Status", |tx| {
             tasks::set_status(tx, &task_id, &status, now_ms, &zone)
+        })
+    }
+
+    /// Makes a task a daily as one "Make Daily" step; returns the daily's id.
+    pub fn make_daily(
+        &self,
+        task_id: String,
+        weekdays: Vec<u32>,
+        interval_days: Option<i64>,
+        target_seconds: Option<i64>,
+        now_ms: i64,
+    ) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "Make Daily", |tx| {
+            dailies::make_daily(
+                tx,
+                &task_id,
+                &weekdays,
+                interval_days,
+                target_seconds,
+                now_ms,
+            )
+        })
+    }
+
+    /// Archives a task's daily as one "Archive Daily" step.
+    pub fn archive_daily(&self, task_id: String, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Archive Daily", |tx| {
+            dailies::archive_daily(tx, &task_id, now_ms)
+        })
+    }
+
+    /// Edits a daily as one "Edit Daily" step.
+    pub fn update_daily(&self, id: String, edit: DailyEdit, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Daily", |tx| {
+            dailies::update_daily(tx, &id, &edit, now_ms)
+        })
+    }
+
+    /// Logs progress on a daily as one "Log Daily" step; returns the
+    /// contribution's id.
+    pub fn log_contribution(
+        &self,
+        daily_id: String,
+        seconds: i64,
+        complete: bool,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "Log Daily", |tx| {
+            dailies::log_contribution(tx, &daily_id, seconds, complete, now_ms, &zone)
+        })
+    }
+
+    /// Un-ticks a day of a daily as one "Clear Daily" step.
+    pub fn clear_contribution(
+        &self,
+        daily_id: String,
+        day_ms: i64,
+        zone: String,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Clear Daily", |tx| {
+            dailies::clear_contribution(tx, &daily_id, day_ms, &zone)
         })
     }
 

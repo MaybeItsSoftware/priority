@@ -589,9 +589,19 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Archives a task's daily as one "Archive Daily" step.
+     */
+    func archiveDaily(taskId: String, nowMs: Int64) throws 
+    
+    /**
      * Ranks tasks in Today's focus order as one "Reorder Today" step.
      */
     func arrangeDay(orderedTaskIds: [String], nowMs: Int64) throws 
+    
+    /**
+     * Un-ticks a day of a daily as one "Clear Daily" step.
+     */
+    func clearContribution(dailyId: String, dayMs: Int64, zone: String) throws 
     
     /**
      * Clears the focus order as one "Clear Focus Order" step.
@@ -642,6 +652,17 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     func indentTask(id: String, nowMs: Int64) throws 
+    
+    /**
+     * Logs progress on a daily as one "Log Daily" step; returns the
+     * contribution's id.
+     */
+    func logContribution(dailyId: String, seconds: Int64, complete: Bool, nowMs: Int64, zone: String) throws  -> String
+    
+    /**
+     * Makes a task a daily as one "Make Daily" step; returns the daily's id.
+     */
+    func makeDaily(taskId: String, weekdays: [UInt32], intervalDays: Int64?, targetSeconds: Int64?, nowMs: Int64) throws  -> String
     
     /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
@@ -772,6 +793,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func unpinTask(taskId: String, nowMs: Int64) throws 
     
     /**
+     * Edits a daily as one "Edit Daily" step.
+     */
+    func updateDaily(id: String, edit: DailyEdit, nowMs: Int64) throws 
+    
+    /**
      * Sets a list's name and colour as one "Edit List" step.
      */
     func updateList(id: String, name: String, colourHex: String?, nowMs: Int64) throws 
@@ -847,6 +873,19 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 
     
     /**
+     * Archives a task's daily as one "Archive Daily" step.
+     */
+open func archiveDaily(taskId: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_archive_daily(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Ranks tasks in Today's focus order as one "Reorder Today" step.
      */
 open func arrangeDay(orderedTaskIds: [String], nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -855,6 +894,20 @@ open func arrangeDay(orderedTaskIds: [String], nowMs: Int64)throws   {try rustCa
             self.uniffiCloneHandle(),
         FfiConverterSequenceString.lower(orderedTaskIds),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Un-ticks a day of a daily as one "Clear Daily" step.
+     */
+open func clearContribution(dailyId: String, dayMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_clear_contribution(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(dailyId),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 }
 }
@@ -995,6 +1048,41 @@ open func indentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(Ff
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Logs progress on a daily as one "Log Daily" step; returns the
+     * contribution's id.
+     */
+open func logContribution(dailyId: String, seconds: Int64, complete: Bool, nowMs: Int64, zone: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_log_contribution(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(dailyId),
+        FfiConverterInt64.lower(seconds),
+        FfiConverterBool.lower(complete),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Makes a task a daily as one "Make Daily" step; returns the daily's id.
+     */
+open func makeDaily(taskId: String, weekdays: [UInt32], intervalDays: Int64?, targetSeconds: Int64?, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_make_daily(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterSequenceUInt32.lower(weekdays),
+        FfiConverterOptionInt64.lower(intervalDays),
+        FfiConverterOptionInt64.lower(targetSeconds),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -1348,6 +1436,20 @@ open func unpinTask(taskId: String, nowMs: Int64)throws   {try rustCallWithError
 }
     
     /**
+     * Edits a daily as one "Edit Daily" step.
+     */
+open func updateDaily(id: String, edit: DailyEdit, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_update_daily(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterTypeDailyEdit_lower(edit),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Sets a list's name and colour as one "Edit List" step.
      */
 open func updateList(id: String, name: String, colourHex: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1481,6 +1583,88 @@ public func FfiConverterTypeCreatedItem_lift(_ buf: RustBuffer) throws -> Create
 #endif
 public func FfiConverterTypeCreatedItem_lower(_ value: CreatedItem) -> RustBuffer {
     return FfiConverterTypeCreatedItem.lower(value)
+}
+
+
+/**
+ * What [`update_daily`] changes. Each field left `None` keeps what is there;
+ * the `set_` flags let a caller clear the interval or the target.
+ */
+public struct DailyEdit: Equatable, Hashable {
+    /**
+     * Ignored when empty.
+     */
+    public var weekdays: [UInt32]?
+    public var setInterval: Bool
+    /**
+     * Clamped to 1 to 366 days.
+     */
+    public var intervalDays: Int64?
+    public var setTarget: Bool
+    public var targetSeconds: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Ignored when empty.
+         */weekdays: [UInt32]?, setInterval: Bool, 
+        /**
+         * Clamped to 1 to 366 days.
+         */intervalDays: Int64?, setTarget: Bool, targetSeconds: Int64?) {
+        self.weekdays = weekdays
+        self.setInterval = setInterval
+        self.intervalDays = intervalDays
+        self.setTarget = setTarget
+        self.targetSeconds = targetSeconds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DailyEdit: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDailyEdit: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DailyEdit {
+        return
+            try DailyEdit(
+                weekdays: FfiConverterOptionSequenceUInt32.read(from: &buf), 
+                setInterval: FfiConverterBool.read(from: &buf), 
+                intervalDays: FfiConverterOptionInt64.read(from: &buf), 
+                setTarget: FfiConverterBool.read(from: &buf), 
+                targetSeconds: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DailyEdit, into buf: inout [UInt8]) {
+        FfiConverterOptionSequenceUInt32.write(value.weekdays, into: &buf)
+        FfiConverterBool.write(value.setInterval, into: &buf)
+        FfiConverterOptionInt64.write(value.intervalDays, into: &buf)
+        FfiConverterBool.write(value.setTarget, into: &buf)
+        FfiConverterOptionInt64.write(value.targetSeconds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDailyEdit_lift(_ buf: RustBuffer) throws -> DailyEdit {
+    return try FfiConverterTypeDailyEdit.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDailyEdit_lower(_ value: DailyEdit) -> RustBuffer {
+    return FfiConverterTypeDailyEdit.lower(value)
 }
 
 
@@ -1926,6 +2110,8 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case NoJournal
     case MissingTask(id: String
     )
+    case MissingDaily(id: String
+    )
     case MissingList(id: String
     )
     case MissingFolder(id: String
@@ -1977,20 +2163,23 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 4: return .MissingTask(
             id: try FfiConverterString.read(from: &buf)
             )
-        case 5: return .MissingList(
+        case 5: return .MissingDaily(
             id: try FfiConverterString.read(from: &buf)
             )
-        case 6: return .MissingFolder(
+        case 6: return .MissingList(
             id: try FfiConverterString.read(from: &buf)
             )
-        case 7: return .SystemListIsPermanent
-        case 8: return .EmptyName
-        case 9: return .InvalidFolderMove
-        case 10: return .InvalidCondition
-        case 11: return .InvalidStatus(
+        case 7: return .MissingFolder(
+            id: try FfiConverterString.read(from: &buf)
+            )
+        case 8: return .SystemListIsPermanent
+        case 9: return .EmptyName
+        case 10: return .InvalidFolderMove
+        case 11: return .InvalidCondition
+        case 12: return .InvalidStatus(
             status: try FfiConverterString.read(from: &buf)
             )
-        case 12: return .InvalidTaskMove
+        case 13: return .InvalidTaskMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -2023,39 +2212,44 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             FfiConverterString.write(id, into: &buf)
             
         
-        case let .MissingList(id):
+        case let .MissingDaily(id):
             writeInt(&buf, Int32(5))
             FfiConverterString.write(id, into: &buf)
             
         
-        case let .MissingFolder(id):
+        case let .MissingList(id):
             writeInt(&buf, Int32(6))
             FfiConverterString.write(id, into: &buf)
             
         
-        case .SystemListIsPermanent:
+        case let .MissingFolder(id):
             writeInt(&buf, Int32(7))
+            FfiConverterString.write(id, into: &buf)
+            
         
-        
-        case .EmptyName:
+        case .SystemListIsPermanent:
             writeInt(&buf, Int32(8))
         
         
-        case .InvalidFolderMove:
+        case .EmptyName:
             writeInt(&buf, Int32(9))
         
         
-        case .InvalidCondition:
+        case .InvalidFolderMove:
             writeInt(&buf, Int32(10))
         
         
-        case let .InvalidStatus(status):
+        case .InvalidCondition:
             writeInt(&buf, Int32(11))
+        
+        
+        case let .InvalidStatus(status):
+            writeInt(&buf, Int32(12))
             FfiConverterString.write(status, into: &buf)
             
         
         case .InvalidTaskMove:
-            writeInt(&buf, Int32(12))
+            writeInt(&buf, Int32(13))
         
         }
     }
@@ -2121,6 +2315,55 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
         case 1: return try FfiConverterString.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionSequenceUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt32]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceUInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt32]
+
+    public static func write(_ value: [UInt32], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterUInt32.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt32] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UInt32]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterUInt32.read(from: &buf))
+        }
+        return seq
     }
 }
 
@@ -2238,7 +2481,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_archive_daily() != 52136) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_arrange_day() != 44382) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_clear_contribution() != 5187) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order() != 51024) {
@@ -2269,6 +2518,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_indent_task() != 14168) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_log_contribution() != 57143) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_make_daily() != 20074) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_move_folder() != 35092) {
@@ -2344,6 +2599,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_unpin_task() != 59060) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_update_daily() != 13413) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_update_list() != 5208) {

@@ -9,6 +9,7 @@ import Foundation
 /// to a particular failure rather than only report it.
 public enum CoreFailure: Equatable, Sendable {
   case missingTask(id: String)
+  case missingDaily(id: String)
   case missingList(id: String)
   case missingFolder(id: String)
   case systemListIsPermanent
@@ -28,6 +29,7 @@ extension Error {
     guard let error = self as? CoreError else { return nil }
     switch error {
     case .MissingTask(let id): return .missingTask(id: id)
+    case .MissingDaily(let id): return .missingDaily(id: id)
     case .MissingList(let id): return .missingList(id: id)
     case .MissingFolder(let id): return .missingFolder(id: id)
     case .SystemListIsPermanent: return .systemListIsPermanent

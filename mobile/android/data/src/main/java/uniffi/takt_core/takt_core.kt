@@ -681,7 +681,11 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_archive_daily(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_arrange_day(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_clear_contribution(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order(
     ): Int
@@ -702,6 +706,10 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_indent_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_log_contribution(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_make_daily(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_folder(
     ): Int
@@ -753,6 +761,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_unpin_task(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_update_daily(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_list(
     ): Int
     external fun uniffi_takt_core_checksum_constructor_coreworkspace_open(
@@ -783,7 +793,11 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_archive_daily(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_arrange_day(`ptr`: Long,`orderedTaskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_clear_contribution(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_clear_focus_order(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -805,6 +819,10 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_indent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_log_contribution(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`seconds`: Long,`complete`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_make_daily(`ptr`: Long,`taskId`: RustBuffer.ByValue,`weekdays`: RustBuffer.ByValue,`intervalDays`: RustBuffer.ByValue,`targetSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_move_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_move_folder_within_siblings(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -854,6 +872,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_undoable_label(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_unpin_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_update_daily(`ptr`: Long,`id`: RustBuffer.ByValue,`edit`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_update_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`colourHex`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -991,7 +1011,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_archive_daily() and 0xFFFF) != 52136) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_arrange_day() and 0xFFFF) != 44382) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_clear_contribution() and 0xFFFF) != 5187) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order() and 0xFFFF) != 51024) {
@@ -1022,6 +1048,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_indent_task() and 0xFFFF) != 14168) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_log_contribution() and 0xFFFF) != 57143) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_make_daily() and 0xFFFF) != 20074) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_folder() and 0xFFFF) != 35092) {
@@ -1097,6 +1129,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_unpin_task() and 0xFFFF) != 59060) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_daily() and 0xFFFF) != 13413) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_list() and 0xFFFF) != 5208) {
@@ -1513,9 +1548,19 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Archives a task's daily as one "Archive Daily" step.
+     */
+    fun `archiveDaily`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
      * Ranks tasks in Today's focus order as one "Reorder Today" step.
      */
     fun `arrangeDay`(`orderedTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
+    
+    /**
+     * Un-ticks a day of a daily as one "Clear Daily" step.
+     */
+    fun `clearContribution`(`dailyId`: kotlin.String, `dayMs`: kotlin.Long, `zone`: kotlin.String)
     
     /**
      * Clears the focus order as one "Clear Focus Order" step.
@@ -1566,6 +1611,17 @@ public interface CoreWorkspaceInterface {
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     fun `indentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Logs progress on a daily as one "Log Daily" step; returns the
+     * contribution's id.
+     */
+    fun `logContribution`(`dailyId`: kotlin.String, `seconds`: kotlin.Long, `complete`: kotlin.Boolean, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String
+    
+    /**
+     * Makes a task a daily as one "Make Daily" step; returns the daily's id.
+     */
+    fun `makeDaily`(`taskId`: kotlin.String, `weekdays`: List<kotlin.UInt>, `intervalDays`: kotlin.Long?, `targetSeconds`: kotlin.Long?, `nowMs`: kotlin.Long): kotlin.String
     
     /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
@@ -1696,6 +1752,11 @@ public interface CoreWorkspaceInterface {
     fun `unpinTask`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * Edits a daily as one "Edit Daily" step.
+     */
+    fun `updateDaily`(`id`: kotlin.String, `edit`: DailyEdit, `nowMs`: kotlin.Long)
+    
+    /**
      * Sets a list's name and colour as one "Edit List" step.
      */
     fun `updateList`(`id`: kotlin.String, `name`: kotlin.String, `colourHex`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -1809,6 +1870,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Archives a task's daily as one "Archive Daily" step.
+     */
+    @Throws(CoreException::class)override fun `archiveDaily`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_archive_daily(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Ranks tasks in Today's focus order as one "Reorder Today" step.
      */
     @Throws(CoreException::class)override fun `arrangeDay`(`orderedTaskIds`: List<kotlin.String>, `nowMs`: kotlin.Long)
@@ -1820,6 +1899,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterSequenceString.lower(`orderedTaskIds`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Un-ticks a day of a daily as one "Clear Daily" step.
+     */
+    @Throws(CoreException::class)override fun `clearContribution`(`dailyId`: kotlin.String, `dayMs`: kotlin.Long, `zone`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_clear_contribution(
+        it,
+        
+        FfiConverterString.lower(`dailyId`),
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     }
     
@@ -2011,6 +2109,51 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Logs progress on a daily as one "Log Daily" step; returns the
+     * contribution's id.
+     */
+    @Throws(CoreException::class)override fun `logContribution`(`dailyId`: kotlin.String, `seconds`: kotlin.Long, `complete`: kotlin.Boolean, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_log_contribution(
+        it,
+        
+        FfiConverterString.lower(`dailyId`),
+        FfiConverterLong.lower(`seconds`),
+        FfiConverterBoolean.lower(`complete`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Makes a task a daily as one "Make Daily" step; returns the daily's id.
+     */
+    @Throws(CoreException::class)override fun `makeDaily`(`taskId`: kotlin.String, `weekdays`: List<kotlin.UInt>, `intervalDays`: kotlin.Long?, `targetSeconds`: kotlin.Long?, `nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_make_daily(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterSequenceUInt.lower(`weekdays`),
+        FfiConverterOptionalLong.lower(`intervalDays`),
+        FfiConverterOptionalLong.lower(`targetSeconds`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -2490,6 +2633,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Edits a daily as one "Edit Daily" step.
+     */
+    @Throws(CoreException::class)override fun `updateDaily`(`id`: kotlin.String, `edit`: DailyEdit, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_update_daily(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterTypeDailyEdit.lower(`edit`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Sets a list's name and colour as one "Edit List" step.
      */
     @Throws(CoreException::class)override fun `updateList`(`id`: kotlin.String, `name`: kotlin.String, `colourHex`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -2611,6 +2773,69 @@ public object FfiConverterTypeCreatedItem: FfiConverterRustBuffer<CreatedItem> {
             FfiConverterString.write(value.`id`, buf)
             FfiConverterString.write(value.`name`, buf)
             FfiConverterLong.write(value.`sortOrder`, buf)
+    }
+}
+
+
+
+/**
+ * What [`update_daily`] changes. Each field left `None` keeps what is there;
+ * the `set_` flags let a caller clear the interval or the target.
+ */
+data class DailyEdit (
+    /**
+     * Ignored when empty.
+     */
+    var `weekdays`: List<kotlin.UInt>?
+    , 
+    var `setInterval`: kotlin.Boolean
+    , 
+    /**
+     * Clamped to 1 to 366 days.
+     */
+    var `intervalDays`: kotlin.Long?
+    , 
+    var `setTarget`: kotlin.Boolean
+    , 
+    var `targetSeconds`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDailyEdit: FfiConverterRustBuffer<DailyEdit> {
+    override fun read(buf: ByteBuffer): DailyEdit {
+        return DailyEdit(
+            FfiConverterOptionalSequenceUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DailyEdit) = (
+            FfiConverterOptionalSequenceUInt.allocationSize(value.`weekdays`) +
+            FfiConverterBoolean.allocationSize(value.`setInterval`) +
+            FfiConverterOptionalLong.allocationSize(value.`intervalDays`) +
+            FfiConverterBoolean.allocationSize(value.`setTarget`) +
+            FfiConverterOptionalLong.allocationSize(value.`targetSeconds`)
+    )
+
+    override fun write(value: DailyEdit, buf: ByteBuffer) {
+            FfiConverterOptionalSequenceUInt.write(value.`weekdays`, buf)
+            FfiConverterBoolean.write(value.`setInterval`, buf)
+            FfiConverterOptionalLong.write(value.`intervalDays`, buf)
+            FfiConverterBoolean.write(value.`setTarget`, buf)
+            FfiConverterOptionalLong.write(value.`targetSeconds`, buf)
     }
 }
 
@@ -2987,6 +3212,14 @@ sealed class CoreException: kotlin.Exception() {
             get() = "id=${ `id` }"
     }
     
+    class MissingDaily(
+        
+        val `id`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "id=${ `id` }"
+    }
+    
     class MissingList(
         
         val `id`: kotlin.String
@@ -3071,20 +3304,23 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             4 -> CoreException.MissingTask(
                 FfiConverterString.read(buf),
                 )
-            5 -> CoreException.MissingList(
+            5 -> CoreException.MissingDaily(
                 FfiConverterString.read(buf),
                 )
-            6 -> CoreException.MissingFolder(
+            6 -> CoreException.MissingList(
                 FfiConverterString.read(buf),
                 )
-            7 -> CoreException.SystemListIsPermanent()
-            8 -> CoreException.EmptyName()
-            9 -> CoreException.InvalidFolderMove()
-            10 -> CoreException.InvalidCondition()
-            11 -> CoreException.InvalidStatus(
+            7 -> CoreException.MissingFolder(
                 FfiConverterString.read(buf),
                 )
-            12 -> CoreException.InvalidTaskMove()
+            8 -> CoreException.SystemListIsPermanent()
+            9 -> CoreException.EmptyName()
+            10 -> CoreException.InvalidFolderMove()
+            11 -> CoreException.InvalidCondition()
+            12 -> CoreException.InvalidStatus(
+                FfiConverterString.read(buf),
+                )
+            13 -> CoreException.InvalidTaskMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -3107,6 +3343,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
             )
             is CoreException.MissingTask -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`id`)
+            )
+            is CoreException.MissingDaily -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 + FfiConverterString.allocationSize(value.`id`)
@@ -3171,39 +3412,44 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 FfiConverterString.write(value.`id`, buf)
                 Unit
             }
-            is CoreException.MissingList -> {
+            is CoreException.MissingDaily -> {
                 buf.putInt(5)
                 FfiConverterString.write(value.`id`, buf)
                 Unit
             }
-            is CoreException.MissingFolder -> {
+            is CoreException.MissingList -> {
                 buf.putInt(6)
                 FfiConverterString.write(value.`id`, buf)
                 Unit
             }
-            is CoreException.SystemListIsPermanent -> {
+            is CoreException.MissingFolder -> {
                 buf.putInt(7)
+                FfiConverterString.write(value.`id`, buf)
                 Unit
             }
-            is CoreException.EmptyName -> {
+            is CoreException.SystemListIsPermanent -> {
                 buf.putInt(8)
                 Unit
             }
-            is CoreException.InvalidFolderMove -> {
+            is CoreException.EmptyName -> {
                 buf.putInt(9)
                 Unit
             }
-            is CoreException.InvalidCondition -> {
+            is CoreException.InvalidFolderMove -> {
                 buf.putInt(10)
                 Unit
             }
-            is CoreException.InvalidStatus -> {
+            is CoreException.InvalidCondition -> {
                 buf.putInt(11)
+                Unit
+            }
+            is CoreException.InvalidStatus -> {
+                buf.putInt(12)
                 FfiConverterString.write(value.`status`, buf)
                 Unit
             }
             is CoreException.InvalidTaskMove -> {
-                buf.putInt(12)
+                buf.putInt(13)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -3271,6 +3517,66 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
         } else {
             buf.put(1)
             FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>?> {
+    override fun read(buf: ByteBuffer): List<kotlin.UInt>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceUInt.read(buf)
+    }
+
+    override fun allocationSize(value: List<kotlin.UInt>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceUInt.allocationSize(value)
+        }
+    }
+
+    override fun write(value: List<kotlin.UInt>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceUInt.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>> {
+    override fun read(buf: ByteBuffer): List<kotlin.UInt> {
+        val len = buf.getInt()
+        return List<kotlin.UInt>(len) {
+            FfiConverterUInt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.UInt>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterUInt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.UInt>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterUInt.write(it, buf)
         }
     }
 }

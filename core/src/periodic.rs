@@ -134,8 +134,37 @@ fn weekday(name: &str) -> Option<Weekday> {
 
 /// A zone by its IANA name, falling back to UTC for a name this build does
 /// not know rather than refusing the write.
+///
+/// Also reads the fixed offsets Foundation names `GMT+0100` (a
+/// `TimeZone(secondsFromGMT:)`, which tests use), as the `Etc/GMT` zone of
+/// the same whole-hour offset.
 pub fn zone(name: &str) -> Tz {
-    name.parse().unwrap_or(Tz::UTC)
+    if let Ok(zone) = name.parse() {
+        return zone;
+    }
+    let fixed = name.strip_prefix("GMT").and_then(|rest| {
+        let (sign, digits) = rest.split_at(rest.find(|c: char| c.is_ascii_digit())?);
+        let hours: i32 = digits.get(..2)?.parse().ok()?;
+        let minutes: i32 = digits
+            .get(2..)
+            .filter(|m| !m.is_empty())
+            .map_or(Some(0), |m| m.parse().ok())?;
+        if minutes != 0 {
+            return None;
+        }
+        // Etc/GMT names count the other way: GMT+0100 is Etc/GMT-1.
+        let inverted = match sign {
+            "+" => -hours,
+            "-" => hours,
+            _ => return None,
+        };
+        if inverted == 0 {
+            "Etc/GMT".parse().ok()
+        } else {
+            format!("Etc/GMT{inverted:+}").parse().ok()
+        }
+    });
+    fixed.unwrap_or(Tz::UTC)
 }
 
 #[cfg(test)]
@@ -210,8 +239,12 @@ mod tests {
     }
 
     #[test]
-    fn an_unknown_zone_name_is_utc() {
+    fn zone_names_and_foundations_fixed_offsets_are_read() {
         assert_eq!(zone("Nowhere/Special"), Tz::UTC);
         assert_eq!(zone("Europe/London"), Tz::Europe__London);
+        assert_eq!(zone("GMT"), Tz::GMT);
+        assert_eq!(zone("GMT+0100"), Tz::Etc__GMTMinus1);
+        assert_eq!(zone("GMT-0500"), Tz::Etc__GMTPlus5);
+        assert_eq!(zone("GMT+0530"), Tz::UTC);
     }
 }

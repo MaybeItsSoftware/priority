@@ -518,6 +518,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     } catch {
       switch error.coreFailure {
       case .missingTask: throw WorkspaceStoreError.missingTask
+      case .missingDaily: throw WorkspaceStoreError.missingDaily
       case .missingList: throw WorkspaceStoreError.missingList
       case .missingFolder: throw WorkspaceStoreError.missingFolder
       case .systemListIsPermanent: throw WorkspaceStoreError.systemListIsPermanent

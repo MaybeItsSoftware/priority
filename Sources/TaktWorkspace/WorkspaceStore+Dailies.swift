@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import TaktRustCore
 import TaktCore
 
 /// Dailies, the contributions logged against them, and the ranking that feeds
@@ -46,6 +47,7 @@ extension WorkspaceStore {
 
   /// Makes `taskId` a daily, or returns the one it already has. Idempotent so
   /// the inspector's toggle can be driven from anywhere without checking first.
+  /// Makes a task a daily: the Rust core's `dailies::make_daily`.
   @discardableResult
   public func makeDaily(
     taskId: String,
@@ -54,10 +56,16 @@ extension WorkspaceStore {
     targetSeconds: Int? = nil,
     now: Date = .now
   ) throws -> WorkspaceDaily {
-    try journalledWrite("Make Daily") { db in
-      try Self.makeDailyRecord(db, taskId: taskId, weekdays: weekdays, intervalDays: intervalDays,
-                               targetSeconds: targetSeconds, now: now)
+    let id = try coreWrite {
+      try core.makeDaily(
+        taskId: taskId, weekdays: weekdays.sorted().map { UInt32(clamping: $0) },
+        intervalDays: intervalDays.map(Int64.init), targetSeconds: targetSeconds.map(Int64.init),
+        nowMs: now.coreMilliseconds)
     }
+    guard let daily = try database.read({ db in try WorkspaceDaily.fetchOne(db, key: id) }) else {
+      throw WorkspaceStoreError.missingDaily
+    }
+    return daily
   }
 
   static func makeDailyRecord(
@@ -87,9 +95,7 @@ extension WorkspaceStore {
 
   /// Archives rather than deletes, so logged contributions keep a parent.
   public func archiveDaily(taskId: String, now: Date = .now) throws {
-    try journalledWrite("Archive Daily") { db in
-      try Self.archiveDailyRecord(db, taskId: taskId, now: now)
-    }
+    try coreWrite { try core.archiveDaily(taskId: taskId, nowMs: now.coreMilliseconds) }
   }
 
   static func archiveDailyRecord(_ db: Database, taskId: String, now: Date) throws {
@@ -100,20 +106,18 @@ extension WorkspaceStore {
     try daily.update(db)
   }
 
+  /// Edits a daily: the Rust core's `dailies::update_daily`. A doubly
+  /// optional field left nil keeps its value; `.some(nil)` clears it.
   public func updateDaily(
     id: String, weekdays: Set<Int>? = nil, intervalDays: Int?? = nil, targetSeconds: Int?? = nil, now: Date = .now
   ) throws {
-    try journalledWrite("Edit Daily") { db in
-      guard var daily = try WorkspaceDaily.fetchOne(db, key: id) else { return }
-      if let weekdays, !weekdays.isEmpty { daily.activeWeekdaysMask = WorkspaceDaily.mask(forWeekdays: weekdays) }
-      if let intervalDays {
-        daily.intervalDays = intervalDays.map { min(366, max(1, $0)) }
-        daily.intervalAnchor = intervalDays == nil ? nil : (daily.intervalAnchor ?? now)
-      }
-      if let targetSeconds { daily.targetSeconds = targetSeconds }
-      daily.updatedAt = now
-      try daily.update(db)
-    }
+    let days: [UInt32]? = weekdays.map { set in set.sorted().map { UInt32(clamping: $0) } }
+    let interval: Int64? = (intervalDays ?? nil).map { Int64($0) }
+    let target: Int64? = (targetSeconds ?? nil).map { Int64($0) }
+    let edit = DailyEdit(
+      weekdays: days, setInterval: intervalDays != nil, intervalDays: interval,
+      setTarget: targetSeconds != nil, targetSeconds: target)
+    try coreWrite { try core.updateDaily(id: id, edit: edit, nowMs: now.coreMilliseconds) }
   }
 
   /// Records progress against a daily's task for `day`, accumulating seconds
@@ -125,24 +129,22 @@ extension WorkspaceStore {
   public func logContribution(
     dailyId: String, seconds: Int = 0, complete: Bool = true, now: Date = .now, calendar: Calendar = .current
   ) throws -> DailyContribution {
-    try journalledWrite("Log Daily") { db in
-      guard let daily = try WorkspaceDaily.fetchOne(db, key: dailyId) else {
-        throw WorkspaceStoreError.missingDaily
-      }
-      return try Self.recordContribution(
-        db, daily: daily, seconds: seconds, complete: complete, now: now, calendar: calendar)
+    // The Rust core's `dailies::log_contribution`, keyed on the calendar's day.
+    let id = try coreWrite {
+      try core.logContribution(
+        dailyId: dailyId, seconds: Int64(seconds), complete: complete, nowMs: now.coreMilliseconds,
+        zone: calendar.timeZone.identifier)
     }
+    guard let contribution = try database.read({ db in try DailyContribution.fetchOne(db, key: id) }) else {
+      throw WorkspaceStoreError.missingDaily
+    }
+    return contribution
   }
 
   /// Un-ticks a day without discarding the time already logged against it.
   public func clearContribution(dailyId: String, on day: Date = .now, calendar: Calendar = .current) throws {
-    let key = DailyContribution.dayKey(for: day, calendar: calendar)
-    try journalledWrite("Clear Daily") { db in
-      guard var contribution = try DailyContribution
-        .filter(Column("dailyId") == dailyId && Column("dayKey") == key).fetchOne(db)
-      else { return }
-      contribution.completedAt = nil
-      try contribution.update(db)
+    try coreWrite {
+      try core.clearContribution(dailyId: dailyId, dayMs: day.coreMilliseconds, zone: calendar.timeZone.identifier)
     }
   }
 
