@@ -397,7 +397,7 @@ struct WorkspaceKanbanCard: View {
     .overlay {
       // Rules above and below only: the card runs the column's full width, so
       // side edges would double the hairlines between columns. The selection
-      // is an inset band with no edge of its own, so the rules stay under it.
+      // is a band with no edge of its own, so the rules stay over it.
       if isDropTargeted {
         Rectangle().strokeBorder(theme.primary, lineWidth: theme.emphasisBorder)
       } else {

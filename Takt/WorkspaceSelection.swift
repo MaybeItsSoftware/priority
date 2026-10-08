@@ -55,19 +55,17 @@ struct WorkspaceSelectionBackground: View {
   /// read as a box jammed inside a box.
   private var border: Color { hasKeyboard && !isSelected ? theme.focusRing : .clear }
 
-  /// Rounded at the theme's row radius and inset from the row — the theme's
-  /// smallest step at the sides, half of it top and bottom — so a selection is
-  /// a soft band inside the pane rather than a square cut across it, and
-  /// never meets the pane's border.
+  /// The whole of the row, edge to edge and square unless a caller asks for
+  /// a radius: the band is the row's area, so it shows exactly what a click
+  /// or a key will act on. It used to be a rounded band inset from the row,
+  /// which left a margin of row around it that looked unselected.
   var body: some View {
-    let shape = RoundedRectangle(cornerRadius: radius ?? theme.rowRadius, style: .continuous)
+    let shape = RoundedRectangle(cornerRadius: radius ?? 0, style: .continuous)
     shape
       .fill(theme.color(.primary, opacity: fill))
       .overlay(
         shape.strokeBorder(border, lineWidth: theme.hairline)
       )
-      .padding(.horizontal, theme.space.xs)
-      .padding(.vertical, theme.space.xxs / 2)
       .animation(WorkspaceMotion.quick, value: fill)
   }
 }

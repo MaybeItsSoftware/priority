@@ -98,8 +98,17 @@ struct ThemedPicker<Value: Hashable>: View {
     self.options = options
   }
 
+  // The menu takes the rest of the row rather than hugging its value, so
+  // the whole width beside the label opens it.
   var body: some View {
-    ThemedControlRow(title) { ThemedMenuPicker(title, selection: $selection, options: options) }
+    HStack(spacing: theme.space.sm) {
+      Text(title)
+        .font(theme.bodyFont())
+        .foregroundStyle(theme.ink)
+        .lineLimit(1)
+      ThemedMenuPicker(title, selection: $selection, options: options, expands: true)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
@@ -110,17 +119,21 @@ struct ThemedMenuPicker<Value: Hashable>: View {
   let title: String
   @Binding var selection: Value
   let options: [ThemedPickerOption<Value>]
+  var expands = false
 
-  init(_ title: String, selection: Binding<Value>, options: [ThemedPickerOption<Value>]) {
+  init(
+    _ title: String, selection: Binding<Value>, options: [ThemedPickerOption<Value>], expands: Bool = false
+  ) {
     self.title = title
     _selection = selection
     self.options = options
+    self.expands = expands
   }
 
   private var current: ThemedPickerOption<Value>? { options.first { $0.value == selection } }
 
   var body: some View {
-    ThemedMenu(current?.title ?? title, systemImage: current?.systemImage) {
+    ThemedMenu(current?.title ?? title, systemImage: current?.systemImage, expands: expands) {
       Picker(title, selection: $selection) {
         ForEach(options) { option in
           if let symbol = option.systemImage {
@@ -174,6 +187,9 @@ struct ThemedMenu<Content: View>: View {
     .menuIndicator(.visible)
     .lineLimit(1)
     .fixedSize(horizontal: !expands, vertical: true)
+    // Expanded, the menu itself is stretched rather than only its frame, so
+    // a click anywhere in the frame opens it.
+    .frame(maxWidth: expands ? .infinity : nil, alignment: .leading)
     .themedControlFrame(expands: expands)
   }
 }
