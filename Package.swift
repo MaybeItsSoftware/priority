@@ -24,6 +24,7 @@ let pluginTargetExcludes = [
   "Sources/TaktWorkspace",
   "Sources/TaktSync",
   "sync-tests",
+  "test-support",
   // The sync server and the phone apps: other build systems, and their build
   // trees are large enough that walking them slows every build.
   "sync-server",
@@ -171,6 +172,7 @@ let appLogicTargetExcludes = [
   "Sources/TaktWorkspace",
   "Sources/TaktSync",
   "sync-tests",
+  "test-support",
   // The sync server and the phone apps: other build systems, and their build
   // trees are large enough that walking them slows every build.
   "sync-server",
@@ -299,7 +301,6 @@ let package = Package(
     .library(name: "TaktRustCore", targets: ["TaktRustCore"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.8.0"),
     // Supabase Auth: accounts for sync (`docs/sync.md`). Only the `Auth`
     // product is linked, by `TaktSync`.
     .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.55.0"),
@@ -325,18 +326,17 @@ let package = Package(
       name: "TaktRustCore",
       dependencies: ["takt_coreFFI"],
       path: "Sources/TaktRustCore",
-      // The core links the system SQLite on Apple platforms, the library GRDB
-      // uses too; say so here, so a product that takes the core without GRDB
-      // still links it.
+      // The core links the system SQLite on Apple platforms rather than
+      // bringing its own, so nothing in the process has a second copy.
       linkerSettings: [.linkedLibrary("sqlite3")]
     ),
     .target(
       name: "TaktWorkspace",
       dependencies: [
         "TaktCore",
-        // The schema and its migrations live in the Rust core.
+        // Every read and write, the schema and its migrations are the Rust
+        // core's (docs/rust-core-migration.md).
         "TaktRustCore",
-        .product(name: "GRDB", package: "GRDB.swift"),
       ],
       path: "Sources/TaktWorkspace"
     ),
@@ -438,6 +438,13 @@ let package = Package(
         "applogic-support/AppLogicSharedTypes.swift",
       ]
     ),
+    // A second connection onto a workspace file, for tests that play another
+    // process or look underneath the store, on the system SQLite.
+    .target(
+      name: "TestSQLite",
+      path: "test-support/sqlite",
+      linkerSettings: [.linkedLibrary("sqlite3")]
+    ),
     .testTarget(
       name: "TaktCoreTests",
       dependencies: ["TaktCore"],
@@ -455,9 +462,9 @@ let package = Package(
     ),
     .testTarget(
       name: "TaktWorkspaceTests",
-      // GRDB directly, so a migration test can write a fixture database in the
-      // shape an older version of the app left behind.
-      dependencies: ["TaktWorkspace", .product(name: "GRDB", package: "GRDB.swift")],
+      // A connection of its own, so a migration test can write a fixture
+      // database in the shape an older version of the app left behind.
+      dependencies: ["TaktWorkspace", "TestSQLite"],
       path: "workspace-tests"
     ),
     .testTarget(
@@ -473,7 +480,7 @@ let package = Package(
     .testTarget(
       name: "TaktSyncTests",
       dependencies: [
-        "TaktSync", "TaktWorkspace", .product(name: "GRDB", package: "GRDB.swift"),
+        "TaktSync", "TaktWorkspace", "TestSQLite",
         .product(name: "Auth", package: "supabase-swift"),
       ],
       path: "sync-tests"

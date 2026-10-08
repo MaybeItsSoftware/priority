@@ -542,9 +542,12 @@ class WorkspaceRepository(
 
     // region External writes (WorkspaceStore+ExternalWrites.swift)
 
-    /** `PRAGMA data_version` on the writer: moves only when another connection or process commits. */
-    suspend fun externalChangeToken(): Long =
-        database.writerWithoutTransaction { (it.long("PRAGMA data_version") ?: 0L) - database.ownCoreCommits }
+    /**
+     * `PRAGMA data_version` on the Rust core's connection, which every write
+     * of this app goes through: it moves only when another connection or
+     * process commits, never for the app's own writes.
+     */
+    suspend fun externalChangeToken(): Long = coreRead { it.dataVersion() }
 
     // endregion
 

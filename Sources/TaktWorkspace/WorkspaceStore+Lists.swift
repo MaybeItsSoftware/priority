@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 import TaktRustCore
 
 extension WorkspaceStore {
@@ -94,15 +93,6 @@ extension WorkspaceStore {
 
   public func visibleOutline(in listId: String, parentTaskId: String? = nil) throws -> [TaskOutlineItem] {
     try listTree(in: listId).visibleOutline(under: parentTaskId)
-  }
-
-  static func validateActionableTask(_ db: Database, id: String) throws {
-    guard let task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
-    guard !task.isList,
-      let list = try TaskList.fetchOne(db, key: task.listId), !list.isArchived, list.completedAt == nil,
-      list.visibleRootTaskId != id,
-      !inactiveContainerItems(try WorkspaceTask.filter(Column("listId") == task.listId).fetchAll(db)).contains(id)
-    else { throw WorkspaceStoreError.invalidTaskMove }
   }
 }
 

@@ -1,4 +1,4 @@
-import GRDB
+import TestSQLite
 
 extension Database {
   /// Takes `v17_sync` back off a database, and `v18_themes_and_preferences`

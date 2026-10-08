@@ -1,5 +1,5 @@
 import Foundation
-import GRDB
+import TestSQLite
 import TaktCore
 @testable import TaktWorkspace
 import XCTest
@@ -252,7 +252,7 @@ final class WorkspaceConditionsTests: XCTestCase {
     let session = try store.startFocusSession(taskId: task.id, now: now)
     try store.completeActiveFocusTask(sessionId: session.id, elapsedSeconds: 600, completeTask: false, now: now)
     try store.deleteTask(id: task.id)
-    let blocks = try DatabaseQueue(path: url.path).read { try FocusWorkBlock.fetchAll($0) }
+    let blocks = try store.focusWorkBlocks(in: DateInterval(start: .distantPast, end: .distantFuture))
     XCTAssertEqual(blocks.first?.taskTitle, "Task")
     XCTAssertNil(blocks.first?.taskId)
     XCTAssertEqual(blocks.first?.seconds, 600)
@@ -278,10 +278,17 @@ final class WorkspaceConditionsTests: XCTestCase {
     let task = try task()
     let foreign = try DatabaseQueue(path: url.path).write { db -> TaskCondition in
       let other = Workspace(id: UUID().uuidString, name: "Other", createdAt: now, updatedAt: now)
-      try other.insert(db)
+      try db.execute(
+        sql: "INSERT INTO workspaces (id, name, createdAt, updatedAt) VALUES (?, ?, ?, ?)",
+        arguments: [other.id, other.name, now, now])
       let record = TaskCondition(id: UUID().uuidString, workspaceId: other.id, name: "Other", isLocation: false,
         isArchived: false, createdAt: now, updatedAt: now)
-      try record.insert(db)
+      try db.execute(
+        sql: """
+          INSERT INTO task_conditions (id, workspaceId, name, isLocation, isArchived, createdAt, updatedAt)
+          VALUES (?, ?, ?, 0, 0, ?, ?)
+          """,
+        arguments: [record.id, record.workspaceId, record.name, now, now])
       return record
     }
     var draft = try edit(task.id); draft.values.requirementGroups = [[foreign.id]]

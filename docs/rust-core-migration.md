@@ -40,13 +40,13 @@ three build against one lockfile.
 
 **Database access.** The crate owns the connection, through `rusqlite` with
 the bundled SQLite, so every platform runs the same SQLite version and the
-same pragmas: WAL, a five-second busy timeout, foreign keys. Swift stops
-opening the file through GRDB once its last write path has moved.
+same pragmas: WAL, a five-second busy timeout, foreign keys. Swift no longer
+opens the file through GRDB at all.
 
-**Change notification.** The app's `PRAGMA data_version` poll keeps working
-unchanged, because writes still land in the same file. Later the core can
-expose a callback for its own process's commits, which removes the "ignore
-our own writes" special case in `WorkspaceViewModel+ExternalWrites.swift`.
+**Change notification.** The apps poll `PRAGMA data_version` on the core's
+own connection (`CoreWorkspace.dataVersion`). Every write of theirs goes
+through that connection, which does not count its own commits, so the number
+moves only for another process, with no "ignore our own writes" bookkeeping.
 
 **Threading.** The `Store` object is `Send + Sync` behind a connection pool.
 Swift calls it from a background executor and hops to the main actor with
@@ -119,10 +119,17 @@ covered the old copies pass against it.
    functions, so it no longer copies Swift row for row; a real-data run
    against a copy of the live database (add, rename, link, waiting with a
    past follow-up, complete, task to list, delete) left it consistent.
-6. **Reads.** Search with FTS, the today and next-up ranking, outline
-   folding. These are the hot paths. Benchmark each against the Swift version
-   before switching, using `WorkspaceRepositoryBenchmark.kt` on Android.
-   **The next-up ranking is done (2026-10-08).** `core/src/ranking.rs` holds
+6. **Reads. Done 2026-10-08.** Every read the Mac, iPhone and Android make
+   is the core's. `records.rs` holds the task, list, folder and workspace
+   rows, the outline and the visible-root reads; `search.rs` the FTS prefix
+   search with titles weighted over notes; `rows.rs` dailies and what a day
+   shows, the completion streak, conditions, metadata, focus sessions and
+   queues, work blocks, awards and points, themes, preferences, boards and
+   counts; `editor.rs` the editor snapshot. Each client keeps its record
+   types and its small in-memory trees (`WorkspaceListTree`) over the core's
+   rows, so screens did not change. Android's `Db` reaches the core, so the
+   helpers its repository shares switched in place.
+   **The next-up ranking (2026-10-08).** `core/src/ranking.rs` holds
    `NextUpSelector.evaluate` and `score`; `focus.rs` holds the candidate read
    and `TaskAvailabilityPolicy`. Swift's `TaktCore` and Kotlin's `:core`
    keep their types and wrap the core, so their callers did not change; the
@@ -141,6 +148,11 @@ covered the old copies pass against it.
 8. **Remove the copies.** Delete GRDB from the package, the Kotlin
    repository bodies and the CLI's store code. `TaktWorkspace` becomes a thin
    Swift wrapper over the generated bindings.
+   **GRDB is gone (2026-10-08).** `WorkspaceStore` holds one `CoreWorkspace`
+   and nothing else; the records lost their GRDB conformances; the
+   external-change token is the core connection's `data_version`, on the Mac
+   and on Android, so neither keeps count of its own commits any more. Tests
+   that play another process open the file through `test-support/sqlite`.
 
 Pure-logic engines in `TaktCore` (the command parser, recurrence, visibility,
 theming) stay in Swift until steps 1 to 8 are done. They are not duplicated
@@ -173,6 +185,6 @@ on Android in the same way, so moving them buys less.
   migration already ran would install stale triggers. That cannot happen in
   order, which is the only way migrations apply, but tests that rewind one
   migration must rewind the later ones too.
-- **Two writers during the move.** Until step 8, Swift's GRDB and the core
-  both write the same file. The busy timeout on both sides, added
-  2026-10-07, is what keeps that safe. Do not remove it mid-migration.
+- **Two writers.** The CLI and each app write the same file through their
+  own core connections. The five-second busy timeout on every connection is
+  what keeps that safe; do not remove it.

@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 
 /// Reading back what focused work has been worth. Writing an award happens in
 /// `completeActiveFocusTask`, inside the same transaction that finishes the

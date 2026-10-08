@@ -128,7 +128,7 @@ final class WorkspaceTodayTests: XCTestCase {
     let task = try store.createTask(capturing: "Contract signed wait:Sam", listId: work.id)
     XCTAssertEqual(task.title, "Contract signed")
     XCTAssertEqual(try store.boardMetadata(for: [task.id]).columns[task.id], WaitingFollowUp.waitingColumnID)
-    let waitingOn = try store.database.read { db in try TaskMetadata.fetchOne(db, key: task.id)?.waitingOn }
+    let waitingOn = try store.core.metadata(taskId: task.id)?.waitingOn
     XCTAssertEqual(waitingOn, "Sam")
     _ = try store.undo()
     XCTAssertNil(try store.task(id: task.id), "one undo removes the task and its waiting state together")

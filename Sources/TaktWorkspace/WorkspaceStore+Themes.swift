@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 
 /// A user theme as the workspace holds it: the identifier the file resolves
 /// to, and the file's text, verbatim.
@@ -39,18 +38,6 @@ public enum WorkspacePreferenceKey {
 /// it really changes, so one device saving a file another device has just
 /// written cannot send the same text round and round.
 extension WorkspaceStore {
-  static func createThemeAndPreferenceTables(_ db: Database) throws {
-    try db.execute(sql: """
-      CREATE TABLE themes (
-        id TEXT PRIMARY KEY,
-        json TEXT NOT NULL,
-        updatedAt DATETIME NOT NULL);
-      CREATE TABLE preferences (
-        key TEXT PRIMARY KEY,
-        value TEXT,
-        updatedAt DATETIME NOT NULL);
-      """)
-  }
 
   // MARK: - Themes
 

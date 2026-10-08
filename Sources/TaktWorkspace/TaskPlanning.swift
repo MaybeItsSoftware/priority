@@ -1,9 +1,7 @@
 import Foundation
-import GRDB
 import TaktCore
 
-public struct TaskCondition: Codable, FetchableRecord, PersistableRecord, Identifiable, Equatable, Sendable {
-  public static let databaseTableName = "task_conditions"
+public struct TaskCondition: Codable, Identifiable, Equatable, Sendable {
   public let id: String
   public let workspaceId: String
   public var name: String
@@ -36,8 +34,7 @@ public struct TaskPlanning: Codable, Equatable, Sendable {
   }
 }
 
-public struct FocusWorkBlock: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable, Equatable {
-  public static let databaseTableName = "focus_work_blocks"
+public struct FocusWorkBlock: Codable, Identifiable, Sendable, Equatable {
   public let id: String
   public let sessionId: String?
   public let taskId: String?

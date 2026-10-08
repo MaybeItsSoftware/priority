@@ -787,6 +787,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_task(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_data_version(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_list(
@@ -1087,6 +1089,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_task(`ptr`: Long,`task`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_data_version(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_folder(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_list(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1564,6 +1568,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_task() and 0xFFFF) != 36329) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_data_version() and 0xFFFF) != 15691) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_folder() and 0xFFFF) != 27954) {
@@ -2504,6 +2511,14 @@ public interface CoreWorkspaceInterface {
      * Creates a task as one "New Task" step and returns its id.
      */
     fun `createTask`(`task`: NewTask, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
+     * SQLite's `data_version` on this handle's connection: it moves when
+     * another connection commits (the CLI, another process) and never for
+     * this handle's own writes, so a client that writes only through the
+     * core can poll it to learn that someone else changed the file.
+     */
+    fun `dataVersion`(): kotlin.Long
     
     /**
      * Deletes a folder as one "Delete Folder" step; its lists move to the top.
@@ -3940,6 +3955,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterTypeNewTask.lower(`task`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * SQLite's `data_version` on this handle's connection: it moves when
+     * another connection commits (the CLI, another process) and never for
+     * this handle's own writes, so a client that writes only through the
+     * core can poll it to learn that someone else changed the file.
+     */
+    @Throws(CoreException::class)override fun `dataVersion`(): kotlin.Long {
+            return FfiConverterLong.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_data_version(
+        it,
+        _status)
 }
     }
     )

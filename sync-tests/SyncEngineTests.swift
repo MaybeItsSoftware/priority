@@ -1,5 +1,5 @@
 import Foundation
-import GRDB
+import TestSQLite
 import TaktSync
 import TaktWorkspace
 import XCTest

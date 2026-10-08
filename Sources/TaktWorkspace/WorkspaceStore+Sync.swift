@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 
 /// The store's half of multi-device sync. The protocol is specified in
 /// `docs/sync.md`; this file is its local schema and the reads and writes the

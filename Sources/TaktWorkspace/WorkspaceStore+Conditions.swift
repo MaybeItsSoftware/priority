@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 import TaktCore
 
 extension WorkspaceStore {

@@ -45,10 +45,23 @@ impl CoreWorkspace {
     pub fn open(path: String) -> Result<Arc<Self>, CoreError> {
         let connection = Connection::open(path)?;
         connection.busy_timeout(Duration::from_secs(5))?;
+        // WAL lets the CLI read while the app writes, and is a property of
+        // the file: already set, this changes nothing.
+        connection.query_row("PRAGMA journal_mode = WAL", [], |_| Ok(()))?;
         connection.execute_batch("PRAGMA foreign_keys = ON")?;
         Ok(Arc::new(Self {
             connection: Mutex::new(connection),
         }))
+    }
+
+    /// SQLite's `data_version` on this handle's connection: it moves when
+    /// another connection commits (the CLI, another process) and never for
+    /// this handle's own writes, so a client that writes only through the
+    /// core can poll it to learn that someone else changed the file.
+    pub fn data_version(&self) -> Result<i64, CoreError> {
+        Ok(self
+            .lock()
+            .query_row("PRAGMA data_version", [], |row| row.get(0))?)
     }
 
     /// Reverses the most recent step; returns its label, or nothing when there

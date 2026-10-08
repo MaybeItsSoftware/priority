@@ -95,7 +95,7 @@ Notes:
 ### How the workspace writes stay safe
 
 The `workspace_*` write tools make the CLI a second writer to a database that
-`WorkspaceStore` (Swift, GRDB) owns. That is safe because of four things
+the apps own through the Rust core. That is safe because of four things
 (`cli/src/workspace_tasks.rs`):
 
 1. **Each write is the Rust core's.** `cli/src/workspace_tasks.rs` calls
@@ -103,7 +103,7 @@ The `workspace_*` write tools make the CLI a second writer to a database that
    call (`tasks::create_task`, `tasks::set_status`, `tasks::move_task`,
    `conversions::move_task_to_folder`, `lists::create_list` and the rest),
    so there is one implementation of the sort-order conventions, the
-   uppercase UUIDs, GRDB's UTC `YYYY-MM-DD HH:MM:SS.SSS` timestamps, the
+   uppercase UUIDs, the UTC `YYYY-MM-DD HH:MM:SS.SSS` timestamps, the
    lazily created `task_metadata` rows and the refusals. The search index is
    kept level by the schema's own FTS triggers.
 2. **Every write is one undo step, labelled `MCP: …`.** Each runs inside the
@@ -118,10 +118,11 @@ The `workspace_*` write tools make the CLI a second writer to a database that
    the other rather than failing. Foreign keys are on, as in the app, so a
    delete cascades to subtasks. A database older than the schema these writes
    target (`v16_task_completion_time`) is refused rather than written.
-4. **The app notices.** GRDB's observation only sees the app's own writes, so
-   `WorkspaceViewModel+ExternalWrites.swift` polls `PRAGMA data_version` once a
-   second on the pool's writer connection. That number moves only when *another*
-   connection commits. When it moves, the app flushes any draft being typed,
+4. **The app notices.** Nothing in the app's process hears about another
+   process's commit, so `WorkspaceViewModel+ExternalWrites.swift` polls
+   `PRAGMA data_version` once a second on the Rust core's connection, which
+   every app write goes through (`CoreWorkspace.dataVersion`). That number
+   moves only when *another* connection commits. When it moves, the app flushes any draft being typed,
    reloads the way it does after undo, and reconciles open editors against the
    new rows, so a field changed on both sides shows as a conflict instead of
    being lost.

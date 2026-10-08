@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 import TaktRustCore
 import TaktCore
 
@@ -9,17 +8,12 @@ import TaktCore
 /// translate their data into local records at the edge, so normal task editing
 /// never needs network access.
 public final class WorkspaceStore: @unchecked Sendable {
-  /// Internal rather than private so the extensions in the sibling files —
-  /// the same type, split only for size — can reach it.
-  let database: DatabasePool
-  /// The Rust core's handle on the same file (core/src/workspace.rs): a
-  /// connection of its own, on the same system SQLite as GRDB. What has moved
-  /// into the core so far (docs/rust-core-migration.md) goes through it.
+  /// The Rust core's handle on the workspace file (core/src/workspace.rs):
+  /// every read and write goes through it, so the Mac, the iPhone, Android
+  /// and the CLI share one implementation (docs/rust-core-migration.md).
+  /// Internal rather than private so the sibling files — the same type, split
+  /// only for size — can reach it.
   let core: CoreWorkspace
-  /// How far the writer's `data_version` has moved because of this store's
-  /// own writes through `core`. See `coreWrite`.
-  let ownCoreCommitLock = NSLock()
-  var ownCoreCommitCount = 0
 
   public convenience init() throws {
     try self.init(databaseURL: WorkspaceStore.defaultDatabaseURL())
@@ -28,21 +22,11 @@ public final class WorkspaceStore: @unchecked Sendable {
   public init(databaseURL: URL) throws {
     let directory = databaseURL.deletingLastPathComponent()
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    var configuration = Configuration()
-    // The CLI writes this file too, under `BEGIN IMMEDIATE`, and sets a
-    // five-second busy timeout of its own (`cli/src/workspace_tasks.rs`).
-    // GRDB's default is to fail at once, so without this an app write that
-    // lands while the CLI holds the lock throws and the keystroke is lost.
-    configuration.busyMode = .timeout(5)
-    configuration.prepareDatabase { db in
-      try db.execute(sql: "PRAGMA foreign_keys = ON")
-    }
-    // The schema is the Rust core's (core/src/schema, step two of
-    // docs/rust-core-migration.md): it opens the file, brings it up to date
-    // under GRDB's own `grdb_migrations` ledger, and closes it again before
-    // the pool opens, so the two never hold the file at once.
+    // The schema is the Rust core's (core/src/schema): it brings the file up
+    // to date under GRDB's old `grdb_migrations` ledger, which every client
+    // and older build still reads, before the handle opens it. The handle
+    // sets a five-second busy timeout, as the CLI does, and WAL.
     _ = try migrateWorkspace(path: databaseURL.path)
-    self.database = try DatabasePool(path: databaseURL.path, configuration: configuration)
     self.core = try CoreWorkspace.open(path: databaseURL.path)
   }
 
@@ -453,26 +437,6 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .noJournal, .other, nil: throw error
       }
     }
-  }
-
-  static func persistTaskOrder(_ tasks: [WorkspaceTask], db: Database, now: Date) throws {
-    for (index, var task) in tasks.enumerated() {
-      task.sortOrder = index
-      task.updatedAt = now
-      try task.update(db)
-    }
-  }
-
-  static func taskDescendantIDs(_ db: Database, of taskID: String) throws -> Set<String> {
-    var descendants = Set<String>()
-    var frontier = [taskID]
-    while !frontier.isEmpty {
-      let children = try String.fetchAll(
-        db, sql: "SELECT id FROM tasks WHERE parentTaskId IN (\(frontier.map { _ in "?" }.joined(separator: ",")))",
-        arguments: StatementArguments(frontier))
-      frontier = children.filter { descendants.insert($0).inserted }
-    }
-    return descendants
   }
 }
 

@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 
 /// Scoring a block of focused work.
 ///
@@ -98,9 +97,7 @@ public enum FocusQuality: String, Codable, CaseIterable, Identifiable, Sendable 
 /// The task's title is copied in rather than looked up. A score is a record of
 /// something that happened: renaming the task afterwards, or deleting it,
 /// should not rewrite or erase what was earned for it.
-public struct FocusAward: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable, Equatable {
-  public static let databaseTableName = "focus_awards"
-
+public struct FocusAward: Codable, Identifiable, Sendable, Equatable {
   public let id: String
   public let sessionId: String?
   public let taskId: String?

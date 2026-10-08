@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 import TaktRustCore
 import TaktCore
 
@@ -219,25 +218,5 @@ extension WorkspaceStore {
       try core.importLegacyDailies(legacy: seeds, progressTaskIds: progressTaskIDs, nowMs: now.coreMilliseconds)
     }
     return Int(imported)
-  }
-
-  func habitsList(_ db: Database, workspaceId: String, now: Date) throws -> TaskList {
-    let id = HabitPolicy.habitsListId(workspaceId: workspaceId)
-    if let existing = try TaskList.fetchOne(db, key: id) { return existing }
-    if let existing = try TaskList.filter(
-      Column("workspaceId") == workspaceId && Column("name") == HabitPolicy.habitsListName
-    ).fetchOne(db) {
-      return existing
-    }
-    let order = try Int.fetchOne(
-      db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM task_lists WHERE workspaceId = ?",
-      arguments: [workspaceId]) ?? 0
-    let list = TaskList(
-      // Derived rather than random: another device making it too makes the
-      // same row, and sync merges the two.
-      id: id, workspaceId: workspaceId, folderId: nil, name: HabitPolicy.habitsListName, colorHex: nil,
-      sortOrder: order, isArchived: false, createdAt: now, updatedAt: now)
-    try list.insert(db)
-    return list
   }
 }

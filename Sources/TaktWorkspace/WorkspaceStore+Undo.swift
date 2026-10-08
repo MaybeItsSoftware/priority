@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 
 /// Taking back the last thing you did. Split from `WorkspaceStore.swift` — the
 /// same type — because it is a mechanism rather than a feature: nothing else in

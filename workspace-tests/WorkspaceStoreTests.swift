@@ -1,6 +1,6 @@
 import Foundation
 @testable import TaktWorkspace
-import GRDB
+import TestSQLite
 import XCTest
 
 final class WorkspaceStoreTests: XCTestCase {
@@ -478,7 +478,7 @@ extension WorkspaceStoreTests {
                          title: "Task \($0)", status: .open, sortOrder: $0)
       }))
     let ids = outcome.insertedTaskIDs
-    try store.database.write { db in
+    try DatabaseQueue(path: directoryURL.appendingPathComponent("priority.sqlite").path).write { db in
       for (index, id) in ids.enumerated() where index % 3 != 0 {
         try db.execute(sql: """
           INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON,

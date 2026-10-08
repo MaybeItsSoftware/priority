@@ -55,4 +55,36 @@ mod tests {
         assert_eq!(core_version(), env!("CARGO_PKG_VERSION"));
         assert!(!core_version().is_empty());
     }
+
+    #[test]
+    fn data_version_moves_for_other_connections_and_not_for_the_handles_own() {
+        let path = std::env::temp_dir().join(format!(
+            "takt-data-version-{}-{}.sqlite",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let path_text = path.to_string_lossy().to_string();
+        schema::migrate_workspace(path_text.clone()).unwrap();
+        let core = workspace::CoreWorkspace::open(path_text.clone()).unwrap();
+        let start = core.data_version().unwrap();
+        core.bootstrap(1_000).unwrap();
+        assert_eq!(core.data_version().unwrap(), start, "its own write");
+        let other = rusqlite::Connection::open(&path).unwrap();
+        other
+            .execute("UPDATE workspaces SET name = 'Elsewhere'", [])
+            .unwrap();
+        assert!(core.data_version().unwrap() > start, "someone else's write");
+        let mode: String = other
+            .query_row("PRAGMA journal_mode", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(mode, "wal");
+        drop(other);
+        drop(core);
+        for suffix in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{path_text}{suffix}"));
+        }
+    }
 }

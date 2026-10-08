@@ -847,6 +847,14 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func createTask(task: NewTask, nowMs: Int64) throws  -> String
     
     /**
+     * SQLite's `data_version` on this handle's connection: it moves when
+     * another connection commits (the CLI, another process) and never for
+     * this handle's own writes, so a client that writes only through the
+     * core can poll it to learn that someone else changed the file.
+     */
+    func dataVersion() throws  -> Int64
+    
+    /**
      * Deletes a folder as one "Delete Folder" step; its lists move to the top.
      */
     func deleteFolder(id: String) throws 
@@ -2006,6 +2014,21 @@ open func createTask(task: NewTask, nowMs: Int64)throws  -> String  {
             self.uniffiCloneHandle(),
         FfiConverterTypeNewTask_lower(task),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * SQLite's `data_version` on this handle's connection: it moves when
+     * another connection commits (the CLI, another process) and never for
+     * this handle's own writes, so a client that writes only through the
+     * core can poll it to learn that someone else changed the file.
+     */
+open func dataVersion()throws  -> Int64  {
+    return try  FfiConverterInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_data_version(
+            self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
 }
@@ -9224,6 +9247,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_create_task() != 36329) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_data_version() != 15691) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_delete_folder() != 27954) {
