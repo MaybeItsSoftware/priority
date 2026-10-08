@@ -102,7 +102,7 @@ impl Cadence {
 /// A wall-clock time in `zone` as an instant. A time the clocks skip over is
 /// moved later by the length of the gap, and a time they repeat takes its
 /// earlier occurrence, as Foundation and `ZonedDateTime` both resolve them.
-fn resolve(zone: Tz, local: NaiveDateTime) -> DateTime<Utc> {
+pub(crate) fn resolve(zone: Tz, local: NaiveDateTime) -> DateTime<Utc> {
     match zone.from_local_datetime(&local) {
         LocalResult::Single(time) => time.with_timezone(&Utc),
         LocalResult::Ambiguous(earlier, _) => earlier.with_timezone(&Utc),

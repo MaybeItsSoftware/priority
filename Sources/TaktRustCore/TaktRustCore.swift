@@ -589,6 +589,11 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Copies a task's planning onto its subtasks as one step.
+     */
+    func applyPlanningToDescendants(taskId: String, nowMs: Int64, zone: String) throws 
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
     func archiveDaily(taskId: String, nowMs: Int64) throws 
@@ -642,6 +647,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Deletes a task and its subtree as one "Delete Task" step.
      */
     func deleteTask(id: String) throws  -> DeletedTask
+    
+    /**
+     * A task's editable state, as the editor opens it.
+     */
+    func editorSnapshot(taskId: String) throws  -> EditorSnapshot
     
     /**
      * The task and list the next undo (`for_undo`) or redo affects.
@@ -751,6 +761,17 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func saveCondition(id: String, name: String, isLocation: Bool, isArchived: Bool, nowMs: Int64) throws 
     
     /**
+     * Saves the task editor as one "Edit Task" step, refusing if the task
+     * changed since `baseline`. Returns the task as saved.
+     */
+    func saveEditor(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int64, zone: String) throws  -> EditorSnapshot
+    
+    /**
+     * Moves a task's start as one "Schedule Task" step.
+     */
+    func scheduleTask(id: String, startAtMs: Int64?, nowMs: Int64, zone: String) throws 
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
     func setKanbanColumn(taskIds: [String], column: String?, nowMs: Int64) throws 
@@ -798,9 +819,19 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func updateDaily(id: String, edit: DailyEdit, nowMs: Int64) throws 
     
     /**
+     * Sets a task's priority, tags, links and repeat as one "Edit Task Details" step.
+     */
+    func updateEditorMetadata(taskId: String, metadata: EditorMetadata, nowMs: Int64) throws 
+    
+    /**
      * Sets a list's name and colour as one "Edit List" step.
      */
     func updateList(id: String, name: String, colourHex: String?, nowMs: Int64) throws 
+    
+    /**
+     * Sets a task's title, notes, due time and estimate as one "Edit Task" step.
+     */
+    func updateTask(id: String, title: String, notes: String, dueAtMs: Int64?, estimateSeconds: Int64?, nowMs: Int64, zone: String) throws 
     
 }
 /**
@@ -871,6 +902,20 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * Copies a task's planning onto its subtasks as one step.
+     */
+open func applyPlanningToDescendants(taskId: String, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_apply_planning_to_descendants(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+}
+}
     
     /**
      * Archives a task's daily as one "Archive Daily" step.
@@ -1020,6 +1065,19 @@ open func deleteTask(id: String)throws  -> DeletedTask  {
     uniffi_takt_core_fn_method_coreworkspace_delete_task(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A task's editable state, as the editor opens it.
+     */
+open func editorSnapshot(taskId: String)throws  -> EditorSnapshot  {
+    return try  FfiConverterTypeEditorSnapshot_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
     )
 })
 }
@@ -1326,6 +1384,38 @@ open func saveCondition(id: String, name: String, isLocation: Bool, isArchived: 
 }
     
     /**
+     * Saves the task editor as one "Edit Task" step, refusing if the task
+     * changed since `baseline`. Returns the task as saved.
+     */
+open func saveEditor(edit: EditorSnapshot, baseline: EditorSnapshot, nowMs: Int64, zone: String)throws  -> EditorSnapshot  {
+    return try  FfiConverterTypeEditorSnapshot_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_save_editor(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeEditorSnapshot_lower(edit),
+        FfiConverterTypeEditorSnapshot_lower(baseline),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Moves a task's start as one "Schedule Task" step.
+     */
+open func scheduleTask(id: String, startAtMs: Int64?, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_schedule_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterOptionInt64.lower(startAtMs),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
 open func setKanbanColumn(taskIds: [String], column: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1450,6 +1540,20 @@ open func updateDaily(id: String, edit: DailyEdit, nowMs: Int64)throws   {try ru
 }
     
     /**
+     * Sets a task's priority, tags, links and repeat as one "Edit Task Details" step.
+     */
+open func updateEditorMetadata(taskId: String, metadata: EditorMetadata, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_update_editor_metadata(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterTypeEditorMetadata_lower(metadata),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Sets a list's name and colour as one "Edit List" step.
      */
 open func updateList(id: String, name: String, colourHex: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1460,6 +1564,24 @@ open func updateList(id: String, name: String, colourHex: String?, nowMs: Int64)
         FfiConverterString.lower(name),
         FfiConverterOptionString.lower(colourHex),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Sets a task's title, notes, due time and estimate as one "Edit Task" step.
+     */
+open func updateTask(id: String, title: String, notes: String, dueAtMs: Int64?, estimateSeconds: Int64?, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_update_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(title),
+        FfiConverterString.lower(notes),
+        FfiConverterOptionInt64.lower(dueAtMs),
+        FfiConverterOptionInt64.lower(estimateSeconds),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 }
 }
@@ -1803,6 +1925,168 @@ public func FfiConverterTypeDeletedTask_lower(_ value: DeletedTask) -> RustBuffe
 
 
 /**
+ * The parts of a task's metadata the editor shows.
+ */
+public struct EditorMetadata: Equatable, Hashable {
+    /**
+     * 1 to 4; anything else is no priority.
+     */
+    public var priority: Int64?
+    public var tags: [String]
+    public var recurrenceRule: String?
+    public var externalLinks: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * 1 to 4; anything else is no priority.
+         */priority: Int64?, tags: [String], recurrenceRule: String?, externalLinks: [String]) {
+        self.priority = priority
+        self.tags = tags
+        self.recurrenceRule = recurrenceRule
+        self.externalLinks = externalLinks
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditorMetadata: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditorMetadata: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditorMetadata {
+        return
+            try EditorMetadata(
+                priority: FfiConverterOptionInt64.read(from: &buf), 
+                tags: FfiConverterSequenceString.read(from: &buf), 
+                recurrenceRule: FfiConverterOptionString.read(from: &buf), 
+                externalLinks: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditorMetadata, into buf: inout [UInt8]) {
+        FfiConverterOptionInt64.write(value.priority, into: &buf)
+        FfiConverterSequenceString.write(value.tags, into: &buf)
+        FfiConverterOptionString.write(value.recurrenceRule, into: &buf)
+        FfiConverterSequenceString.write(value.externalLinks, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorMetadata_lift(_ buf: RustBuffer) throws -> EditorMetadata {
+    return try FfiConverterTypeEditorMetadata.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorMetadata_lower(_ value: EditorMetadata) -> RustBuffer {
+    return FfiConverterTypeEditorMetadata.lower(value)
+}
+
+
+/**
+ * Everything the task editor edits, as it stands. `TaskEditorSnapshot`.
+ */
+public struct EditorSnapshot: Equatable, Hashable {
+    public var workspaceId: String
+    public var taskId: String
+    public var title: String
+    public var notes: String
+    public var dueAtMs: Int64?
+    public var estimateSeconds: Int64?
+    public var metadata: EditorMetadata
+    /**
+     * Whether the task is tracked as an active daily.
+     */
+    public var dailyProgress: Bool
+    public var planning: Planning?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(workspaceId: String, taskId: String, title: String, notes: String, dueAtMs: Int64?, estimateSeconds: Int64?, metadata: EditorMetadata, 
+        /**
+         * Whether the task is tracked as an active daily.
+         */dailyProgress: Bool, planning: Planning?) {
+        self.workspaceId = workspaceId
+        self.taskId = taskId
+        self.title = title
+        self.notes = notes
+        self.dueAtMs = dueAtMs
+        self.estimateSeconds = estimateSeconds
+        self.metadata = metadata
+        self.dailyProgress = dailyProgress
+        self.planning = planning
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditorSnapshot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditorSnapshot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditorSnapshot {
+        return
+            try EditorSnapshot(
+                workspaceId: FfiConverterString.read(from: &buf), 
+                taskId: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                notes: FfiConverterString.read(from: &buf), 
+                dueAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                metadata: FfiConverterTypeEditorMetadata.read(from: &buf), 
+                dailyProgress: FfiConverterBool.read(from: &buf), 
+                planning: FfiConverterOptionTypePlanning.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditorSnapshot, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.workspaceId, into: &buf)
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.notes, into: &buf)
+        FfiConverterOptionInt64.write(value.dueAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
+        FfiConverterTypeEditorMetadata.write(value.metadata, into: &buf)
+        FfiConverterBool.write(value.dailyProgress, into: &buf)
+        FfiConverterOptionTypePlanning.write(value.planning, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorSnapshot_lift(_ buf: RustBuffer) throws -> EditorSnapshot {
+    return try FfiConverterTypeEditorSnapshot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorSnapshot_lower(_ value: EditorSnapshot) -> RustBuffer {
+    return FfiConverterTypeEditorSnapshot.lower(value)
+}
+
+
+/**
  * The task and list the next undo (or redo) affects, so a client can reveal
  * the work that comes back.
  */
@@ -2004,6 +2288,82 @@ public func FfiConverterTypeNewTask_lower(_ value: NewTask) -> RustBuffer {
 
 
 /**
+ * When and how a task can be worked on. All groups of requirements must be
+ * met, and any condition in a group meets it.
+ */
+public struct Planning: Equatable, Hashable {
+    public var startAtMs: Int64?
+    /**
+     * A calendar date, `yyyy-MM-dd`, the task is due by the end of.
+     */
+    public var dueDate: String?
+    public var requirementGroups: [[String]]?
+    public var minimumBlockSeconds: Int64?
+    public var requiresSingleSitting: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(startAtMs: Int64?, 
+        /**
+         * A calendar date, `yyyy-MM-dd`, the task is due by the end of.
+         */dueDate: String?, requirementGroups: [[String]]?, minimumBlockSeconds: Int64?, requiresSingleSitting: Bool?) {
+        self.startAtMs = startAtMs
+        self.dueDate = dueDate
+        self.requirementGroups = requirementGroups
+        self.minimumBlockSeconds = minimumBlockSeconds
+        self.requiresSingleSitting = requiresSingleSitting
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension Planning: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlanning: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Planning {
+        return
+            try Planning(
+                startAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                dueDate: FfiConverterOptionString.read(from: &buf), 
+                requirementGroups: FfiConverterOptionSequenceSequenceString.read(from: &buf), 
+                minimumBlockSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                requiresSingleSitting: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Planning, into buf: inout [UInt8]) {
+        FfiConverterOptionInt64.write(value.startAtMs, into: &buf)
+        FfiConverterOptionString.write(value.dueDate, into: &buf)
+        FfiConverterOptionSequenceSequenceString.write(value.requirementGroups, into: &buf)
+        FfiConverterOptionInt64.write(value.minimumBlockSeconds, into: &buf)
+        FfiConverterOptionBool.write(value.requiresSingleSitting, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanning_lift(_ buf: RustBuffer) throws -> Planning {
+    return try FfiConverterTypePlanning.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanning_lower(_ value: Planning) -> RustBuffer {
+    return FfiConverterTypePlanning.lower(value)
+}
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 public struct UndoStep: Equatable, Hashable {
@@ -2122,6 +2482,11 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case InvalidCondition
     case InvalidStatus(status: String
     )
+    case InvalidSchedule
+    case InvalidMinimum
+    case EstimateRequired
+    case InvalidDate
+    case EditorConflict
     case InvalidTaskMove
 
     
@@ -2179,7 +2544,12 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 12: return .InvalidStatus(
             status: try FfiConverterString.read(from: &buf)
             )
-        case 13: return .InvalidTaskMove
+        case 13: return .InvalidSchedule
+        case 14: return .InvalidMinimum
+        case 15: return .EstimateRequired
+        case 16: return .InvalidDate
+        case 17: return .EditorConflict
+        case 18: return .InvalidTaskMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -2248,8 +2618,28 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             FfiConverterString.write(status, into: &buf)
             
         
-        case .InvalidTaskMove:
+        case .InvalidSchedule:
             writeInt(&buf, Int32(13))
+        
+        
+        case .InvalidMinimum:
+            writeInt(&buf, Int32(14))
+        
+        
+        case .EstimateRequired:
+            writeInt(&buf, Int32(15))
+        
+        
+        case .InvalidDate:
+            writeInt(&buf, Int32(16))
+        
+        
+        case .EditorConflict:
+            writeInt(&buf, Int32(17))
+        
+        
+        case .InvalidTaskMove:
+            writeInt(&buf, Int32(18))
         
         }
     }
@@ -2297,6 +2687,30 @@ fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionBool: FfiConverterRustBuffer {
+    typealias SwiftType = Bool?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterBool.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterBool.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -2321,6 +2735,30 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypePlanning: FfiConverterRustBuffer {
+    typealias SwiftType = Planning?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypePlanning.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypePlanning.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceUInt32: FfiConverterRustBuffer {
     typealias SwiftType = [UInt32]?
 
@@ -2337,6 +2775,30 @@ fileprivate struct FfiConverterOptionSequenceUInt32: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterSequenceUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionSequenceSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [[String]]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceSequenceString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceSequenceString.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -2416,6 +2878,31 @@ fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
         return seq
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [[String]]
+
+    public static func write(_ value: [[String]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[String]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[String]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterSequenceString.read(from: &buf))
+        }
+        return seq
+    }
+}
 /**
  * The version of this crate, as compiled into the library a client loaded.
  *
@@ -2481,6 +2968,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants() != 40638) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_archive_daily() != 52136) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2512,6 +3002,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_delete_task() != 40901) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() != 20106) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_history_target() != 25210) {
@@ -2577,6 +3070,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_save_condition() != 40969) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_save_editor() != 10270) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_schedule_task() != 28936) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column() != 29324) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2604,7 +3103,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_update_daily() != 13413) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_update_editor_metadata() != 47794) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_update_list() != 5208) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_update_task() != 10215) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_constructor_coreworkspace_open() != 50515) {

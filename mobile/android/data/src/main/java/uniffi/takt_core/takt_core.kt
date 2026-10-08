@@ -681,6 +681,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_archive_daily(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_arrange_day(
@@ -702,6 +704,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
     ): Int
@@ -745,6 +749,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_save_condition(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_save_editor(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_schedule_task(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_list_archived(
@@ -763,7 +771,11 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_daily(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_update_editor_metadata(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_update_task(
     ): Int
     external fun uniffi_takt_core_checksum_constructor_coreworkspace_open(
     ): Int
@@ -793,6 +805,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_apply_planning_to_descendants(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_archive_daily(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_arrange_day(`ptr`: Long,`orderedTaskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -814,6 +828,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_list(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -857,6 +873,10 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_save_condition(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`isArchived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_save_editor(`ptr`: Long,`edit`: RustBuffer.ByValue,`baseline`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_schedule_task(`ptr`: Long,`id`: RustBuffer.ByValue,`startAtMs`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(`ptr`: Long,`taskIds`: RustBuffer.ByValue,`column`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_list_archived(`ptr`: Long,`id`: RustBuffer.ByValue,`archived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -875,7 +895,11 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_update_daily(`ptr`: Long,`id`: RustBuffer.ByValue,`edit`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_update_editor_metadata(`ptr`: Long,`taskId`: RustBuffer.ByValue,`metadata`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_update_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`colourHex`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_update_task(`ptr`: Long,`id`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,`notes`: RustBuffer.ByValue,`dueAtMs`: RustBuffer.ByValue,`estimateSeconds`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1011,6 +1035,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants() and 0xFFFF) != 40638) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_archive_daily() and 0xFFFF) != 52136) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1042,6 +1069,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_task() and 0xFFFF) != 40901) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_editor_snapshot() and 0xFFFF) != 20106) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_history_target() and 0xFFFF) != 25210) {
@@ -1107,6 +1137,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_condition() and 0xFFFF) != 40969) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_save_editor() and 0xFFFF) != 10270) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_schedule_task() and 0xFFFF) != 28936) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column() and 0xFFFF) != 29324) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1134,7 +1170,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_daily() and 0xFFFF) != 13413) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_editor_metadata() and 0xFFFF) != 47794) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_list() and 0xFFFF) != 5208) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_task() and 0xFFFF) != 10215) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_constructor_coreworkspace_open() and 0xFFFF) != 50515) {
@@ -1548,6 +1590,11 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Copies a task's planning onto its subtasks as one step.
+     */
+    fun `applyPlanningToDescendants`(`taskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
     fun `archiveDaily`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
@@ -1601,6 +1648,11 @@ public interface CoreWorkspaceInterface {
      * Deletes a task and its subtree as one "Delete Task" step.
      */
     fun `deleteTask`(`id`: kotlin.String): DeletedTask
+    
+    /**
+     * A task's editable state, as the editor opens it.
+     */
+    fun `editorSnapshot`(`taskId`: kotlin.String): EditorSnapshot
     
     /**
      * The task and list the next undo (`for_undo`) or redo affects.
@@ -1710,6 +1762,17 @@ public interface CoreWorkspaceInterface {
     fun `saveCondition`(`id`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `isArchived`: kotlin.Boolean, `nowMs`: kotlin.Long)
     
     /**
+     * Saves the task editor as one "Edit Task" step, refusing if the task
+     * changed since `baseline`. Returns the task as saved.
+     */
+    fun `saveEditor`(`edit`: EditorSnapshot, `baseline`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): EditorSnapshot
+    
+    /**
+     * Moves a task's start as one "Schedule Task" step.
+     */
+    fun `scheduleTask`(`id`: kotlin.String, `startAtMs`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
     fun `setKanbanColumn`(`taskIds`: List<kotlin.String>, `column`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -1757,9 +1820,19 @@ public interface CoreWorkspaceInterface {
     fun `updateDaily`(`id`: kotlin.String, `edit`: DailyEdit, `nowMs`: kotlin.Long)
     
     /**
+     * Sets a task's priority, tags, links and repeat as one "Edit Task Details" step.
+     */
+    fun `updateEditorMetadata`(`taskId`: kotlin.String, `metadata`: EditorMetadata, `nowMs`: kotlin.Long)
+    
+    /**
      * Sets a list's name and colour as one "Edit List" step.
      */
     fun `updateList`(`id`: kotlin.String, `name`: kotlin.String, `colourHex`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Sets a task's title, notes, due time and estimate as one "Edit Task" step.
+     */
+    fun `updateTask`(`id`: kotlin.String, `title`: kotlin.String, `notes`: kotlin.String, `dueAtMs`: kotlin.Long?, `estimateSeconds`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String)
     
     companion object
 }
@@ -1867,6 +1940,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * Copies a task's planning onto its subtasks as one step.
+     */
+    @Throws(CoreException::class)override fun `applyPlanningToDescendants`(`taskId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_apply_planning_to_descendants(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    
+    
 
     
     /**
@@ -2069,6 +2161,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A task's editable state, as the editor opens it.
+     */
+    @Throws(CoreException::class)override fun `editorSnapshot`(`taskId`: kotlin.String): EditorSnapshot {
+            return FfiConverterTypeEditorSnapshot.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_editor_snapshot(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
 }
     }
     )
@@ -2483,6 +2593,48 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Saves the task editor as one "Edit Task" step, refusing if the task
+     * changed since `baseline`. Returns the task as saved.
+     */
+    @Throws(CoreException::class)override fun `saveEditor`(`edit`: EditorSnapshot, `baseline`: EditorSnapshot, `nowMs`: kotlin.Long, `zone`: kotlin.String): EditorSnapshot {
+            return FfiConverterTypeEditorSnapshot.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_save_editor(
+        it,
+        
+        FfiConverterTypeEditorSnapshot.lower(`edit`),
+        FfiConverterTypeEditorSnapshot.lower(`baseline`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Moves a task's start as one "Schedule Task" step.
+     */
+    @Throws(CoreException::class)override fun `scheduleTask`(`id`: kotlin.String, `startAtMs`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_schedule_task(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterOptionalLong.lower(`startAtMs`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
     @Throws(CoreException::class)override fun `setKanbanColumn`(`taskIds`: List<kotlin.String>, `column`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -2652,6 +2804,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Sets a task's priority, tags, links and repeat as one "Edit Task Details" step.
+     */
+    @Throws(CoreException::class)override fun `updateEditorMetadata`(`taskId`: kotlin.String, `metadata`: EditorMetadata, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_update_editor_metadata(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterTypeEditorMetadata.lower(`metadata`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Sets a list's name and colour as one "Edit List" step.
      */
     @Throws(CoreException::class)override fun `updateList`(`id`: kotlin.String, `name`: kotlin.String, `colourHex`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -2665,6 +2836,29 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`name`),
         FfiConverterOptionalString.lower(`colourHex`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Sets a task's title, notes, due time and estimate as one "Edit Task" step.
+     */
+    @Throws(CoreException::class)override fun `updateTask`(`id`: kotlin.String, `title`: kotlin.String, `notes`: kotlin.String, `dueAtMs`: kotlin.Long?, `estimateSeconds`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_update_task(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`title`),
+        FfiConverterString.lower(`notes`),
+        FfiConverterOptionalLong.lower(`dueAtMs`),
+        FfiConverterOptionalLong.lower(`estimateSeconds`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     }
     
@@ -2940,6 +3134,139 @@ public object FfiConverterTypeDeletedTask: FfiConverterRustBuffer<DeletedTask> {
 
 
 /**
+ * The parts of a task's metadata the editor shows.
+ */
+data class EditorMetadata (
+    /**
+     * 1 to 4; anything else is no priority.
+     */
+    var `priority`: kotlin.Long?
+    , 
+    var `tags`: List<kotlin.String>
+    , 
+    var `recurrenceRule`: kotlin.String?
+    , 
+    var `externalLinks`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEditorMetadata: FfiConverterRustBuffer<EditorMetadata> {
+    override fun read(buf: ByteBuffer): EditorMetadata {
+        return EditorMetadata(
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EditorMetadata) = (
+            FfiConverterOptionalLong.allocationSize(value.`priority`) +
+            FfiConverterSequenceString.allocationSize(value.`tags`) +
+            FfiConverterOptionalString.allocationSize(value.`recurrenceRule`) +
+            FfiConverterSequenceString.allocationSize(value.`externalLinks`)
+    )
+
+    override fun write(value: EditorMetadata, buf: ByteBuffer) {
+            FfiConverterOptionalLong.write(value.`priority`, buf)
+            FfiConverterSequenceString.write(value.`tags`, buf)
+            FfiConverterOptionalString.write(value.`recurrenceRule`, buf)
+            FfiConverterSequenceString.write(value.`externalLinks`, buf)
+    }
+}
+
+
+
+/**
+ * Everything the task editor edits, as it stands. `TaskEditorSnapshot`.
+ */
+data class EditorSnapshot (
+    var `workspaceId`: kotlin.String
+    , 
+    var `taskId`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `notes`: kotlin.String
+    , 
+    var `dueAtMs`: kotlin.Long?
+    , 
+    var `estimateSeconds`: kotlin.Long?
+    , 
+    var `metadata`: EditorMetadata
+    , 
+    /**
+     * Whether the task is tracked as an active daily.
+     */
+    var `dailyProgress`: kotlin.Boolean
+    , 
+    var `planning`: Planning?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEditorSnapshot: FfiConverterRustBuffer<EditorSnapshot> {
+    override fun read(buf: ByteBuffer): EditorSnapshot {
+        return EditorSnapshot(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterTypeEditorMetadata.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalTypePlanning.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EditorSnapshot) = (
+            FfiConverterString.allocationSize(value.`workspaceId`) +
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`notes`) +
+            FfiConverterOptionalLong.allocationSize(value.`dueAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
+            FfiConverterTypeEditorMetadata.allocationSize(value.`metadata`) +
+            FfiConverterBoolean.allocationSize(value.`dailyProgress`) +
+            FfiConverterOptionalTypePlanning.allocationSize(value.`planning`)
+    )
+
+    override fun write(value: EditorSnapshot, buf: ByteBuffer) {
+            FfiConverterString.write(value.`workspaceId`, buf)
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`notes`, buf)
+            FfiConverterOptionalLong.write(value.`dueAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
+            FfiConverterTypeEditorMetadata.write(value.`metadata`, buf)
+            FfiConverterBoolean.write(value.`dailyProgress`, buf)
+            FfiConverterOptionalTypePlanning.write(value.`planning`, buf)
+    }
+}
+
+
+
+/**
  * The task and list the next undo (or redo) affects, so a client can reveal
  * the work that comes back.
  */
@@ -3108,6 +3435,66 @@ public object FfiConverterTypeNewTask: FfiConverterRustBuffer<NewTask> {
 
 
 /**
+ * When and how a task can be worked on. All groups of requirements must be
+ * met, and any condition in a group meets it.
+ */
+data class Planning (
+    var `startAtMs`: kotlin.Long?
+    , 
+    /**
+     * A calendar date, `yyyy-MM-dd`, the task is due by the end of.
+     */
+    var `dueDate`: kotlin.String?
+    , 
+    var `requirementGroups`: List<List<kotlin.String>>?
+    , 
+    var `minimumBlockSeconds`: kotlin.Long?
+    , 
+    var `requiresSingleSitting`: kotlin.Boolean?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePlanning: FfiConverterRustBuffer<Planning> {
+    override fun read(buf: ByteBuffer): Planning {
+        return Planning(
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalSequenceSequenceString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Planning) = (
+            FfiConverterOptionalLong.allocationSize(value.`startAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`dueDate`) +
+            FfiConverterOptionalSequenceSequenceString.allocationSize(value.`requirementGroups`) +
+            FfiConverterOptionalLong.allocationSize(value.`minimumBlockSeconds`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`requiresSingleSitting`)
+    )
+
+    override fun write(value: Planning, buf: ByteBuffer) {
+            FfiConverterOptionalLong.write(value.`startAtMs`, buf)
+            FfiConverterOptionalString.write(value.`dueDate`, buf)
+            FfiConverterOptionalSequenceSequenceString.write(value.`requirementGroups`, buf)
+            FfiConverterOptionalLong.write(value.`minimumBlockSeconds`, buf)
+            FfiConverterOptionalBoolean.write(value.`requiresSingleSitting`, buf)
+    }
+}
+
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 data class UndoStep (
@@ -3268,6 +3655,36 @@ sealed class CoreException: kotlin.Exception() {
             get() = "status=${ `status` }"
     }
     
+    class InvalidSchedule(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
+    class InvalidMinimum(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
+    class EstimateRequired(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
+    class InvalidDate(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
+    class EditorConflict(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
     class InvalidTaskMove(
         ) : CoreException() {
         override val message
@@ -3320,7 +3737,12 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             12 -> CoreException.InvalidStatus(
                 FfiConverterString.read(buf),
                 )
-            13 -> CoreException.InvalidTaskMove()
+            13 -> CoreException.InvalidSchedule()
+            14 -> CoreException.InvalidMinimum()
+            15 -> CoreException.EstimateRequired()
+            16 -> CoreException.InvalidDate()
+            17 -> CoreException.EditorConflict()
+            18 -> CoreException.InvalidTaskMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -3382,6 +3804,26 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 + FfiConverterString.allocationSize(value.`status`)
+            )
+            is CoreException.InvalidSchedule -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.InvalidMinimum -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.EstimateRequired -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.InvalidDate -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CoreException.EditorConflict -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
             )
             is CoreException.InvalidTaskMove -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
@@ -3448,8 +3890,28 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 FfiConverterString.write(value.`status`, buf)
                 Unit
             }
-            is CoreException.InvalidTaskMove -> {
+            is CoreException.InvalidSchedule -> {
                 buf.putInt(13)
+                Unit
+            }
+            is CoreException.InvalidMinimum -> {
+                buf.putInt(14)
+                Unit
+            }
+            is CoreException.EstimateRequired -> {
+                buf.putInt(15)
+                Unit
+            }
+            is CoreException.InvalidDate -> {
+                buf.putInt(16)
+                Unit
+            }
+            is CoreException.EditorConflict -> {
+                buf.putInt(17)
+                Unit
+            }
+            is CoreException.InvalidTaskMove -> {
+                buf.putInt(18)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -3495,6 +3957,38 @@ public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
 /**
  * @suppress
  */
+public object FfiConverterOptionalBoolean: FfiConverterRustBuffer<kotlin.Boolean?> {
+    override fun read(buf: ByteBuffer): kotlin.Boolean? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterBoolean.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Boolean?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterBoolean.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Boolean?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterBoolean.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
     override fun read(buf: ByteBuffer): kotlin.String? {
         if (buf.get().toInt() == 0) {
@@ -3527,6 +4021,38 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypePlanning: FfiConverterRustBuffer<Planning?> {
+    override fun read(buf: ByteBuffer): Planning? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypePlanning.read(buf)
+    }
+
+    override fun allocationSize(value: Planning?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypePlanning.allocationSize(value)
+        }
+    }
+
+    override fun write(value: Planning?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypePlanning.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>?> {
     override fun read(buf: ByteBuffer): List<kotlin.UInt>? {
         if (buf.get().toInt() == 0) {
@@ -3549,6 +4075,38 @@ public object FfiConverterOptionalSequenceUInt: FfiConverterRustBuffer<List<kotl
         } else {
             buf.put(1)
             FfiConverterSequenceUInt.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalSequenceSequenceString: FfiConverterRustBuffer<List<List<kotlin.String>>?> {
+    override fun read(buf: ByteBuffer): List<List<kotlin.String>>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceSequenceString.read(buf)
+    }
+
+    override fun allocationSize(value: List<List<kotlin.String>>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceSequenceString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: List<List<kotlin.String>>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceSequenceString.write(value, buf)
         }
     }
 }
@@ -3633,6 +4191,34 @@ public object FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer<List<Undo
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeUndoStep.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceSequenceString: FfiConverterRustBuffer<List<List<kotlin.String>>> {
+    override fun read(buf: ByteBuffer): List<List<kotlin.String>> {
+        val len = buf.getInt()
+        return List<List<kotlin.String>>(len) {
+            FfiConverterSequenceString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<List<kotlin.String>>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterSequenceString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<List<kotlin.String>>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterSequenceString.write(it, buf)
         }
     }
 }

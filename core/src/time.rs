@@ -47,3 +47,21 @@ pub fn parse_stored(text: &str) -> Option<chrono::DateTime<chrono::Utc>> {
 pub fn stored_instant(instant: chrono::DateTime<chrono::Utc>) -> String {
     stored(instant.timestamp_millis())
 }
+
+/// JSON as Swift's `JSONEncoder` writes it by default: compact, with `/`
+/// escaped as `\/`. The clients compare and sync these columns as text, so
+/// the core writes them the same way. Kotlin's `SwiftJSON.encode`.
+pub fn swift_json(value: &serde_json::Value) -> String {
+    value.to_string().replace('/', "\\/")
+}
+
+/// A list of strings as `tagsJSON` and `externalLinksJSON` hold them.
+pub fn swift_json_strings(values: &[String]) -> String {
+    swift_json(&serde_json::Value::from(values.to_vec()))
+}
+
+/// A stored string array read back leniently: anything that is not a JSON
+/// array of strings reads as empty, as `decodeStringArray` did.
+pub fn decode_strings(text: &str) -> Vec<String> {
+    serde_json::from_str::<Vec<String>>(text).unwrap_or_default()
+}

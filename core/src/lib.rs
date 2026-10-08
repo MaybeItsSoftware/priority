@@ -11,6 +11,7 @@ uniffi::setup_scaffolding!();
 
 pub mod conditions;
 pub mod dailies;
+pub mod editor;
 pub mod error;
 pub mod journal;
 pub mod lists;

@@ -98,14 +98,6 @@ extension WorkspaceStore {
     try coreWrite { try core.archiveDaily(taskId: taskId, nowMs: now.coreMilliseconds) }
   }
 
-  static func archiveDailyRecord(_ db: Database, taskId: String, now: Date) throws {
-    guard var daily = try WorkspaceDaily.filter(Column("taskId") == taskId && Column("archivedAt") == nil)
-      .fetchOne(db) else { return }
-    daily.archivedAt = now
-    daily.updatedAt = now
-    try daily.update(db)
-  }
-
   /// Edits a daily: the Rust core's `dailies::update_daily`. A doubly
   /// optional field left nil keeps its value; `.some(nil)` clears it.
   public func updateDaily(
@@ -359,13 +351,9 @@ extension WorkspaceStore {
   /// Pushes a task out of consideration until `date` by setting its start time.
   /// This is what "schedule it for later" on the focus screen writes.
   public func scheduleTask(id: String, startAt: Date?, now: Date = .now) throws {
-    try journalledWrite("Schedule Task") { db in
-      let previous = try Self.taskEditorSnapshot(db, taskId: id)
-      var edit = previous
-      var plan = edit.planning ?? TaskPlanning()
-      plan.startAt = startAt
-      edit.planning = plan.normalized
-      try Self.updatePlanning(db, edit: edit, previous: previous.planning, previousDueAt: previous.dueAt, now: now)
+    // The Rust core's `editor::schedule_task`.
+    try coreWrite {
+      try core.scheduleTask(id: id, startAtMs: startAt?.coreMilliseconds, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
     }
   }
 

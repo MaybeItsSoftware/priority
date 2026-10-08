@@ -14,6 +14,7 @@ use rusqlite::Connection;
 use crate::CoreError;
 use crate::conditions;
 use crate::dailies::{self, DailyEdit};
+use crate::editor::{self, EditorMetadata, EditorSnapshot};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList};
 use crate::tasks::{self, DeletedTask, NewTask};
@@ -320,6 +321,88 @@ impl CoreWorkspace {
     ) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Edit Condition", |tx| {
             conditions::save_condition(tx, &id, &name, is_location, is_archived, now_ms)
+        })
+    }
+
+    /// A task's editable state, as the editor opens it.
+    pub fn editor_snapshot(&self, task_id: String) -> Result<EditorSnapshot, CoreError> {
+        editor::snapshot(&self.lock(), &task_id)
+    }
+
+    /// Saves the task editor as one "Edit Task" step, refusing if the task
+    /// changed since `baseline`. Returns the task as saved.
+    pub fn save_editor(
+        &self,
+        edit: EditorSnapshot,
+        baseline: EditorSnapshot,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<EditorSnapshot, CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Task", |tx| {
+            editor::save_editor(tx, &edit, &baseline, now_ms, &zone)
+        })
+    }
+
+    /// Sets a task's title, notes, due time and estimate as one "Edit Task" step.
+    #[allow(clippy::too_many_arguments)]
+    pub fn update_task(
+        &self,
+        id: String,
+        title: String,
+        notes: String,
+        due_at_ms: Option<i64>,
+        estimate_seconds: Option<i64>,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Task", |tx| {
+            editor::update_task(
+                tx,
+                &id,
+                &title,
+                &notes,
+                due_at_ms,
+                estimate_seconds,
+                now_ms,
+                &zone,
+            )
+        })
+    }
+
+    /// Sets a task's priority, tags, links and repeat as one "Edit Task Details" step.
+    pub fn update_editor_metadata(
+        &self,
+        task_id: String,
+        metadata: EditorMetadata,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Edit Task Details", |tx| {
+            editor::update_editor_metadata(tx, &task_id, &metadata, now_ms)
+        })
+    }
+
+    /// Moves a task's start as one "Schedule Task" step.
+    pub fn schedule_task(
+        &self,
+        id: String,
+        start_at_ms: Option<i64>,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Schedule Task", |tx| {
+            editor::schedule_task(tx, &id, start_at_ms, now_ms, &zone)
+        })
+    }
+
+    /// Copies a task's planning onto its subtasks as one step.
+    pub fn apply_planning_to_descendants(
+        &self,
+        task_id: String,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Apply Planning to Subtasks", |tx| {
+            editor::apply_planning_to_descendants(tx, &task_id, now_ms, &zone)
         })
     }
 

@@ -359,6 +359,8 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  /// Sets a task's title, notes, due time and estimate: the Rust core's
+  /// `editor::update_task`. A due time replaces a due date in its planning.
   public func updateTask(
     id: String,
     title: String,
@@ -367,17 +369,10 @@ public final class WorkspaceStore: @unchecked Sendable {
     estimateSeconds: Int?,
     now: Date = .now
   ) throws {
-    let trimmed = try Self.nonEmptyName(title)
-    try journalledWrite("Edit Task") { db in
-      var edit = try Self.taskEditorSnapshot(db, taskId: id)
-      let previous = edit
-      edit.title = trimmed
-      edit.notes = notes
-      edit.dueAt = dueAt
-      edit.estimateSeconds = estimateSeconds
-      if dueAt != nil { edit.planning?.dueDate = nil; edit.planning = edit.planning?.normalized }
-      try Self.updatePlanning(db, edit: edit, previous: previous.planning, previousDueAt: previous.dueAt, now: now)
-      try Self.updateTaskRecord(db, edit: edit, now: now)
+    try coreWrite {
+      try core.updateTask(
+        id: id, title: title, notes: notes, dueAtMs: dueAt?.coreMilliseconds,
+        estimateSeconds: estimateSeconds.map { Int64($0) }, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
     }
   }
 
@@ -385,11 +380,13 @@ public final class WorkspaceStore: @unchecked Sendable {
     try database.read { db in try Self.taskEditorSnapshot(db, taskId: taskId).metadata }
   }
 
+  /// Sets a task's priority, tags, links and repeat: the Rust core's
+  /// `editor::update_editor_metadata`.
   public func updateTaskEditorMetadata(
     taskId: String, metadata: TaskEditorMetadata, now: Date = .now
   ) throws {
-    try journalledWrite("Edit Task Details") { db in
-      try Self.updateEditorMetadata(db, taskId: taskId, metadata: metadata, now: now)
+    try coreWrite {
+      try core.updateEditorMetadata(taskId: taskId, metadata: metadata.core, nowMs: now.coreMilliseconds)
     }
   }
 
@@ -525,6 +522,11 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .emptyName: throw WorkspaceStoreError.emptyName
       case .invalidFolderMove: throw WorkspaceStoreError.invalidFolderMove
       case .invalidCondition: throw TaskPlanningError.invalidCondition
+      case .invalidSchedule: throw TaskPlanningError.invalidSchedule
+      case .invalidMinimum: throw TaskPlanningError.invalidMinimum
+      case .estimateRequired: throw TaskPlanningError.estimateRequired
+      case .invalidDate: throw TaskPlanningError.invalidDate
+      case .editorConflict: throw TaskEditorError.conflictingChanges
       case .invalidTaskMove: throw WorkspaceStoreError.invalidTaskMove
       case .noJournal, .other, nil: throw error
       }
@@ -604,7 +606,9 @@ private extension String {
 }
 
 extension Date {
-  /// This moment as the Rust core takes "now": whole milliseconds since 1970,
-  /// truncated as GRDB truncates a stored date.
-  var coreMilliseconds: Int64 { Int64((timeIntervalSince1970 * 1000).rounded(.down)) }
+  /// This moment as the Rust core takes it: whole milliseconds since 1970,
+  /// rounded to the nearest. A date GRDB read back from `...20.123` can be a
+  /// hair under it, and truncating would make it `...20.122`, so a value
+  /// read, sent to the core and compared there would no longer match.
+  var coreMilliseconds: Int64 { Int64((timeIntervalSince1970 * 1000).rounded()) }
 }

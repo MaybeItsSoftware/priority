@@ -16,6 +16,11 @@ public enum CoreFailure: Equatable, Sendable {
   case emptyName
   case invalidFolderMove
   case invalidCondition
+  case invalidSchedule
+  case invalidMinimum
+  case estimateRequired
+  case invalidDate
+  case editorConflict
   case invalidTaskMove
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
@@ -36,6 +41,11 @@ extension Error {
     case .EmptyName: return .emptyName
     case .InvalidFolderMove: return .invalidFolderMove
     case .InvalidCondition: return .invalidCondition
+    case .InvalidSchedule: return .invalidSchedule
+    case .InvalidMinimum: return .invalidMinimum
+    case .EstimateRequired: return .estimateRequired
+    case .InvalidDate: return .invalidDate
+    case .EditorConflict: return .editorConflict
     case .InvalidTaskMove: return .invalidTaskMove
     case .NoJournal: return .noJournal
     default: return .other

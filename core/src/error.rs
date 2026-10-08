@@ -30,6 +30,16 @@ pub enum CoreError {
     InvalidCondition,
     #[error("{status} is not a task status; use open, completed or cancelled.")]
     InvalidStatus { status: String },
+    #[error("Start must be before the deadline.")]
+    InvalidSchedule,
+    #[error("Enter a minimum useful block of at least one minute.")]
+    InvalidMinimum,
+    #[error("One-sitting tasks need a positive estimate at least as long as their minimum block.")]
+    EstimateRequired,
+    #[error("Choose a valid calendar date.")]
+    InvalidDate,
+    #[error("This task changed while it was open. Review the latest version before saving.")]
+    EditorConflict,
     #[error("A task cannot be moved into itself or one of its subtasks.")]
     InvalidTaskMove,
 }

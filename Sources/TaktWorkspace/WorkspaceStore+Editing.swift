@@ -22,65 +22,16 @@ extension WorkspaceStore {
     return snapshot
   }
 
+  /// Saves the editor as one step, refusing if the task changed since the
+  /// draft's baseline was read: the Rust core's `editor::save_editor`.
   @discardableResult
   public func saveTaskEditor(_ draft: TaskEditorDraft, now: Date = .now) throws -> TaskEditorSnapshot {
     let edit = try draft.validatedSnapshot()
-    return try journalledWrite("Edit Task") { db in
-      let current = try Self.taskEditorSnapshot(db, taskId: edit.taskId)
-      guard current == draft.baseline else { throw TaskEditorError.conflictingChanges }
-      try Self.updatePlanning(db, edit: edit, previous: current.planning, previousDueAt: current.dueAt, now: now)
-      try Self.updateTaskRecord(db, edit: edit, now: now)
-      try Self.updateEditorMetadata(db, taskId: edit.taskId, metadata: edit.metadata, now: now)
-      try Self.setDailyAttachment(db, taskId: edit.taskId, enabled: edit.dailyProgress,
-                                  estimateSeconds: edit.estimateSeconds, now: now)
-      return try Self.taskEditorSnapshot(db, taskId: edit.taskId)
+    try coreWrite {
+      _ = try core.saveEditor(
+        edit: edit.core, baseline: draft.baseline.core, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
     }
-  }
-
-  static func updateTaskRecord(_ db: Database, edit: TaskEditorSnapshot, now: Date) throws {
-    guard var task = try WorkspaceTask.fetchOne(db, key: edit.taskId) else { throw WorkspaceStoreError.missingTask }
-    guard task.title != edit.title || task.notes != edit.notes || task.dueAt != edit.dueAt
-      || task.estimateSeconds != edit.estimateSeconds else { return }
-    task.title = edit.title
-    task.notes = edit.notes
-    task.dueAt = edit.dueAt
-    task.estimateSeconds = edit.estimateSeconds
-    task.updatedAt = now
-    try task.update(db)
-  }
-
-  static func updateEditorMetadata(_ db: Database, taskId: String, metadata: TaskEditorMetadata, now: Date) throws {
-    guard try WorkspaceTask.fetchOne(db, key: taskId) != nil else { throw WorkspaceStoreError.missingTask }
-    let tags = normalizedStrings(metadata.tags)
-    let links = normalizedStrings(metadata.externalLinks)
-    let recurrence = metadata.recurrenceRule?.trimmingCharacters(in: .whitespacesAndNewlines)
-    let priority = metadata.priority.flatMap { (1...4).contains($0) ? $0 : nil }
-    let existing = try TaskMetadata.fetchOne(db, key: taskId)
-    var record = existing ?? TaskMetadata(
-      taskId: taskId, priority: nil, startAt: nil, tagsJSON: "[]", recurrenceRule: nil,
-      matrixUrgency: nil, matrixImportance: nil, kanbanColumn: nil, externalLinksJSON: "[]", updatedAt: now)
-    let newRecurrence = recurrence?.isEmpty == true ? nil : recurrence
-    guard record.priority != priority || decodeStringArray(record.tagsJSON) != tags
-      || record.recurrenceRule != newRecurrence || decodeStringArray(record.externalLinksJSON) != links else { return }
-    record.priority = priority
-    record.tagsJSON = String(data: try JSONEncoder().encode(tags), encoding: .utf8) ?? "[]"
-    record.recurrenceRule = newRecurrence
-    record.externalLinksJSON = String(data: try JSONEncoder().encode(links), encoding: .utf8) ?? "[]"
-    record.updatedAt = now
-    if existing == nil { try record.insert(db) } else { try record.update(db) }
-  }
-
-  static func setDailyAttachment(
-    _ db: Database, taskId: String, enabled: Bool, estimateSeconds: Int?, now: Date
-  ) throws {
-    let existing = try WorkspaceDaily.filter(Column("taskId") == taskId).fetchOne(db)
-    let isEnabled = existing.map { $0.archivedAt == nil } ?? false
-    guard isEnabled != enabled else { return }
-    if enabled {
-      _ = try Self.makeDailyRecord(db, taskId: taskId, targetSeconds: estimateSeconds, now: now)
-    } else {
-      try Self.archiveDailyRecord(db, taskId: taskId, now: now)
-    }
+    return try database.read { db in try Self.taskEditorSnapshot(db, taskId: edit.taskId) }
   }
 
   public func validParentFolders(for folderId: String) throws -> [ListFolder] {

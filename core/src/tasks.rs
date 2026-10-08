@@ -129,8 +129,8 @@ pub fn create_task(
                 id,
                 priority,
                 new.start_at_ms.map(stored),
-                serde_json::to_string(&tags).unwrap_or_else(|_| "[]".into()),
-                serde_json::to_string(&new.external_links).unwrap_or_else(|_| "[]".into()),
+                crate::time::swift_json_strings(&tags),
+                crate::time::swift_json_strings(&new.external_links),
                 kanban_column,
                 waiting_on,
                 now,
@@ -587,7 +587,10 @@ fn persist_task_order(
     Ok(())
 }
 
-fn descendant_ids(transaction: &Transaction, id: &str) -> Result<Vec<String>, CoreError> {
+pub(crate) fn descendant_ids(
+    transaction: &Transaction,
+    id: &str,
+) -> Result<Vec<String>, CoreError> {
     let mut statement = transaction.prepare(
         "WITH RECURSIVE subtree(id) AS (
            SELECT id FROM tasks WHERE parentTaskId = ?1

@@ -337,6 +337,7 @@ class WorkspaceRepository(
         coreWrite { it.setStatus(taskId, status.raw, now.toEpochMilli(), zone.id) }
     }
 
+    /** Sets a task's title, notes, due time and estimate: the Rust core's `editor::update_task`. */
     suspend fun updateTask(
         id: String,
         title: String,
@@ -345,24 +346,17 @@ class WorkspaceRepository(
         estimateSeconds: Int?,
         now: Instant = now(),
     ) {
-        val trimmed = nonEmptyName(title)
-        journalledWrite("Edit Task") { db ->
-            val previous = taskEditorSnapshot(db, id)
-            var planning = previous.planning
-            if (dueAt != null) planning = planning?.copy(dueDate = null)?.normalized
-            val edit = previous.copy(
-                title = trimmed, notes = notes, dueAt = dueAt, estimateSeconds = estimateSeconds, planning = planning,
-            )
-            updatePlanning(db, edit, previous.planning, previous.dueAt, now, zone)
-            updateTaskRecord(db, edit, now)
+        coreWrite {
+            it.updateTask(id, title, notes, dueAt?.toEpochMilli(), estimateSeconds?.toLong(), now.toEpochMilli(), zone.id)
         }
     }
 
     suspend fun taskEditorMetadata(taskId: String): TaskEditorMetadata =
         database.read { taskEditorSnapshot(it, taskId).metadata }
 
+    /** Sets a task's priority, tags, links and repeat: the Rust core's `editor::update_editor_metadata`. */
     suspend fun updateTaskEditorMetadata(taskId: String, metadata: TaskEditorMetadata, now: Instant = now()) {
-        journalledWrite("Edit Task Details") { db -> updateEditorMetadata(db, taskId, metadata, now) }
+        coreWrite { it.updateEditorMetadata(taskId, metadata.toCore(), now.toEpochMilli()) }
     }
 
     suspend fun kanbanColumn(taskId: String): String? = database.read { it.metadata(taskId)?.kanbanColumn }
@@ -471,6 +465,11 @@ class WorkspaceRepository(
             is CoreException.EmptyName -> fail(WorkspaceStoreError.EMPTY_NAME)
             is CoreException.InvalidFolderMove -> fail(WorkspaceStoreError.INVALID_FOLDER_MOVE)
             is CoreException.InvalidCondition -> planningFail(TaskPlanningError.INVALID_CONDITION)
+            is CoreException.InvalidSchedule -> planningFail(TaskPlanningError.INVALID_SCHEDULE)
+            is CoreException.InvalidMinimum -> planningFail(TaskPlanningError.INVALID_MINIMUM)
+            is CoreException.EstimateRequired -> planningFail(TaskPlanningError.ESTIMATE_REQUIRED)
+            is CoreException.InvalidDate -> planningFail(TaskPlanningError.INVALID_DATE)
+            is CoreException.EditorConflict -> throw TaskEditorException(TaskEditorError.CONFLICTING_CHANGES)
             is CoreException.InvalidTaskMove -> fail(WorkspaceStoreError.INVALID_TASK_MOVE)
             else -> throw error
         }
@@ -687,18 +686,14 @@ class WorkspaceRepository(
             runCatching { taskEditorSnapshot(db, taskId) }.getOrNull()
         }
 
-    /** Saves the inspector's draft; throws CONFLICTING_CHANGES if the task changed underneath it. */
+    /**
+     * Saves the inspector's draft as one step; throws CONFLICTING_CHANGES if the task changed
+     * underneath it. The Rust core's `editor::save_editor`.
+     */
     suspend fun saveTaskEditor(draft: TaskEditorDraft, now: Instant = now()): TaskEditorSnapshot {
         val edit = draft.validatedSnapshot()
-        return journalledWrite("Edit Task") { db ->
-            val current = taskEditorSnapshot(db, edit.taskId)
-            if (current != draft.baseline) throw TaskEditorException(TaskEditorError.CONFLICTING_CHANGES)
-            updatePlanning(db, edit, current.planning, current.dueAt, now, zone)
-            updateTaskRecord(db, edit, now)
-            updateEditorMetadata(db, edit.taskId, edit.metadata, now)
-            setDailyAttachment(db, edit.taskId, edit.dailyProgress, edit.estimateSeconds, now)
-            taskEditorSnapshot(db, edit.taskId)
-        }
+        coreWrite { it.saveEditor(edit.toCore(), draft.baseline.toCore(), now.toEpochMilli(), zone.id) }
+        return taskEditorSnapshot(edit.taskId)
     }
 
     /** Folders [folderId] may move under: everything but itself and its subtree. */
@@ -806,14 +801,7 @@ class WorkspaceRepository(
 
     /** Copies a task's requirements, start and block rules (not due dates) onto every descendant. */
     suspend fun applyPlanningToDescendants(taskId: String, now: Instant = now()) {
-        journalledWrite("Apply Planning to Subtasks") { db ->
-            val parent = taskEditorSnapshot(db, taskId)
-            for (id in db.taskDescendantIDs(taskId)) {
-                val saved = taskEditorSnapshot(db, id)
-                val planning = parent.planning?.copy(dueDate = saved.planning?.dueDate)
-                updatePlanning(db, saved.copy(planning = planning), null, now = now, zone = zone)
-            }
-        }
+        coreWrite { it.applyPlanningToDescendants(taskId, now.toEpochMilli(), zone.id) }
     }
 
     /** Every task's planning, keyed by task id. */
@@ -973,11 +961,7 @@ class WorkspaceRepository(
 
     /** "Schedule it for later": sets the task's start. */
     suspend fun scheduleTask(id: String, startAt: Instant?, now: Instant = now()) {
-        journalledWrite("Schedule Task") { db ->
-            val previous = taskEditorSnapshot(db, id)
-            val plan = (previous.planning ?: TaskPlanning()).copy(startAt = startAt)
-            updatePlanning(db, previous.copy(planning = plan.normalized), previous.planning, previous.dueAt, now, zone)
-        }
+        coreWrite { it.scheduleTask(id, startAt?.toEpochMilli(), now.toEpochMilli(), zone.id) }
     }
 
     // endregion
