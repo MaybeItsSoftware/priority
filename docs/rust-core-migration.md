@@ -119,13 +119,16 @@ on Android in the same way, so moving them buys less.
 - **Android ABIs.** Build arm64-v8a and x86_64; the user's phone is arm64.
 - **FFI cost on hot reads.** Ranking returns whole snapshots, not
   per-task calls, so the boundary is crossed once per refresh.
-- **Two SQLite libraries in one process.** On Apple the core links the
-  system SQLite that GRDB uses, so there is one. On Android the core bundles
-  its own beside androidx's bundled one. That is safe only while they never
-  hold the same file at once, and today the core opens, migrates and closes
-  before androidx opens. Once writes move (step 4), Android's connection must
-  go through the core, or the core must use androidx's library. Otherwise one
-  library closing the file can release the other's POSIX locks.
+- **Two SQLite libraries in one process. Resolved 2026-10-08.** Two
+  copies of SQLite sharing a file can each release the other's POSIX locks
+  and corrupt it, so the core never brings a second one into an app. On
+  Apple it links the system SQLite, which GRDB uses. On Android it links
+  androidx's bundled SQLite: `libsqliteJni.so` exports the whole C API, and
+  `scripts/build_core_android.sh` links the core against it, so the core's
+  `.so` needs `libsqliteJni.so` and carries no SQLite of its own. The core
+  can therefore open the file while the app holds it. Keep the core's
+  androidx version and the driver's in step: both come from
+  `libs.versions.toml`.
 - **Captured triggers are text.** A captured migration's triggers name the
   columns its table had then. Replaying it on a database where a later
   migration already ran would install stale triggers. That cannot happen in

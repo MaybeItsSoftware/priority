@@ -24,10 +24,37 @@ if [[ -z "${ANDROID_NDK_HOME:-}" ]]; then
   export ANDROID_NDK_HOME
 fi
 
-# minSdk 29 matches mobile/android/data/build.gradle.kts.
-echo "takt-core: android (arm64-v8a, armeabi-v7a, x86_64)"
-(cd "$CORE" && cargo ndk -q -P 29 -t arm64-v8a -t armeabi-v7a -t x86_64 \
-  -o "$DATA/jniLibs" build $FLAG --lib)
+# The core links androidx's SQLite (libsqliteJni.so, which exports the whole
+# C API) instead of bundling its own, so the app runs one SQLite library: two
+# copies sharing a file can release each other's locks and corrupt it. Gradle
+# unpacks those libraries and passes their folder in; run standalone, this
+# finds the AAR in Gradle's cache.
+if [[ -z "${TAKT_SQLITE_JNI_DIR:-}" ]]; then
+  version=$(sed -nE 's/^sqlite = "([^"]+)"/\1/p' "$ROOT_DIR/mobile/android/gradle/libs.versions.toml")
+  aar=$(find "$HOME/.gradle/caches" -path "*sqlite-bundled-android/$version/*" -name "*.aar" 2>/dev/null | head -1)
+  if [[ -z "$aar" ]]; then
+    echo "error: androidx sqlite-bundled-android $version is not in Gradle's cache; build once with ./gradlew first." >&2
+    exit 1
+  fi
+  TAKT_SQLITE_JNI_DIR=$(mktemp -d)
+  unzip -q -o "$aar" 'jni/*/libsqliteJni.so' -d "$TAKT_SQLITE_JNI_DIR.tmp"
+  mv "$TAKT_SQLITE_JNI_DIR.tmp/jni/"* "$TAKT_SQLITE_JNI_DIR/"
+  rm -rf "$TAKT_SQLITE_JNI_DIR.tmp"
+fi
+
+# libsqlite3-sys links a library called sqlite3; a copy named that, carrying
+# libsqliteJni.so's SONAME, makes the core's .so need libsqliteJni.so at run
+# time, which the app already ships beside it.
+link_dir=$(mktemp -d)
+trap 'rm -rf "$link_dir"' EXIT
+for abi in arm64-v8a armeabi-v7a x86_64; do
+  mkdir -p "$link_dir/$abi"
+  cp "$TAKT_SQLITE_JNI_DIR/$abi/libsqliteJni.so" "$link_dir/$abi/libsqlite3.so"
+  echo "takt-core: android $abi"
+  # minSdk 29 matches mobile/android/data/build.gradle.kts.
+  (cd "$CORE" && SQLITE3_LIB_DIR="$link_dir/$abi" SQLITE3_STATIC=0 \
+    cargo ndk -q -P 29 -t "$abi" -o "$DATA/jniLibs" build $FLAG --lib)
+done
 
 # The host library: the JVM unit tests load it, and bindgen reads its metadata.
 echo "takt-core: host"
@@ -38,7 +65,7 @@ case "$(uname)" in
 esac
 
 gen=$(mktemp -d)
-trap 'rm -rf "$gen"' EXIT
+trap 'rm -rf "$gen" "$link_dir"' EXIT
 (cd "$CORE" && cargo run -q --features bindgen --bin uniffi-bindgen -- \
   generate --library "$host_lib" --language kotlin --no-format --out-dir "$gen")
 rm -rf "$DATA/java/uniffi"

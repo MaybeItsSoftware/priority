@@ -77,6 +77,24 @@ val unpackSqliteHostNatives = tasks.register<Sync>("unpackSqliteHostNatives") {
     into(layout.buildDirectory.dir("sqliteHostNatives"))
 }
 
+// The Android flavour's natives: libsqliteJni.so, which is SQLite itself with
+// its whole C API exported. The Rust core links against this file rather than
+// bundling a second SQLite, so the app has one SQLite library in its process:
+// two copies sharing a database file can each release the other's POSIX locks
+// and corrupt it, and the core writes the file while the app holds it open.
+val sqliteAndroidNatives: Configuration by configurations.creating {
+    isTransitive = false
+}
+
+val unpackSqliteAndroidNatives = tasks.register<Sync>("unpackSqliteAndroidNatives") {
+    from({ sqliteAndroidNatives.map { zipTree(it) } }) {
+        include("jni/**/libsqliteJni.so")
+        eachFile { path = path.removePrefix("jni/") }
+        includeEmptyDirs = false
+    }
+    into(layout.buildDirectory.dir("sqliteAndroidNatives"))
+}
+
 // The Rust core (core/): its Android libraries, the Kotlin bindings and the
 // host library the JVM unit tests load are all produced by one script. Gradle
 // runs it whenever core/ has changed, so Android Studio, the scripts and CI
@@ -90,6 +108,10 @@ val buildRustCore = tasks.register<Exec>("buildRustCore") {
     outputs.dir(layout.projectDirectory.dir("src/main/jniLibs"))
     outputs.dir(layout.projectDirectory.dir("src/main/java/uniffi"))
     outputs.dir(coreDir.resolve("target/release"))
+    dependsOn(unpackSqliteAndroidNatives)
+    val natives = layout.buildDirectory.dir("sqliteAndroidNatives")
+    inputs.dir(natives)
+    environment("TAKT_SQLITE_JNI_DIR", natives.get().asFile.absolutePath)
     commandLine(rootProject.file("../../scripts/build_core_android.sh").absolutePath)
 }
 tasks.named("preBuild") { dependsOn(buildRustCore) }
@@ -117,4 +139,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     sqliteHostNatives(libs.androidx.sqlite.bundled.jvm)
+    // The same version as the driver above, so the core and the app agree on one library.
+    sqliteAndroidNatives("androidx.sqlite:sqlite-bundled-android:${libs.versions.sqlite.get()}@aar")
 }
