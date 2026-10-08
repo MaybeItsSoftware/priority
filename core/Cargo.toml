@@ -1,0 +1,29 @@
+[package]
+name = "takt-core"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Takt's shared core: the workspace store, its journal and sync, called by every client through UniFFI. See docs/rust-core-migration.md."
+
+[lib]
+# `lib` for the CLI and sync server, which link it as a Rust crate; `staticlib`
+# for the Apple xcframework; `cdylib` for Android and for the JVM unit tests,
+# and as the library UniFFI's bindgen reads its metadata from.
+crate-type = ["lib", "staticlib", "cdylib"]
+name = "takt_core"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+required-features = ["bindgen"]
+
+[features]
+bindgen = ["uniffi/cli"]
+
+[dependencies]
+uniffi = "0.32"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

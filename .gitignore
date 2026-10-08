@@ -102,7 +102,12 @@ __pycache__/
 
 .env.local
 cli/target/
+core/target/
 
 # Scratch worktrees from `git worktree add`, used to check a commit builds alone.
 .worktrees/
 supabase/.temp/
+
+# The Rust core: built per machine by scripts/build_core_{apple,android}.sh.
+build/core/
+mobile/android/data/src/main/jniLibs/

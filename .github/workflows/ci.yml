@@ -25,6 +25,13 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      # Package.swift's `takt_coreFFI` binary target is built, not committed:
+      # the Rust core has to exist before the package can even resolve.
+      - name: Build the Rust core
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim
+          scripts/build_core_apple.sh
+
       - name: Build package
         run: swift build
 
@@ -95,7 +102,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             cli/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('cli/Cargo.lock') }}
+            core/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('cli/Cargo.lock', 'core/Cargo.lock') }}
+
+      # Package.swift's `takt_coreFFI` binary target is built, not committed:
+      # the Rust core has to exist before the package can even resolve.
+      - name: Build the Rust core
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim
+          scripts/build_core_apple.sh
 
       # Both configurations now sign with a real "Apple Development" identity so
       # local rebuilds keep a stable designated requirement (and stop
@@ -178,6 +193,32 @@ jobs:
   # it gets its own job. It is also now the *only* MCP server — the app bundles
   # it and `--mcp-server` hands over to it — so these tests are what hold the
   # server itself correct. `mcp-smoke` below checks the handover.
+  # The shared Rust core (core/, docs/rust-core-migration.md).
+  core:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/target
+          key: core-${{ runner.os }}-${{ hashFiles('core/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path core/Cargo.toml --check
+
+      - name: Clippy
+        run: cargo clippy --manifest-path core/Cargo.toml --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --manifest-path core/Cargo.toml
+
   cli:
     runs-on: macos-15
     timeout-minutes: 15
@@ -228,7 +269,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             cli/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('cli/Cargo.lock') }}
+            core/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('cli/Cargo.lock', 'core/Cargo.lock') }}
+
+      # Package.swift's `takt_coreFFI` binary target is built, not committed:
+      # the Rust core has to exist before the package can even resolve.
+      - name: Build the Rust core
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim
+          scripts/build_core_apple.sh
 
       # The build phase runs scripts/bundle_cli.sh, which cargo-builds the CLI
       # and installs it into the bundle, so this covers the bundling too.

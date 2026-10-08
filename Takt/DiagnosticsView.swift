@@ -1,5 +1,6 @@
 import AppKit
 import TaktCore
+import TaktRustCore
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -57,7 +58,9 @@ struct DiagnosticsView: View {
     HStack {
       VStack(alignment: .leading, spacing: theme.space.xxs) {
         Text("Diagnostics").font(theme.titleFont)
-        Text("\(Self.appVersion) (\(Self.buildNumber)) · \(Self.bundleIdentifier)")
+        // The core version comes across the UniFFI boundary, so a stale
+        // xcframework shows here as a number that does not match core/.
+        Text("\(Self.appVersion) (\(Self.buildNumber)) · core \(coreVersion()) · \(Self.bundleIdentifier)")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
           .textSelection(.enabled)

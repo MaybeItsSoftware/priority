@@ -44,6 +44,13 @@ jobs:
             cli/target
           key: cargo-${{ runner.os }}-${{ hashFiles('cli/Cargo.lock') }}
 
+      # Package.swift's `takt_coreFFI` binary target is built, not committed:
+      # the Rust core has to exist before the package can even resolve.
+      - name: Build the Rust core
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim
+          scripts/build_core_apple.sh
+
       - name: Resolve version
         id: version
         run: |

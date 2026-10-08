@@ -5,6 +5,9 @@ excluded:
   - FocusCore/.build
   - .claude
   - mobile/ios/build
+  # fastlane, vendored by Bundler; third-party Swift templates.
+  - mobile/android/vendor
+  - core/target
   - "**/SourcePackages"
   - "**/*.derived"
 

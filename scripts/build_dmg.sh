@@ -2,6 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# The Swift package resolves only once the Rust core's xcframework exists
+# (Package.swift `takt_coreFFI`); this rebuilds it when core/ changed.
+TAKT_CORE_IF_STALE=1 "$ROOT_DIR/scripts/build_core_apple.sh"
 PROJECT_DIR="$ROOT_DIR"
 XCODEPROJ="$PROJECT_DIR/Takt.xcodeproj"
 SCHEME="Takt"

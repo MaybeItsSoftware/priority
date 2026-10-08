@@ -10,6 +10,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# The Swift package resolves only once the Rust core's xcframework exists
+# (Package.swift `takt_coreFFI`); this rebuilds it when core/ changed.
+TAKT_CORE_IF_STALE=1 "$ROOT/scripts/build_core_apple.sh"
 IOS="$ROOT/mobile/ios"
 BUNDLE_ID="uk.co.maybeitssoftware.takt"
 SIMULATOR="${SIMULATOR:-iPhone 17 Pro}"

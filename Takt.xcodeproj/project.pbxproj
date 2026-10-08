@@ -10,6 +10,7 @@
 		665C2D8C2F588A0A002ED852 /* TaktCore in Frameworks */ = {isa = PBXBuildFile; productRef = 665C2D8B2F588A0A002ED852 /* TaktCore */; };
 		A11CE0012F588A0A002ED852 /* TaktWorkspace in Frameworks */ = {isa = PBXBuildFile; productRef = A11CE0022F588A0A002ED852 /* TaktWorkspace */; };
 		A11CE0032F588A0A002ED852 /* TaktSync in Frameworks */ = {isa = PBXBuildFile; productRef = A11CE0042F588A0A002ED852 /* TaktSync */; };
+		A11CE00A2F588A0A002ED852 /* TaktRustCore in Frameworks */ = {isa = PBXBuildFile; productRef = A11CE00B2F588A0A002ED852 /* TaktRustCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +64,7 @@
 				665C2D8C2F588A0A002ED852 /* TaktCore in Frameworks */,
 				A11CE0012F588A0A002ED852 /* TaktWorkspace in Frameworks */,
 				A11CE0032F588A0A002ED852 /* TaktSync in Frameworks */,
+				A11CE00A2F588A0A002ED852 /* TaktRustCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,6 +111,7 @@
 				665C2D8B2F588A0A002ED852 /* TaktCore */,
 				A11CE0022F588A0A002ED852 /* TaktWorkspace */,
 				A11CE0042F588A0A002ED852 /* TaktSync */,
+				A11CE00B2F588A0A002ED852 /* TaktRustCore */,
 			);
 			productName = "Takt";
 			productReference = 665C2D5D2F588A0A002ED852 /* Takt.app */;
@@ -428,6 +431,10 @@
 		A11CE0042F588A0A002ED852 /* TaktSync */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TaktSync;
+		};
+		A11CE00B2F588A0A002ED852 /* TaktRustCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TaktRustCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 

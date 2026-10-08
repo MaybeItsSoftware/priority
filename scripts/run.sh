@@ -4,6 +4,10 @@ set -euo pipefail
 # Configuration. Resolved from the script's own location, like the other
 # scripts, so this works from any directory rather than only the repo root.
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# The Swift package resolves only once the Rust core's xcframework exists
+# (Package.swift `takt_coreFFI`); this rebuilds it when core/ changed.
+TAKT_CORE_IF_STALE=1 "$ROOT_DIR/scripts/build_core_apple.sh"
 XCODEPROJ="$ROOT_DIR/Takt.xcodeproj"
 SCHEME="Takt"
 PRODUCT="Takt"
