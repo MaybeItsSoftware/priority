@@ -84,11 +84,6 @@ extension WorkspaceViewModel {
     // After clearing the error, so a reload that fails still says so.
     flushPendingRefresh(afterWrite: true)
     if let store { taskEditor.refresh(store: store) }
-    // Some writes now go through the Rust core's own connection (undo and
-    // redo, so far), which moves the writer's data_version as another
-    // process's commit would. The refresh above has already read past it, so
-    // take the new token rather than let the poll reload a second time.
-    if externalWriteToken != nil, let store { externalWriteToken = try? store.externalChangeToken() }
     // Every local write funnels through here, which makes it the one place
     // the Google Tasks mirror has to be told about. It coalesces.
     if shouldMirror { onLocalWrite?() }

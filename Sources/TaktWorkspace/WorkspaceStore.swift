@@ -16,6 +16,10 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// connection of its own, on the same system SQLite as GRDB. What has moved
   /// into the core so far (docs/rust-core-migration.md) goes through it.
   let core: CoreWorkspace
+  /// How far the writer's `data_version` has moved because of this store's
+  /// own writes through `core`. See `coreWrite`.
+  let ownCoreCommitLock = NSLock()
+  var ownCoreCommitCount = 0
 
   public convenience init() throws {
     try self.init(databaseURL: WorkspaceStore.defaultDatabaseURL())
@@ -131,7 +135,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     parentFolderId: String? = nil,
     now: Date = .now
   ) throws -> ListFolder {
-    let created = try Self.mappingCoreErrors {
+    let created = try coreWrite {
       try core.createFolder(
         workspaceId: workspaceId, name: name, parentFolderId: parentFolderId, nowMs: now.coreMilliseconds)
     }
@@ -147,7 +151,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     folderId: String? = nil,
     now: Date = .now
   ) throws -> TaskList {
-    let created = try Self.mappingCoreErrors {
+    let created = try coreWrite {
       try core.createList(workspaceId: workspaceId, name: name, folderId: folderId, nowMs: now.coreMilliseconds)
     }
     return TaskList(
@@ -161,24 +165,24 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   /// Renames a folder: the Rust core's `lists::rename_folder`.
   public func updateFolder(id: String, name: String, now: Date = .now) throws {
-    try Self.mappingCoreErrors { try core.renameFolder(id: id, name: name, nowMs: now.coreMilliseconds) }
+    try coreWrite { try core.renameFolder(id: id, name: name, nowMs: now.coreMilliseconds) }
   }
 
   /// Moves a folder into another or to the top: the Rust core's `lists::move_folder`.
   public func moveFolder(id: String, toParentFolderId parentFolderId: String?, now: Date = .now) throws {
-    try Self.mappingCoreErrors { try core.moveFolder(id: id, parentFolderId: parentFolderId, nowMs: now.coreMilliseconds) }
+    try coreWrite { try core.moveFolder(id: id, parentFolderId: parentFolderId, nowMs: now.coreMilliseconds) }
   }
 
   /// Deletes a folder as one undo step. Its lists move to the sidebar root
   /// (the schema's SET NULL) and folders inside it go with it. The write is
   /// the Rust core's (`lists::delete_folder`).
   public func deleteFolder(id: String) throws {
-    try Self.mappingCoreErrors { _ = try core.deleteFolder(id: id) }
+    try coreWrite { _ = try core.deleteFolder(id: id) }
   }
 
   /// Sets a list's name and colour: the Rust core's `lists::update_list`.
   public func updateList(id: String, name: String, colorHex: String?, now: Date = .now) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.updateList(id: id, name: name, colourHex: colorHex, nowMs: now.coreMilliseconds)
     }
   }
@@ -190,17 +194,17 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// than the settings sheet's broader "Edit List".
   /// Renames a list and nothing else: the Rust core's `lists::rename_list`.
   public func renameList(id: String, name: String, now: Date = .now) throws {
-    try Self.mappingCoreErrors { try core.renameList(id: id, name: name, nowMs: now.coreMilliseconds) }
+    try coreWrite { try core.renameList(id: id, name: name, nowMs: now.coreMilliseconds) }
   }
 
   /// Moves a list into a folder or to the top: the Rust core's `lists::move_list`.
   public func moveList(id: String, toFolderId folderId: String?, now: Date = .now) throws {
-    try Self.mappingCoreErrors { try core.moveList(id: id, folderId: folderId, nowMs: now.coreMilliseconds) }
+    try coreWrite { try core.moveList(id: id, folderId: folderId, nowMs: now.coreMilliseconds) }
   }
 
   /// Moves a list among its siblings: the Rust core's `lists::move_list_within_folder`.
   public func moveListWithinFolder(id: String, by offset: Int, now: Date = .now) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.moveListWithinFolder(id: id, offset: Int32(clamping: offset), nowMs: now.coreMilliseconds)
     }
   }
@@ -215,7 +219,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   public func placeList(
     id: String, before targetID: String?, inFolderId folderId: String?, now: Date = .now
   ) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.placeList(id: id, beforeId: targetID, folderId: folderId, nowMs: now.coreMilliseconds)
     }
   }
@@ -226,14 +230,14 @@ public final class WorkspaceStore: @unchecked Sendable {
   public func placeFolder(
     id: String, before targetID: String?, inParentFolderId parentFolderId: String?, now: Date = .now
   ) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.placeFolder(id: id, beforeId: targetID, parentFolderId: parentFolderId, nowMs: now.coreMilliseconds)
     }
   }
 
   /// Moves a folder among its siblings: the Rust core's `lists::move_folder_within_siblings`.
   public func moveFolderWithinSiblings(id: String, by offset: Int, now: Date = .now) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.moveFolderWithinSiblings(id: id, offset: Int32(clamping: offset), nowMs: now.coreMilliseconds)
     }
   }
@@ -241,7 +245,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Archives or restores a list; the Inbox stays. The Rust core's
   /// `lists::set_list_archived`.
   public func setListArchived(_ archived: Bool, id: String, now: Date = .now) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.setListArchived(id: id, archived: archived, nowMs: now.coreMilliseconds)
     }
   }
@@ -249,7 +253,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Deletes a list and its tasks as one undo step; the Inbox is permanent.
   /// The write is the Rust core's (`lists::delete_list`).
   public func deleteList(id: String) throws {
-    try Self.mappingCoreErrors { _ = try core.deleteList(id: id) }
+    try coreWrite { _ = try core.deleteList(id: id) }
   }
 
   public func outline(in listId: String, parentTaskId: String? = nil) throws -> [TaskOutlineItem] {
@@ -313,6 +317,8 @@ public final class WorkspaceStore: @unchecked Sendable {
       .replacingOccurrences(of: "[^\\p{L}\\p{N}]+", with: "", options: .regularExpression)
   }
 
+  /// Creates a task, with whatever the add field read off its title, as one
+  /// undo step: the Rust core's `tasks::create_task`.
   public func createTask(
     listId: String,
     title: String,
@@ -330,56 +336,16 @@ public final class WorkspaceStore: @unchecked Sendable {
     waitingOn: String? = nil,
     now: Date = .now
   ) throws -> WorkspaceTask {
-    let trimmed = try Self.nonEmptyName(title)
-    // Waiting on someone puts it in that column, as `setWaiting` does.
-    let waitingOn = WaitingFollowUp.normalizedTag(waitingOn)
-    let kanbanColumn = waitingOn != nil ? WaitingFollowUp.waitingColumnID : kanbanColumn
-    // What the add field read off the end of the title, written in the same
-    // undo step as the task: undoing a typed task should not leave its
-    // estimate behind as a second step to undo first.
-    let tags = Self.normalizedStrings(tags)
-    let priority = priority.flatMap { (1...4).contains($0) ? $0 : nil }
-    let estimateSeconds = estimateSeconds.flatMap { $0 > 0 ? $0 : nil }
-    return try journalledWrite("New Task") { db in
-      guard try TaskList.fetchOne(db, key: listId) != nil else { throw WorkspaceStoreError.missingList }
-      if let parentTaskId {
-        guard let parent = try WorkspaceTask.fetchOne(db, key: parentTaskId), parent.listId == listId else {
-          throw WorkspaceStoreError.invalidTaskMove
-        }
-      }
-      let nextOrder = try Self.nextOrder(
-        db, table: WorkspaceTask.databaseTableName, whereSQL: "listId = ? AND parentTaskId IS ?",
-        arguments: [listId, parentTaskId])
-      let task = WorkspaceTask(
-        id: UUID().uuidString, listId: listId, parentTaskId: parentTaskId, title: trimmed,
-        notes: "", status: .open, sortOrder: nextOrder, dueAt: dueAt, estimateSeconds: estimateSeconds,
-        itemKind: kind, createdAt: now, updatedAt: now)
-      try task.insert(db)
-      if kanbanColumn != nil || startAt != nil || !tags.isEmpty || priority != nil || waitingOn != nil {
-        let tagsJSON = String(data: try JSONEncoder().encode(tags), encoding: .utf8) ?? "[]"
-        try db.execute(sql: """
-          INSERT INTO task_metadata(taskId, priority, startAt, tagsJSON, externalLinksJSON, kanbanColumn, waitingOn,
-            updatedAt)
-          VALUES (?, ?, ?, ?, '[]', ?, ?, ?)
-          """, arguments: [task.id, priority, startAt, tagsJSON, kanbanColumn, waitingOn, now])
-      }
-      if atTop || adjacentTaskId != nil {
-        var siblings = try WorkspaceTask
-          .filter(Column("listId") == listId && Column("parentTaskId") == parentTaskId)
-          .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
-        siblings.removeAll { $0.id == task.id }
-        let insertion: Int
-        if let adjacentTaskId {
-          guard let index = siblings.firstIndex(where: { $0.id == adjacentTaskId }) else {
-            throw WorkspaceStoreError.invalidTaskMove
-          }
-          insertion = index + (above ? 0 : 1)
-        } else { insertion = 0 }
-        siblings.insert(task, at: insertion)
-        try Self.persistTaskOrder(siblings, db: db, now: now)
-      }
-      return try WorkspaceTask.fetchOne(db, key: task.id) ?? task
+    let new = NewTask(
+      listId: listId, title: title, parentTaskId: parentTaskId, kind: kind.rawValue, notes: "",
+      kanbanColumn: kanbanColumn, startAtMs: startAt?.coreMilliseconds, dueAtMs: dueAt?.coreMilliseconds,
+      estimateSeconds: estimateSeconds.map(Int64.init), tags: tags, priority: priority.map(Int64.init),
+      waitingOn: waitingOn, externalLinks: [], atTop: atTop, adjacentTaskId: adjacentTaskId, above: above)
+    let id = try coreWrite { try core.createTask(task: new, nowMs: now.coreMilliseconds) }
+    guard let task = try database.read({ db in try WorkspaceTask.fetchOne(db, key: id) }) else {
+      throw WorkspaceStoreError.missingTask
     }
+    return task
   }
 
   public func setStatus(_ status: TaskStatus, for taskId: String, now: Date = .now) throws {
@@ -472,7 +438,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// `tasks::set_kanban_column`.
   public func setKanbanColumn(_ column: String?, for taskIDs: [String], now: Date = .now) throws {
     guard !taskIDs.isEmpty else { return }
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.setKanbanColumn(taskIds: taskIDs, column: column, nowMs: now.coreMilliseconds)
     }
   }
@@ -490,7 +456,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     for taskId: String,
     now: Date = .now
   ) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.setMatrixPosition(
         id: taskId, urgency: position.urgency.map(Int64.init), importance: position.importance.map(Int64.init),
         nowMs: now.coreMilliseconds)
@@ -504,7 +470,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     id: String, toListId listId: String, parentTaskId: String? = nil,
     toVisibleRoot: Bool = false, now: Date = .now
   ) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.moveTask(
         id: id, listId: listId, parentTaskId: parentTaskId, toVisibleRoot: toVisibleRoot, nowMs: now.coreMilliseconds)
     }
@@ -512,7 +478,7 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   /// Moves a task among its siblings: the Rust core's `tasks::move_task_within_siblings`.
   public func moveTaskWithinSiblings(id: String, by offset: Int, now: Date = .now) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.moveTaskWithinSiblings(id: id, offset: Int32(clamping: offset), nowMs: now.coreMilliseconds)
     }
   }
@@ -521,14 +487,14 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// queue uses this same persistent order, so the first card is first live.
   /// Moves a task to the top of its siblings: the Rust core's `tasks::move_task_to_start`.
   public func moveTaskToStart(id: String, now: Date = .now) throws {
-    try Self.mappingCoreErrors { try core.moveTaskToStart(id: id, nowMs: now.coreMilliseconds) }
+    try coreWrite { try core.moveTaskToStart(id: id, nowMs: now.coreMilliseconds) }
   }
 
   /// Reorders a card before another card without changing either task's real
   /// list or project parent. Cross-project drops remain a list-move operation.
   /// Drops a task before a sibling: the Rust core's `tasks::move_task_before`.
   public func moveTaskBefore(id: String, targetId: String, kanbanColumn: String? = nil, now: Date = .now) throws {
-    try Self.mappingCoreErrors {
+    try coreWrite {
       try core.moveTaskBefore(id: id, targetId: targetId, kanbanColumn: kanbanColumn, nowMs: now.coreMilliseconds)
     }
   }
@@ -536,19 +502,19 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Makes the selected task a child of its immediately preceding sibling.
   /// Indents a task under the sibling above: the Rust core's `tasks::indent_task`.
   public func indentTask(id: String, now: Date = .now) throws {
-    try Self.mappingCoreErrors { try core.indentTask(id: id, nowMs: now.coreMilliseconds) }
+    try coreWrite { try core.indentTask(id: id, nowMs: now.coreMilliseconds) }
   }
 
   /// Promotes a task one level, immediately after its former parent.
   /// Outdents a task to follow its parent: the Rust core's `tasks::outdent_task`.
   public func outdentTask(id: String, now: Date = .now) throws {
-    try Self.mappingCoreErrors { try core.outdentTask(id: id, nowMs: now.coreMilliseconds) }
+    try coreWrite { try core.outdentTask(id: id, nowMs: now.coreMilliseconds) }
   }
 
   /// Deletes a task and its subtree as one undo step. The write is the Rust
   /// core's (`tasks::delete_task`), shared with Android and the CLI.
   public func deleteTask(id: String) throws {
-    try Self.mappingCoreErrors { _ = try core.deleteTask(id: id) }
+    try coreWrite { _ = try core.deleteTask(id: id) }
   }
 
   /// Runs a call into the Rust core, turning the failures callers react to

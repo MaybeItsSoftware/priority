@@ -68,10 +68,24 @@ class WorkspaceDatabase private constructor(
      * the core never waits on this database's writer or it on the core.
      */
     suspend fun <T> coreWrite(tables: Set<String>, block: (CoreWorkspace) -> T): T = withContext(dispatcher) {
-        val result = writerLock.withLock { block(core) }
+        val result = writerLock.withLock {
+            // The writer's data_version counts every commit but its own, which now
+            // includes the core's. Whatever it moves across this write is ours, so
+            // [ownCoreCommits] takes it back out of the external-change token.
+            val db = Db(writer)
+            val before = db.long("PRAGMA data_version") ?: 0L
+            val value = block(core)
+            ownCoreCommits += (db.long("PRAGMA data_version") ?: 0L) - before
+            value
+        }
         changes.emit(tables)
         result
     }
+
+    /** How far the writer's `data_version` has moved because of [coreWrite]; only touched under the writer lock. */
+    @Volatile
+    var ownCoreCommits: Long = 0L
+        private set
 
     /** Runs a read through the Rust core's connection. */
     suspend fun <T> coreRead(block: (CoreWorkspace) -> T): T = withContext(dispatcher) { block(core) }

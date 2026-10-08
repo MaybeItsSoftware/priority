@@ -297,6 +297,10 @@ class WorkspaceRepository(
         }
     }
 
+    /**
+     * Creates a task, with whatever the add field read off its title, as one undo step:
+     * the Rust core's `tasks::create_task`.
+     */
     suspend fun createTask(
         listId: String,
         title: String,
@@ -313,45 +317,15 @@ class WorkspaceRepository(
         priority: Int? = null,
         now: Instant = now(),
     ): WorkspaceTask {
-        val trimmed = nonEmptyName(title)
-        val normalizedTags = normalizedStrings(tags)
-        val normalizedPriority = priority?.takeIf { it in 1..4 }
-        val estimate = estimateSeconds?.takeIf { it > 0 }
-        return journalledWrite("New Task") { db ->
-            db.list(listId) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (parentTaskId != null) {
-                val parent = db.task(parentTaskId)
-                if (parent == null || parent.listId != listId) fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-            }
-            val order = db.nextOrder("tasks", "listId = ? AND parentTaskId IS ?", listId, parentTaskId)
-            val task = WorkspaceTask(
-                id = newId(), listId = listId, parentTaskId = parentTaskId, title = trimmed, notes = "",
-                status = TaskStatus.OPEN, sortOrder = order, dueAt = dueAt, estimateSeconds = estimate,
-                sourceSystem = null, sourceId = null, itemKind = kind, isPromoted = null, archivedAt = null,
-                completedAt = null, createdAt = now, updatedAt = now,
-            )
-            db.insert(task)
-            if (kanbanColumn != null || startAt != null || normalizedTags.isNotEmpty() || normalizedPriority != null) {
-                db.execute(
-                    "INSERT INTO task_metadata(taskId, priority, startAt, tagsJSON, externalLinksJSON, kanbanColumn, " +
-                        "updatedAt) VALUES (?, ?, ?, ?, '[]', ?, ?)",
-                    task.id, normalizedPriority, startAt, encodeStringArray(normalizedTags), kanbanColumn, now,
-                )
-            }
-            if (atTop || adjacentTaskId != null) {
-                val siblings = db.taskSiblings(listId, parentTaskId).filter { it.id != task.id }.toMutableList()
-                val insertion = if (adjacentTaskId != null) {
-                    val index = siblings.indexOfFirst { it.id == adjacentTaskId }
-                    if (index < 0) fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-                    index + if (above) 0 else 1
-                } else {
-                    0
-                }
-                siblings.add(insertion, task)
-                db.persistTaskOrder(siblings, now)
-            }
-            db.task(task.id) ?: task
-        }
+        val new = uniffi.takt_core.NewTask(
+            listId = listId, title = title, parentTaskId = parentTaskId, kind = kind.raw, notes = "",
+            kanbanColumn = kanbanColumn, startAtMs = startAt?.toEpochMilli(), dueAtMs = dueAt?.toEpochMilli(),
+            estimateSeconds = estimateSeconds?.toLong(), tags = tags, priority = priority?.toLong(),
+            waitingOn = null, externalLinks = emptyList(), atTop = atTop, adjacentTaskId = adjacentTaskId,
+            above = above,
+        )
+        val id = coreWrite { it.createTask(new, now.toEpochMilli()) }
+        return task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
     }
 
     /** Closing one occurrence of a repeating task writes the next one. */
@@ -710,7 +684,7 @@ class WorkspaceRepository(
 
     /** `PRAGMA data_version` on the writer: moves only when another connection or process commits. */
     suspend fun externalChangeToken(): Long =
-        database.writerWithoutTransaction { it.long("PRAGMA data_version") ?: 0L }
+        database.writerWithoutTransaction { (it.long("PRAGMA data_version") ?: 0L) - database.ownCoreCommits }
 
     // endregion
 

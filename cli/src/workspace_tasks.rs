@@ -461,7 +461,7 @@ impl Workspace {
         } else {
             "New Task"
         };
-        self.journalled(label, |tx, now| {
+        self.journalled(label, |tx, _now| {
             list_row(tx, &new.list_id)?;
             if let Some(parent) = new.parent_task_id.as_deref() {
                 let parent = task_row(tx, parent)?;
@@ -472,32 +472,23 @@ impl Workspace {
                     )));
                 }
             }
-            let parent = new.parent_task_id.as_deref();
-            let order = next_task_order(tx, &new.list_id, parent)?;
-            let id = new_id();
-            tx.execute(
-                "INSERT INTO tasks (id, listId, parentTaskId, title, notes, status, sortOrder, \
-                 dueAt, estimateSeconds, createdAt, updatedAt, sourceSystem, sourceId, itemKind, \
-                 isPromoted, archivedAt, completedAt) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, 'open', ?6, NULL, NULL, ?7, ?7, NULL, NULL, ?8, \
-                 NULL, NULL, NULL)",
-                params![id, new.list_id, parent, title, new.notes, order, now, new.kind],
+            // The write is the Rust core's, shared with the apps.
+            let id = takt_core::tasks::create_task(
+                tx,
+                &takt_core::tasks::NewTask {
+                    list_id: new.list_id.clone(),
+                    title: title.clone(),
+                    parent_task_id: new.parent_task_id.clone(),
+                    kind: new.kind.clone(),
+                    notes: new.notes.clone(),
+                    kanban_column: column.clone(),
+                    external_links: links.clone(),
+                    at_top: new.at_top,
+                    ..Default::default()
+                },
+                Utc::now().timestamp_millis(),
             )
-            .map_err(map_write_error)?;
-            if !links.is_empty() || column.is_some() {
-                tx.execute(
-                    "INSERT INTO task_metadata (taskId, tagsJSON, externalLinksJSON, kanbanColumn, \
-                     updatedAt) VALUES (?1, '[]', ?2, ?3, ?4)",
-                    params![id, encode_links(&links), column, now],
-                )
-                .map_err(map_write_error)?;
-            }
-            if new.at_top {
-                let mut siblings = sibling_ids(tx, &new.list_id, parent)?;
-                siblings.retain(|sibling| sibling != &id);
-                siblings.insert(0, id.clone());
-                persist_task_order(tx, &siblings, now)?;
-            }
+            .map_err(map_core_error)?;
             Ok(task_row(tx, &id)?.to_json())
         })
     }
@@ -1140,36 +1131,6 @@ fn descendant_ids(connection: &Connection, task_id: &str) -> Result<HashSet<Stri
         })
         .map_err(map_query_error)?;
     Ok(ids)
-}
-
-fn sibling_ids(
-    connection: &Connection,
-    list_id: &str,
-    parent: Option<&str>,
-) -> Result<Vec<String>> {
-    connection
-        .prepare(
-            "SELECT id FROM tasks WHERE listId = ?1 AND parentTaskId IS ?2 \
-             ORDER BY sortOrder, createdAt, id",
-        )
-        .and_then(|mut statement| {
-            statement
-                .query_map(params![list_id, parent], |row| row.get(0))?
-                .collect::<rusqlite::Result<Vec<_>>>()
-        })
-        .map_err(map_query_error)
-}
-
-/// `persistTaskOrder`: dense, zero-based, every sibling touched.
-fn persist_task_order(tx: &Transaction, ids: &[String], now: &str) -> Result<()> {
-    for (index, id) in ids.iter().enumerate() {
-        tx.execute(
-            "UPDATE tasks SET sortOrder = ?1, updatedAt = ?2 WHERE id = ?3",
-            params![index as i64, now, id],
-        )
-        .map_err(map_write_error)?;
-    }
-    Ok(())
 }
 
 fn next_task_order(connection: &Connection, list_id: &str, parent: Option<&str>) -> Result<i64> {

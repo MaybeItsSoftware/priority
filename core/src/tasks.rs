@@ -12,6 +12,162 @@ use rusqlite::{OptionalExtension, Transaction, params};
 use crate::CoreError;
 use crate::time::stored;
 
+/// A task to create: everything any client can set when it adds one.
+#[derive(Debug, Clone, Default, PartialEq, Eq, uniffi::Record)]
+pub struct NewTask {
+    pub list_id: String,
+    pub title: String,
+    pub parent_task_id: Option<String>,
+    /// `"task"`, or `"list"` for a nested list.
+    pub kind: String,
+    pub notes: String,
+    pub kanban_column: Option<String>,
+    pub start_at_ms: Option<i64>,
+    pub due_at_ms: Option<i64>,
+    pub estimate_seconds: Option<i64>,
+    pub tags: Vec<String>,
+    /// 1 to 4; anything else is no priority.
+    pub priority: Option<i64>,
+    /// Who it waits on; puts it in the waiting column.
+    pub waiting_on: Option<String>,
+    pub external_links: Vec<String>,
+    /// First among its siblings rather than last.
+    pub at_top: bool,
+    /// A sibling to go beside: below it, or above with `above`.
+    pub adjacent_task_id: Option<String>,
+    pub above: bool,
+}
+
+/// The board column a task waiting on someone goes in.
+pub const WAITING_COLUMN: &str = "waiting-on";
+/// The longest waiting-on tag kept: it is a chip, not a note.
+const MAXIMUM_WAITING_TAG: usize = 40;
+
+/// Creates a task and returns its id. Everything the add field read off the
+/// title (tags, priority, estimate, waiting) goes in the same undo step, so
+/// undoing a typed task never leaves its estimate behind as a step of its
+/// own. Replaces `WorkspaceStore.createTask`, its Kotlin copy and the CLI's
+/// `add_task`.
+pub fn create_task(
+    transaction: &Transaction,
+    new: &NewTask,
+    now_ms: i64,
+) -> Result<String, CoreError> {
+    let title = crate::time::non_empty_name(&new.title)?;
+    let waiting_on = new
+        .waiting_on
+        .as_deref()
+        .map(str::trim)
+        .filter(|w| !w.is_empty())
+        .map(|w| w.chars().take(MAXIMUM_WAITING_TAG).collect::<String>());
+    // Waiting on someone puts it in that column, as `set_waiting` does.
+    let kanban_column = if waiting_on.is_some() {
+        Some(WAITING_COLUMN.to_string())
+    } else {
+        new.kanban_column.clone()
+    };
+    let tags = normalized_strings(&new.tags);
+    let priority = new.priority.filter(|p| (1..=4).contains(p));
+    let estimate = new.estimate_seconds.filter(|e| *e > 0);
+
+    let list_exists: bool = transaction.query_row(
+        "SELECT EXISTS(SELECT 1 FROM task_lists WHERE id = ?1)",
+        [&new.list_id],
+        |row| row.get(0),
+    )?;
+    if !list_exists {
+        return Err(CoreError::MissingList {
+            id: new.list_id.clone(),
+        });
+    }
+    let parent = new.parent_task_id.as_deref();
+    if let Some(parent) = parent {
+        let parent_list: Option<String> = transaction
+            .query_row("SELECT listId FROM tasks WHERE id = ?1", [parent], |row| {
+                row.get(0)
+            })
+            .optional()?;
+        // A parent that is gone, or in another list, is a place the task
+        // cannot go, as Swift reported it.
+        if parent_list.as_deref() != Some(new.list_id.as_str()) {
+            return Err(CoreError::InvalidTaskMove);
+        }
+    }
+    let sort_order = next_task_order(transaction, &new.list_id, parent)?;
+    let id = crate::lists::new_id();
+    let now = stored(now_ms);
+    transaction.execute(
+        "INSERT INTO tasks (id, listId, parentTaskId, title, notes, status, sortOrder, dueAt,
+                            estimateSeconds, createdAt, updatedAt, sourceSystem, sourceId, itemKind,
+                            isPromoted, archivedAt, completedAt)
+         VALUES (?1, ?2, ?3, ?4, ?5, 'open', ?6, ?7, ?8, ?9, ?9, NULL, NULL, ?10, NULL, NULL, NULL)",
+        params![
+            id,
+            new.list_id,
+            parent,
+            title,
+            new.notes,
+            sort_order,
+            new.due_at_ms.map(stored),
+            estimate,
+            now,
+            if new.kind == "list" { "list" } else { "task" },
+        ],
+    )?;
+    let has_metadata = kanban_column.is_some()
+        || new.start_at_ms.is_some()
+        || !tags.is_empty()
+        || priority.is_some()
+        || waiting_on.is_some()
+        || !new.external_links.is_empty();
+    if has_metadata {
+        transaction.execute(
+            "INSERT INTO task_metadata(taskId, priority, startAt, tagsJSON, externalLinksJSON,
+                                       kanbanColumn, waitingOn, updatedAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                id,
+                priority,
+                new.start_at_ms.map(stored),
+                serde_json::to_string(&tags).unwrap_or_else(|_| "[]".into()),
+                serde_json::to_string(&new.external_links).unwrap_or_else(|_| "[]".into()),
+                kanban_column,
+                waiting_on,
+                now,
+            ],
+        )?;
+    }
+    if new.at_top || new.adjacent_task_id.is_some() {
+        let mut siblings = task_siblings(transaction, &new.list_id, parent)?;
+        siblings.retain(|s| *s != id);
+        let insertion = match new.adjacent_task_id.as_deref() {
+            Some(adjacent) => {
+                let index = siblings
+                    .iter()
+                    .position(|s| s == adjacent)
+                    .ok_or(CoreError::InvalidTaskMove)?;
+                index + usize::from(!new.above)
+            }
+            None => 0,
+        };
+        siblings.insert(insertion, id.clone());
+        persist_task_order(transaction, &siblings, now_ms)?;
+    }
+    Ok(id)
+}
+
+/// Tags trimmed, blanks dropped and repeats (ignoring case) kept once, in
+/// the order given: `WorkspaceStore.normalizedStrings`.
+pub fn normalized_strings(values: &[String]) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    values
+        .iter()
+        .map(|v| v.trim())
+        .filter(|v| !v.is_empty() && seen.insert(v.to_lowercase()))
+        .map(str::to_string)
+        .collect()
+}
+
 /// What [`delete_task`] removed.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct DeletedTask {

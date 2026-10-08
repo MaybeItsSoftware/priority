@@ -655,6 +655,7 @@ name = "takt-core"
 version = "0.1.0"
 dependencies = [
  "rusqlite",
+ "serde_json",
  "thiserror",
  "unicode-normalization",
  "uniffi",

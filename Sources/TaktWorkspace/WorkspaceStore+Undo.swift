@@ -49,15 +49,16 @@ extension WorkspaceStore {
   ///
   /// The replay is the core's (core/src/journal.rs), on its own connection: a
   /// commit GRDB's observation does not see, so callers reload afterwards, as
-  /// the view model's `perform` already does.
+  /// the view model's `perform` already does. `coreWrite` keeps it from
+  /// looking like another process's commit.
   @discardableResult
   public func undo() throws -> String? {
-    try core.undo()
+    try coreWrite { try core.undo() }
   }
 
   @discardableResult
   public func redo() throws -> String? {
-    try core.redo()
+    try coreWrite { try core.redo() }
   }
 
   /// Runs a mutation as one undoable step.

@@ -599,6 +599,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func createList(workspaceId: String, name: String, folderId: String?, nowMs: Int64) throws  -> CreatedItem
     
     /**
+     * Creates a task as one "New Task" step and returns its id.
+     */
+    func createTask(task: NewTask, nowMs: Int64) throws  -> String
+    
+    /**
      * Deletes a folder as one "Delete Folder" step; its lists move to the top.
      */
     func deleteFolder(id: String) throws 
@@ -832,6 +837,20 @@ open func createList(workspaceId: String, name: String, folderId: String?, nowMs
         FfiConverterString.lower(workspaceId),
         FfiConverterString.lower(name),
         FfiConverterOptionString.lower(folderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Creates a task as one "New Task" step and returns its id.
+     */
+open func createTask(task: NewTask, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_create_task(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeNewTask_lower(task),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 })
@@ -1522,6 +1541,149 @@ public func FfiConverterTypeHistoryTarget_lower(_ value: HistoryTarget) -> RustB
 
 
 /**
+ * A task to create: everything any client can set when it adds one.
+ */
+public struct NewTask: Equatable, Hashable {
+    public var listId: String
+    public var title: String
+    public var parentTaskId: String?
+    /**
+     * `"task"`, or `"list"` for a nested list.
+     */
+    public var kind: String
+    public var notes: String
+    public var kanbanColumn: String?
+    public var startAtMs: Int64?
+    public var dueAtMs: Int64?
+    public var estimateSeconds: Int64?
+    public var tags: [String]
+    /**
+     * 1 to 4; anything else is no priority.
+     */
+    public var priority: Int64?
+    /**
+     * Who it waits on; puts it in the waiting column.
+     */
+    public var waitingOn: String?
+    public var externalLinks: [String]
+    /**
+     * First among its siblings rather than last.
+     */
+    public var atTop: Bool
+    /**
+     * A sibling to go beside: below it, or above with `above`.
+     */
+    public var adjacentTaskId: String?
+    public var above: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(listId: String, title: String, parentTaskId: String?, 
+        /**
+         * `"task"`, or `"list"` for a nested list.
+         */kind: String, notes: String, kanbanColumn: String?, startAtMs: Int64?, dueAtMs: Int64?, estimateSeconds: Int64?, tags: [String], 
+        /**
+         * 1 to 4; anything else is no priority.
+         */priority: Int64?, 
+        /**
+         * Who it waits on; puts it in the waiting column.
+         */waitingOn: String?, externalLinks: [String], 
+        /**
+         * First among its siblings rather than last.
+         */atTop: Bool, 
+        /**
+         * A sibling to go beside: below it, or above with `above`.
+         */adjacentTaskId: String?, above: Bool) {
+        self.listId = listId
+        self.title = title
+        self.parentTaskId = parentTaskId
+        self.kind = kind
+        self.notes = notes
+        self.kanbanColumn = kanbanColumn
+        self.startAtMs = startAtMs
+        self.dueAtMs = dueAtMs
+        self.estimateSeconds = estimateSeconds
+        self.tags = tags
+        self.priority = priority
+        self.waitingOn = waitingOn
+        self.externalLinks = externalLinks
+        self.atTop = atTop
+        self.adjacentTaskId = adjacentTaskId
+        self.above = above
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NewTask: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNewTask: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NewTask {
+        return
+            try NewTask(
+                listId: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                parentTaskId: FfiConverterOptionString.read(from: &buf), 
+                kind: FfiConverterString.read(from: &buf), 
+                notes: FfiConverterString.read(from: &buf), 
+                kanbanColumn: FfiConverterOptionString.read(from: &buf), 
+                startAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                dueAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                tags: FfiConverterSequenceString.read(from: &buf), 
+                priority: FfiConverterOptionInt64.read(from: &buf), 
+                waitingOn: FfiConverterOptionString.read(from: &buf), 
+                externalLinks: FfiConverterSequenceString.read(from: &buf), 
+                atTop: FfiConverterBool.read(from: &buf), 
+                adjacentTaskId: FfiConverterOptionString.read(from: &buf), 
+                above: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NewTask, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterOptionString.write(value.parentTaskId, into: &buf)
+        FfiConverterString.write(value.kind, into: &buf)
+        FfiConverterString.write(value.notes, into: &buf)
+        FfiConverterOptionString.write(value.kanbanColumn, into: &buf)
+        FfiConverterOptionInt64.write(value.startAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.dueAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
+        FfiConverterSequenceString.write(value.tags, into: &buf)
+        FfiConverterOptionInt64.write(value.priority, into: &buf)
+        FfiConverterOptionString.write(value.waitingOn, into: &buf)
+        FfiConverterSequenceString.write(value.externalLinks, into: &buf)
+        FfiConverterBool.write(value.atTop, into: &buf)
+        FfiConverterOptionString.write(value.adjacentTaskId, into: &buf)
+        FfiConverterBool.write(value.above, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNewTask_lift(_ buf: RustBuffer) throws -> NewTask {
+    return try FfiConverterTypeNewTask.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNewTask_lower(_ value: NewTask) -> RustBuffer {
+    return FfiConverterTypeNewTask.lower(value)
+}
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 public struct UndoStep: Equatable, Hashable {
@@ -1928,6 +2090,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_create_list() != 11553) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_create_task() != 36329) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_delete_folder() != 27954) {

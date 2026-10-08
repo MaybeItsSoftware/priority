@@ -685,6 +685,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_list(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_create_task(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_delete_list(
@@ -770,6 +772,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_create_folder(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_list(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_create_task(`ptr`: Long,`task`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_delete_folder(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -963,6 +967,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_list() and 0xFFFF) != 11553) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_task() and 0xFFFF) != 36329) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_folder() and 0xFFFF) != 27954) {
@@ -1467,6 +1474,11 @@ public interface CoreWorkspaceInterface {
     fun `createList`(`workspaceId`: kotlin.String, `name`: kotlin.String, `folderId`: kotlin.String?, `nowMs`: kotlin.Long): CreatedItem
     
     /**
+     * Creates a task as one "New Task" step and returns its id.
+     */
+    fun `createTask`(`task`: NewTask, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
      * Deletes a folder as one "Delete Folder" step; its lists move to the top.
      */
     fun `deleteFolder`(`id`: kotlin.String)
@@ -1745,6 +1757,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`workspaceId`),
         FfiConverterString.lower(`name`),
         FfiConverterOptionalString.lower(`folderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Creates a task as one "New Task" step and returns its id.
+     */
+    @Throws(CoreException::class)override fun `createTask`(`task`: NewTask, `nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_create_task(
+        it,
+        
+        FfiConverterTypeNewTask.lower(`task`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -2500,6 +2531,132 @@ public object FfiConverterTypeHistoryTarget: FfiConverterRustBuffer<HistoryTarge
     override fun write(value: HistoryTarget, buf: ByteBuffer) {
             FfiConverterOptionalString.write(value.`taskId`, buf)
             FfiConverterOptionalString.write(value.`listId`, buf)
+    }
+}
+
+
+
+/**
+ * A task to create: everything any client can set when it adds one.
+ */
+data class NewTask (
+    var `listId`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `parentTaskId`: kotlin.String?
+    , 
+    /**
+     * `"task"`, or `"list"` for a nested list.
+     */
+    var `kind`: kotlin.String
+    , 
+    var `notes`: kotlin.String
+    , 
+    var `kanbanColumn`: kotlin.String?
+    , 
+    var `startAtMs`: kotlin.Long?
+    , 
+    var `dueAtMs`: kotlin.Long?
+    , 
+    var `estimateSeconds`: kotlin.Long?
+    , 
+    var `tags`: List<kotlin.String>
+    , 
+    /**
+     * 1 to 4; anything else is no priority.
+     */
+    var `priority`: kotlin.Long?
+    , 
+    /**
+     * Who it waits on; puts it in the waiting column.
+     */
+    var `waitingOn`: kotlin.String?
+    , 
+    var `externalLinks`: List<kotlin.String>
+    , 
+    /**
+     * First among its siblings rather than last.
+     */
+    var `atTop`: kotlin.Boolean
+    , 
+    /**
+     * A sibling to go beside: below it, or above with `above`.
+     */
+    var `adjacentTaskId`: kotlin.String?
+    , 
+    var `above`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeNewTask: FfiConverterRustBuffer<NewTask> {
+    override fun read(buf: ByteBuffer): NewTask {
+        return NewTask(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: NewTask) = (
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterOptionalString.allocationSize(value.`parentTaskId`) +
+            FfiConverterString.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`notes`) +
+            FfiConverterOptionalString.allocationSize(value.`kanbanColumn`) +
+            FfiConverterOptionalLong.allocationSize(value.`startAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`dueAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
+            FfiConverterSequenceString.allocationSize(value.`tags`) +
+            FfiConverterOptionalLong.allocationSize(value.`priority`) +
+            FfiConverterOptionalString.allocationSize(value.`waitingOn`) +
+            FfiConverterSequenceString.allocationSize(value.`externalLinks`) +
+            FfiConverterBoolean.allocationSize(value.`atTop`) +
+            FfiConverterOptionalString.allocationSize(value.`adjacentTaskId`) +
+            FfiConverterBoolean.allocationSize(value.`above`)
+    )
+
+    override fun write(value: NewTask, buf: ByteBuffer) {
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterOptionalString.write(value.`parentTaskId`, buf)
+            FfiConverterString.write(value.`kind`, buf)
+            FfiConverterString.write(value.`notes`, buf)
+            FfiConverterOptionalString.write(value.`kanbanColumn`, buf)
+            FfiConverterOptionalLong.write(value.`startAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`dueAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
+            FfiConverterSequenceString.write(value.`tags`, buf)
+            FfiConverterOptionalLong.write(value.`priority`, buf)
+            FfiConverterOptionalString.write(value.`waitingOn`, buf)
+            FfiConverterSequenceString.write(value.`externalLinks`, buf)
+            FfiConverterBoolean.write(value.`atTop`, buf)
+            FfiConverterOptionalString.write(value.`adjacentTaskId`, buf)
+            FfiConverterBoolean.write(value.`above`, buf)
     }
 }
 

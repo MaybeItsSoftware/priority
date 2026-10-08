@@ -332,3 +332,122 @@ fn matrix(connection: &Connection, id: &str) -> (Option<i64>, Option<i64>) {
         )
         .unwrap()
 }
+
+fn new_task(list: &str, title: &str) -> NewTask {
+    NewTask {
+        list_id: list.into(),
+        title: title.into(),
+        kind: "task".into(),
+        ..NewTask::default()
+    }
+}
+
+#[test]
+fn a_new_task_goes_last_with_what_the_add_field_read_in_the_same_step() {
+    let mut connection = workspace();
+    let new = NewTask {
+        tags: vec![" Home ".into(), "home".into(), "".into(), "Errand".into()],
+        priority: Some(2),
+        estimate_seconds: Some(1800),
+        waiting_on: Some("  Sam  ".into()),
+        kanban_column: Some("today".into()),
+        ..new_task("l", "  Buy milk ")
+    };
+    let id = journalled(&mut connection, "New Task", |tx| create_task(tx, &new, NOW)).unwrap();
+    assert_eq!(children(&connection, "l", None), ["p", "o", id.as_str()]);
+    let (title, estimate, kind): (String, Option<i64>, String) = connection
+        .query_row(
+            "SELECT title, estimateSeconds, itemKind FROM tasks WHERE id = ?1",
+            [&id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        (title.as_str(), estimate, kind.as_str()),
+        ("Buy milk", Some(1800), "task")
+    );
+    let (tags, priority, column, waiting): (String, Option<i64>, Option<String>, Option<String>) = connection
+        .query_row(
+            "SELECT tagsJSON, priority, kanbanColumn, waitingOn FROM task_metadata WHERE taskId = ?1",
+            [&id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(tags, r#"["Home","Errand"]"#);
+    assert_eq!(priority, Some(2));
+    assert_eq!(column.as_deref(), Some(WAITING_COLUMN));
+    assert_eq!(waiting.as_deref(), Some("Sam"));
+
+    assert_eq!(undo(&mut connection).unwrap().as_deref(), Some("New Task"));
+    let left: i64 = connection
+        .query_row(
+            "SELECT COUNT(*) FROM task_metadata WHERE taskId = ?1",
+            [&id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(left, 0);
+}
+
+#[test]
+fn a_new_task_can_go_first_or_beside_a_sibling_and_needs_a_real_place() {
+    let mut connection = workspace();
+    let top = journalled(&mut connection, "New Task", |tx| {
+        create_task(
+            tx,
+            &NewTask {
+                at_top: true,
+                ..new_task("l", "Top")
+            },
+            NOW,
+        )
+    })
+    .unwrap();
+    assert_eq!(children(&connection, "l", None), [top.as_str(), "p", "o"]);
+    let above = journalled(&mut connection, "New Task", |tx| {
+        create_task(
+            tx,
+            &NewTask {
+                adjacent_task_id: Some("o".into()),
+                above: true,
+                ..new_task("l", "Above")
+            },
+            NOW,
+        )
+    })
+    .unwrap();
+    assert_eq!(
+        children(&connection, "l", None),
+        [top.as_str(), "p", above.as_str(), "o"]
+    );
+
+    assert!(matches!(
+        journalled(&mut connection, "New Task", |tx| create_task(
+            tx,
+            &new_task("nope", "X"),
+            NOW
+        )),
+        Err(CoreError::MissingList { .. })
+    ));
+    assert!(matches!(
+        journalled(&mut connection, "New Task", |tx| create_task(
+            tx,
+            &new_task("l", "  "),
+            NOW
+        )),
+        Err(CoreError::EmptyName)
+    ));
+    assert!(matches!(
+        journalled(&mut connection, "New Task", |tx| {
+            create_task(
+                tx,
+                &NewTask {
+                    adjacent_task_id: Some("c".into()),
+                    ..new_task("l", "X")
+                },
+                NOW,
+            )
+        }),
+        Err(CoreError::InvalidTaskMove)
+    ));
+}
