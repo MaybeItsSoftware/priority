@@ -12,6 +12,10 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Internal rather than private so the extensions in the sibling files —
   /// the same type, split only for size — can reach it.
   let database: DatabasePool
+  /// The Rust core's handle on the same file (core/src/workspace.rs): a
+  /// connection of its own, on the same system SQLite as GRDB. What has moved
+  /// into the core so far (docs/rust-core-migration.md) goes through it.
+  let core: CoreWorkspace
 
   public convenience init() throws {
     try self.init(databaseURL: WorkspaceStore.defaultDatabaseURL())
@@ -35,6 +39,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     // the pool opens, so the two never hold the file at once.
     _ = try migrateWorkspace(path: databaseURL.path)
     self.database = try DatabasePool(path: databaseURL.path, configuration: configuration)
+    self.core = try CoreWorkspace.open(path: databaseURL.path)
   }
 
   public static func defaultDatabaseURL() -> URL {

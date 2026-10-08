@@ -16,111 +16,48 @@ import GRDB
 /// is a record of what happened, not an edit to take back, and undoing your way
 /// into a half-finished session would be a strange thing to offer.
 extension WorkspaceStore {
-  /// The tables whose rows are the user's work, and the column each is keyed by.
-  static let journalledTables: KeyValuePairs<String, String> = [
-    "task_lists": "id",
-    "list_folders": "id",
-    "tasks": "id",
-    "task_metadata": "taskId",
-    "task_conditions": "id",
-    "dailies": "id",
-    "daily_contributions": "id",
-    "kanban_boards": "id",
-  ]
-
   /// What undo would take back, phrased for a menu item. Nil when there is
   /// nothing to undo.
   public func undoableLabel() throws -> String? {
-    try database.read { db in
-      try String.fetchOne(
-        db, sql: "SELECT label FROM change_log WHERE undone = 0 ORDER BY id DESC LIMIT 1")
-    }
+    try core.undoableLabel()
   }
 
   public func redoableLabel() throws -> String? {
-    try database.read { db in
-      try String.fetchOne(
-        db, sql: "SELECT label FROM change_log WHERE undone = 1 ORDER BY id ASC LIMIT 1")
-    }
+    try core.redoableLabel()
   }
 
   /// The journal's named steps, newest first, at most `limit` of them.
   ///
-  /// The undone steps — the redo stack — come first, since they were done
+  /// The undone steps (the redo stack) come first, since they were done
   /// later than anything still standing; the last of them is the next redo,
-  /// and the first step that is not undone is the next undo. A history view
-  /// reads this rather than the journal's rows, which are an implementation
-  /// detail of how undo replays.
+  /// and the first step that is not undone is the next undo.
   public func undoHistory(limit: Int = 100) throws -> [WorkspaceUndoStep] {
-    try database.read { db in
-      let rows = try Row.fetchAll(db, sql: """
-        SELECT groupId, MAX(label) AS label, MAX(undone) AS undone, COUNT(*) AS changes, MAX(id) AS lastId
-        FROM change_log
-        WHERE groupId IS NOT NULL
-        GROUP BY groupId
-        ORDER BY lastId DESC
-        LIMIT ?
-        """, arguments: [max(0, limit)])
-      return rows.map { row in
-        WorkspaceUndoStep(
-          id: row["groupId"],
-          label: (row["label"] as String?) ?? "Change",
-          isUndone: (row["undone"] as Bool?) ?? false,
-          changeCount: row["changes"])
-      }
+    try core.undoHistory(limit: UInt32(clamping: max(0, limit))).map { step in
+      WorkspaceUndoStep(
+        id: step.id, label: step.label, isUndone: step.isUndone, changeCount: Int(step.changeCount))
     }
   }
 
   /// The affected task/list lets the desktop reveal restored work after undo.
   public func historyTarget(forUndo: Bool) throws -> (taskId: String?, listId: String?) {
-    try database.read { db in
-      let groupID = try String.fetchOne(db, sql: forUndo
-        ? "SELECT groupId FROM change_log WHERE undone = 0 ORDER BY id DESC LIMIT 1"
-        : "SELECT groupId FROM change_log WHERE undone = 1 ORDER BY id ASC LIMIT 1")
-      guard let groupID else { return (nil, nil) }
-      let operation = forUndo ? "delete" : "insert"
-      let taskID = try String.fetchOne(db, sql: """
-        SELECT rowId FROM change_log WHERE groupId = ? AND tableName = 'tasks'
-        ORDER BY CASE WHEN operation = ? THEN 0 ELSE 1 END, id DESC LIMIT 1
-        """, arguments: [groupID, operation])
-      let listID = try String.fetchOne(db, sql: """
-        SELECT rowId FROM change_log WHERE groupId = ? AND tableName = 'task_lists' AND operation = ?
-        ORDER BY id DESC LIMIT 1
-        """, arguments: [groupID, operation])
-      return (taskID, listID)
-    }
+    let target = try core.historyTarget(forUndo: forUndo)
+    return (target.taskId, target.listId)
   }
 
   /// Reverses the most recent group of changes. Returns its label, or nil when
   /// there was nothing to undo.
+  ///
+  /// The replay is the core's (core/src/journal.rs), on its own connection: a
+  /// commit GRDB's observation does not see, so callers reload afterwards, as
+  /// the view model's `perform` already does.
   @discardableResult
   public func undo() throws -> String? {
-    try database.write { db in
-      guard let group = try Row.fetchOne(
-        db, sql: "SELECT groupId, label FROM change_log WHERE undone = 0 ORDER BY id DESC LIMIT 1")
-      else { return nil }
-      let groupID: String = group["groupId"]
-      let entries = try Row.fetchAll(
-        db, sql: "SELECT * FROM change_log WHERE groupId = ? ORDER BY id DESC", arguments: [groupID])
-      try Self.replay(entries, reversed: true, in: db)
-      try db.execute(sql: "UPDATE change_log SET undone = 1 WHERE groupId = ?", arguments: [groupID])
-      return group["label"]
-    }
+    try core.undo()
   }
 
   @discardableResult
   public func redo() throws -> String? {
-    try database.write { db in
-      guard let group = try Row.fetchOne(
-        db, sql: "SELECT groupId, label FROM change_log WHERE undone = 1 ORDER BY id ASC LIMIT 1")
-      else { return nil }
-      let groupID: String = group["groupId"]
-      let entries = try Row.fetchAll(
-        db, sql: "SELECT * FROM change_log WHERE groupId = ? ORDER BY id ASC", arguments: [groupID])
-      try Self.replay(entries, reversed: false, in: db)
-      try db.execute(sql: "UPDATE change_log SET undone = 0 WHERE groupId = ?", arguments: [groupID])
-      return group["label"]
-    }
+    try core.redo()
   }
 
   /// Runs a mutation as one undoable step.
@@ -129,6 +66,11 @@ extension WorkspaceStore {
   /// rather than the table. Every write that touches a journalled table goes
   /// through here: a write that does not would be recorded against whichever
   /// step ran before it, and undoing that step would take back both.
+  ///
+  /// The bookkeeping matches `journal::begin` and `journal::finish` in the
+  /// core statement for statement. It stays here until the writes it wraps
+  /// move into the core (step four), because it has to run inside GRDB's
+  /// transaction, which the core's connection cannot join.
   func journalledWrite<T>(_ label: String, _ block: (Database) throws -> T) throws -> T {
     try database.write { db in
       let groupID = UUID().uuidString
@@ -146,85 +88,17 @@ extension WorkspaceStore {
       let changed = try Bool.fetchOne(
         db, sql: "SELECT EXISTS(SELECT 1 FROM change_log WHERE groupId = ?)", arguments: [groupID]) ?? false
       if changed { try db.execute(sql: "DELETE FROM change_log WHERE undone = 1") }
-      try Self.trimJournal(db)
+      // Whole groups only: half an undo step is worse than none. The depth is
+      // the core's JOURNAL_DEPTH.
+      try db.execute(sql: """
+        DELETE FROM change_log WHERE groupId IN (
+          SELECT groupId FROM change_log GROUP BY groupId
+          ORDER BY MAX(id) DESC LIMIT -1 OFFSET 100
+        )
+        """)
       return result
     }
   }
-
-  private static func replay(_ entries: [Row], reversed: Bool, in db: Database) throws {
-    // Recording is already off outside a journalled write; set explicitly so a
-    // replay can never record undoing as another thing to undo.
-    try db.execute(sql: "UPDATE undo_control SET suppressed = 1 WHERE id = 0")
-    // A subtree comes back parent-first or child-first depending on the order
-    // its rows were deleted in, and either way one end of it briefly points at
-    // a row that is not there yet.
-    try db.execute(sql: "PRAGMA defer_foreign_keys = ON")
-
-    for entry in entries {
-      let table: String = entry["tableName"]
-      let key: String = entry["rowId"]
-      let operation: String = entry["operation"]
-      let before: String? = entry["beforeJSON"]
-      let after: String? = entry["afterJSON"]
-      guard let keyColumn = journalledTables.first(where: { $0.key == table })?.value else { continue }
-
-      switch (operation, reversed) {
-      case ("insert", true), ("delete", false):
-        try db.execute(sql: "DELETE FROM \(table) WHERE \(keyColumn) = ?", arguments: [key])
-      case ("delete", true), ("insert", false):
-        guard let json = reversed ? before : after else { continue }
-        try insertRow(json, into: table, db: db)
-      case ("update", _):
-        guard let json = reversed ? before : after else { continue }
-        try updateRow(json, in: table, key: key, keyColumn: keyColumn, db: db)
-      default:
-        continue
-      }
-    }
-  }
-
-  /// Puts a deleted row back, exactly as it was.
-  private static func insertRow(_ json: String, into table: String, db: Database) throws {
-    let columns = try db.columns(in: table).map(\.name)
-    let values = columns.map { "json_extract(?, '$.\($0)')" }.joined(separator: ", ")
-    try db.execute(
-      sql: """
-        INSERT INTO \(table) (\(columns.map { "\"\($0)\"" }.joined(separator: ", ")))
-        VALUES (\(values))
-        """,
-      arguments: StatementArguments(Array(repeating: json, count: columns.count)))
-  }
-
-  /// Returns an existing row to a recorded state.
-  ///
-  /// An UPDATE rather than INSERT OR REPLACE: replacing a row deletes it first,
-  /// and a delete cascades, so putting back a task's old title would take its
-  /// subtree with it.
-  private static func updateRow(
-    _ json: String, in table: String, key: String, keyColumn: String, db: Database
-  ) throws {
-    let columns = try db.columns(in: table).map(\.name)
-    let assignments = columns.map { "\"\($0)\" = json_extract(?, '$.\($0)')" }.joined(separator: ", ")
-    var arguments = Array(repeating: json, count: columns.count)
-    arguments.append(key)
-    try db.execute(
-      sql: "UPDATE \(table) SET \(assignments) WHERE \"\(keyColumn)\" = ?",
-      arguments: StatementArguments(arguments))
-  }
-
-  /// Keeps the journal to a working depth rather than a complete history. Whole
-  /// groups only: half an undo step is worse than none.
-  private static func trimJournal(_ db: Database) throws {
-    try db.execute(sql: """
-      DELETE FROM change_log WHERE groupId IN (
-        SELECT groupId FROM change_log GROUP BY groupId
-        ORDER BY MAX(id) DESC LIMIT -1 OFFSET \(journalDepth)
-      )
-      """)
-  }
-
-  private static let journalDepth = 100
-
 }
 
 /// One named step in the undo journal, as `undoHistory(limit:)` reports it.

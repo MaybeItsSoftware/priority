@@ -97,13 +97,9 @@ class WorkspaceRepository(
     }
 
     /** What undo would take back, phrased for a menu item; nil when there is nothing. */
-    suspend fun undoableLabel(): String? = database.read {
-        it.string("SELECT label FROM change_log WHERE undone = 0 ORDER BY id DESC LIMIT 1")
-    }
+    suspend fun undoableLabel(): String? = database.coreRead { it.undoableLabel() }
 
-    suspend fun redoableLabel(): String? = database.read {
-        it.string("SELECT label FROM change_log WHERE undone = 1 ORDER BY id ASC LIMIT 1")
-    }
+    suspend fun redoableLabel(): String? = database.coreRead { it.redoableLabel() }
 
     /** Both labels, re-read whenever the journal changes. */
     fun observeHistoryLabels(): Flow<Pair<String?, String?>> = database.observe(setOf("change_log")) {
@@ -112,95 +108,22 @@ class WorkspaceRepository(
     }
 
     /** The task and list the next undo (or redo) affects, so the UI can reveal restored work. */
-    suspend fun historyTarget(forUndo: Boolean): HistoryTarget = database.read { db ->
-        val groupId = db.string(
-            if (forUndo) {
-                "SELECT groupId FROM change_log WHERE undone = 0 ORDER BY id DESC LIMIT 1"
-            } else {
-                "SELECT groupId FROM change_log WHERE undone = 1 ORDER BY id ASC LIMIT 1"
-            },
-        ) ?: return@read HistoryTarget(null, null)
-        val operation = if (forUndo) "delete" else "insert"
-        val taskId = db.string(
-            "SELECT rowId FROM change_log WHERE groupId = ? AND tableName = 'tasks' " +
-                "ORDER BY CASE WHEN operation = ? THEN 0 ELSE 1 END, id DESC LIMIT 1",
-            groupId, operation,
-        )
-        val listId = db.string(
-            "SELECT rowId FROM change_log WHERE groupId = ? AND tableName = 'task_lists' AND operation = ? " +
-                "ORDER BY id DESC LIMIT 1",
-            groupId, operation,
-        )
-        HistoryTarget(taskId, listId)
-    }
+    suspend fun historyTarget(forUndo: Boolean): HistoryTarget =
+        database.coreRead { it.historyTarget(forUndo) }.let { HistoryTarget(it.taskId, it.listId) }
 
-    /** Reverses the most recent group of changes. Returns its label, or nil when there was nothing to undo. */
-    suspend fun undo(): String? = database.write { db ->
-        val group = db.queryOne(
-            "SELECT groupId, label FROM change_log WHERE undone = 0 ORDER BY id DESC LIMIT 1",
-        ) { it.stringOrNull("groupId") to it.stringOrNull("label") } ?: return@write null
-        val entries = db.query("SELECT * FROM change_log WHERE groupId = ? ORDER BY id DESC", group.first) {
-            it.toJournalEntry()
-        }
-        replay(db, entries, reversed = true)
-        db.execute("UPDATE change_log SET undone = 1 WHERE groupId = ?", group.first)
-        group.second
-    }
+    /**
+     * Reverses the most recent group of changes. Returns its label, or nil when there was nothing to undo.
+     * The replay is the Rust core's (core/src/journal.rs), the same code the Mac and the CLI's steps use.
+     */
+    suspend fun undo(): String? = database.coreWrite(REPLAYED_TABLES) { it.undo() }
 
-    suspend fun redo(): String? = database.write { db ->
-        val group = db.queryOne(
-            "SELECT groupId, label FROM change_log WHERE undone = 1 ORDER BY id ASC LIMIT 1",
-        ) { it.stringOrNull("groupId") to it.stringOrNull("label") } ?: return@write null
-        val entries = db.query("SELECT * FROM change_log WHERE groupId = ? ORDER BY id ASC", group.first) {
-            it.toJournalEntry()
-        }
-        replay(db, entries, reversed = false)
-        db.execute("UPDATE change_log SET undone = 0 WHERE groupId = ?", group.first)
-        group.second
-    }
+    suspend fun redo(): String? = database.coreWrite(REPLAYED_TABLES) { it.redo() }
 
     /** The journal, newest first, for a history pane. */
-    suspend fun history(limit: Int = 100): List<HistoryEntry> = database.read { db ->
-        db.query(
-            "SELECT groupId, label, MAX(id) AS lastId, MAX(undone) AS undone, COUNT(*) AS changes " +
-                "FROM change_log GROUP BY groupId ORDER BY lastId DESC LIMIT ?",
-            limit,
-        ) {
-            HistoryEntry(it.string("groupId"), it.stringOrNull("label"), it.bool("undone"), it.int("changes"))
+    suspend fun history(limit: Int = 100): List<HistoryEntry> =
+        database.coreRead { it.undoHistory(limit.coerceAtLeast(0).toUInt()) }.map {
+            HistoryEntry(it.id, it.label, it.isUndone, it.changeCount.toInt())
         }
-    }
-
-    private fun replay(db: Db, entries: List<JournalEntry>, reversed: Boolean) {
-        db.execute("UPDATE undo_control SET suppressed = 1 WHERE id = 0")
-        db.execute("PRAGMA defer_foreign_keys = ON")
-        for (entry in entries) {
-            val keyColumn = WorkspaceSchema.journalKey(entry.table) ?: continue
-            when {
-                entry.operation == "insert" && reversed || entry.operation == "delete" && !reversed ->
-                    db.execute("DELETE FROM ${entry.table} WHERE $keyColumn = ?", entry.rowId)
-                entry.operation == "delete" && reversed || entry.operation == "insert" && !reversed -> {
-                    val json = (if (reversed) entry.before else entry.after) ?: continue
-                    val columns = db.columns(entry.table)
-                    db.execute(
-                        "INSERT INTO ${entry.table} (${columns.joinToString(", ") { "\"$it\"" }}) " +
-                            "VALUES (${columns.joinToString(", ") { "json_extract(?, '$.$it')" }})",
-                        *Array(columns.size) { json },
-                    )
-                }
-                entry.operation == "update" -> {
-                    val json = (if (reversed) entry.before else entry.after) ?: continue
-                    val columns = db.columns(entry.table)
-                    // An UPDATE, never INSERT OR REPLACE: a replace deletes, and a delete cascades.
-                    db.execute(
-                        "UPDATE ${entry.table} SET " +
-                            columns.joinToString(", ") { "\"$it\" = json_extract(?, '$.$it')" } +
-                            " WHERE \"$keyColumn\" = ?",
-                        *(Array<Any?>(columns.size) { json } + entry.rowId),
-                    )
-                }
-            }
-        }
-    }
 
     private fun trimJournal(db: Db) {
         db.execute(
@@ -1717,6 +1640,10 @@ class WorkspaceRepository(
     companion object {
         const val JOURNAL_DEPTH = 100
 
+        /** What an undo or redo can change, announced to observers since the core writes on its own connection. */
+        private val REPLAYED_TABLES: Set<String> =
+            WorkspaceSchema.journalledTables.map { it.first }.toSet() + setOf("change_log", "sync_outbox")
+
         /** Opens the workspace database at [path] and wraps it. */
         fun open(path: String, clock: Clock = Clock.systemUTC()): WorkspaceRepository =
             WorkspaceRepository(WorkspaceDatabase.open(path), clock)
@@ -1728,19 +1655,6 @@ data class HistoryTarget(val taskId: String?, val listId: String?)
 data class HistoryEntry(val groupId: String, val label: String?, val isUndone: Boolean, val changeCount: Int)
 
 data class BoardMetadata(val columns: Map<String, String>, val positions: Map<String, TaskMatrixPosition>)
-
-internal data class JournalEntry(
-    val table: String,
-    val rowId: String,
-    val operation: String,
-    val before: String?,
-    val after: String?,
-)
-
-internal fun uk.co.maybeitsadam.takt.data.db.Row.toJournalEntry() = JournalEntry(
-    table = string("tableName"), rowId = string("rowId"), operation = string("operation"),
-    before = stringOrNull("beforeJSON"), after = stringOrNull("afterJSON"),
-)
 
 internal fun emptyMetadata(taskId: String, now: Instant) = TaskMetadata(
     taskId = taskId, priority = null, startAt = null, tagsJSON = "[]", recurrenceRule = null, matrixUrgency = null,

@@ -2,6 +2,7 @@ package uk.co.maybeitsadam.takt.data.db
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import uniffi.takt_core.CoreWorkspace
 import uniffi.takt_core.migrateWorkspace
 import androidx.sqlite.execSQL
 import java.io.Closeable
@@ -38,6 +39,13 @@ class WorkspaceDatabase private constructor(
     private val readers: Channel<SQLiteConnection>,
     private val readerConnections: List<SQLiteConnection>,
     private val dispatcher: CoroutineDispatcher,
+    /**
+     * The Rust core's handle on the same file (core/src/workspace.rs): a
+     * connection of its own on the same SQLite library as the driver, so the
+     * two cannot release each other's locks. What has moved into the core
+     * (docs/rust-core-migration.md) goes through it.
+     */
+    val core: CoreWorkspace,
 ) : Closeable {
 
     private val writerLock = Mutex()
@@ -52,6 +60,21 @@ class WorkspaceDatabase private constructor(
         if (touched.isNotEmpty()) changes.emit(touched)
         result
     }
+
+    /**
+     * Runs a write the Rust core makes on its own connection, then announces
+     * [tables] as changed, since the TEMP triggers that report this database's
+     * own writes cannot see the core's. Holds the writer lock throughout, so
+     * the core never waits on this database's writer or it on the core.
+     */
+    suspend fun <T> coreWrite(tables: Set<String>, block: (CoreWorkspace) -> T): T = withContext(dispatcher) {
+        val result = writerLock.withLock { block(core) }
+        changes.emit(tables)
+        result
+    }
+
+    /** Runs a read through the Rust core's connection. */
+    suspend fun <T> coreRead(block: (CoreWorkspace) -> T): T = withContext(dispatcher) { block(core) }
 
     /** Runs [block] on the writer outside a transaction (for `PRAGMA data_version` and the like). */
     suspend fun <T> writerWithoutTransaction(block: (Db) -> T): T = withContext(dispatcher) {
@@ -113,6 +136,7 @@ class WorkspaceDatabase private constructor(
             writerLock.withLock {
                 writer.close()
                 readerConnections.forEach { it.close() }
+                core.close()
             }
         }
     }
@@ -126,9 +150,9 @@ class WorkspaceDatabase private constructor(
         ): WorkspaceDatabase {
             File(path).absoluteFile.parentFile?.mkdirs()
             // The schema is the Rust core's (core/src/schema). It opens the file
-            // with its own SQLite, migrates it and closes it before the driver
-            // below opens it, so the two never hold the file at once. This is
-            // the only place the app opens the database, once per process.
+            // on its own connection, migrates it and closes it before the driver
+            // below opens it. The core links this driver's SQLite library
+            // (libsqliteJni.so), so later core connections share its locks.
             migrateWorkspace(path)
             val driver = BundledSQLiteDriver()
             val writer = driver.open(path)
@@ -144,7 +168,7 @@ class WorkspaceDatabase private constructor(
             }
             val pool = Channel<SQLiteConnection>(readerConnections.size)
             readerConnections.forEach { pool.trySend(it) }
-            return WorkspaceDatabase(path, writer, pool, readerConnections, dispatcher)
+            return WorkspaceDatabase(path, writer, pool, readerConnections, dispatcher, CoreWorkspace.open(path))
         }
 
         private fun configure(connection: SQLiteConnection) {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+      The Rust core's generated UniFFI bindings (src/main/java/uniffi, written by
+      scripts/build_core_android.sh) use java.lang.ref.Cleaner, which is API 33,
+      only after checking at run time that the class exists; below 33 they fall
+      back to JNA's cleaner. Lint cannot see the check. Scoped to that package,
+      so a real NewApi call anywhere else still fails the build.
+    -->
+    <issue id="NewApi">
+        <ignore path="src/main/java/uniffi/**" />
+    </issue>
+</lint>

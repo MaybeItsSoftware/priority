@@ -43,5 +43,4 @@ object WorkspaceSchema {
     )
 
     fun syncKey(table: String): String? = syncedTables.firstOrNull { it.first == table }?.second
-    fun journalKey(table: String): String? = journalledTables.firstOrNull { it.first == table }?.second
 }
