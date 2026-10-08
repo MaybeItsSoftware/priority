@@ -533,7 +533,7 @@ enum SchemaError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
 
     
     
-    case Database(message: String
+    case Database(detail: String
     )
     case ForeignKeys(identifier: String, count: UInt32
     )
@@ -567,7 +567,7 @@ public struct FfiConverterTypeSchemaError: FfiConverterRustBuffer {
 
         
         case 1: return .Database(
-            message: try FfiConverterString.read(from: &buf)
+            detail: try FfiConverterString.read(from: &buf)
             )
         case 2: return .ForeignKeys(
             identifier: try FfiConverterString.read(from: &buf), 
@@ -585,9 +585,9 @@ public struct FfiConverterTypeSchemaError: FfiConverterRustBuffer {
 
         
         
-        case let .Database(message):
+        case let .Database(detail):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(detail, into: &buf)
             
         
         case let .ForeignKeys(identifier,count):

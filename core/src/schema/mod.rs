@@ -14,6 +14,7 @@
 //! the wild records which ones it ran.
 
 mod data;
+pub mod triggers;
 
 use std::time::Duration;
 
@@ -103,8 +104,9 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
 /// What went wrong bringing a database up to date.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum SchemaError {
-    #[error("Could not open or migrate the workspace database: {message}")]
-    Database { message: String },
+    // Not `message`: Kotlin's bindings make this a Throwable, which has one.
+    #[error("Could not open or migrate the workspace database: {detail}")]
+    Database { detail: String },
     #[error("Migration {identifier} left {count} broken foreign key(s); nothing was saved.")]
     ForeignKeys { identifier: String, count: u32 },
 }
@@ -112,7 +114,7 @@ pub enum SchemaError {
 impl From<rusqlite::Error> for SchemaError {
     fn from(error: rusqlite::Error) -> Self {
         SchemaError::Database {
-            message: error.to_string(),
+            detail: error.to_string(),
         }
     }
 }

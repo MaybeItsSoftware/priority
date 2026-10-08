@@ -346,3 +346,42 @@ fn a_timestamp_is_written_as_grdb_writes_one() {
         "1970-01-01 00:00:00.000"
     );
 }
+
+/// The generator a new migration uses to reinstall the journal and outbox
+/// triggers writes, on today's schema, exactly the triggers the captured
+/// migrations left behind.
+#[test]
+fn triggers_match_the_fixture() {
+    let connection = migrated();
+    let stored = |name: &str| -> String {
+        connection
+            .query_row(
+                "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = ?1",
+                [name],
+                |row| row.get(0),
+            )
+            .unwrap()
+    };
+    let mut checked = 0;
+    for statement in super::triggers::change_log_statements(&connection)
+        .unwrap()
+        .into_iter()
+        .chain(super::triggers::sync_statements(&connection).unwrap())
+        .filter(|s| s.starts_with("CREATE TRIGGER"))
+    {
+        let name = statement.split_whitespace().nth(2).unwrap().to_string();
+        assert_eq!(statement, stored(&name), "trigger {name}");
+        checked += 1;
+    }
+    assert_eq!(checked, 8 * 3 + 15 * 3);
+    let before = dump_schema(&connection).unwrap();
+    super::triggers::reinstall(&connection).unwrap();
+    let after = dump_schema(&connection).unwrap();
+    // Reinstalling moves each trigger to the end of sqlite_master, so compare
+    // the set of statements rather than their order.
+    let mut a: Vec<&str> = before.lines().collect();
+    let mut b: Vec<&str> = after.lines().collect();
+    a.sort_unstable();
+    b.sort_unstable();
+    assert_eq!(a, b);
+}

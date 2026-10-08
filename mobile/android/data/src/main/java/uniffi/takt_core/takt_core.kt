@@ -676,6 +676,10 @@ internal object IntegrityCheckingUniffiLib {
     internal fun ensureInitialized() = Unit
     external fun uniffi_takt_core_checksum_func_core_version(
     ): Int
+    external fun uniffi_takt_core_checksum_func_migrate_workspace(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_workspace_migrations(
+    ): Int
     external fun ffi_takt_core_uniffi_contract_version(
     ): Int
 
@@ -692,6 +696,10 @@ internal object UniffiLib {
 
     internal fun ensureInitialized() = Unit
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_workspace_migrations(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_takt_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -815,6 +823,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_core_version() and 0xFFFF) != 3784) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_migrate_workspace() and 0xFFFF) != 65179) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
 }
 
 /**
@@ -911,6 +925,29 @@ object NoHandle
 /**
  * @suppress
  */
+public object FfiConverterUInt: FfiConverter<UInt, Int> {
+    override fun lift(value: Int): UInt {
+        return value.toUInt()
+    }
+
+    override fun read(buf: ByteBuffer): UInt {
+        return lift(buf.getInt())
+    }
+
+    override fun lower(value: UInt): Int {
+        return value.toInt()
+    }
+
+    override fun allocationSize(value: UInt) = 4UL
+
+    override fun write(value: UInt, buf: ByteBuffer) {
+        buf.putInt(value.toInt())
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     // Note: we don't inherit from FfiConverterRustBuffer, because we use a
     // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
@@ -964,6 +1001,125 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
         buf.put(byteBuf)
     }
 }
+
+
+
+
+
+/**
+ * What went wrong bringing a database up to date.
+ */
+sealed class SchemaException: kotlin.Exception() {
+    
+    class Database(
+        
+        val `detail`: kotlin.String
+        ) : SchemaException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    class ForeignKeys(
+        
+        val `identifier`: kotlin.String, 
+        
+        val `count`: kotlin.UInt
+        ) : SchemaException() {
+        override val message
+            get() = "identifier=${ `identifier` }, count=${ `count` }"
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<SchemaException> {
+        override fun lift(error_buf: RustBuffer.ByValue): SchemaException = FfiConverterTypeSchemaError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSchemaError : FfiConverterRustBuffer<SchemaException> {
+    override fun read(buf: ByteBuffer): SchemaException {
+        
+
+        return when(buf.getInt()) {
+            1 -> SchemaException.Database(
+                FfiConverterString.read(buf),
+                )
+            2 -> SchemaException.ForeignKeys(
+                FfiConverterString.read(buf),
+                FfiConverterUInt.read(buf),
+                )
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: SchemaException): ULong {
+        return when(value) {
+            is SchemaException.Database -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is SchemaException.ForeignKeys -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`identifier`)
+                + FfiConverterUInt.allocationSize(value.`count`)
+            )
+        }
+    }
+
+    override fun write(value: SchemaException, buf: ByteBuffer) {
+        when(value) {
+            is SchemaException.Database -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is SchemaException.ForeignKeys -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`identifier`, buf)
+                FfiConverterUInt.write(value.`count`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
+        val len = buf.getInt()
+        return List<kotlin.String>(len) {
+            FfiConverterString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterString.write(it, buf)
+        }
+    }
+}
         /**
          * The version of this crate, as compiled into the library a client loaded.
          *
@@ -974,6 +1130,39 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
             return FfiConverterString.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_takt_core_fn_func_core_version(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * Brings the database at `path` up to date, creating it if it does not
+         * exist, and returns the identifier of the newest migration it now has.
+         *
+         * Opens its own connection and closes it before returning, so call it
+         * before the client opens the file. Waits up to five seconds for another
+         * writer, as every client does.
+         */
+    @Throws(SchemaException::class) fun `migrateWorkspace`(`path`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCallWithError(SchemaException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_migrate_workspace(
+    
+        
+        FfiConverterString.lower(`path`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The migration identifiers, oldest first.
+         */ fun `workspaceMigrations`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_workspace_migrations(
     
         _status)
 }
