@@ -172,7 +172,8 @@ the ones the task has. Escape puts the title back; clicking away saves.
 
 In the row that opens for a new task (`Return`, `Shift+Return`), `Tab` makes it a
 subtask of the task above and `Shift+Tab` takes it back out, before you type or
-after.
+after. `↑` and `↓` close the row, dropping what was typed as `Escape` does, and
+carry on to the task above or below where it sat.
 
 Only the **trailing** words are read, and the first word from the end that is
 not one of these stops the reading — so a title is never rewritten in the

@@ -9,7 +9,8 @@ import SwiftUI
 /// the pane — rather than in a field in the title bar that only named the
 /// place. Return files it and leaves a fresh row under the one just made, so
 /// a run of tasks is typed straight down, the way Checkvist does it. Esc, or
-/// leaving the row empty, closes it.
+/// leaving the row empty, closes it; ↑ and ↓ close it and move on through the
+/// tasks from where it sat.
 struct WorkspaceTaskDraftRow: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -43,6 +44,13 @@ struct WorkspaceTaskDraftRow: View {
           } else {
             model.indentTaskDraft()
           }
+          return .handled
+        }
+        // The arrows leave the row and carry on through the tasks, so
+        // stepping away from a draft is the same keys as stepping anywhere.
+        .onKeyPress(keys: [.upArrow, .downArrow], phases: .down) { press in
+          guard press.modifiers.isDisjoint(with: [.command, .option, .control, .shift]) else { return .ignored }
+          model.leaveTaskDraft(by: press.key == .upArrow ? -1 : 1)
           return .handled
         }
       if capture.hasDetails {

@@ -46,6 +46,27 @@ extension WorkspaceViewModel {
     requestKeyboardFocus(.tasks)
   }
 
+  /// ↑ or ↓ in the draft row: drop what was being typed, as Esc does, and
+  /// carry on navigating from where the row sat — up lands on the task just
+  /// above it, down on the one just below.
+  func leaveTaskDraft(by offset: Int) {
+    guard isDraftingTask else { return }
+    let reference = taskInsertionReference
+    let above = taskInsertionAbove && !taskInsertionIsChild
+    endTaskDraft()
+    let rows = navigationRowIDs()
+    guard !rows.isEmpty else { return }
+    // With no reference the row is at the foot of the pane: nothing below it.
+    guard let reference, let index = rows.firstIndex(of: reference.id) else {
+      if offset < 0 { selectedTaskID = rows.last }
+      return
+    }
+    // The row sits in the gap before `index` (above) or after it.
+    let gapBefore = above ? index - 1 : index
+    let destination = offset < 0 ? gapBefore : gapBefore + 1
+    selectedTaskID = rows[min(max(destination, 0), rows.count - 1)]
+  }
+
   /// Whether the draft row belongs right before (`above`) or after the row
   /// for `taskID`; with no reference it goes at the end of the pane.
   func draftsBeside(_ taskID: String, above: Bool) -> Bool {
