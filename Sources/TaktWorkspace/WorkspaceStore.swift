@@ -67,36 +67,23 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// The list quick capture lands in. Never archived, never deleted, and found
   /// by its role rather than by its name.
   public func inbox(in workspaceId: String) throws -> TaskList? {
-    try database.read { db in try Self.inbox(db, workspaceId: workspaceId) }
-  }
-
-  private static func inbox(_ db: Database, workspaceId: String) throws -> TaskList? {
-    try TaskList
-      .filter(Column("workspaceId") == workspaceId && Column("systemRole") == TaskListRole.inbox.rawValue)
-      .fetchOne(db)
+    try Self.mappingCoreErrors { try core.inbox(workspaceId: workspaceId) }.map(TaskList.init)
   }
 
   @discardableResult
 
   public func workspaces() throws -> [Workspace] {
-    try database.read { db in
-      try Workspace.order(Column("createdAt")).fetchAll(db)
-    }
+    try Self.mappingCoreErrors { try core.workspaces() }.map(Workspace.init)
   }
 
   public func folders(in workspaceId: String) throws -> [ListFolder] {
-    try database.read { db in
-      try ListFolder.filter(Column("workspaceId") == workspaceId)
-        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
-    }
+    try Self.mappingCoreErrors { try core.folders(workspaceId: workspaceId) }.map(ListFolder.init)
   }
 
   public func lists(in workspaceId: String, includingArchived: Bool = false) throws -> [TaskList] {
-    try database.read { db in
-      var request = TaskList.filter(Column("workspaceId") == workspaceId)
-      if !includingArchived { request = request.filter(Column("isArchived") == false) }
-      return try request.order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
-    }
+    try Self.mappingCoreErrors {
+      try core.lists(workspaceId: workspaceId, includingArchived: includingArchived)
+    }.map(TaskList.init)
   }
 
   /// Creates a folder after its siblings: the Rust core's `lists::create_folder`.
@@ -131,7 +118,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func task(id: String) throws -> WorkspaceTask? {
-    try database.read { db in try WorkspaceTask.fetchOne(db, key: id) }
+    try Self.mappingCoreErrors { try core.task(id: id) }.map(WorkspaceTask.init)
   }
 
   /// Renames a folder: the Rust core's `lists::rename_folder`.
@@ -235,28 +222,15 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// intentionally excluded: each project can be entered and planned as its
   /// own board without inheriting its parent's column.
   public func tasks(in listId: String, parentTaskId: String? = nil) throws -> [WorkspaceTask] {
-    try database.read { db in
-      try WorkspaceTask
-        .filter(Column("listId") == listId && Column("parentTaskId") == parentTaskId)
-        .order(Column("sortOrder"), Column("createdAt"))
-        .fetchAll(db)
-    }
+    try Self.mappingCoreErrors {
+      try core.childTasks(listId: listId, parentTaskId: parentTaskId)
+    }.map(WorkspaceTask.init)
   }
 
   /// Returns the imported wrapper by its persisted identity. If it has been
   /// moved or promoted alongside other roots, show the actual hierarchy.
   public func visibleRootParentTaskID(for list: TaskList) throws -> String? {
-    try database.read { db in
-      try Self.visibleRootParentTaskID(db, listId: list.id)
-    }
-  }
-
-  private static func visibleRootParentTaskID(_ db: Database, listId: String) throws -> String? {
-    guard let list = try TaskList.fetchOne(db, key: listId), let rootID = list.visibleRootTaskId else { return nil }
-    let roots = try WorkspaceTask
-      .filter(Column("listId") == listId && Column("parentTaskId") == nil).fetchAll(db)
-    guard roots.count == 1, roots.first?.id == rootID else { return nil }
-    return rootID
+    try Self.mappingCoreErrors { try core.visibleRootParent(listId: list.id) }
   }
 
   /// The virtual Everything scope aggregates active lists without changing
@@ -328,7 +302,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func taskEditorMetadata(for taskId: String) throws -> TaskEditorMetadata {
-    try database.read { db in try Self.taskEditorSnapshot(db, taskId: taskId).metadata }
+    try taskEditorSnapshot(for: taskId).metadata
   }
 
   /// Sets a task's priority, tags, links and repeat: the Rust core's
@@ -502,18 +476,6 @@ public final class WorkspaceStore: @unchecked Sendable {
     while !frontier.isEmpty {
       let children = try String.fetchAll(
         db, sql: "SELECT id FROM tasks WHERE parentTaskId IN (\(frontier.map { _ in "?" }.joined(separator: ",")))",
-        arguments: StatementArguments(frontier))
-      frontier = children.filter { descendants.insert($0).inserted }
-    }
-    return descendants
-  }
-
-  static func folderDescendantIDs(_ db: Database, of folderID: String) throws -> Set<String> {
-    var descendants = Set<String>()
-    var frontier = [folderID]
-    while !frontier.isEmpty {
-      let children = try String.fetchAll(
-        db, sql: "SELECT id FROM list_folders WHERE parentFolderId IN (\(frontier.map { _ in "?" }.joined(separator: ",")))",
         arguments: StatementArguments(frontier))
       frontier = children.filter { descendants.insert($0).inserted }
     }

@@ -709,6 +709,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_child_tasks(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_clear_contribution(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order(
@@ -741,6 +743,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_folders(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_has_resumable_focus_queue_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
@@ -749,11 +753,17 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_import_tasks(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_inbox(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_indent_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_kanban_board_baseline(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_lists(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_log_contribution(
     ): Int
@@ -782,6 +792,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_outdent_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_outline(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session(
     ): Int
@@ -827,6 +839,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_schedule_task(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_search_tasks(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_board_columns(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_item_kind(
@@ -855,6 +869,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_sync_state(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_by_id(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo_history(
@@ -872,6 +892,14 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_update_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_upsert_theme(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_valid_parent_folders(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_visible_root_candidates(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_visible_root_parent(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_workspaces(
     ): Int
     external fun uniffi_takt_core_checksum_constructor_coreworkspace_open(
     ): Int
@@ -919,6 +947,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_checkpoint_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_child_tasks(`ptr`: Long,`listId`: RustBuffer.ByValue,`parentTaskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_clear_contribution(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_clear_focus_order(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -951,6 +981,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_finish_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_folders(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_has_resumable_focus_queue_task(`ptr`: Long,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -959,11 +991,17 @@ internal object UniffiLib {
     ): Int
     external fun uniffi_takt_core_fn_method_coreworkspace_import_tasks(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`listName`: RustBuffer.ByValue,`sourceSystem`: RustBuffer.ByValue,`seeds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_inbox(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_indent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_kanban_board_baseline(`ptr`: Long,`legacy`: RustBuffer.ByValue,`currentKey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_latest_sync_outbox_seq(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_list(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_lists(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`includingArchived`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_log_contribution(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`seconds`: Long,`complete`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -993,6 +1031,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_outdent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_outline(`ptr`: Long,`listId`: RustBuffer.ByValue,`parentTaskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_pause_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_pending_sync_changes(`ptr`: Long,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
@@ -1037,6 +1077,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_schedule_task(`ptr`: Long,`id`: RustBuffer.ByValue,`startAtMs`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_search_tasks(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`query`: RustBuffer.ByValue,`includingCompleted`: Byte,`includingArchivedLists`: Byte,`limit`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_set_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,`columns`: RustBuffer.ByValue,`movingTaskIds`: RustBuffer.ByValue,`toColumn`: RustBuffer.ByValue,`label`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_item_kind(`ptr`: Long,`id`: RustBuffer.ByValue,`kind`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1065,6 +1107,12 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_sync_state(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_tasks_by_id(`ptr`: Long,`ids`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_tasks_in_lists(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undo_history(`ptr`: Long,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
@@ -1083,6 +1131,14 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_upsert_theme(`ptr`: Long,`id`: RustBuffer.ByValue,`json`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_valid_parent_folders(`ptr`: Long,`folderId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_visible_root_candidates(`ptr`: Long,`listId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_visible_root_parent(`ptr`: Long,`listId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_workspaces(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1269,6 +1325,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() and 0xFFFF) != 13264) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_child_tasks() and 0xFFFF) != 32228) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_clear_contribution() and 0xFFFF) != 5187) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1317,6 +1376,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session() and 0xFFFF) != 58295) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_folders() and 0xFFFF) != 64875) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_has_resumable_focus_queue_task() and 0xFFFF) != 48787) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1329,6 +1391,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_import_tasks() and 0xFFFF) != 64382) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_inbox() and 0xFFFF) != 29369) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_indent_task() and 0xFFFF) != 14168) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1336,6 +1401,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq() and 0xFFFF) != 11156) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_list() and 0xFFFF) != 60638) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_lists() and 0xFFFF) != 47506) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_log_contribution() and 0xFFFF) != 57143) {
@@ -1374,10 +1445,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_nest_list() and 0xFFFF) != 38763) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates() and 0xFFFF) != 64441) {
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates() and 0xFFFF) != 63552) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_outdent_task() and 0xFFFF) != 3744) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_outline() and 0xFFFF) != 55647) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session() and 0xFFFF) != 59685) {
@@ -1446,6 +1520,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_schedule_task() and 0xFFFF) != 28936) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_search_tasks() and 0xFFFF) != 47825) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() and 0xFFFF) != 65113) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1488,6 +1565,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_sync_state() and 0xFFFF) != 5326) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task() and 0xFFFF) != 3486) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_by_id() and 0xFFFF) != 674) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists() and 0xFFFF) != 34639) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1513,6 +1599,18 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_upsert_theme() and 0xFFFF) != 43674) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_valid_parent_folders() and 0xFFFF) != 51949) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_visible_root_candidates() and 0xFFFF) != 60554) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_visible_root_parent() and 0xFFFF) != 62676) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_workspaces() and 0xFFFF) != 24930) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_constructor_coreworkspace_open() and 0xFFFF) != 50515) {
@@ -1995,6 +2093,11 @@ public interface CoreWorkspaceInterface {
     fun `checkpointFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * The children of a task in a list, or its roots, in outline order.
+     */
+    fun `childTasks`(`listId`: kotlin.String, `parentTaskId`: kotlin.String?): List<TaskRow>
+    
+    /**
      * Un-ticks a day of a daily as one "Clear Daily" step.
      */
     fun `clearContribution`(`dailyId`: kotlin.String, `dayMs`: kotlin.Long, `zone`: kotlin.String)
@@ -2076,6 +2179,11 @@ public interface CoreWorkspaceInterface {
     fun `finishFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
+     * A workspace's folders in sidebar order.
+     */
+    fun `folders`(`workspaceId`: kotlin.String): List<FolderRow>
+    
+    /**
      * Whether a session waiting on a blocked queue can resume in `context`.
      */
     fun `hasResumableFocusQueueTask`(`context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean
@@ -2097,6 +2205,11 @@ public interface CoreWorkspaceInterface {
     fun `importTasks`(`workspaceId`: kotlin.String, `listName`: kotlin.String, `sourceSystem`: kotlin.String, `seeds`: List<ImportedTaskSeed>, `nowMs`: kotlin.Long): ImportOutcome?
     
     /**
+     * A workspace's Inbox.
+     */
+    fun `inbox`(`workspaceId`: kotlin.String): ListRow?
+    
+    /**
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     fun `indentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
@@ -2111,6 +2224,16 @@ public interface CoreWorkspaceInterface {
      * The newest outbox entry, or nothing when nothing is waiting.
      */
     fun `latestSyncOutboxSeq`(): kotlin.Long?
+    
+    /**
+     * One list, if it exists.
+     */
+    fun `list`(`id`: kotlin.String): ListRow?
+    
+    /**
+     * A workspace's lists in sidebar order.
+     */
+    fun `lists`(`workspaceId`: kotlin.String, `includingArchived`: kotlin.Boolean): List<ListRow>
     
     /**
      * Logs progress on a daily as one "Log Daily" step; returns the
@@ -2174,15 +2297,17 @@ public interface CoreWorkspaceInterface {
      */
     fun `nestList`(`id`: kotlin.String, `intoListId`: kotlin.String, `parentTaskId`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String
     
-    /**
-     * The open tasks the next-up engine and the day choose from.
-     */
     fun `nextUpCandidates`(`nowMs`: kotlin.Long, `zone`: kotlin.String): List<Candidate>
     
     /**
      * Outdents a task to follow its parent as one "Outdent Task" step.
      */
     fun `outdentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * A list's outline under a task, or the whole list.
+     */
+    fun `outline`(`listId`: kotlin.String, `parentTaskId`: kotlin.String?): List<OutlineItem>
     
     /**
      * Pauses a running block.
@@ -2299,6 +2424,11 @@ public interface CoreWorkspaceInterface {
     fun `scheduleTask`(`id`: kotlin.String, `startAtMs`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String)
     
     /**
+     * Prefix search over titles and notes, best match first.
+     */
+    fun `searchTasks`(`workspaceId`: kotlin.String, `query`: kotlin.String, `includingCompleted`: kotlin.Boolean, `includingArchivedLists`: kotlin.Boolean, `limit`: kotlin.Long): List<SearchHit>
+    
+    /**
      * Saves a board's columns, moving cards out of a removed one, as one step.
      */
     fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
@@ -2370,6 +2500,21 @@ public interface CoreWorkspaceInterface {
     fun `syncState`(): LocalSyncState?
     
     /**
+     * One task, if it exists.
+     */
+    fun `task`(`id`: kotlin.String): TaskRow?
+    
+    /**
+     * Tasks by id; missing ids are absent.
+     */
+    fun `tasksById`(`ids`: List<kotlin.String>): List<TaskRow>
+    
+    /**
+     * Every task in the given lists, each list in outline order.
+     */
+    fun `tasksInLists`(`listIds`: List<kotlin.String>): List<TaskRow>
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -2414,6 +2559,27 @@ public interface CoreWorkspaceInterface {
      * Stores a theme's JSON; whether it changed anything.
      */
     fun `upsertTheme`(`id`: kotlin.String, `json`: kotlin.String, `nowMs`: kotlin.Long): kotlin.Boolean
+    
+    /**
+     * The folders a folder may move into.
+     */
+    fun `validParentFolders`(`folderId`: kotlin.String): List<FolderRow>
+    
+    /**
+     * The root a list may show its children in place of, if there is one.
+     */
+    fun `visibleRootCandidates`(`listId`: kotlin.String): List<TaskRow>
+    
+    /**
+     * The imported wrapper a list shows its children in place of, if any.
+     */
+    fun `visibleRootParent`(`listId`: kotlin.String): kotlin.String?
+    
+    /**
+     * The open tasks the next-up engine and the day choose from.
+     * The workspaces, oldest first.
+     */
+    fun `workspaces`(): List<WorkspaceRow>
     
     companion object
 }
@@ -2688,6 +2854,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * The children of a task in a list, or its roots, in outline order.
+     */
+    @Throws(CoreException::class)override fun `childTasks`(`listId`: kotlin.String, `parentTaskId`: kotlin.String?): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_child_tasks(
+        it,
+        
+        FfiConverterString.lower(`listId`),
+        FfiConverterOptionalString.lower(`parentTaskId`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -2995,6 +3180,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * A workspace's folders in sidebar order.
+     */
+    @Throws(CoreException::class)override fun `folders`(`workspaceId`: kotlin.String): List<FolderRow> {
+            return FfiConverterSequenceTypeFolderRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_folders(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Whether a session waiting on a blocked queue can resume in `context`.
      */
     @Throws(CoreException::class)override fun `hasResumableFocusQueueTask`(`context`: FocusContext, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
@@ -3076,6 +3279,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * A workspace's Inbox.
+     */
+    @Throws(CoreException::class)override fun `inbox`(`workspaceId`: kotlin.String): ListRow? {
+            return FfiConverterOptionalTypeListRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_inbox(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     @Throws(CoreException::class)override fun `indentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
@@ -3123,6 +3344,43 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     UniffiLib.uniffi_takt_core_fn_method_coreworkspace_latest_sync_outbox_seq(
         it,
         _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * One list, if it exists.
+     */
+    @Throws(CoreException::class)override fun `list`(`id`: kotlin.String): ListRow? {
+            return FfiConverterOptionalTypeListRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_list(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A workspace's lists in sidebar order.
+     */
+    @Throws(CoreException::class)override fun `lists`(`workspaceId`: kotlin.String, `includingArchived`: kotlin.Boolean): List<ListRow> {
+            return FfiConverterSequenceTypeListRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_lists(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterBoolean.lower(`includingArchived`),_status)
 }
     }
     )
@@ -3371,9 +3629,6 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     
 
     
-    /**
-     * The open tasks the next-up engine and the day choose from.
-     */
     @Throws(CoreException::class)override fun `nextUpCandidates`(`nowMs`: kotlin.Long, `zone`: kotlin.String): List<Candidate> {
             return FfiConverterSequenceTypeCandidate.lift(
     callWithHandle {
@@ -3405,6 +3660,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * A list's outline under a task, or the whole list.
+     */
+    @Throws(CoreException::class)override fun `outline`(`listId`: kotlin.String, `parentTaskId`: kotlin.String?): List<OutlineItem> {
+            return FfiConverterSequenceTypeOutlineItem.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_outline(
+        it,
+        
+        FfiConverterString.lower(`listId`),
+        FfiConverterOptionalString.lower(`parentTaskId`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -3831,6 +4105,28 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Prefix search over titles and notes, best match first.
+     */
+    @Throws(CoreException::class)override fun `searchTasks`(`workspaceId`: kotlin.String, `query`: kotlin.String, `includingCompleted`: kotlin.Boolean, `includingArchivedLists`: kotlin.Boolean, `limit`: kotlin.Long): List<SearchHit> {
+            return FfiConverterSequenceTypeSearchHit.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_search_tasks(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterString.lower(`query`),
+        FfiConverterBoolean.lower(`includingCompleted`),
+        FfiConverterBoolean.lower(`includingArchivedLists`),
+        FfiConverterLong.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Saves a board's columns, moving cards out of a removed one, as one step.
      */
     @Throws(CoreException::class)override fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
@@ -4109,6 +4405,60 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * One task, if it exists.
+     */
+    @Throws(CoreException::class)override fun `task`(`id`: kotlin.String): TaskRow? {
+            return FfiConverterOptionalTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Tasks by id; missing ids are absent.
+     */
+    @Throws(CoreException::class)override fun `tasksById`(`ids`: List<kotlin.String>): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_tasks_by_id(
+        it,
+        
+        FfiConverterSequenceString.lower(`ids`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Every task in the given lists, each list in outline order.
+     */
+    @Throws(CoreException::class)override fun `tasksInLists`(`listIds`: List<kotlin.String>): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_tasks_in_lists(
+        it,
+        
+        FfiConverterSequenceString.lower(`listIds`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -4273,6 +4623,78 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`id`),
         FfiConverterString.lower(`json`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The folders a folder may move into.
+     */
+    @Throws(CoreException::class)override fun `validParentFolders`(`folderId`: kotlin.String): List<FolderRow> {
+            return FfiConverterSequenceTypeFolderRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_valid_parent_folders(
+        it,
+        
+        FfiConverterString.lower(`folderId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The root a list may show its children in place of, if there is one.
+     */
+    @Throws(CoreException::class)override fun `visibleRootCandidates`(`listId`: kotlin.String): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_visible_root_candidates(
+        it,
+        
+        FfiConverterString.lower(`listId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The imported wrapper a list shows its children in place of, if any.
+     */
+    @Throws(CoreException::class)override fun `visibleRootParent`(`listId`: kotlin.String): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_visible_root_parent(
+        it,
+        
+        FfiConverterString.lower(`listId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The open tasks the next-up engine and the day choose from.
+     * The workspaces, oldest first.
+     */
+    @Throws(CoreException::class)override fun `workspaces`(): List<WorkspaceRow> {
+            return FfiConverterSequenceTypeWorkspaceRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_workspaces(
+        it,
+        _status)
 }
     }
     )
@@ -5046,6 +5468,72 @@ public object FfiConverterTypeFocusContext: FfiConverterRustBuffer<FocusContext>
 
 
 /**
+ * A row of `list_folders`. `ListFolder`.
+ */
+data class FolderRow (
+    var `id`: kotlin.String
+    , 
+    var `workspaceId`: kotlin.String
+    , 
+    var `parentFolderId`: kotlin.String?
+    , 
+    var `name`: kotlin.String
+    , 
+    var `sortOrder`: kotlin.Long
+    , 
+    var `createdAtMs`: kotlin.Long
+    , 
+    var `updatedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFolderRow: FfiConverterRustBuffer<FolderRow> {
+    override fun read(buf: ByteBuffer): FolderRow {
+        return FolderRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FolderRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`workspaceId`) +
+            FfiConverterOptionalString.allocationSize(value.`parentFolderId`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+    )
+
+    override fun write(value: FolderRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`workspaceId`, buf)
+            FfiConverterOptionalString.write(value.`parentFolderId`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
  * What the habit form saves. The schedule arrives as the daily stores it
  * (a weekday mask's days and an interval), which each client derives from
  * its own frequency type.
@@ -5414,6 +5902,100 @@ public object FfiConverterTypeLegacyDailySeed: FfiConverterRustBuffer<LegacyDail
 
 
 /**
+ * A row of `task_lists`. `TaskList`.
+ */
+data class ListRow (
+    var `id`: kotlin.String
+    , 
+    var `workspaceId`: kotlin.String
+    , 
+    var `folderId`: kotlin.String?
+    , 
+    var `name`: kotlin.String
+    , 
+    var `colorHex`: kotlin.String?
+    , 
+    var `sortOrder`: kotlin.Long
+    , 
+    var `isArchived`: kotlin.Boolean
+    , 
+    /**
+     * "inbox" for the Inbox; absent for an ordinary list.
+     */
+    var `systemRole`: kotlin.String?
+    , 
+    var `visibleRootTaskId`: kotlin.String?
+    , 
+    var `completedAtMs`: kotlin.Long?
+    , 
+    var `createdAtMs`: kotlin.Long
+    , 
+    var `updatedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeListRow: FfiConverterRustBuffer<ListRow> {
+    override fun read(buf: ByteBuffer): ListRow {
+        return ListRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ListRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`workspaceId`) +
+            FfiConverterOptionalString.allocationSize(value.`folderId`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterOptionalString.allocationSize(value.`colorHex`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`) +
+            FfiConverterBoolean.allocationSize(value.`isArchived`) +
+            FfiConverterOptionalString.allocationSize(value.`systemRole`) +
+            FfiConverterOptionalString.allocationSize(value.`visibleRootTaskId`) +
+            FfiConverterOptionalLong.allocationSize(value.`completedAtMs`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+    )
+
+    override fun write(value: ListRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`workspaceId`, buf)
+            FfiConverterOptionalString.write(value.`folderId`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterOptionalString.write(value.`colorHex`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
+            FfiConverterBoolean.write(value.`isArchived`, buf)
+            FfiConverterOptionalString.write(value.`systemRole`, buf)
+            FfiConverterOptionalString.write(value.`visibleRootTaskId`, buf)
+            FfiConverterOptionalLong.write(value.`completedAtMs`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
  * What the list settings sheet saves.
  */
 data class ListSettings (
@@ -5736,6 +6318,47 @@ public object FfiConverterTypeOutgoingChange: FfiConverterRustBuffer<OutgoingCha
 
 
 /**
+ * A task in an outline, with how deep it sits. `TaskOutlineItem`.
+ */
+data class OutlineItem (
+    var `task`: TaskRow
+    , 
+    var `depth`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOutlineItem: FfiConverterRustBuffer<OutlineItem> {
+    override fun read(buf: ByteBuffer): OutlineItem {
+        return OutlineItem(
+            FfiConverterTypeTaskRow.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: OutlineItem) = (
+            FfiConverterTypeTaskRow.allocationSize(value.`task`) +
+            FfiConverterLong.allocationSize(value.`depth`)
+    )
+
+    override fun write(value: OutlineItem, buf: ByteBuffer) {
+            FfiConverterTypeTaskRow.write(value.`task`, buf)
+            FfiConverterLong.write(value.`depth`, buf)
+    }
+}
+
+
+
+/**
  * A batch of outgoing changes and the newest outbox entry folded in, which
  * is what to acknowledge once the server has them.
  */
@@ -5945,6 +6568,177 @@ public object FfiConverterTypeScored: FfiConverterRustBuffer<Scored> {
 
 
 /**
+ * One hit, with the list it lives in. `TaskSearchResult`.
+ */
+data class SearchHit (
+    var `task`: TaskRow
+    , 
+    var `list`: ListRow
+    , 
+    /**
+     * The matching stretch of the notes, when the match was in the notes.
+     */
+    var `notesSnippet`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSearchHit: FfiConverterRustBuffer<SearchHit> {
+    override fun read(buf: ByteBuffer): SearchHit {
+        return SearchHit(
+            FfiConverterTypeTaskRow.read(buf),
+            FfiConverterTypeListRow.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SearchHit) = (
+            FfiConverterTypeTaskRow.allocationSize(value.`task`) +
+            FfiConverterTypeListRow.allocationSize(value.`list`) +
+            FfiConverterOptionalString.allocationSize(value.`notesSnippet`)
+    )
+
+    override fun write(value: SearchHit, buf: ByteBuffer) {
+            FfiConverterTypeTaskRow.write(value.`task`, buf)
+            FfiConverterTypeListRow.write(value.`list`, buf)
+            FfiConverterOptionalString.write(value.`notesSnippet`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `tasks`. Swift's `WorkspaceTask`, Kotlin's `WorkspaceTask`.
+ */
+data class TaskRow (
+    var `id`: kotlin.String
+    , 
+    var `listId`: kotlin.String
+    , 
+    var `parentTaskId`: kotlin.String?
+    , 
+    var `title`: kotlin.String
+    , 
+    var `notes`: kotlin.String
+    , 
+    /**
+     * "open", "completed" or "cancelled".
+     */
+    var `status`: kotlin.String
+    , 
+    var `sortOrder`: kotlin.Long
+    , 
+    var `dueAtMs`: kotlin.Long?
+    , 
+    var `estimateSeconds`: kotlin.Long?
+    , 
+    var `sourceSystem`: kotlin.String?
+    , 
+    var `sourceId`: kotlin.String?
+    , 
+    /**
+     * "task" or "list"; absent on rows written before the column existed.
+     */
+    var `itemKind`: kotlin.String?
+    , 
+    var `isPromoted`: kotlin.Boolean?
+    , 
+    var `archivedAtMs`: kotlin.Long?
+    , 
+    var `completedAtMs`: kotlin.Long?
+    , 
+    var `createdAtMs`: kotlin.Long
+    , 
+    var `updatedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTaskRow: FfiConverterRustBuffer<TaskRow> {
+    override fun read(buf: ByteBuffer): TaskRow {
+        return TaskRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: TaskRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterOptionalString.allocationSize(value.`parentTaskId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`notes`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`) +
+            FfiConverterOptionalLong.allocationSize(value.`dueAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
+            FfiConverterOptionalString.allocationSize(value.`sourceSystem`) +
+            FfiConverterOptionalString.allocationSize(value.`sourceId`) +
+            FfiConverterOptionalString.allocationSize(value.`itemKind`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`isPromoted`) +
+            FfiConverterOptionalLong.allocationSize(value.`archivedAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`completedAtMs`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+    )
+
+    override fun write(value: TaskRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterOptionalString.write(value.`parentTaskId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`notes`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
+            FfiConverterOptionalLong.write(value.`dueAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
+            FfiConverterOptionalString.write(value.`sourceSystem`, buf)
+            FfiConverterOptionalString.write(value.`sourceId`, buf)
+            FfiConverterOptionalString.write(value.`itemKind`, buf)
+            FfiConverterOptionalBoolean.write(value.`isPromoted`, buf)
+            FfiConverterOptionalLong.write(value.`archivedAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`completedAtMs`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 data class UndoStep (
@@ -6002,6 +6796,57 @@ public object FfiConverterTypeUndoStep: FfiConverterRustBuffer<UndoStep> {
             FfiConverterString.write(value.`label`, buf)
             FfiConverterBoolean.write(value.`isUndone`, buf)
             FfiConverterUInt.write(value.`changeCount`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `workspaces`. `Workspace`.
+ */
+data class WorkspaceRow (
+    var `id`: kotlin.String
+    , 
+    var `name`: kotlin.String
+    , 
+    var `createdAtMs`: kotlin.Long
+    , 
+    var `updatedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeWorkspaceRow: FfiConverterRustBuffer<WorkspaceRow> {
+    override fun read(buf: ByteBuffer): WorkspaceRow {
+        return WorkspaceRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: WorkspaceRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+    )
+
+    override fun write(value: WorkspaceRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
     }
 }
 
@@ -6918,6 +7763,38 @@ public object FfiConverterOptionalTypeImportOutcome: FfiConverterRustBuffer<Impo
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeListRow: FfiConverterRustBuffer<ListRow?> {
+    override fun read(buf: ByteBuffer): ListRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeListRow.read(buf)
+    }
+
+    override fun allocationSize(value: ListRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeListRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ListRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeListRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeLocalSyncState: FfiConverterRustBuffer<LocalSyncState?> {
     override fun read(buf: ByteBuffer): LocalSyncState? {
         if (buf.get().toInt() == 0) {
@@ -6972,6 +7849,38 @@ public object FfiConverterOptionalTypePlanning: FfiConverterRustBuffer<Planning?
         } else {
             buf.put(1)
             FfiConverterTypePlanning.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeTaskRow: FfiConverterRustBuffer<TaskRow?> {
+    override fun read(buf: ByteBuffer): TaskRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeTaskRow.read(buf)
+    }
+
+    override fun allocationSize(value: TaskRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeTaskRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: TaskRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeTaskRow.write(value, buf)
         }
     }
 }
@@ -7214,6 +8123,34 @@ public object FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer<List<Can
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer<List<FolderRow>> {
+    override fun read(buf: ByteBuffer): List<FolderRow> {
+        val len = buf.getInt()
+        return List<FolderRow>(len) {
+            FfiConverterTypeFolderRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FolderRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFolderRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FolderRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFolderRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeImportedTaskSeed: FfiConverterRustBuffer<List<ImportedTaskSeed>> {
     override fun read(buf: ByteBuffer): List<ImportedTaskSeed> {
         val len = buf.getInt()
@@ -7298,6 +8235,34 @@ public object FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer<Li
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeListRow: FfiConverterRustBuffer<List<ListRow>> {
+    override fun read(buf: ByteBuffer): List<ListRow> {
+        val len = buf.getInt()
+        return List<ListRow>(len) {
+            FfiConverterTypeListRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ListRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeListRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ListRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeListRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffer<List<OutgoingChange>> {
     override fun read(buf: ByteBuffer): List<OutgoingChange> {
         val len = buf.getInt()
@@ -7316,6 +8281,34 @@ public object FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffer<Lis
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeOutgoingChange.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeOutlineItem: FfiConverterRustBuffer<List<OutlineItem>> {
+    override fun read(buf: ByteBuffer): List<OutlineItem> {
+        val len = buf.getInt()
+        return List<OutlineItem>(len) {
+            FfiConverterTypeOutlineItem.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<OutlineItem>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeOutlineItem.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<OutlineItem>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeOutlineItem.write(it, buf)
         }
     }
 }
@@ -7354,6 +8347,62 @@ public object FfiConverterSequenceTypeScored: FfiConverterRustBuffer<List<Scored
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeSearchHit: FfiConverterRustBuffer<List<SearchHit>> {
+    override fun read(buf: ByteBuffer): List<SearchHit> {
+        val len = buf.getInt()
+        return List<SearchHit>(len) {
+            FfiConverterTypeSearchHit.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SearchHit>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSearchHit.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SearchHit>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSearchHit.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeTaskRow: FfiConverterRustBuffer<List<TaskRow>> {
+    override fun read(buf: ByteBuffer): List<TaskRow> {
+        val len = buf.getInt()
+        return List<TaskRow>(len) {
+            FfiConverterTypeTaskRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<TaskRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeTaskRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<TaskRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeTaskRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer<List<UndoStep>> {
     override fun read(buf: ByteBuffer): List<UndoStep> {
         val len = buf.getInt()
@@ -7372,6 +8421,34 @@ public object FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer<List<Undo
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeUndoStep.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeWorkspaceRow: FfiConverterRustBuffer<List<WorkspaceRow>> {
+    override fun read(buf: ByteBuffer): List<WorkspaceRow> {
+        val len = buf.getInt()
+        return List<WorkspaceRow>(len) {
+            FfiConverterTypeWorkspaceRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<WorkspaceRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeWorkspaceRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<WorkspaceRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeWorkspaceRow.write(it, buf)
         }
     }
 }

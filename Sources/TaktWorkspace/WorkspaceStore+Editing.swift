@@ -1,26 +1,10 @@
 import Foundation
-import GRDB
 import TaktRustCore
 
 extension WorkspaceStore {
+  /// A task's editable state: the Rust core's `editor::snapshot`.
   public func taskEditorSnapshot(for taskId: String) throws -> TaskEditorSnapshot {
-    try database.read { try Self.taskEditorSnapshot($0, taskId: taskId) }
-  }
-
-  static func taskEditorSnapshot(_ db: Database, taskId: String) throws -> TaskEditorSnapshot {
-    guard let task = try WorkspaceTask.fetchOne(db, key: taskId),
-      let list = try TaskList.fetchOne(db, key: task.listId) else { throw WorkspaceStoreError.missingTask }
-    let record = try TaskMetadata.fetchOne(db, key: taskId)
-    let metadata = record.map {
-      TaskEditorMetadata(priority: $0.priority, tags: decodeStringArray($0.tagsJSON),
-                         recurrenceRule: $0.recurrenceRule, externalLinks: decodeStringArray($0.externalLinksJSON))
-    } ?? TaskEditorMetadata()
-    let daily = try WorkspaceDaily.filter(Column("taskId") == taskId && Column("archivedAt") == nil).fetchOne(db)
-    var snapshot = TaskEditorSnapshot(
-      workspaceId: list.workspaceId, taskId: taskId, title: task.title, notes: task.notes,
-      dueAt: task.dueAt, estimateSeconds: task.estimateSeconds, metadata: metadata, dailyProgress: daily != nil)
-    snapshot.planning = try planning(record)
-    return snapshot
+    TaskEditorSnapshot(try Self.mappingCoreErrors { try core.editorSnapshot(taskId: taskId) })
   }
 
   /// Saves the editor as one step, refusing if the task changed since the
@@ -32,17 +16,12 @@ extension WorkspaceStore {
       _ = try core.saveEditor(
         edit: edit.core, baseline: draft.baseline.core, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
     }
-    return try database.read { db in try Self.taskEditorSnapshot(db, taskId: edit.taskId) }
+    return try taskEditorSnapshot(for: edit.taskId)
   }
 
+  /// The folders a folder may move into: the Rust core's `records::valid_parent_folders`.
   public func validParentFolders(for folderId: String) throws -> [ListFolder] {
-    try database.read { db in
-      guard let folder = try ListFolder.fetchOne(db, key: folderId) else { throw WorkspaceStoreError.missingFolder }
-      let excluded = try Self.folderDescendantIDs(db, of: folderId).union([folderId])
-      return try ListFolder.filter(Column("workspaceId") == folder.workspaceId)
-        .order(Column("sortOrder"), Column("createdAt"), Column("id")).fetchAll(db)
-        .filter { !excluded.contains($0.id) }
-    }
+    try Self.mappingCoreErrors { try core.validParentFolders(folderId: folderId) }.map(ListFolder.init)
   }
 
   /// Saves the folder settings sheet: the Rust core's `lists::save_folder_settings`.
@@ -50,13 +29,10 @@ extension WorkspaceStore {
     try coreWrite { try core.saveFolderSettings(id: id, name: name, parentFolderId: parentFolderId, nowMs: now.coreMilliseconds) }
   }
 
+  /// The root a list may show its children in place of: the Rust core's
+  /// `records::visible_root_candidates`.
   public func visibleRootCandidates(in listId: String) throws -> [WorkspaceTask] {
-    try database.read { db in
-      let roots = try WorkspaceTask.filter(Column("listId") == listId && Column("parentTaskId") == nil).fetchAll(db)
-      guard roots.count == 1, let root = roots.first, root.sourceSystem != nil || root.isList,
-        try (root.isList || WorkspaceTask.filter(Column("parentTaskId") == root.id).fetchCount(db) > 0) else { return [] }
-      return [root]
-    }
+    try Self.mappingCoreErrors { try core.visibleRootCandidates(listId: listId) }.map(WorkspaceTask.init)
   }
 
   /// Saves the list settings sheet: the Rust core's `lists::save_list_settings`.

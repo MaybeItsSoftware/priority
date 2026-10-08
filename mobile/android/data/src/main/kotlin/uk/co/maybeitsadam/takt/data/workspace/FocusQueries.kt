@@ -190,24 +190,4 @@ internal fun nextUpSnapshot(
     )
 }
 
-/**
- * GRDB's `FTS5Pattern(matchingAllPrefixesIn:)`: the query split into tokens the
- * way FTS5's ascii tokenizer would, each quoted and made a prefix. Nil when
- * nothing is left to match on.
- */
-internal fun ftsPrefixPattern(query: String): String? {
-    val tokens = mutableListOf<String>()
-    val current = StringBuilder()
-    for (c in query) {
-        val separator = c.code < 128 && !c.isLetterOrDigit()
-        if (separator) {
-            if (current.isNotEmpty()) tokens += current.toString()
-            current.clear()
-        } else {
-            current.append(if (c.code < 128) c.lowercaseChar() else c)
-        }
-    }
-    if (current.isNotEmpty()) tokens += current.toString()
-    if (tokens.isEmpty()) return null
-    return tokens.joinToString(" ") { "\"$it\"*" }
-}
+

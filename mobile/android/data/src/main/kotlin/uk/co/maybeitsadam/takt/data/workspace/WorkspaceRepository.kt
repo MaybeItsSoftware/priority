@@ -116,13 +116,10 @@ class WorkspaceRepository(
     /** The list quick capture lands in, found by its role rather than its name. */
     suspend fun inbox(workspaceId: String): TaskList? = database.read { inbox(it, workspaceId) }
 
-    suspend fun workspaces(): List<Workspace> = database.read { db ->
-        db.query("SELECT * FROM workspaces ORDER BY createdAt") { it.toWorkspace() }
-    }
+    suspend fun workspaces(): List<Workspace> = database.read { db -> db.core.workspaces().map { it.toWorkspace() } }
 
-    fun observeWorkspaces(): Flow<List<Workspace>> = database.observe(setOf("workspaces")) { db ->
-        db.query("SELECT * FROM workspaces ORDER BY createdAt") { it.toWorkspace() }
-    }
+    fun observeWorkspaces(): Flow<List<Workspace>> =
+        database.observe(setOf("workspaces")) { db -> db.core.workspaces().map { it.toWorkspace() } }
 
     suspend fun folders(workspaceId: String): List<ListFolder> = database.read { foldersIn(it, workspaceId) }
 
@@ -238,10 +235,10 @@ class WorkspaceRepository(
 
     /** A parent's direct children, as a project's own board shows them. */
     suspend fun tasks(listId: String, parentTaskId: String? = null): List<WorkspaceTask> =
-        database.read { it.taskSiblings(listId, parentTaskId, withId = false) }
+        database.read { db -> db.core.childTasks(listId, parentTaskId).map { it.toTask() } }
 
     fun observeTasks(listId: String, parentTaskId: String? = null): Flow<List<WorkspaceTask>> =
-        database.observe(setOf("tasks")) { it.taskSiblings(listId, parentTaskId, withId = false) }
+        database.observe(setOf("tasks")) { db -> db.core.childTasks(listId, parentTaskId).map { it.toTask() } }
 
     /** The imported wrapper standing in for the list's roots, while it is still the only root. */
     suspend fun visibleRootParentTaskId(list: TaskList): String? =
@@ -410,8 +407,15 @@ class WorkspaceRepository(
      * changed and turning the failures screens react to into the repository's
      * own errors, so they see the same cases whichever side made the write.
      */
-    internal suspend fun <T> coreWrite(block: (uniffi.takt_core.CoreWorkspace) -> T): T = try {
-        database.coreWrite(CORE_WRITTEN_TABLES, block)
+    internal suspend fun <T> coreWrite(block: (uniffi.takt_core.CoreWorkspace) -> T): T =
+        mappingCoreErrors { database.coreWrite(CORE_WRITTEN_TABLES, block) }
+
+    /** Runs a read the Rust core makes, with the same errors as [coreWrite]. */
+    internal suspend fun <T> coreRead(block: (uniffi.takt_core.CoreWorkspace) -> T): T =
+        mappingCoreErrors { database.coreRead(block) }
+
+    private inline fun <T> mappingCoreErrors(call: () -> T): T = try {
+        call()
     } catch (error: CoreException) {
         when (error) {
             is CoreException.MissingTask -> fail(WorkspaceStoreError.MISSING_TASK)
@@ -528,11 +532,11 @@ class WorkspaceRepository(
     /** Several lists' rows in one read transaction, so a combined scope sees one moment. */
     suspend fun listTrees(listIds: List<String>): Map<String, WorkspaceListTree> {
         if (listIds.isEmpty()) return emptyMap()
-        return database.read { db -> listIds.toSet().associateWith { listTree(db, it) } }
+        return database.read { db -> listTrees(db, listIds) }
     }
 
     fun observeListTrees(listIds: List<String>): Flow<Map<String, WorkspaceListTree>> =
-        database.observe(setOf("tasks")) { db -> listIds.toSet().associateWith { listTree(db, it) } }
+        database.observe(setOf("tasks")) { db -> listTrees(db, listIds) }
 
     /** Tasks by id, in one read; missing ids are absent. */
     suspend fun tasks(ids: List<String>): Map<String, WorkspaceTask> {
@@ -570,11 +574,8 @@ class WorkspaceRepository(
     }
 
     /** Folders [folderId] may move under: everything but itself and its subtree. */
-    suspend fun validParentFolders(folderId: String): List<ListFolder> = database.read { db ->
-        val folder = db.folder(folderId) ?: fail(WorkspaceStoreError.MISSING_FOLDER)
-        val excluded = db.folderDescendantIDs(folderId) + folderId
-        foldersIn(db, folder.workspaceId).filter { it.id !in excluded }
-    }
+    suspend fun validParentFolders(folderId: String): List<ListFolder> =
+        coreRead { core -> core.validParentFolders(folderId).map { it.toFolder() } }
 
     /** Saves the folder settings sheet: the Rust core's `lists::save_folder_settings`. */
     suspend fun saveFolderSettings(id: String, name: String, parentFolderId: String?, now: Instant = now()) {
@@ -582,13 +583,8 @@ class WorkspaceRepository(
     }
 
     /** The only root that may serve as the list's visible root, if there is one. */
-    suspend fun visibleRootCandidates(listId: String): List<WorkspaceTask> = database.read { db ->
-        val roots = db.query("SELECT * FROM tasks WHERE listId = ? AND parentTaskId IS NULL", listId) { it.toTask() }
-        val root = roots.singleOrNull() ?: return@read emptyList()
-        if (root.sourceSystem == null && !root.isList) return@read emptyList()
-        if (!root.isList && !db.exists("SELECT 1 FROM tasks WHERE parentTaskId = ?", root.id)) return@read emptyList()
-        listOf(root)
-    }
+    suspend fun visibleRootCandidates(listId: String): List<WorkspaceTask> =
+        coreRead { core -> core.visibleRootCandidates(listId).map { it.toTask() } }
 
     /** Saves the list settings sheet: the Rust core's `lists::save_list_settings`. */
     suspend fun saveListSettings(
@@ -1067,30 +1063,10 @@ class WorkspaceRepository(
         includingArchivedLists: Boolean = false,
         limit: Int = 60,
     ): List<TaskSearchResult> {
-        val trimmed = query.trimmedWhitespace()
-        if (trimmed.isEmpty()) return emptyList()
-        val pattern = ftsPrefixPattern(trimmed) ?: return emptyList()
-        return database.read { db ->
-            val conditions = mutableListOf("tasks_fts MATCH ?", "task_lists.workspaceId = ?")
-            val args = mutableListOf<Any?>(pattern, workspaceId)
-            if (!includingCompleted) {
-                conditions += "tasks.status = ?"
-                args += TaskStatus.OPEN.raw
-            }
-            if (!includingArchivedLists) conditions += "task_lists.isArchived = 0"
-            args += limit
-            val rows = db.query(
-                "SELECT tasks.*, task_lists.id AS matchedListId, " +
-                    "snippet(tasks_fts, 1, '', '', '…', 10) AS notesSnippet " +
-                    "FROM tasks_fts JOIN tasks ON tasks.rowid = tasks_fts.rowid " +
-                    "JOIN task_lists ON task_lists.id = tasks.listId " +
-                    "WHERE ${conditions.joinToString(" AND ")} ORDER BY bm25(tasks_fts, 10.0, 1.0) LIMIT ?",
-                *args.toTypedArray(),
-            ) { Triple(it.toTask(), it.string("matchedListId"), it.stringOrNull("notesSnippet")) }
-            val lists = HashMap<String, TaskList?>()
-            rows.mapNotNull { (task, listId, snippet) ->
-                val list = lists.getOrPut(listId) { db.list(listId) } ?: return@mapNotNull null
-                TaskSearchResult(task, list, snippet?.trimmedWhitespace()?.takeIf { it.isNotEmpty() })
+        // The Rust core's `search::search`, which the Mac and iPhone call too.
+        return database.coreRead { core ->
+            core.searchTasks(workspaceId, query, includingCompleted, includingArchivedLists, limit.toLong()).map {
+                TaskSearchResult(it.task.toTask(), it.list.toList(), it.notesSnippet)
             }
         }
     }

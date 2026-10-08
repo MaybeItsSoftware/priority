@@ -651,6 +651,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func checkpointFocusSession(id: String, nowMs: Int64) throws 
     
     /**
+     * The children of a task in a list, or its roots, in outline order.
+     */
+    func childTasks(listId: String, parentTaskId: String?) throws  -> [TaskRow]
+    
+    /**
      * Un-ticks a day of a daily as one "Clear Daily" step.
      */
     func clearContribution(dailyId: String, dayMs: Int64, zone: String) throws 
@@ -732,6 +737,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func finishFocusSession(id: String, nowMs: Int64) throws 
     
     /**
+     * A workspace's folders in sidebar order.
+     */
+    func folders(workspaceId: String) throws  -> [FolderRow]
+    
+    /**
      * Whether a session waiting on a blocked queue can resume in `context`.
      */
     func hasResumableFocusQueueTask(context: FocusContext, nowMs: Int64, zone: String) throws  -> Bool
@@ -753,6 +763,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func importTasks(workspaceId: String, listName: String, sourceSystem: String, seeds: [ImportedTaskSeed], nowMs: Int64) throws  -> ImportOutcome?
     
     /**
+     * A workspace's Inbox.
+     */
+    func inbox(workspaceId: String) throws  -> ListRow?
+    
+    /**
      * Indents a task under the sibling above as one "Indent Task" step.
      */
     func indentTask(id: String, nowMs: Int64) throws 
@@ -767,6 +782,16 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * The newest outbox entry, or nothing when nothing is waiting.
      */
     func latestSyncOutboxSeq() throws  -> Int64?
+    
+    /**
+     * One list, if it exists.
+     */
+    func list(id: String) throws  -> ListRow?
+    
+    /**
+     * A workspace's lists in sidebar order.
+     */
+    func lists(workspaceId: String, includingArchived: Bool) throws  -> [ListRow]
     
     /**
      * Logs progress on a daily as one "Log Daily" step; returns the
@@ -830,15 +855,17 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      */
     func nestList(id: String, intoListId: String, parentTaskId: String?, nowMs: Int64) throws  -> String
     
-    /**
-     * The open tasks the next-up engine and the day choose from.
-     */
     func nextUpCandidates(nowMs: Int64, zone: String) throws  -> [Candidate]
     
     /**
      * Outdents a task to follow its parent as one "Outdent Task" step.
      */
     func outdentTask(id: String, nowMs: Int64) throws 
+    
+    /**
+     * A list's outline under a task, or the whole list.
+     */
+    func outline(listId: String, parentTaskId: String?) throws  -> [OutlineItem]
     
     /**
      * Pauses a running block.
@@ -955,6 +982,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func scheduleTask(id: String, startAtMs: Int64?, nowMs: Int64, zone: String) throws 
     
     /**
+     * Prefix search over titles and notes, best match first.
+     */
+    func searchTasks(workspaceId: String, query: String, includingCompleted: Bool, includingArchivedLists: Bool, limit: Int64) throws  -> [SearchHit]
+    
+    /**
      * Saves a board's columns, moving cards out of a removed one, as one step.
      */
     func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64) throws 
@@ -1026,6 +1058,21 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func syncState() throws  -> LocalSyncState?
     
     /**
+     * One task, if it exists.
+     */
+    func task(id: String) throws  -> TaskRow?
+    
+    /**
+     * Tasks by id; missing ids are absent.
+     */
+    func tasksById(ids: [String]) throws  -> [TaskRow]
+    
+    /**
+     * Every task in the given lists, each list in outline order.
+     */
+    func tasksInLists(listIds: [String]) throws  -> [TaskRow]
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -1070,6 +1117,27 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Stores a theme's JSON; whether it changed anything.
      */
     func upsertTheme(id: String, json: String, nowMs: Int64) throws  -> Bool
+    
+    /**
+     * The folders a folder may move into.
+     */
+    func validParentFolders(folderId: String) throws  -> [FolderRow]
+    
+    /**
+     * The root a list may show its children in place of, if there is one.
+     */
+    func visibleRootCandidates(listId: String) throws  -> [TaskRow]
+    
+    /**
+     * The imported wrapper a list shows its children in place of, if any.
+     */
+    func visibleRootParent(listId: String) throws  -> String?
+    
+    /**
+     * The open tasks the next-up engine and the day choose from.
+     * The workspaces, oldest first.
+     */
+    func workspaces() throws  -> [WorkspaceRow]
     
 }
 /**
@@ -1262,6 +1330,20 @@ open func checkpointFocusSession(id: String, nowMs: Int64)throws   {try rustCall
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * The children of a task in a list, or its roots, in outline order.
+     */
+open func childTasks(listId: String, parentTaskId: String?)throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_child_tasks(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(listId),
+        FfiConverterOptionString.lower(parentTaskId),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -1488,6 +1570,19 @@ open func finishFocusSession(id: String, nowMs: Int64)throws   {try rustCallWith
 }
     
     /**
+     * A workspace's folders in sidebar order.
+     */
+open func folders(workspaceId: String)throws  -> [FolderRow]  {
+    return try  FfiConverterSequenceTypeFolderRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_folders(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Whether a session waiting on a blocked queue can resume in `context`.
      */
 open func hasResumableFocusQueueTask(context: FocusContext, nowMs: Int64, zone: String)throws  -> Bool  {
@@ -1549,6 +1644,19 @@ open func importTasks(workspaceId: String, listName: String, sourceSystem: Strin
 }
     
     /**
+     * A workspace's Inbox.
+     */
+open func inbox(workspaceId: String)throws  -> ListRow?  {
+    return try  FfiConverterOptionTypeListRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_inbox(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Indents a task under the sibling above as one "Indent Task" step.
      */
 open func indentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1584,6 +1692,33 @@ open func latestSyncOutboxSeq()throws  -> Int64?  {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_latest_sync_outbox_seq(
             self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * One list, if it exists.
+     */
+open func list(id: String)throws  -> ListRow?  {
+    return try  FfiConverterOptionTypeListRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A workspace's lists in sidebar order.
+     */
+open func lists(workspaceId: String, includingArchived: Bool)throws  -> [ListRow]  {
+    return try  FfiConverterSequenceTypeListRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_lists(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterBool.lower(includingArchived),uniffiCallStatus
     )
 })
 }
@@ -1769,9 +1904,6 @@ open func nestList(id: String, intoListId: String, parentTaskId: String?, nowMs:
 })
 }
     
-    /**
-     * The open tasks the next-up engine and the day choose from.
-     */
 open func nextUpCandidates(nowMs: Int64, zone: String)throws  -> [Candidate]  {
     return try  FfiConverterSequenceTypeCandidate.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
@@ -1794,6 +1926,20 @@ open func outdentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(F
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * A list's outline under a task, or the whole list.
+     */
+open func outline(listId: String, parentTaskId: String?)throws  -> [OutlineItem]  {
+    return try  FfiConverterSequenceTypeOutlineItem.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_outline(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(listId),
+        FfiConverterOptionString.lower(parentTaskId),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -2109,6 +2255,23 @@ open func scheduleTask(id: String, startAtMs: Int64?, nowMs: Int64, zone: String
 }
     
     /**
+     * Prefix search over titles and notes, best match first.
+     */
+open func searchTasks(workspaceId: String, query: String, includingCompleted: Bool, includingArchivedLists: Bool, limit: Int64)throws  -> [SearchHit]  {
+    return try  FfiConverterSequenceTypeSearchHit.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_search_tasks(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterString.lower(query),
+        FfiConverterBool.lower(includingCompleted),
+        FfiConverterBool.lower(includingArchivedLists),
+        FfiConverterInt64.lower(limit),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Saves a board's columns, moving cards out of a removed one, as one step.
      */
 open func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -2317,6 +2480,45 @@ open func syncState()throws  -> LocalSyncState?  {
 }
     
     /**
+     * One task, if it exists.
+     */
+open func task(id: String)throws  -> TaskRow?  {
+    return try  FfiConverterOptionTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Tasks by id; missing ids are absent.
+     */
+open func tasksById(ids: [String])throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_tasks_by_id(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(ids),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Every task in the given lists, each list in outline order.
+     */
+open func tasksInLists(listIds: [String])throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_tasks_in_lists(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(listIds),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -2439,6 +2641,58 @@ open func upsertTheme(id: String, json: String, nowMs: Int64)throws  -> Bool  {
         FfiConverterString.lower(id),
         FfiConverterString.lower(json),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The folders a folder may move into.
+     */
+open func validParentFolders(folderId: String)throws  -> [FolderRow]  {
+    return try  FfiConverterSequenceTypeFolderRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_valid_parent_folders(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(folderId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The root a list may show its children in place of, if there is one.
+     */
+open func visibleRootCandidates(listId: String)throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_visible_root_candidates(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(listId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The imported wrapper a list shows its children in place of, if any.
+     */
+open func visibleRootParent(listId: String)throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_visible_root_parent(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(listId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The open tasks the next-up engine and the day choose from.
+     * The workspaces, oldest first.
+     */
+open func workspaces()throws  -> [WorkspaceRow]  {
+    return try  FfiConverterSequenceTypeWorkspaceRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_workspaces(
+            self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
 }
@@ -3395,6 +3649,83 @@ public func FfiConverterTypeFocusContext_lower(_ value: FocusContext) -> RustBuf
 
 
 /**
+ * A row of `list_folders`. `ListFolder`.
+ */
+public struct FolderRow: Equatable, Hashable {
+    public var id: String
+    public var workspaceId: String
+    public var parentFolderId: String?
+    public var name: String
+    public var sortOrder: Int64
+    public var createdAtMs: Int64
+    public var updatedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, workspaceId: String, parentFolderId: String?, name: String, sortOrder: Int64, createdAtMs: Int64, updatedAtMs: Int64) {
+        self.id = id
+        self.workspaceId = workspaceId
+        self.parentFolderId = parentFolderId
+        self.name = name
+        self.sortOrder = sortOrder
+        self.createdAtMs = createdAtMs
+        self.updatedAtMs = updatedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FolderRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFolderRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FolderRow {
+        return
+            try FolderRow(
+                id: FfiConverterString.read(from: &buf), 
+                workspaceId: FfiConverterString.read(from: &buf), 
+                parentFolderId: FfiConverterOptionString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FolderRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.workspaceId, into: &buf)
+        FfiConverterOptionString.write(value.parentFolderId, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFolderRow_lift(_ buf: RustBuffer) throws -> FolderRow {
+    return try FfiConverterTypeFolderRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFolderRow_lower(_ value: FolderRow) -> RustBuffer {
+    return FfiConverterTypeFolderRow.lower(value)
+}
+
+
+/**
  * What the habit form saves. The schedule arrives as the daily stores it
  * (a weekday mask's days and an interval), which each client derives from
  * its own frequency type.
@@ -3846,6 +4177,109 @@ public func FfiConverterTypeLegacyDailySeed_lower(_ value: LegacyDailySeed) -> R
 
 
 /**
+ * A row of `task_lists`. `TaskList`.
+ */
+public struct ListRow: Equatable, Hashable {
+    public var id: String
+    public var workspaceId: String
+    public var folderId: String?
+    public var name: String
+    public var colorHex: String?
+    public var sortOrder: Int64
+    public var isArchived: Bool
+    /**
+     * "inbox" for the Inbox; absent for an ordinary list.
+     */
+    public var systemRole: String?
+    public var visibleRootTaskId: String?
+    public var completedAtMs: Int64?
+    public var createdAtMs: Int64
+    public var updatedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, workspaceId: String, folderId: String?, name: String, colorHex: String?, sortOrder: Int64, isArchived: Bool, 
+        /**
+         * "inbox" for the Inbox; absent for an ordinary list.
+         */systemRole: String?, visibleRootTaskId: String?, completedAtMs: Int64?, createdAtMs: Int64, updatedAtMs: Int64) {
+        self.id = id
+        self.workspaceId = workspaceId
+        self.folderId = folderId
+        self.name = name
+        self.colorHex = colorHex
+        self.sortOrder = sortOrder
+        self.isArchived = isArchived
+        self.systemRole = systemRole
+        self.visibleRootTaskId = visibleRootTaskId
+        self.completedAtMs = completedAtMs
+        self.createdAtMs = createdAtMs
+        self.updatedAtMs = updatedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ListRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeListRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ListRow {
+        return
+            try ListRow(
+                id: FfiConverterString.read(from: &buf), 
+                workspaceId: FfiConverterString.read(from: &buf), 
+                folderId: FfiConverterOptionString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                colorHex: FfiConverterOptionString.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf), 
+                isArchived: FfiConverterBool.read(from: &buf), 
+                systemRole: FfiConverterOptionString.read(from: &buf), 
+                visibleRootTaskId: FfiConverterOptionString.read(from: &buf), 
+                completedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ListRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.workspaceId, into: &buf)
+        FfiConverterOptionString.write(value.folderId, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionString.write(value.colorHex, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+        FfiConverterBool.write(value.isArchived, into: &buf)
+        FfiConverterOptionString.write(value.systemRole, into: &buf)
+        FfiConverterOptionString.write(value.visibleRootTaskId, into: &buf)
+        FfiConverterOptionInt64.write(value.completedAtMs, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeListRow_lift(_ buf: RustBuffer) throws -> ListRow {
+    return try FfiConverterTypeListRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeListRow_lower(_ value: ListRow) -> RustBuffer {
+    return FfiConverterTypeListRow.lower(value)
+}
+
+
+/**
  * What the list settings sheet saves.
  */
 public struct ListSettings: Equatable, Hashable {
@@ -4233,6 +4667,63 @@ public func FfiConverterTypeOutgoingChange_lower(_ value: OutgoingChange) -> Rus
 
 
 /**
+ * A task in an outline, with how deep it sits. `TaskOutlineItem`.
+ */
+public struct OutlineItem: Equatable, Hashable {
+    public var task: TaskRow
+    public var depth: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(task: TaskRow, depth: Int64) {
+        self.task = task
+        self.depth = depth
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension OutlineItem: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOutlineItem: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OutlineItem {
+        return
+            try OutlineItem(
+                task: FfiConverterTypeTaskRow.read(from: &buf), 
+                depth: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: OutlineItem, into buf: inout [UInt8]) {
+        FfiConverterTypeTaskRow.write(value.task, into: &buf)
+        FfiConverterInt64.write(value.depth, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutlineItem_lift(_ buf: RustBuffer) throws -> OutlineItem {
+    return try FfiConverterTypeOutlineItem.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutlineItem_lower(_ value: OutlineItem) -> RustBuffer {
+    return FfiConverterTypeOutlineItem.lower(value)
+}
+
+
+/**
  * A batch of outgoing changes and the newest outbox entry folded in, which
  * is what to acknowledge once the server has them.
  */
@@ -4513,6 +5004,202 @@ public func FfiConverterTypeScored_lower(_ value: Scored) -> RustBuffer {
 
 
 /**
+ * One hit, with the list it lives in. `TaskSearchResult`.
+ */
+public struct SearchHit: Equatable, Hashable {
+    public var task: TaskRow
+    public var list: ListRow
+    /**
+     * The matching stretch of the notes, when the match was in the notes.
+     */
+    public var notesSnippet: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(task: TaskRow, list: ListRow, 
+        /**
+         * The matching stretch of the notes, when the match was in the notes.
+         */notesSnippet: String?) {
+        self.task = task
+        self.list = list
+        self.notesSnippet = notesSnippet
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SearchHit: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSearchHit: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SearchHit {
+        return
+            try SearchHit(
+                task: FfiConverterTypeTaskRow.read(from: &buf), 
+                list: FfiConverterTypeListRow.read(from: &buf), 
+                notesSnippet: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SearchHit, into buf: inout [UInt8]) {
+        FfiConverterTypeTaskRow.write(value.task, into: &buf)
+        FfiConverterTypeListRow.write(value.list, into: &buf)
+        FfiConverterOptionString.write(value.notesSnippet, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSearchHit_lift(_ buf: RustBuffer) throws -> SearchHit {
+    return try FfiConverterTypeSearchHit.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSearchHit_lower(_ value: SearchHit) -> RustBuffer {
+    return FfiConverterTypeSearchHit.lower(value)
+}
+
+
+/**
+ * A row of `tasks`. Swift's `WorkspaceTask`, Kotlin's `WorkspaceTask`.
+ */
+public struct TaskRow: Equatable, Hashable {
+    public var id: String
+    public var listId: String
+    public var parentTaskId: String?
+    public var title: String
+    public var notes: String
+    /**
+     * "open", "completed" or "cancelled".
+     */
+    public var status: String
+    public var sortOrder: Int64
+    public var dueAtMs: Int64?
+    public var estimateSeconds: Int64?
+    public var sourceSystem: String?
+    public var sourceId: String?
+    /**
+     * "task" or "list"; absent on rows written before the column existed.
+     */
+    public var itemKind: String?
+    public var isPromoted: Bool?
+    public var archivedAtMs: Int64?
+    public var completedAtMs: Int64?
+    public var createdAtMs: Int64
+    public var updatedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, listId: String, parentTaskId: String?, title: String, notes: String, 
+        /**
+         * "open", "completed" or "cancelled".
+         */status: String, sortOrder: Int64, dueAtMs: Int64?, estimateSeconds: Int64?, sourceSystem: String?, sourceId: String?, 
+        /**
+         * "task" or "list"; absent on rows written before the column existed.
+         */itemKind: String?, isPromoted: Bool?, archivedAtMs: Int64?, completedAtMs: Int64?, createdAtMs: Int64, updatedAtMs: Int64) {
+        self.id = id
+        self.listId = listId
+        self.parentTaskId = parentTaskId
+        self.title = title
+        self.notes = notes
+        self.status = status
+        self.sortOrder = sortOrder
+        self.dueAtMs = dueAtMs
+        self.estimateSeconds = estimateSeconds
+        self.sourceSystem = sourceSystem
+        self.sourceId = sourceId
+        self.itemKind = itemKind
+        self.isPromoted = isPromoted
+        self.archivedAtMs = archivedAtMs
+        self.completedAtMs = completedAtMs
+        self.createdAtMs = createdAtMs
+        self.updatedAtMs = updatedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TaskRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTaskRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaskRow {
+        return
+            try TaskRow(
+                id: FfiConverterString.read(from: &buf), 
+                listId: FfiConverterString.read(from: &buf), 
+                parentTaskId: FfiConverterOptionString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                notes: FfiConverterString.read(from: &buf), 
+                status: FfiConverterString.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf), 
+                dueAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                sourceSystem: FfiConverterOptionString.read(from: &buf), 
+                sourceId: FfiConverterOptionString.read(from: &buf), 
+                itemKind: FfiConverterOptionString.read(from: &buf), 
+                isPromoted: FfiConverterOptionBool.read(from: &buf), 
+                archivedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                completedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TaskRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterOptionString.write(value.parentTaskId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.notes, into: &buf)
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+        FfiConverterOptionInt64.write(value.dueAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
+        FfiConverterOptionString.write(value.sourceSystem, into: &buf)
+        FfiConverterOptionString.write(value.sourceId, into: &buf)
+        FfiConverterOptionString.write(value.itemKind, into: &buf)
+        FfiConverterOptionBool.write(value.isPromoted, into: &buf)
+        FfiConverterOptionInt64.write(value.archivedAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.completedAtMs, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskRow_lift(_ buf: RustBuffer) throws -> TaskRow {
+    return try FfiConverterTypeTaskRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskRow_lower(_ value: TaskRow) -> RustBuffer {
+    return FfiConverterTypeTaskRow.lower(value)
+}
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 public struct UndoStep: Equatable, Hashable {
@@ -4598,6 +5285,71 @@ public func FfiConverterTypeUndoStep_lift(_ buf: RustBuffer) throws -> UndoStep 
 #endif
 public func FfiConverterTypeUndoStep_lower(_ value: UndoStep) -> RustBuffer {
     return FfiConverterTypeUndoStep.lower(value)
+}
+
+
+/**
+ * A row of `workspaces`. `Workspace`.
+ */
+public struct WorkspaceRow: Equatable, Hashable {
+    public var id: String
+    public var name: String
+    public var createdAtMs: Int64
+    public var updatedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String, createdAtMs: Int64, updatedAtMs: Int64) {
+        self.id = id
+        self.name = name
+        self.createdAtMs = createdAtMs
+        self.updatedAtMs = updatedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension WorkspaceRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeWorkspaceRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WorkspaceRow {
+        return
+            try WorkspaceRow(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: WorkspaceRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWorkspaceRow_lift(_ buf: RustBuffer) throws -> WorkspaceRow {
+    return try FfiConverterTypeWorkspaceRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWorkspaceRow_lower(_ value: WorkspaceRow) -> RustBuffer {
+    return FfiConverterTypeWorkspaceRow.lower(value)
 }
 
 
@@ -5186,6 +5938,30 @@ fileprivate struct FfiConverterOptionTypeImportOutcome: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeListRow: FfiConverterRustBuffer {
+    typealias SwiftType = ListRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeListRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeListRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeLocalSyncState: FfiConverterRustBuffer {
     typealias SwiftType = LocalSyncState?
 
@@ -5226,6 +6002,30 @@ fileprivate struct FfiConverterOptionTypePlanning: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypePlanning.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeTaskRow: FfiConverterRustBuffer {
+    typealias SwiftType = TaskRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeTaskRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeTaskRow.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -5432,6 +6232,31 @@ fileprivate struct FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer {
+    typealias SwiftType = [FolderRow]
+
+    public static func write(_ value: [FolderRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFolderRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FolderRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FolderRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeFolderRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeImportedTaskSeed: FfiConverterRustBuffer {
     typealias SwiftType = [ImportedTaskSeed]
 
@@ -5507,6 +6332,31 @@ fileprivate struct FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuff
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeListRow: FfiConverterRustBuffer {
+    typealias SwiftType = [ListRow]
+
+    public static func write(_ value: [ListRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeListRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ListRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ListRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeListRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffer {
     typealias SwiftType = [OutgoingChange]
 
@@ -5524,6 +6374,31 @@ fileprivate struct FfiConverterSequenceTypeOutgoingChange: FfiConverterRustBuffe
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeOutgoingChange.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeOutlineItem: FfiConverterRustBuffer {
+    typealias SwiftType = [OutlineItem]
+
+    public static func write(_ value: [OutlineItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeOutlineItem.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [OutlineItem] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [OutlineItem]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeOutlineItem.read(from: &buf))
         }
         return seq
     }
@@ -5557,6 +6432,56 @@ fileprivate struct FfiConverterSequenceTypeScored: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeSearchHit: FfiConverterRustBuffer {
+    typealias SwiftType = [SearchHit]
+
+    public static func write(_ value: [SearchHit], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSearchHit.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SearchHit] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SearchHit]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSearchHit.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeTaskRow: FfiConverterRustBuffer {
+    typealias SwiftType = [TaskRow]
+
+    public static func write(_ value: [TaskRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTaskRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TaskRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TaskRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTaskRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
     typealias SwiftType = [UndoStep]
 
@@ -5574,6 +6499,31 @@ fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeUndoStep.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeWorkspaceRow: FfiConverterRustBuffer {
+    typealias SwiftType = [WorkspaceRow]
+
+    public static func write(_ value: [WorkspaceRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeWorkspaceRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [WorkspaceRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [WorkspaceRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeWorkspaceRow.read(from: &buf))
         }
         return seq
     }
@@ -5829,6 +6779,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_checkpoint_focus_session() != 13264) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_child_tasks() != 32228) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_clear_contribution() != 5187) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5877,6 +6830,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session() != 58295) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_folders() != 64875) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_has_resumable_focus_queue_task() != 48787) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5889,6 +6845,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_import_tasks() != 64382) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_inbox() != 29369) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_indent_task() != 14168) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5896,6 +6855,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_latest_sync_outbox_seq() != 11156) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_list() != 60638) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_lists() != 47506) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_log_contribution() != 57143) {
@@ -5934,10 +6899,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_nest_list() != 38763) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates() != 64441) {
+    if (uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates() != 63552) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_outdent_task() != 3744) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_outline() != 55647) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session() != 59685) {
@@ -6006,6 +6974,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_schedule_task() != 28936) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_search_tasks() != 47825) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() != 65113) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -6048,6 +7019,15 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_sync_state() != 5326) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_task() != 3486) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_tasks_by_id() != 674) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists() != 34639) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -6073,6 +7053,18 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_upsert_theme() != 43674) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_valid_parent_folders() != 51949) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_visible_root_candidates() != 60554) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_visible_root_parent() != 62676) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_workspaces() != 24930) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_constructor_coreworkspace_open() != 50515) {

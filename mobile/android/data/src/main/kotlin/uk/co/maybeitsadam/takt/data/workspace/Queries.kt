@@ -20,43 +20,28 @@ import uk.co.maybeitsadam.takt.data.db.Db
 
 // The store's `static func …(_ db: Database, …)` helpers, shared by its methods.
 
-internal fun inbox(db: Db, workspaceId: String): TaskList? = db.queryOne(
-    "SELECT * FROM task_lists WHERE workspaceId = ? AND systemRole = ?", workspaceId, TaskListRole.INBOX.raw,
-) { it.toList() }
+internal fun inbox(db: Db, workspaceId: String): TaskList? = db.core.inbox(workspaceId)?.toList()
 
-internal fun foldersIn(db: Db, workspaceId: String): List<ListFolder> = db.query(
-    "SELECT * FROM list_folders WHERE workspaceId = ? ORDER BY sortOrder, createdAt, id", workspaceId,
-) { it.toFolder() }
+internal fun foldersIn(db: Db, workspaceId: String): List<ListFolder> =
+    db.core.folders(workspaceId).map { it.toFolder() }
 
-internal fun listsIn(db: Db, workspaceId: String, includingArchived: Boolean): List<TaskList> = db.query(
-    "SELECT * FROM task_lists WHERE workspaceId = ?" + (if (includingArchived) "" else " AND isArchived = 0") +
-        " ORDER BY sortOrder, createdAt, id",
-    workspaceId,
-) { it.toList() }
+internal fun listsIn(db: Db, workspaceId: String, includingArchived: Boolean): List<TaskList> =
+    db.core.lists(workspaceId, includingArchived).map { it.toList() }
 
-internal fun rootTaskIds(db: Db, listId: String): List<String> =
-    db.strings("SELECT id FROM tasks WHERE listId = ? AND parentTaskId IS NULL", listId)
+internal fun visibleRootParentTaskId(db: Db, listId: String): String? = db.core.visibleRootParent(listId)
 
-internal fun visibleRootParentTaskId(db: Db, listId: String): String? {
-    val rootId = db.list(listId)?.visibleRootTaskId ?: return null
-    val roots = rootTaskIds(db, listId)
-    return if (roots.size == 1 && roots.first() == rootId) rootId else null
+internal fun listTree(db: Db, listId: String): WorkspaceListTree =
+    WorkspaceListTree(listId, db.core.tasksInLists(listOf(listId)).map { it.toTask() })
+
+/** Several lists' trees from one read: the Rust core's `records::tasks_in_lists`. */
+internal fun listTrees(db: Db, listIds: Collection<String>): Map<String, WorkspaceListTree> {
+    val grouped = listIds.associateWith { mutableListOf<WorkspaceTask>() }
+    for (row in db.core.tasksInLists(listIds.distinct())) grouped[row.listId]?.add(row.toTask())
+    return grouped.mapValues { (id, tasks) -> WorkspaceListTree(id, tasks) }
 }
 
-internal fun listTree(db: Db, listId: String): WorkspaceListTree = WorkspaceListTree(
-    listId,
-    db.query("SELECT * FROM tasks WHERE listId = ? ORDER BY sortOrder, createdAt", listId) { it.toTask() },
-)
-
-internal fun tasksById(db: Db, ids: List<String>): Map<String, WorkspaceTask> {
-    val result = HashMap<String, WorkspaceTask>()
-    for (chunk in ids.distinct().chunked(500)) {
-        db.query("SELECT * FROM tasks WHERE id IN (${chunk.joinToString(",") { "?" }})", *chunk.toTypedArray()) {
-            it.toTask()
-        }.forEach { result[it.id] = it }
-    }
-    return result
-}
+internal fun tasksById(db: Db, ids: List<String>): Map<String, WorkspaceTask> =
+    db.core.tasksById(ids.distinct()).associate { it.id to it.toTask() }
 
 internal fun actionableTasks(db: Db, workspaceId: String, limitedTo: List<String>?): List<WorkspaceTask> {
     val all = listsIn(db, workspaceId, false).filter { it.completedAt == null }

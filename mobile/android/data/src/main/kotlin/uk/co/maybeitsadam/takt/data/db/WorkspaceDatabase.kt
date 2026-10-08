@@ -92,7 +92,7 @@ class WorkspaceDatabase private constructor(
 
     /** Runs [block] on the writer outside a transaction (for `PRAGMA data_version` and the like). */
     suspend fun <T> writerWithoutTransaction(block: (Db) -> T): T = withContext(dispatcher) {
-        writerLock.withLock { block(Db(writer)) }
+        writerLock.withLock { block(Db(writer, core)) }
     }
 
     /** Runs [block] in a read transaction on a pooled reader, so it sees one consistent moment. */
@@ -128,7 +128,7 @@ class WorkspaceDatabase private constructor(
     ): Pair<T, Set<String>> {
         connection.execSQL(begin)
         try {
-            val db = Db(connection)
+            val db = Db(connection, core)
             val result = block(db)
             val touched = if (track) {
                 db.strings("SELECT tableName FROM temp.priority_changed").toSet().also {

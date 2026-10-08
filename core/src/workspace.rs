@@ -23,6 +23,8 @@ use crate::imports::{self, BoardBaseline, ImportOutcome, ImportedTaskSeed, Legac
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
 use crate::ranking::{self, Ranking, Scored};
+use crate::records::{self, FolderRow, ListRow, OutlineItem, TaskRow, WorkspaceRow};
+use crate::search::{self, SearchHit};
 use crate::setup;
 use crate::sync::{self, IncomingRow, LocalSyncState, PendingChanges};
 use crate::tasks::{self, DeletedTask, NewTask};
@@ -966,6 +968,102 @@ impl CoreWorkspace {
     }
 
     /// The open tasks the next-up engine and the day choose from.
+    /// The workspaces, oldest first.
+    pub fn workspaces(&self) -> Result<Vec<WorkspaceRow>, CoreError> {
+        records::workspaces(&self.lock())
+    }
+
+    /// A workspace's folders in sidebar order.
+    pub fn folders(&self, workspace_id: String) -> Result<Vec<FolderRow>, CoreError> {
+        records::folders(&self.lock(), &workspace_id)
+    }
+
+    /// A workspace's lists in sidebar order.
+    pub fn lists(
+        &self,
+        workspace_id: String,
+        including_archived: bool,
+    ) -> Result<Vec<ListRow>, CoreError> {
+        records::lists(&self.lock(), &workspace_id, including_archived)
+    }
+
+    /// One list, if it exists.
+    pub fn list(&self, id: String) -> Result<Option<ListRow>, CoreError> {
+        records::list(&self.lock(), &id)
+    }
+
+    /// A workspace's Inbox.
+    pub fn inbox(&self, workspace_id: String) -> Result<Option<ListRow>, CoreError> {
+        records::inbox(&self.lock(), &workspace_id)
+    }
+
+    /// One task, if it exists.
+    pub fn task(&self, id: String) -> Result<Option<TaskRow>, CoreError> {
+        records::task(&self.lock(), &id)
+    }
+
+    /// Tasks by id; missing ids are absent.
+    pub fn tasks_by_id(&self, ids: Vec<String>) -> Result<Vec<TaskRow>, CoreError> {
+        records::tasks_by_id(&self.lock(), &ids)
+    }
+
+    /// The children of a task in a list, or its roots, in outline order.
+    pub fn child_tasks(
+        &self,
+        list_id: String,
+        parent_task_id: Option<String>,
+    ) -> Result<Vec<TaskRow>, CoreError> {
+        records::children(&self.lock(), &list_id, parent_task_id.as_deref())
+    }
+
+    /// Every task in the given lists, each list in outline order.
+    pub fn tasks_in_lists(&self, list_ids: Vec<String>) -> Result<Vec<TaskRow>, CoreError> {
+        records::tasks_in_lists(&self.lock(), &list_ids)
+    }
+
+    /// A list's outline under a task, or the whole list.
+    pub fn outline(
+        &self,
+        list_id: String,
+        parent_task_id: Option<String>,
+    ) -> Result<Vec<OutlineItem>, CoreError> {
+        records::outline(&self.lock(), &list_id, parent_task_id.as_deref())
+    }
+
+    /// The imported wrapper a list shows its children in place of, if any.
+    pub fn visible_root_parent(&self, list_id: String) -> Result<Option<String>, CoreError> {
+        records::visible_root_parent(&self.lock(), &list_id)
+    }
+
+    /// The root a list may show its children in place of, if there is one.
+    pub fn visible_root_candidates(&self, list_id: String) -> Result<Vec<TaskRow>, CoreError> {
+        records::visible_root_candidates(&self.lock(), &list_id)
+    }
+
+    /// The folders a folder may move into.
+    pub fn valid_parent_folders(&self, folder_id: String) -> Result<Vec<FolderRow>, CoreError> {
+        records::valid_parent_folders(&self.lock(), &folder_id)
+    }
+
+    /// Prefix search over titles and notes, best match first.
+    pub fn search_tasks(
+        &self,
+        workspace_id: String,
+        query: String,
+        including_completed: bool,
+        including_archived_lists: bool,
+        limit: i64,
+    ) -> Result<Vec<SearchHit>, CoreError> {
+        search::search(
+            &self.lock(),
+            &workspace_id,
+            &query,
+            including_completed,
+            including_archived_lists,
+            limit,
+        )
+    }
+
     pub fn next_up_candidates(
         &self,
         now_ms: i64,

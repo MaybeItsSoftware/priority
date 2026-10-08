@@ -1,5 +1,5 @@
 import Foundation
-import GRDB
+import TaktRustCore
 
 /// One list's tasks, read once and then shaped as many ways as a screen needs.
 ///
@@ -162,7 +162,9 @@ public struct WorkspaceBoardTrees: Sendable, Equatable {
 extension WorkspaceStore {
   /// One list's rows, read once.
   public func listTree(in listId: String) throws -> WorkspaceListTree {
-    try database.read { db in try Self.listTree(db, listId: listId) }
+    WorkspaceListTree(
+      listId: listId,
+      tasks: try Self.mappingCoreErrors { try core.tasksInLists(listIds: [listId]) }.map(WorkspaceTask.init))
   }
 
   /// Several lists' rows in one read transaction, so a combined scope sees one
@@ -173,39 +175,20 @@ extension WorkspaceStore {
     // all of them on every reload. Rows arrive in each list's order, so
     // grouping keeps it.
     let ids = Array(Set(listIds))
-    return try database.read { db in
-      var grouped: [String: [WorkspaceTask]] = Dictionary(uniqueKeysWithValues: ids.map { ($0, []) })
-      for start in stride(from: 0, to: ids.count, by: 500) {
-        let chunk = Array(ids[start..<min(start + 500, ids.count)])
-        let tasks = try WorkspaceTask.filter(chunk.contains(Column("listId")))
-          .order(Column("listId"), Column("sortOrder"), Column("createdAt")).fetchAll(db)
-        for task in tasks { grouped[task.listId, default: []].append(task) }
-      }
-      return Dictionary(uniqueKeysWithValues: grouped.map { id, tasks in
-        (id, WorkspaceListTree(listId: id, tasks: tasks))
-      })
+    var grouped: [String: [WorkspaceTask]] = Dictionary(uniqueKeysWithValues: ids.map { ($0, []) })
+    // The Rust core's `records::tasks_in_lists`: rows arrive in each list's
+    // order, so grouping keeps it.
+    for row in try Self.mappingCoreErrors({ try core.tasksInLists(listIds: ids) }) {
+      grouped[row.listId, default: []].append(WorkspaceTask(row))
     }
+    return Dictionary(uniqueKeysWithValues: grouped.map { id, tasks in
+      (id, WorkspaceListTree(listId: id, tasks: tasks))
+    })
   }
 
-  /// Tasks by id, in one read. Missing ids are simply absent.
   public func tasks(ids: [String]) throws -> [String: WorkspaceTask] {
     guard !ids.isEmpty else { return [:] }
-    return try database.read { db in
-      var result: [String: WorkspaceTask] = [:]
-      let unique = Array(Set(ids))
-      for start in stride(from: 0, to: unique.count, by: 500) {
-        let chunk = Array(unique[start..<min(start + 500, unique.count)])
-        for task in try WorkspaceTask.filter(chunk.contains(Column("id"))).fetchAll(db) {
-          result[task.id] = task
-        }
-      }
-      return result
-    }
-  }
-
-  static func listTree(_ db: Database, listId: String) throws -> WorkspaceListTree {
-    let tasks = try WorkspaceTask.filter(Column("listId") == listId)
-      .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-    return WorkspaceListTree(listId: listId, tasks: tasks)
+    let rows = try Self.mappingCoreErrors { try core.tasksById(ids: Array(Set(ids))) }
+    return Dictionary(rows.map { ($0.id, WorkspaceTask($0)) }, uniquingKeysWith: { first, _ in first })
   }
 }

@@ -19,6 +19,11 @@ import uk.co.maybeitsadam.takt.core.WorkspaceItemKind
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.db.Db
 import uk.co.maybeitsadam.takt.data.db.Row
+import uniffi.takt_core.FolderRow
+import uniffi.takt_core.ListRow
+import uniffi.takt_core.TaskRow
+import uniffi.takt_core.WorkspaceRow
+import java.time.Instant
 
 // The GRDB records' fetch/insert/update, by hand. `update` writes every
 // column like GRDB's `record.update(db)`; the triggers then record only what
@@ -109,12 +114,40 @@ internal fun Row.toAward() = FocusAward(
     multiplier = double("multiplier"), points = double("points"), awardedAt = instant("awardedAt"),
 )
 
+// The Rust core's rows (core/src/records.rs) as the records the screens use.
+
+private fun Long.instant(): Instant = Instant.ofEpochMilli(this)
+
+internal fun WorkspaceRow.toWorkspace() = Workspace(
+    id = id, name = name, createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(),
+)
+
+internal fun FolderRow.toFolder() = ListFolder(
+    id = id, workspaceId = workspaceId, parentFolderId = parentFolderId, name = name, sortOrder = sortOrder.toInt(),
+    createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(),
+)
+
+internal fun ListRow.toList() = TaskList(
+    id = id, workspaceId = workspaceId, folderId = folderId, name = name, colorHex = colorHex,
+    sortOrder = sortOrder.toInt(), isArchived = isArchived, systemRole = TaskListRole.of(systemRole),
+    visibleRootTaskId = visibleRootTaskId, completedAt = completedAtMs?.instant(),
+    createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(),
+)
+
+internal fun TaskRow.toTask() = WorkspaceTask(
+    id = id, listId = listId, parentTaskId = parentTaskId, title = title, notes = notes,
+    status = TaskStatus.of(status), sortOrder = sortOrder.toInt(), dueAt = dueAtMs?.instant(),
+    estimateSeconds = estimateSeconds?.toInt(), sourceSystem = sourceSystem, sourceId = sourceId,
+    itemKind = WorkspaceItemKind.of(itemKind), isPromoted = isPromoted, archivedAt = archivedAtMs?.instant(),
+    completedAt = completedAtMs?.instant(), createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(),
+)
+
 // Fetch by key.
 
 internal fun Db.workspace(id: String) = queryOne("SELECT * FROM workspaces WHERE id = ?", id) { it.toWorkspace() }
 internal fun Db.folder(id: String) = queryOne("SELECT * FROM list_folders WHERE id = ?", id) { it.toFolder() }
-internal fun Db.list(id: String) = queryOne("SELECT * FROM task_lists WHERE id = ?", id) { it.toList() }
-internal fun Db.task(id: String) = queryOne("SELECT * FROM tasks WHERE id = ?", id) { it.toTask() }
+internal fun Db.list(id: String) = core.list(id)?.toList()
+internal fun Db.task(id: String) = core.task(id)?.toTask()
 internal fun Db.metadata(taskId: String) =
     queryOne("SELECT * FROM task_metadata WHERE taskId = ?", taskId) { it.toMetadata() }
 internal fun Db.session(id: String) = queryOne("SELECT * FROM focus_sessions WHERE id = ?", id) { it.toSession() }

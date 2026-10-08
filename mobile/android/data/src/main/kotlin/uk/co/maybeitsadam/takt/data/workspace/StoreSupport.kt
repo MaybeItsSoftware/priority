@@ -96,9 +96,6 @@ internal fun Db.persistTaskOrder(tasks: List<WorkspaceTask>, now: Instant) {
 
 internal fun Db.taskDescendantIDs(taskId: String): Set<String> = descendantIDs("tasks", "parentTaskId", taskId)
 
-internal fun Db.folderDescendantIDs(folderId: String): Set<String> =
-    descendantIDs("list_folders", "parentFolderId", folderId)
-
 private fun Db.descendantIDs(table: String, parentColumn: String, rootId: String): Set<String> {
     val descendants = LinkedHashSet<String>()
     var frontier = listOf(rootId)

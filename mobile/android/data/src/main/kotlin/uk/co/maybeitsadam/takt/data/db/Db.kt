@@ -4,13 +4,26 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteStatement
 import java.time.Instant
 import uk.co.maybeitsadam.takt.core.SyncValue
+import uniffi.takt_core.CoreWorkspace
 
 /**
  * A connection inside a transaction, with the handful of helpers the store's
  * SQL needs. Arguments may be `null`, `String`, `Int`, `Long`, `Double`,
  * `Boolean` (written 0/1), `Instant` (written as GRDB text) or a [SyncValue].
  */
-class Db internal constructor(val connection: SQLiteConnection) {
+class Db internal constructor(
+    val connection: SQLiteConnection,
+    /**
+     * The Rust core's handle on the same file, for the reads that are the
+     * core's (docs/rust-core-migration.md). Absent on a bare connection, such
+     * as the schema test's.
+     */
+    private val coreHandle: CoreWorkspace? = null,
+) {
+    /** The Rust core, for a read that is its. */
+    val core: CoreWorkspace
+        get() = checkNotNull(coreHandle) { "This connection was opened without the Rust core." }
+
 
     fun execute(sql: String, vararg args: Any?) {
         connection.prepare(sql).use { statement ->
