@@ -543,34 +543,18 @@ impl Workspace {
             if let Some(status) = edit.status.as_deref()
                 && status != task.status
             {
-                // `setStatus`: stamp only a task that is newly closed, and
-                // clear the stamp on reopening.
-                let was_open = task.completed_at.is_none();
-                let recurs = task
-                    .recurrence_rule
-                    .as_deref()
-                    .is_some_and(|rule| !rule.trim().is_empty());
-                if status != "open" && was_open && recurs && !task.is_list() {
-                    return Err(ToolError::new(format!(
-                        "\"{}\" repeats ({}). Complete it in Takt, which schedules the next \
-                         occurrence; completing it here would end the series.",
-                        task.title,
-                        task.recurrence_rule.as_deref().unwrap_or_default()
-                    )));
-                }
-                let completed_at = if status == "open" {
-                    None
-                } else {
-                    Some(task.completed_at.clone().unwrap_or_else(|| now.to_string()))
-                };
-                tx.execute(
-                    "UPDATE tasks SET status = ?1, completedAt = ?2, updatedAt = ?3 WHERE id = ?4",
-                    params![status, completed_at, now, task.id],
+                // The Rust core's `tasks::set_status`, shared with the apps:
+                // it stamps a newly closed task, writes a repeating task's
+                // next occurrence and ends the habits made from it.
+                let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into());
+                takt_core::tasks::set_status(
+                    tx,
+                    &task.id,
+                    status,
+                    Utc::now().timestamp_millis(),
+                    &zone,
                 )
-                .map_err(map_write_error)?;
-                if status != "open" && was_open {
-                    expire_habits(tx, &task.id, now)?;
-                }
+                .map_err(map_core_error)?;
             }
 
             if let Some(links) = edit.external_links.as_ref() {
@@ -1272,32 +1256,6 @@ fn parse_follow_up(text: &str) -> Result<String> {
         .and_then(|date| date.with_nanosecond(0))
         .unwrap_or(instant);
     Ok(stored_string(minute))
-}
-
-/// Uppercase, as Foundation's `UUID().uuidString` writes them.
-/// `WorkspaceStore.expireHabits`: closing a task ends every habit made from
-/// it whose expiry is "when the source is done", and takes each one's card
-/// out of the column the habit put it in. A no-op on a database the app has
-/// not yet migrated to `v19_habit_options`.
-fn expire_habits(tx: &Transaction, source_id: &str, now: &str) -> Result<()> {
-    if !has_migration(tx, "v19_habit_options")? {
-        return Ok(());
-    }
-    tx.execute(
-        "UPDATE task_metadata SET kanbanColumn = NULL, focusRank = NULL, updatedAt = ?2 \
-         WHERE taskId IN (SELECT taskId FROM dailies WHERE sourceTaskId = ?1 \
-           AND archivedAt IS NULL AND expiryRule = 'source' \
-           AND placementColumn = task_metadata.kanbanColumn)",
-        params![source_id, now],
-    )
-    .map_err(map_write_error)?;
-    tx.execute(
-        "UPDATE dailies SET archivedAt = ?2, updatedAt = ?2 \
-         WHERE sourceTaskId = ?1 AND archivedAt IS NULL AND expiryRule = 'source'",
-        params![source_id, now],
-    )
-    .map_err(map_write_error)?;
-    Ok(())
 }
 
 fn new_id() -> String {

@@ -704,7 +704,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_task_update",
-            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind, sidebar pin, or what it is waiting on and when to follow up. Fields left out are unchanged; one call is one undo step. Completing a repeating task is refused: do that in Takt, which schedules the next occurrence.",
+            "description": "Change a local task's title, notes, external links (replaces the whole set), status, kanban column, kind, sidebar pin, or what it is waiting on and when to follow up. Fields left out are unchanged; one call is one undo step. Completing a repeating task writes its next occurrence, as Takt does.",
             "inputSchema": {
                 "type": "object",
                 "properties": {

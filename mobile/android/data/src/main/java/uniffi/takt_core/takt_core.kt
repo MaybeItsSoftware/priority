@@ -743,6 +743,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_status(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo_history(
@@ -842,6 +844,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_set_list_archived(`ptr`: Long,`id`: RustBuffer.ByValue,`archived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_matrix_position(`ptr`: Long,`id`: RustBuffer.ByValue,`urgency`: RustBuffer.ByValue,`importance`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_status(`ptr`: Long,`taskId`: RustBuffer.ByValue,`status`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1078,6 +1082,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position() and 0xFFFF) != 2656) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_status() and 0xFFFF) != 17278) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
@@ -1660,6 +1667,12 @@ public interface CoreWorkspaceInterface {
      * Places a task on the priority matrix as one "Move Task" step.
      */
     fun `setMatrixPosition`(`id`: kotlin.String, `urgency`: kotlin.Long?, `importance`: kotlin.Long?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Opens, completes or cancels a task as one "Change Status" step,
+     * writing a repeating task's next occurrence in `zone` (an IANA name).
+     */
+    fun `setStatus`(`taskId`: kotlin.String, `status`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -2385,6 +2398,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Opens, completes or cancels a task as one "Change Status" step,
+     * writing a repeating task's next occurrence in `zone` (an IANA name).
+     */
+    @Throws(CoreException::class)override fun `setStatus`(`taskId`: kotlin.String, `status`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_status(
+        it,
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterString.lower(`status`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -2993,6 +3027,14 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class InvalidStatus(
+        
+        val `status`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "status=${ `status` }"
+    }
+    
     class InvalidTaskMove(
         ) : CoreException() {
         override val message
@@ -3039,7 +3081,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             8 -> CoreException.EmptyName()
             9 -> CoreException.InvalidFolderMove()
             10 -> CoreException.InvalidCondition()
-            11 -> CoreException.InvalidTaskMove()
+            11 -> CoreException.InvalidStatus(
+                FfiConverterString.read(buf),
+                )
+            12 -> CoreException.InvalidTaskMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -3091,6 +3136,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             is CoreException.InvalidCondition -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
+            )
+            is CoreException.InvalidStatus -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`status`)
             )
             is CoreException.InvalidTaskMove -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
@@ -3147,8 +3197,13 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 buf.putInt(10)
                 Unit
             }
-            is CoreException.InvalidTaskMove -> {
+            is CoreException.InvalidStatus -> {
                 buf.putInt(11)
+                FfiConverterString.write(value.`status`, buf)
+                Unit
+            }
+            is CoreException.InvalidTaskMove -> {
+                buf.putInt(12)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

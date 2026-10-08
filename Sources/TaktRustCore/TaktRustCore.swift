@@ -745,6 +745,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func setMatrixPosition(id: String, urgency: Int64?, importance: Int64?, nowMs: Int64) throws 
     
     /**
+     * Opens, completes or cancels a task as one "Change Status" step,
+     * writing a repeating task's next occurrence in `zone` (an IANA name).
+     */
+    func setStatus(taskId: String, status: String, nowMs: Int64, zone: String) throws 
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -1270,6 +1276,22 @@ open func setMatrixPosition(id: String, urgency: Int64?, importance: Int64?, now
         FfiConverterOptionInt64.lower(urgency),
         FfiConverterOptionInt64.lower(importance),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Opens, completes or cancels a task as one "Change Status" step,
+     * writing a repeating task's next occurrence in `zone` (an IANA name).
+     */
+open func setStatus(taskId: String, status: String, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_status(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),
+        FfiConverterString.lower(status),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 }
 }
@@ -1912,6 +1934,8 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case EmptyName
     case InvalidFolderMove
     case InvalidCondition
+    case InvalidStatus(status: String
+    )
     case InvalidTaskMove
 
     
@@ -1963,7 +1987,10 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 8: return .EmptyName
         case 9: return .InvalidFolderMove
         case 10: return .InvalidCondition
-        case 11: return .InvalidTaskMove
+        case 11: return .InvalidStatus(
+            status: try FfiConverterString.read(from: &buf)
+            )
+        case 12: return .InvalidTaskMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -2022,8 +2049,13 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(10))
         
         
-        case .InvalidTaskMove:
+        case let .InvalidStatus(status):
             writeInt(&buf, Int32(11))
+            FfiConverterString.write(status, into: &buf)
+            
+        
+        case .InvalidTaskMove:
+            writeInt(&buf, Int32(12))
         
         }
     }
@@ -2297,6 +2329,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position() != 2656) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_status() != 17278) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {

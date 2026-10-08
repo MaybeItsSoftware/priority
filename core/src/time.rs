@@ -19,3 +19,31 @@ pub fn non_empty_name(raw: &str) -> Result<String, crate::CoreError> {
     }
     Ok(trimmed.to_string())
 }
+
+/// A stored date read back, as leniently as the clients read one: GRDB's
+/// `YYYY-MM-DD HH:MM:SS.SSS`, with or without seconds and fraction, with a
+/// space or a `T`, and with an offset if one was written.
+pub fn parse_stored(text: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+    use chrono::{DateTime, NaiveDateTime, Utc};
+    let text = text.trim();
+    if let Ok(zoned) = DateTime::parse_from_rfc3339(text) {
+        return Some(zoned.with_timezone(&Utc));
+    }
+    let normalised = text.replacen('T', " ", 1);
+    let normalised = normalised.trim_end_matches('Z');
+    for format in [
+        "%Y-%m-%d %H:%M:%S%.f",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+    ] {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(normalised, format) {
+            return Some(naive.and_utc());
+        }
+    }
+    None
+}
+
+/// An instant as GRDB stores one.
+pub fn stored_instant(instant: chrono::DateTime<chrono::Utc>) -> String {
+    stored(instant.timestamp_millis())
+}

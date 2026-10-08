@@ -451,3 +451,166 @@ fn a_new_task_can_go_first_or_beside_a_sibling_and_needs_a_real_place() {
         Err(CoreError::InvalidTaskMove)
     ));
 }
+
+fn status_of(connection: &Connection, id: &str) -> (String, Option<String>) {
+    connection
+        .query_row(
+            "SELECT status, completedAt FROM tasks WHERE id = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
+}
+
+#[test]
+fn closing_stamps_a_task_once_and_reopening_clears_it() {
+    let mut connection = workspace();
+    let first = 1_700_000_000_000;
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", first, "UTC")
+    })
+    .unwrap();
+    assert_eq!(
+        status_of(&connection, "o"),
+        ("completed".into(), Some("2023-11-14 22:13:20.000".into()))
+    );
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "cancelled", first + 60_000, "UTC")
+    })
+    .unwrap();
+    assert_eq!(
+        status_of(&connection, "o").1.as_deref(),
+        Some("2023-11-14 22:13:20.000")
+    );
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "open", first, "UTC")
+    })
+    .unwrap();
+    assert_eq!(status_of(&connection, "o"), ("open".into(), None));
+
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "gone", "completed", first, "UTC")
+    })
+    .unwrap();
+    assert!(matches!(
+        journalled(&mut connection, "Change Status", |tx| set_status(
+            tx, "o", "done", first, "UTC"
+        )),
+        Err(CoreError::InvalidStatus { .. })
+    ));
+}
+
+#[test]
+fn closing_a_repeating_task_writes_the_next_one_just_after_it() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "UPDATE tasks SET dueAt = '2026-03-02 09:00:00.000', estimateSeconds = 900 WHERE id = 'o';
+             INSERT INTO task_metadata (taskId, priority, tagsJSON, recurrenceRule, kanbanColumn, focusRank, updatedAt)
+               VALUES ('o', 2, '[\"home\"]', 'every 3 days', 'today', 0, '{T}');
+             INSERT INTO tasks (id, listId, title, sortOrder, createdAt, updatedAt)
+               VALUES ('z', 'l', 'Last', 2, '{T}', '{T}');"
+        ))
+        .unwrap();
+    // Finished late, on 8 March: every third day from the 2nd lands on the 11th.
+    let finished = 1_772_971_200_000; // 2026-03-08 12:00:00 UTC
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", finished, "Europe/London")
+    })
+    .unwrap();
+
+    let next: (String, String, Option<String>, Option<i64>, Option<String>) = connection
+        .query_row(
+            "SELECT id, status, dueAt, estimateSeconds, completedAt FROM tasks WHERE title = 'Other' AND id <> 'o'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        (next.1.as_str(), next.2.as_deref(), next.3, next.4),
+        ("open", Some("2026-03-11 09:00:00.000"), Some(900), None)
+    );
+    let carried: (Option<i64>, String, Option<String>, Option<String>, Option<i64>) = connection
+        .query_row(
+            "SELECT priority, tagsJSON, recurrenceRule, kanbanColumn, focusRank FROM task_metadata WHERE taskId = ?1",
+            [&next.0],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        carried,
+        (
+            Some(2),
+            "[\"home\"]".into(),
+            Some("every 3 days".into()),
+            None,
+            None
+        )
+    );
+    assert_eq!(
+        children(&connection, "l", None),
+        ["p", "o", next.0.as_str(), "z"]
+    );
+
+    // Closing it again is not newly closed, so nothing more is written.
+    let count = |c: &Connection| -> i64 {
+        c.query_row("SELECT COUNT(*) FROM tasks", [], |row| row.get(0))
+            .unwrap()
+    };
+    let before = count(&connection);
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", finished, "UTC")
+    })
+    .unwrap();
+    assert_eq!(count(&connection), before);
+
+    // Closing it again was its own step; the one before it took back the
+    // close and the occurrence it wrote together.
+    assert_eq!(
+        undo(&mut connection).unwrap().as_deref(),
+        Some("Change Status")
+    );
+    assert_eq!(count(&connection), before);
+    assert_eq!(
+        undo(&mut connection).unwrap().as_deref(),
+        Some("Change Status")
+    );
+    assert_eq!(count(&connection), before - 1);
+    assert_eq!(status_of(&connection, "o"), ("open".into(), None));
+}
+
+#[test]
+fn closing_a_habits_source_ends_the_habit_and_clears_its_placement() {
+    let mut connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO dailies (id, taskId, sortOrder, createdAt, updatedAt, sourceTaskId, placementColumn, expiryRule)
+               VALUES ('h', 'c', 0, '{T}', '{T}', 'o', 'today', 'source'),
+                      ('keep', 'g', 1, '{T}', '{T}', 'o', NULL, 'never');
+             UPDATE task_metadata SET kanbanColumn = 'today', focusRank = 3 WHERE taskId = 'c';"
+        ))
+        .unwrap();
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "o", "completed", 1_700_000_000_000, "UTC")
+    })
+    .unwrap();
+    let archived = |id: &str| -> Option<String> {
+        connection
+            .query_row(
+                "SELECT archivedAt FROM dailies WHERE id = ?1",
+                [id],
+                |row| row.get(0),
+            )
+            .unwrap()
+    };
+    assert!(archived("h").is_some());
+    assert!(archived("keep").is_none());
+    let placement: (Option<String>, Option<i64>) = connection
+        .query_row(
+            "SELECT kanbanColumn, focusRank FROM task_metadata WHERE taskId = 'c'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(placement, (None, None));
+}

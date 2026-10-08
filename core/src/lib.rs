@@ -13,6 +13,7 @@ pub mod conditions;
 pub mod error;
 pub mod journal;
 pub mod lists;
+pub mod periodic;
 pub mod schema;
 pub mod tasks;
 pub mod time;

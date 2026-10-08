@@ -602,5 +602,236 @@ fn descendant_ids(transaction: &Transaction, id: &str) -> Result<Vec<String>, Co
     Ok(ids)
 }
 
+/// Opens, completes or cancels a task. Only a task that is newly closed is
+/// stamped as completed, so a sync or a repeated command closing it again does
+/// not move it into today. Closing one occurrence of a repeating task writes
+/// the next one, and ends the habits made from it. A task that is gone is
+/// left alone, as both clients did. Replaces `WorkspaceStore.setStatus` and
+/// `WorkspaceRepository.setStatus`.
+///
+/// `zone` is the user's IANA time zone, which the next occurrence's dates
+/// are stepped in.
+pub fn set_status(
+    transaction: &Transaction,
+    task_id: &str,
+    status: &str,
+    now_ms: i64,
+    zone: &str,
+) -> Result<(), CoreError> {
+    if !matches!(status, "open" | "completed" | "cancelled") {
+        return Err(CoreError::InvalidStatus {
+            status: status.to_string(),
+        });
+    }
+    let completed_at: Option<Option<String>> = transaction
+        .query_row(
+            "SELECT completedAt FROM tasks WHERE id = ?1",
+            [task_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    let Some(completed_at) = completed_at else {
+        return Ok(());
+    };
+    let was_open = completed_at.is_none();
+    let now = stored(now_ms);
+    let completed_at = if status == "open" {
+        None
+    } else {
+        Some(completed_at.unwrap_or_else(|| now.clone()))
+    };
+    transaction.execute(
+        "UPDATE tasks SET status = ?1, completedAt = ?2, updatedAt = ?3 WHERE id = ?4",
+        params![status, completed_at, now, task_id],
+    )?;
+    if status != "open" && was_open {
+        schedule_next_occurrence(transaction, task_id, now_ms, crate::periodic::zone(zone))?;
+        expire_habits(transaction, task_id, now_ms)?;
+    }
+    Ok(())
+}
+
+/// Writes the next occurrence of a repeating task just after it, and returns
+/// its id; nothing for a list, a task with no rule this app wrote, or one
+/// with no dates to step from. `WorkspaceStore.scheduleNextOccurrence`.
+///
+/// Steps from the dates the occurrence carried, so "every 3 days" keeps its
+/// own rhythm. Everything describing the work carries over; what describes
+/// this sitting (its board column, its rung on the ladder) does not.
+pub fn schedule_next_occurrence(
+    transaction: &Transaction,
+    task_id: &str,
+    now_ms: i64,
+    zone: chrono_tz::Tz,
+) -> Result<Option<String>, CoreError> {
+    use crate::periodic::Cadence;
+    use crate::time::{parse_stored, stored_instant};
+
+    let Some(task) = transaction
+        .query_row(
+            "SELECT listId, parentTaskId, title, notes, sortOrder, dueAt, estimateSeconds, itemKind, isPromoted
+             FROM tasks WHERE id = ?1",
+            [task_id],
+            |row| {
+                Ok(Occurrence {
+                    list_id: row.get(0)?,
+                    parent: row.get(1)?,
+                    title: row.get(2)?,
+                    notes: row.get(3)?,
+                    sort_order: row.get(4)?,
+                    due_at: row.get(5)?,
+                    estimate: row.get(6)?,
+                    // Older rows predate both columns; the clients read them
+                    // as an ordinary, unpromoted task.
+                    kind: row.get::<_, Option<String>>(7)?.unwrap_or_else(|| "task".into()),
+                    promoted: row.get::<_, Option<bool>>(8)?.unwrap_or(false),
+                })
+            },
+        )
+        .optional()?
+    else {
+        return Ok(None);
+    };
+    let Occurrence {
+        list_id,
+        parent,
+        title,
+        notes,
+        sort_order,
+        due_at,
+        estimate,
+        kind,
+        promoted,
+    } = task;
+    if kind == "list" {
+        return Ok(None);
+    }
+    let metadata: Option<(Option<String>, Option<String>)> = transaction
+        .query_row(
+            "SELECT recurrenceRule, startAt FROM task_metadata WHERE taskId = ?1",
+            [task_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let Some((Some(rule), start_at)) = metadata else {
+        return Ok(None);
+    };
+    let Some(cadence) = Cadence::parse(&rule) else {
+        return Ok(None);
+    };
+    let now = chrono::DateTime::from_timestamp_millis(now_ms).unwrap_or_default();
+    let rolled = |date: Option<String>| {
+        date.as_deref()
+            .and_then(parse_stored)
+            .and_then(|date| cadence.next_occurrence(date, Some(now), zone))
+    };
+    let next_due = rolled(due_at);
+    let next_start = rolled(start_at).or_else(|| {
+        next_due
+            .is_none()
+            .then(|| cadence.next_occurrence(now, Some(now), zone))
+            .flatten()
+    });
+    if next_start.is_none() && next_due.is_none() {
+        return Ok(None);
+    }
+
+    let id = crate::lists::new_id();
+    let stamp = stored(now_ms);
+    transaction.execute(
+        "INSERT INTO tasks (id, listId, parentTaskId, title, notes, status, sortOrder, dueAt, estimateSeconds,
+                            sourceSystem, sourceId, itemKind, isPromoted, archivedAt, completedAt, createdAt, updatedAt)
+         VALUES (?1, ?2, ?3, ?4, ?5, 'open', ?6, ?7, ?8, NULL, NULL, ?9, ?10, NULL, NULL, ?11, ?11)",
+        params![
+            id,
+            list_id,
+            parent,
+            title,
+            notes,
+            sort_order,
+            next_due.map(stored_instant),
+            estimate,
+            kind,
+            promoted,
+            stamp
+        ],
+    )?;
+    transaction.execute(
+        "INSERT INTO task_metadata (taskId, priority, startAt, tagsJSON, recurrenceRule, matrixUrgency,
+                                    matrixImportance, kanbanColumn, externalLinksJSON, focusRank, planningJSON, updatedAt)
+         SELECT ?1, priority, ?2, tagsJSON, recurrenceRule, matrixUrgency, matrixImportance, NULL,
+                externalLinksJSON, NULL, planningJSON, ?3
+         FROM task_metadata WHERE taskId = ?4",
+        params![id, next_start.map(stored_instant), stamp, task_id],
+    )?;
+
+    // The finished occurrence keeps its place; the next one follows it.
+    let mut siblings = task_siblings(transaction, &list_id, parent.as_deref())?;
+    siblings.retain(|sibling| sibling != &id);
+    if let Some(index) = siblings.iter().position(|sibling| sibling == task_id) {
+        siblings.insert(index + 1, id.clone());
+        persist_task_order(transaction, &siblings, now_ms)?;
+    }
+    Ok(Some(id))
+}
+
+/// The parts of a finished occurrence the next one is made from.
+struct Occurrence {
+    list_id: String,
+    parent: Option<String>,
+    title: String,
+    notes: String,
+    sort_order: i64,
+    due_at: Option<String>,
+    estimate: Option<i64>,
+    kind: String,
+    promoted: bool,
+}
+
+/// Ends the habits made from a task that is set to end when it is done, and
+/// takes them out of the board column they were placed in if they are still
+/// there. `WorkspaceStore.expireHabits`.
+fn expire_habits(
+    transaction: &Transaction,
+    source_task_id: &str,
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    let now = stored(now_ms);
+    let mut statement = transaction.prepare(
+        "SELECT id, taskId, placementColumn FROM dailies
+         WHERE sourceTaskId = ?1 AND archivedAt IS NULL AND expiryRule = 'source'",
+    )?;
+    let habits: Vec<(String, String, Option<String>)> = statement
+        .query_map([source_task_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?
+        .collect::<Result<_, _>>()?;
+    for (habit_id, habit_task_id, placement) in habits {
+        transaction.execute(
+            "UPDATE dailies SET archivedAt = ?1, updatedAt = ?1 WHERE id = ?2",
+            params![now, habit_id],
+        )?;
+        let Some(placement) = placement else { continue };
+        let column: Option<String> = transaction
+            .query_row(
+                "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?1",
+                [&habit_task_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten();
+        if column.as_deref() == Some(placement.as_str()) {
+            transaction.execute(
+                "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
+                 VALUES (?1, '[]', '[]', NULL, ?2)
+                 ON CONFLICT(taskId) DO UPDATE SET
+                   kanbanColumn = NULL, focusRank = NULL, updatedAt = excluded.updatedAt",
+                params![habit_task_id, now],
+            )?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests;

@@ -329,24 +329,12 @@ class WorkspaceRepository(
     }
 
     /** Closing one occurrence of a repeating task writes the next one. */
+    /**
+     * Opens, completes or cancels a task: the Rust core's `tasks::set_status`, which also writes a
+     * repeating task's next occurrence, stepped in [zone], and ends the habits made from it.
+     */
     suspend fun setStatus(status: TaskStatus, taskId: String, now: Instant = now()) {
-        journalledWrite("Change Status") { db ->
-            val existing = db.task(taskId) ?: return@journalledWrite
-            // Only stamp a task that is newly closed.
-            val wasOpen = existing.completedAt == null
-            val task = existing.copy(
-                status = status,
-                completedAt = if (status == TaskStatus.OPEN) null else (existing.completedAt ?: now),
-                updatedAt = now,
-            )
-            db.update(task)
-            // Closing one occurrence of a repeating task writes the next one,
-            // and ends the habits made from it.
-            if (status != TaskStatus.OPEN && wasOpen) {
-                scheduleNextOccurrence(db, task, now, zone)
-                expireHabits(db, task.id, now)
-            }
-        }
+        coreWrite { it.setStatus(taskId, status.raw, now.toEpochMilli(), zone.id) }
     }
 
     suspend fun updateTask(

@@ -348,22 +348,14 @@ public final class WorkspaceStore: @unchecked Sendable {
     return task
   }
 
+  /// Opens, completes or cancels a task: the Rust core's `tasks::set_status`,
+  /// which also writes a repeating task's next occurrence, stepped in the
+  /// user's time zone, and ends the habits made from it.
   public func setStatus(_ status: TaskStatus, for taskId: String, now: Date = .now) throws {
-    try journalledWrite("Change Status") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: taskId) else { return }
-      task.status = status
-      // Only stamp a task that is newly closed. Re-closing an already closed
-      // task — which a sync or a repeated command can do — would otherwise
-      // move it into today and inflate the count.
-      let wasOpen = task.completedAt == nil
-      task.completedAt = status == .open ? nil : (task.completedAt ?? now)
-      task.updatedAt = now
-      try task.update(db)
-      // Closing one occurrence of a repeating task writes the next one.
-      if status != .open, wasOpen {
-        try Self.scheduleNextOccurrence(db, after: task, now: now)
-        try Self.expireHabits(db, sourceTaskId: task.id, now: now)
-      }
+    try coreWrite {
+      try core.setStatus(
+        taskId: taskId, status: status.rawValue, nowMs: now.coreMilliseconds,
+        zone: TimeZone.current.identifier)
     }
   }
 

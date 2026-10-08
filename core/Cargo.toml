@@ -22,6 +22,9 @@ bindgen = ["uniffi/cli"]
 
 [dependencies]
 uniffi = "0.32"
+chrono = "0.4"
+chrono-tz = "0.10"
+regex-lite = "0.1"
 serde_json = "1"
 thiserror = "2"
 unicode-normalization = "0.1"

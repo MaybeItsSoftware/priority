@@ -470,7 +470,7 @@ fn completing_a_source_task_ends_the_habits_made_from_it() {
 }
 
 #[test]
-fn a_repeating_task_is_left_for_the_app_to_complete() {
+fn completing_a_repeating_task_writes_its_next_occurrence() {
     let fixture = Fixture::new();
     let id = fixture.add(PROJECTS, "Water the plants", None);
     fixture
@@ -481,15 +481,21 @@ fn a_repeating_task_is_left_for_the_app_to_complete() {
             params![id, EARLIER],
         )
         .unwrap();
-    let error = fixture
-        .try_call(
-            "workspace_task_update",
-            json!({ "task_id": id, "status": "completed" }),
-        )
-        .unwrap_err();
-    assert!(error.contains("repeats"), "{error}");
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": id, "status": "completed" }),
+    );
     let status: String = fixture.scalar("SELECT status FROM tasks WHERE id = ?1", &id);
-    assert_eq!(status, "open");
+    assert_eq!(status, "completed");
+    // The series goes on: the next occurrence is open and carries the rule
+    // (the Rust core's `tasks::set_status`).
+    let next: String = fixture.scalar(
+        "SELECT t.id FROM tasks t JOIN task_metadata m ON m.taskId = t.id \
+         WHERE t.title = 'Water the plants' AND t.status = 'open' AND m.recurrenceRule = 'every week' \
+         AND t.id <> ?1",
+        &id,
+    );
+    assert_ne!(next, id);
 }
 
 // -- moving -------------------------------------------------------------------

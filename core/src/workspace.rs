@@ -322,6 +322,20 @@ impl CoreWorkspace {
         })
     }
 
+    /// Opens, completes or cancels a task as one "Change Status" step,
+    /// writing a repeating task's next occurrence in `zone` (an IANA name).
+    pub fn set_status(
+        &self,
+        task_id: String,
+        status: String,
+        now_ms: i64,
+        zone: String,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Change Status", |tx| {
+            tasks::set_status(tx, &task_id, &status, now_ms, &zone)
+        })
+    }
+
     /// Ranks tasks in Today's focus order as one "Reorder Today" step.
     pub fn arrange_day(&self, ordered_task_ids: Vec<String>, now_ms: i64) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Reorder Today", |tx| {

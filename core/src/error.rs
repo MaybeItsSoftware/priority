@@ -26,6 +26,8 @@ pub enum CoreError {
     InvalidFolderMove,
     #[error("A required condition is missing, archived or belongs to another workspace.")]
     InvalidCondition,
+    #[error("{status} is not a task status; use open, completed or cancelled.")]
+    InvalidStatus { status: String },
     #[error("A task cannot be moved into itself or one of its subtasks.")]
     InvalidTaskMove,
 }
