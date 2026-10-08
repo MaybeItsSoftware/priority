@@ -84,13 +84,13 @@ something you already have to know.
 | `Ctrl+-` / `Ctrl+Shift+-` | Back / forward through the lists you have been in — Zed's go back / go forward |
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |
 | `Ctrl+T` | Plan the task for today, or take it off |
-| `hh` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
+| `gb` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
 | `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection in the outline and the matrix, into the list you are in elsewhere |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
-| `hc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `hc` shows them all again |
+| `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |
 | `f` | Start a focus block on the task — on Today, queue it behind a running block |
 | `l` / `]` | Open the task's subtasks |
 | `→` / `←` | In the outline, show a task's subtasks and step into them / hide them and step out — without opening the task. Elsewhere, open and leave it. At the top level of a list, `←` goes back to the list in the sidebar |
@@ -100,7 +100,7 @@ something you already have to know.
 | `Cmd+R` | Rename the list you are in (`F2` and `Shift+R` in the sidebar) |
 | `Shift+Return` / `Alt+Shift+Return` | New task above the selection (Checkvist's) / new subtask |
 | `Cmd+F` / `Cmd+Shift+F` | Search |
-| `Cmd+P` / `ll` | Go to a list — opened empty, it lists the ones you were in most recently first. Every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
+| `Cmd+P` / `gl` | Go to a list — opened empty, it lists the ones you were in most recently first. Every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
@@ -187,7 +187,7 @@ after Return.
 ### Coming from Checkvist
 
 The desktop workspace supports Checkvist-style two-letter commands, including
-`uu`, `ee`, `dd`, `nn`, `tt`, `mm`, `ll`, `hc`, `hh` and `ww`, plus native undo/redo in the
+`uu`, `ee`, `dd`, `nn`, `tt`, `mm` and `ww`, plus native undo/redo in the
 Edit menu. Board arrows navigate every column, including empty ones, and
 `Up`/`Down` step through the subtask rows drawn on each card as well as the
 cards (folded cards are skipped over); `Space` completes the row you are on and
@@ -195,7 +195,7 @@ cards (folded cards are skipped over); `Space` completes the row you are on and
 
 A task you tick off stays where it was for three seconds — long enough to see
 it go and to take it back — and then leaves the list; the Done rail keeps it.
-`hc` shows every completed task again, and toggles back.
+`tc` shows every completed task again, and toggles back.
 
 Subtasks fold where they stand, as they do in Checkvist, so you can look
 inside a task without opening it: in the outline `→` unfolds a task and steps
@@ -204,9 +204,10 @@ are on in the outline or on a board card, and every row with subtasks has a
 chevron. Folds are shared by the outline and the board and kept across
 launches — see [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md#folding-subtasks-where-they-are).
 
-A letter that begins a sequence and also means something on its own — `x`
-(complete, or `xx`), `l` (open subtasks, or `ll`), `h` (leave them, or `hc`) —
-waits up to 1.2 seconds for a second letter, then does its own job. Any other
+Checkvist's `ll`, `hc` and `hh` are `gl`, `tc` and `gb` here, so that `l` and
+`h` — open a task's subtasks and leave them — never wait. A letter that begins a
+sequence and also means something on its own, which leaves only `x` (complete,
+or `xx`), waits up to 1.2 seconds for a second letter, then does its own job. Any other
 key ends the wait at once, and holding Shift (`⇧X`) skips it. A letter that
 begins no sequence where you are never waits.
 
@@ -699,7 +700,7 @@ Recurring things you intend to do — habits, not tasks — sitting at the top o
 
 ### Habits
 
-`hh` (or `Cmd+Shift+H`) opens the habit form. On a task it makes a habit *from*
+`gb` (or `Cmd+Shift+H`) opens the habit form. On a task it makes a habit *from*
 that task — select "Learn drums" and save "Practise drums" — which goes into the
 Habits list with a daily attached, so everything above about dailies holds for
 it. On a task that already has a daily it edits that daily, and with nothing

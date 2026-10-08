@@ -72,7 +72,7 @@ public enum WorkspaceCommandCatalog {
       id: .goTimeline, title: "Show the day's timeline", group: "Go", keys: ["cmd+9"],
       note: "Press again to close it"),
     .init(
-      id: .goListNavigator, title: "Find or create a list", group: "Go", keys: ["cmd+p", "ll"],
+      id: .goListNavigator, title: "Find or create a list", group: "Go", keys: ["cmd+p", "gl"],
       note: "Zed's file finder, for lists"),
     .init(
       id: .goSearch, title: "Search every task", group: "Go", keys: ["cmd+f", "cmd+shift+f", "/"],
@@ -139,10 +139,11 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .taskToggleDaily, title: "Commit to this daily, or stop", group: "Task",
       keys: ["cmd+shift+d"], note: "A requirement to contribute to it every day"),
-    // `hh` sits beside `hc`, so `h` was already held for a sequence.
+    // `gb`, not Checkvist's `hh`: no sequence starts with `h`, so `h` leaves
+    // a task's subtasks at once instead of waiting to see if a second follows.
     .init(
       id: .taskHabit, title: "Make a habit from the task, or edit its habit", group: "Task",
-      keys: ["hh", "cmd+shift+h"],
+      keys: ["gb", "cmd+shift+h"],
       note: "How often, which column, an estimate, and when it ends. With nothing selected, a habit of its own"),
     // `w` was free, so `ww` is a sequence of its own.
     .init(
@@ -213,7 +214,7 @@ public enum WorkspaceCommandCatalog {
       id: .planLeaveTask, title: "Leave the task's subtasks", group: "Plan",
       keys: ["left", "shift+left", "h", "["],
       note: "With nothing left to leave, hands the keyboard back to the sidebar"),
-    .init(id: .planHideCompleted, title: "Hide or show completed tasks", group: "Plan", keys: ["hc"]),
+    .init(id: .planHideCompleted, title: "Hide or show completed tasks", group: "Plan", keys: ["tc"]),
     // Checkvist folds a branch where it stands, so a task's subtasks can be
     // read and walked without opening the task. `za` is vim's fold toggle.
     .init(

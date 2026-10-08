@@ -38,7 +38,7 @@ Last checked against `main` on 6 October 2026.
 | Mac feature | Android | Notes |
 | --- | --- | --- |
 | Dailies: a contribution a task owes each day | Done | Ticking logs today's contribution and leaves the task open |
-| Habit form (`hh` / `Cmd+Shift+H`): frequency incl. every N days, column, drop or carry, estimate, end | Done | A bottom sheet. Open it from a task's menu (create or edit), from Today's toolbar or "New habit" in the palette (standalone), or with `Ctrl+Shift+H` |
+| Habit form (`gb` / `Cmd+Shift+H`): frequency incl. every N days, column, drop or carry, estimate, end | Done | A bottom sheet. Open it from a task's menu (create or edit), from Today's toolbar or "New habit" in the palette (standalone), or with `Ctrl+Shift+H` |
 | Habit engine: place each appearance in its column, drop or carry a missed day, expire with the source task or on a date | Done | `HabitPolicy` in `:core`, with the Mac's test cases. Runs when the app comes forward, every 30 s while it is in front (which covers a new day), and after undo and redo |
 | Closing a task ends the habits made from it | Done | In every close path, inside the same write, so undo brings them back |
 | One Habits list on two devices | Done | Its id is derived from the workspace on both platforms (`HabitPolicy.habitsListId`) |

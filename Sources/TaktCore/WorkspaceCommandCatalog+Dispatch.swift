@@ -28,9 +28,9 @@ extension WorkspaceCommandCatalog {
   /// in front of it (the palette, the reference, search), or belongs to the
   /// window rather than to the pane.
   ///
-  /// `goListNavigator` is deliberately absent. One of its keys is `ll`, and admitting
-  /// it would make `l` a sequence starter on the timeline, where `l` steps a
-  /// day forward on its own — so it would wait out the timeout.
+  /// `goListNavigator` is deliberately absent. One of its keys is `gl`, and
+  /// admitting it would make `g` a sequence starter on full-pane screens that
+  /// have no other use for one.
   public static let reachableFromFullPaneScreens: Set<WorkspaceCommandID> = [
     .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goInbox, .goFocus, .goTimeline,
     .goSearch, .goCommandPalette, .goKeyboardReference,

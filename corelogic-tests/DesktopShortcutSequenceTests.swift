@@ -25,8 +25,8 @@ final class DesktopShortcutSequenceTests: XCTestCase {
 
   func testAHeldKeyRunsOnItsOwnWhenTheHoldTimesOut() {
     var sequence = DesktopShortcutSequence()
-    XCTAssertEqual(sequence.advance("l", at: 1, sequences: outline), .pending)
-    XCTAssertEqual(sequence.expire(heldAt: 1), "l")
+    XCTAssertEqual(sequence.advance("x", at: 1, sequences: outline), .pending)
+    XCTAssertEqual(sequence.expire(heldAt: 1), "x")
     XCTAssertEqual(sequence.prefix, "")
     XCTAssertNil(sequence.expire(heldAt: 1), "a hold releases once")
   }
@@ -71,13 +71,25 @@ final class DesktopShortcutSequenceTests: XCTestCase {
   }
 
   /// Where no sequence begins with a key, it runs at once. On the timeline
-  /// `l` steps a day forward, and nothing there starts with `l`, so it must not
-  /// wait out the timeout the way it does on the outline.
+  /// `x` means nothing and nothing there starts with it, so it must not wait
+  /// out the timeout the way it does on the outline, where `xx` exists.
   func testAKeyIsOnlyHeldWhereASequenceBeginsWithIt() {
     var timeline = DesktopShortcutSequence()
     XCTAssertEqual(
-      timeline.advance("l", at: 1, sequences: WorkspaceCommandCatalog.sequences(on: .timeline)), .pass)
+      timeline.advance("x", at: 1, sequences: WorkspaceCommandCatalog.sequences(on: .timeline)), .pass)
     var list = DesktopShortcutSequence()
-    XCTAssertEqual(list.advance("l", at: 1, sequences: outline), .pending)
+    XCTAssertEqual(list.advance("x", at: 1, sequences: outline), .pending)
+  }
+
+  /// `l` and `h` open and leave a task's subtasks, the keys you navigate by;
+  /// Checkvist's `ll`, `hc` and `hh` moved off them so they never wait.
+  func testTheNavigationLettersAreNeverHeldOnTheTaskPanes() {
+    for surface in [WorkspaceCommandSurface.outline, .board, .today, .matrix, .sidebar] {
+      let sequences = WorkspaceCommandCatalog.sequences(on: surface)
+      for key in ["h", "j", "k", "l"] {
+        var sequence = DesktopShortcutSequence()
+        XCTAssertEqual(sequence.advance(key, at: 1, sequences: sequences), .pass, "\(key) on \(surface)")
+      }
+    }
   }
 }

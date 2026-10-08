@@ -53,7 +53,7 @@ import uk.co.maybeitsadam.takt.ui.theme.Metrics
 import uk.co.maybeitsadam.takt.ui.theme.TaktTheme
 
 /**
- * The habit form, as a bottom sheet: the Mac's `hh` overlay for a phone.
+ * The habit form, as a bottom sheet: the Mac's `gb` overlay for a phone.
  * Opened on a task it makes a habit from that task; on a habit it edits it;
  * with no task it makes a standalone habit. A habit lands in a board column
  * each day it is due, disappears at the end of a missed day or stays until

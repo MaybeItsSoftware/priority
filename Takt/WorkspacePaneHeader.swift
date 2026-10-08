@@ -79,7 +79,7 @@ struct WorkspacePaneHeader<Subtitle: View, Trailing: View>: View {
 }
 
 /// The pane title as a way to the list finder: the name, a small chevron, and
-/// the hover fill every header control has. ⌘P and `ll` were the only ways
+/// the hover fill every header control has. ⌘P and `gl` were the only ways
 /// in, and nothing on the screen said so.
 private struct WorkspaceListSwitcherTitle: View {
   @Environment(WorkspaceViewModel.self) private var model

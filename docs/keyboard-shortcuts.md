@@ -59,7 +59,7 @@ directory. Its keys act on the sidebar row, never on a task behind it:
 | Command palette | `:` (vim) | The palette |
 
 Because the sidebar has its own `d`, `h` and `l`, it does not hold them for
-the task sequences that begin with them (`dd`, `hc`, `ll`): a letter a surface
+the task sequence that begins with one (`dd`): a letter a surface
 binds on its own runs at once there. And Shift on a letter is a key of its
 own — `Shift+D` is not `d` — though a `Shift` letter nothing binds still runs
 the plain letter, so `Shift+X` remains the way to skip a sequence's wait.

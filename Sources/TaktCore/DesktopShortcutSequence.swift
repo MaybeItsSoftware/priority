@@ -5,8 +5,8 @@ import Foundation
 ///
 /// A held key is never lost. It used to be: the first letter of every
 /// sequence was swallowed and nothing replayed it, so `x` (complete), `l`
-/// (open subtasks) and `h` (leave them) — each the first letter of `xx`, `ll`
-/// or `hc` — did nothing at all, while the reference sheet went on listing
+/// (open subtasks) and `h` (leave them) — each then the first letter of `xx`,
+/// `ll` or `hc` — did nothing at all, while the reference sheet went on listing
 /// them. Now a held key that does not become a sequence runs on its own: at
 /// once when the next key turns out not to complete it, or when the hold
 /// times out with no next key. The second half is a timer the caller owns,

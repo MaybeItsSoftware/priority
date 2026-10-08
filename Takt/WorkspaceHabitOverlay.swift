@@ -7,7 +7,7 @@ struct WorkspaceHabitRequest: Identifiable {
   let context: HabitFormContext
 }
 
-/// The habit form: `hh` or ⇧⌘H. Opened on a task, it makes a habit from it
+/// The habit form: `gb` or ⇧⌘H. Opened on a task, it makes a habit from it
 /// ("learn drums" → a daily "practise drums" that ends when the goal is done);
 /// opened on a habit, it edits it; opened on nothing, a standalone habit.
 ///

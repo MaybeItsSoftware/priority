@@ -553,7 +553,7 @@ enum WorkspaceSidebarItem: Identifiable {
   private(set) var pendingKeyPrefix = ""
   /// On by default: a ticked-off task stays where it was for
   /// `completedLingerInterval`, then leaves the pane — the Done rail is where
-  /// finished work is kept. `hc` turns it off and shows every completion.
+  /// finished work is kept. `tc` turns it off and shows every completion.
   var hidesCompletedTasks = true
   /// When the soonest lingering completion is due to go, and the reload that
   /// takes it away. Not observed: nothing draws them.

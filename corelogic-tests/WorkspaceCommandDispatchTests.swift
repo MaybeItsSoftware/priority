@@ -174,8 +174,8 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertEqual(
       WorkspaceCommandCatalog.sequences(on: .outline),
       [
-        "ee", "ea", "ei", "dd", "nn", "tt", "mm", "ll", "uu", "td", "tm", "cd", "cn", "ct",
-        "dr", "hc", "hh", "ww", "gh", "sd", "oo", "pc", "xx", "gg", "za",
+        "ee", "ea", "ei", "dd", "nn", "tt", "mm", "gl", "uu", "td", "tm", "cd", "cn", "ct",
+        "dr", "tc", "gb", "ww", "gh", "sd", "oo", "pc", "xx", "gg", "za",
       ])
     let written = Set(
       WorkspaceCommandCatalog.all.flatMap(\.allKeys).filter(WorkspaceCommandCatalog.isSequence))

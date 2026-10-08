@@ -36,7 +36,7 @@ struct KeyboardCommands: View {
         .keyboardShortcut(.downArrow, modifiers: [])
       Button("Select previous task") { model.navigation.outlineCommand = .selectPrevious }
         .keyboardShortcut(.upArrow, modifiers: [])
-      // The Mac reaches these by two-letter sequences (`hc`, `za`, `pc`),
+      // The Mac reaches these by two-letter sequences (`tc`, `za`, `pc`),
       // which a key-command chain cannot express; they get chords here.
       Button(WorkspaceCommandCatalog[.planHideCompleted].title) { model.navigation.outlineCommand = .toggleHideCompleted }
         .keyboardShortcut("h", modifiers: [.command, .option])
