@@ -9,6 +9,8 @@ let pluginTargetExcludes = [
   // The Rust CLI crate. No Swift sources, but `path: "."` would otherwise walk
   // all of `cli/target` on every build.
   "cli",
+  // The Rust core; its Swift face is the TaktRustCore target.
+  "core",
   "README.md",
   "applogic-support",
   "applogic-tests",
@@ -156,6 +158,8 @@ let appLogicTargetExcludes = [
   // The Rust CLI crate. No Swift sources, but `path: "."` would otherwise walk
   // all of `cli/target` on every build.
   "cli",
+  // The Rust core; its Swift face is the TaktRustCore target.
+  "core",
   "README.md",
   "applogic-tests",
   "build",

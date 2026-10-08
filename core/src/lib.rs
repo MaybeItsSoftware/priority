@@ -9,6 +9,8 @@
 
 uniffi::setup_scaffolding!();
 
+pub mod schema;
+
 /// The version of this crate, as compiled into the library a client loaded.
 ///
 /// The first call across the boundary, and the one a client shows in its
