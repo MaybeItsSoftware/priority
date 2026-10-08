@@ -92,6 +92,7 @@ struct SettingsSyncPane: View {
           Button("Sign in") { signIn(session) }
             .buttonStyle(FocusActionButtonStyle(prominent: true))
             .keyboardShortcut(.defaultAction)
+            .help("Sign in · ↩")
             .disabled(isWorking || email.isEmpty || password.isEmpty)
           Button("Create account") { signUp(session) }
             .buttonStyle(FocusActionButtonStyle())
@@ -273,6 +274,7 @@ struct SettingsSyncPane: View {
             .textContentType(.newPassword)
             .themedTextField()
             .onSubmit { setNewPassword(session) }
+            .help("↩ saves it")
           Button("Save") { setNewPassword(session) }
             .buttonStyle(FocusActionButtonStyle(prominent: true))
             .disabled(isWorking || newPassword.isEmpty)
@@ -399,7 +401,7 @@ struct SyncPhaseText: View {
     case .needsSignIn:
       Label("Signed out — sign in again", systemImage: "exclamationmark.icloud")
         .foregroundStyle(theme.danger)
-        .help("Your sync sign-in has ended on this Mac. Sign in again in Settings → Sync.")
+        .help("Your sync sign-in has ended on this Mac. Sign in again in Settings (⌘,) → Sync.")
     case .syncing:
       Label("Syncing", systemImage: "arrow.triangle.2.circlepath")
     case .failed(let reason):

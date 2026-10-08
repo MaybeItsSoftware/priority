@@ -108,6 +108,7 @@ struct WorkspaceHabitOverlay: View {
       Button("Save") { save() }
         .buttonStyle(.plain)
         .foregroundStyle(theme.primary)
+        .help("Save · ↩")
     }
     .font(theme.bodyFont())
     .padding(.horizontal, theme.space.md)

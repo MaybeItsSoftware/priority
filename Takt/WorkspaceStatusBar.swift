@@ -65,7 +65,8 @@ struct WorkspaceStatusBar: View {
         WorkspacePaneIconButton(
           tab.symbolName, title: tab.title, command: tab.command, isOn: isOn,
           note: tab == .lists
-            ? "Lists (the keyboard is in \(Self.regionTitle(model.keyboardFocusArea)); ⌃Tab moves it on)"
+            ? "Lists (the keyboard is in \(Self.regionTitle(model.keyboardFocusArea)); "
+              + "\(WorkspaceCommandHelpText.firstKey(for: .goCycleRegion)) moves it on)"
             : "Agent — asks before every change"
         ) {
           if isOn { model.hideLeftDock() } else { model.showLeftDock(tab) }
@@ -237,7 +238,8 @@ private struct WorkspaceStatusTrailing: View {
       "Today: time focused, focus points and tasks finished. This week: "
         + "\(WorkspaceDurationText.short(progress.week.seconds)) logged, "
         + "\(WorkspaceDurationText.short(progress.averageSecondsPerDay)) a day, "
-        + "\(progress.week.completed) done. Click for the timeline.")
+        + "\(progress.week.completed) done. "
+        + WorkspaceCommandHelpText.text(for: .goTimeline, note: "Click for the timeline"))
   }
 
   /// The Google Tasks mirror. Silent until it

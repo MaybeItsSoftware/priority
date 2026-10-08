@@ -80,7 +80,8 @@ struct WorkspaceListRowLabel: View {
           .strikethrough(list.completedAt != nil)
           .lineLimit(1)
           .truncationMode(.middle)
-          .help(list.name)
+          // The Inbox has a key of its own from anywhere; say so.
+          .help(list.systemRole == .inbox ? WorkspaceCommandHelpText.text(for: .goInbox, note: list.name) : list.name)
       }
     }
 
@@ -114,6 +115,7 @@ struct WorkspaceRenameField: View {
       .focused($isFocused)
       .onSubmit { commit() }
       .onExitCommand { cancel() }
+      .help("Return renames · Esc cancels")
       .onAppear { isFocused = true }
       .onChange(of: isFocused) { wasFocused, nowFocused in
         if wasFocused && !nowFocused { commit() }

@@ -62,6 +62,7 @@ struct LocalTaskInspector: View {
       .textFieldStyle(.plain)
       .focused($titleIsFocused)
       .onSubmit { model.saveTaskEditor(task) }
+      .help("Task title · ↩ or ⌘S saves")
     if draft.isDirty {
       Text("Unsaved changes").font(theme.captionFont).foregroundStyle(theme.muted)
     }
@@ -111,11 +112,13 @@ struct LocalTaskInspector: View {
           }
           .buttonStyle(FocusActionButtonStyle(prominent: true))
           .focusable()
+          .commandHelp(.taskStartFocus, note: "Add this task to the focus queue")
           Button("Open focus") { model.run(.goFocus) }
             .buttonStyle(.plain)
             .font(theme.captionFont)
             .foregroundStyle(theme.primary)
             .focusable()
+            .commandHelp(.goFocus)
         }
       } else {
         Button { model.startFocus(on: task) } label: {
@@ -141,6 +144,7 @@ struct LocalTaskInspector: View {
         .overlay(
           RoundedRectangle(cornerRadius: theme.controlRadius)
             .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
+        .commandHelp(.taskEditNotes)
     }
   }
 
@@ -151,13 +155,16 @@ struct LocalTaskInspector: View {
       ThemedPicker(
         "Priority", selection: binding(\.priority, fallback: draft.values.priority),
         options: Self.priorityNames.enumerated().map { ThemedPickerOption($0.element, value: $0.offset) }
-      ).focusable()
+      )
+      .focusable()
+      .commandHelp(.motionSetPriority)
       ThemedControlRow("Estimate") {
         TextField(
           "Estimate (minutes)", text: binding(\.estimateMinutes, fallback: draft.values.estimateMinutes),
           prompt: Text("Minutes")
         )
         .themedTextField()
+        .commandHelp(.taskEditEstimate)
       }
       if let seconds = model.taskLoggedSeconds[task.id], seconds > 0 {
         Text(
@@ -200,6 +207,7 @@ struct LocalTaskInspector: View {
                 get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
                 set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }),
               includesTime: true)
+            .commandHelp(.taskEditDue)
           } else if let day = draft.values.dueDate {
             ThemedDateField(
               selection: Binding(
@@ -213,8 +221,10 @@ struct LocalTaskInspector: View {
                     $0.dueAt = nil
                   }
                 }))
+            .commandHelp(.taskEditDue)
           }
       })
+      .commandHelp(.taskDueToday)
       if hasDue {
         Toggle(
           "At a set time",
@@ -240,11 +250,12 @@ struct LocalTaskInspector: View {
           "Repeat", text: binding(\.recurrenceRule, fallback: draft.values.recurrenceRule),
           prompt: Text("Every Monday"))
         .themedTextField()
+        .commandHelp(.taskEditRecurrence)
       }
       Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
         .toggleStyle(.themedSwitch)
         .focusable()
-        .help("Show this ongoing task in Dailies without completing the task itself")
+        .commandHelp(.taskToggleDaily, note: "Show this ongoing task in Dailies without completing the task itself")
     }
   }
 
@@ -254,6 +265,7 @@ struct LocalTaskInspector: View {
       ThemedControlRow("Tags") {
         TextField("Tags", text: binding(\.tags, fallback: draft.values.tags), prompt: Text("Work, launch"))
           .themedTextField()
+          .commandHelp(.taskEditTags)
       }
       ThemedMenu("Move to list", systemImage: "arrow.right", expands: true) {
         ForEach(model.lists.filter { $0.id != task.listId }) { list in
@@ -281,6 +293,7 @@ struct LocalTaskInspector: View {
         .overlay(
           RoundedRectangle(cornerRadius: theme.controlRadius)
             .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
+        .commandHelp(.taskOpenLink, note: "One link per line; the first opens")
     }
   }
 
@@ -305,9 +318,12 @@ struct LocalTaskInspector: View {
         HStack(spacing: theme.space.xs) {
           Button(task.isPromoted == true ? "Unpin from sidebar" : "Pin to sidebar") {
             model.toggleListPromotion(task)
-          }.focusable()
+          }
+          .focusable()
+          .commandHelp(.taskPromoteList)
           Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
             .focusable()
+            .commandHelp(.taskComplete, note: task.status == .open ? "Complete the list" : "Reopen the list")
           Button("Archive list") { model.archiveNestedList(task) }.focusable()
         }
         .buttonStyle(FocusActionButtonStyle())
@@ -322,6 +338,7 @@ struct LocalTaskInspector: View {
       Button("Save") { model.saveTaskEditor(task) }
         .buttonStyle(FocusActionButtonStyle(prominent: draft.isDirty))
         .keyboardShortcut("s", modifiers: .command)
+        .help("Save · ⌘S")
         .disabled(
           !draft.isDirty || draft.isUnavailable || !draft.conflicts.isEmpty
             || draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -414,6 +431,7 @@ private struct ListSettingsEditor: View {
             .themedTextField()
             .focused($nameIsFocused)
             .onSubmit { save() }
+            .help("↩ saves, esc cancels")
         }
         ThemedControlRow("Color (hex)") {
           TextField("Color (hex)", text: $colorHex, prompt: Text("#4F86C6"))
@@ -431,6 +449,7 @@ private struct ListSettingsEditor: View {
           .toggleStyle(.themedSwitch)
           .focusable()
           .disabled(list.isSystemList)
+          .commandHelp(.listArchive, note: "Archive the list")
         if !model.visibleRootCandidates(for: list).isEmpty || visibleRootTaskID != nil {
           ThemedPicker(
             "Show at list root", selection: $visibleRootTaskID, options: visibleRootOptions)
@@ -455,18 +474,23 @@ private struct ListSettingsEditor: View {
         }
         .focusable()
         .disabled(list.isSystemList)
+        .commandHelp(.listDelete, note: "Delete the list")
         Button("Move up") { model.moveListWithinFolder(list, by: -1) }
           .focusable()
+          .commandHelp(.listMoveUp, note: "Move the list up")
         Button("Move down") { model.moveListWithinFolder(list, by: 1) }
           .focusable()
+          .commandHelp(.listMoveDown, note: "Move the list down")
         Spacer()
         Button("Cancel") { dismiss() }
           .focusable()
           .keyboardShortcut(.cancelAction)
+          .help("Cancel · esc")
         Button("Save") { save() }
           .buttonStyle(FocusActionButtonStyle(prominent: true))
           .focusable()
           .keyboardShortcut(.defaultAction)
+          .help("Save · ↩")
           .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       }
       .buttonStyle(FocusActionButtonStyle())
@@ -526,6 +550,7 @@ private struct FolderSettingsEditor: View {
             .themedTextField()
             .focused($nameIsFocused)
             .onSubmit { save() }
+            .help("↩ saves, esc cancels")
         }
         ThemedPicker(
           "Parent folder", selection: $parentFolderID,
@@ -541,18 +566,23 @@ private struct FolderSettingsEditor: View {
           dismiss()
         }
         .focusable()
+        .commandHelp(.listDelete, note: "Delete the folder")
         Button("Move up") { model.moveFolderWithinSiblings(folder, by: -1) }
           .focusable()
+          .commandHelp(.folderMoveUp)
         Button("Move down") { model.moveFolderWithinSiblings(folder, by: 1) }
           .focusable()
+          .commandHelp(.folderMoveDown)
         Spacer()
         Button("Cancel") { dismiss() }
           .focusable()
           .keyboardShortcut(.cancelAction)
+          .help("Cancel · esc")
         Button("Save") { save() }
           .buttonStyle(FocusActionButtonStyle(prominent: true))
           .focusable()
           .keyboardShortcut(.defaultAction)
+          .help("Save · ↩")
           .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       }
       .buttonStyle(FocusActionButtonStyle())

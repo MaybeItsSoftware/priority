@@ -88,9 +88,12 @@ extension SettingsView {
       ) {
         HStack(spacing: theme.space.xs) {
           Button("Reload") { keymap.reload(force: true) }
+            .commandHelp(.windowReloadKeymap)
           Button("Open") { keymap.openFile() }
+            .commandHelp(.windowOpenKeymap)
         }
       }
+      KeyHint(WorkspaceCommandHelpText.firstKey(for: .goKeyboardReference), "Every key the window answers, in the window")
     } header: {
       Text("Window keys")
     }
@@ -139,6 +142,7 @@ extension SettingsView {
       .toggleStyle(.themedSwitch)
       if enabled.wrappedValue {
         HotkeyRecorderField(keyCode: keyCode, modifiers: modifiers)
+          .help("Click, then press a modifier and a key · esc cancels")
           .frame(width: Self.hotkeyRecorderWidth)
           .padding(.vertical, theme.space.xs)
           .themedSurface(theme, fill: theme.raised, radius: theme.controlRadius, stroke: theme.inputBorder)

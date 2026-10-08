@@ -69,6 +69,7 @@ struct DiagnosticsView: View {
       Button("Done") { manager.popoverChrome.showsDiagnostics = false }
         .buttonStyle(FocusActionButtonStyle(prominent: true))
         .keyboardShortcut(.defaultAction)
+        .help("Close diagnostics · ↩")
     }
     .padding(theme.space.md)
   }

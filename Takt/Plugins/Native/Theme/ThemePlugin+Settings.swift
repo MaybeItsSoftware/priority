@@ -108,10 +108,14 @@ struct ThemeSettingsPage: View {
       }
       HStack(spacing: theme.space.xs) {
         Button("Open themes folder") { library.openFolder() }
+          .commandHelp(.windowOpenThemesFolder)
         Button("Duplicate current theme") { library.exportCurrentTheme() }
-          .help("Writes the theme in force to a new file in the themes folder and switches to it, so you can edit a copy")
+          .commandHelp(
+            .windowExportTheme,
+            note: "Writes the theme in force to a new file in the themes folder and switches to it, so you can edit a copy")
         Spacer(minLength: 0)
         Button("Reload") { library.reload(force: true) }
+          .commandHelp(.windowReloadThemes)
       }
       ForEach(library.skipped, id: \.source) { skipped in
         issueRow("\(skipped.source) not loaded: \(skipped.reason)", severity: .error)
@@ -320,6 +324,7 @@ private struct ThemeGalleryCard: View {
       choose()
       return .handled
     }
+    .help("\(name) · ↩ when focused")
     .onHover { isHovering = $0 }
     .accessibilityLabel("\(name) theme")
     .accessibilityAddTraits(isSelected ? .isSelected : [])

@@ -99,12 +99,19 @@ class MenuBarController: NSObject {
     let menu = NSMenu()
     appendSessionItems(to: menu)
     appendDayItems(to: menu)
-    menu.addItem(withTitle: "Quick Add…", action: #selector(menuQuickAdd), keyEquivalent: "")
-      .target = self
-    menu.addItem(withTitle: "Focus Panel", action: #selector(menuFocusPanel), keyEquivalent: "")
-      .target = self
-    menu.addItem(withTitle: "Open Main Window", action: #selector(menuMainWindow), keyEquivalent: "")
-      .target = self
+    let preferences = manager.preferences
+    let quickAdd = menu.addItem(withTitle: "Quick Add…", action: #selector(menuQuickAdd), keyEquivalent: "")
+    quickAdd.target = self
+    quickAdd.toolTip = Self.hotkeyTip(
+      preferences.quickAddHotkeyEnabled, preferences.quickAddHotkeyKeyCode, preferences.quickAddHotkeyModifiers)
+    let focusPanel = menu.addItem(withTitle: "Focus Panel", action: #selector(menuFocusPanel), keyEquivalent: "")
+    focusPanel.target = self
+    focusPanel.toolTip = Self.hotkeyTip(
+      preferences.focusPanelHotkeyEnabled, preferences.focusPanelHotkeyKeyCode, preferences.focusPanelHotkeyModifiers)
+    let mainWindow = menu.addItem(withTitle: "Open Main Window", action: #selector(menuMainWindow), keyEquivalent: "")
+    mainWindow.target = self
+    mainWindow.toolTip = Self.hotkeyTip(
+      preferences.globalHotkeyEnabled, preferences.globalHotkeyKeyCode, preferences.globalHotkeyModifiers)
     menu.addItem(.separator())
     menu.addItem(withTitle: "Preferences…", action: #selector(menuSettings), keyEquivalent: "")
       .target = self
@@ -114,6 +121,17 @@ class MenuBarController: NSObject {
     statusItem.menu = menu
     statusItem.button?.performClick(nil)
     statusItem.menu = nil
+  }
+
+  /// The global hotkey that does what a menu item does, as its tooltip.
+  ///
+  /// Not as the item's key equivalent: that would also make the key answer
+  /// inside the open menu, which is a binding rather than a hint. Nil when
+  /// the hotkey is switched off in Settings, so the menu never names a key
+  /// that does nothing.
+  private static func hotkeyTip(_ enabled: Bool, _ keyCode: Int, _ modifiers: Int) -> String? {
+    guard enabled else { return nil }
+    return "\(HotkeyRecorderField.displayString(keyCode: keyCode, modifiers: modifiers)) from any app"
   }
 
   /// The running block, and the three things you can do to it.

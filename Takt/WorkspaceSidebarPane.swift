@@ -61,6 +61,7 @@ struct WorkspaceSidebarPane: View {
               isCurrent: model.isCurrentSidebarRow(todaySidebarID),
               rowID: "row:today"))
           .accessibilityLabel("Today, across all lists")
+          .commandHelp(.goToday, note: "Today, across all lists")
           Button {
             model.selectEverything()
             model.reportKeyboardFocus(.sidebar)
@@ -80,6 +81,7 @@ struct WorkspaceSidebarPane: View {
               isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
               rowID: "row:everything"))
           .accessibilityLabel("Everything, all lists")
+          .commandHelp(.goEverything, note: "Everything, all lists")
           if let inbox = model.inboxList {
             sidebarListRow(inbox)
             WorkspaceNestedListRows(list: inbox, depth: 1)
@@ -209,7 +211,9 @@ struct WorkspaceSidebarPane: View {
           }
         }
         Button("Rename") { model.beginRenaming(.list(list)) }
+          .commandShortcut(.listRename)
         Button("List settings…") { model.showSettings(for: list) }
+          .commandShortcut(.listSettings)
         Button("New nested list…") {
           model.selectList(list.id)
           model.requestNestedListCreation()
@@ -219,10 +223,14 @@ struct WorkspaceSidebarPane: View {
         if !list.isSystemList {
           Divider()
           Button("Convert to task in Inbox") { model.convertListToTask(list) }
+            .commandShortcut(.taskConvertToList)
           Button(list.completedAt == nil ? "Complete list" : "Reopen list") { model.toggleListCompletion(list) }
+            .commandShortcut(.listComplete)
           Button("Archive") { model.archiveList(list) }
+            .commandShortcut(.listArchive)
           Divider()
           Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
+            .commandShortcut(.listDelete)
         }
       }
   }
@@ -409,7 +417,9 @@ private struct WorkspaceFolderTree: View {
           }
           .contextMenu {
             Button("Rename") { model.beginRenaming(.list(list)) }
+              .commandShortcut(.listRename)
             Button("List settings…") { model.showSettings(for: list) }
+              .commandShortcut(.listSettings)
             Button("New nested list…") {
               model.selectList(list.id)
               model.requestNestedListCreation()
@@ -417,10 +427,14 @@ private struct WorkspaceFolderTree: View {
             if !list.isSystemList {
               Divider()
               Button("Convert to task in Inbox") { model.convertListToTask(list) }
+                .commandShortcut(.taskConvertToList)
               Button(list.completedAt == nil ? "Complete list" : "Reopen list") { model.toggleListCompletion(list) }
+                .commandShortcut(.listComplete)
               Button("Archive") { model.archiveList(list) }
+                .commandShortcut(.listArchive)
               Divider()
               Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
+                .commandShortcut(.listDelete)
             }
           }
         WorkspaceNestedListRows(list: list, depth: depth + 2)
@@ -451,6 +465,10 @@ private struct WorkspaceFolderTree: View {
             .contentShape(Rectangle())
         }
         .accessibilityLabel(model.isFolderExpanded(folder) ? "Collapse folder" : "Expand folder")
+        .help(
+          model.isFolderExpanded(folder)
+            ? WorkspaceCommandHelpText.text(for: .motionSidebarCollapse, note: "Collapse folder")
+            : WorkspaceCommandHelpText.text(for: .motionSidebarExpand, note: "Expand folder"))
         Image(systemName: "folder")
           .frame(width: WorkspaceSidebarMetrics.iconWidth)
         if model.isRenaming(.folder(folder)) {
@@ -493,11 +511,16 @@ private struct WorkspaceFolderTree: View {
         }
         .contextMenu {
           Button("Rename") { model.beginRenaming(.folder(folder)) }
+            .commandShortcut(.listRename)
           Button("Folder settings…") { model.showSettings(for: folder) }
+            .commandShortcut(.listSettings)
           Button("New list in folder") { model.requestCreation(.list, in: folder.id) }
+            .commandShortcut(.listNew)
           Button("New subfolder") { model.requestCreation(.folder, in: folder.id) }
+            .commandShortcut(.folderNew)
           Divider()
           Button("Delete folder", role: .destructive) { model.requestDeletion(of: .folder(folder)) }
+            .commandShortcut(.listDelete)
         }
   }
 }

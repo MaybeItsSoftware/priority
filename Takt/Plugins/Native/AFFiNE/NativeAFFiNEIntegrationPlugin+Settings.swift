@@ -81,6 +81,7 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
       TextField("Path to affine-mcp (optional)", text: $serverCommandPath)
         .themedTextField()
         .onSubmit { plugin.serverCommandPath = serverCommandPath }
+        .help("↩ saves it")
 
       // Priority never handles the AFFiNE password: the helper keeps its own
       // credentials, and saying so is the only way the user knows where to put
@@ -144,6 +145,7 @@ private struct AFFiNEIntegrationPluginSettingsView: View {
       TextField("Document id (optional)", text: $parentDocId)
         .themedTextField()
         .onSubmit { plugin.parentDocId = parentDocId }
+        .help("↩ saves it")
 
       Text("A new checklist document is linked under this one, so it shows in the sidebar.")
         .font(theme.captionFont)

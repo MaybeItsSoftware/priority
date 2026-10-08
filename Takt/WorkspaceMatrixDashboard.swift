@@ -138,6 +138,15 @@ struct WorkspaceMatrixQuadrant: View {
     }
   }
 
+  /// The quadrant's own key, ⌥1 to ⌥4 in the order the catalogue lists them:
+  /// do now, schedule, delegate, eliminate.
+  private var placeHelp: String {
+    let index = importance == 1 ? (urgency == 1 ? 0 : 1) : (urgency == 1 ? 2 : 3)
+    let keys = WorkspaceCommandCatalog.byID[.planMatrixPlace]?.displayKeys ?? []
+    let subject = "Place the selected task in \(title)"
+    return keys.indices.contains(index) ? "\(subject) · \(keys[index])" : subject
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(spacing: theme.space.xs) {
@@ -148,6 +157,7 @@ struct WorkspaceMatrixQuadrant: View {
           .foregroundStyle(theme.dim)
           .monospacedDigit()
       }
+      .help(placeHelp)
       ForEach(tasks) { task in
         WorkspaceMatrixTaskRow(task: task)
           .environment(model)

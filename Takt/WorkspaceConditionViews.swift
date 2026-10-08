@@ -117,6 +117,7 @@ private struct WorkspaceConditionsEditor: View {
         Button("Done") { dismiss() }
           .buttonStyle(FocusActionButtonStyle(prominent: true))
           .keyboardShortcut(.defaultAction)
+          .help("Done · ↩")
       }
     }
     .padding(theme.space.xl)
@@ -173,8 +174,10 @@ struct WorkspaceTaskPlanningEditor: View {
             ThemedDateField(
               selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
               includesTime: true)
+            .commandHelp(.taskEditStart)
           }
       })
+      .commandHelp(.taskEditStart)
       MicroLabel("Conditions")
       if (values.requirementGroups ?? []).isEmpty {
         Text("Anytime, on your laptop").font(theme.captionFont).foregroundStyle(theme.muted)

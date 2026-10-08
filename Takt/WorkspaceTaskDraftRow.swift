@@ -75,9 +75,19 @@ struct WorkspaceTaskDraftRow: View {
       RoundedRectangle(cornerRadius: theme.controlRadius)
         .strokeBorder(theme.focusRing, lineWidth: theme.focusRingWidth)
         .padding(.horizontal, theme.space.xs))
-    .help(TaskCapturePreview.syntaxHint)
+    .help(keysHint)
     .onAppear { focusSoon() }
     .onChange(of: model.taskComposerFocusRequest) { _, _ in focusSoon() }
+  }
+
+  /// The row's own keys, ahead of the capture syntax, in the tooltip rather
+  /// than along the row: a hint line under every draft would be one more row
+  /// in a list of tasks. Tab only means something in the outline.
+  private var keysHint: String {
+    var keys = ["↩ add", "esc close"]
+    if model.viewMode == .outline { keys.append("⇥ ⇧⇥ indent, outdent") }
+    keys.append("↑ ↓ back to the tasks")
+    return "\(keys.joined(separator: " · ")). \(TaskCapturePreview.syntaxHint)"
   }
 
   /// A beat late, so the row is in the window — inside a `List` it is not

@@ -295,8 +295,11 @@ struct ThemedDateField: View {
               selection, toDayOf: Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now)
           }
           Spacer()
+          // The chip style draws no default-button tint, so the tooltip is
+          // what says Return closes it.
           Button("Done") { isPicking = false }
             .keyboardShortcut(.defaultAction)
+            .help("Done · ↩")
         }
         .buttonStyle(FocusChipButtonStyle(isOn: false))
       }

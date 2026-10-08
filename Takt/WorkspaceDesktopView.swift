@@ -203,13 +203,19 @@ struct WorkspaceItemActions: View {
 
   var body: some View {
     Button(task.isList ? "Open list" : "Open subtasks") { model.openItemList(task) }
+    // The menu draws each item's chorded key from the catalogue. Those keys act
+    // on the selected task; in here they act on the row that was clicked.
     Button("Rename…") { model.presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: task, kind: .title))) }
+      .commandShortcut(.taskRename)
     Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
+      .commandShortcut(.taskConvertToList)
     Button("Move to list or folder…") { model.requestMove(task) }
+      .commandShortcut(.taskMove)
     Button("New nested list…") { model.requestNestedListCreation(under: task) }
     if task.isList {
       Button("Move to top level") { model.moveDroppedItem(task.id, toFolderID: nil) }
       Button(task.isPromoted == true ? "Unpin from sidebar" : "Promote to sidebar") { model.toggleListPromotion(task) }
+        .commandShortcut(.taskPromoteList)
       Menu("Choose icon") {
         ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
           Button { model.setNestedListIcon(icon.symbol, for: task) } label: { Label(icon.label, systemImage: icon.symbol) }

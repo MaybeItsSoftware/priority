@@ -92,10 +92,13 @@ struct WorkspaceTaskQuickEditOverlay: View {
         Button("Clear") { save(clear: true) }
           .buttonStyle(.plain)
           .foregroundStyle(theme.muted)
+          // ⌫ only where the calendar has the keyboard; a text field keeps it.
+          .help(isDate ? "Clear · ⌫ on the calendar" : "Clear")
       }
       Button("Save") { save() }
         .buttonStyle(.plain)
         .foregroundStyle(theme.primary)
+        .help("Save · ↩")
     }
     .font(theme.bodyFont())
     .padding(.horizontal, theme.space.md)
@@ -154,6 +157,7 @@ struct WorkspaceTaskQuickEditOverlay: View {
           .foregroundStyle(theme.muted)
           .focusable()
           .accessibilityLabel("Previous month")
+          .help("Previous month · ⇧← on the calendar")
         Spacer()
         Text(date, format: .dateTime.month(.wide).year())
           .font(theme.bodyFont(weight: .medium))
@@ -164,6 +168,7 @@ struct WorkspaceTaskQuickEditOverlay: View {
           .foregroundStyle(theme.muted)
           .focusable()
           .accessibilityLabel("Next month")
+          .help("Next month · ⇧→ on the calendar")
       }
       LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7)) {
         ForEach(0..<7, id: \.self) { index in

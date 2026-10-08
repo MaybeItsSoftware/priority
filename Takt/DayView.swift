@@ -129,7 +129,7 @@ struct DayView: View {
           Label(model.activeFocusSession == nil ? "Focus" : "Back to the block", systemImage: "arrow.up.right")
         }
         .buttonStyle(FocusActionButtonStyle(prominent: model.activeFocusSession == nil))
-        .help("Open the focus panel to pick a task and start it (⌘8)")
+        .commandHelp(.goFocus, note: "Open the focus panel to pick a task and start it")
       }
       if surface.isPanel {
         Button { openInWindow() } label: {
@@ -275,6 +275,10 @@ struct DayView: View {
           activateSelection()
           return .handled
         }
+        // The keys the hint row below has no room for.
+        .help(surface.isPanel
+          ? "⌘⌫ deletes the task you are on, with the field empty · ⌘↵ opens the main window"
+          : "⌘⌫ deletes the task you are on, with the field empty")
     }
     .padding(.horizontal, theme.space.md)
     .padding(.vertical, theme.space.sm)
@@ -606,6 +610,7 @@ struct DayView: View {
       }
       .buttonStyle(FocusActionButtonStyle(prominent: true))
       .focusable(false)
+      .help("Done · ⇥ on the running task, or space with the field empty")
     }
   }
 

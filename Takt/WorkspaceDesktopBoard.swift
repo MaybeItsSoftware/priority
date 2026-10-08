@@ -460,7 +460,11 @@ struct WorkspaceKanbanCard: View {
         .contentShape(Rectangle())
         .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
         .accessibilityLabel("Drag \(task.title)")
-        .help("Drag this card to reorder it or move it to another column")
+        .help(
+          "Drag this card to reorder it or move it to another column. "
+            + "\(WorkspaceCommandHelpText.text(for: .taskMoveUp)); "
+            + "\(WorkspaceCommandHelpText.text(for: .planBoardMoveCardLeft)); "
+            + WorkspaceCommandHelpText.text(for: .planBoardMoveCardRight))
       Button {
         if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
       } label: {
@@ -469,6 +473,7 @@ struct WorkspaceKanbanCard: View {
       }
       .buttonStyle(.plain)
       .focusable()
+      .commandHelp(task.isList ? .planEnterTask : .taskComplete, note: task.isList ? "Open the list" : nil)
       Button(task.title) {
         model.selectTask(task)
         model.reportKeyboardFocus(.tasks)
@@ -493,7 +498,7 @@ struct WorkspaceKanbanCard: View {
         .buttonStyle(.plain)
         .focusable()
         .accessibilityLabel(isTreeCollapsed ? "Show subtasks" : "Hide subtasks")
-        .help(isTreeCollapsed ? "Show subtasks" : "Hide subtasks")
+        .commandHelp(.planToggleFold, note: isTreeCollapsed ? "Show subtasks" : "Hide subtasks")
       }
     }
   }
@@ -540,7 +545,7 @@ struct WorkspaceKanbanCard: View {
           .buttonStyle(.plain)
           .padding(.leading, Self.indentStep(theme))
           .padding(.vertical, theme.space.xxs)
-          .help("Open \(task.title) to see every subtask")
+          .commandHelp(.planEnterTask, note: "Open \(task.title) to see every subtask")
         }
       }
       .padding(.leading, Self.treeInset(theme))
@@ -563,6 +568,7 @@ struct WorkspaceKanbanCard: View {
       .buttonStyle(.plain)
       .accessibilityLabel(
         item.task.isList ? "Open \(item.task.title)" : (isOpen ? "Complete \(item.task.title)" : "Reopen \(item.task.title)"))
+      .commandHelp(item.task.isList ? .planEnterTask : .taskComplete, note: item.task.isList ? "Open the list" : nil)
       Button(item.task.title) {
         model.selectTask(item.task)
         model.reportKeyboardFocus(.tasks)

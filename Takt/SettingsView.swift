@@ -263,6 +263,7 @@ struct SettingsView: View {
             focus = .list
             return .handled
           }
+          .help("↩ opens the first match, ↓ moves to the list")
       }
       .themedControlFrame(expands: true)
       .padding(.horizontal, theme.space.sm)
@@ -347,6 +348,8 @@ struct SettingsView: View {
   ) -> some View {
     let isSelected = navState.destination == destination
     let showsFocus = isSelected && focus == .list
+    // The ⌘1…⌘9 the window's background binds, by the same sidebar order.
+    let shortcut = allDestinations.prefix(9).firstIndex(of: destination).map { "\(title) · ⌘\($0 + 1)" }
     return Button {
       navState.destination = destination
       focus = .list
@@ -372,6 +375,7 @@ struct SettingsView: View {
       .background(WorkspaceSelectionBackground(isSelected: isSelected, hasKeyboard: showsFocus))
     }
     .buttonStyle(.plain)
+    .help(shortcut ?? "")
     .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 

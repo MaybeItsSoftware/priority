@@ -89,7 +89,7 @@ private struct FocusPanelStrip: View {
     .padding(.horizontal, theme.space.lg)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .contentShape(Rectangle())
-    .help("Space finishes · Return adds a task · P pauses · ↓ shows the day · Esc hides")
+    .help("Space finishes · Return adds a task · P pauses · ↓ shows the day · ⌘Return opens the window · Esc hides")
     .focusable()
     .focused($hasKeyboard)
     // The same two keys as everywhere else: Space completes the task, which

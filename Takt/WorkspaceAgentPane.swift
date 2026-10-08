@@ -313,10 +313,14 @@ struct WorkspaceAgentApprovalCard: View {
     switch approval.state {
     case .pending:
       HStack(spacing: theme.space.sm) {
+        // The card's keys answer only while it has the keyboard, which Tab
+        // from the message field gives it.
         Button("Approve", action: approve)
           .buttonStyle(WorkspaceAgentCardButtonStyle(tint: isDestructive ? theme.danger : theme.primary))
+          .help("Approve · ↩, with the card focused (⇥ from the message field)")
         Button("Deny", action: deny)
           .buttonStyle(WorkspaceAgentCardButtonStyle(tint: nil))
+          .help("Deny · esc, with the card focused (⇥ from the message field)")
         Spacer(minLength: 0)
         if isFocused {
           Text("return approves · esc denies")
@@ -420,8 +424,10 @@ struct WorkspaceAgentSetup: View {
             RoundedRectangle(cornerRadius: theme.controlRadius)
               .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
           .onSubmit(usePath)
+          .help("↩ uses this path")
         Button("Use", action: usePath)
           .buttonStyle(WorkspaceAgentCardButtonStyle(tint: nil))
+          .help("Use this path · ↩ in the field")
       }
       if !model.agent.userExecutablePath.isEmpty {
         Text("\(model.agent.userExecutablePath) is not an executable file.")

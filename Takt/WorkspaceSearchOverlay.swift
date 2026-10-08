@@ -36,6 +36,7 @@ struct WorkspaceSearchOverlay: View {
           .toggleStyle(.themedSwitch)
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
+          .help("Include completed · ⌘.")
         Spacer()
       }
       .padding(.horizontal, theme.listGutter)

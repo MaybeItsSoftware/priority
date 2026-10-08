@@ -112,6 +112,8 @@ struct WorkspaceTimelineScreen: View {
         .labelsHidden()
         .datePickerStyle(.field)
         .font(theme.captionFont)
+        // The field's own keys; the day-by-day keys are on the chevrons.
+        .help("The day on screen · ↑ ↓ change the part under the caret")
       WorkspacePaneIconButton("chevron.right", title: "Next day", command: .timelineNextDay) {
         model.moveTimelineDay(by: 1)
       }

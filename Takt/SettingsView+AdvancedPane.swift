@@ -42,6 +42,7 @@ extension SettingsView {
           checkvistManager.popoverChrome.showsDiagnostics = true
           AppDelegate.shared.showMainWindow()
         }
+        .commandHelp(.windowShowDiagnostics)
       }
       SettingsRow(
         "App data",

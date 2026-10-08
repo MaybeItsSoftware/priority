@@ -173,6 +173,7 @@ private struct FontFamilyList: View {
           .onSubmit { choose((highlighted ?? entries.first)?.family) }
           .onKeyPress(.downArrow) { move(1) }
           .onKeyPress(.upArrow) { move(-1) }
+          .help("↑ ↓ moves, ↩ chooses, esc closes")
       }
       .font(theme.bodyFont())
       .padding(theme.space.sm)

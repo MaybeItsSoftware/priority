@@ -12,7 +12,8 @@ import TaktWorkspace
 @MainActor
 final class QuickCapturePanelController: NSObject, NSWindowDelegate {
   private static let width = WorkspaceTitleBarAddField.width + 48
-  private static let height: CGFloat = 56
+  /// The field and, under it, the line of keys that steer it.
+  private static let height: CGFloat = 84
   /// Where it lands: a little above centre, as Spotlight does.
   private static let verticalAnchor: CGFloat = 0.22
 
@@ -116,18 +117,29 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
 }
 
 /// The field on a card of its own: a raised surface and a hairline, no more.
+/// Under it, the keys the field answers (`TitleBarAddTextField`'s
+/// `doCommandBy`): the arrows steer a capture somewhere no tooltip on a
+/// summoned panel would ever be hovered long enough to say.
 private struct QuickCapturePanelView: View {
   @Environment(\.theme) private var theme
 
   var body: some View {
-    WorkspaceTitleBarAddField()
-      .padding(theme.space.md)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(
-        RoundedRectangle(cornerRadius: theme.panelRadius)
-          .fill(theme.raised))
-      .overlay(
-        RoundedRectangle(cornerRadius: theme.panelRadius)
-          .strokeBorder(theme.border, lineWidth: theme.hairline))
+    VStack(alignment: .leading, spacing: theme.space.sm) {
+      WorkspaceTitleBarAddField()
+      HStack(spacing: theme.space.md) {
+        KeyHint("↩", "Add")
+        KeyHint("esc", "Cancel")
+        KeyHint("↑ ↓", "List")
+        KeyHint("← →", "Day")
+      }
+    }
+    .padding(theme.space.md)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(
+      RoundedRectangle(cornerRadius: theme.panelRadius)
+        .fill(theme.raised))
+    .overlay(
+      RoundedRectangle(cornerRadius: theme.panelRadius)
+        .strokeBorder(theme.border, lineWidth: theme.hairline))
   }
 }

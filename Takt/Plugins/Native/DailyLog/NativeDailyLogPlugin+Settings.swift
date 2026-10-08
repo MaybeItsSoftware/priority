@@ -183,6 +183,7 @@ private struct DailyLogPluginSettingsView: View {
             // someone just typed for reaching at the mouse is the wrong
             // default. An empty or unchanged draft commits to nothing.
             .onSubmit { commitTitleDraft(for: daily) }
+            .help("↩ renames it")
             .onChange(of: focusedTitleField) { previous, _ in
               if let previous, previous == daily.id { commitTitleDraft(for: daily) }
             }

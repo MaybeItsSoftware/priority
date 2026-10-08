@@ -73,6 +73,7 @@ struct WorkspaceWaitingOverlay: View {
       Button("Save") { save() }
         .buttonStyle(.plain)
         .foregroundStyle(theme.primary)
+        .help("Save · ↩")
     }
     .font(theme.bodyFont())
     .padding(.horizontal, theme.space.md)
@@ -204,6 +205,7 @@ struct WorkspaceWaitingInspectorSection: View {
             .themedTextField()
             .focused($tagFocused)
             .onSubmit { saveTag() }
+            .help("↩ saves")
             .onChange(of: tagFocused) { _, focused in if !focused { saveTag() } }
         }
         ThemedOptionalRow(
@@ -216,6 +218,7 @@ struct WorkspaceWaitingInspectorSection: View {
                 selection: Binding(get: { at }, set: { save(followUpAt: $0) }), includesTime: true)
             }
           })
+        .commandHelp(.taskWaiting, note: "Edit who and when to follow up in the Waiting on form")
       } else {
         Button { model.presentWaitingForm() } label: {
           Label("Waiting on…", systemImage: "hourglass")

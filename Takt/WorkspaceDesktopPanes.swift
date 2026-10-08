@@ -156,6 +156,7 @@ struct WorkspaceOutlineRow: View {
       }
       .buttonStyle(.plain)
       .focusable()
+      .commandHelp(item.task.isList ? .planEnterTask : .taskComplete, note: item.task.isList ? "Open the list" : nil)
       // In the space left of the glyph — the gutter, or the indent — so a row
       // with subtasks takes no more width than one without, and the guides
       // still hang from the glyphs.
@@ -189,7 +190,9 @@ struct WorkspaceOutlineRow: View {
           .multilineTextAlignment(.leading)
           .expandsWhenSelected(isSelected)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .help(item.task.title)
+          // Selected, the row shows its whole title already, and a second
+          // click renames — so the tooltip says how to do that from the keys.
+          .help(isSelected ? WorkspaceCommandHelpText.text(for: .taskRename) : item.task.title)
           .strikethrough(item.task.status != .open)
           .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
       }
@@ -300,7 +303,7 @@ struct WorkspaceTaskTitleField: View {
         .focused($isFocused)
         .onSubmit { commit() }
         .onExitCommand { cancel() }
-        .help(TaskCapturePreview.syntaxHint)
+        .help("\(TaskCapturePreview.syntaxHint) Return saves · Esc cancels")
       if capture.hasDetails {
         TaskCapturePreview(capture: capture)
       }
