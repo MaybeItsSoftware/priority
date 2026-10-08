@@ -664,6 +664,10 @@ pub fn set_status(
 /// subtask does not write its next occurrence — its parent is closed, so the
 /// occurrence would only be hidden under it — but its habits end, since the
 /// task they were made of has.
+///
+/// Lists are the exception, both ways. Closing a list hides what is in it
+/// without finishing it, so the cascade neither starts at a list nor walks
+/// into one nested in the branch.
 fn close_open_descendants(
     transaction: &Transaction,
     task_id: &str,
@@ -671,7 +675,20 @@ fn close_open_descendants(
     now: &str,
     now_ms: i64,
 ) -> Result<(), CoreError> {
-    for id in descendant_ids(transaction, task_id)? {
+    let mut statement = transaction.prepare(
+        "WITH RECURSIVE subtree(id) AS (
+           SELECT id FROM tasks
+           WHERE id = ?1 AND COALESCE(itemKind, 'task') != 'list'
+           UNION
+           SELECT tasks.id FROM tasks JOIN subtree ON tasks.parentTaskId = subtree.id
+           WHERE COALESCE(tasks.itemKind, 'task') != 'list'
+         )
+         SELECT id FROM subtree WHERE id != ?1",
+    )?;
+    let ids: Vec<String> = statement
+        .query_map([task_id], |row| row.get(0))?
+        .collect::<Result<_, _>>()?;
+    for id in ids {
         let closed = transaction.execute(
             "UPDATE tasks SET status = ?1, completedAt = ?2, updatedAt = ?2
              WHERE id = ?3 AND completedAt IS NULL",

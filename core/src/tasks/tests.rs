@@ -541,6 +541,27 @@ fn closing_a_task_closes_its_open_subtree_and_one_undo_reopens_it() {
 }
 
 #[test]
+fn closing_a_list_or_a_branch_holding_one_leaves_what_is_in_the_list_open() {
+    let mut connection = workspace();
+    connection
+        .execute_batch("UPDATE tasks SET itemKind = 'list' WHERE id = 'c'")
+        .unwrap();
+    let now = 1_700_000_000_000;
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "p", "completed", now, "UTC")
+    })
+    .unwrap();
+    assert_eq!(status_of(&connection, "c"), ("open".into(), None));
+    assert_eq!(status_of(&connection, "g"), ("open".into(), None));
+
+    journalled(&mut connection, "Change Status", |tx| {
+        set_status(tx, "c", "completed", now, "UTC")
+    })
+    .unwrap();
+    assert_eq!(status_of(&connection, "g"), ("open".into(), None));
+}
+
+#[test]
 fn closing_a_repeating_task_writes_the_next_one_just_after_it() {
     let mut connection = workspace();
     connection
