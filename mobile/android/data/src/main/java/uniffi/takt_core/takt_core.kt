@@ -691,6 +691,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_condition(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_folder(
@@ -727,9 +729,13 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_before(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_to_folder(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_to_start(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_within_siblings(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_nest_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_outdent_task(
     ): Int
@@ -753,11 +759,21 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_schedule_task(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_board_columns(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_item_kind(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_list_archived(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_list_completed(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_archived(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_promoted(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_status(
     ): Int
@@ -815,6 +831,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_clear_focus_order(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_convert_list_to_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_condition(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_folder(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -851,10 +869,14 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_move_task_before(`ptr`: Long,`id`: RustBuffer.ByValue,`targetId`: RustBuffer.ByValue,`kanbanColumn`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_task_to_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_move_task_to_start(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_move_task_within_siblings(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_nest_list(`ptr`: Long,`id`: RustBuffer.ByValue,`intoListId`: RustBuffer.ByValue,`parentTaskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_outdent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_pin_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,`index`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -877,11 +899,21 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_schedule_task(`ptr`: Long,`id`: RustBuffer.ByValue,`startAtMs`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,`columns`: RustBuffer.ByValue,`movingTaskIds`: RustBuffer.ByValue,`toColumn`: RustBuffer.ByValue,`label`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_item_kind(`ptr`: Long,`id`: RustBuffer.ByValue,`kind`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(`ptr`: Long,`taskIds`: RustBuffer.ByValue,`column`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_list_archived(`ptr`: Long,`id`: RustBuffer.ByValue,`archived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_list_completed(`ptr`: Long,`id`: RustBuffer.ByValue,`completed`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_matrix_position(`ptr`: Long,`id`: RustBuffer.ByValue,`urgency`: RustBuffer.ByValue,`importance`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_nested_list_archived(`ptr`: Long,`id`: RustBuffer.ByValue,`archived`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_nested_list_promoted(`ptr`: Long,`id`: RustBuffer.ByValue,`promoted`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_status(`ptr`: Long,`taskId`: RustBuffer.ByValue,`status`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -1050,6 +1082,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order() and 0xFFFF) != 51024) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task() and 0xFFFF) != 37246) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_condition() and 0xFFFF) != 36493) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1104,10 +1139,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_task_before() and 0xFFFF) != 26716) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_task_to_folder() and 0xFFFF) != 56865) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_task_to_start() and 0xFFFF) != 39003) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_task_within_siblings() and 0xFFFF) != 3701) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_nest_list() and 0xFFFF) != 38763) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_outdent_task() and 0xFFFF) != 3744) {
@@ -1143,13 +1184,28 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_schedule_task() and 0xFFFF) != 28936) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() and 0xFFFF) != 65113) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_item_kind() and 0xFFFF) != 55048) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column() and 0xFFFF) != 29324) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_list_archived() and 0xFFFF) != 35767) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_list_completed() and 0xFFFF) != 2328) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position() and 0xFFFF) != 2656) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_archived() and 0xFFFF) != 51940) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_promoted() and 0xFFFF) != 39960) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_status() and 0xFFFF) != 17278) {
@@ -1615,6 +1671,11 @@ public interface CoreWorkspaceInterface {
     fun `clearFocusOrder`(`nowMs`: kotlin.Long)
     
     /**
+     * Turns a standalone list into a task in the Inbox; returns the task's id.
+     */
+    fun `convertListToTask`(`id`: kotlin.String, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
      * Creates a condition as one "New Condition" step; returns its id.
      */
     fun `createCondition`(`workspaceId`: kotlin.String, `name`: kotlin.String, `isLocation`: kotlin.Boolean, `nowMs`: kotlin.Long): kotlin.String
@@ -1707,6 +1768,11 @@ public interface CoreWorkspaceInterface {
     fun `moveTaskBefore`(`id`: kotlin.String, `targetId`: kotlin.String, `kanbanColumn`: kotlin.String?, `nowMs`: kotlin.Long)
     
     /**
+     * Makes a task a standalone list in a folder (or at the top); returns the list's id.
+     */
+    fun `moveTaskToFolder`(`id`: kotlin.String, `folderId`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
      * Moves a task to the top of its siblings as one "Reorder Task" step.
      */
     fun `moveTaskToStart`(`id`: kotlin.String, `nowMs`: kotlin.Long)
@@ -1715,6 +1781,11 @@ public interface CoreWorkspaceInterface {
      * Moves a task among its siblings as one "Reorder Task" step.
      */
     fun `moveTaskWithinSiblings`(`id`: kotlin.String, `offset`: kotlin.Int, `nowMs`: kotlin.Long)
+    
+    /**
+     * Nests a standalone list inside another list; returns its task's id.
+     */
+    fun `nestList`(`id`: kotlin.String, `intoListId`: kotlin.String, `parentTaskId`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String
     
     /**
      * Outdents a task to follow its parent as one "Outdent Task" step.
@@ -1773,6 +1844,16 @@ public interface CoreWorkspaceInterface {
     fun `scheduleTask`(`id`: kotlin.String, `startAtMs`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String)
     
     /**
+     * Saves a board's columns, moving cards out of a removed one, as one step.
+     */
+    fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Makes an item a task or a nested list.
+     */
+    fun `setItemKind`(`id`: kotlin.String, `kind`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
     fun `setKanbanColumn`(`taskIds`: List<kotlin.String>, `column`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -1783,9 +1864,24 @@ public interface CoreWorkspaceInterface {
     fun `setListArchived`(`id`: kotlin.String, `archived`: kotlin.Boolean, `nowMs`: kotlin.Long)
     
     /**
+     * Completes or reopens a standalone list.
+     */
+    fun `setListCompleted`(`id`: kotlin.String, `completed`: kotlin.Boolean, `nowMs`: kotlin.Long)
+    
+    /**
      * Places a task on the priority matrix as one "Move Task" step.
      */
     fun `setMatrixPosition`(`id`: kotlin.String, `urgency`: kotlin.Long?, `importance`: kotlin.Long?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Archives or restores a nested list.
+     */
+    fun `setNestedListArchived`(`id`: kotlin.String, `archived`: kotlin.Boolean, `nowMs`: kotlin.Long)
+    
+    /**
+     * Pins a nested list to the sidebar, or unpins it.
+     */
+    fun `setNestedListPromoted`(`id`: kotlin.String, `promoted`: kotlin.Boolean, `nowMs`: kotlin.Long)
     
     /**
      * Opens, completes or cancels a task as one "Change Status" step,
@@ -2030,6 +2126,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Turns a standalone list into a task in the Inbox; returns the task's id.
+     */
+    @Throws(CoreException::class)override fun `convertListToTask`(`id`: kotlin.String, `nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_convert_list_to_task(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -2386,6 +2501,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Makes a task a standalone list in a folder (or at the top); returns the list's id.
+     */
+    @Throws(CoreException::class)override fun `moveTaskToFolder`(`id`: kotlin.String, `folderId`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_task_to_folder(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterOptionalString.lower(`folderId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Moves a task to the top of its siblings as one "Reorder Task" step.
      */
     @Throws(CoreException::class)override fun `moveTaskToStart`(`id`: kotlin.String, `nowMs`: kotlin.Long)
@@ -2419,6 +2554,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * Nests a standalone list inside another list; returns its task's id.
+     */
+    @Throws(CoreException::class)override fun `nestList`(`id`: kotlin.String, `intoListId`: kotlin.String, `parentTaskId`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_nest_list(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`intoListId`),
+        FfiConverterOptionalString.lower(`parentTaskId`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -2635,6 +2791,47 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Saves a board's columns, moving cards out of a removed one, as one step.
+     */
+    @Throws(CoreException::class)override fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_board_columns(
+        it,
+        
+        FfiConverterString.lower(`key`),
+        FfiConverterSequenceTypeBoardColumn.lower(`columns`),
+        FfiConverterSequenceString.lower(`movingTaskIds`),
+        FfiConverterOptionalString.lower(`toColumn`),
+        FfiConverterString.lower(`label`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Makes an item a task or a nested list.
+     */
+    @Throws(CoreException::class)override fun `setItemKind`(`id`: kotlin.String, `kind`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_item_kind(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`kind`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
     @Throws(CoreException::class)override fun `setKanbanColumn`(`taskIds`: List<kotlin.String>, `column`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -2673,6 +2870,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Completes or reopens a standalone list.
+     */
+    @Throws(CoreException::class)override fun `setListCompleted`(`id`: kotlin.String, `completed`: kotlin.Boolean, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_list_completed(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterBoolean.lower(`completed`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Places a task on the priority matrix as one "Move Task" step.
      */
     @Throws(CoreException::class)override fun `setMatrixPosition`(`id`: kotlin.String, `urgency`: kotlin.Long?, `importance`: kotlin.Long?, `nowMs`: kotlin.Long)
@@ -2685,6 +2901,44 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`id`),
         FfiConverterOptionalLong.lower(`urgency`),
         FfiConverterOptionalLong.lower(`importance`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Archives or restores a nested list.
+     */
+    @Throws(CoreException::class)override fun `setNestedListArchived`(`id`: kotlin.String, `archived`: kotlin.Boolean, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_nested_list_archived(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterBoolean.lower(`archived`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Pins a nested list to the sidebar, or unpins it.
+     */
+    @Throws(CoreException::class)override fun `setNestedListPromoted`(`id`: kotlin.String, `promoted`: kotlin.Boolean, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_nested_list_promoted(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterBoolean.lower(`promoted`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -2914,6 +3168,47 @@ public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
 
     override fun write(value: CoreWorkspace, buf: ByteBuffer) {
         buf.putLong(lower(value))
+    }
+}
+
+
+
+/**
+ * One column of a board.
+ */
+data class BoardColumn (
+    var `id`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBoardColumn: FfiConverterRustBuffer<BoardColumn> {
+    override fun read(buf: ByteBuffer): BoardColumn {
+        return BoardColumn(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BoardColumn) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`)
+    )
+
+    override fun write(value: BoardColumn, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
     }
 }
 
@@ -4163,6 +4458,34 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer<List<BoardColumn>> {
+    override fun read(buf: ByteBuffer): List<BoardColumn> {
+        val len = buf.getInt()
+        return List<BoardColumn>(len) {
+            FfiConverterTypeBoardColumn.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<BoardColumn>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeBoardColumn.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<BoardColumn>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeBoardColumn.write(it, buf)
         }
     }
 }

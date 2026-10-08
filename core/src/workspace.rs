@@ -13,6 +13,7 @@ use rusqlite::Connection;
 
 use crate::CoreError;
 use crate::conditions;
+use crate::conversions::{self, BoardColumn};
 use crate::dailies::{self, DailyEdit};
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
 use crate::journal::{self, HistoryTarget, UndoStep};
@@ -321,6 +322,128 @@ impl CoreWorkspace {
     ) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Edit Condition", |tx| {
             conditions::save_condition(tx, &id, &name, is_location, is_archived, now_ms)
+        })
+    }
+
+    /// Makes a task a standalone list in a folder (or at the top); returns the list's id.
+    pub fn move_task_to_folder(
+        &self,
+        id: String,
+        folder_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<String, CoreError> {
+        let label = if folder_id.is_none() {
+            "Move Item to Top Level"
+        } else {
+            "Move Item to Folder"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            conversions::move_task_to_folder(tx, &id, folder_id.as_deref(), now_ms)
+        })
+    }
+
+    /// Turns a standalone list into a task in the Inbox; returns the task's id.
+    pub fn convert_list_to_task(&self, id: String, now_ms: i64) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "Convert List to Task", |tx| {
+            conversions::convert_list_to_task(tx, &id, now_ms)
+        })
+    }
+
+    /// Nests a standalone list inside another list; returns its task's id.
+    pub fn nest_list(
+        &self,
+        id: String,
+        into_list_id: String,
+        parent_task_id: Option<String>,
+        now_ms: i64,
+    ) -> Result<String, CoreError> {
+        journal::journalled(&mut self.lock(), "Move List into List", |tx| {
+            conversions::nest_list(tx, &id, &into_list_id, parent_task_id.as_deref(), now_ms)
+        })
+    }
+
+    /// Makes an item a task or a nested list.
+    pub fn set_item_kind(&self, id: String, kind: String, now_ms: i64) -> Result<(), CoreError> {
+        let label = if kind == "list" {
+            "Convert to List"
+        } else {
+            "Convert to Task"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            conversions::set_item_kind(tx, &id, &kind, now_ms)
+        })
+    }
+
+    /// Pins a nested list to the sidebar, or unpins it.
+    pub fn set_nested_list_promoted(
+        &self,
+        id: String,
+        promoted: bool,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        let label = if promoted {
+            "Promote List"
+        } else {
+            "Unpin List"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            conversions::set_nested_list_promoted(tx, &id, promoted, now_ms)
+        })
+    }
+
+    /// Archives or restores a nested list.
+    pub fn set_nested_list_archived(
+        &self,
+        id: String,
+        archived: bool,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        let label = if archived {
+            "Archive Nested List"
+        } else {
+            "Restore Nested List"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            conversions::set_nested_list_archived(tx, &id, archived, now_ms)
+        })
+    }
+
+    /// Completes or reopens a standalone list.
+    pub fn set_list_completed(
+        &self,
+        id: String,
+        completed: bool,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        let label = if completed {
+            "Complete List"
+        } else {
+            "Reopen List"
+        };
+        journal::journalled(&mut self.lock(), label, |tx| {
+            conversions::set_list_completed(tx, &id, completed, now_ms)
+        })
+    }
+
+    /// Saves a board's columns, moving cards out of a removed one, as one step.
+    pub fn set_board_columns(
+        &self,
+        key: String,
+        columns: Vec<BoardColumn>,
+        moving_task_ids: Vec<String>,
+        to_column: Option<String>,
+        label: String,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), &label, |tx| {
+            conversions::set_board_columns(
+                tx,
+                &key,
+                &columns,
+                &moving_task_ids,
+                to_column.as_deref(),
+                now_ms,
+            )
         })
     }
 

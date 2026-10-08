@@ -480,108 +480,37 @@ class WorkspaceRepository(
     // region Lists as tasks (WorkspaceStore+Lists.swift)
 
     /** Turns an item into a standalone list in [folderId] (nil: the top level), keeping its subtree. */
-    suspend fun moveTaskToFolder(id: String, folderId: String?, now: Instant = now()): TaskList =
-        journalledWrite(if (folderId == null) "Move Item to Top Level" else "Move Item to Folder") { db ->
-            val task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            val source = db.list(task.listId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            if (folderId != null) {
-                val folder = db.folder(folderId)
-                if (folder == null || folder.workspaceId != source.workspaceId) fail(WorkspaceStoreError.MISSING_FOLDER)
-            }
-            // Do not extract a transport wrapper and leave a broken source list.
-            if (source.visibleRootTaskId == id) fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-            val destination = TaskList(
-                id = newId(), workspaceId = source.workspaceId, folderId = folderId, name = task.title,
-                colorHex = source.colorHex,
-                sortOrder = db.nextOrder("task_lists", "workspaceId = ? AND folderId IS ?", source.workspaceId, folderId),
-                isArchived = task.isList && task.archivedAt != null, systemRole = null, visibleRootTaskId = task.id,
-                completedAt = if (task.isList && task.status != TaskStatus.OPEN) now else null,
-                createdAt = now, updatedAt = now,
-            )
-            db.insert(destination)
-            moveSubtree(db, db.taskDescendantIDs(id) + id, destination.id, now)
-            val order = db.nextOrder("tasks", "listId = ? AND parentTaskId IS ?", destination.id, null)
-            db.update(
-                task.copy(
-                    listId = destination.id, parentTaskId = null, sortOrder = order, itemKind = WorkspaceItemKind.LIST,
-                    isPromoted = null, archivedAt = null, status = TaskStatus.OPEN, updatedAt = now,
-                ),
-            )
-            destination
-        }
+    suspend fun moveTaskToFolder(id: String, folderId: String?, now: Instant = now()): TaskList {
+        val listId = coreWrite { it.moveTaskToFolder(id, folderId, now.toEpochMilli()) }
+        return database.read { it.list(listId) } ?: fail(WorkspaceStoreError.MISSING_LIST)
+    }
 
     /** A standalone list becomes one task in Inbox, keeping its children, metadata and hierarchy. */
-    suspend fun convertListToTask(id: String, now: Instant = now()): WorkspaceTask =
-        journalledWrite("Convert List to Task") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (list.isSystemList) fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
-            val inbox = inbox(db, list.workspaceId) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            relocateList(db, list, inbox, null, WorkspaceItemKind.TASK, now)
-        }
+    suspend fun convertListToTask(id: String, now: Instant = now()): WorkspaceTask {
+        val taskId = coreWrite { it.convertListToTask(id, now.toEpochMilli()) }
+        return task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
+    }
 
     /** Drops a standalone list into another list as a nested list. */
-    suspend fun nestList(id: String, inListId: String, parentTaskId: String? = null, now: Instant = now()): WorkspaceTask =
-        journalledWrite("Move List into List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            val destination = db.list(inListId) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (list.isSystemList) fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
-            if (id == inListId || list.workspaceId != destination.workspaceId) fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-            val parentId = parentTaskId ?: destination.visibleRootTaskId?.let { rootId ->
-                val roots = db.query("SELECT id FROM tasks WHERE listId = ? AND parentTaskId IS NULL", inListId) {
-                    it.string("id")
-                }
-                if (roots.size == 1 && roots.first() == rootId) rootId else null
-            }
-            if (parentId != null) {
-                val parent = db.task(parentId)
-                if (parent == null || parent.listId != inListId ||
-                    !(parent.isList || parent.id == destination.visibleRootTaskId)
-                ) {
-                    fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-                }
-            }
-            relocateList(db, list, destination, parentId, WorkspaceItemKind.LIST, now)
-        }
+    suspend fun nestList(id: String, inListId: String, parentTaskId: String? = null, now: Instant = now()): WorkspaceTask {
+        val taskId = coreWrite { it.nestList(id, inListId, parentTaskId, now.toEpochMilli()) }
+        return task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
+    }
 
     suspend fun setItemKind(kind: WorkspaceItemKind, id: String, now: Instant = now()) {
-        journalledWrite(if (kind == WorkspaceItemKind.LIST) "Convert to List" else "Convert to Task") { db ->
-            val task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            if ((task.itemKind ?: WorkspaceItemKind.TASK) == kind) return@journalledWrite
-            if ((db.int("SELECT COUNT(*) FROM task_lists WHERE visibleRootTaskId = ?", id) ?: 0) != 0) {
-                fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-            }
-            if ((db.int("SELECT COUNT(*) FROM focus_sessions WHERE activeTaskId = ? AND phase != 'finished'", id) ?: 0) != 0) {
-                fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-            }
-            var updated = task.copy(itemKind = kind, updatedAt = now)
-            if (kind == WorkspaceItemKind.TASK) updated = updated.copy(isPromoted = null, archivedAt = null)
-            db.update(updated)
-        }
+        coreWrite { it.setItemKind(id, kind.raw, now.toEpochMilli()) }
     }
 
     suspend fun setNestedListPromoted(promoted: Boolean, id: String, now: Instant = now()) {
-        journalledWrite(if (promoted) "Promote List" else "Unpin List") { db ->
-            val task = db.task(id)?.takeIf { it.isList } ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if ((task.isPromoted == true) == promoted) return@journalledWrite
-            db.update(task.copy(isPromoted = promoted, updatedAt = now))
-        }
+        coreWrite { it.setNestedListPromoted(id, promoted, now.toEpochMilli()) }
     }
 
     suspend fun setNestedListArchived(archived: Boolean, id: String, now: Instant = now()) {
-        journalledWrite(if (archived) "Archive Nested List" else "Restore Nested List") { db ->
-            val task = db.task(id)?.takeIf { it.isList } ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if ((task.archivedAt != null) == archived) return@journalledWrite
-            db.update(task.copy(archivedAt = if (archived) now else null, updatedAt = now))
-        }
+        coreWrite { it.setNestedListArchived(id, archived, now.toEpochMilli()) }
     }
 
     suspend fun setListCompleted(completed: Boolean, id: String, now: Instant = now()) {
-        journalledWrite(if (completed) "Complete List" else "Reopen List") { db ->
-            val list = db.list(id) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            if (list.isSystemList) fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
-            if ((list.completedAt != null) == completed) return@journalledWrite
-            db.update(list.copy(completedAt = if (completed) now else null, updatedAt = now))
-        }
+        coreWrite { it.setListCompleted(id, completed, now.toEpochMilli()) }
     }
 
     /** Open, doable tasks across the workspace's active lists, or only [limitedTo] in that order. */
@@ -621,7 +550,7 @@ class WorkspaceRepository(
                 .toMap()
         }
 
-    /** A removed column and the cards moved out of it form one undo step. */
+    /** A removed column and the cards moved out of it form one undo step: the Rust core's `conversions::set_board_columns`. */
     suspend fun setKanbanBoardColumns(
         columns: List<WorkspaceKanbanColumn>,
         key: String,
@@ -631,19 +560,8 @@ class WorkspaceRepository(
         now: Instant = now(),
     ) {
         if (columns.isEmpty()) return
-        val json = KanbanColumnsCodec.encode(columns)
-        journalledWrite(label) { db ->
-            for (id in movingTaskIds.distinct()) {
-                db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-                upsertKanbanColumn(db, id, toColumn, now)
-            }
-            db.execute(
-                "INSERT INTO kanban_boards(id, columnsJSON) VALUES (?, ?) " +
-                    "ON CONFLICT(id) DO UPDATE SET columnsJSON = excluded.columnsJSON " +
-                    "WHERE columnsJSON != excluded.columnsJSON",
-                key, json,
-            )
-        }
+        val core = columns.map { uniffi.takt_core.BoardColumn(it.id, it.title) }
+        coreWrite { it.setBoardColumns(key, core, movingTaskIds, toColumn, label, now.toEpochMilli()) }
     }
 
     // endregion

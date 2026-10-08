@@ -117,41 +117,6 @@ internal fun moveSubtree(db: Db, ids: Set<String>, listId: String, now: Instant)
     }
 }
 
-internal fun relocateList(
-    db: Db,
-    list: TaskList,
-    destination: TaskList,
-    parentTaskId: String?,
-    kind: WorkspaceItemKind,
-    now: Instant,
-): WorkspaceTask {
-    val tasks = db.query("SELECT * FROM tasks WHERE listId = ?", list.id) { it.toTask() }
-    val wrapper = tasks.firstOrNull { it.id == list.visibleRootTaskId && it.parentTaskId == null }
-    val base = wrapper ?: WorkspaceTask(
-        id = newId(), listId = destination.id, parentTaskId = parentTaskId, title = list.name, notes = "",
-        status = TaskStatus.OPEN, sortOrder = 0, dueAt = null, estimateSeconds = null, sourceSystem = null,
-        sourceId = null, itemKind = null, isPromoted = null, archivedAt = null, completedAt = null,
-        createdAt = now, updatedAt = now,
-    )
-    val root = base.copy(
-        listId = destination.id, parentTaskId = parentTaskId, title = list.name, itemKind = kind, isPromoted = null,
-        archivedAt = null, status = if (list.completedAt == null) TaskStatus.OPEN else TaskStatus.COMPLETED,
-        completedAt = list.completedAt,
-        sortOrder = db.nextOrder("tasks", "listId = ? AND parentTaskId IS ?", destination.id, parentTaskId),
-        updatedAt = now,
-    )
-    if (wrapper == null) db.insert(root)
-    for (task in tasks) {
-        if (task.id == root.id) continue
-        db.update(
-            task.copy(listId = destination.id, parentTaskId = task.parentTaskId ?: root.id, updatedAt = now),
-        )
-    }
-    if (wrapper != null) db.update(root)
-    db.execute("DELETE FROM task_lists WHERE id = ?", list.id)
-    return root
-}
-
 internal fun upsertKanbanColumn(db: Db, taskId: String, column: String?, now: Instant) {
     db.execute(
         "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt) " +

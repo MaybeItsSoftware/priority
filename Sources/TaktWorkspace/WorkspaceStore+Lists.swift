@@ -1,45 +1,17 @@
 import Foundation
 import GRDB
+import TaktRustCore
 
 extension WorkspaceStore {
   /// Dropping an item onto a folder or the top level makes it a standalone list, retaining
   /// its identity and descendants. Conversion and relocation are one undo step.
   @discardableResult
   public func moveTaskToFolder(id: String, folderId: String?, now: Date = .now) throws -> TaskList {
-    try journalledWrite(folderId == nil ? "Move Item to Top Level" : "Move Item to Folder") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: id),
-        let source = try TaskList.fetchOne(db, key: task.listId) else { throw WorkspaceStoreError.missingTask }
-      if let folderId {
-        guard let folder = try ListFolder.fetchOne(db, key: folderId), folder.workspaceId == source.workspaceId else {
-          throw WorkspaceStoreError.missingFolder
-        }
-      }
-      // Do not extract a transport wrapper and leave a broken source list.
-      guard source.visibleRootTaskId != id else { throw WorkspaceStoreError.invalidTaskMove }
-      let destination = TaskList(id: UUID().uuidString, workspaceId: source.workspaceId, folderId: folderId,
-          name: task.title, colorHex: source.colorHex,
-          sortOrder: try Self.nextOrder(db, table: "task_lists", whereSQL: "workspaceId = ? AND folderId IS ?", arguments: [source.workspaceId, folderId]),
-          isArchived: task.isList && task.archivedAt != nil,
-          visibleRootTaskId: task.id,
-          completedAt: task.isList && task.status != .open ? now : nil,
-          createdAt: now, updatedAt: now)
-      try destination.insert(db)
-      let parentID: String? = nil
-      let ids = try Self.taskDescendantIDs(db, of: id).union([id])
-      let values: [Any] = [destination.id, now] + ids.sorted()
-      guard let arguments = StatementArguments(values) else { throw WorkspaceStoreError.invalidTaskMove }
-      try db.execute(sql: "UPDATE tasks SET listId = ?, updatedAt = ? WHERE id IN (\(ids.map { _ in "?" }.joined(separator: ",")))",
-        arguments: arguments)
-      task.listId = destination.id
-      task.parentTaskId = parentID
-      task.sortOrder = try Self.nextOrder(db, table: "tasks", whereSQL: "listId = ? AND parentTaskId IS ?", arguments: [destination.id, parentID])
-      task.itemKind = .list
-      task.isPromoted = nil
-      task.archivedAt = nil
-      task.status = .open
-      task.updatedAt = now
-      try task.update(db)
-      return destination
+    // The Rust core's `conversions::move_task_to_folder`.
+    let listID = try coreWrite { try core.moveTaskToFolder(id: id, folderId: folderId, nowMs: now.coreMilliseconds) }
+    return try database.read { db in
+      guard let list = try TaskList.fetchOne(db, key: listID) else { throw WorkspaceStoreError.missingList }
+      return list
     }
   }
 
@@ -47,120 +19,43 @@ extension WorkspaceStore {
   /// identities, metadata and hierarchy. The whole operation is one undo step.
   @discardableResult
   public func convertListToTask(id: String, now: Date = .now) throws -> WorkspaceTask {
-    try journalledWrite("Convert List to Task") { db in
-      guard let list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      guard !list.isSystemList else { throw WorkspaceStoreError.systemListIsPermanent }
-      guard let inbox = try TaskList.filter(Column("workspaceId") == list.workspaceId
-        && Column("systemRole") == TaskListRole.inbox.rawValue).fetchOne(db) else {
-        throw WorkspaceStoreError.missingList
-      }
-      return try Self.relocateList(db, list: list, destination: inbox, parentTaskId: nil, kind: .task, now: now)
-    }
+    // The Rust core's `conversions::convert_list_to_task`.
+    let taskID = try coreWrite { try core.convertListToTask(id: id, nowMs: now.coreMilliseconds) }
+    return try fetchTask(taskID)
   }
 
   /// Dragging a standalone list into another list preserves the full contents
   /// as a nested list, rather than merging away the source list's identity.
   @discardableResult
   public func nestList(id: String, inListId: String, parentTaskId: String? = nil, now: Date = .now) throws -> WorkspaceTask {
-    try journalledWrite("Move List into List") { db in
-      guard let list = try TaskList.fetchOne(db, key: id),
-        let destination = try TaskList.fetchOne(db, key: inListId) else { throw WorkspaceStoreError.missingList }
-      guard !list.isSystemList else { throw WorkspaceStoreError.systemListIsPermanent }
-      guard id != inListId, list.workspaceId == destination.workspaceId else { throw WorkspaceStoreError.invalidTaskMove }
-      let parentID = try parentTaskId ?? destination.visibleRootTaskId.flatMap { rootID in
-        // Only use a transport wrapper that still represents the visible root.
-        let roots = try WorkspaceTask.filter(Column("listId") == inListId && Column("parentTaskId") == nil).fetchAll(db)
-        return roots.count == 1 && roots.first?.id == rootID ? rootID : nil
-      }
-      if let parentID {
-        guard let parent = try WorkspaceTask.fetchOne(db, key: parentID), parent.listId == inListId,
-          parent.isList || parent.id == destination.visibleRootTaskId else { throw WorkspaceStoreError.invalidTaskMove }
-      }
-      return try Self.relocateList(db, list: list, destination: destination, parentTaskId: parentID, kind: .list, now: now)
+    // The Rust core's `conversions::nest_list`.
+    let taskID = try coreWrite {
+      try core.nestList(id: id, intoListId: inListId, parentTaskId: parentTaskId, nowMs: now.coreMilliseconds)
     }
+    return try fetchTask(taskID)
   }
 
-  private static func relocateList(_ db: Database, list: TaskList, destination: TaskList,
-                                   parentTaskId: String?, kind: WorkspaceItemKind, now: Date) throws -> WorkspaceTask {
-      let tasks = try WorkspaceTask.filter(Column("listId") == list.id).fetchAll(db)
-      let wrapper = tasks.first { $0.id == list.visibleRootTaskId && $0.parentTaskId == nil }
-      var root = wrapper ?? WorkspaceTask(id: UUID().uuidString, listId: destination.id, parentTaskId: parentTaskId,
-        title: list.name, notes: "", status: .open, sortOrder: 0, dueAt: nil, estimateSeconds: nil,
-        createdAt: now, updatedAt: now)
-      root.listId = destination.id
-      root.parentTaskId = parentTaskId
-      root.title = list.name
-      root.itemKind = kind
-      root.isPromoted = nil
-      root.archivedAt = nil
-      root.status = list.completedAt == nil ? .open : .completed
-      root.completedAt = list.completedAt
-      root.sortOrder = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM tasks WHERE listId = ? AND parentTaskId IS ?", arguments: [destination.id, parentTaskId]) ?? 0
-      root.updatedAt = now
-      if wrapper == nil { try root.insert(db) }
-      for var task in tasks where task.id != root.id {
-        task.listId = destination.id
-        if task.parentTaskId == nil { task.parentTaskId = root.id }
-        task.updatedAt = now
-        try task.update(db)
-      }
-      if wrapper != nil { try root.update(db) }
-      try TaskList.deleteOne(db, key: list.id)
-      return root
+  private func fetchTask(_ id: String) throws -> WorkspaceTask {
+    guard let task = try database.read({ db in try WorkspaceTask.fetchOne(db, key: id) }) else {
+      throw WorkspaceStoreError.missingTask
+    }
+    return task
   }
 
   public func setItemKind(_ kind: WorkspaceItemKind, for id: String, now: Date = .now) throws {
-    try journalledWrite(kind == .list ? "Convert to List" : "Convert to Task") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
-      guard (task.itemKind ?? .task) != kind else { return }
-      // A transport wrapper is already represented by its top-level list.
-      guard try TaskList.filter(Column("visibleRootTaskId") == id).fetchCount(db) == 0 else {
-        throw WorkspaceStoreError.invalidTaskMove
-      }
-      guard try FocusSession.filter(Column("activeTaskId") == id
-        && Column("phase") != FocusSessionPhase.finished.rawValue).fetchCount(db) == 0 else {
-        throw WorkspaceStoreError.invalidTaskMove
-      }
-      task.itemKind = kind
-      if kind == .task { task.isPromoted = nil; task.archivedAt = nil }
-      task.updatedAt = now
-      try task.update(db)
-    }
+    try coreWrite { try core.setItemKind(id: id, kind: kind.rawValue, nowMs: now.coreMilliseconds) }
   }
 
   public func setNestedListPromoted(_ promoted: Bool, id: String, now: Date = .now) throws {
-    try journalledWrite(promoted ? "Promote List" : "Unpin List") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: id), task.isList else {
-        throw WorkspaceStoreError.missingList
-      }
-      guard (task.isPromoted == true) != promoted else { return }
-      task.isPromoted = promoted
-      task.updatedAt = now
-      try task.update(db)
-    }
+    try coreWrite { try core.setNestedListPromoted(id: id, promoted: promoted, nowMs: now.coreMilliseconds) }
   }
 
   public func setNestedListArchived(_ archived: Bool, id: String, now: Date = .now) throws {
-    try journalledWrite(archived ? "Archive Nested List" : "Restore Nested List") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: id), task.isList else {
-        throw WorkspaceStoreError.missingList
-      }
-      guard (task.archivedAt != nil) != archived else { return }
-      task.archivedAt = archived ? now : nil
-      task.updatedAt = now
-      try task.update(db)
-    }
+    try coreWrite { try core.setNestedListArchived(id: id, archived: archived, nowMs: now.coreMilliseconds) }
   }
 
   public func setListCompleted(_ completed: Bool, id: String, now: Date = .now) throws {
-    try journalledWrite(completed ? "Complete List" : "Reopen List") { db in
-      guard var list = try TaskList.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingList }
-      guard !list.isSystemList else { throw WorkspaceStoreError.systemListIsPermanent }
-      guard (list.completedAt != nil) != completed else { return }
-      list.completedAt = completed ? now : nil
-      list.updatedAt = now
-      try list.update(db)
-    }
+    try coreWrite { try core.setListCompleted(id: id, completed: completed, nowMs: now.coreMilliseconds) }
   }
 
   /// Closed/archived containers suppress descendants without altering their status.
@@ -237,22 +132,12 @@ extension WorkspaceStore {
     _ columns: [WorkspaceKanbanColumn], for key: String,
     movingTaskIDs: [String] = [], toColumn: String? = nil, label: String = "Edit Board"
   ) throws {
-    guard !columns.isEmpty else { return }
-    let json = String(decoding: try JSONEncoder().encode(columns), as: UTF8.self)
-    try journalledWrite(label) { db in
-      for id in Set(movingTaskIDs) {
-        guard try WorkspaceTask.fetchOne(db, key: id) != nil else { throw WorkspaceStoreError.missingTask }
-        try db.execute(sql: """
-          INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
-          VALUES (?, '[]', '[]', ?, ?)
-          ON CONFLICT(taskId) DO UPDATE SET kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt
-          """, arguments: [id, toColumn, Date.now])
-      }
-      try db.execute(sql: """
-        INSERT INTO kanban_boards(id, columnsJSON) VALUES (?, ?)
-        ON CONFLICT(id) DO UPDATE SET columnsJSON = excluded.columnsJSON
-        WHERE columnsJSON != excluded.columnsJSON
-        """, arguments: [key, json])
+    // The Rust core's `conversions::set_board_columns`.
+    let core = columns.map { BoardColumn(id: $0.id, title: $0.title) }
+    try coreWrite {
+      try self.core.setBoardColumns(
+        key: key, columns: core, movingTaskIds: movingTaskIDs, toColumn: toColumn, label: label,
+        nowMs: Date.now.coreMilliseconds)
     }
   }
 }

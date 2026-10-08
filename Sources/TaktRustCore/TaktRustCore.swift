@@ -614,6 +614,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func clearFocusOrder(nowMs: Int64) throws 
     
     /**
+     * Turns a standalone list into a task in the Inbox; returns the task's id.
+     */
+    func convertListToTask(id: String, nowMs: Int64) throws  -> String
+    
+    /**
      * Creates a condition as one "New Condition" step; returns its id.
      */
     func createCondition(workspaceId: String, name: String, isLocation: Bool, nowMs: Int64) throws  -> String
@@ -706,6 +711,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func moveTaskBefore(id: String, targetId: String, kanbanColumn: String?, nowMs: Int64) throws 
     
     /**
+     * Makes a task a standalone list in a folder (or at the top); returns the list's id.
+     */
+    func moveTaskToFolder(id: String, folderId: String?, nowMs: Int64) throws  -> String
+    
+    /**
      * Moves a task to the top of its siblings as one "Reorder Task" step.
      */
     func moveTaskToStart(id: String, nowMs: Int64) throws 
@@ -714,6 +724,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Moves a task among its siblings as one "Reorder Task" step.
      */
     func moveTaskWithinSiblings(id: String, offset: Int32, nowMs: Int64) throws 
+    
+    /**
+     * Nests a standalone list inside another list; returns its task's id.
+     */
+    func nestList(id: String, intoListId: String, parentTaskId: String?, nowMs: Int64) throws  -> String
     
     /**
      * Outdents a task to follow its parent as one "Outdent Task" step.
@@ -772,6 +787,16 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func scheduleTask(id: String, startAtMs: Int64?, nowMs: Int64, zone: String) throws 
     
     /**
+     * Saves a board's columns, moving cards out of a removed one, as one step.
+     */
+    func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64) throws 
+    
+    /**
+     * Makes an item a task or a nested list.
+     */
+    func setItemKind(id: String, kind: String, nowMs: Int64) throws 
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
     func setKanbanColumn(taskIds: [String], column: String?, nowMs: Int64) throws 
@@ -782,9 +807,24 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func setListArchived(id: String, archived: Bool, nowMs: Int64) throws 
     
     /**
+     * Completes or reopens a standalone list.
+     */
+    func setListCompleted(id: String, completed: Bool, nowMs: Int64) throws 
+    
+    /**
      * Places a task on the priority matrix as one "Move Task" step.
      */
     func setMatrixPosition(id: String, urgency: Int64?, importance: Int64?, nowMs: Int64) throws 
+    
+    /**
+     * Archives or restores a nested list.
+     */
+    func setNestedListArchived(id: String, archived: Bool, nowMs: Int64) throws 
+    
+    /**
+     * Pins a nested list to the sidebar, or unpins it.
+     */
+    func setNestedListPromoted(id: String, promoted: Bool, nowMs: Int64) throws 
     
     /**
      * Opens, completes or cancels a task as one "Change Status" step,
@@ -967,6 +1007,20 @@ open func clearFocusOrder(nowMs: Int64)throws   {try rustCallWithError(FfiConver
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Turns a standalone list into a task in the Inbox; returns the task's id.
+     */
+open func convertListToTask(id: String, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_convert_list_to_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -1232,6 +1286,21 @@ open func moveTaskBefore(id: String, targetId: String, kanbanColumn: String?, no
 }
     
     /**
+     * Makes a task a standalone list in a folder (or at the top); returns the list's id.
+     */
+open func moveTaskToFolder(id: String, folderId: String?, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_task_to_folder(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterOptionString.lower(folderId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Moves a task to the top of its siblings as one "Reorder Task" step.
      */
 open func moveTaskToStart(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1256,6 +1325,22 @@ open func moveTaskWithinSiblings(id: String, offset: Int32, nowMs: Int64)throws 
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * Nests a standalone list inside another list; returns its task's id.
+     */
+open func nestList(id: String, intoListId: String, parentTaskId: String?, nowMs: Int64)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_nest_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(intoListId),
+        FfiConverterOptionString.lower(parentTaskId),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -1416,6 +1501,37 @@ open func scheduleTask(id: String, startAtMs: Int64?, nowMs: Int64, zone: String
 }
     
     /**
+     * Saves a board's columns, moving cards out of a removed one, as one step.
+     */
+open func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_board_columns(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),
+        FfiConverterSequenceTypeBoardColumn.lower(columns),
+        FfiConverterSequenceString.lower(movingTaskIds),
+        FfiConverterOptionString.lower(toColumn),
+        FfiConverterString.lower(label),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Makes an item a task or a nested list.
+     */
+open func setItemKind(id: String, kind: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_item_kind(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(kind),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Puts tasks in a board column as one "Move Task" step.
      */
 open func setKanbanColumn(taskIds: [String], column: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1444,6 +1560,20 @@ open func setListArchived(id: String, archived: Bool, nowMs: Int64)throws   {try
 }
     
     /**
+     * Completes or reopens a standalone list.
+     */
+open func setListCompleted(id: String, completed: Bool, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_list_completed(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterBool.lower(completed),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Places a task on the priority matrix as one "Move Task" step.
      */
 open func setMatrixPosition(id: String, urgency: Int64?, importance: Int64?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1453,6 +1583,34 @@ open func setMatrixPosition(id: String, urgency: Int64?, importance: Int64?, now
         FfiConverterString.lower(id),
         FfiConverterOptionInt64.lower(urgency),
         FfiConverterOptionInt64.lower(importance),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Archives or restores a nested list.
+     */
+open func setNestedListArchived(id: String, archived: Bool, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_nested_list_archived(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterBool.lower(archived),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Pins a nested list to the sidebar, or unpins it.
+     */
+open func setNestedListPromoted(id: String, promoted: Bool, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_nested_list_promoted(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterBool.lower(promoted),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
@@ -1632,6 +1790,63 @@ public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt6
 }
 
 
+
+
+/**
+ * One column of a board.
+ */
+public struct BoardColumn: Equatable, Hashable {
+    public var id: String
+    public var title: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String) {
+        self.id = id
+        self.title = title
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BoardColumn: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBoardColumn: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BoardColumn {
+        return
+            try BoardColumn(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BoardColumn, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardColumn_lift(_ buf: RustBuffer) throws -> BoardColumn {
+    return try FfiConverterTypeBoardColumn.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardColumn_lower(_ value: BoardColumn) -> RustBuffer {
+    return FfiConverterTypeBoardColumn.lower(value)
+}
 
 
 /**
@@ -2857,6 +3072,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer {
+    typealias SwiftType = [BoardColumn]
+
+    public static func write(_ value: [BoardColumn], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBoardColumn.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [BoardColumn] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [BoardColumn]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBoardColumn.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
     typealias SwiftType = [UndoStep]
 
@@ -2983,6 +3223,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order() != 51024) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task() != 37246) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_create_condition() != 36493) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3037,10 +3280,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_move_task_before() != 26716) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_task_to_folder() != 56865) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_move_task_to_start() != 39003) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_move_task_within_siblings() != 3701) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_nest_list() != 38763) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_outdent_task() != 3744) {
@@ -3076,13 +3325,28 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_schedule_task() != 28936) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() != 65113) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_item_kind() != 55048) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column() != 29324) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_list_archived() != 35767) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_list_completed() != 2328) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_matrix_position() != 2656) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_archived() != 51940) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_nested_list_promoted() != 39960) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_status() != 17278) {
