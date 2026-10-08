@@ -457,7 +457,7 @@ That still works in both respects for as long as the binary it names is on
 disk: the app hands the process to the bundled helper, and the environment
 still beats the file, so those inline credentials are the ones the server uses.
 After the rename, though, that binary is the old `Priority.app`, and
-`scripts/install_local.sh` moves it aside into `build/backup.noindex/` — so set
+`scripts/install_local.sh` removes it — so set
 the client up again from Takt. That regenerates the whole entry in the
 credential-free form above under the name `takt`, and removes the old
 `priority` entry, which the installer recognises as its own by its command

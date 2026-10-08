@@ -18,8 +18,8 @@ BUILD_DIR="$ROOT_DIR/build"
 # known up front. It used to be discovered with
 #     find "$BUILD_DIR" -name "$PRODUCT" -type f -perm +111 | head -n 1
 # which silently launched whatever `find` happened to walk into first — a stale
-# Release build under build/rel/ (left by build_dmg.sh) or a build/backup.noindex/
-# snapshot, both of which sort ahead of build/Debug/. The build would succeed
+# Release build under build/rel/ (left by build_dmg.sh) or a backup snapshot the
+# installer used to keep, both of which sort ahead of build/Debug/. The build would succeed
 # and the *old* app would start, which looks exactly like a change not working.
 APP_PATH="$BUILD_DIR/$CONFIG/$PRODUCT.app"
 BINARY_PATH="$APP_PATH/Contents/MacOS/$PRODUCT"

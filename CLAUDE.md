@@ -200,9 +200,9 @@ working tree.
 ```
 
 This is already the standing instruction in `AGENTS.md`, repeated here because
-that file is not always loaded. It builds Release, backs up the existing
-`/Applications/Takt.app`, replaces it and relaunches (an old
-`/Applications/Priority.app` is moved into `build/backup.noindex/`) — and it is part of
+that file is not always loaded. It builds Release, supersedes
+`/Applications/Takt.app` outright — no backup is kept, and an old
+`/Applications/Priority.app` is removed too — and relaunches. It is part of
 finishing the work, not a step to hand back. A passing `xcodebuild` is not
 completion: what the user actually runs is the installed bundle, and until it
 is replaced every fix is still only a claim. Check the output for
