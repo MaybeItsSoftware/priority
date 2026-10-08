@@ -97,22 +97,21 @@ covered the old copies pass against it.
    on its own connection, the Mac takes in the new `data_version` after each
    `perform`, and Android's `WorkspaceDatabase.coreWrite` announces the
    changed tables itself.
-4. **Task writes. Done 2026-10-08.** Every journalled write except
-   finishing a focus block is in the core, and the Swift store, the Kotlin
-   repository and the CLI call it: `tasks.rs` (create, delete, move, nudge,
-   drop, indent, outdent, board column, matrix, status with the next
-   occurrence), `lists.rs` (folders and lists, their settings sheets),
-   `conversions.rs` (tasks to lists and back, nested-list flags, boards),
-   `editor.rs` (the task editor and planning), `conditions.rs`, `dailies.rs`,
-   `habits.rs` (with `HabitPolicy`), `today.rs` (focus order, planning for
-   today), `waiting.rs` (waiting and follow-ups) and `periodic.rs`
-   (`PeriodicSchedule`). Each takes the caller's transaction, so the CLI
-   journals it under "MCP: "; `CoreWorkspace` journals it for the apps. The
-   apps' own core commits are kept out of their external-change tokens. The
-   generic `journalledWrite` in Swift and Kotlin now wraps only the focus
-   block, which moves with step six because it needs the availability
-   engine.
-5. **The rest of the writes.** Lists, folders, dailies, habits, waiting and conditions went with step four. What is left here: imports, bootstrap and the inbox, and the focus session writes. Then dailies, habits, waiting and conditions, then
+4. **Task writes. Done 2026-10-08.** Every journalled write is in the core,
+   and the Swift store, the Kotlin repository and the CLI call it: `tasks.rs`
+   (create, delete, move, nudge, drop, indent, outdent, board column,
+   matrix, status with the next occurrence), `lists.rs` (folders and lists,
+   their settings sheets), `conversions.rs` (tasks to lists and back,
+   nested-list flags, boards), `editor.rs` (the task editor and planning),
+   `conditions.rs`, `dailies.rs`, `habits.rs` (with `HabitPolicy`),
+   `today.rs` (focus order, planning for today), `waiting.rs` (waiting and
+   follow-ups), `focus.rs` (sessions, with the candidate read and
+   `TaskAvailabilityPolicy`) and `periodic.rs` (`PeriodicSchedule`). Each
+   takes the caller's transaction, so the CLI journals it under "MCP: ";
+   `CoreWorkspace` journals it for the apps. `journalledWrite` is gone from
+   both apps. Their own core commits are kept out of their external-change
+   tokens.
+5. **The rest of the writes.** Lists, folders, dailies, habits, waiting, conditions and focus went with step four. What is left here: bootstrap and the inbox, imports, and themes and preferences. Then dailies, habits, waiting and conditions, then
    focus sessions and points.
 6. **Reads.** Search with FTS, the today and next-up ranking, outline
    folding. These are the hot paths. Benchmark each against the Swift version
