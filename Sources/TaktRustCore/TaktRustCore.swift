@@ -557,6 +557,11 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Deletes a task and its subtree as one "Delete Task" step.
+     */
+    func deleteTask(id: String) throws  -> DeletedTask
+    
+    /**
      * The task and list the next undo (`for_undo`) or redo affects.
      */
     func historyTarget(forUndo: Bool) throws  -> HistoryTarget
@@ -656,6 +661,19 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * Deletes a task and its subtree as one "Delete Task" step.
+     */
+open func deleteTask(id: String)throws  -> DeletedTask  {
+    return try  FfiConverterTypeDeletedTask_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_delete_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
     
     /**
      * The task and list the next undo (`for_undo`) or redo affects.
@@ -778,6 +796,73 @@ public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt6
 }
 
 
+
+
+/**
+ * What [`delete_task`] removed.
+ */
+public struct DeletedTask: Equatable, Hashable {
+    public var id: String
+    public var title: String
+    /**
+     * How many tasks below it went with it.
+     */
+    public var subtasksDeleted: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String, 
+        /**
+         * How many tasks below it went with it.
+         */subtasksDeleted: UInt32) {
+        self.id = id
+        self.title = title
+        self.subtasksDeleted = subtasksDeleted
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DeletedTask: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDeletedTask: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DeletedTask {
+        return
+            try DeletedTask(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                subtasksDeleted: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DeletedTask, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterUInt32.write(value.subtasksDeleted, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeletedTask_lift(_ buf: RustBuffer) throws -> DeletedTask {
+    return try FfiConverterTypeDeletedTask.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeletedTask_lower(_ value: DeletedTask) -> RustBuffer {
+    return FfiConverterTypeDeletedTask.lower(value)
+}
 
 
 /**
@@ -943,6 +1028,8 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case ForeignKeys(identifier: String, count: UInt32
     )
     case NoJournal
+    case MissingTask(id: String
+    )
 
     
 
@@ -980,6 +1067,9 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             count: try FfiConverterUInt32.read(from: &buf)
             )
         case 3: return .NoJournal
+        case 4: return .MissingTask(
+            id: try FfiConverterString.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1006,6 +1096,11 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case .NoJournal:
             writeInt(&buf, Int32(3))
         
+        
+        case let .MissingTask(id):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(id, into: &buf)
+            
         }
     }
 }
@@ -1161,6 +1256,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_delete_task() != 40901) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_history_target() != 25210) {

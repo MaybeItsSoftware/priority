@@ -12,6 +12,7 @@ uniffi::setup_scaffolding!();
 pub mod error;
 pub mod journal;
 pub mod schema;
+pub mod tasks;
 pub mod workspace;
 
 pub use error::CoreError;

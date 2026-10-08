@@ -681,6 +681,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_delete_task(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_redo(
@@ -721,6 +723,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_delete_task(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_redo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -865,6 +869,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_task() and 0xFFFF) != 40901) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_history_target() and 0xFFFF) != 25210) {
@@ -1250,6 +1257,11 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Deletes a task and its subtree as one "Delete Task" step.
+     */
+    fun `deleteTask`(`id`: kotlin.String): DeletedTask
+    
+    /**
      * The task and list the next undo (`for_undo`) or redo affects.
      */
     fun `historyTarget`(`forUndo`: kotlin.Boolean): HistoryTarget
@@ -1386,6 +1398,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * Deletes a task and its subtree as one "Delete Task" step.
+     */
+    @Throws(CoreException::class)override fun `deleteTask`(`id`: kotlin.String): DeletedTask {
+            return FfiConverterTypeDeletedTask.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_delete_task(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
 
     
     /**
@@ -1548,6 +1578,55 @@ public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
 
 
 /**
+ * What [`delete_task`] removed.
+ */
+data class DeletedTask (
+    var `id`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    /**
+     * How many tasks below it went with it.
+     */
+    var `subtasksDeleted`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDeletedTask: FfiConverterRustBuffer<DeletedTask> {
+    override fun read(buf: ByteBuffer): DeletedTask {
+        return DeletedTask(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DeletedTask) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterUInt.allocationSize(value.`subtasksDeleted`)
+    )
+
+    override fun write(value: DeletedTask, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterUInt.write(value.`subtasksDeleted`, buf)
+    }
+}
+
+
+
+/**
  * The task and list the next undo (or redo) affects, so a client can reveal
  * the work that comes back.
  */
@@ -1686,6 +1765,14 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class MissingTask(
+        
+        val `id`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "id=${ `id` }"
+    }
+    
 
     
 
@@ -1713,6 +1800,9 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 FfiConverterUInt.read(buf),
                 )
             3 -> CoreException.NoJournal()
+            4 -> CoreException.MissingTask(
+                FfiConverterString.read(buf),
+                )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -1734,6 +1824,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is CoreException.MissingTask -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`id`)
+            )
         }
     }
 
@@ -1752,6 +1847,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             }
             is CoreException.NoJournal -> {
                 buf.putInt(3)
+                Unit
+            }
+            is CoreException.MissingTask -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`id`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

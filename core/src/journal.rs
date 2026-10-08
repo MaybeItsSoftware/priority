@@ -82,6 +82,22 @@ pub fn finish(transaction: &Transaction, group: &str) -> Result<bool, CoreError>
     Ok(changed)
 }
 
+/// Runs `work` as one undoable step in its own immediate transaction: the
+/// way every write the core owns is made. A failure anywhere rolls back the
+/// rows, the journal entries and the armed `undo_control` together.
+pub fn journalled<T>(
+    connection: &mut Connection,
+    label: &str,
+    work: impl FnOnce(&Transaction) -> Result<T, CoreError>,
+) -> Result<T, CoreError> {
+    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let group = begin(&transaction, label)?;
+    let result = work(&transaction)?;
+    finish(&transaction, &group)?;
+    transaction.commit()?;
+    Ok(result)
+}
+
 /// What undo would take back, phrased for a menu item.
 pub fn undoable_label(connection: &Connection) -> Result<Option<String>, CoreError> {
     Ok(connection

@@ -1,5 +1,6 @@
 package uk.co.maybeitsadam.takt.data.workspace
 
+import uniffi.takt_core.CoreException
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -672,10 +673,12 @@ class WorkspaceRepository(
         }
     }
 
+    /** Deletes a task and its subtree as one undo step: the Rust core's `tasks::delete_task`. */
     suspend fun deleteTask(id: String) {
-        journalledWrite("Delete Task") { db ->
-            db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            db.execute("DELETE FROM tasks WHERE id = ?", id)
+        try {
+            database.coreWrite(CORE_WRITTEN_TABLES) { it.deleteTask(id) }
+        } catch (missing: CoreException.MissingTask) {
+            fail(WorkspaceStoreError.MISSING_TASK)
         }
     }
 
@@ -1643,6 +1646,14 @@ class WorkspaceRepository(
         /** What an undo or redo can change, announced to observers since the core writes on its own connection. */
         private val REPLAYED_TABLES: Set<String> =
             WorkspaceSchema.journalledTables.map { it.first }.toSet() + setOf("change_log", "sync_outbox")
+
+        /**
+         * What a write the core makes can change, cascades included. Every table the
+         * workspace syncs, plus the journal and the outbox: broader than any one write
+         * needs, so an observer may re-read once for nothing, but never misses a change.
+         */
+        private val CORE_WRITTEN_TABLES: Set<String> =
+            WorkspaceSchema.syncedTables.map { it.first }.toSet() + setOf("change_log", "sync_outbox")
 
         /** Opens the workspace database at [path] and wraps it. */
         fun open(path: String, clock: Clock = Clock.systemUTC()): WorkspaceRepository =

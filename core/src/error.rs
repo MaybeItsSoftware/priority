@@ -12,6 +12,8 @@ pub enum CoreError {
     ForeignKeys { identifier: String, count: u32 },
     #[error("The workspace has no undo journal to record into.")]
     NoJournal,
+    #[error("No task with id {id}.")]
+    MissingTask { id: String },
 }
 
 impl From<rusqlite::Error> for CoreError {

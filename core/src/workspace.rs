@@ -13,6 +13,7 @@ use rusqlite::Connection;
 
 use crate::CoreError;
 use crate::journal::{self, HistoryTarget, UndoStep};
+use crate::tasks::{self, DeletedTask};
 
 /// An open workspace database.
 #[derive(uniffi::Object)]
@@ -63,6 +64,13 @@ impl CoreWorkspace {
     /// The task and list the next undo (`for_undo`) or redo affects.
     pub fn history_target(&self, for_undo: bool) -> Result<HistoryTarget, CoreError> {
         journal::history_target(&self.lock(), for_undo)
+    }
+
+    /// Deletes a task and its subtree as one "Delete Task" step.
+    pub fn delete_task(&self, id: String) -> Result<DeletedTask, CoreError> {
+        journal::journalled(&mut self.lock(), "Delete Task", |tx| {
+            tasks::delete_task(tx, &id)
+        })
     }
 }
 

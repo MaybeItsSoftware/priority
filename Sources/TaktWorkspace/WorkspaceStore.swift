@@ -770,10 +770,13 @@ public final class WorkspaceStore: @unchecked Sendable {
     }
   }
 
+  /// Deletes a task and its subtree as one undo step. The write is the Rust
+  /// core's (`tasks::delete_task`), shared with Android and the CLI.
   public func deleteTask(id: String) throws {
-    try journalledWrite("Delete Task") { db in
-      guard try WorkspaceTask.fetchOne(db, key: id) != nil else { throw WorkspaceStoreError.missingTask }
-      try WorkspaceTask.deleteOne(db, key: id)
+    do {
+      _ = try core.deleteTask(id: id)
+    } catch where error.coreFailure == .missingTask(id: id) {
+      throw WorkspaceStoreError.missingTask
     }
   }
 

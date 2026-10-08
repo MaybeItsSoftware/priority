@@ -876,11 +876,13 @@ impl Workspace {
     /// cascade, and all of it comes back on undo.
     pub fn delete_task(&self, task_id: &str) -> Result<Value> {
         self.journalled("Delete Task", |tx, _now| {
-            let task = task_row(tx, task_id)?;
-            let subtasks = descendant_ids(tx, &task.id)?.len();
-            tx.execute("DELETE FROM tasks WHERE id = ?1", [&task.id])
-                .map_err(map_write_error)?;
-            Ok(json!({ "deleted": task.id, "title": task.title, "subtasks_deleted": subtasks }))
+            // The write is the Rust core's, shared with the apps.
+            let deleted = takt_core::tasks::delete_task(tx, task_id).map_err(map_core_error)?;
+            Ok(json!({
+                "deleted": deleted.id,
+                "title": deleted.title,
+                "subtasks_deleted": deleted.subtasks_deleted,
+            }))
         })
     }
 
@@ -1454,6 +1456,7 @@ fn map_core_error(error: takt_core::CoreError) -> ToolError {
         takt_core::CoreError::NoJournal => ToolError::new(
             "The workspace has no undo journal to record into. Open Takt once, then try again.",
         ),
+        missing @ takt_core::CoreError::MissingTask { .. } => ToolError::new(missing.to_string()),
         other => ToolError::new(format!("Workspace write failed: {other}")),
     }
 }
