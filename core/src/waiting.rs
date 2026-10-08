@@ -108,16 +108,14 @@ pub fn set_waiting(
     Ok(())
 }
 
-/// Makes every follow-up that has come due, for one task or all of them, and
-/// returns whether it made any. Not an undo step when run on its own: nobody
-/// asked for it, and undoing it would only have the next pass make it again.
-/// `WorkspaceStore.reconcileWaitingFollowUps` and `makeFollowUp`.
-pub fn make_due_follow_ups(
-    transaction: &Transaction,
+/// The waiting tasks whose follow-up is due and not yet made, each with the
+/// id its follow-up takes. `WaitingFollowUp.dueFollowUp`.
+fn due_follow_ups(
+    connection: &rusqlite::Connection,
     task_id: Option<&str>,
     now_ms: i64,
-) -> Result<bool, CoreError> {
-    let mut statement = transaction.prepare(
+) -> Result<Vec<(WaitingRow, String, i64)>, CoreError> {
+    let mut statement = connection.prepare(
         "SELECT t.id, t.title, t.listId, t.parentTaskId, m.waitingOn, m.waitingFollowUpAt, m.waitingFollowUpTaskId
          FROM task_metadata m JOIN tasks t ON t.id = m.taskId
          WHERE m.waitingFollowUpAt IS NOT NULL AND m.kanbanColumn = ?1 AND t.status = 'open'
@@ -136,8 +134,7 @@ pub fn make_due_follow_ups(
             })
         })?
         .collect::<Result<_, _>>()?;
-    let now = stored(now_ms);
-    let mut made_any = false;
+    let mut due = Vec::new();
     for row in waiting {
         let Some(follow_up_at) = row.follow_up_at.as_deref().and_then(parse_stored) else {
             continue;
@@ -147,9 +144,30 @@ pub fn make_due_follow_ups(
             continue;
         }
         let id = follow_up_task_id(&row.id, at_ms);
-        if row.made.as_deref() == Some(id.as_str()) {
-            continue;
+        if row.made.as_deref() != Some(id.as_str()) {
+            due.push((row, id, at_ms));
         }
+    }
+    Ok(due)
+}
+
+/// Whether any follow-up is due, so a caller can skip the write when not.
+pub fn any_due(connection: &rusqlite::Connection, now_ms: i64) -> Result<bool, CoreError> {
+    Ok(!due_follow_ups(connection, None, now_ms)?.is_empty())
+}
+
+/// Makes every follow-up that has come due, for one task or all of them, and
+/// returns whether it made any. Not an undo step when run on its own: nobody
+/// asked for it, and undoing it would only have the next pass make it again.
+/// `WorkspaceStore.reconcileWaitingFollowUps` and `makeFollowUp`.
+pub fn make_due_follow_ups(
+    transaction: &Transaction,
+    task_id: Option<&str>,
+    now_ms: i64,
+) -> Result<bool, CoreError> {
+    let now = stored(now_ms);
+    let mut made_any = false;
+    for (row, id, at_ms) in due_follow_ups(transaction, task_id, now_ms)? {
         let exists: bool = transaction.query_row(
             "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1)",
             [&id],

@@ -827,7 +827,7 @@ fn hand_off(
     }
 }
 
-fn daily_due(
+pub(crate) fn daily_due(
     connection: &Connection,
     daily_id: &str,
     now_ms: i64,

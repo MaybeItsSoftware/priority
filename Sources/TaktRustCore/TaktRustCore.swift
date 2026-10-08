@@ -605,6 +605,162 @@ fileprivate struct FfiConverterString: FfiConverter {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * The newest session that has not finished.
+     */
+    func activeFocusSession() throws  -> SessionRow?
+    
+    /**
+     * The live dailies in order.
+     */
+    func allDailies() throws  -> [DailyRow]
+    
+    /**
+     * Every metadata row.
+     */
+    func allMetadata() throws  -> [MetadataRow]
+    
+    /**
+     * Tasks completed since `since`, newest first.
+     */
+    func completedTasksSince(sinceMs: Int64, limit: Int64) throws  -> [TaskRow]
+    
+    /**
+     * Where a completion now falls in its day and in a run of days.
+     */
+    func completionContext(nowMs: Int64, zone: String) throws  -> CompletionContext
+    
+    /**
+     * One condition by id.
+     */
+    func condition(id: String) throws  -> ConditionRow?
+    
+    /**
+     * A workspace's conditions, oldest first.
+     */
+    func conditions(workspaceId: String) throws  -> [ConditionRow]
+    
+    /**
+     * One contribution by id.
+     */
+    func contribution(id: String) throws  -> ContributionRow?
+    
+    /**
+     * A daily's contributions on the given days, oldest first.
+     */
+    func contributions(dailyId: String, dayKeys: [String]) throws  -> [ContributionRow]
+    
+    /**
+     * The dailies the local day `day_ms` falls on shows, with their tasks and
+     * that day's contributions.
+     */
+    func dailiesOn(dayMs: Int64, zone: String) throws  -> [DayDaily]
+    
+    /**
+     * One daily by id, archived or not.
+     */
+    func daily(id: String) throws  -> DailyRow?
+    
+    /**
+     * A task's live daily, if it has one.
+     */
+    func dailyForTask(taskId: String) throws  -> DailyRow?
+    
+    /**
+     * One award by id.
+     */
+    func focusAward(id: String) throws  -> AwardRow?
+    
+    /**
+     * Awards in `[from, to)`, newest first.
+     */
+    func focusAwardsBetween(fromMs: Int64, toMs: Int64) throws  -> [AwardRow]
+    
+    /**
+     * Points today, over the last seven days and ever.
+     */
+    func focusPointsSummary(todayMs: Int64, tomorrowMs: Int64, weekStartMs: Int64) throws  -> PointsSummary
+    
+    /**
+     * A session's queue in order, with each task.
+     */
+    func focusQueue(sessionId: String) throws  -> [QueueEntry]
+    
+    /**
+     * One session by id.
+     */
+    func focusSession(id: String) throws  -> SessionRow?
+    
+    /**
+     * Whether any task is pinned in Today's order.
+     */
+    func hasManualFocusOrder() throws  -> Bool
+    
+    /**
+     * Every saved board's columns.
+     */
+    func kanbanBoards() throws  -> [BoardBaseline]
+    
+    /**
+     * Seconds logged per task.
+     */
+    func loggedWork() throws  -> [LoggedWork]
+    
+    /**
+     * A task's metadata row, if it has one.
+     */
+    func metadata(taskId: String) throws  -> MetadataRow?
+    
+    /**
+     * The metadata rows of the given tasks.
+     */
+    func metadataForTasks(taskIds: [String]) throws  -> [MetadataRow]
+    
+    /**
+     * Every preference.
+     */
+    func preferences() throws  -> [PreferenceRow]
+    
+    /**
+     * The newest awards.
+     */
+    func recentFocusAwards(limit: Int64) throws  -> [AwardRow]
+    
+    /**
+     * When tasks were completed in `[from, to)`.
+     */
+    func taskCompletionsBetween(fromMs: Int64, toMs: Int64) throws  -> [Int64]
+    
+    /**
+     * Open and closed task counts.
+     */
+    func taskCounts() throws  -> TaskCounts
+    
+    /**
+     * When tasks were created in `[from, to)`.
+     */
+    func taskCreationsBetween(fromMs: Int64, toMs: Int64) throws  -> [Int64]
+    
+    /**
+     * Tasks closed in `[from, to)`, oldest first.
+     */
+    func tasksClosedBetween(fromMs: Int64, toMs: Int64) throws  -> [TaskRow]
+    
+    /**
+     * The stored themes by id.
+     */
+    func themes() throws  -> [ThemeRow]
+    
+    /**
+     * Work blocks recorded in `[from, to)`.
+     */
+    func workBlocksBetween(fromMs: Int64, toMs: Int64) throws  -> [WorkBlockRow]
+    
+    /**
+     * A task's work blocks, oldest first.
+     */
+    func workBlocksForTask(taskId: String) throws  -> [WorkBlockRow]
+    
+    /**
      * Forgets the outbox entries the server has accepted.
      */
     func acknowledgeSyncChanges(throughSeq: Int64) throws 
@@ -1208,6 +1364,412 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * The newest session that has not finished.
+     */
+open func activeFocusSession()throws  -> SessionRow?  {
+    return try  FfiConverterOptionTypeSessionRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_active_focus_session(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The live dailies in order.
+     */
+open func allDailies()throws  -> [DailyRow]  {
+    return try  FfiConverterSequenceTypeDailyRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_all_dailies(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Every metadata row.
+     */
+open func allMetadata()throws  -> [MetadataRow]  {
+    return try  FfiConverterSequenceTypeMetadataRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_all_metadata(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Tasks completed since `since`, newest first.
+     */
+open func completedTasksSince(sinceMs: Int64, limit: Int64)throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_completed_tasks_since(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(sinceMs),
+        FfiConverterInt64.lower(limit),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Where a completion now falls in its day and in a run of days.
+     */
+open func completionContext(nowMs: Int64, zone: String)throws  -> CompletionContext  {
+    return try  FfiConverterTypeCompletionContext_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_completion_context(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * One condition by id.
+     */
+open func condition(id: String)throws  -> ConditionRow?  {
+    return try  FfiConverterOptionTypeConditionRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_condition(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A workspace's conditions, oldest first.
+     */
+open func conditions(workspaceId: String)throws  -> [ConditionRow]  {
+    return try  FfiConverterSequenceTypeConditionRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_conditions(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * One contribution by id.
+     */
+open func contribution(id: String)throws  -> ContributionRow?  {
+    return try  FfiConverterOptionTypeContributionRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_contribution(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A daily's contributions on the given days, oldest first.
+     */
+open func contributions(dailyId: String, dayKeys: [String])throws  -> [ContributionRow]  {
+    return try  FfiConverterSequenceTypeContributionRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_contributions(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(dailyId),
+        FfiConverterSequenceString.lower(dayKeys),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The dailies the local day `day_ms` falls on shows, with their tasks and
+     * that day's contributions.
+     */
+open func dailiesOn(dayMs: Int64, zone: String)throws  -> [DayDaily]  {
+    return try  FfiConverterSequenceTypeDayDaily.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_dailies_on(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * One daily by id, archived or not.
+     */
+open func daily(id: String)throws  -> DailyRow?  {
+    return try  FfiConverterOptionTypeDailyRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_daily(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A task's live daily, if it has one.
+     */
+open func dailyForTask(taskId: String)throws  -> DailyRow?  {
+    return try  FfiConverterOptionTypeDailyRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_daily_for_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * One award by id.
+     */
+open func focusAward(id: String)throws  -> AwardRow?  {
+    return try  FfiConverterOptionTypeAwardRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_focus_award(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Awards in `[from, to)`, newest first.
+     */
+open func focusAwardsBetween(fromMs: Int64, toMs: Int64)throws  -> [AwardRow]  {
+    return try  FfiConverterSequenceTypeAwardRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_focus_awards_between(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(fromMs),
+        FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Points today, over the last seven days and ever.
+     */
+open func focusPointsSummary(todayMs: Int64, tomorrowMs: Int64, weekStartMs: Int64)throws  -> PointsSummary  {
+    return try  FfiConverterTypePointsSummary_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_focus_points_summary(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(todayMs),
+        FfiConverterInt64.lower(tomorrowMs),
+        FfiConverterInt64.lower(weekStartMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A session's queue in order, with each task.
+     */
+open func focusQueue(sessionId: String)throws  -> [QueueEntry]  {
+    return try  FfiConverterSequenceTypeQueueEntry.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_focus_queue(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(sessionId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * One session by id.
+     */
+open func focusSession(id: String)throws  -> SessionRow?  {
+    return try  FfiConverterOptionTypeSessionRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_focus_session(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Whether any task is pinned in Today's order.
+     */
+open func hasManualFocusOrder()throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_has_manual_focus_order(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Every saved board's columns.
+     */
+open func kanbanBoards()throws  -> [BoardBaseline]  {
+    return try  FfiConverterSequenceTypeBoardBaseline.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_kanban_boards(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Seconds logged per task.
+     */
+open func loggedWork()throws  -> [LoggedWork]  {
+    return try  FfiConverterSequenceTypeLoggedWork.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_logged_work(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A task's metadata row, if it has one.
+     */
+open func metadata(taskId: String)throws  -> MetadataRow?  {
+    return try  FfiConverterOptionTypeMetadataRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_metadata(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The metadata rows of the given tasks.
+     */
+open func metadataForTasks(taskIds: [String])throws  -> [MetadataRow]  {
+    return try  FfiConverterSequenceTypeMetadataRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_metadata_for_tasks(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(taskIds),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Every preference.
+     */
+open func preferences()throws  -> [PreferenceRow]  {
+    return try  FfiConverterSequenceTypePreferenceRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_preferences(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The newest awards.
+     */
+open func recentFocusAwards(limit: Int64)throws  -> [AwardRow]  {
+    return try  FfiConverterSequenceTypeAwardRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_recent_focus_awards(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(limit),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * When tasks were completed in `[from, to)`.
+     */
+open func taskCompletionsBetween(fromMs: Int64, toMs: Int64)throws  -> [Int64]  {
+    return try  FfiConverterSequenceInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_task_completions_between(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(fromMs),
+        FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Open and closed task counts.
+     */
+open func taskCounts()throws  -> TaskCounts  {
+    return try  FfiConverterTypeTaskCounts_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_task_counts(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * When tasks were created in `[from, to)`.
+     */
+open func taskCreationsBetween(fromMs: Int64, toMs: Int64)throws  -> [Int64]  {
+    return try  FfiConverterSequenceInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_task_creations_between(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(fromMs),
+        FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Tasks closed in `[from, to)`, oldest first.
+     */
+open func tasksClosedBetween(fromMs: Int64, toMs: Int64)throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_tasks_closed_between(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(fromMs),
+        FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The stored themes by id.
+     */
+open func themes()throws  -> [ThemeRow]  {
+    return try  FfiConverterSequenceTypeThemeRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_themes(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Work blocks recorded in `[from, to)`.
+     */
+open func workBlocksBetween(fromMs: Int64, toMs: Int64)throws  -> [WorkBlockRow]  {
+    return try  FfiConverterSequenceTypeWorkBlockRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_work_blocks_between(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(fromMs),
+        FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A task's work blocks, oldest first.
+     */
+open func workBlocksForTask(taskId: String)throws  -> [WorkBlockRow]  {
+    return try  FfiConverterSequenceTypeWorkBlockRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_work_blocks_for_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
     
     /**
      * Forgets the outbox entries the server has accepted.
@@ -2746,6 +3308,91 @@ public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt6
 
 
 /**
+ * A row of `focus_awards`. `FocusAward`.
+ */
+public struct AwardRow: Equatable, Hashable {
+    public var id: String
+    public var sessionId: String?
+    public var taskId: String?
+    public var taskTitle: String
+    public var seconds: Int64
+    public var minutes: Double
+    public var multiplier: Double
+    public var points: Double
+    public var awardedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, sessionId: String?, taskId: String?, taskTitle: String, seconds: Int64, minutes: Double, multiplier: Double, points: Double, awardedAtMs: Int64) {
+        self.id = id
+        self.sessionId = sessionId
+        self.taskId = taskId
+        self.taskTitle = taskTitle
+        self.seconds = seconds
+        self.minutes = minutes
+        self.multiplier = multiplier
+        self.points = points
+        self.awardedAtMs = awardedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AwardRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAwardRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AwardRow {
+        return
+            try AwardRow(
+                id: FfiConverterString.read(from: &buf), 
+                sessionId: FfiConverterOptionString.read(from: &buf), 
+                taskId: FfiConverterOptionString.read(from: &buf), 
+                taskTitle: FfiConverterString.read(from: &buf), 
+                seconds: FfiConverterInt64.read(from: &buf), 
+                minutes: FfiConverterDouble.read(from: &buf), 
+                multiplier: FfiConverterDouble.read(from: &buf), 
+                points: FfiConverterDouble.read(from: &buf), 
+                awardedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AwardRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterOptionString.write(value.sessionId, into: &buf)
+        FfiConverterOptionString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.taskTitle, into: &buf)
+        FfiConverterInt64.write(value.seconds, into: &buf)
+        FfiConverterDouble.write(value.minutes, into: &buf)
+        FfiConverterDouble.write(value.multiplier, into: &buf)
+        FfiConverterDouble.write(value.points, into: &buf)
+        FfiConverterInt64.write(value.awardedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAwardRow_lift(_ buf: RustBuffer) throws -> AwardRow {
+    return try FfiConverterTypeAwardRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAwardRow_lower(_ value: AwardRow) -> RustBuffer {
+    return FfiConverterTypeAwardRow.lower(value)
+}
+
+
+/**
  * What finishing a block did. `WorkspaceStore.FocusCompletion`.
  */
 public struct BlockFinished: Equatable, Hashable {
@@ -3129,6 +3776,230 @@ public func FfiConverterTypeCandidate_lower(_ value: Candidate) -> RustBuffer {
 
 
 /**
+ * Where a completion falls in its day and in a run of days.
+ * `WorkspaceStore.CompletionContext`.
+ */
+public struct CompletionContext: Equatable, Hashable {
+    /**
+     * Counting the completion about to happen, so the first of the day is 1.
+     */
+    public var ordinalToday: Int64
+    /**
+     * Days in a row with something finished, today included.
+     */
+    public var streakDays: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Counting the completion about to happen, so the first of the day is 1.
+         */ordinalToday: Int64, 
+        /**
+         * Days in a row with something finished, today included.
+         */streakDays: Int64) {
+        self.ordinalToday = ordinalToday
+        self.streakDays = streakDays
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CompletionContext: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCompletionContext: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CompletionContext {
+        return
+            try CompletionContext(
+                ordinalToday: FfiConverterInt64.read(from: &buf), 
+                streakDays: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CompletionContext, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.ordinalToday, into: &buf)
+        FfiConverterInt64.write(value.streakDays, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCompletionContext_lift(_ buf: RustBuffer) throws -> CompletionContext {
+    return try FfiConverterTypeCompletionContext.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCompletionContext_lower(_ value: CompletionContext) -> RustBuffer {
+    return FfiConverterTypeCompletionContext.lower(value)
+}
+
+
+/**
+ * A row of `task_conditions`. `TaskCondition`.
+ */
+public struct ConditionRow: Equatable, Hashable {
+    public var id: String
+    public var workspaceId: String
+    public var name: String
+    public var isLocation: Bool
+    public var isArchived: Bool
+    public var createdAtMs: Int64
+    public var updatedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, workspaceId: String, name: String, isLocation: Bool, isArchived: Bool, createdAtMs: Int64, updatedAtMs: Int64) {
+        self.id = id
+        self.workspaceId = workspaceId
+        self.name = name
+        self.isLocation = isLocation
+        self.isArchived = isArchived
+        self.createdAtMs = createdAtMs
+        self.updatedAtMs = updatedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ConditionRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConditionRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConditionRow {
+        return
+            try ConditionRow(
+                id: FfiConverterString.read(from: &buf), 
+                workspaceId: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                isLocation: FfiConverterBool.read(from: &buf), 
+                isArchived: FfiConverterBool.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ConditionRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.workspaceId, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterBool.write(value.isLocation, into: &buf)
+        FfiConverterBool.write(value.isArchived, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionRow_lift(_ buf: RustBuffer) throws -> ConditionRow {
+    return try FfiConverterTypeConditionRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConditionRow_lower(_ value: ConditionRow) -> RustBuffer {
+    return FfiConverterTypeConditionRow.lower(value)
+}
+
+
+/**
+ * A row of `daily_contributions`. `DailyContribution`.
+ */
+public struct ContributionRow: Equatable, Hashable {
+    public var id: String
+    public var dailyId: String
+    public var taskId: String
+    public var dayKey: String
+    public var secondsLogged: Int64
+    public var completedAtMs: Int64?
+    public var createdAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, dailyId: String, taskId: String, dayKey: String, secondsLogged: Int64, completedAtMs: Int64?, createdAtMs: Int64) {
+        self.id = id
+        self.dailyId = dailyId
+        self.taskId = taskId
+        self.dayKey = dayKey
+        self.secondsLogged = secondsLogged
+        self.completedAtMs = completedAtMs
+        self.createdAtMs = createdAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ContributionRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeContributionRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ContributionRow {
+        return
+            try ContributionRow(
+                id: FfiConverterString.read(from: &buf), 
+                dailyId: FfiConverterString.read(from: &buf), 
+                taskId: FfiConverterString.read(from: &buf), 
+                dayKey: FfiConverterString.read(from: &buf), 
+                secondsLogged: FfiConverterInt64.read(from: &buf), 
+                completedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ContributionRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.dailyId, into: &buf)
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.dayKey, into: &buf)
+        FfiConverterInt64.write(value.secondsLogged, into: &buf)
+        FfiConverterOptionInt64.write(value.completedAtMs, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeContributionRow_lift(_ buf: RustBuffer) throws -> ContributionRow {
+    return try FfiConverterTypeContributionRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeContributionRow_lower(_ value: ContributionRow) -> RustBuffer {
+    return FfiConverterTypeContributionRow.lower(value)
+}
+
+
+/**
  * A folder or list [`create_folder`] or [`create_list`] made: what a client
  * needs to build its own model of it, beside what it already passed in.
  */
@@ -3281,6 +4152,181 @@ public func FfiConverterTypeDailyEdit_lift(_ buf: RustBuffer) throws -> DailyEdi
 #endif
 public func FfiConverterTypeDailyEdit_lower(_ value: DailyEdit) -> RustBuffer {
     return FfiConverterTypeDailyEdit.lower(value)
+}
+
+
+/**
+ * A row of `dailies`. `WorkspaceDaily`.
+ */
+public struct DailyRow: Equatable, Hashable {
+    public var id: String
+    public var taskId: String
+    public var activeWeekdaysMask: Int64
+    public var intervalDays: Int64?
+    public var intervalAnchorMs: Int64?
+    public var targetSeconds: Int64?
+    public var sortOrder: Int64
+    public var archivedAtMs: Int64?
+    public var legacyDailyId: String?
+    public var createdAtMs: Int64
+    public var updatedAtMs: Int64
+    public var sourceTaskId: String?
+    public var placementColumn: String?
+    public var dropsAtDayEnd: Bool
+    public var expiryRule: String
+    public var expiresAtMs: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, taskId: String, activeWeekdaysMask: Int64, intervalDays: Int64?, intervalAnchorMs: Int64?, targetSeconds: Int64?, sortOrder: Int64, archivedAtMs: Int64?, legacyDailyId: String?, createdAtMs: Int64, updatedAtMs: Int64, sourceTaskId: String?, placementColumn: String?, dropsAtDayEnd: Bool, expiryRule: String, expiresAtMs: Int64?) {
+        self.id = id
+        self.taskId = taskId
+        self.activeWeekdaysMask = activeWeekdaysMask
+        self.intervalDays = intervalDays
+        self.intervalAnchorMs = intervalAnchorMs
+        self.targetSeconds = targetSeconds
+        self.sortOrder = sortOrder
+        self.archivedAtMs = archivedAtMs
+        self.legacyDailyId = legacyDailyId
+        self.createdAtMs = createdAtMs
+        self.updatedAtMs = updatedAtMs
+        self.sourceTaskId = sourceTaskId
+        self.placementColumn = placementColumn
+        self.dropsAtDayEnd = dropsAtDayEnd
+        self.expiryRule = expiryRule
+        self.expiresAtMs = expiresAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DailyRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDailyRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DailyRow {
+        return
+            try DailyRow(
+                id: FfiConverterString.read(from: &buf), 
+                taskId: FfiConverterString.read(from: &buf), 
+                activeWeekdaysMask: FfiConverterInt64.read(from: &buf), 
+                intervalDays: FfiConverterOptionInt64.read(from: &buf), 
+                intervalAnchorMs: FfiConverterOptionInt64.read(from: &buf), 
+                targetSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf), 
+                archivedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                legacyDailyId: FfiConverterOptionString.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf), 
+                sourceTaskId: FfiConverterOptionString.read(from: &buf), 
+                placementColumn: FfiConverterOptionString.read(from: &buf), 
+                dropsAtDayEnd: FfiConverterBool.read(from: &buf), 
+                expiryRule: FfiConverterString.read(from: &buf), 
+                expiresAtMs: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DailyRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterInt64.write(value.activeWeekdaysMask, into: &buf)
+        FfiConverterOptionInt64.write(value.intervalDays, into: &buf)
+        FfiConverterOptionInt64.write(value.intervalAnchorMs, into: &buf)
+        FfiConverterOptionInt64.write(value.targetSeconds, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+        FfiConverterOptionInt64.write(value.archivedAtMs, into: &buf)
+        FfiConverterOptionString.write(value.legacyDailyId, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+        FfiConverterOptionString.write(value.sourceTaskId, into: &buf)
+        FfiConverterOptionString.write(value.placementColumn, into: &buf)
+        FfiConverterBool.write(value.dropsAtDayEnd, into: &buf)
+        FfiConverterString.write(value.expiryRule, into: &buf)
+        FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDailyRow_lift(_ buf: RustBuffer) throws -> DailyRow {
+    return try FfiConverterTypeDailyRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDailyRow_lower(_ value: DailyRow) -> RustBuffer {
+    return FfiConverterTypeDailyRow.lower(value)
+}
+
+
+/**
+ * A daily shown on a day, with its task and that day's contribution.
+ * `DailyItem`.
+ */
+public struct DayDaily: Equatable, Hashable {
+    public var daily: DailyRow
+    public var task: TaskRow
+    public var contribution: ContributionRow?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(daily: DailyRow, task: TaskRow, contribution: ContributionRow?) {
+        self.daily = daily
+        self.task = task
+        self.contribution = contribution
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayDaily: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayDaily: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayDaily {
+        return
+            try DayDaily(
+                daily: FfiConverterTypeDailyRow.read(from: &buf), 
+                task: FfiConverterTypeTaskRow.read(from: &buf), 
+                contribution: FfiConverterOptionTypeContributionRow.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayDaily, into buf: inout [UInt8]) {
+        FfiConverterTypeDailyRow.write(value.daily, into: &buf)
+        FfiConverterTypeTaskRow.write(value.task, into: &buf)
+        FfiConverterOptionTypeContributionRow.write(value.contribution, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayDaily_lift(_ buf: RustBuffer) throws -> DayDaily {
+    return try FfiConverterTypeDayDaily.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayDaily_lower(_ value: DayDaily) -> RustBuffer {
+    return FfiConverterTypeDayDaily.lower(value)
 }
 
 
@@ -4177,6 +5223,63 @@ public func FfiConverterTypeLegacyDailySeed_lower(_ value: LegacyDailySeed) -> R
 
 
 /**
+ * Open tasks in one list.
+ */
+public struct ListCount: Equatable, Hashable {
+    public var listId: String
+    public var `open`: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(listId: String, `open`: Int64) {
+        self.listId = listId
+        self.`open` = `open`
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ListCount: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeListCount: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ListCount {
+        return
+            try ListCount(
+                listId: FfiConverterString.read(from: &buf), 
+                open: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ListCount, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterInt64.write(value.`open`, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeListCount_lift(_ buf: RustBuffer) throws -> ListCount {
+    return try FfiConverterTypeListCount.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeListCount_lower(_ value: ListCount) -> RustBuffer {
+    return FfiConverterTypeListCount.lower(value)
+}
+
+
+/**
  * A row of `task_lists`. `TaskList`.
  */
 public struct ListRow: Equatable, Hashable {
@@ -4432,6 +5535,176 @@ public func FfiConverterTypeLocalSyncState_lift(_ buf: RustBuffer) throws -> Loc
 #endif
 public func FfiConverterTypeLocalSyncState_lower(_ value: LocalSyncState) -> RustBuffer {
     return FfiConverterTypeLocalSyncState.lower(value)
+}
+
+
+/**
+ * Seconds logged against a task, across every block that names it.
+ */
+public struct LoggedWork: Equatable, Hashable {
+    public var taskId: String
+    public var seconds: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, seconds: Int64) {
+        self.taskId = taskId
+        self.seconds = seconds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension LoggedWork: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLoggedWork: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LoggedWork {
+        return
+            try LoggedWork(
+                taskId: FfiConverterString.read(from: &buf), 
+                seconds: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: LoggedWork, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterInt64.write(value.seconds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLoggedWork_lift(_ buf: RustBuffer) throws -> LoggedWork {
+    return try FfiConverterTypeLoggedWork.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLoggedWork_lower(_ value: LoggedWork) -> RustBuffer {
+    return FfiConverterTypeLoggedWork.lower(value)
+}
+
+
+/**
+ * A row of `task_metadata`. `TaskMetadata`.
+ */
+public struct MetadataRow: Equatable, Hashable {
+    public var taskId: String
+    public var priority: Int64?
+    public var startAtMs: Int64?
+    public var tagsJson: String
+    public var recurrenceRule: String?
+    public var matrixUrgency: Int64?
+    public var matrixImportance: Int64?
+    public var kanbanColumn: String?
+    public var externalLinksJson: String
+    public var focusRank: Int64?
+    public var updatedAtMs: Int64
+    public var planningJson: String?
+    public var waitingOn: String?
+    public var waitingFollowUpAtMs: Int64?
+    public var waitingFollowUpTaskId: String?
+    public var followUpOfTaskId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, priority: Int64?, startAtMs: Int64?, tagsJson: String, recurrenceRule: String?, matrixUrgency: Int64?, matrixImportance: Int64?, kanbanColumn: String?, externalLinksJson: String, focusRank: Int64?, updatedAtMs: Int64, planningJson: String?, waitingOn: String?, waitingFollowUpAtMs: Int64?, waitingFollowUpTaskId: String?, followUpOfTaskId: String?) {
+        self.taskId = taskId
+        self.priority = priority
+        self.startAtMs = startAtMs
+        self.tagsJson = tagsJson
+        self.recurrenceRule = recurrenceRule
+        self.matrixUrgency = matrixUrgency
+        self.matrixImportance = matrixImportance
+        self.kanbanColumn = kanbanColumn
+        self.externalLinksJson = externalLinksJson
+        self.focusRank = focusRank
+        self.updatedAtMs = updatedAtMs
+        self.planningJson = planningJson
+        self.waitingOn = waitingOn
+        self.waitingFollowUpAtMs = waitingFollowUpAtMs
+        self.waitingFollowUpTaskId = waitingFollowUpTaskId
+        self.followUpOfTaskId = followUpOfTaskId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MetadataRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMetadataRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MetadataRow {
+        return
+            try MetadataRow(
+                taskId: FfiConverterString.read(from: &buf), 
+                priority: FfiConverterOptionInt64.read(from: &buf), 
+                startAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                tagsJson: FfiConverterString.read(from: &buf), 
+                recurrenceRule: FfiConverterOptionString.read(from: &buf), 
+                matrixUrgency: FfiConverterOptionInt64.read(from: &buf), 
+                matrixImportance: FfiConverterOptionInt64.read(from: &buf), 
+                kanbanColumn: FfiConverterOptionString.read(from: &buf), 
+                externalLinksJson: FfiConverterString.read(from: &buf), 
+                focusRank: FfiConverterOptionInt64.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf), 
+                planningJson: FfiConverterOptionString.read(from: &buf), 
+                waitingOn: FfiConverterOptionString.read(from: &buf), 
+                waitingFollowUpAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                waitingFollowUpTaskId: FfiConverterOptionString.read(from: &buf), 
+                followUpOfTaskId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MetadataRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterOptionInt64.write(value.priority, into: &buf)
+        FfiConverterOptionInt64.write(value.startAtMs, into: &buf)
+        FfiConverterString.write(value.tagsJson, into: &buf)
+        FfiConverterOptionString.write(value.recurrenceRule, into: &buf)
+        FfiConverterOptionInt64.write(value.matrixUrgency, into: &buf)
+        FfiConverterOptionInt64.write(value.matrixImportance, into: &buf)
+        FfiConverterOptionString.write(value.kanbanColumn, into: &buf)
+        FfiConverterString.write(value.externalLinksJson, into: &buf)
+        FfiConverterOptionInt64.write(value.focusRank, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+        FfiConverterOptionString.write(value.planningJson, into: &buf)
+        FfiConverterOptionString.write(value.waitingOn, into: &buf)
+        FfiConverterOptionInt64.write(value.waitingFollowUpAtMs, into: &buf)
+        FfiConverterOptionString.write(value.waitingFollowUpTaskId, into: &buf)
+        FfiConverterOptionString.write(value.followUpOfTaskId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMetadataRow_lift(_ buf: RustBuffer) throws -> MetadataRow {
+    return try FfiConverterTypeMetadataRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMetadataRow_lower(_ value: MetadataRow) -> RustBuffer {
+    return FfiConverterTypeMetadataRow.lower(value)
 }
 
 
@@ -4858,6 +6131,270 @@ public func FfiConverterTypePlanning_lower(_ value: Planning) -> RustBuffer {
 
 
 /**
+ * Focus points over three windows. `FocusPointsSummary`.
+ */
+public struct PointsSummary: Equatable, Hashable {
+    public var today: Double
+    public var last7Days: Double
+    public var allTime: Double
+    public var blocksToday: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(today: Double, last7Days: Double, allTime: Double, blocksToday: Int64) {
+        self.today = today
+        self.last7Days = last7Days
+        self.allTime = allTime
+        self.blocksToday = blocksToday
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PointsSummary: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePointsSummary: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PointsSummary {
+        return
+            try PointsSummary(
+                today: FfiConverterDouble.read(from: &buf), 
+                last7Days: FfiConverterDouble.read(from: &buf), 
+                allTime: FfiConverterDouble.read(from: &buf), 
+                blocksToday: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PointsSummary, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.today, into: &buf)
+        FfiConverterDouble.write(value.last7Days, into: &buf)
+        FfiConverterDouble.write(value.allTime, into: &buf)
+        FfiConverterInt64.write(value.blocksToday, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePointsSummary_lift(_ buf: RustBuffer) throws -> PointsSummary {
+    return try FfiConverterTypePointsSummary.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePointsSummary_lower(_ value: PointsSummary) -> RustBuffer {
+    return FfiConverterTypePointsSummary.lower(value)
+}
+
+
+/**
+ * A row of `preferences`.
+ */
+public struct PreferenceRow: Equatable, Hashable {
+    public var key: String
+    public var value: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(key: String, value: String?) {
+        self.key = key
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PreferenceRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePreferenceRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PreferenceRow {
+        return
+            try PreferenceRow(
+                key: FfiConverterString.read(from: &buf), 
+                value: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PreferenceRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterOptionString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePreferenceRow_lift(_ buf: RustBuffer) throws -> PreferenceRow {
+    return try FfiConverterTypePreferenceRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePreferenceRow_lower(_ value: PreferenceRow) -> RustBuffer {
+    return FfiConverterTypePreferenceRow.lower(value)
+}
+
+
+/**
+ * A queued item with its task. `FocusQueueTask`.
+ */
+public struct QueueEntry: Equatable, Hashable {
+    public var item: QueueItemRow
+    public var task: TaskRow
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(item: QueueItemRow, task: TaskRow) {
+        self.item = item
+        self.task = task
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension QueueEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeQueueEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QueueEntry {
+        return
+            try QueueEntry(
+                item: FfiConverterTypeQueueItemRow.read(from: &buf), 
+                task: FfiConverterTypeTaskRow.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: QueueEntry, into buf: inout [UInt8]) {
+        FfiConverterTypeQueueItemRow.write(value.item, into: &buf)
+        FfiConverterTypeTaskRow.write(value.task, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQueueEntry_lift(_ buf: RustBuffer) throws -> QueueEntry {
+    return try FfiConverterTypeQueueEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQueueEntry_lower(_ value: QueueEntry) -> RustBuffer {
+    return FfiConverterTypeQueueEntry.lower(value)
+}
+
+
+/**
+ * A row of `focus_queue_items`. `FocusQueueItem`.
+ */
+public struct QueueItemRow: Equatable, Hashable {
+    public var id: String
+    public var sessionId: String
+    public var taskId: String
+    public var sortOrder: Int64
+    public var state: String
+    public var plannedSeconds: Int64?
+    public var completedAtMs: Int64?
+    public var skippedAtMs: Int64?
+    public var createdAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, sessionId: String, taskId: String, sortOrder: Int64, state: String, plannedSeconds: Int64?, completedAtMs: Int64?, skippedAtMs: Int64?, createdAtMs: Int64) {
+        self.id = id
+        self.sessionId = sessionId
+        self.taskId = taskId
+        self.sortOrder = sortOrder
+        self.state = state
+        self.plannedSeconds = plannedSeconds
+        self.completedAtMs = completedAtMs
+        self.skippedAtMs = skippedAtMs
+        self.createdAtMs = createdAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension QueueItemRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeQueueItemRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QueueItemRow {
+        return
+            try QueueItemRow(
+                id: FfiConverterString.read(from: &buf), 
+                sessionId: FfiConverterString.read(from: &buf), 
+                taskId: FfiConverterString.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf), 
+                state: FfiConverterString.read(from: &buf), 
+                plannedSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                completedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                skippedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: QueueItemRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.sessionId, into: &buf)
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+        FfiConverterString.write(value.state, into: &buf)
+        FfiConverterOptionInt64.write(value.plannedSeconds, into: &buf)
+        FfiConverterOptionInt64.write(value.completedAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.skippedAtMs, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQueueItemRow_lift(_ buf: RustBuffer) throws -> QueueItemRow {
+    return try FfiConverterTypeQueueItemRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQueueItemRow_lower(_ value: QueueItemRow) -> RustBuffer {
+    return FfiConverterTypeQueueItemRow.lower(value)
+}
+
+
+/**
  * The day's order. `FocusRanking`.
  */
 public struct Ranking: Equatable, Hashable {
@@ -5071,6 +6608,192 @@ public func FfiConverterTypeSearchHit_lower(_ value: SearchHit) -> RustBuffer {
 
 
 /**
+ * A row of `focus_sessions`. `FocusSession`.
+ */
+public struct SessionRow: Equatable, Hashable {
+    public var id: String
+    public var startedAtMs: Int64
+    public var endedAtMs: Int64?
+    /**
+     * "running", "onBreak", "paused" or "finished".
+     */
+    public var phase: String
+    public var activeTaskId: String?
+    public var activeTaskStartedAtMs: Int64
+    public var workDurationSeconds: Int64
+    public var breakDurationSeconds: Int64
+    public var breakEndsAtMs: Int64?
+    public var activeBlockId: String?
+    public var accumulatedSeconds: Int64?
+    public var pausedAtMs: Int64?
+    public var checkpointAtMs: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, startedAtMs: Int64, endedAtMs: Int64?, 
+        /**
+         * "running", "onBreak", "paused" or "finished".
+         */phase: String, activeTaskId: String?, activeTaskStartedAtMs: Int64, workDurationSeconds: Int64, breakDurationSeconds: Int64, breakEndsAtMs: Int64?, activeBlockId: String?, accumulatedSeconds: Int64?, pausedAtMs: Int64?, checkpointAtMs: Int64?) {
+        self.id = id
+        self.startedAtMs = startedAtMs
+        self.endedAtMs = endedAtMs
+        self.phase = phase
+        self.activeTaskId = activeTaskId
+        self.activeTaskStartedAtMs = activeTaskStartedAtMs
+        self.workDurationSeconds = workDurationSeconds
+        self.breakDurationSeconds = breakDurationSeconds
+        self.breakEndsAtMs = breakEndsAtMs
+        self.activeBlockId = activeBlockId
+        self.accumulatedSeconds = accumulatedSeconds
+        self.pausedAtMs = pausedAtMs
+        self.checkpointAtMs = checkpointAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SessionRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSessionRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionRow {
+        return
+            try SessionRow(
+                id: FfiConverterString.read(from: &buf), 
+                startedAtMs: FfiConverterInt64.read(from: &buf), 
+                endedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                phase: FfiConverterString.read(from: &buf), 
+                activeTaskId: FfiConverterOptionString.read(from: &buf), 
+                activeTaskStartedAtMs: FfiConverterInt64.read(from: &buf), 
+                workDurationSeconds: FfiConverterInt64.read(from: &buf), 
+                breakDurationSeconds: FfiConverterInt64.read(from: &buf), 
+                breakEndsAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                activeBlockId: FfiConverterOptionString.read(from: &buf), 
+                accumulatedSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                pausedAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                checkpointAtMs: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SessionRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterInt64.write(value.startedAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.endedAtMs, into: &buf)
+        FfiConverterString.write(value.phase, into: &buf)
+        FfiConverterOptionString.write(value.activeTaskId, into: &buf)
+        FfiConverterInt64.write(value.activeTaskStartedAtMs, into: &buf)
+        FfiConverterInt64.write(value.workDurationSeconds, into: &buf)
+        FfiConverterInt64.write(value.breakDurationSeconds, into: &buf)
+        FfiConverterOptionInt64.write(value.breakEndsAtMs, into: &buf)
+        FfiConverterOptionString.write(value.activeBlockId, into: &buf)
+        FfiConverterOptionInt64.write(value.accumulatedSeconds, into: &buf)
+        FfiConverterOptionInt64.write(value.pausedAtMs, into: &buf)
+        FfiConverterOptionInt64.write(value.checkpointAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSessionRow_lift(_ buf: RustBuffer) throws -> SessionRow {
+    return try FfiConverterTypeSessionRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSessionRow_lower(_ value: SessionRow) -> RustBuffer {
+    return FfiConverterTypeSessionRow.lower(value)
+}
+
+
+/**
+ * Open and closed task counts, for overview screens.
+ */
+public struct TaskCounts: Equatable, Hashable {
+    /**
+     * Open tasks, not lists.
+     */
+    public var `open`: Int64
+    /**
+     * Completed or cancelled tasks, not lists.
+     */
+    public var completed: Int64
+    /**
+     * Open rows per list, lists included, as the sidebar counts them.
+     */
+    public var byList: [ListCount]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Open tasks, not lists.
+         */`open`: Int64, 
+        /**
+         * Completed or cancelled tasks, not lists.
+         */completed: Int64, 
+        /**
+         * Open rows per list, lists included, as the sidebar counts them.
+         */byList: [ListCount]) {
+        self.`open` = `open`
+        self.completed = completed
+        self.byList = byList
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TaskCounts: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTaskCounts: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaskCounts {
+        return
+            try TaskCounts(
+                open: FfiConverterInt64.read(from: &buf), 
+                completed: FfiConverterInt64.read(from: &buf), 
+                byList: FfiConverterSequenceTypeListCount.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TaskCounts, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.`open`, into: &buf)
+        FfiConverterInt64.write(value.completed, into: &buf)
+        FfiConverterSequenceTypeListCount.write(value.byList, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskCounts_lift(_ buf: RustBuffer) throws -> TaskCounts {
+    return try FfiConverterTypeTaskCounts.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskCounts_lower(_ value: TaskCounts) -> RustBuffer {
+    return FfiConverterTypeTaskCounts.lower(value)
+}
+
+
+/**
  * A row of `tasks`. Swift's `WorkspaceTask`, Kotlin's `WorkspaceTask`.
  */
 public struct TaskRow: Equatable, Hashable {
@@ -5200,6 +6923,67 @@ public func FfiConverterTypeTaskRow_lower(_ value: TaskRow) -> RustBuffer {
 
 
 /**
+ * A row of `themes`. `StoredTheme`.
+ */
+public struct ThemeRow: Equatable, Hashable {
+    public var id: String
+    public var json: String
+    public var updatedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, json: String, updatedAtMs: Int64) {
+        self.id = id
+        self.json = json
+        self.updatedAtMs = updatedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ThemeRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeThemeRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ThemeRow {
+        return
+            try ThemeRow(
+                id: FfiConverterString.read(from: &buf), 
+                json: FfiConverterString.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ThemeRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.json, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeThemeRow_lift(_ buf: RustBuffer) throws -> ThemeRow {
+    return try FfiConverterTypeThemeRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeThemeRow_lower(_ value: ThemeRow) -> RustBuffer {
+    return FfiConverterTypeThemeRow.lower(value)
+}
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 public struct UndoStep: Equatable, Hashable {
@@ -5285,6 +7069,83 @@ public func FfiConverterTypeUndoStep_lift(_ buf: RustBuffer) throws -> UndoStep 
 #endif
 public func FfiConverterTypeUndoStep_lower(_ value: UndoStep) -> RustBuffer {
     return FfiConverterTypeUndoStep.lower(value)
+}
+
+
+/**
+ * A row of `focus_work_blocks`. `FocusWorkBlock`.
+ */
+public struct WorkBlockRow: Equatable, Hashable {
+    public var id: String
+    public var sessionId: String?
+    public var taskId: String?
+    public var taskTitle: String
+    public var seconds: Int64
+    public var recordedAtMs: Int64
+    public var originalTaskId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, sessionId: String?, taskId: String?, taskTitle: String, seconds: Int64, recordedAtMs: Int64, originalTaskId: String?) {
+        self.id = id
+        self.sessionId = sessionId
+        self.taskId = taskId
+        self.taskTitle = taskTitle
+        self.seconds = seconds
+        self.recordedAtMs = recordedAtMs
+        self.originalTaskId = originalTaskId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension WorkBlockRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeWorkBlockRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WorkBlockRow {
+        return
+            try WorkBlockRow(
+                id: FfiConverterString.read(from: &buf), 
+                sessionId: FfiConverterOptionString.read(from: &buf), 
+                taskId: FfiConverterOptionString.read(from: &buf), 
+                taskTitle: FfiConverterString.read(from: &buf), 
+                seconds: FfiConverterInt64.read(from: &buf), 
+                recordedAtMs: FfiConverterInt64.read(from: &buf), 
+                originalTaskId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: WorkBlockRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterOptionString.write(value.sessionId, into: &buf)
+        FfiConverterOptionString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.taskTitle, into: &buf)
+        FfiConverterInt64.write(value.seconds, into: &buf)
+        FfiConverterInt64.write(value.recordedAtMs, into: &buf)
+        FfiConverterOptionString.write(value.originalTaskId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWorkBlockRow_lift(_ buf: RustBuffer) throws -> WorkBlockRow {
+    return try FfiConverterTypeWorkBlockRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWorkBlockRow_lower(_ value: WorkBlockRow) -> RustBuffer {
+    return FfiConverterTypeWorkBlockRow.lower(value)
 }
 
 
@@ -5890,6 +7751,102 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeAwardRow: FfiConverterRustBuffer {
+    typealias SwiftType = AwardRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeAwardRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeAwardRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeConditionRow: FfiConverterRustBuffer {
+    typealias SwiftType = ConditionRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeConditionRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeConditionRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeContributionRow: FfiConverterRustBuffer {
+    typealias SwiftType = ContributionRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeContributionRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeContributionRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeDailyRow: FfiConverterRustBuffer {
+    typealias SwiftType = DailyRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeDailyRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeDailyRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeFocusContext: FfiConverterRustBuffer {
     typealias SwiftType = FocusContext?
 
@@ -5986,6 +7943,30 @@ fileprivate struct FfiConverterOptionTypeLocalSyncState: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeMetadataRow: FfiConverterRustBuffer {
+    typealias SwiftType = MetadataRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeMetadataRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeMetadataRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypePlanning: FfiConverterRustBuffer {
     typealias SwiftType = Planning?
 
@@ -6002,6 +7983,30 @@ fileprivate struct FfiConverterOptionTypePlanning: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypePlanning.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeSessionRow: FfiConverterRustBuffer {
+    typealias SwiftType = SessionRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeSessionRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeSessionRow.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -6107,6 +8112,31 @@ fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceInt64: FfiConverterRustBuffer {
+    typealias SwiftType = [Int64]
+
+    public static func write(_ value: [Int64], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterInt64.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Int64] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Int64]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterInt64.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -6124,6 +8154,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeAwardRow: FfiConverterRustBuffer {
+    typealias SwiftType = [AwardRow]
+
+    public static func write(_ value: [AwardRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAwardRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AwardRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AwardRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAwardRow.read(from: &buf))
         }
         return seq
     }
@@ -6232,6 +8287,106 @@ fileprivate struct FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeConditionRow: FfiConverterRustBuffer {
+    typealias SwiftType = [ConditionRow]
+
+    public static func write(_ value: [ConditionRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeConditionRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ConditionRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ConditionRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeConditionRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeContributionRow: FfiConverterRustBuffer {
+    typealias SwiftType = [ContributionRow]
+
+    public static func write(_ value: [ContributionRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeContributionRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ContributionRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ContributionRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeContributionRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeDailyRow: FfiConverterRustBuffer {
+    typealias SwiftType = [DailyRow]
+
+    public static func write(_ value: [DailyRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDailyRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DailyRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DailyRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDailyRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeDayDaily: FfiConverterRustBuffer {
+    typealias SwiftType = [DayDaily]
+
+    public static func write(_ value: [DayDaily], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDayDaily.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DayDaily] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DayDaily]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDayDaily.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer {
     typealias SwiftType = [FolderRow]
 
@@ -6332,6 +8487,31 @@ fileprivate struct FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuff
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeListCount: FfiConverterRustBuffer {
+    typealias SwiftType = [ListCount]
+
+    public static func write(_ value: [ListCount], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeListCount.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ListCount] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ListCount]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeListCount.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeListRow: FfiConverterRustBuffer {
     typealias SwiftType = [ListRow]
 
@@ -6349,6 +8529,56 @@ fileprivate struct FfiConverterSequenceTypeListRow: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeListRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeLoggedWork: FfiConverterRustBuffer {
+    typealias SwiftType = [LoggedWork]
+
+    public static func write(_ value: [LoggedWork], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeLoggedWork.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [LoggedWork] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [LoggedWork]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeLoggedWork.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeMetadataRow: FfiConverterRustBuffer {
+    typealias SwiftType = [MetadataRow]
+
+    public static func write(_ value: [MetadataRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMetadataRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MetadataRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MetadataRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMetadataRow.read(from: &buf))
         }
         return seq
     }
@@ -6399,6 +8629,56 @@ fileprivate struct FfiConverterSequenceTypeOutlineItem: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeOutlineItem.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePreferenceRow: FfiConverterRustBuffer {
+    typealias SwiftType = [PreferenceRow]
+
+    public static func write(_ value: [PreferenceRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePreferenceRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PreferenceRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PreferenceRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePreferenceRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeQueueEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [QueueEntry]
+
+    public static func write(_ value: [QueueEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeQueueEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [QueueEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [QueueEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeQueueEntry.read(from: &buf))
         }
         return seq
     }
@@ -6482,6 +8762,31 @@ fileprivate struct FfiConverterSequenceTypeTaskRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeThemeRow: FfiConverterRustBuffer {
+    typealias SwiftType = [ThemeRow]
+
+    public static func write(_ value: [ThemeRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeThemeRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ThemeRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ThemeRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeThemeRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
     typealias SwiftType = [UndoStep]
 
@@ -6499,6 +8804,31 @@ fileprivate struct FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeUndoStep.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeWorkBlockRow: FfiConverterRustBuffer {
+    typealias SwiftType = [WorkBlockRow]
+
+    public static func write(_ value: [WorkBlockRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeWorkBlockRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [WorkBlockRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [WorkBlockRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeWorkBlockRow.read(from: &buf))
         }
         return seq
     }
@@ -6750,6 +9080,99 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_suggested_block_seconds() != 3786) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_active_focus_session() != 47572) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_all_dailies() != 903) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_all_metadata() != 9263) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_completed_tasks_since() != 62571) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_completion_context() != 33531) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_condition() != 23991) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_conditions() != 7399) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_contribution() != 61979) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_contributions() != 53041) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_dailies_on() != 37166) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_daily() != 52197) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_daily_for_task() != 45009) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_focus_award() != 53113) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_focus_awards_between() != 21823) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_focus_points_summary() != 18763) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_focus_queue() != 62982) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_focus_session() != 61594) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_has_manual_focus_order() != 55087) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_kanban_boards() != 3288) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_logged_work() != 12680) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_metadata() != 45279) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_metadata_for_tasks() != 28414) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_preferences() != 40625) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_recent_focus_awards() != 13804) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_task_completions_between() != 16557) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_task_counts() != 1077) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_task_creations_between() != 9426) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between() != 41355) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_themes() != 15304) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_work_blocks_between() != 63782) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_work_blocks_for_task() != 6070) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() != 39097) {

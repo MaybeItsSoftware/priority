@@ -59,22 +59,19 @@ extension WorkspaceStore {
   /// becoming a habit on save. Any other task is the source of a new habit.
   /// No task at all is a standalone habit.
   public func habitFormContext(forTaskId taskId: String?) throws -> HabitFormContext {
-    try database.read { db in
-      guard let taskId, let task = try WorkspaceTask.fetchOne(db, key: taskId) else {
-        return HabitFormContext(habitTaskId: nil, draft: HabitDraft(title: ""), sourceTitle: nil)
-      }
-      if let daily = try WorkspaceDaily.filter(Column("taskId") == taskId && Column("archivedAt") == nil)
-        .fetchOne(db) {
-        let source = try daily.sourceTaskId.flatMap { try WorkspaceTask.fetchOne(db, key: $0) }
-        let draft = HabitDraft(
-          title: task.title, frequency: daily.frequency, dropsAtDayEnd: daily.dropsAtDayEnd,
-          estimateSeconds: daily.targetSeconds ?? task.estimateSeconds, expiry: daily.expiry,
-          placement: daily.placement ?? .today, sourceTaskId: daily.sourceTaskId)
-        return HabitFormContext(habitTaskId: task.id, draft: draft, sourceTitle: source?.title)
-      }
-      let draft = HabitDraft(title: task.title, sourceTaskId: task.id)
-      return HabitFormContext(habitTaskId: nil, draft: draft, sourceTitle: task.title)
+    guard let taskId, let task = try self.task(id: taskId) else {
+      return HabitFormContext(habitTaskId: nil, draft: HabitDraft(title: ""), sourceTitle: nil)
     }
+    if let daily = try daily(forTaskId: taskId) {
+      let source = try daily.sourceTaskId.flatMap { try self.task(id: $0) }
+      let draft = HabitDraft(
+        title: task.title, frequency: daily.frequency, dropsAtDayEnd: daily.dropsAtDayEnd,
+        estimateSeconds: daily.targetSeconds ?? task.estimateSeconds, expiry: daily.expiry,
+        placement: daily.placement ?? .today, sourceTaskId: daily.sourceTaskId)
+      return HabitFormContext(habitTaskId: task.id, draft: draft, sourceTitle: source?.title)
+    }
+    let draft = HabitDraft(title: task.title, sourceTaskId: task.id)
+    return HabitFormContext(habitTaskId: nil, draft: draft, sourceTitle: task.title)
   }
 
   /// Creates a habit, or rewrites the one on `habitTaskId`.
@@ -100,7 +97,7 @@ extension WorkspaceStore {
       try self.core.saveHabit(
         draft: core, habitTaskId: habitTaskId, nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
     }
-    guard let daily = try database.read({ db in try WorkspaceDaily.fetchOne(db, key: id) }) else {
+    guard let daily = try Self.mappingCoreErrors({ try self.core.daily(id: id) }).map(WorkspaceDaily.init) else {
       throw WorkspaceStoreError.missingDaily
     }
     return daily
@@ -117,49 +114,8 @@ extension WorkspaceStore {
   /// changed, so the caller knows to reload the board.
   @discardableResult
   public func reconcileHabits(now: Date = .now, calendar: Calendar = .current) throws -> Bool {
-    let pending = try database.read { db in
-      try WorkspaceDaily.filter(Column("archivedAt") == nil && Column("placementColumn") != nil).fetchCount(db)
-    }
-    guard pending > 0 else { return false }
-    // The Rust core's `habits::reconcile_habits`, outside the journal.
-    return try coreWrite { try core.reconcileHabits(nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier) }
+    // The Rust core's `habits::reconcile_habits`, outside the journal; it reads
+    // first and skips the write when no habit is live.
+    try coreWrite { try core.reconcileHabits(nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier) }
   }
-
-  /// Whether a habit is showing on `day` — scheduled, or carried over from a
-  /// missed day it does not drop. What `dailies(on:)` lists.
-  static func habitShows(_ db: Database, daily: WorkspaceDaily, on day: Date, calendar: Calendar) throws -> Bool {
-    let rule = daily.habitRule
-    let sourceCompleted = try isSourceCompleted(db, daily: daily)
-    guard !HabitPolicy.isExpired(rule, on: day, sourceCompleted: sourceCompleted, calendar: calendar) else {
-      return false
-    }
-    if HabitPolicy.isScheduled(rule, on: day, calendar: calendar) { return true }
-    return HabitPolicy.appearance(
-      rule, on: day, lastDoneDay: try lastDoneDay(db, dailyId: daily.id, calendar: calendar),
-      sourceCompleted: sourceCompleted, calendar: calendar) != nil
-  }
-
-  // MARK: - Helpers
-
-  /// A source that is closed or gone has ended.
-  private static func isSourceCompleted(_ db: Database, daily: WorkspaceDaily) throws -> Bool {
-    guard let sourceId = daily.sourceTaskId else { return false }
-    guard let source = try WorkspaceTask.fetchOne(db, key: sourceId) else { return true }
-    return source.status != .open
-  }
-
-  private static func lastDoneDay(_ db: Database, dailyId: String, calendar: Calendar) throws -> Date? {
-    guard let key = try String.fetchOne(
-      db, sql: "SELECT MAX(dayKey) FROM daily_contributions WHERE dailyId = ? AND completedAt IS NOT NULL",
-      arguments: [dailyId])
-    else { return nil }
-    let parts = key.split(separator: "-").compactMap { Int($0) }
-    guard parts.count == 3 else { return nil }
-    return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
-  }
-
-  static func kanbanColumn(_ db: Database, taskId: String) throws -> String? {
-    try String.fetchOne(db, sql: "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?", arguments: [taskId])
-  }
-
 }

@@ -44,6 +44,8 @@ import uk.co.maybeitsadam.takt.core.WorkspaceItemKind
 import uk.co.maybeitsadam.takt.core.WorkspaceKanbanColumn
 import uk.co.maybeitsadam.takt.core.WorkspaceListTree
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
+import uk.co.maybeitsadam.takt.core.coreMillis
+import uk.co.maybeitsadam.takt.core.coreName
 import uk.co.maybeitsadam.takt.data.db.Db
 import uk.co.maybeitsadam.takt.data.db.SqlDates
 import uk.co.maybeitsadam.takt.data.db.WorkspaceDatabase
@@ -108,9 +110,8 @@ class WorkspaceRepository(
     suspend fun bootstrapIfNeeded(now: Instant = now()): Workspace {
         // The Rust core's `setup::bootstrap`, outside the journal.
         val id = coreWrite { it.bootstrap(now.toEpochMilli()) }
-        return database.read { db ->
-            db.queryOne("SELECT * FROM workspaces WHERE id = ?", id) { it.toWorkspace() }
-        } ?: fail(WorkspaceStoreError.MISSING_LIST)
+        return coreRead { core -> core.workspaces().firstOrNull { it.id == id }?.toWorkspace() }
+            ?: fail(WorkspaceStoreError.MISSING_LIST)
     }
 
     /** The list quick capture lands in, found by its role rather than its name. */
@@ -318,18 +319,12 @@ class WorkspaceRepository(
     /** Board placement for many cards in one read; missing metadata means unplaced. */
     suspend fun boardMetadata(taskIds: List<String>): BoardMetadata {
         if (taskIds.isEmpty()) return BoardMetadata(emptyMap(), emptyMap())
-        return database.read { db ->
+        return coreRead { core ->
             val columns = HashMap<String, String>()
             val positions = taskIds.toSet().associateWith { TaskMatrixPosition(null, null) }.toMutableMap()
-            for (chunk in taskIds.chunked(500)) {
-                val records = db.query(
-                    "SELECT * FROM task_metadata WHERE taskId IN (${chunk.joinToString(",") { "?" }})",
-                    *chunk.toTypedArray(),
-                ) { it.toMetadata() }
-                for (record in records) {
-                    record.kanbanColumn?.let { columns[record.taskId] = it }
-                    positions[record.taskId] = TaskMatrixPosition(record.matrixUrgency, record.matrixImportance)
-                }
+            for (record in core.metadataForTasks(taskIds)) {
+                record.kanbanColumn?.let { columns[record.taskId] = it }
+                positions[record.taskId] = TaskMatrixPosition(record.matrixUrgency?.toInt(), record.matrixImportance?.toInt())
             }
             BoardMetadata(columns, positions)
         }
@@ -504,8 +499,7 @@ class WorkspaceRepository(
 
     fun observeKanbanBoards(): Flow<Map<String, List<WorkspaceKanbanColumn>>> =
         database.observe(setOf("kanban_boards")) { db ->
-            db.query("SELECT id, columnsJSON FROM kanban_boards") { it.string("id") to it.string("columnsJSON") }
-                .mapNotNull { (key, json) -> KanbanColumnsCodec.decode(json)?.let { key to it } }
+            db.core.kanbanBoards().mapNotNull { board -> KanbanColumnsCodec.decode(board.columnsJson)?.let { board.key to it } }
                 .toMap()
         }
 
@@ -600,15 +594,6 @@ class WorkspaceRepository(
         coreWrite { it.saveListSettings(id, settings, now.toEpochMilli()) }
     }
 
-    private fun validateVisibleRoot(db: Db, listId: String, rootId: String?) {
-        rootId ?: return
-        val roots = db.query("SELECT * FROM tasks WHERE listId = ? AND parentTaskId IS NULL", listId) { it.toTask() }
-        val root = roots.singleOrNull()
-        val valid = root != null && root.id == rootId && (root.sourceSystem != null || root.isList) &&
-            (root.isList || db.exists("SELECT 1 FROM tasks WHERE parentTaskId = ?", rootId))
-        if (!valid) throw TaskEditorException(TaskEditorError.INVALID_VISIBLE_ROOT)
-    }
-
     // endregion
 
     // region Conditions (WorkspaceStore+Conditions.swift)
@@ -654,13 +639,9 @@ class WorkspaceRepository(
         database.observe(setOf("dailies", "daily_contributions", "tasks")) { dailiesOn(it, day, zone) }
 
     /** Every daily regardless of schedule. */
-    suspend fun allDailies(): List<WorkspaceDaily> = database.read { db ->
-        db.query("SELECT * FROM dailies WHERE archivedAt IS NULL ORDER BY sortOrder, createdAt") { it.toDaily() }
-    }
+    suspend fun allDailies(): List<WorkspaceDaily> = coreRead { core -> core.allDailies().map { it.toDaily() } }
 
-    suspend fun daily(taskId: String): WorkspaceDaily? = database.read { db ->
-        db.queryOne("SELECT * FROM dailies WHERE taskId = ? AND archivedAt IS NULL", taskId) { it.toDaily() }
-    }
+    suspend fun daily(taskId: String): WorkspaceDaily? = coreRead { it.dailyForTask(taskId)?.toDaily() }
 
     /** Makes the task a daily, or returns (and revives) the one it already has. */
     /** Makes a task a daily: the Rust core's `dailies::make_daily`. */
@@ -677,7 +658,7 @@ class WorkspaceRepository(
                 targetSeconds?.toLong(), now.toEpochMilli(),
             )
         }
-        return database.read { it.daily(id) } ?: fail(WorkspaceStoreError.MISSING_DAILY)
+        return coreRead { it.daily(id)?.toDaily() } ?: fail(WorkspaceStoreError.MISSING_DAILY)
     }
 
     /** Archives rather than deletes, so logged contributions keep a parent. */
@@ -717,9 +698,7 @@ class WorkspaceRepository(
         zone: ZoneId = this.zone,
     ): DailyContribution {
         val id = coreWrite { it.logContribution(dailyId, seconds.toLong(), complete, now.toEpochMilli(), zone.id) }
-        return database.read { db ->
-            db.queryOne("SELECT * FROM daily_contributions WHERE id = ?", id) { it.toContribution() }
-        } ?: fail(WorkspaceStoreError.MISSING_DAILY)
+        return coreRead { it.contribution(id)?.toContribution() } ?: fail(WorkspaceStoreError.MISSING_DAILY)
     }
 
     /** Un-ticks a day without discarding the time already logged against it. */
@@ -737,36 +716,15 @@ class WorkspaceRepository(
         val keys = (0 until maxOf(1, days)).map { offset ->
             DailyContribution.dayKey(endingOn.atZone(zone).minusDays(offset.toLong()).toInstant(), zone)
         }
-        return database.read { db ->
-            keys.chunked(500).flatMap { chunk ->
-                db.query(
-                    "SELECT * FROM daily_contributions WHERE dailyId = ? AND dayKey IN (${chunk.joinToString(",") { "?" }})",
-                    dailyId, *chunk.toTypedArray(),
-                ) { it.toContribution() }
-            }.sortedBy { it.dayKey }
-        }
+        return coreRead { core -> core.contributions(dailyId, keys).map { it.toContribution() } }
     }
 
     /** How many things are finished today (this one included), and the streak of days ending today. */
     suspend fun completionContext(now: Instant = now(), zone: ZoneId = this.zone): CompletionContext =
-        database.read { db ->
-            val today = now.atZone(zone).toLocalDate()
-            fun start(date: java.time.LocalDate) = date.atStartOfDay(zone).toInstant()
-            fun finishedOn(date: java.time.LocalDate) = db.int(
-                "SELECT COUNT(*) FROM tasks WHERE status = ? AND updatedAt >= ? AND updatedAt < ?",
-                TaskStatus.COMPLETED.raw, start(date), start(date.plusDays(1)),
-            ) ?: 0
-            fun tickedOn(key: String) = db.int(
-                "SELECT COUNT(*) FROM daily_contributions WHERE dayKey = ? AND completedAt IS NOT NULL", key,
-            ) ?: 0
-            val ordinal = finishedOn(today) + tickedOn(DailyContribution.dayKey(now, zone)) + 1
-            var streak = 0
-            for (offset in 0 until 366) {
-                val day = today.minusDays(offset.toLong())
-                val total = finishedOn(day) + tickedOn(DailyContribution.dayKey(start(day), zone))
-                if (total > 0 || offset == 0) streak += 1 else break
-            }
-            CompletionContext(ordinal, streak)
+        coreRead { core ->
+            // The Rust core's `rows::completion_context`, streak walk included.
+            val context = core.completionContext(now.coreMillis, zone.coreName)
+            CompletionContext(context.ordinalToday.toInt(), context.streakDays.toInt())
         }
 
     // endregion
@@ -908,11 +866,9 @@ class WorkspaceRepository(
                 context.toCore(), now.toEpochMilli(), zone.id,
             )
         }
-        return database.read { db ->
-            val session = db.session(sessionId) ?: fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
-            val award = finished.awardId?.let { id ->
-                db.queryOne("SELECT * FROM focus_awards WHERE id = ?", id) { it.toAward() }
-            }
+        return coreRead { core ->
+            val session = core.focusSession(sessionId)?.toSession() ?: fail(WorkspaceStoreError.NO_ACTIVE_FOCUS_TASK)
+            val award = finished.awardId?.let { id -> core.focusAward(id)?.toAward() }
             val seconds = finished.seconds.toInt()
             val outcome = when (finished.outcome) {
                 "taskCompleted" -> FocusCompletionOutcome.TaskCompleted
@@ -982,12 +938,8 @@ class WorkspaceRepository(
     /** Seconds of focused work per task, across renames and deletions. */
     suspend fun loggedWorkTotals(): Map<String, Int> = database.read { loggedWorkTotals(it) }
 
-    suspend fun workBlocks(taskId: String): List<FocusWorkBlock> = database.read { db ->
-        db.query(
-            "SELECT * FROM focus_work_blocks WHERE taskId = ? OR originalTaskId = ? ORDER BY recordedAt",
-            taskId, taskId,
-        ) { it.toWorkBlock() }
-    }
+    suspend fun workBlocks(taskId: String): List<FocusWorkBlock> =
+        coreRead { core -> core.workBlocksForTask(taskId).map { it.toWorkBlock() } }
 
     /** Blocks recorded in `[start, end)`. */
     suspend fun focusWorkBlocks(start: Instant, end: Instant): List<FocusWorkBlock> =
@@ -997,22 +949,12 @@ class WorkspaceRepository(
     suspend fun taskCompletions(start: Instant, end: Instant): List<Instant> = database.read { completionsIn(it, start, end) }
 
     /** When each (non-list) task in `[start, end)` was added. */
-    suspend fun taskCreations(start: Instant, end: Instant): List<Instant> = database.read { db ->
-        db.query(
-            "SELECT createdAt FROM tasks WHERE createdAt >= ? AND createdAt < ? " +
-                "AND COALESCE(itemKind, 'task') <> 'list' ORDER BY createdAt",
-            start, end,
-        ) { it.instant("createdAt") }
-    }
+    suspend fun taskCreations(start: Instant, end: Instant): List<Instant> =
+        coreRead { it.taskCreationsBetween(start.coreMillis, end.coreMillis).map(Instant::ofEpochMilli) }
 
     /** Tasks closed since [since], newest first; lists left out, cancellations kept. */
-    suspend fun completedTasks(since: Instant, limit: Int = 300): List<WorkspaceTask> = database.read { db ->
-        db.query(
-            "SELECT * FROM tasks WHERE completedAt IS NOT NULL AND completedAt >= ? " +
-                "AND COALESCE(itemKind, 'task') <> 'list' ORDER BY completedAt DESC, id DESC LIMIT ?",
-            since, limit,
-        ) { it.toTask() }
-    }
+    suspend fun completedTasks(since: Instant, limit: Int = 300): List<WorkspaceTask> =
+        coreRead { core -> core.completedTasksSince(since.coreMillis, limit.toLong()).map { it.toTask() } }
 
     /** Today measured against the week it is part of. */
     /** Today against its week; [firstWeekday] (1 = Sunday) is Swift's `Calendar.firstWeekday`. */
@@ -1030,18 +972,14 @@ class WorkspaceRepository(
     // region Points (WorkspaceStore+Points.swift)
 
     /** Most recent first. */
-    suspend fun focusAwards(limit: Int = 50): List<FocusAward> = database.read { db ->
-        db.query("SELECT * FROM focus_awards ORDER BY awardedAt DESC LIMIT ?", maxOf(0, limit)) { it.toAward() }
-    }
+    suspend fun focusAwards(limit: Int = 50): List<FocusAward> =
+        coreRead { core -> core.recentFocusAwards(limit.toLong()).map { it.toAward() } }
 
     suspend fun focusAwards(onDayOf: Instant, zone: ZoneId = this.zone): List<FocusAward> {
         val day = onDayOf.atZone(zone).toLocalDate()
-        return database.read { db ->
-            db.query(
-                "SELECT * FROM focus_awards WHERE awardedAt >= ? AND awardedAt < ? ORDER BY awardedAt DESC",
-                day.atStartOfDay(zone).toInstant(), day.plusDays(1).atStartOfDay(zone).toInstant(),
-            ) { it.toAward() }
-        }
+        val start = day.atStartOfDay(zone).toInstant()
+        val end = day.plusDays(1).atStartOfDay(zone).toInstant()
+        return coreRead { core -> core.focusAwardsBetween(start.coreMillis, end.coreMillis).map { it.toAward() } }
     }
 
     /** Today, the trailing seven calendar days, and all time, from one read. */
@@ -1103,14 +1041,11 @@ class WorkspaceRepository(
 
     /** Open and total task counts per list, for a sidebar or a home screen. */
     fun observeTaskCounts(): Flow<TaskCounts> = database.observe(setOf("tasks")) { db ->
+        val counts = db.core.taskCounts()
         TaskCounts(
-            open = db.int("SELECT COUNT(*) FROM tasks WHERE status = 'open' AND COALESCE(itemKind, 'task') <> 'list'") ?: 0,
-            completed = db.int(
-                "SELECT COUNT(*) FROM tasks WHERE status <> 'open' AND COALESCE(itemKind, 'task') <> 'list'",
-            ) ?: 0,
-            byList = db.query(
-                "SELECT listId, COUNT(*) AS n FROM tasks WHERE status = 'open' GROUP BY listId",
-            ) { it.string("listId") to it.int("n") }.toMap(),
+            open = counts.open.toInt(),
+            completed = counts.completed.toInt(),
+            byList = counts.byList.associate { it.listId to it.open.toInt() },
         )
     }
 

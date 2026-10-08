@@ -319,6 +319,15 @@ pub fn reconcile_habits(
     Ok(changed)
 }
 
+/// Whether any habit is live, so a caller can skip the write when none is.
+pub fn any_live(connection: &rusqlite::Connection) -> Result<bool, CoreError> {
+    Ok(connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM dailies WHERE archivedAt IS NULL AND placementColumn IS NOT NULL)",
+        [],
+        |row| row.get(0),
+    )?)
+}
+
 /// Whether a habit is showing on the local day `now_ms` falls on: scheduled,
 /// or carried from a missed day it does not drop. `WorkspaceStore.habitShows`.
 pub(crate) fn habit_shows(

@@ -26,19 +26,14 @@ extension WorkspaceStore {
   /// Every task with a waiting tag, a follow-up time, or a source it chases.
   /// A small set, read whole so a card's chip is a dictionary lookup.
   public func waitingDetails() throws -> [String: TaskWaitingDetails] {
-    try database.read { db in
-      let rows = try Row.fetchAll(db, sql: """
-        SELECT taskId, waitingOn, waitingFollowUpAt, followUpOfTaskId FROM task_metadata
-        WHERE waitingOn IS NOT NULL OR waitingFollowUpAt IS NOT NULL OR followUpOfTaskId IS NOT NULL
-        """)
-      var details: [String: TaskWaitingDetails] = [:]
-      for row in rows {
-        details[row["taskId"]] = TaskWaitingDetails(
-          waitingOn: row["waitingOn"], followUpAt: row["waitingFollowUpAt"],
-          followUpOfTaskId: row["followUpOfTaskId"])
-      }
-      return details
+    var details: [String: TaskWaitingDetails] = [:]
+    for row in try Self.mappingCoreErrors({ try core.allMetadata() })
+    where row.waitingOn != nil || row.waitingFollowUpAtMs != nil || row.followUpOfTaskId != nil {
+      details[row.taskId] = TaskWaitingDetails(
+        waitingOn: row.waitingOn, followUpAt: row.waitingFollowUpAtMs.map(Date.init(coreMilliseconds:)),
+        followUpOfTaskId: row.followUpOfTaskId)
     }
+    return details
   }
 
   // MARK: - Writing
@@ -64,32 +59,8 @@ extension WorkspaceStore {
   /// next pass make it again. Returns whether anything was made.
   @discardableResult
   public func reconcileWaitingFollowUps(now: Date = .now) throws -> Bool {
-    let due = try database.read { db in
-      try Self.waitingStates(db, taskId: nil).contains { WaitingFollowUp.dueFollowUp(for: $0, now: now) != nil }
-    }
-    guard due else { return false }
-    // The Rust core's `waiting::make_due_follow_ups`, outside the journal.
-    return try coreWrite { try core.reconcileWaitingFollowUps(nowMs: now.coreMilliseconds) }
+    // The Rust core's `waiting::make_due_follow_ups`, outside the journal; it
+    // reads first and skips the write when nothing is due.
+    try coreWrite { try core.reconcileWaitingFollowUps(nowMs: now.coreMilliseconds) }
   }
-
-  /// The waiting tasks with a follow-up time, as the policy reads them.
-  static func waitingStates(_ db: Database, taskId: String?) throws -> [WaitingTaskState] {
-    var sql = """
-      SELECT t.id, t.title, t.status, m.kanbanColumn, m.waitingOn, m.waitingFollowUpAt, m.waitingFollowUpTaskId
-      FROM task_metadata m JOIN tasks t ON t.id = m.taskId
-      WHERE m.waitingFollowUpAt IS NOT NULL AND m.kanbanColumn = ? AND t.status = ?
-      """
-    var arguments: StatementArguments = [WaitingFollowUp.waitingColumnID, TaskStatus.open.rawValue]
-    if let taskId {
-      sql += " AND t.id = ?"
-      arguments += [taskId]
-    }
-    return try Row.fetchAll(db, sql: sql, arguments: arguments).map { row in
-      WaitingTaskState(
-        taskId: row["id"], title: row["title"], isOpen: (row["status"] as String?) == TaskStatus.open.rawValue,
-        column: row["kanbanColumn"], waitingOn: row["waitingOn"], followUpAt: row["waitingFollowUpAt"],
-        madeFollowUpTaskId: row["waitingFollowUpTaskId"])
-    }
-  }
-
 }

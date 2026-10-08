@@ -5,10 +5,7 @@ import TaktCore
 extension WorkspaceStore {
 
   public func conditions(in workspaceId: String) throws -> [TaskCondition] {
-    try database.read { db in
-      try TaskCondition.filter(Column("workspaceId") == workspaceId)
-        .order(Column("createdAt"), Column("id")).fetchAll(db)
-    }
+    try Self.mappingCoreErrors { try core.conditions(workspaceId: workspaceId) }.map(TaskCondition.init)
   }
 
   @discardableResult
@@ -19,7 +16,7 @@ extension WorkspaceStore {
       try core.createCondition(
         workspaceId: workspaceId, name: name, isLocation: isLocation, nowMs: now.coreMilliseconds)
     }
-    guard let record = try database.read({ db in try TaskCondition.fetchOne(db, key: id) }) else {
+    guard let record = try Self.mappingCoreErrors({ try core.condition(id: id) }).map(TaskCondition.init) else {
       throw TaskPlanningError.invalidCondition
     }
     return record
@@ -54,12 +51,11 @@ extension WorkspaceStore {
 
 extension WorkspaceStore {
   public func taskPlanningValues() throws -> [String: TaskPlanning] {
-    try database.read { db in
-      var result: [String: TaskPlanning] = [:]
-      for record in try TaskMetadata.fetchAll(db) {
-        if let plan = try Self.planning(record) { result[record.taskId] = plan }
-      }
-      return result
+    var result: [String: TaskPlanning] = [:]
+    for row in try Self.mappingCoreErrors({ try core.allMetadata() }) {
+      let record = TaskMetadata(row)
+      if let plan = try Self.planning(record) { result[record.taskId] = plan }
     }
+    return result
   }
 }

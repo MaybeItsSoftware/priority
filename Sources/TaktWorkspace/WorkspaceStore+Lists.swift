@@ -9,10 +9,10 @@ extension WorkspaceStore {
   public func moveTaskToFolder(id: String, folderId: String?, now: Date = .now) throws -> TaskList {
     // The Rust core's `conversions::move_task_to_folder`.
     let listID = try coreWrite { try core.moveTaskToFolder(id: id, folderId: folderId, nowMs: now.coreMilliseconds) }
-    return try database.read { db in
-      guard let list = try TaskList.fetchOne(db, key: listID) else { throw WorkspaceStoreError.missingList }
-      return list
+    guard let list = try Self.mappingCoreErrors({ try core.list(id: listID) }).map(TaskList.init) else {
+      throw WorkspaceStoreError.missingList
     }
+    return list
   }
 
   /// A standalone list becomes one task in Inbox, keeping all existing child
@@ -36,7 +36,7 @@ extension WorkspaceStore {
   }
 
   private func fetchTask(_ id: String) throws -> WorkspaceTask {
-    guard let task = try database.read({ db in try WorkspaceTask.fetchOne(db, key: id) }) else {
+    guard let task = try task(id: id) else {
       throw WorkspaceStoreError.missingTask
     }
     return task

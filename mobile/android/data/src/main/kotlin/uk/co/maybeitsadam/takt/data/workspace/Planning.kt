@@ -30,21 +30,10 @@ internal fun planning(metadata: TaskMetadata?): TaskPlanning? {
     return stored.copy(startAt = metadata?.startAt).normalized
 }
 
-internal fun taskEditorSnapshot(db: Db, taskId: String): TaskEditorSnapshot {
-    val task = db.task(taskId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-    val list = db.list(task.listId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-    val record = db.metadata(taskId)
-    val metadata = record?.let {
-        TaskEditorMetadata(
-            priority = it.priority, tags = decodeStringArray(it.tagsJSON), recurrenceRule = it.recurrenceRule,
-            externalLinks = decodeStringArray(it.externalLinksJSON),
-        )
-    } ?: TaskEditorMetadata()
-    val daily = db.exists("SELECT 1 FROM dailies WHERE taskId = ? AND archivedAt IS NULL", taskId)
-    return TaskEditorSnapshot(
-        workspaceId = list.workspaceId, taskId = taskId, title = task.title, notes = task.notes, dueAt = task.dueAt,
-        estimateSeconds = task.estimateSeconds, metadata = metadata, dailyProgress = daily,
-        planning = planning(record),
-    )
+/** The Rust core's `editor::snapshot`, which the Mac and iPhone read too. */
+internal fun taskEditorSnapshot(db: Db, taskId: String): TaskEditorSnapshot = try {
+    db.core.editorSnapshot(taskId).toSnapshot()
+} catch (_: uniffi.takt_core.CoreException.MissingTask) {
+    fail(WorkspaceStoreError.MISSING_TASK)
 }
 

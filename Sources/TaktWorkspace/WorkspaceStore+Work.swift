@@ -4,54 +4,37 @@ import TaktCore
 
 extension WorkspaceStore {
   public func loggedWorkTotals() throws -> [String: Int] {
-    try database.read { db in
-      Dictionary(uniqueKeysWithValues: try Row.fetchAll(db, sql: """
-        SELECT COALESCE(taskId, originalTaskId) AS taskId, SUM(seconds) AS seconds
-        FROM focus_work_blocks WHERE COALESCE(taskId, originalTaskId) IS NOT NULL
-        GROUP BY COALESCE(taskId, originalTaskId)
-        """).map { row -> (String, Int) in (row["taskId"], row["seconds"]) })
-    }
+    Dictionary(uniqueKeysWithValues: try Self.mappingCoreErrors { try core.loggedWork() }.map {
+      ($0.taskId, Int($0.seconds))
+    })
   }
 
   public func workBlocks(for taskId: String) throws -> [FocusWorkBlock] {
-    try database.read { db in
-      try FocusWorkBlock.filter(Column("taskId") == taskId || Column("originalTaskId") == taskId).order(Column("recordedAt")).fetchAll(db)
-    }
+    try Self.mappingCoreErrors { try core.workBlocksForTask(taskId: taskId) }.map(FocusWorkBlock.init)
   }
 
   /// Uses a half-open interval so midnight entries appear on exactly one day.
   /// Saved titles remain available even after the task is renamed or deleted.
   public func focusWorkBlocks(in interval: DateInterval) throws -> [FocusWorkBlock] {
-    try database.read { db in
-      try FocusWorkBlock.filter(Column("recordedAt") >= interval.start && Column("recordedAt") < interval.end)
-        .order(Column("recordedAt"), Column("id")).fetchAll(db)
-    }
+    try Self.mappingCoreErrors {
+      try core.workBlocksBetween(fromMs: interval.start.coreMilliseconds, toMs: interval.end.coreMilliseconds)
+    }.map(FocusWorkBlock.init)
   }
 
   /// When each task in the interval was closed. Lists are left out: closing a
   /// container is bookkeeping, not a unit of work done.
   public func taskCompletions(in interval: DateInterval) throws -> [Date] {
-    try database.read { db in
-      try Date.fetchAll(db, sql: """
-        SELECT completedAt FROM tasks
-        WHERE completedAt IS NOT NULL AND completedAt >= ? AND completedAt < ?
-          AND COALESCE(itemKind, 'task') <> 'list'
-        ORDER BY completedAt
-        """, arguments: [interval.start, interval.end])
-    }
+    try Self.mappingCoreErrors {
+      try core.taskCompletionsBetween(fromMs: interval.start.coreMilliseconds, toMs: interval.end.coreMilliseconds)
+    }.map(Date.init(coreMilliseconds:))
   }
 
   /// When each task in the interval was added, lists left out as they are
   /// from `taskCompletions(in:)`, so the two can be read against each other.
   public func taskCreations(in interval: DateInterval) throws -> [Date] {
-    try database.read { db in
-      try Date.fetchAll(db, sql: """
-        SELECT createdAt FROM tasks
-        WHERE createdAt >= ? AND createdAt < ?
-          AND COALESCE(itemKind, 'task') <> 'list'
-        ORDER BY createdAt
-        """, arguments: [interval.start, interval.end])
-    }
+    try Self.mappingCoreErrors {
+      try core.taskCreationsBetween(fromMs: interval.start.coreMilliseconds, toMs: interval.end.coreMilliseconds)
+    }.map(Date.init(coreMilliseconds:))
   }
 
   /// The tasks closed since `since`, newest first.
@@ -62,14 +45,9 @@ extension WorkspaceStore {
   /// tasks are kept — deciding not to do something is a real outcome, and the
   /// caller can tell them apart by `status`.
   public func completedTasks(since: Date, limit: Int = 300) throws -> [WorkspaceTask] {
-    try database.read { db in
-      try WorkspaceTask
-        .filter(Column("completedAt") != nil && Column("completedAt") >= since)
-        .filter(sql: "COALESCE(itemKind, 'task') <> 'list'")
-        .order(Column("completedAt").desc, Column("id").desc)
-        .limit(limit)
-        .fetchAll(db)
-    }
+    try Self.mappingCoreErrors {
+      try core.completedTasksSince(sinceMs: since.coreMilliseconds, limit: Int64(limit))
+    }.map(WorkspaceTask.init)
   }
 
   /// Today measured against the week it is part of.

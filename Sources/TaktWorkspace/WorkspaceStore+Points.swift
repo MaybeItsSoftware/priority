@@ -8,20 +8,15 @@ extension WorkspaceStore {
   /// Most recent first. `limit` keeps a history pane from loading a year of
   /// blocks to show ten.
   public func focusAwards(limit: Int = 50) throws -> [FocusAward] {
-    try database.read { db in
-      try FocusAward.order(Column("awardedAt").desc).limit(max(0, limit)).fetchAll(db)
-    }
+    try Self.mappingCoreErrors { try core.recentFocusAwards(limit: Int64(limit)) }.map(FocusAward.init)
   }
 
   public func focusAwards(onDayOf date: Date, calendar: Calendar = .current) throws -> [FocusAward] {
     let day = calendar.startOfDay(for: date)
     guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { return [] }
-    return try database.read { db in
-      try FocusAward
-        .filter(Column("awardedAt") >= day && Column("awardedAt") < next)
-        .order(Column("awardedAt").desc)
-        .fetchAll(db)
-    }
+    return try Self.mappingCoreErrors {
+      try core.focusAwardsBetween(fromMs: day.coreMilliseconds, toMs: next.coreMilliseconds)
+    }.map(FocusAward.init)
   }
 
   /// Today, the trailing week, and everything — in one read, so the three
@@ -36,20 +31,13 @@ extension WorkspaceStore {
       let weekStart = calendar.date(byAdding: .day, value: -6, to: today)
     else { return .zero }
 
-    return try database.read { db in
-      func total(_ from: Date?, _ upTo: Date?) throws -> Double {
-        var request = FocusAward.all()
-        if let from { request = request.filter(Column("awardedAt") >= from) }
-        if let upTo { request = request.filter(Column("awardedAt") < upTo) }
-        return try Double.fetchOne(db, request.select(sum(Column("points")))) ?? 0
-      }
-      return FocusPointsSummary(
-        today: try total(today, tomorrow),
-        last7Days: try total(weekStart, tomorrow),
-        allTime: try total(nil, nil),
-        blocksToday: try FocusAward
-          .filter(Column("awardedAt") >= today && Column("awardedAt") < tomorrow)
-          .fetchCount(db))
+    let summary = try Self.mappingCoreErrors {
+      try core.focusPointsSummary(
+        todayMs: today.coreMilliseconds, tomorrowMs: tomorrow.coreMilliseconds,
+        weekStartMs: weekStart.coreMilliseconds)
     }
+    return FocusPointsSummary(
+      today: summary.today, last7Days: summary.last7Days, allTime: summary.allTime,
+      blocksToday: Int(summary.blocksToday))
   }
 }

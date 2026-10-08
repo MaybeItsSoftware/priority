@@ -64,35 +64,22 @@ data class FocusCompletion(
     val award: FocusAward?,
 )
 
-internal fun conditionsIn(db: Db, workspaceId: String): List<TaskCondition> = db.query(
-    "SELECT * FROM task_conditions WHERE workspaceId = ? ORDER BY createdAt, id", workspaceId,
-) { it.toCondition() }
+internal fun conditionsIn(db: Db, workspaceId: String): List<TaskCondition> =
+    db.core.conditions(workspaceId).map { it.toCondition() }
 
 internal fun taskPlanningValues(db: Db): Map<String, TaskPlanning> =
-    db.query("SELECT * FROM task_metadata") { it.toMetadata() }
+    db.core.allMetadata().map { it.toMetadata() }
         .mapNotNull { record -> planning(record)?.let { record.taskId to it } }
         .toMap()
 
-internal fun hasManualFocusOrder(db: Db): Boolean =
-    (db.int("SELECT COUNT(*) FROM task_metadata WHERE focusRank IS NOT NULL") ?: 0) > 0
+internal fun hasManualFocusOrder(db: Db): Boolean = db.core.hasManualFocusOrder()
 
-internal fun loggedWorkTotals(db: Db): Map<String, Int> = db.query(
-    "SELECT COALESCE(taskId, originalTaskId) AS taskId, SUM(seconds) AS seconds FROM focus_work_blocks " +
-        "WHERE COALESCE(taskId, originalTaskId) IS NOT NULL GROUP BY COALESCE(taskId, originalTaskId)",
-) { it.string("taskId") to it.int("seconds") }.toMap()
+internal fun loggedWorkTotals(db: Db): Map<String, Int> =
+    db.core.loggedWork().associate { it.taskId to it.seconds.toInt() }
 
-internal fun dailiesOn(db: Db, day: Instant, zone: ZoneId): List<DailyItem> {
-    val key = DailyContribution.dayKey(day, zone)
-    val dailies = db.query("SELECT * FROM dailies WHERE archivedAt IS NULL ORDER BY sortOrder, createdAt") { it.toDaily() }
-    return dailies.mapNotNull { daily ->
-        if (!dailyShows(db, daily, day, zone)) return@mapNotNull null
-        val task = db.task(daily.taskId)?.takeIf { !it.isList } ?: return@mapNotNull null
-        val contribution = db.queryOne(
-            "SELECT * FROM daily_contributions WHERE dailyId = ? AND dayKey = ?", daily.id, key,
-        ) { it.toContribution() }
-        DailyItem(daily, task, contribution)
-    }
-}
+/** The Rust core's `rows::dailies_on`, which the Mac and iPhone call too. */
+internal fun dailiesOn(db: Db, day: Instant, zone: ZoneId): List<DailyItem> =
+    db.core.dailiesOn(day.coreMillis, zone.coreName).map { it.toItem() }
 
 /**
  * Every open task that could be done now, shaped for `NextUpSelector`: the
@@ -101,14 +88,10 @@ internal fun dailiesOn(db: Db, day: Instant, zone: ZoneId): List<DailyItem> {
 internal fun focusCandidates(core: CoreWorkspace, now: Instant, zone: ZoneId): List<NextUpCandidate> =
     core.nextUpCandidates(now.coreMillis, zone.coreName).map(::NextUpCandidate)
 
-internal fun activeSession(db: Db, newestFirst: Boolean = true): FocusSession? = db.queryOne(
-    "SELECT * FROM focus_sessions WHERE phase != 'finished'" + if (newestFirst) " ORDER BY startedAt DESC" else "",
-) { it.toSession() }
+internal fun activeSession(db: Db): FocusSession? = db.core.activeFocusSession()?.toSession()
 
 internal fun focusQueue(db: Db, sessionId: String): List<FocusQueueTask> =
-    db.query("SELECT * FROM focus_queue_items WHERE sessionId = ? ORDER BY sortOrder, createdAt", sessionId) {
-        it.toQueueItem()
-    }.mapNotNull { item -> db.task(item.taskId)?.takeIf { !it.isList }?.let { FocusQueueTask(item, it) } }
+    db.core.focusQueue(sessionId).map { it.toQueueTask() }
 
 internal fun finishSession(db: Db, id: String, now: Instant) {
     val session = db.session(id) ?: return
@@ -117,15 +100,11 @@ internal fun finishSession(db: Db, id: String, now: Instant) {
 
 @Suppress("LongParameterList")
 
-internal fun workBlocksIn(db: Db, start: Instant, end: Instant): List<FocusWorkBlock> = db.query(
-    "SELECT * FROM focus_work_blocks WHERE recordedAt >= ? AND recordedAt < ? ORDER BY recordedAt, id", start, end,
-) { it.toWorkBlock() }
+internal fun workBlocksIn(db: Db, start: Instant, end: Instant): List<FocusWorkBlock> =
+    db.core.workBlocksBetween(start.coreMillis, end.coreMillis).map { it.toWorkBlock() }
 
-internal fun completionsIn(db: Db, start: Instant, end: Instant): List<Instant> = db.query(
-    "SELECT completedAt FROM tasks WHERE completedAt IS NOT NULL AND completedAt >= ? AND completedAt < ? " +
-        "AND COALESCE(itemKind, 'task') <> 'list' ORDER BY completedAt",
-    start, end,
-) { it.instant("completedAt") }
+internal fun completionsIn(db: Db, start: Instant, end: Instant): List<Instant> =
+    db.core.taskCompletionsBetween(start.coreMillis, end.coreMillis).map(Instant::ofEpochMilli)
 
 internal fun workProgress(
     db: Db,
@@ -150,19 +129,12 @@ internal fun pointsSummary(db: Db, now: Instant, zone: ZoneId): FocusPointsSumma
     val start = today.atStartOfDay(zone).toInstant()
     val tomorrow = today.plusDays(1).atStartOfDay(zone).toInstant()
     val weekStart = today.minusDays(6).atStartOfDay(zone).toInstant()
-    fun total(from: Instant?, upTo: Instant?): Double {
-        val conditions = listOfNotNull(from?.let { "awardedAt >= ?" }, upTo?.let { "awardedAt < ?" })
-        val where = if (conditions.isEmpty()) "" else " WHERE " + conditions.joinToString(" AND ")
-        return db.queryOne("SELECT SUM(points) FROM focus_awards$where", *listOfNotNull(from, upTo).toTypedArray()) {
-            if (it.isNull(0)) 0.0 else it.double(0)
-        } ?: 0.0
-    }
+    val summary = db.core.focusPointsSummary(start.coreMillis, tomorrow.coreMillis, weekStart.coreMillis)
     return FocusPointsSummary(
-        today = total(start, tomorrow),
-        last7Days = total(weekStart, tomorrow),
-        allTime = total(null, null),
-        blocksToday = db.int("SELECT COUNT(*) FROM focus_awards WHERE awardedAt >= ? AND awardedAt < ?", start, tomorrow)
-            ?: 0,
+        today = summary.today,
+        last7Days = summary.last7Days,
+        allTime = summary.allTime,
+        blocksToday = summary.blocksToday.toInt(),
     )
 }
 

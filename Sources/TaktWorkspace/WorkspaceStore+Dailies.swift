@@ -13,36 +13,20 @@ extension WorkspaceStore {
   /// Every non-archived daily due on `day`, joined to its task and to that
   /// day's contribution, in display order.
   public func dailies(on day: Date = .now, calendar: Calendar = .current) throws -> [DailyItem] {
-    let key = DailyContribution.dayKey(for: day, calendar: calendar)
-    return try database.read { db in
-      let dailies = try WorkspaceDaily.filter(Column("archivedAt") == nil)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-      return try dailies.compactMap { daily -> DailyItem? in
-        let shows = daily.isHabit
-          ? try Self.habitShows(db, daily: daily, on: day, calendar: calendar)
-          : daily.isDue(on: day, calendar: calendar)
-        guard shows,
-          let task = try WorkspaceTask.fetchOne(db, key: daily.taskId), !task.isList
-        else { return nil }
-        let contribution = try DailyContribution
-          .filter(Column("dailyId") == daily.id && Column("dayKey") == key).fetchOne(db)
-        return DailyItem(daily: daily, task: task, contribution: contribution)
-      }
-    }
+    // The Rust core's `rows::dailies_on`: a habit when its rule shows it, any
+    // other daily when it is due, never one whose task is gone or is a list.
+    try Self.mappingCoreErrors {
+      try core.dailiesOn(dayMs: day.coreMilliseconds, zone: calendar.timeZone.identifier)
+    }.map(DailyItem.init)
   }
 
   /// Every daily regardless of schedule — what a settings editor lists.
   public func allDailies() throws -> [WorkspaceDaily] {
-    try database.read { db in
-      try WorkspaceDaily.filter(Column("archivedAt") == nil)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-    }
+    try Self.mappingCoreErrors { try core.allDailies() }.map(WorkspaceDaily.init)
   }
 
   public func daily(forTaskId taskId: String) throws -> WorkspaceDaily? {
-    try database.read { db in
-      try WorkspaceDaily.filter(Column("taskId") == taskId && Column("archivedAt") == nil).fetchOne(db)
-    }
+    try Self.mappingCoreErrors { try core.dailyForTask(taskId: taskId) }.map(WorkspaceDaily.init)
   }
 
   /// Makes `taskId` a daily, or returns the one it already has. Idempotent so
@@ -62,7 +46,7 @@ extension WorkspaceStore {
         intervalDays: intervalDays.map(Int64.init), targetSeconds: targetSeconds.map(Int64.init),
         nowMs: now.coreMilliseconds)
     }
-    guard let daily = try database.read({ db in try WorkspaceDaily.fetchOne(db, key: id) }) else {
+    guard let daily = try Self.mappingCoreErrors({ try core.daily(id: id) }).map(WorkspaceDaily.init) else {
       throw WorkspaceStoreError.missingDaily
     }
     return daily
@@ -102,7 +86,7 @@ extension WorkspaceStore {
         dailyId: dailyId, seconds: Int64(seconds), complete: complete, nowMs: now.coreMilliseconds,
         zone: calendar.timeZone.identifier)
     }
-    guard let contribution = try database.read({ db in try DailyContribution.fetchOne(db, key: id) }) else {
+    guard let contribution = try Self.mappingCoreErrors({ try core.contribution(id: id) }).map(DailyContribution.init) else {
       throw WorkspaceStoreError.missingDaily
     }
     return contribution
@@ -124,10 +108,8 @@ extension WorkspaceStore {
       guard let date = calendar.date(byAdding: .day, value: -offset, to: day) else { return nil }
       return DailyContribution.dayKey(for: date, calendar: calendar)
     }
-    return try database.read { db in
-      try DailyContribution.filter(Column("dailyId") == dailyId && keys.contains(Column("dayKey")))
-        .order(Column("dayKey")).fetchAll(db)
-    }
+    return try Self.mappingCoreErrors { try core.contributions(dailyId: dailyId, dayKeys: keys) }
+      .map(DailyContribution.init)
   }
 
   // MARK: - Completion context
@@ -151,47 +133,11 @@ extension WorkspaceStore {
   }
 
   public func completionContext(now: Date = .now, calendar: Calendar = .current) throws -> CompletionContext {
-    try database.read { db in
-      let today = calendar.startOfDay(for: now)
-      let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? now
-      let tasksToday = try Int.fetchOne(
-        db,
-        sql: "SELECT COUNT(*) FROM tasks WHERE status = ? AND updatedAt >= ? AND updatedAt < ?",
-        arguments: [TaskStatus.completed.rawValue, today, tomorrow]) ?? 0
-      let contributionsToday = try Int.fetchOne(
-        db,
-        sql: "SELECT COUNT(*) FROM daily_contributions WHERE dayKey = ? AND completedAt IS NOT NULL",
-        arguments: [DailyContribution.dayKey(for: now, calendar: calendar)]) ?? 0
-      // Counting the completion about to happen, so the first of the day is 1.
-      let ordinal = tasksToday + contributionsToday + 1
-
-      // Walk back a day at a time until a day has nothing in it. Bounded at a
-      // year: past that the number stops meaning anything and the scan stops
-      // being free.
-      var streak = 0
-      for offset in 0..<366 {
-        guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { break }
-        let next = calendar.date(byAdding: .day, value: 1, to: day) ?? day
-        let finished = try Int.fetchOne(
-          db,
-          sql: "SELECT COUNT(*) FROM tasks WHERE status = ? AND updatedAt >= ? AND updatedAt < ?",
-          arguments: [TaskStatus.completed.rawValue, day, next]) ?? 0
-        let ticked = try Int.fetchOne(
-          db,
-          sql: "SELECT COUNT(*) FROM daily_contributions WHERE dayKey = ? AND completedAt IS NOT NULL",
-          arguments: [DailyContribution.dayKey(for: day, calendar: calendar)]) ?? 0
-        if finished + ticked > 0 {
-          streak += 1
-        } else if offset == 0 {
-          // Today being empty does not break a streak that is about to be
-          // extended by the completion we are describing.
-          streak += 1
-        } else {
-          break
-        }
-      }
-      return CompletionContext(ordinalToday: ordinal, streakDays: streak)
+    // The Rust core's `rows::completion_context`, streak walk included.
+    let context = try Self.mappingCoreErrors {
+      try core.completionContext(nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
     }
+    return CompletionContext(ordinalToday: Int(context.ordinalToday), streakDays: Int(context.streakDays))
   }
 
   // MARK: - Next up
@@ -239,9 +185,7 @@ extension WorkspaceStore {
   }
 
   public func hasManualFocusOrder() throws -> Bool {
-    try database.read { db in
-      try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM task_metadata WHERE focusRank IS NOT NULL") ?? 0 > 0
-    }
+    try Self.mappingCoreErrors { try core.hasManualFocusOrder() }
   }
 
   /// Pushes a task out of consideration until `date` by setting its start time.

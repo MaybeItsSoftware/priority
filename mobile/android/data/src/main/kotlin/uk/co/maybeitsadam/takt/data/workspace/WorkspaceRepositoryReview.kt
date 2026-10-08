@@ -6,6 +6,7 @@ import uk.co.maybeitsadam.takt.core.FocusAward
 import uk.co.maybeitsadam.takt.core.FocusSession
 import uk.co.maybeitsadam.takt.core.FocusWorkBlock
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
+import uk.co.maybeitsadam.takt.core.coreMillis
 
 // Live reads behind Review (timeline, done rail, progress) and the history
 // sheet. Each re-queries when one of the tables it reads is written, so a
@@ -35,28 +36,17 @@ fun WorkspaceRepository.observeReviewDay(start: Instant, end: Instant): Flow<Rev
         val session = activeSession(db)
         ReviewDayRecords(
             blocks = workBlocksIn(db, start, end),
-            awards = db.query(
-                "SELECT * FROM focus_awards WHERE awardedAt >= ? AND awardedAt < ? ORDER BY awardedAt DESC",
-                start, end,
-            ) { it.toAward() },
+            awards = db.core.focusAwardsBetween(start.coreMillis, end.coreMillis).map { it.toAward() },
             activeSession = session,
             activeTaskTitle = session?.activeTaskId?.let { db.task(it)?.title },
-            closedTasks = db.query(
-                "SELECT * FROM tasks WHERE completedAt IS NOT NULL AND completedAt >= ? AND completedAt < ? " +
-                    "AND COALESCE(itemKind, 'task') <> 'list' ORDER BY completedAt, id",
-                start, end,
-            ) { it.toTask() },
+            closedTasks = db.core.tasksClosedBetween(start.coreMillis, end.coreMillis).map { it.toTask() },
         )
     }
 
 /** Tasks closed since [since], newest first; lists left out, cancellations kept. */
 fun WorkspaceRepository.observeCompletedTasks(since: Instant, limit: Int = 300): Flow<List<WorkspaceTask>> =
     database.observe(setOf("tasks")) { db ->
-        db.query(
-            "SELECT * FROM tasks WHERE completedAt IS NOT NULL AND completedAt >= ? " +
-                "AND COALESCE(itemKind, 'task') <> 'list' ORDER BY completedAt DESC, id DESC LIMIT ?",
-            since, limit,
-        ) { it.toTask() }
+        db.core.completedTasksSince(since.coreMillis, limit.toLong()).map { it.toTask() }
     }
 
 /** Completions, creations and focus blocks in `[start, end)`, from one read. */
@@ -64,11 +54,7 @@ fun WorkspaceRepository.observeReviewProgress(start: Instant, end: Instant): Flo
     database.observe(setOf("tasks", "focus_work_blocks")) { db ->
         ReviewProgressRecords(
             completions = completionsIn(db, start, end),
-            creations = db.query(
-                "SELECT createdAt FROM tasks WHERE createdAt >= ? AND createdAt < ? " +
-                    "AND COALESCE(itemKind, 'task') <> 'list' ORDER BY createdAt",
-                start, end,
-            ) { it.instant("createdAt") },
+            creations = db.core.taskCreationsBetween(start.coreMillis, end.coreMillis).map(Instant::ofEpochMilli),
             blocks = workBlocksIn(db, start, end),
         )
     }
@@ -76,11 +62,7 @@ fun WorkspaceRepository.observeReviewProgress(start: Instant, end: Instant): Flo
 /** The journal, newest first, re-read whenever it changes: [WorkspaceRepository.history], live. */
 fun WorkspaceRepository.observeHistory(limit: Int = 100): Flow<List<HistoryEntry>> =
     database.observe(setOf("change_log")) { db ->
-        db.query(
-            "SELECT groupId, label, MAX(id) AS lastId, MAX(undone) AS undone, COUNT(*) AS changes " +
-                "FROM change_log GROUP BY groupId ORDER BY lastId DESC LIMIT ?",
-            limit,
-        ) {
-            HistoryEntry(it.string("groupId"), it.stringOrNull("label"), it.bool("undone"), it.int("changes"))
+        db.core.undoHistory(limit.coerceAtLeast(0).toUInt()).map {
+            HistoryEntry(it.id, it.label, it.isUndone, it.changeCount.toInt())
         }
     }

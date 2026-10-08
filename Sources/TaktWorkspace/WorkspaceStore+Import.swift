@@ -36,7 +36,7 @@ extension WorkspaceStore {
         workspaceId: workspaceId, listName: listName, sourceSystem: sourceSystem, seeds: core,
         nowMs: now.coreMilliseconds)
     }) else { return nil }
-    guard let list = try database.read({ db in try TaskList.fetchOne(db, key: outcome.listId) }) else {
+    guard let list = try Self.mappingCoreErrors({ try self.core.list(id: outcome.listId) }).map(TaskList.init) else {
       throw WorkspaceStoreError.missingList
     }
     return TaskImportOutcome(

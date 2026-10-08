@@ -22,16 +22,15 @@ data class TaskWaitingDetails(
 )
 
 private fun readWaitingDetails(db: Db): Map<String, TaskWaitingDetails> =
-    db.query(
-        "SELECT taskId, waitingOn, waitingFollowUpAt, followUpOfTaskId FROM task_metadata " +
-            "WHERE waitingOn IS NOT NULL OR waitingFollowUpAt IS NOT NULL OR followUpOfTaskId IS NOT NULL",
-    ) {
-        it.string("taskId") to TaskWaitingDetails(
-            waitingOn = it.stringOrNull("waitingOn"),
-            followUpAt = it.instantOrNull("waitingFollowUpAt"),
-            followUpOfTaskId = it.stringOrNull("followUpOfTaskId"),
-        )
-    }.toMap()
+    db.core.allMetadata()
+        .filter { it.waitingOn != null || it.waitingFollowUpAtMs != null || it.followUpOfTaskId != null }
+        .associate {
+            it.taskId to TaskWaitingDetails(
+                waitingOn = it.waitingOn,
+                followUpAt = it.waitingFollowUpAtMs?.let(Instant::ofEpochMilli),
+                followUpOfTaskId = it.followUpOfTaskId,
+            )
+        }
 
 /** Every task with a waiting tag, a follow-up time, or a source it chases. A small set, read whole. */
 suspend fun WorkspaceRepository.waitingDetails(): Map<String, TaskWaitingDetails> = database.read(::readWaitingDetails)
@@ -61,33 +60,8 @@ suspend fun WorkspaceRepository.setWaiting(
  * pass make it again. Returns whether anything was made.
  */
 suspend fun WorkspaceRepository.reconcileWaitingFollowUps(now: Instant = now()): Boolean {
-    // A read first, so the poll that finds nothing due never takes the writer.
-    val due = database.read { db -> waitingStates(db, null).any { WaitingFollowUp.dueFollowUp(it, now) != null } }
-    if (!due) return false
-    // The Rust core's `waiting::make_due_follow_ups`, outside the journal.
+    // The Rust core's `waiting::make_due_follow_ups`, outside the journal; it
+    // reads first, so the poll that finds nothing due never takes the writer.
     return coreWrite { it.reconcileWaitingFollowUps(now.toEpochMilli()) }
-}
-
-/** The open waiting tasks with a follow-up time, as the engine reads them. */
-private fun waitingStates(db: Db, taskId: String?): List<WaitingTaskState> {
-    var sql = "SELECT t.id, t.title, t.status, m.kanbanColumn, m.waitingOn, m.waitingFollowUpAt, " +
-        "m.waitingFollowUpTaskId FROM task_metadata m JOIN tasks t ON t.id = m.taskId " +
-        "WHERE m.waitingFollowUpAt IS NOT NULL AND m.kanbanColumn = ? AND t.status = ?"
-    val args = mutableListOf<Any?>(WaitingFollowUp.WAITING_COLUMN_ID, TaskStatus.OPEN.raw)
-    if (taskId != null) {
-        sql += " AND t.id = ?"
-        args += taskId
-    }
-    return db.query(sql, *args.toTypedArray()) {
-        WaitingTaskState(
-            taskId = it.string("id"),
-            title = it.string("title"),
-            isOpen = it.string("status") == TaskStatus.OPEN.raw,
-            column = it.stringOrNull("kanbanColumn"),
-            waitingOn = it.stringOrNull("waitingOn"),
-            followUpAt = it.instantOrNull("waitingFollowUpAt"),
-            madeFollowUpTaskId = it.stringOrNull("waitingFollowUpTaskId"),
-        )
-    }
 }
 

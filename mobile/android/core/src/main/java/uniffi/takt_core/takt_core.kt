@@ -691,6 +691,68 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_suggested_block_seconds(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_active_focus_session(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_all_dailies(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_all_metadata(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_completed_tasks_since(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_completion_context(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_condition(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_conditions(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_contribution(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_contributions(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_dailies_on(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_daily(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_daily_for_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_focus_award(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_focus_awards_between(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_focus_points_summary(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_focus_queue(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_focus_session(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_has_manual_focus_order(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_kanban_boards(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_logged_work(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_metadata(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_metadata_for_tasks(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_preferences(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_recent_focus_awards(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_task_completions_between(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_task_counts(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_task_creations_between(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_themes(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_work_blocks_between(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_work_blocks_for_task(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
@@ -929,6 +991,68 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_active_focus_session(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_all_dailies(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_all_metadata(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_completed_tasks_since(`ptr`: Long,`sinceMs`: Long,`limit`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_completion_context(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_condition(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_conditions(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_contribution(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_contributions(`ptr`: Long,`dailyId`: RustBuffer.ByValue,`dayKeys`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_dailies_on(`ptr`: Long,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_daily(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_daily_for_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_focus_award(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_focus_awards_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_focus_points_summary(`ptr`: Long,`todayMs`: Long,`tomorrowMs`: Long,`weekStartMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_focus_queue(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_has_manual_focus_order(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_kanban_boards(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_logged_work(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_metadata(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_metadata_for_tasks(`ptr`: Long,`taskIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_preferences(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_recent_focus_awards(`ptr`: Long,`limit`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_task_completions_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_task_counts(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_task_creations_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_tasks_closed_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_themes(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_work_blocks_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_work_blocks_for_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_acknowledge_sync_changes(`ptr`: Long,`throughSeq`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1296,6 +1420,99 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_suggested_block_seconds() and 0xFFFF) != 3786) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_active_focus_session() and 0xFFFF) != 47572) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_all_dailies() and 0xFFFF) != 903) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_all_metadata() and 0xFFFF) != 9263) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_completed_tasks_since() and 0xFFFF) != 62571) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_completion_context() and 0xFFFF) != 33531) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_condition() and 0xFFFF) != 23991) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_conditions() and 0xFFFF) != 7399) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_contribution() and 0xFFFF) != 61979) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_contributions() and 0xFFFF) != 53041) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_dailies_on() and 0xFFFF) != 37166) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_daily() and 0xFFFF) != 52197) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_daily_for_task() and 0xFFFF) != 45009) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_focus_award() and 0xFFFF) != 53113) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_focus_awards_between() and 0xFFFF) != 21823) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_focus_points_summary() and 0xFFFF) != 18763) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_focus_queue() and 0xFFFF) != 62982) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_focus_session() and 0xFFFF) != 61594) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_has_manual_focus_order() and 0xFFFF) != 55087) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_kanban_boards() and 0xFFFF) != 3288) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_logged_work() and 0xFFFF) != 12680) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_metadata() and 0xFFFF) != 45279) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_metadata_for_tasks() and 0xFFFF) != 28414) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_preferences() and 0xFFFF) != 40625) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_recent_focus_awards() and 0xFFFF) != 13804) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_completions_between() and 0xFFFF) != 16557) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_counts() and 0xFFFF) != 1077) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_creations_between() and 0xFFFF) != 9426) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between() and 0xFFFF) != 41355) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_themes() and 0xFFFF) != 15304) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_work_blocks_between() and 0xFFFF) != 63782) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_work_blocks_for_task() and 0xFFFF) != 6070) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() and 0xFFFF) != 39097) {
@@ -2047,6 +2264,162 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * The newest session that has not finished.
+     */
+    fun `activeFocusSession`(): SessionRow?
+    
+    /**
+     * The live dailies in order.
+     */
+    fun `allDailies`(): List<DailyRow>
+    
+    /**
+     * Every metadata row.
+     */
+    fun `allMetadata`(): List<MetadataRow>
+    
+    /**
+     * Tasks completed since `since`, newest first.
+     */
+    fun `completedTasksSince`(`sinceMs`: kotlin.Long, `limit`: kotlin.Long): List<TaskRow>
+    
+    /**
+     * Where a completion now falls in its day and in a run of days.
+     */
+    fun `completionContext`(`nowMs`: kotlin.Long, `zone`: kotlin.String): CompletionContext
+    
+    /**
+     * One condition by id.
+     */
+    fun `condition`(`id`: kotlin.String): ConditionRow?
+    
+    /**
+     * A workspace's conditions, oldest first.
+     */
+    fun `conditions`(`workspaceId`: kotlin.String): List<ConditionRow>
+    
+    /**
+     * One contribution by id.
+     */
+    fun `contribution`(`id`: kotlin.String): ContributionRow?
+    
+    /**
+     * A daily's contributions on the given days, oldest first.
+     */
+    fun `contributions`(`dailyId`: kotlin.String, `dayKeys`: List<kotlin.String>): List<ContributionRow>
+    
+    /**
+     * The dailies the local day `day_ms` falls on shows, with their tasks and
+     * that day's contributions.
+     */
+    fun `dailiesOn`(`dayMs`: kotlin.Long, `zone`: kotlin.String): List<DayDaily>
+    
+    /**
+     * One daily by id, archived or not.
+     */
+    fun `daily`(`id`: kotlin.String): DailyRow?
+    
+    /**
+     * A task's live daily, if it has one.
+     */
+    fun `dailyForTask`(`taskId`: kotlin.String): DailyRow?
+    
+    /**
+     * One award by id.
+     */
+    fun `focusAward`(`id`: kotlin.String): AwardRow?
+    
+    /**
+     * Awards in `[from, to)`, newest first.
+     */
+    fun `focusAwardsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<AwardRow>
+    
+    /**
+     * Points today, over the last seven days and ever.
+     */
+    fun `focusPointsSummary`(`todayMs`: kotlin.Long, `tomorrowMs`: kotlin.Long, `weekStartMs`: kotlin.Long): PointsSummary
+    
+    /**
+     * A session's queue in order, with each task.
+     */
+    fun `focusQueue`(`sessionId`: kotlin.String): List<QueueEntry>
+    
+    /**
+     * One session by id.
+     */
+    fun `focusSession`(`id`: kotlin.String): SessionRow?
+    
+    /**
+     * Whether any task is pinned in Today's order.
+     */
+    fun `hasManualFocusOrder`(): kotlin.Boolean
+    
+    /**
+     * Every saved board's columns.
+     */
+    fun `kanbanBoards`(): List<BoardBaseline>
+    
+    /**
+     * Seconds logged per task.
+     */
+    fun `loggedWork`(): List<LoggedWork>
+    
+    /**
+     * A task's metadata row, if it has one.
+     */
+    fun `metadata`(`taskId`: kotlin.String): MetadataRow?
+    
+    /**
+     * The metadata rows of the given tasks.
+     */
+    fun `metadataForTasks`(`taskIds`: List<kotlin.String>): List<MetadataRow>
+    
+    /**
+     * Every preference.
+     */
+    fun `preferences`(): List<PreferenceRow>
+    
+    /**
+     * The newest awards.
+     */
+    fun `recentFocusAwards`(`limit`: kotlin.Long): List<AwardRow>
+    
+    /**
+     * When tasks were completed in `[from, to)`.
+     */
+    fun `taskCompletionsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<kotlin.Long>
+    
+    /**
+     * Open and closed task counts.
+     */
+    fun `taskCounts`(): TaskCounts
+    
+    /**
+     * When tasks were created in `[from, to)`.
+     */
+    fun `taskCreationsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<kotlin.Long>
+    
+    /**
+     * Tasks closed in `[from, to)`, oldest first.
+     */
+    fun `tasksClosedBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<TaskRow>
+    
+    /**
+     * The stored themes by id.
+     */
+    fun `themes`(): List<ThemeRow>
+    
+    /**
+     * Work blocks recorded in `[from, to)`.
+     */
+    fun `workBlocksBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<WorkBlockRow>
+    
+    /**
+     * A task's work blocks, oldest first.
+     */
+    fun `workBlocksForTask`(`taskId`: kotlin.String): List<WorkBlockRow>
+    
+    /**
      * Forgets the outbox entries the server has accepted.
      */
     fun `acknowledgeSyncChanges`(`throughSeq`: kotlin.Long)
@@ -2687,6 +3060,567 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * The newest session that has not finished.
+     */
+    @Throws(CoreException::class)override fun `activeFocusSession`(): SessionRow? {
+            return FfiConverterOptionalTypeSessionRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_active_focus_session(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The live dailies in order.
+     */
+    @Throws(CoreException::class)override fun `allDailies`(): List<DailyRow> {
+            return FfiConverterSequenceTypeDailyRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_all_dailies(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Every metadata row.
+     */
+    @Throws(CoreException::class)override fun `allMetadata`(): List<MetadataRow> {
+            return FfiConverterSequenceTypeMetadataRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_all_metadata(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Tasks completed since `since`, newest first.
+     */
+    @Throws(CoreException::class)override fun `completedTasksSince`(`sinceMs`: kotlin.Long, `limit`: kotlin.Long): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_completed_tasks_since(
+        it,
+        
+        FfiConverterLong.lower(`sinceMs`),
+        FfiConverterLong.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Where a completion now falls in its day and in a run of days.
+     */
+    @Throws(CoreException::class)override fun `completionContext`(`nowMs`: kotlin.Long, `zone`: kotlin.String): CompletionContext {
+            return FfiConverterTypeCompletionContext.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_completion_context(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * One condition by id.
+     */
+    @Throws(CoreException::class)override fun `condition`(`id`: kotlin.String): ConditionRow? {
+            return FfiConverterOptionalTypeConditionRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_condition(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A workspace's conditions, oldest first.
+     */
+    @Throws(CoreException::class)override fun `conditions`(`workspaceId`: kotlin.String): List<ConditionRow> {
+            return FfiConverterSequenceTypeConditionRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_conditions(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * One contribution by id.
+     */
+    @Throws(CoreException::class)override fun `contribution`(`id`: kotlin.String): ContributionRow? {
+            return FfiConverterOptionalTypeContributionRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_contribution(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A daily's contributions on the given days, oldest first.
+     */
+    @Throws(CoreException::class)override fun `contributions`(`dailyId`: kotlin.String, `dayKeys`: List<kotlin.String>): List<ContributionRow> {
+            return FfiConverterSequenceTypeContributionRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_contributions(
+        it,
+        
+        FfiConverterString.lower(`dailyId`),
+        FfiConverterSequenceString.lower(`dayKeys`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The dailies the local day `day_ms` falls on shows, with their tasks and
+     * that day's contributions.
+     */
+    @Throws(CoreException::class)override fun `dailiesOn`(`dayMs`: kotlin.Long, `zone`: kotlin.String): List<DayDaily> {
+            return FfiConverterSequenceTypeDayDaily.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_dailies_on(
+        it,
+        
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * One daily by id, archived or not.
+     */
+    @Throws(CoreException::class)override fun `daily`(`id`: kotlin.String): DailyRow? {
+            return FfiConverterOptionalTypeDailyRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_daily(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A task's live daily, if it has one.
+     */
+    @Throws(CoreException::class)override fun `dailyForTask`(`taskId`: kotlin.String): DailyRow? {
+            return FfiConverterOptionalTypeDailyRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_daily_for_task(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * One award by id.
+     */
+    @Throws(CoreException::class)override fun `focusAward`(`id`: kotlin.String): AwardRow? {
+            return FfiConverterOptionalTypeAwardRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_focus_award(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Awards in `[from, to)`, newest first.
+     */
+    @Throws(CoreException::class)override fun `focusAwardsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<AwardRow> {
+            return FfiConverterSequenceTypeAwardRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_focus_awards_between(
+        it,
+        
+        FfiConverterLong.lower(`fromMs`),
+        FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Points today, over the last seven days and ever.
+     */
+    @Throws(CoreException::class)override fun `focusPointsSummary`(`todayMs`: kotlin.Long, `tomorrowMs`: kotlin.Long, `weekStartMs`: kotlin.Long): PointsSummary {
+            return FfiConverterTypePointsSummary.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_focus_points_summary(
+        it,
+        
+        FfiConverterLong.lower(`todayMs`),
+        FfiConverterLong.lower(`tomorrowMs`),
+        FfiConverterLong.lower(`weekStartMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A session's queue in order, with each task.
+     */
+    @Throws(CoreException::class)override fun `focusQueue`(`sessionId`: kotlin.String): List<QueueEntry> {
+            return FfiConverterSequenceTypeQueueEntry.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_focus_queue(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * One session by id.
+     */
+    @Throws(CoreException::class)override fun `focusSession`(`id`: kotlin.String): SessionRow? {
+            return FfiConverterOptionalTypeSessionRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_focus_session(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Whether any task is pinned in Today's order.
+     */
+    @Throws(CoreException::class)override fun `hasManualFocusOrder`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_has_manual_focus_order(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Every saved board's columns.
+     */
+    @Throws(CoreException::class)override fun `kanbanBoards`(): List<BoardBaseline> {
+            return FfiConverterSequenceTypeBoardBaseline.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_kanban_boards(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Seconds logged per task.
+     */
+    @Throws(CoreException::class)override fun `loggedWork`(): List<LoggedWork> {
+            return FfiConverterSequenceTypeLoggedWork.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_logged_work(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A task's metadata row, if it has one.
+     */
+    @Throws(CoreException::class)override fun `metadata`(`taskId`: kotlin.String): MetadataRow? {
+            return FfiConverterOptionalTypeMetadataRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_metadata(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The metadata rows of the given tasks.
+     */
+    @Throws(CoreException::class)override fun `metadataForTasks`(`taskIds`: List<kotlin.String>): List<MetadataRow> {
+            return FfiConverterSequenceTypeMetadataRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_metadata_for_tasks(
+        it,
+        
+        FfiConverterSequenceString.lower(`taskIds`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Every preference.
+     */
+    @Throws(CoreException::class)override fun `preferences`(): List<PreferenceRow> {
+            return FfiConverterSequenceTypePreferenceRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_preferences(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The newest awards.
+     */
+    @Throws(CoreException::class)override fun `recentFocusAwards`(`limit`: kotlin.Long): List<AwardRow> {
+            return FfiConverterSequenceTypeAwardRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_recent_focus_awards(
+        it,
+        
+        FfiConverterLong.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * When tasks were completed in `[from, to)`.
+     */
+    @Throws(CoreException::class)override fun `taskCompletionsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<kotlin.Long> {
+            return FfiConverterSequenceLong.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task_completions_between(
+        it,
+        
+        FfiConverterLong.lower(`fromMs`),
+        FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Open and closed task counts.
+     */
+    @Throws(CoreException::class)override fun `taskCounts`(): TaskCounts {
+            return FfiConverterTypeTaskCounts.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task_counts(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * When tasks were created in `[from, to)`.
+     */
+    @Throws(CoreException::class)override fun `taskCreationsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<kotlin.Long> {
+            return FfiConverterSequenceLong.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task_creations_between(
+        it,
+        
+        FfiConverterLong.lower(`fromMs`),
+        FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Tasks closed in `[from, to)`, oldest first.
+     */
+    @Throws(CoreException::class)override fun `tasksClosedBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_tasks_closed_between(
+        it,
+        
+        FfiConverterLong.lower(`fromMs`),
+        FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The stored themes by id.
+     */
+    @Throws(CoreException::class)override fun `themes`(): List<ThemeRow> {
+            return FfiConverterSequenceTypeThemeRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_themes(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Work blocks recorded in `[from, to)`.
+     */
+    @Throws(CoreException::class)override fun `workBlocksBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<WorkBlockRow> {
+            return FfiConverterSequenceTypeWorkBlockRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_work_blocks_between(
+        it,
+        
+        FfiConverterLong.lower(`fromMs`),
+        FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A task's work blocks, oldest first.
+     */
+    @Throws(CoreException::class)override fun `workBlocksForTask`(`taskId`: kotlin.String): List<WorkBlockRow> {
+            return FfiConverterSequenceTypeWorkBlockRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_work_blocks_for_task(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
 
     
     /**
@@ -4757,6 +5691,82 @@ public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
 
 
 /**
+ * A row of `focus_awards`. `FocusAward`.
+ */
+data class AwardRow (
+    var `id`: kotlin.String
+    , 
+    var `sessionId`: kotlin.String?
+    , 
+    var `taskId`: kotlin.String?
+    , 
+    var `taskTitle`: kotlin.String
+    , 
+    var `seconds`: kotlin.Long
+    , 
+    var `minutes`: kotlin.Double
+    , 
+    var `multiplier`: kotlin.Double
+    , 
+    var `points`: kotlin.Double
+    , 
+    var `awardedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAwardRow: FfiConverterRustBuffer<AwardRow> {
+    override fun read(buf: ByteBuffer): AwardRow {
+        return AwardRow(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AwardRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterOptionalString.allocationSize(value.`sessionId`) +
+            FfiConverterOptionalString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`taskTitle`) +
+            FfiConverterLong.allocationSize(value.`seconds`) +
+            FfiConverterDouble.allocationSize(value.`minutes`) +
+            FfiConverterDouble.allocationSize(value.`multiplier`) +
+            FfiConverterDouble.allocationSize(value.`points`) +
+            FfiConverterLong.allocationSize(value.`awardedAtMs`)
+    )
+
+    override fun write(value: AwardRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterOptionalString.write(value.`sessionId`, buf)
+            FfiConverterOptionalString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`taskTitle`, buf)
+            FfiConverterLong.write(value.`seconds`, buf)
+            FfiConverterDouble.write(value.`minutes`, buf)
+            FfiConverterDouble.write(value.`multiplier`, buf)
+            FfiConverterDouble.write(value.`points`, buf)
+            FfiConverterLong.write(value.`awardedAtMs`, buf)
+    }
+}
+
+
+
+/**
  * What finishing a block did. `WorkspaceStore.FocusCompletion`.
  */
 data class BlockFinished (
@@ -5071,6 +6081,186 @@ public object FfiConverterTypeCandidate: FfiConverterRustBuffer<Candidate> {
 
 
 /**
+ * Where a completion falls in its day and in a run of days.
+ * `WorkspaceStore.CompletionContext`.
+ */
+data class CompletionContext (
+    /**
+     * Counting the completion about to happen, so the first of the day is 1.
+     */
+    var `ordinalToday`: kotlin.Long
+    , 
+    /**
+     * Days in a row with something finished, today included.
+     */
+    var `streakDays`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCompletionContext: FfiConverterRustBuffer<CompletionContext> {
+    override fun read(buf: ByteBuffer): CompletionContext {
+        return CompletionContext(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CompletionContext) = (
+            FfiConverterLong.allocationSize(value.`ordinalToday`) +
+            FfiConverterLong.allocationSize(value.`streakDays`)
+    )
+
+    override fun write(value: CompletionContext, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`ordinalToday`, buf)
+            FfiConverterLong.write(value.`streakDays`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `task_conditions`. `TaskCondition`.
+ */
+data class ConditionRow (
+    var `id`: kotlin.String
+    , 
+    var `workspaceId`: kotlin.String
+    , 
+    var `name`: kotlin.String
+    , 
+    var `isLocation`: kotlin.Boolean
+    , 
+    var `isArchived`: kotlin.Boolean
+    , 
+    var `createdAtMs`: kotlin.Long
+    , 
+    var `updatedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow> {
+    override fun read(buf: ByteBuffer): ConditionRow {
+        return ConditionRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ConditionRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`workspaceId`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterBoolean.allocationSize(value.`isLocation`) +
+            FfiConverterBoolean.allocationSize(value.`isArchived`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+    )
+
+    override fun write(value: ConditionRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`workspaceId`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterBoolean.write(value.`isLocation`, buf)
+            FfiConverterBoolean.write(value.`isArchived`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `daily_contributions`. `DailyContribution`.
+ */
+data class ContributionRow (
+    var `id`: kotlin.String
+    , 
+    var `dailyId`: kotlin.String
+    , 
+    var `taskId`: kotlin.String
+    , 
+    var `dayKey`: kotlin.String
+    , 
+    var `secondsLogged`: kotlin.Long
+    , 
+    var `completedAtMs`: kotlin.Long?
+    , 
+    var `createdAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeContributionRow: FfiConverterRustBuffer<ContributionRow> {
+    override fun read(buf: ByteBuffer): ContributionRow {
+        return ContributionRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ContributionRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`dailyId`) +
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`dayKey`) +
+            FfiConverterLong.allocationSize(value.`secondsLogged`) +
+            FfiConverterOptionalLong.allocationSize(value.`completedAtMs`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`)
+    )
+
+    override fun write(value: ContributionRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`dailyId`, buf)
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`dayKey`, buf)
+            FfiConverterLong.write(value.`secondsLogged`, buf)
+            FfiConverterOptionalLong.write(value.`completedAtMs`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+    }
+}
+
+
+
+/**
  * A folder or list [`create_folder`] or [`create_list`] made: what a client
  * needs to build its own model of it, beside what it already passed in.
  */
@@ -5181,6 +6371,164 @@ public object FfiConverterTypeDailyEdit: FfiConverterRustBuffer<DailyEdit> {
             FfiConverterOptionalLong.write(value.`intervalDays`, buf)
             FfiConverterBoolean.write(value.`setTarget`, buf)
             FfiConverterOptionalLong.write(value.`targetSeconds`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `dailies`. `WorkspaceDaily`.
+ */
+data class DailyRow (
+    var `id`: kotlin.String
+    , 
+    var `taskId`: kotlin.String
+    , 
+    var `activeWeekdaysMask`: kotlin.Long
+    , 
+    var `intervalDays`: kotlin.Long?
+    , 
+    var `intervalAnchorMs`: kotlin.Long?
+    , 
+    var `targetSeconds`: kotlin.Long?
+    , 
+    var `sortOrder`: kotlin.Long
+    , 
+    var `archivedAtMs`: kotlin.Long?
+    , 
+    var `legacyDailyId`: kotlin.String?
+    , 
+    var `createdAtMs`: kotlin.Long
+    , 
+    var `updatedAtMs`: kotlin.Long
+    , 
+    var `sourceTaskId`: kotlin.String?
+    , 
+    var `placementColumn`: kotlin.String?
+    , 
+    var `dropsAtDayEnd`: kotlin.Boolean
+    , 
+    var `expiryRule`: kotlin.String
+    , 
+    var `expiresAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDailyRow: FfiConverterRustBuffer<DailyRow> {
+    override fun read(buf: ByteBuffer): DailyRow {
+        return DailyRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DailyRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterLong.allocationSize(value.`activeWeekdaysMask`) +
+            FfiConverterOptionalLong.allocationSize(value.`intervalDays`) +
+            FfiConverterOptionalLong.allocationSize(value.`intervalAnchorMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`targetSeconds`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`) +
+            FfiConverterOptionalLong.allocationSize(value.`archivedAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`legacyDailyId`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`sourceTaskId`) +
+            FfiConverterOptionalString.allocationSize(value.`placementColumn`) +
+            FfiConverterBoolean.allocationSize(value.`dropsAtDayEnd`) +
+            FfiConverterString.allocationSize(value.`expiryRule`) +
+            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`)
+    )
+
+    override fun write(value: DailyRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterLong.write(value.`activeWeekdaysMask`, buf)
+            FfiConverterOptionalLong.write(value.`intervalDays`, buf)
+            FfiConverterOptionalLong.write(value.`intervalAnchorMs`, buf)
+            FfiConverterOptionalLong.write(value.`targetSeconds`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
+            FfiConverterOptionalLong.write(value.`archivedAtMs`, buf)
+            FfiConverterOptionalString.write(value.`legacyDailyId`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+            FfiConverterOptionalString.write(value.`sourceTaskId`, buf)
+            FfiConverterOptionalString.write(value.`placementColumn`, buf)
+            FfiConverterBoolean.write(value.`dropsAtDayEnd`, buf)
+            FfiConverterString.write(value.`expiryRule`, buf)
+            FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * A daily shown on a day, with its task and that day's contribution.
+ * `DailyItem`.
+ */
+data class DayDaily (
+    var `daily`: DailyRow
+    , 
+    var `task`: TaskRow
+    , 
+    var `contribution`: ContributionRow?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayDaily: FfiConverterRustBuffer<DayDaily> {
+    override fun read(buf: ByteBuffer): DayDaily {
+        return DayDaily(
+            FfiConverterTypeDailyRow.read(buf),
+            FfiConverterTypeTaskRow.read(buf),
+            FfiConverterOptionalTypeContributionRow.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayDaily) = (
+            FfiConverterTypeDailyRow.allocationSize(value.`daily`) +
+            FfiConverterTypeTaskRow.allocationSize(value.`task`) +
+            FfiConverterOptionalTypeContributionRow.allocationSize(value.`contribution`)
+    )
+
+    override fun write(value: DayDaily, buf: ByteBuffer) {
+            FfiConverterTypeDailyRow.write(value.`daily`, buf)
+            FfiConverterTypeTaskRow.write(value.`task`, buf)
+            FfiConverterOptionalTypeContributionRow.write(value.`contribution`, buf)
     }
 }
 
@@ -5902,6 +7250,47 @@ public object FfiConverterTypeLegacyDailySeed: FfiConverterRustBuffer<LegacyDail
 
 
 /**
+ * Open tasks in one list.
+ */
+data class ListCount (
+    var `listId`: kotlin.String
+    , 
+    var `open`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeListCount: FfiConverterRustBuffer<ListCount> {
+    override fun read(buf: ByteBuffer): ListCount {
+        return ListCount(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ListCount) = (
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterLong.allocationSize(value.`open`)
+    )
+
+    override fun write(value: ListCount, buf: ByteBuffer) {
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterLong.write(value.`open`, buf)
+    }
+}
+
+
+
+/**
  * A row of `task_lists`. `TaskList`.
  */
 data class ListRow (
@@ -6120,6 +7509,158 @@ public object FfiConverterTypeLocalSyncState: FfiConverterRustBuffer<LocalSyncSt
             FfiConverterBoolean.write(value.`needsSnapshot`, buf)
             FfiConverterOptionalLong.write(value.`lastSyncedAtMs`, buf)
             FfiConverterBoolean.write(value.`isRecording`, buf)
+    }
+}
+
+
+
+/**
+ * Seconds logged against a task, across every block that names it.
+ */
+data class LoggedWork (
+    var `taskId`: kotlin.String
+    , 
+    var `seconds`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLoggedWork: FfiConverterRustBuffer<LoggedWork> {
+    override fun read(buf: ByteBuffer): LoggedWork {
+        return LoggedWork(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: LoggedWork) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterLong.allocationSize(value.`seconds`)
+    )
+
+    override fun write(value: LoggedWork, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterLong.write(value.`seconds`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `task_metadata`. `TaskMetadata`.
+ */
+data class MetadataRow (
+    var `taskId`: kotlin.String
+    , 
+    var `priority`: kotlin.Long?
+    , 
+    var `startAtMs`: kotlin.Long?
+    , 
+    var `tagsJson`: kotlin.String
+    , 
+    var `recurrenceRule`: kotlin.String?
+    , 
+    var `matrixUrgency`: kotlin.Long?
+    , 
+    var `matrixImportance`: kotlin.Long?
+    , 
+    var `kanbanColumn`: kotlin.String?
+    , 
+    var `externalLinksJson`: kotlin.String
+    , 
+    var `focusRank`: kotlin.Long?
+    , 
+    var `updatedAtMs`: kotlin.Long
+    , 
+    var `planningJson`: kotlin.String?
+    , 
+    var `waitingOn`: kotlin.String?
+    , 
+    var `waitingFollowUpAtMs`: kotlin.Long?
+    , 
+    var `waitingFollowUpTaskId`: kotlin.String?
+    , 
+    var `followUpOfTaskId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMetadataRow: FfiConverterRustBuffer<MetadataRow> {
+    override fun read(buf: ByteBuffer): MetadataRow {
+        return MetadataRow(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MetadataRow) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterOptionalLong.allocationSize(value.`priority`) +
+            FfiConverterOptionalLong.allocationSize(value.`startAtMs`) +
+            FfiConverterString.allocationSize(value.`tagsJson`) +
+            FfiConverterOptionalString.allocationSize(value.`recurrenceRule`) +
+            FfiConverterOptionalLong.allocationSize(value.`matrixUrgency`) +
+            FfiConverterOptionalLong.allocationSize(value.`matrixImportance`) +
+            FfiConverterOptionalString.allocationSize(value.`kanbanColumn`) +
+            FfiConverterString.allocationSize(value.`externalLinksJson`) +
+            FfiConverterOptionalLong.allocationSize(value.`focusRank`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`planningJson`) +
+            FfiConverterOptionalString.allocationSize(value.`waitingOn`) +
+            FfiConverterOptionalLong.allocationSize(value.`waitingFollowUpAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`waitingFollowUpTaskId`) +
+            FfiConverterOptionalString.allocationSize(value.`followUpOfTaskId`)
+    )
+
+    override fun write(value: MetadataRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterOptionalLong.write(value.`priority`, buf)
+            FfiConverterOptionalLong.write(value.`startAtMs`, buf)
+            FfiConverterString.write(value.`tagsJson`, buf)
+            FfiConverterOptionalString.write(value.`recurrenceRule`, buf)
+            FfiConverterOptionalLong.write(value.`matrixUrgency`, buf)
+            FfiConverterOptionalLong.write(value.`matrixImportance`, buf)
+            FfiConverterOptionalString.write(value.`kanbanColumn`, buf)
+            FfiConverterString.write(value.`externalLinksJson`, buf)
+            FfiConverterOptionalLong.write(value.`focusRank`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+            FfiConverterOptionalString.write(value.`planningJson`, buf)
+            FfiConverterOptionalString.write(value.`waitingOn`, buf)
+            FfiConverterOptionalLong.write(value.`waitingFollowUpAtMs`, buf)
+            FfiConverterOptionalString.write(value.`waitingFollowUpTaskId`, buf)
+            FfiConverterOptionalString.write(value.`followUpOfTaskId`, buf)
     }
 }
 
@@ -6461,6 +8002,215 @@ public object FfiConverterTypePlanning: FfiConverterRustBuffer<Planning> {
 
 
 /**
+ * Focus points over three windows. `FocusPointsSummary`.
+ */
+data class PointsSummary (
+    var `today`: kotlin.Double
+    , 
+    var `last7Days`: kotlin.Double
+    , 
+    var `allTime`: kotlin.Double
+    , 
+    var `blocksToday`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePointsSummary: FfiConverterRustBuffer<PointsSummary> {
+    override fun read(buf: ByteBuffer): PointsSummary {
+        return PointsSummary(
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: PointsSummary) = (
+            FfiConverterDouble.allocationSize(value.`today`) +
+            FfiConverterDouble.allocationSize(value.`last7Days`) +
+            FfiConverterDouble.allocationSize(value.`allTime`) +
+            FfiConverterLong.allocationSize(value.`blocksToday`)
+    )
+
+    override fun write(value: PointsSummary, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`today`, buf)
+            FfiConverterDouble.write(value.`last7Days`, buf)
+            FfiConverterDouble.write(value.`allTime`, buf)
+            FfiConverterLong.write(value.`blocksToday`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `preferences`.
+ */
+data class PreferenceRow (
+    var `key`: kotlin.String
+    , 
+    var `value`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePreferenceRow: FfiConverterRustBuffer<PreferenceRow> {
+    override fun read(buf: ByteBuffer): PreferenceRow {
+        return PreferenceRow(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: PreferenceRow) = (
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterOptionalString.allocationSize(value.`value`)
+    )
+
+    override fun write(value: PreferenceRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterOptionalString.write(value.`value`, buf)
+    }
+}
+
+
+
+/**
+ * A queued item with its task. `FocusQueueTask`.
+ */
+data class QueueEntry (
+    var `item`: QueueItemRow
+    , 
+    var `task`: TaskRow
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQueueEntry: FfiConverterRustBuffer<QueueEntry> {
+    override fun read(buf: ByteBuffer): QueueEntry {
+        return QueueEntry(
+            FfiConverterTypeQueueItemRow.read(buf),
+            FfiConverterTypeTaskRow.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QueueEntry) = (
+            FfiConverterTypeQueueItemRow.allocationSize(value.`item`) +
+            FfiConverterTypeTaskRow.allocationSize(value.`task`)
+    )
+
+    override fun write(value: QueueEntry, buf: ByteBuffer) {
+            FfiConverterTypeQueueItemRow.write(value.`item`, buf)
+            FfiConverterTypeTaskRow.write(value.`task`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `focus_queue_items`. `FocusQueueItem`.
+ */
+data class QueueItemRow (
+    var `id`: kotlin.String
+    , 
+    var `sessionId`: kotlin.String
+    , 
+    var `taskId`: kotlin.String
+    , 
+    var `sortOrder`: kotlin.Long
+    , 
+    var `state`: kotlin.String
+    , 
+    var `plannedSeconds`: kotlin.Long?
+    , 
+    var `completedAtMs`: kotlin.Long?
+    , 
+    var `skippedAtMs`: kotlin.Long?
+    , 
+    var `createdAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQueueItemRow: FfiConverterRustBuffer<QueueItemRow> {
+    override fun read(buf: ByteBuffer): QueueItemRow {
+        return QueueItemRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QueueItemRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`sessionId`) +
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`) +
+            FfiConverterString.allocationSize(value.`state`) +
+            FfiConverterOptionalLong.allocationSize(value.`plannedSeconds`) +
+            FfiConverterOptionalLong.allocationSize(value.`completedAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`skippedAtMs`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`)
+    )
+
+    override fun write(value: QueueItemRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`sessionId`, buf)
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
+            FfiConverterString.write(value.`state`, buf)
+            FfiConverterOptionalLong.write(value.`plannedSeconds`, buf)
+            FfiConverterOptionalLong.write(value.`completedAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`skippedAtMs`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+    }
+}
+
+
+
+/**
  * The day's order. `FocusRanking`.
  */
 data class Ranking (
@@ -6617,6 +8367,160 @@ public object FfiConverterTypeSearchHit: FfiConverterRustBuffer<SearchHit> {
 
 
 /**
+ * A row of `focus_sessions`. `FocusSession`.
+ */
+data class SessionRow (
+    var `id`: kotlin.String
+    , 
+    var `startedAtMs`: kotlin.Long
+    , 
+    var `endedAtMs`: kotlin.Long?
+    , 
+    /**
+     * "running", "onBreak", "paused" or "finished".
+     */
+    var `phase`: kotlin.String
+    , 
+    var `activeTaskId`: kotlin.String?
+    , 
+    var `activeTaskStartedAtMs`: kotlin.Long
+    , 
+    var `workDurationSeconds`: kotlin.Long
+    , 
+    var `breakDurationSeconds`: kotlin.Long
+    , 
+    var `breakEndsAtMs`: kotlin.Long?
+    , 
+    var `activeBlockId`: kotlin.String?
+    , 
+    var `accumulatedSeconds`: kotlin.Long?
+    , 
+    var `pausedAtMs`: kotlin.Long?
+    , 
+    var `checkpointAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSessionRow: FfiConverterRustBuffer<SessionRow> {
+    override fun read(buf: ByteBuffer): SessionRow {
+        return SessionRow(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SessionRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterLong.allocationSize(value.`startedAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`endedAtMs`) +
+            FfiConverterString.allocationSize(value.`phase`) +
+            FfiConverterOptionalString.allocationSize(value.`activeTaskId`) +
+            FfiConverterLong.allocationSize(value.`activeTaskStartedAtMs`) +
+            FfiConverterLong.allocationSize(value.`workDurationSeconds`) +
+            FfiConverterLong.allocationSize(value.`breakDurationSeconds`) +
+            FfiConverterOptionalLong.allocationSize(value.`breakEndsAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`activeBlockId`) +
+            FfiConverterOptionalLong.allocationSize(value.`accumulatedSeconds`) +
+            FfiConverterOptionalLong.allocationSize(value.`pausedAtMs`) +
+            FfiConverterOptionalLong.allocationSize(value.`checkpointAtMs`)
+    )
+
+    override fun write(value: SessionRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterLong.write(value.`startedAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`endedAtMs`, buf)
+            FfiConverterString.write(value.`phase`, buf)
+            FfiConverterOptionalString.write(value.`activeTaskId`, buf)
+            FfiConverterLong.write(value.`activeTaskStartedAtMs`, buf)
+            FfiConverterLong.write(value.`workDurationSeconds`, buf)
+            FfiConverterLong.write(value.`breakDurationSeconds`, buf)
+            FfiConverterOptionalLong.write(value.`breakEndsAtMs`, buf)
+            FfiConverterOptionalString.write(value.`activeBlockId`, buf)
+            FfiConverterOptionalLong.write(value.`accumulatedSeconds`, buf)
+            FfiConverterOptionalLong.write(value.`pausedAtMs`, buf)
+            FfiConverterOptionalLong.write(value.`checkpointAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * Open and closed task counts, for overview screens.
+ */
+data class TaskCounts (
+    /**
+     * Open tasks, not lists.
+     */
+    var `open`: kotlin.Long
+    , 
+    /**
+     * Completed or cancelled tasks, not lists.
+     */
+    var `completed`: kotlin.Long
+    , 
+    /**
+     * Open rows per list, lists included, as the sidebar counts them.
+     */
+    var `byList`: List<ListCount>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTaskCounts: FfiConverterRustBuffer<TaskCounts> {
+    override fun read(buf: ByteBuffer): TaskCounts {
+        return TaskCounts(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterSequenceTypeListCount.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: TaskCounts) = (
+            FfiConverterLong.allocationSize(value.`open`) +
+            FfiConverterLong.allocationSize(value.`completed`) +
+            FfiConverterSequenceTypeListCount.allocationSize(value.`byList`)
+    )
+
+    override fun write(value: TaskCounts, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`open`, buf)
+            FfiConverterLong.write(value.`completed`, buf)
+            FfiConverterSequenceTypeListCount.write(value.`byList`, buf)
+    }
+}
+
+
+
+/**
  * A row of `tasks`. Swift's `WorkspaceTask`, Kotlin's `WorkspaceTask`.
  */
 data class TaskRow (
@@ -6739,6 +8643,52 @@ public object FfiConverterTypeTaskRow: FfiConverterRustBuffer<TaskRow> {
 
 
 /**
+ * A row of `themes`. `StoredTheme`.
+ */
+data class ThemeRow (
+    var `id`: kotlin.String
+    , 
+    var `json`: kotlin.String
+    , 
+    var `updatedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeThemeRow: FfiConverterRustBuffer<ThemeRow> {
+    override fun read(buf: ByteBuffer): ThemeRow {
+        return ThemeRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ThemeRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`json`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+    )
+
+    override fun write(value: ThemeRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`json`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
  * One named step in the journal, as [`history`] reports it.
  */
 data class UndoStep (
@@ -6796,6 +8746,72 @@ public object FfiConverterTypeUndoStep: FfiConverterRustBuffer<UndoStep> {
             FfiConverterString.write(value.`label`, buf)
             FfiConverterBoolean.write(value.`isUndone`, buf)
             FfiConverterUInt.write(value.`changeCount`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `focus_work_blocks`. `FocusWorkBlock`.
+ */
+data class WorkBlockRow (
+    var `id`: kotlin.String
+    , 
+    var `sessionId`: kotlin.String?
+    , 
+    var `taskId`: kotlin.String?
+    , 
+    var `taskTitle`: kotlin.String
+    , 
+    var `seconds`: kotlin.Long
+    , 
+    var `recordedAtMs`: kotlin.Long
+    , 
+    var `originalTaskId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeWorkBlockRow: FfiConverterRustBuffer<WorkBlockRow> {
+    override fun read(buf: ByteBuffer): WorkBlockRow {
+        return WorkBlockRow(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: WorkBlockRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterOptionalString.allocationSize(value.`sessionId`) +
+            FfiConverterOptionalString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`taskTitle`) +
+            FfiConverterLong.allocationSize(value.`seconds`) +
+            FfiConverterLong.allocationSize(value.`recordedAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`originalTaskId`)
+    )
+
+    override fun write(value: WorkBlockRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterOptionalString.write(value.`sessionId`, buf)
+            FfiConverterOptionalString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`taskTitle`, buf)
+            FfiConverterLong.write(value.`seconds`, buf)
+            FfiConverterLong.write(value.`recordedAtMs`, buf)
+            FfiConverterOptionalString.write(value.`originalTaskId`, buf)
     }
 }
 
@@ -7699,6 +9715,134 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeAwardRow: FfiConverterRustBuffer<AwardRow?> {
+    override fun read(buf: ByteBuffer): AwardRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeAwardRow.read(buf)
+    }
+
+    override fun allocationSize(value: AwardRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeAwardRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: AwardRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeAwardRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeConditionRow: FfiConverterRustBuffer<ConditionRow?> {
+    override fun read(buf: ByteBuffer): ConditionRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeConditionRow.read(buf)
+    }
+
+    override fun allocationSize(value: ConditionRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeConditionRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ConditionRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeConditionRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeContributionRow: FfiConverterRustBuffer<ContributionRow?> {
+    override fun read(buf: ByteBuffer): ContributionRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeContributionRow.read(buf)
+    }
+
+    override fun allocationSize(value: ContributionRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeContributionRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ContributionRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeContributionRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeDailyRow: FfiConverterRustBuffer<DailyRow?> {
+    override fun read(buf: ByteBuffer): DailyRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeDailyRow.read(buf)
+    }
+
+    override fun allocationSize(value: DailyRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeDailyRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: DailyRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeDailyRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeFocusContext: FfiConverterRustBuffer<FocusContext?> {
     override fun read(buf: ByteBuffer): FocusContext? {
         if (buf.get().toInt() == 0) {
@@ -7827,6 +9971,38 @@ public object FfiConverterOptionalTypeLocalSyncState: FfiConverterRustBuffer<Loc
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeMetadataRow: FfiConverterRustBuffer<MetadataRow?> {
+    override fun read(buf: ByteBuffer): MetadataRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeMetadataRow.read(buf)
+    }
+
+    override fun allocationSize(value: MetadataRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeMetadataRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: MetadataRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeMetadataRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypePlanning: FfiConverterRustBuffer<Planning?> {
     override fun read(buf: ByteBuffer): Planning? {
         if (buf.get().toInt() == 0) {
@@ -7849,6 +10025,38 @@ public object FfiConverterOptionalTypePlanning: FfiConverterRustBuffer<Planning?
         } else {
             buf.put(1)
             FfiConverterTypePlanning.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeSessionRow: FfiConverterRustBuffer<SessionRow?> {
+    override fun read(buf: ByteBuffer): SessionRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeSessionRow.read(buf)
+    }
+
+    override fun allocationSize(value: SessionRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeSessionRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: SessionRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeSessionRow.write(value, buf)
         }
     }
 }
@@ -7983,6 +10191,34 @@ public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>
 /**
  * @suppress
  */
+public object FfiConverterSequenceLong: FfiConverterRustBuffer<List<kotlin.Long>> {
+    override fun read(buf: ByteBuffer): List<kotlin.Long> {
+        val len = buf.getInt()
+        return List<kotlin.Long>(len) {
+            FfiConverterLong.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.Long>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterLong.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.Long>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterLong.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
     override fun read(buf: ByteBuffer): List<kotlin.String> {
         val len = buf.getInt()
@@ -8001,6 +10237,34 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeAwardRow: FfiConverterRustBuffer<List<AwardRow>> {
+    override fun read(buf: ByteBuffer): List<AwardRow> {
+        val len = buf.getInt()
+        return List<AwardRow>(len) {
+            FfiConverterTypeAwardRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<AwardRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeAwardRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<AwardRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeAwardRow.write(it, buf)
         }
     }
 }
@@ -8123,6 +10387,118 @@ public object FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer<List<Can
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeConditionRow: FfiConverterRustBuffer<List<ConditionRow>> {
+    override fun read(buf: ByteBuffer): List<ConditionRow> {
+        val len = buf.getInt()
+        return List<ConditionRow>(len) {
+            FfiConverterTypeConditionRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ConditionRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeConditionRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ConditionRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeConditionRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeContributionRow: FfiConverterRustBuffer<List<ContributionRow>> {
+    override fun read(buf: ByteBuffer): List<ContributionRow> {
+        val len = buf.getInt()
+        return List<ContributionRow>(len) {
+            FfiConverterTypeContributionRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ContributionRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeContributionRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ContributionRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeContributionRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeDailyRow: FfiConverterRustBuffer<List<DailyRow>> {
+    override fun read(buf: ByteBuffer): List<DailyRow> {
+        val len = buf.getInt()
+        return List<DailyRow>(len) {
+            FfiConverterTypeDailyRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<DailyRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeDailyRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<DailyRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeDailyRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeDayDaily: FfiConverterRustBuffer<List<DayDaily>> {
+    override fun read(buf: ByteBuffer): List<DayDaily> {
+        val len = buf.getInt()
+        return List<DayDaily>(len) {
+            FfiConverterTypeDayDaily.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<DayDaily>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeDayDaily.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<DayDaily>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeDayDaily.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer<List<FolderRow>> {
     override fun read(buf: ByteBuffer): List<FolderRow> {
         val len = buf.getInt()
@@ -8235,6 +10611,34 @@ public object FfiConverterSequenceTypeLegacyDailySeed: FfiConverterRustBuffer<Li
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeListCount: FfiConverterRustBuffer<List<ListCount>> {
+    override fun read(buf: ByteBuffer): List<ListCount> {
+        val len = buf.getInt()
+        return List<ListCount>(len) {
+            FfiConverterTypeListCount.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ListCount>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeListCount.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ListCount>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeListCount.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeListRow: FfiConverterRustBuffer<List<ListRow>> {
     override fun read(buf: ByteBuffer): List<ListRow> {
         val len = buf.getInt()
@@ -8253,6 +10657,62 @@ public object FfiConverterSequenceTypeListRow: FfiConverterRustBuffer<List<ListR
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeListRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeLoggedWork: FfiConverterRustBuffer<List<LoggedWork>> {
+    override fun read(buf: ByteBuffer): List<LoggedWork> {
+        val len = buf.getInt()
+        return List<LoggedWork>(len) {
+            FfiConverterTypeLoggedWork.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<LoggedWork>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeLoggedWork.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<LoggedWork>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeLoggedWork.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMetadataRow: FfiConverterRustBuffer<List<MetadataRow>> {
+    override fun read(buf: ByteBuffer): List<MetadataRow> {
+        val len = buf.getInt()
+        return List<MetadataRow>(len) {
+            FfiConverterTypeMetadataRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MetadataRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMetadataRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MetadataRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMetadataRow.write(it, buf)
         }
     }
 }
@@ -8309,6 +10769,62 @@ public object FfiConverterSequenceTypeOutlineItem: FfiConverterRustBuffer<List<O
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeOutlineItem.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypePreferenceRow: FfiConverterRustBuffer<List<PreferenceRow>> {
+    override fun read(buf: ByteBuffer): List<PreferenceRow> {
+        val len = buf.getInt()
+        return List<PreferenceRow>(len) {
+            FfiConverterTypePreferenceRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<PreferenceRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypePreferenceRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<PreferenceRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypePreferenceRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeQueueEntry: FfiConverterRustBuffer<List<QueueEntry>> {
+    override fun read(buf: ByteBuffer): List<QueueEntry> {
+        val len = buf.getInt()
+        return List<QueueEntry>(len) {
+            FfiConverterTypeQueueEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<QueueEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeQueueEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<QueueEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeQueueEntry.write(it, buf)
         }
     }
 }
@@ -8403,6 +10919,34 @@ public object FfiConverterSequenceTypeTaskRow: FfiConverterRustBuffer<List<TaskR
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeThemeRow: FfiConverterRustBuffer<List<ThemeRow>> {
+    override fun read(buf: ByteBuffer): List<ThemeRow> {
+        val len = buf.getInt()
+        return List<ThemeRow>(len) {
+            FfiConverterTypeThemeRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ThemeRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeThemeRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ThemeRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeThemeRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer<List<UndoStep>> {
     override fun read(buf: ByteBuffer): List<UndoStep> {
         val len = buf.getInt()
@@ -8421,6 +10965,34 @@ public object FfiConverterSequenceTypeUndoStep: FfiConverterRustBuffer<List<Undo
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeUndoStep.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeWorkBlockRow: FfiConverterRustBuffer<List<WorkBlockRow>> {
+    override fun read(buf: ByteBuffer): List<WorkBlockRow> {
+        val len = buf.getInt()
+        return List<WorkBlockRow>(len) {
+            FfiConverterTypeWorkBlockRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<WorkBlockRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeWorkBlockRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<WorkBlockRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeWorkBlockRow.write(it, buf)
         }
     }
 }

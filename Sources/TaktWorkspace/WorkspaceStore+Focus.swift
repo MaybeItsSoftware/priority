@@ -4,21 +4,11 @@ import TaktCore
 
 extension WorkspaceStore {
   public func activeFocusSession() throws -> FocusSession? {
-    try database.read { db in
-      try FocusSession.filter(Column("phase") != FocusSessionPhase.finished.rawValue)
-        .order(Column("startedAt").desc).fetchOne(db)
-    }
+    try Self.mappingCoreErrors { try core.activeFocusSession() }.map(FocusSession.init)
   }
 
   public func focusQueue(for sessionId: String) throws -> [FocusQueueTask] {
-    try database.read { db in
-      let items = try FocusQueueItem.filter(Column("sessionId") == sessionId)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-      return try items.compactMap { item in
-        guard let task = try WorkspaceTask.fetchOne(db, key: item.taskId), !task.isList else { return nil }
-        return FocusQueueTask(item: item, task: task)
-      }
-    }
+    try Self.mappingCoreErrors { try core.focusQueue(sessionId: sessionId) }.map(FocusQueueTask.init)
   }
 
   /// `plannedSeconds` is the estimate given on the focus screen. It becomes the
@@ -41,7 +31,7 @@ extension WorkspaceStore {
         workSeconds: Int64(workDurationSeconds), breakSeconds: Int64(breakDurationSeconds),
         context: context?.core, overrideAvailability: overrideAvailability, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
     }
-    guard let session = try database.read({ db in try FocusSession.fetchOne(db, key: id) }) else {
+    guard let session = try Self.mappingCoreErrors({ try core.focusSession(id: id) }).map(FocusSession.init) else {
       throw WorkspaceStoreError.noActiveFocusTask
     }
     return session
@@ -103,11 +93,11 @@ extension WorkspaceStore {
         completeTask: completeTask, expectedBlockId: expectedBlockId, context: context.core,
         nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
     }
-    return try database.read { db in
-      guard let session = try FocusSession.fetchOne(db, key: sessionId) else {
+    return try Self.mappingCoreErrors {
+      guard let session = try core.focusSession(id: sessionId).map(FocusSession.init) else {
         throw WorkspaceStoreError.noActiveFocusTask
       }
-      let award = try finished.awardId.flatMap { try FocusAward.fetchOne(db, key: $0) }
+      let award = try finished.awardId.flatMap { try core.focusAward(id: $0) }.map(FocusAward.init)
       let seconds = Int(finished.seconds)
       let outcome: FocusCompletionOutcome = switch finished.outcome {
       case "taskCompleted": .taskCompleted

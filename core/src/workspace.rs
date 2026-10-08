@@ -674,6 +674,10 @@ impl CoreWorkspace {
     /// returns whether it made any.
     pub fn reconcile_waiting_follow_ups(&self, now_ms: i64) -> Result<bool, CoreError> {
         let mut connection = self.lock();
+        // Reading first keeps the usual pass, with nothing due, off the writer.
+        if !waiting::any_due(&connection, now_ms)? {
+            return Ok(false);
+        }
         let transaction =
             connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let made = waiting::make_due_follow_ups(&transaction, None, now_ms)?;
@@ -704,6 +708,9 @@ impl CoreWorkspace {
     /// journal; returns whether anything changed.
     pub fn reconcile_habits(&self, now_ms: i64, zone: String) -> Result<bool, CoreError> {
         let mut connection = self.lock();
+        if !habits::any_live(&connection)? {
+            return Ok(false);
+        }
         let transaction =
             connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let changed = habits::reconcile_habits(&transaction, now_ms, &zone)?;
@@ -1164,7 +1171,7 @@ impl CoreWorkspace {
 
     /// A poisoned lock only means another call panicked mid-way; SQLite rolled
     /// its transaction back, so the connection is still sound to use.
-    fn lock(&self) -> MutexGuard<'_, Connection> {
+    pub(crate) fn lock(&self) -> MutexGuard<'_, Connection> {
         self.connection
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())

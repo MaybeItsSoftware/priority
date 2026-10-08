@@ -62,7 +62,7 @@ data class HabitFormContext(
  */
 suspend fun WorkspaceRepository.habitFormContext(taskId: String?): HabitFormContext = database.read { db ->
     val task = taskId?.let { db.task(it) } ?: return@read HabitFormContext(null, HabitDraft.new(""), null)
-    val daily = db.queryOne("SELECT * FROM dailies WHERE taskId = ? AND archivedAt IS NULL", task.id) { it.toDaily() }
+    val daily = db.core.dailyForTask(task.id)?.toDaily()
     if (daily != null) {
         val source = daily.sourceTaskId?.let { db.task(it) }
         val draft = HabitDraft(
@@ -76,9 +76,8 @@ suspend fun WorkspaceRepository.habitFormContext(taskId: String?): HabitFormCont
 }
 
 /** Every task whose daily is a habit: the ones ticked for the day rather than closed. */
-suspend fun WorkspaceRepository.habitTaskIds(): Set<String> = database.read { db ->
-    db.strings("SELECT taskId FROM dailies WHERE archivedAt IS NULL AND placementColumn IS NOT NULL").toSet()
-}
+suspend fun WorkspaceRepository.habitTaskIds(): Set<String> =
+    coreRead { core -> core.allDailies().filter { it.placementColumn != null }.map { it.taskId }.toSet() }
 
 /**
  * Creates a habit, or rewrites the one on [habitTaskId]. A new habit is a
@@ -120,45 +119,10 @@ suspend fun WorkspaceRepository.saveHabit(
  * changed.
  */
 suspend fun WorkspaceRepository.reconcileHabits(now: Instant = now(), zone: ZoneId = this.zone): Boolean {
-    val pending = database.read { db ->
-        db.strings("SELECT id FROM dailies WHERE archivedAt IS NULL AND placementColumn IS NOT NULL")
-    }
-    if (pending.isEmpty()) return false
-    // The Rust core's `habits::reconcile_habits`, outside the journal.
+    // The Rust core's `habits::reconcile_habits`, outside the journal; it reads
+    // first and skips the write when no habit is live.
     return coreWrite { it.reconcileHabits(now.toEpochMilli(), zone.id) }
 }
-
-/** Whether a habit is showing on [day]: scheduled, or carried over from a missed day it does not drop. */
-internal fun habitShows(db: Db, daily: WorkspaceDaily, day: Instant, zone: ZoneId): Boolean {
-    val rule = daily.habitRule
-    val sourceCompleted = isSourceCompleted(db, daily)
-    if (HabitPolicy.isExpired(rule, day, sourceCompleted, zone)) return false
-    if (HabitPolicy.isScheduled(rule, day, zone)) return true
-    return HabitPolicy.appearance(rule, day, lastDoneDay(db, daily.id, zone), sourceCompleted, zone) != null
-}
-
-/** What `dailies(on:)` and next-up ask of a daily: due for a plain one, showing for a habit. */
-internal fun dailyShows(db: Db, daily: WorkspaceDaily, day: Instant, zone: ZoneId): Boolean =
-    if (daily.isHabit) habitShows(db, daily, day, zone) else daily.isDue(day, zone)
-
-/** A source that is closed or gone has ended. */
-private fun isSourceCompleted(db: Db, daily: WorkspaceDaily): Boolean {
-    val sourceId = daily.sourceTaskId ?: return false
-    val source = db.task(sourceId) ?: return true
-    return source.status != TaskStatus.OPEN
-}
-
-private fun lastDoneDay(db: Db, dailyId: String, zone: ZoneId): Instant? {
-    val key = db.string(
-        "SELECT MAX(dayKey) FROM daily_contributions WHERE dailyId = ? AND completedAt IS NOT NULL", dailyId,
-    ) ?: return null
-    val parts = key.split("-").mapNotNull { it.toIntOrNull() }
-    if (parts.size != 3) return null
-    return runCatching { LocalDate.of(parts[0], parts[1], parts[2]).atStartOfDay(zone).toInstant() }.getOrNull()
-}
-
-private fun startOfDay(instant: Instant, zone: ZoneId): Instant =
-    instant.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant()
 
 internal fun kanbanColumn(db: Db, taskId: String): String? =
     db.string("SELECT kanbanColumn FROM task_metadata WHERE taskId = ?", taskId)

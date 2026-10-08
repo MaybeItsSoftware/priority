@@ -83,7 +83,7 @@ internal fun validateActionableTask(db: Db, id: String) {
     val ok = !task.isList && list != null && !list.isArchived && list.completedAt == null &&
         list.visibleRootTaskId != id &&
         id !in WorkspaceListTree.inactiveContainerItems(
-            db.query("SELECT * FROM tasks WHERE listId = ?", task.listId) { it.toTask() },
+            db.core.tasksInLists(listOf(task.listId)).map { it.toTask() },
         )
     if (!ok) fail(WorkspaceStoreError.INVALID_TASK_MOVE)
 }

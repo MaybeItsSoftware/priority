@@ -1,9 +1,11 @@
 package uk.co.maybeitsadam.takt.data.workspace
 
 import uk.co.maybeitsadam.takt.core.DailyContribution
+import uk.co.maybeitsadam.takt.core.DailyItem
 import uk.co.maybeitsadam.takt.core.FocusAward
 import uk.co.maybeitsadam.takt.core.FocusQueueItem
 import uk.co.maybeitsadam.takt.core.FocusQueueState
+import uk.co.maybeitsadam.takt.core.FocusQueueTask
 import uk.co.maybeitsadam.takt.core.FocusSession
 import uk.co.maybeitsadam.takt.core.FocusSessionPhase
 import uk.co.maybeitsadam.takt.core.FocusWorkBlock
@@ -19,7 +21,16 @@ import uk.co.maybeitsadam.takt.core.WorkspaceItemKind
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.db.Db
 import uk.co.maybeitsadam.takt.data.db.Row
+import uniffi.takt_core.AwardRow
+import uniffi.takt_core.ConditionRow
+import uniffi.takt_core.ContributionRow
+import uniffi.takt_core.DailyRow
+import uniffi.takt_core.DayDaily
 import uniffi.takt_core.FolderRow
+import uniffi.takt_core.MetadataRow
+import uniffi.takt_core.QueueEntry
+import uniffi.takt_core.SessionRow
+import uniffi.takt_core.WorkBlockRow
 import uniffi.takt_core.ListRow
 import uniffi.takt_core.TaskRow
 import uniffi.takt_core.WorkspaceRow
@@ -142,18 +153,73 @@ internal fun TaskRow.toTask() = WorkspaceTask(
     completedAt = completedAtMs?.instant(), createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(),
 )
 
+internal fun DailyRow.toDaily() = WorkspaceDaily(
+    id = id, taskId = taskId, activeWeekdaysMask = activeWeekdaysMask.toInt(), intervalDays = intervalDays?.toInt(),
+    intervalAnchor = intervalAnchorMs?.instant(), targetSeconds = targetSeconds?.toInt(), sortOrder = sortOrder.toInt(),
+    archivedAt = archivedAtMs?.instant(), legacyDailyId = legacyDailyId, createdAt = createdAtMs.instant(),
+    updatedAt = updatedAtMs.instant(), sourceTaskId = sourceTaskId, placementColumn = placementColumn,
+    dropsAtDayEnd = dropsAtDayEnd, expiryRule = expiryRule, expiresAt = expiresAtMs?.instant(),
+)
+
+internal fun ContributionRow.toContribution() = DailyContribution(
+    id = id, dailyId = dailyId, taskId = taskId, dayKey = dayKey, secondsLogged = secondsLogged.toInt(),
+    completedAt = completedAtMs?.instant(), createdAt = createdAtMs.instant(),
+)
+
+internal fun DayDaily.toItem() = DailyItem(daily.toDaily(), task.toTask(), contribution?.toContribution())
+
+internal fun ConditionRow.toCondition() = TaskCondition(
+    id = id, workspaceId = workspaceId, name = name, isLocation = isLocation, isArchived = isArchived,
+    createdAt = createdAtMs.instant(), updatedAt = updatedAtMs.instant(),
+)
+
+internal fun MetadataRow.toMetadata() = TaskMetadata(
+    taskId = taskId, priority = priority?.toInt(), startAt = startAtMs?.instant(), tagsJSON = tagsJson,
+    recurrenceRule = recurrenceRule, matrixUrgency = matrixUrgency?.toInt(), matrixImportance = matrixImportance?.toInt(),
+    kanbanColumn = kanbanColumn, externalLinksJSON = externalLinksJson, focusRank = focusRank?.toInt(),
+    updatedAt = updatedAtMs.instant(), planningJSON = planningJson, waitingOn = waitingOn,
+    waitingFollowUpAt = waitingFollowUpAtMs?.instant(), waitingFollowUpTaskId = waitingFollowUpTaskId,
+    followUpOfTaskId = followUpOfTaskId,
+)
+
+internal fun SessionRow.toSession() = FocusSession(
+    id = id, startedAt = startedAtMs.instant(), endedAt = endedAtMs?.instant(), phase = FocusSessionPhase.of(phase),
+    activeTaskId = activeTaskId, activeTaskStartedAt = activeTaskStartedAtMs.instant(),
+    workDurationSeconds = workDurationSeconds.toInt(), breakDurationSeconds = breakDurationSeconds.toInt(),
+    breakEndsAt = breakEndsAtMs?.instant(), activeBlockId = activeBlockId, accumulatedSeconds = accumulatedSeconds?.toInt(),
+    pausedAt = pausedAtMs?.instant(), checkpointAt = checkpointAtMs?.instant(),
+)
+
+internal fun QueueEntry.toQueueTask() = FocusQueueTask(
+    FocusQueueItem(
+        id = item.id, sessionId = item.sessionId, taskId = item.taskId, sortOrder = item.sortOrder.toInt(),
+        state = FocusQueueState.of(item.state), plannedSeconds = item.plannedSeconds?.toInt(),
+        completedAt = item.completedAtMs?.instant(), skippedAt = item.skippedAtMs?.instant(),
+        createdAt = item.createdAtMs.instant(),
+    ),
+    task.toTask(),
+)
+
+internal fun WorkBlockRow.toWorkBlock() = FocusWorkBlock(
+    id = id, sessionId = sessionId, taskId = taskId, taskTitle = taskTitle, seconds = seconds.toInt(),
+    recordedAt = recordedAtMs.instant(), originalTaskId = originalTaskId,
+)
+
+internal fun AwardRow.toAward() = FocusAward(
+    id = id, sessionId = sessionId, taskId = taskId, taskTitle = taskTitle, seconds = seconds.toInt(),
+    minutes = minutes, multiplier = multiplier, points = points, awardedAt = awardedAtMs.instant(),
+)
+
 // Fetch by key.
 
 internal fun Db.workspace(id: String) = queryOne("SELECT * FROM workspaces WHERE id = ?", id) { it.toWorkspace() }
 internal fun Db.folder(id: String) = queryOne("SELECT * FROM list_folders WHERE id = ?", id) { it.toFolder() }
 internal fun Db.list(id: String) = core.list(id)?.toList()
 internal fun Db.task(id: String) = core.task(id)?.toTask()
-internal fun Db.metadata(taskId: String) =
-    queryOne("SELECT * FROM task_metadata WHERE taskId = ?", taskId) { it.toMetadata() }
-internal fun Db.session(id: String) = queryOne("SELECT * FROM focus_sessions WHERE id = ?", id) { it.toSession() }
-internal fun Db.daily(id: String) = queryOne("SELECT * FROM dailies WHERE id = ?", id) { it.toDaily() }
-internal fun Db.condition(id: String) =
-    queryOne("SELECT * FROM task_conditions WHERE id = ?", id) { it.toCondition() }
+internal fun Db.metadata(taskId: String) = core.metadata(taskId)?.toMetadata()
+internal fun Db.session(id: String) = core.focusSession(id)?.toSession()
+internal fun Db.daily(id: String) = core.daily(id)?.toDaily()
+internal fun Db.condition(id: String) = core.condition(id)?.toCondition()
 internal fun Db.workBlockExists(id: String) = exists("SELECT 1 FROM focus_work_blocks WHERE id = ?", id)
 
 /** Siblings in GRDB's `.order(sortOrder, createdAt, id)`. */

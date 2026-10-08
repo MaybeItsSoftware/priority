@@ -58,9 +58,6 @@ suspend fun WorkspaceRepository.setPreference(key: String, value: String?, now: 
     coreWrite { it.setPreference(key, value, now.toEpochMilli()) }
 
 private fun readThemes(db: Db): List<StoredTheme> =
-    db.query("SELECT id, json, updatedAt FROM themes ORDER BY id") {
-        StoredTheme(it.string("id"), it.string("json"), it.instant("updatedAt"))
-    }
+    db.core.themes().map { StoredTheme(it.id, it.json, Instant.ofEpochMilli(it.updatedAtMs)) }
 
-private fun readPreferences(db: Db): Map<String, String?> =
-    db.query("SELECT key, value FROM preferences ORDER BY key") { it.string("key") to it.stringOrNull("value") }.toMap()
+private fun readPreferences(db: Db): Map<String, String?> = db.core.preferences().associate { it.key to it.value }

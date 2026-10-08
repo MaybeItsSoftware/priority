@@ -1,5 +1,5 @@
 import Foundation
-import GRDB
+import TaktRustCore
 import TaktCore
 
 /// Tasks that come round again.
@@ -23,16 +23,14 @@ extension WorkspaceStore {
   /// Whether a task repeats, and how often — for anything that wants to say so
   /// without re-reading the rule itself.
   public func periodicSchedule(for taskId: String) throws -> PeriodicSchedule? {
-    try database.read { db in
-      guard let metadata = try TaskMetadata.fetchOne(db, key: taskId),
-        let rule = metadata.recurrenceRule
-      else { return nil }
-      return PeriodicSchedule(rule)
+    guard let rule = try Self.mappingCoreErrors({ try core.metadata(taskId: taskId) })?.recurrenceRule else {
+      return nil
     }
+    return PeriodicSchedule(rule)
   }
 
   /// When a task is scheduled to be begun, if anything scheduled it.
   public func startAt(for taskId: String) throws -> Date? {
-    try database.read { db in try TaskMetadata.fetchOne(db, key: taskId)?.startAt }
+    try Self.mappingCoreErrors { try core.metadata(taskId: taskId) }?.startAtMs.map(Date.init(coreMilliseconds:))
   }
 }

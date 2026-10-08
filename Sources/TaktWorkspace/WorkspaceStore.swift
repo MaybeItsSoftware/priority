@@ -58,7 +58,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   public func bootstrapIfNeeded(now: Date = .now) throws -> Workspace {
     // The Rust core's `setup::bootstrap`, outside the journal.
     let id = try coreWrite { try core.bootstrap(nowMs: now.coreMilliseconds) }
-    guard let workspace = try database.read({ db in try Workspace.fetchOne(db, key: id) }) else {
+    guard let workspace = try workspaces().first(where: { $0.id == id }) else {
       throw WorkspaceStoreError.missingList
     }
     return workspace
@@ -267,7 +267,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       estimateSeconds: estimateSeconds.map(Int64.init), tags: tags, priority: priority.map(Int64.init),
       waitingOn: waitingOn, externalLinks: [], atTop: atTop, adjacentTaskId: adjacentTaskId, above: above)
     let id = try coreWrite { try core.createTask(task: new, nowMs: now.coreMilliseconds) }
-    guard let task = try database.read({ db in try WorkspaceTask.fetchOne(db, key: id) }) else {
+    guard let task = try task(id: id) else {
       throw WorkspaceStoreError.missingTask
     }
     return task
@@ -316,7 +316,7 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func kanbanColumn(for taskId: String) throws -> String? {
-    try database.read { db in try TaskMetadata.fetchOne(db, key: taskId)?.kanbanColumn }
+    try Self.mappingCoreErrors { try core.metadata(taskId: taskId) }?.kanbanColumn
   }
 
   /// Loads board placement in batches rather than opening a read per card.
@@ -325,22 +325,16 @@ public final class WorkspaceStore: @unchecked Sendable {
     columns: [String: String], positions: [String: TaskMatrixPosition]
   ) {
     guard !taskIDs.isEmpty else { return ([:], [:]) }
-    return try database.read { db in
-      var columns: [String: String] = [:]
-      var positions = Dictionary(uniqueKeysWithValues: Set(taskIDs).map {
-        ($0, TaskMatrixPosition(urgency: nil, importance: nil))
-      })
-      // Stay below SQLite's parameter limit even for large imported trees.
-      for start in stride(from: 0, to: taskIDs.count, by: 500) {
-        let ids = Array(taskIDs[start..<min(start + 500, taskIDs.count)])
-        for record in try TaskMetadata.filter(ids.contains(Column("taskId"))).fetchAll(db) {
-          columns[record.taskId] = record.kanbanColumn
-          positions[record.taskId] = TaskMatrixPosition(
-            urgency: record.matrixUrgency, importance: record.matrixImportance)
-        }
-      }
-      return (columns, positions)
+    var columns: [String: String] = [:]
+    var positions = Dictionary(uniqueKeysWithValues: Set(taskIDs).map {
+      ($0, TaskMatrixPosition(urgency: nil, importance: nil))
+    })
+    for record in try Self.mappingCoreErrors({ try core.metadataForTasks(taskIds: taskIDs) }) {
+      columns[record.taskId] = record.kanbanColumn
+      positions[record.taskId] = TaskMatrixPosition(
+        urgency: record.matrixUrgency.map { Int($0) }, importance: record.matrixImportance.map { Int($0) })
     }
+    return (columns, positions)
   }
 
   public func setKanbanColumn(_ column: String?, for taskId: String, now: Date = .now) throws {
@@ -358,10 +352,9 @@ public final class WorkspaceStore: @unchecked Sendable {
   }
 
   public func matrixPosition(for taskId: String) throws -> TaskMatrixPosition {
-    try database.read { db in
-      let metadata = try TaskMetadata.fetchOne(db, key: taskId)
-      return TaskMatrixPosition(urgency: metadata?.matrixUrgency, importance: metadata?.matrixImportance)
-    }
+    let metadata = try Self.mappingCoreErrors { try core.metadata(taskId: taskId) }
+    return TaskMatrixPosition(
+      urgency: metadata?.matrixUrgency.map { Int($0) }, importance: metadata?.matrixImportance.map { Int($0) })
   }
 
   /// Places a task on the priority matrix: the Rust core's `tasks::set_matrix_position`.

@@ -56,10 +56,8 @@ extension WorkspaceStore {
 
   /// Every stored theme, by identifier.
   public func themes() throws -> [StoredTheme] {
-    try database.read { db in
-      try Row.fetchAll(db, sql: "SELECT id, json, updatedAt FROM themes ORDER BY id").map {
-        StoredTheme(id: $0["id"], json: $0["json"], updatedAt: $0["updatedAt"])
-      }
+    try Self.mappingCoreErrors { try core.themes() }.map {
+      StoredTheme(id: $0.id, json: $0.json, updatedAt: Date(coreMilliseconds: $0.updatedAtMs))
     }
   }
 
@@ -80,20 +78,14 @@ extension WorkspaceStore {
 
   /// The value stored under `key`, or nil when it is unset or stored as null.
   public func preference(_ key: String) throws -> String? {
-    try database.read { db in
-      try String.fetchOne(db, sql: "SELECT value FROM preferences WHERE key = ?", arguments: [key])
-    }
+    try preferences()[key] ?? nil
   }
 
   /// Every stored preference. A key stored as null has a nil value.
   public func preferences() throws -> [String: String?] {
-    try database.read { db in
-      var values: [String: String?] = [:]
-      for row in try Row.fetchAll(db, sql: "SELECT key, value FROM preferences") {
-        values[row["key"]] = row["value"] as String?
-      }
-      return values
-    }
+    var values: [String: String?] = [:]
+    for row in try Self.mappingCoreErrors({ try core.preferences() }) { values[row.key] = row.value }
+    return values
   }
 
   /// Stores `value` under `key`. A nil value is kept as a row holding null
