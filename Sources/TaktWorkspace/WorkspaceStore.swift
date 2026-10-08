@@ -519,129 +519,50 @@ public final class WorkspaceStore: @unchecked Sendable {
 
   /// Moves a task and its complete subtree. A destination parent must belong to
   /// the destination list and may not be the task itself or one of its descendants.
+  /// Moves a task and its subtree: the Rust core's `tasks::move_task`.
   public func moveTask(
     id: String, toListId listId: String, parentTaskId: String? = nil,
     toVisibleRoot: Bool = false, now: Date = .now
   ) throws {
-    try journalledWrite("Move Task") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
-      guard try TaskList.fetchOne(db, key: listId) != nil else { throw WorkspaceStoreError.missingList }
-      let parentTaskId = toVisibleRoot ? try Self.visibleRootParentTaskID(db, listId: listId) : parentTaskId
-      let descendants = try Self.taskDescendantIDs(db, of: id)
-      guard parentTaskId != id, parentTaskId.map({ !descendants.contains($0) }) ?? true else {
-        throw WorkspaceStoreError.invalidTaskMove
-      }
-      if let parentTaskId {
-        guard let parent = try WorkspaceTask.fetchOne(db, key: parentTaskId), parent.listId == listId else {
-          throw WorkspaceStoreError.invalidTaskMove
-        }
-      }
-      guard task.listId != listId || task.parentTaskId != parentTaskId else { return }
-      if task.listId != listId {
-        let ids = descendants.union([id])
-        let values: [Any] = [listId, now] + ids.sorted()
-        guard let arguments = StatementArguments(values) else { throw WorkspaceStoreError.invalidTaskMove }
-        try db.execute(
-          sql: "UPDATE tasks SET listId = ?, updatedAt = ? WHERE id IN (\(ids.map { _ in "?" }.joined(separator: ",")))",
-          arguments: arguments)
-        task.listId = listId
-      }
-      task.parentTaskId = parentTaskId
-      task.sortOrder = try Self.nextOrder(
-        db, table: WorkspaceTask.databaseTableName, whereSQL: "listId = ? AND parentTaskId IS ?",
-        arguments: [listId, parentTaskId])
-      task.updatedAt = now
-      try task.update(db)
+    try Self.mappingCoreErrors {
+      try core.moveTask(
+        id: id, listId: listId, parentTaskId: parentTaskId, toVisibleRoot: toVisibleRoot, nowMs: now.coreMilliseconds)
     }
   }
 
+  /// Moves a task among its siblings: the Rust core's `tasks::move_task_within_siblings`.
   public func moveTaskWithinSiblings(id: String, by offset: Int, now: Date = .now) throws {
-    try journalledWrite("Reorder Task") { db in
-      guard let task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
-      var siblings = try WorkspaceTask.filter(Column("listId") == task.listId && Column("parentTaskId") == task.parentTaskId)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-      guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
-      let target = min(max(0, index + offset), siblings.count - 1)
-      guard target != index else { return }
-      let moved = siblings.remove(at: index)
-      siblings.insert(moved, at: target)
-      try Self.persistTaskOrder(siblings, db: db, now: now)
+    try Self.mappingCoreErrors {
+      try core.moveTaskWithinSiblings(id: id, offset: Int32(clamping: offset), nowMs: now.coreMilliseconds)
     }
   }
 
   /// Places a newly captured task at the top of its project/list. The Today
   /// queue uses this same persistent order, so the first card is first live.
+  /// Moves a task to the top of its siblings: the Rust core's `tasks::move_task_to_start`.
   public func moveTaskToStart(id: String, now: Date = .now) throws {
-    try journalledWrite("Reorder Task") { db in
-      guard let task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
-      var siblings = try WorkspaceTask.filter(Column("listId") == task.listId && Column("parentTaskId") == task.parentTaskId)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-      guard let index = siblings.firstIndex(where: { $0.id == id }), index > 0 else { return }
-      siblings.insert(siblings.remove(at: index), at: 0)
-      try Self.persistTaskOrder(siblings, db: db, now: now)
-    }
+    try Self.mappingCoreErrors { try core.moveTaskToStart(id: id, nowMs: now.coreMilliseconds) }
   }
 
   /// Reorders a card before another card without changing either task's real
   /// list or project parent. Cross-project drops remain a list-move operation.
+  /// Drops a task before a sibling: the Rust core's `tasks::move_task_before`.
   public func moveTaskBefore(id: String, targetId: String, kanbanColumn: String? = nil, now: Date = .now) throws {
-    try journalledWrite("Reorder Task") { db in
-      guard let task = try WorkspaceTask.fetchOne(db, key: id),
-        let target = try WorkspaceTask.fetchOne(db, key: targetId)
-      else { throw WorkspaceStoreError.missingTask }
-      guard task.listId == target.listId, task.parentTaskId == target.parentTaskId else {
-        throw WorkspaceStoreError.invalidTaskMove
-      }
-      guard id != targetId else { return }
-      var siblings = try WorkspaceTask.filter(Column("listId") == task.listId && Column("parentTaskId") == task.parentTaskId)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-      guard let index = siblings.firstIndex(where: { $0.id == id }) else { return }
-      let moved = siblings.remove(at: index)
-      guard let targetIndex = siblings.firstIndex(where: { $0.id == targetId }) else { return }
-      siblings.insert(moved, at: targetIndex)
-      try Self.persistTaskOrder(siblings, db: db, now: now)
-      if let kanbanColumn {
-        try db.execute(sql: """
-          INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
-          VALUES (?, '[]', '[]', ?, ?)
-          ON CONFLICT(taskId) DO UPDATE SET kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt
-          """, arguments: [id, kanbanColumn, now])
-      }
+    try Self.mappingCoreErrors {
+      try core.moveTaskBefore(id: id, targetId: targetId, kanbanColumn: kanbanColumn, nowMs: now.coreMilliseconds)
     }
   }
 
   /// Makes the selected task a child of its immediately preceding sibling.
+  /// Indents a task under the sibling above: the Rust core's `tasks::indent_task`.
   public func indentTask(id: String, now: Date = .now) throws {
-    try journalledWrite("Indent Task") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
-      let siblings = try WorkspaceTask.filter(Column("listId") == task.listId && Column("parentTaskId") == task.parentTaskId)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-      guard let index = siblings.firstIndex(where: { $0.id == id }), index > 0 else { return }
-      let newParent = siblings[index - 1]
-      task.parentTaskId = newParent.id
-      task.sortOrder = try Self.nextOrder(
-        db, table: WorkspaceTask.databaseTableName, whereSQL: "listId = ? AND parentTaskId IS ?",
-        arguments: [task.listId, newParent.id])
-      task.updatedAt = now
-      try task.update(db)
-      try Self.persistTaskOrder(siblings.filter { $0.id != id }, db: db, now: now)
-    }
+    try Self.mappingCoreErrors { try core.indentTask(id: id, nowMs: now.coreMilliseconds) }
   }
 
   /// Promotes a task one level, immediately after its former parent.
+  /// Outdents a task to follow its parent: the Rust core's `tasks::outdent_task`.
   public func outdentTask(id: String, now: Date = .now) throws {
-    try journalledWrite("Outdent Task") { db in
-      guard var task = try WorkspaceTask.fetchOne(db, key: id) else { throw WorkspaceStoreError.missingTask }
-      guard let parentID = task.parentTaskId, let parent = try WorkspaceTask.fetchOne(db, key: parentID) else { return }
-      let newParentID = parent.parentTaskId
-      var targetSiblings = try WorkspaceTask.filter(Column("listId") == task.listId && Column("parentTaskId") == newParentID)
-        .order(Column("sortOrder"), Column("createdAt")).fetchAll(db)
-      let parentIndex = targetSiblings.firstIndex(where: { $0.id == parentID }) ?? (targetSiblings.count - 1)
-      task.parentTaskId = newParentID
-      task.updatedAt = now
-      targetSiblings.insert(task, at: min(parentIndex + 1, targetSiblings.count))
-      try Self.persistTaskOrder(targetSiblings, db: db, now: now)
-    }
+    try Self.mappingCoreErrors { try core.outdentTask(id: id, nowMs: now.coreMilliseconds) }
   }
 
   /// Deletes a task and its subtree as one undo step. The write is the Rust
@@ -664,6 +585,7 @@ public final class WorkspaceStore: @unchecked Sendable {
       case .systemListIsPermanent: throw WorkspaceStoreError.systemListIsPermanent
       case .emptyName: throw WorkspaceStoreError.emptyName
       case .invalidFolderMove: throw WorkspaceStoreError.invalidFolderMove
+      case .invalidTaskMove: throw WorkspaceStoreError.invalidTaskMove
       case .noJournal, .other, nil: throw error
       }
     }

@@ -619,6 +619,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func historyTarget(forUndo: Bool) throws  -> HistoryTarget
     
     /**
+     * Indents a task under the sibling above as one "Indent Task" step.
+     */
+    func indentTask(id: String, nowMs: Int64) throws 
+    
+    /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
      */
     func moveFolder(id: String, parentFolderId: String?, nowMs: Int64) throws 
@@ -637,6 +642,32 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Moves a list among its siblings as one "Reorder List" step.
      */
     func moveListWithinFolder(id: String, offset: Int32, nowMs: Int64) throws 
+    
+    /**
+     * Moves a task and its subtree as one "Move Task" step.
+     */
+    func moveTask(id: String, listId: String, parentTaskId: String?, toVisibleRoot: Bool, nowMs: Int64) throws 
+    
+    /**
+     * Drops a task before a sibling, and into a board column, as one
+     * "Reorder Task" step.
+     */
+    func moveTaskBefore(id: String, targetId: String, kanbanColumn: String?, nowMs: Int64) throws 
+    
+    /**
+     * Moves a task to the top of its siblings as one "Reorder Task" step.
+     */
+    func moveTaskToStart(id: String, nowMs: Int64) throws 
+    
+    /**
+     * Moves a task among its siblings as one "Reorder Task" step.
+     */
+    func moveTaskWithinSiblings(id: String, offset: Int32, nowMs: Int64) throws 
+    
+    /**
+     * Outdents a task to follow its parent as one "Outdent Task" step.
+     */
+    func outdentTask(id: String, nowMs: Int64) throws 
     
     /**
      * Drops a folder before another, in a parent, as one "Reorder Folder" step.
@@ -848,6 +879,19 @@ open func historyTarget(forUndo: Bool)throws  -> HistoryTarget  {
 }
     
     /**
+     * Indents a task under the sibling above as one "Indent Task" step.
+     */
+open func indentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_indent_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
      */
 open func moveFolder(id: String, parentFolderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -898,6 +942,78 @@ open func moveListWithinFolder(id: String, offset: Int32, nowMs: Int64)throws   
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),
         FfiConverterInt32.lower(offset),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Moves a task and its subtree as one "Move Task" step.
+     */
+open func moveTask(id: String, listId: String, parentTaskId: String?, toVisibleRoot: Bool, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(listId),
+        FfiConverterOptionString.lower(parentTaskId),
+        FfiConverterBool.lower(toVisibleRoot),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Drops a task before a sibling, and into a board column, as one
+     * "Reorder Task" step.
+     */
+open func moveTaskBefore(id: String, targetId: String, kanbanColumn: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_task_before(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(targetId),
+        FfiConverterOptionString.lower(kanbanColumn),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Moves a task to the top of its siblings as one "Reorder Task" step.
+     */
+open func moveTaskToStart(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_task_to_start(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Moves a task among its siblings as one "Reorder Task" step.
+     */
+open func moveTaskWithinSiblings(id: String, offset: Int32, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_task_within_siblings(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt32.lower(offset),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Outdents a task to follow its parent as one "Outdent Task" step.
+     */
+open func outdentTask(id: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_outdent_task(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
@@ -1480,6 +1596,7 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case SystemListIsPermanent
     case EmptyName
     case InvalidFolderMove
+    case InvalidTaskMove
 
     
 
@@ -1529,6 +1646,7 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 7: return .SystemListIsPermanent
         case 8: return .EmptyName
         case 9: return .InvalidFolderMove
+        case 10: return .InvalidTaskMove
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1581,6 +1699,10 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         
         case .InvalidFolderMove:
             writeInt(&buf, Int32(9))
+        
+        
+        case .InvalidTaskMove:
+            writeInt(&buf, Int32(10))
         
         }
     }
@@ -1757,6 +1879,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_history_target() != 25210) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_indent_task() != 14168) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_move_folder() != 35092) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1767,6 +1892,21 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_move_list_within_folder() != 53589) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_task() != 61445) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_task_before() != 26716) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_task_to_start() != 39003) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_task_within_siblings() != 3701) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_outdent_task() != 3744) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_place_folder() != 1445) {

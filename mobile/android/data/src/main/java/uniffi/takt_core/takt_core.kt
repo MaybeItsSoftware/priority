@@ -693,6 +693,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_history_target(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_indent_task(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_folder_within_siblings(
@@ -700,6 +702,16 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_list_within_folder(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_before(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_to_start(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_within_siblings(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_outdent_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_folder(
     ): Int
@@ -763,6 +775,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_history_target(`ptr`: Long,`forUndo`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_indent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_move_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_move_folder_within_siblings(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -770,6 +784,16 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_move_list(`ptr`: Long,`id`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_move_list_within_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_task(`ptr`: Long,`id`: RustBuffer.ByValue,`listId`: RustBuffer.ByValue,`parentTaskId`: RustBuffer.ByValue,`toVisibleRoot`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_task_before(`ptr`: Long,`id`: RustBuffer.ByValue,`targetId`: RustBuffer.ByValue,`kanbanColumn`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_task_to_start(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_task_within_siblings(`ptr`: Long,`id`: RustBuffer.ByValue,`offset`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_outdent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -945,6 +969,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_history_target() and 0xFFFF) != 25210) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_indent_task() and 0xFFFF) != 14168) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_folder() and 0xFFFF) != 35092) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -955,6 +982,21 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_list_within_folder() and 0xFFFF) != 53589) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_task() and 0xFFFF) != 61445) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_task_before() and 0xFFFF) != 26716) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_task_to_start() and 0xFFFF) != 39003) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_task_within_siblings() and 0xFFFF) != 3701) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_outdent_task() and 0xFFFF) != 3744) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_folder() and 0xFFFF) != 1445) {
@@ -1431,6 +1473,11 @@ public interface CoreWorkspaceInterface {
     fun `historyTarget`(`forUndo`: kotlin.Boolean): HistoryTarget
     
     /**
+     * Indents a task under the sibling above as one "Indent Task" step.
+     */
+    fun `indentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
      */
     fun `moveFolder`(`id`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -1449,6 +1496,32 @@ public interface CoreWorkspaceInterface {
      * Moves a list among its siblings as one "Reorder List" step.
      */
     fun `moveListWithinFolder`(`id`: kotlin.String, `offset`: kotlin.Int, `nowMs`: kotlin.Long)
+    
+    /**
+     * Moves a task and its subtree as one "Move Task" step.
+     */
+    fun `moveTask`(`id`: kotlin.String, `listId`: kotlin.String, `parentTaskId`: kotlin.String?, `toVisibleRoot`: kotlin.Boolean, `nowMs`: kotlin.Long)
+    
+    /**
+     * Drops a task before a sibling, and into a board column, as one
+     * "Reorder Task" step.
+     */
+    fun `moveTaskBefore`(`id`: kotlin.String, `targetId`: kotlin.String, `kanbanColumn`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Moves a task to the top of its siblings as one "Reorder Task" step.
+     */
+    fun `moveTaskToStart`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Moves a task among its siblings as one "Reorder Task" step.
+     */
+    fun `moveTaskWithinSiblings`(`id`: kotlin.String, `offset`: kotlin.Int, `nowMs`: kotlin.Long)
+    
+    /**
+     * Outdents a task to follow its parent as one "Outdent Task" step.
+     */
+    fun `outdentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
      * Drops a folder before another, in a parent, as one "Reorder Folder" step.
@@ -1728,6 +1801,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Indents a task under the sibling above as one "Indent Task" step.
+     */
+    @Throws(CoreException::class)override fun `indentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_indent_task(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Moves a folder into another (or to the top) as one "Move Folder" step.
      */
     @Throws(CoreException::class)override fun `moveFolder`(`id`: kotlin.String, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -1796,6 +1887,103 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterString.lower(`id`),
         FfiConverterInt.lower(`offset`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Moves a task and its subtree as one "Move Task" step.
+     */
+    @Throws(CoreException::class)override fun `moveTask`(`id`: kotlin.String, `listId`: kotlin.String, `parentTaskId`: kotlin.String?, `toVisibleRoot`: kotlin.Boolean, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_task(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`listId`),
+        FfiConverterOptionalString.lower(`parentTaskId`),
+        FfiConverterBoolean.lower(`toVisibleRoot`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Drops a task before a sibling, and into a board column, as one
+     * "Reorder Task" step.
+     */
+    @Throws(CoreException::class)override fun `moveTaskBefore`(`id`: kotlin.String, `targetId`: kotlin.String, `kanbanColumn`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_task_before(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`targetId`),
+        FfiConverterOptionalString.lower(`kanbanColumn`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Moves a task to the top of its siblings as one "Reorder Task" step.
+     */
+    @Throws(CoreException::class)override fun `moveTaskToStart`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_task_to_start(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Moves a task among its siblings as one "Reorder Task" step.
+     */
+    @Throws(CoreException::class)override fun `moveTaskWithinSiblings`(`id`: kotlin.String, `offset`: kotlin.Int, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_task_within_siblings(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterInt.lower(`offset`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Outdents a task to follow its parent as one "Outdent Task" step.
+     */
+    @Throws(CoreException::class)override fun `outdentTask`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_outdent_task(
+        it,
+        
+        FfiConverterString.lower(`id`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -2393,6 +2581,12 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class InvalidTaskMove(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -2432,6 +2626,7 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             7 -> CoreException.SystemListIsPermanent()
             8 -> CoreException.EmptyName()
             9 -> CoreException.InvalidFolderMove()
+            10 -> CoreException.InvalidTaskMove()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -2480,6 +2675,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is CoreException.InvalidTaskMove -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -2525,6 +2724,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             }
             is CoreException.InvalidFolderMove -> {
                 buf.putInt(9)
+                Unit
+            }
+            is CoreException.InvalidTaskMove -> {
+                buf.putInt(10)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

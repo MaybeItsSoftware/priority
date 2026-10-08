@@ -461,6 +461,7 @@ class WorkspaceRepository(
     }
 
     /** Moves a task and its subtree; the destination parent must be in the destination list and outside the subtree. */
+    /** Moves a task and its subtree: the Rust core's `tasks::move_task`. */
     suspend fun moveTask(
         id: String,
         toListId: String,
@@ -468,102 +469,36 @@ class WorkspaceRepository(
         toVisibleRoot: Boolean = false,
         now: Instant = now(),
     ) {
-        journalledWrite("Move Task") { db ->
-            var task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            db.list(toListId) ?: fail(WorkspaceStoreError.MISSING_LIST)
-            val parent = if (toVisibleRoot) visibleRootParentTaskId(db, toListId) else parentTaskId
-            val descendants = db.taskDescendantIDs(id)
-            if (parent == id || (parent != null && parent in descendants)) fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-            if (parent != null) {
-                val parentTask = db.task(parent)
-                if (parentTask == null || parentTask.listId != toListId) fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-            }
-            if (task.listId == toListId && task.parentTaskId == parent) return@journalledWrite
-            if (task.listId != toListId) {
-                moveSubtree(db, descendants + id, toListId, now)
-                task = task.copy(listId = toListId)
-            }
-            val order = db.nextOrder("tasks", "listId = ? AND parentTaskId IS ?", toListId, parent)
-            db.update(task.copy(parentTaskId = parent, sortOrder = order, updatedAt = now))
-        }
+        coreWrite { it.moveTask(id, toListId, parentTaskId, toVisibleRoot, now.toEpochMilli()) }
     }
 
+    /** Moves a task among its siblings: the Rust core's `tasks::move_task_within_siblings`. */
     suspend fun moveTaskWithinSiblings(id: String, by: Int, now: Instant = now()) {
-        journalledWrite("Reorder Task") { db ->
-            val task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            val siblings = db.taskSiblings(task.listId, task.parentTaskId, withId = false).toMutableList()
-            val index = siblings.indexOfFirst { it.id == id }
-            if (index < 0) return@journalledWrite
-            val target = (index + by).coerceAtLeast(0).coerceAtMost(siblings.size - 1)
-            if (target == index) return@journalledWrite
-            siblings.add(target, siblings.removeAt(index))
-            db.persistTaskOrder(siblings, now)
-        }
+        coreWrite { it.moveTaskWithinSiblings(id, by, now.toEpochMilli()) }
     }
 
     /** Puts a task first among its siblings. */
+    /** Moves a task to the top of its siblings: the Rust core's `tasks::move_task_to_start`. */
     suspend fun moveTaskToStart(id: String, now: Instant = now()) {
-        journalledWrite("Reorder Task") { db ->
-            val task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            val siblings = db.taskSiblings(task.listId, task.parentTaskId, withId = false).toMutableList()
-            val index = siblings.indexOfFirst { it.id == id }
-            if (index <= 0) return@journalledWrite
-            siblings.add(0, siblings.removeAt(index))
-            db.persistTaskOrder(siblings, now)
-        }
+        coreWrite { it.moveTaskToStart(id, now.toEpochMilli()) }
     }
 
     /** Reorders a card before another card of the same parent, optionally filing it in [kanbanColumn]. */
+    /** Drops a task before a sibling: the Rust core's `tasks::move_task_before`. */
     suspend fun moveTaskBefore(id: String, targetId: String, kanbanColumn: String? = null, now: Instant = now()) {
-        journalledWrite("Reorder Task") { db ->
-            val task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            val target = db.task(targetId) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            if (task.listId != target.listId || task.parentTaskId != target.parentTaskId) {
-                fail(WorkspaceStoreError.INVALID_TASK_MOVE)
-            }
-            if (id == targetId) return@journalledWrite
-            val siblings = db.taskSiblings(task.listId, task.parentTaskId, withId = false).toMutableList()
-            val index = siblings.indexOfFirst { it.id == id }
-            if (index < 0) return@journalledWrite
-            val moved = siblings.removeAt(index)
-            val targetIndex = siblings.indexOfFirst { it.id == targetId }
-            if (targetIndex < 0) return@journalledWrite
-            siblings.add(targetIndex, moved)
-            db.persistTaskOrder(siblings, now)
-            if (kanbanColumn != null) upsertKanbanColumn(db, id, kanbanColumn, now)
-        }
+        coreWrite { it.moveTaskBefore(id, targetId, kanbanColumn, now.toEpochMilli()) }
     }
 
     /** Makes the task a child of its immediately preceding sibling. */
+    /** Indents a task under the sibling above: the Rust core's `tasks::indent_task`. */
     suspend fun indentTask(id: String, now: Instant = now()) {
-        journalledWrite("Indent Task") { db ->
-            val task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            val siblings = db.taskSiblings(task.listId, task.parentTaskId, withId = false)
-            val index = siblings.indexOfFirst { it.id == id }
-            if (index <= 0) return@journalledWrite
-            val newParent = siblings[index - 1]
-            val order = db.nextOrder("tasks", "listId = ? AND parentTaskId IS ?", task.listId, newParent.id)
-            db.update(task.copy(parentTaskId = newParent.id, sortOrder = order, updatedAt = now))
-            db.persistTaskOrder(siblings.filter { it.id != id }, now)
-        }
+        coreWrite { it.indentTask(id, now.toEpochMilli()) }
     }
 
     /** Promotes a task one level, immediately after its former parent. */
+    /** Outdents a task to follow its parent: the Rust core's `tasks::outdent_task`. */
     suspend fun outdentTask(id: String, now: Instant = now()) {
-        journalledWrite("Outdent Task") { db ->
-            val task = db.task(id) ?: fail(WorkspaceStoreError.MISSING_TASK)
-            val parentId = task.parentTaskId ?: return@journalledWrite
-            val parent = db.task(parentId) ?: return@journalledWrite
-            val newParentId = parent.parentTaskId
-            val targetSiblings = db.taskSiblings(task.listId, newParentId, withId = false).toMutableList()
-            val parentIndex = targetSiblings.indexOfFirst { it.id == parentId }.takeIf { it >= 0 }
-                ?: (targetSiblings.size - 1)
-            targetSiblings.add(
-                minOf(parentIndex + 1, targetSiblings.size),
-                task.copy(parentTaskId = newParentId, updatedAt = now),
-            )
-            db.persistTaskOrder(targetSiblings, now)
-        }
+        coreWrite { it.outdentTask(id, now.toEpochMilli()) }
     }
 
     /** Deletes a task and its subtree as one undo step: the Rust core's `tasks::delete_task`. */
@@ -586,6 +521,7 @@ class WorkspaceRepository(
             is CoreException.SystemListIsPermanent -> fail(WorkspaceStoreError.SYSTEM_LIST_IS_PERMANENT)
             is CoreException.EmptyName -> fail(WorkspaceStoreError.EMPTY_NAME)
             is CoreException.InvalidFolderMove -> fail(WorkspaceStoreError.INVALID_FOLDER_MOVE)
+            is CoreException.InvalidTaskMove -> fail(WorkspaceStoreError.INVALID_TASK_MOVE)
             else -> throw error
         }
     }

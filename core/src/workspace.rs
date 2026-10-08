@@ -67,6 +67,74 @@ impl CoreWorkspace {
         journal::history_target(&self.lock(), for_undo)
     }
 
+    /// Moves a task and its subtree as one "Move Task" step.
+    pub fn move_task(
+        &self,
+        id: String,
+        list_id: String,
+        parent_task_id: Option<String>,
+        to_visible_root: bool,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Move Task", |tx| {
+            tasks::move_task(
+                tx,
+                &id,
+                &list_id,
+                parent_task_id.as_deref(),
+                to_visible_root,
+                now_ms,
+            )
+        })
+    }
+
+    /// Moves a task among its siblings as one "Reorder Task" step.
+    pub fn move_task_within_siblings(
+        &self,
+        id: String,
+        offset: i32,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Reorder Task", |tx| {
+            tasks::move_task_within_siblings(tx, &id, offset, now_ms)
+        })
+    }
+
+    /// Moves a task to the top of its siblings as one "Reorder Task" step.
+    pub fn move_task_to_start(&self, id: String, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Reorder Task", |tx| {
+            tasks::move_task_to_start(tx, &id, now_ms)
+        })
+    }
+
+    /// Drops a task before a sibling, and into a board column, as one
+    /// "Reorder Task" step.
+    pub fn move_task_before(
+        &self,
+        id: String,
+        target_id: String,
+        kanban_column: Option<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Reorder Task", |tx| {
+            tasks::move_task_before(tx, &id, &target_id, kanban_column.as_deref(), now_ms)
+        })
+    }
+
+    /// Indents a task under the sibling above as one "Indent Task" step.
+    pub fn indent_task(&self, id: String, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Indent Task", |tx| {
+            tasks::indent_task(tx, &id, now_ms)
+        })
+    }
+
+    /// Outdents a task to follow its parent as one "Outdent Task" step.
+    pub fn outdent_task(&self, id: String, now_ms: i64) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Outdent Task", |tx| {
+            tasks::outdent_task(tx, &id, now_ms)
+        })
+    }
+
     /// Deletes a task and its subtree as one "Delete Task" step.
     pub fn delete_task(&self, id: String) -> Result<DeletedTask, CoreError> {
         journal::journalled(&mut self.lock(), "Delete Task", |tx| {

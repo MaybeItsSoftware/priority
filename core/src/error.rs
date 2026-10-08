@@ -24,6 +24,8 @@ pub enum CoreError {
     EmptyName,
     #[error("A folder cannot go inside itself or one of its own folders.")]
     InvalidFolderMove,
+    #[error("A task cannot be moved into itself or one of its subtasks.")]
+    InvalidTaskMove,
 }
 
 impl From<rusqlite::Error> for CoreError {

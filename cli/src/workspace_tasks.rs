@@ -713,7 +713,7 @@ impl Workspace {
             "Move Task"
         };
 
-        self.journalled(label, |tx, now| {
+        self.journalled(label, |tx, _now| {
             let task = task_row(tx, task_id)?;
             let (destination_list, destination_parent) = match (parent_task_id, list_id) {
                 (Some(parent), list) => {
@@ -735,59 +735,22 @@ impl Workspace {
                 (None, None) => (task.list_id.clone(), task.parent_task_id.clone()),
             };
 
-            let descendants = descendant_ids(tx, &task.id)?;
-            if let Some(parent) = destination_parent.as_deref()
-                && (parent == task.id || descendants.contains(parent))
-            {
-                return Err(ToolError::new(
-                    "A task cannot be moved into itself or one of its subtasks.",
-                ));
-            }
-
-            if destination_list != task.list_id || destination_parent != task.parent_task_id {
-                if destination_list != task.list_id {
-                    // One statement over the subtree, as `WorkspaceStore.moveTask`
-                    // writes it. The change_log triggers are per row either
-                    // way, so the undo step records the same rows; sorting
-                    // the ids gives them the same order too.
-                    let mut ids: Vec<&str> = descendants.iter().map(String::as_str).collect();
-                    ids.push(&task.id);
-                    ids.sort_unstable();
-                    let placeholders = (0..ids.len())
-                        .map(|index| format!("?{}", index + 3))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    let mut values: Vec<&dyn rusqlite::ToSql> = vec![&destination_list, &now];
-                    values.extend(ids.iter().map(|id| id as &dyn rusqlite::ToSql));
-                    tx.execute(
-                        &format!(
-                            "UPDATE tasks SET listId = ?1, updatedAt = ?2 WHERE id IN ({placeholders})"
-                        ),
-                        values.as_slice(),
-                    )
-                    .map_err(map_write_error)?;
-                }
-                let order = next_task_order(tx, &destination_list, destination_parent.as_deref())?;
-                tx.execute(
-                    "UPDATE tasks SET parentTaskId = ?1, sortOrder = ?2, updatedAt = ?3 \
-                     WHERE id = ?4",
-                    params![destination_parent, order, now, task.id],
-                )
-                .map_err(map_write_error)?;
-            }
-
+            // The writes are the Rust core's, shared with the apps: the move
+            // itself, then the CLI's `position` among the new siblings.
+            let millis = Utc::now().timestamp_millis();
+            takt_core::tasks::move_task(
+                tx,
+                &task.id,
+                &destination_list,
+                destination_parent.as_deref(),
+                false,
+                millis,
+            )
+            .map_err(map_core_error)?;
             if let Some(position) = position {
-                let mut siblings =
-                    sibling_ids(tx, &destination_list, destination_parent.as_deref())?;
-                let before = siblings.clone();
-                siblings.retain(|sibling| sibling != &task.id);
-                let index = usize::try_from(position - 1)
-                    .unwrap_or(0)
-                    .min(siblings.len());
-                siblings.insert(index, task.id.clone());
-                if siblings != before {
-                    persist_task_order(tx, &siblings, now)?;
-                }
+                let index = u32::try_from(position - 1).unwrap_or(0);
+                takt_core::tasks::place_task_at(tx, &task.id, index, millis)
+                    .map_err(map_core_error)?;
             }
 
             Ok(task_row(tx, &task.id)?.to_json())
@@ -1432,7 +1395,8 @@ fn map_core_error(error: takt_core::CoreError) -> ToolError {
         takt_core::CoreError::MissingFolder { id } => ToolError::new(format!(
             "No folder with id {id}. workspace_tree lists the folders and their ids."
         )),
-        refused @ takt_core::CoreError::InvalidFolderMove => ToolError::new(refused.to_string()),
+        refused @ (takt_core::CoreError::InvalidFolderMove
+        | takt_core::CoreError::InvalidTaskMove) => ToolError::new(refused.to_string()),
         permanent @ takt_core::CoreError::SystemListIsPermanent => {
             ToolError::new(permanent.to_string())
         }
