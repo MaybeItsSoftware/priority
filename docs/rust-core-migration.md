@@ -111,14 +111,24 @@ covered the old copies pass against it.
    `CoreWorkspace` journals it for the apps. `journalledWrite` is gone from
    both apps. Their own core commits are kept out of their external-change
    tokens.
-5. **The rest of the writes.** Lists, folders, dailies, habits, waiting, conditions and focus went with step four. What is left here: bootstrap and the inbox, imports, and themes and preferences. Then dailies, habits, waiting and conditions, then
-   focus sessions and points.
+5. **The rest of the writes. Done 2026-10-08.** Bootstrap and the Inbox,
+   themes and preferences (`setup.rs`), the Checkvist import, the
+   plugin-era dailies and the board baseline (`imports.rs`) are in the core.
+   No client opens a write transaction of its own any more, except
+   Android's benchmark fixture. The CLI's workspace writes call the same
+   functions, so it no longer copies Swift row for row; a real-data run
+   against a copy of the live database (add, rename, link, waiting with a
+   past follow-up, complete, task to list, delete) left it consistent.
 6. **Reads.** Search with FTS, the today and next-up ranking, outline
    folding. These are the hot paths. Benchmark each against the Swift version
    before switching, using `WorkspaceRepositoryBenchmark.kt` on Android.
-7. **Sync engine.** The HLC, push/pull and merge move into `core/src/sync`.
-   `sync-server` uses the same merge code, so client and server cannot
-   disagree about a conflict.
+7. **Sync engine. The database half done 2026-10-08.** `core/src/sync.rs`
+   holds the pairing state, the snapshot, the outbox coalesced per row,
+   acknowledging, and applying a pull (local edits win until pushed,
+   unique-key rivals resolved the same way on every device, a second
+   workspace folded in, orphans removed). The Mac, iPhone and Android call
+   it. What is left in the clients is the transport and the HLC stamping of
+   a push; sharing the merge with `sync-server` is the remaining part.
 8. **Remove the copies.** Delete GRDB from the package, the Kotlin
    repository bodies and the CLI's store code. `TaktWorkspace` becomes a thin
    Swift wrapper over the generated bindings.
