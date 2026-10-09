@@ -155,8 +155,9 @@ struct WorkspaceTaskDraftRow: View {
     model.taskDraftText = ""
     model.taskDraftSelection = nil
     model.submitAddField(named: text)
-    // The row may be rebuilt under the new task; ask again so it keeps the key.
-    model.taskComposerFocusRequest += 1
+    // One task per Return: the row goes and the keyboard is back on the
+    // tasks, rather than a fresh draft opening under the one just added.
+    model.endTaskDraft()
   }
 }
 
