@@ -617,6 +617,14 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 /**
  * An open workspace database.
+ *
+ * Two connections. Every write, and most reads, go through `connection`,
+ * whose `data_version` the apps poll. `reader` serves the reads a client
+ * makes off its main thread (the next-up snapshot), so a main-thread read
+ * does not queue behind them on one lock. It is `query_only` and never
+ * holds a transaction open between calls, so under WAL each of its reads
+ * sees every commit made before it began, the handle's own included, and it
+ * cannot move the writer's `data_version`: reads do not commit.
  */
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
@@ -1335,6 +1343,14 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
 }
 /**
  * An open workspace database.
+ *
+ * Two connections. Every write, and most reads, go through `connection`,
+ * whose `data_version` the apps poll. `reader` serves the reads a client
+ * makes off its main thread (the next-up snapshot), so a main-thread read
+ * does not queue behind them on one lock. It is `query_only` and never
+ * holds a transaction open between calls, so under WAL each of its reads
+ * sees every commit made before it began, the handle's own included, and it
+ * cannot move the writer's `data_version`: reads do not commit.
  */
 open class CoreWorkspace: CoreWorkspaceProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64

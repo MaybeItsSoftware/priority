@@ -34,9 +34,20 @@ use crate::today;
 use crate::waiting;
 
 /// An open workspace database.
+///
+/// Two connections. Every write, and most reads, go through `connection`,
+/// whose `data_version` the apps poll. `reader` serves the reads a client
+/// makes off its main thread (the next-up snapshot), so a main-thread read
+/// does not queue behind them on one lock. It is `query_only` and never
+/// holds a transaction open between calls, so under WAL each of its reads
+/// sees every commit made before it began, the handle's own included, and it
+/// cannot move the writer's `data_version`: reads do not commit.
 #[derive(uniffi::Object)]
 pub struct CoreWorkspace {
     connection: Mutex<Connection>,
+    /// Absent for an in-memory database, which a second connection would not
+    /// share; reads then use `connection`.
+    reader: Option<Mutex<Connection>>,
 }
 
 #[uniffi::export]
@@ -45,14 +56,27 @@ impl CoreWorkspace {
     /// ([`crate::schema::migrate_workspace`]).
     #[uniffi::constructor]
     pub fn open(path: String) -> Result<Arc<Self>, CoreError> {
-        let connection = Connection::open(path)?;
+        let connection = Connection::open(&path)?;
         connection.busy_timeout(Duration::from_secs(5))?;
         // WAL lets the CLI read while the app writes, and is a property of
         // the file: already set, this changes nothing.
         connection.query_row("PRAGMA journal_mode = WAL", [], |_| Ok(()))?;
         connection.execute_batch("PRAGMA foreign_keys = ON")?;
+        let in_memory = path.is_empty() || path == ":memory:" || path.contains("mode=memory");
+        let reader = if in_memory {
+            None
+        } else {
+            // Opened read-write but `query_only`, rather than read-only:
+            // a read-only connection to a WAL file depends on the writer
+            // having made the -shm file, and gains nothing here.
+            let reader = Connection::open(&path)?;
+            reader.busy_timeout(Duration::from_secs(5))?;
+            reader.execute_batch("PRAGMA query_only = ON")?;
+            Some(Mutex::new(reader))
+        };
         Ok(Arc::new(Self {
             connection: Mutex::new(connection),
+            reader,
         }))
     }
 
@@ -1026,7 +1050,7 @@ impl CoreWorkspace {
 
     /// Tasks by id; missing ids are absent.
     pub fn tasks_by_id(&self, ids: Vec<String>) -> Result<Vec<TaskRow>, CoreError> {
-        records::tasks_by_id(&self.lock(), &ids)
+        records::tasks_by_id(&self.read(), &ids)
     }
 
     /// The children of a task in a list, or its roots, in outline order.
@@ -1112,7 +1136,7 @@ impl CoreWorkspace {
         ladder_limit: Option<u32>,
     ) -> Result<NextUp, CoreError> {
         next_up::next_up(
-            &self.lock(),
+            &self.read(),
             now_ms,
             &zone,
             &context,
@@ -1217,6 +1241,18 @@ impl CoreWorkspace {
         self.connection
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// The reading connection, for a pure read a client makes off its main
+    /// thread. Nothing that writes, or that must see a transaction still
+    /// open on the writer, may use it.
+    pub(crate) fn read(&self) -> MutexGuard<'_, Connection> {
+        match &self.reader {
+            Some(reader) => reader
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()),
+            None => self.lock(),
+        }
     }
 }
 

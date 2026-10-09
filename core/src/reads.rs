@@ -59,12 +59,12 @@ impl CoreWorkspace {
 
     /// Whether any task is pinned in Today's order.
     pub fn has_manual_focus_order(&self) -> Result<bool, CoreError> {
-        rows::has_manual_focus_order(&self.lock())
+        rows::has_manual_focus_order(&self.read())
     }
 
     /// A workspace's conditions, oldest first.
     pub fn conditions(&self, workspace_id: String) -> Result<Vec<ConditionRow>, CoreError> {
-        rows::conditions(&self.lock(), &workspace_id)
+        rows::conditions(&self.read(), &workspace_id)
     }
 
     /// One condition by id.
@@ -84,7 +84,7 @@ impl CoreWorkspace {
 
     /// Every metadata row.
     pub fn all_metadata(&self) -> Result<Vec<MetadataRow>, CoreError> {
-        rows::all_metadata(&self.lock())
+        rows::all_metadata(&self.read())
     }
 
     /// The newest session that has not finished.
@@ -104,7 +104,7 @@ impl CoreWorkspace {
 
     /// Seconds logged per task.
     pub fn logged_work(&self) -> Result<Vec<LoggedWork>, CoreError> {
-        rows::logged_work(&self.lock())
+        rows::logged_work(&self.read())
     }
 
     /// A task's work blocks, oldest first.
@@ -118,7 +118,7 @@ impl CoreWorkspace {
         from_ms: i64,
         to_ms: i64,
     ) -> Result<Vec<WorkBlockRow>, CoreError> {
-        rows::work_blocks_between(&self.lock(), from_ms, to_ms)
+        rows::work_blocks_between(&self.read(), from_ms, to_ms)
     }
 
     /// One award by id.
@@ -156,7 +156,7 @@ impl CoreWorkspace {
         from_ms: i64,
         to_ms: i64,
     ) -> Result<Vec<i64>, CoreError> {
-        rows::completions_between(&self.lock(), from_ms, to_ms)
+        rows::completions_between(&self.read(), from_ms, to_ms)
     }
 
     /// When tasks were created in `[from, to)`.

@@ -72,8 +72,40 @@ mod tests {
         schema::migrate_workspace(path_text.clone()).unwrap();
         let core = workspace::CoreWorkspace::open(path_text.clone()).unwrap();
         let start = core.data_version().unwrap();
-        core.bootstrap(1_000).unwrap();
+        let workspace_id = core.bootstrap(1_000).unwrap();
         assert_eq!(core.data_version().unwrap(), start, "its own write");
+        // The reading connection sees the handle's own commit straight away,
+        // and reading through it moves nothing.
+        let inbox = core.inbox(workspace_id.clone()).unwrap().unwrap();
+        let task = core
+            .create_task(
+                tasks::NewTask {
+                    list_id: inbox.id,
+                    title: "Seen".into(),
+                    parent_task_id: None,
+                    kind: "task".into(),
+                    notes: String::new(),
+                    kanban_column: None,
+                    start_at_ms: None,
+                    due_at_ms: None,
+                    estimate_seconds: None,
+                    tags: vec![],
+                    priority: None,
+                    waiting_on: None,
+                    external_links: vec![],
+                    at_top: false,
+                    adjacent_task_id: None,
+                    above: false,
+                },
+                2_000,
+            )
+            .unwrap();
+        assert_eq!(core.tasks_by_id(vec![task.clone()]).unwrap().len(), 1);
+        let read = core
+            .next_up(3_000, "UTC".into(), Default::default(), None, None)
+            .unwrap();
+        assert!(read.ranked.iter().any(|s| s.candidate.id == task));
+        assert_eq!(core.data_version().unwrap(), start, "its own reads");
         let other = rusqlite::Connection::open(&path).unwrap();
         other
             .execute("UPDATE workspaces SET name = 'Elsewhere'", [])
