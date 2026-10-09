@@ -48,6 +48,9 @@ struct DayView: View {
   private static let createRowID = "priority:create"
 
   var body: some View {
+    // Built once per render and handed down, rather than a computed property
+    // read by the list and again by the change handler below.
+    let rows = rows
     VStack(spacing: 0) {
       if surface.isPanel, let pending = model.panelFocusCompletion {
         // Scoring a block is one question with one answer, so it gets the
@@ -58,8 +61,8 @@ struct DayView: View {
         summary
         field
         FocusRule()
-        content
-        if let pending = model.pendingTaskDeletion {
+        content(rows)
+        if model.pendingTaskDeletionID != nil, let pending = model.pendingTaskDeletion {
           TaskDeletionPrompt(task: pending)
         } else {
           FocusRule()
@@ -73,7 +76,7 @@ struct DayView: View {
         // numbers in and no reference to look keys up in. In the window each
         // of those already has a home, and here they were a second copy of it.
         header
-        content
+        content(rows)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -319,7 +322,7 @@ struct DayView: View {
 
   private var startHint: String {
     if selectedID == Self.createRowID { return "Add and start" }
-    if let id = selectedID, id == model.activeFocusTask?.id { return "Done" }
+    if let id = selectedID, id == activeTaskID { return "Done" }
     return "Start it"
   }
 
@@ -329,7 +332,7 @@ struct DayView: View {
   private var isDrafting: Bool { !surface.isPanel && model.draftsAtEnd }
 
   @ViewBuilder
-  private var content: some View {
+  private func content(_ rows: [DayRow]) -> some View {
     if rows.isEmpty && !isDrafting {
       empty
     } else {
@@ -399,110 +402,43 @@ struct DayView: View {
     switch row.kind {
     case .create:
       createRow(row)
-    case .task(let task, let index, let isActive):
-      if isActive, let session = model.activeFocusSession {
-        activeCard(task: task, index: index, session: session)
+    case .task(let facts):
+      if facts.isActive, let session = model.activeFocusSession {
+        activeCard(facts: facts, session: session)
       } else {
-        taskCard(task: task, index: index, listName: row.listName, detail: row.detail)
+        DayTaskRow(
+          facts: facts, listName: row.listName, detail: row.detail,
+          chrome: chrome(id: row.id, completion: facts.completion),
+          onHover: { hover(row.id, $0) },
+          onTap: { setCursor(row.id); start(facts.task) },
+          onTick: { tickOff(facts.task) })
+          .equatable()
       }
     }
   }
 
-  /// An ordinary row: what it is, what it should cost, what it has cost.
-  private func taskCard(task: WorkspaceTask, index: Int?, listName: String?, detail: String?) -> some View {
-    // The row under the cursor grows to show all of its text; the rest stay
-    // one line each. Baseline-aligned while it is grown, so the number, the
-    // list and the time stay on the first line beside the title's start.
-    let isExpanded = task.id == cursorID
-    let alignment: VerticalAlignment = isExpanded ? .firstTextBaseline : .center
-    return card(id: task.id) {
-      VStack(alignment: .leading, spacing: theme.space.xxs) {
-        HStack(alignment: alignment, spacing: theme.space.sm) {
-          marker(for: task, index: index)
-          Text(task.title)
-            .font(theme.bodyFont())
-            .foregroundStyle(theme.ink)
-            .expandsWhenSelected(isExpanded)
-          if model.isDailyProgressTask(task) {
-            DailyBadge(task: task, isDoneToday: model.isDailyProgressComplete(task))
-          }
-          Spacer(minLength: theme.space.sm)
-          if let listName {
-            MicroLabel(listName).lineLimit(1).fixedSize(horizontal: isExpanded, vertical: false)
-          }
-          // Time only once there is some: logged against the estimate, or
-          // either alone. A column of "No estimate" and 00:00 down a fresh
-          // day was the noisiest thing on the screen and said nothing.
-          if let cost = costText(for: task) {
-            DayEstimateLabel(
-              text: cost,
-              help: "Set the time estimate (\(WorkspaceCommandHelpText.firstKey(for: .taskEditEstimate)))",
-              action: surface.isPanel ? nil : {
-                model.selectedTaskID = task.id
-                model.quickEdit(.estimate)
-              })
-          }
-        }
-        if let detail {
-          Text(detail)
-            .font(theme.captionFont)
-            .foregroundStyle(theme.dim)
-            .expandsWhenSelected(isExpanded)
-            .padding(.leading, WorkspaceRowMetrics.indent(theme))
-        }
-      }
-    } action: {
-      start(task)
-    }
+  /// The row's shell, from the list's state. `hasKeyboard` reads the focus
+  /// area only for the cursor row, as the row used to.
+  private func chrome(id: String, isActive: Bool = false, completion: CompletionKind?) -> DayRowChrome {
+    let isSelected = id == cursorID
+    return DayRowChrome(
+      id: id, isPanel: surface.isPanel, isSelected: isSelected,
+      hasKeyboard: isSelected && !surface.isPanel && model.keyboardFocusArea == .tasks,
+      isHovered: hoveredID == id, isActive: isActive, completion: completion)
+  }
+
+  private func hover(_ id: String, _ inside: Bool) {
+    if inside { hoveredID = id } else if hoveredID == id { hoveredID = nil }
   }
 
   /// "12m / 25m", "12m" or "25m"; nil when the task has neither.
-  private func costText(for task: WorkspaceTask) -> String? {
-    let logged = model.taskLoggedSeconds[task.id] ?? 0
+  private func costText(for task: WorkspaceTask, logged: Int) -> String? {
     switch (logged > 0, task.estimateSeconds) {
     case (true, let estimate?): return "\(duration(logged)) / \(duration(estimate))"
     case (true, nil): return duration(logged)
     case (false, let estimate?): return duration(estimate)
     case (false, nil): return nil
     }
-  }
-
-  /// A row's number, which becomes the way to tick it off when the pointer is
-  /// over it.
-  ///
-  /// Blitzit's list has a checkbox on every row and this one had nothing: the
-  /// day list could start work but not finish it, so anything already done had
-  /// to be closed somewhere else. The number and the tick share one slot
-  /// because the row is narrow and they are never both wanted at once.
-  private func marker(for task: WorkspaceTask, index: Int?) -> some View {
-    let isHovering = hoveredID == task.id
-    return Button {
-      tickOff(task)
-    } label: {
-      Group {
-        if isHovering {
-          Image(systemName: "checkmark.circle")
-            .font(theme.bodyFont())
-            .foregroundStyle(theme.success)
-        } else if let index {
-          Text("\(index)")
-            .font(theme.numeralFont(theme.scale.caption))
-            .monospacedDigit()
-            .foregroundStyle(theme.dim)
-        } else {
-          // No empty box down the column; the tick shows under the pointer.
-          Image(systemName: "circle")
-            .font(theme.captionFont)
-            .hidden()
-        }
-      }
-      .frame(width: WorkspaceRowMetrics.iconWidth, alignment: .trailing)
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .focusable(false)
-    .help("Tick off without running a block (Space)")
-    .accessibilityLabel("Tick off \(task.title)")
   }
 
   /// Finishing something that never needed a block. A task that owes the day a
@@ -547,9 +483,19 @@ struct DayView: View {
 
   /// The row you are on. Same card, grown: a live clock, and the controls that
   /// only ever apply to the task actually running.
-  private func activeCard(task: WorkspaceTask, index: Int?, session: FocusSession) -> some View {
+  private func activeCard(facts: DayTaskFacts, session: FocusSession) -> some View {
+    let task = facts.task
+    let index = facts.index
     let isExpanded = task.id == cursorID
-    return card(id: task.id, isActive: true) {
+    return DayRowCard(
+      chrome: chrome(id: task.id, isActive: true, completion: facts.completion),
+      onHover: { hover(task.id, $0) },
+      onTap: {
+        // Clicking is choosing, never finishing: a stray click on the row you
+        // are working through closed the block. Done is its own button.
+        setCursor(task.id)
+      },
+      content: {
       VStack(alignment: .leading, spacing: theme.space.sm) {
         HStack(alignment: isExpanded ? .firstTextBaseline : .center, spacing: theme.space.sm) {
           if let index {
@@ -587,10 +533,7 @@ struct DayView: View {
         }
         controlStrip(session: session)
       }
-    } action: {
-      // Clicking is choosing, never finishing: a stray click on the row you
-      // are working through closed the block. Done is its own button.
-    }
+    })
   }
 
   /// Blitzit's strip, in Priority's vocabulary: pause, skip to the next queued
@@ -629,7 +572,11 @@ struct DayView: View {
   /// beside it — the same parse `createTask(capturing:)` runs on Return.
   private func createRow(_ row: DayRow) -> some View {
     let capture = TaskCapture.parse(row.title)
-    return card(id: row.id) {
+    return DayRowCard(
+      chrome: chrome(id: row.id, completion: nil),
+      onHover: { hover(row.id, $0) },
+      onTap: { setCursor(row.id); createFromQuery() },
+      content: {
       HStack(spacing: theme.space.sm) {
         Image(systemName: "plus")
           .font(theme.bodyFont())
@@ -644,97 +591,7 @@ struct DayView: View {
         Spacer(minLength: 0)
       }
       .help(TaskCapturePreview.syntaxHint)
-    } action: {
-      createFromQuery()
-    }
-  }
-
-  /// The side padding inside a row. In the window, the pane's gutter, so a
-  /// task's title starts under the header's "Today" the way the outline's
-  /// start under its list name; the panel keeps its own narrower figure,
-  /// being a small floating surface rather than a pane.
-  private var rowGutter: CGFloat { surface.isPanel ? theme.space.lg : theme.paneGutter }
-
-  /// Above and below a row's content. The window uses the rows' shared
-  /// figure, so a two-line day row is as dense as two outline rows.
-  private var rowPadding: CGFloat { surface.isPanel ? theme.space.sm : theme.rowVerticalPadding }
-
-  /// One row shape for every row, so a row that gains controls is visibly the
-  /// same row rather than a different kind of thing.
-  ///
-  /// Flat on the page with a hairline under it. What a row *is* reads from a
-  /// tint of the matching hue: the running one in primary, the one under the
-  /// cursor in the selection fill, the one being finished in success — never
-  /// a raised card or a stock accent.
-  private func card<Content: View>(
-    id: String, isActive: Bool = false, @ViewBuilder content: () -> Content,
-    action: @escaping () -> Void
-  ) -> some View {
-    let isSelected = id == cursorID
-    // In the window the cursor row carries the same hairline in the focus
-    // colour as every other pane's while the keyboard is on the tasks. The
-    // panel has one region, so its fill says it all.
-    let hasKeyboard = isSelected && !surface.isPanel && model.keyboardFocusArea == .tasks
-    // The card being finished takes whatever the active celebration preset
-    // does to a row, so the tick, the tint and the collapse are the same
-    // gesture here as on the focus ladder.
-    let phase = celebrationPhase(forTaskID: id)
-    let treatment = manager.celebration.rowTreatment
-    let celebrating = phase != .idle
-    let isHovered = hoveredID == id
-    let fill: Color =
-      celebrating ? theme.success.opacity(treatment.tintOpacity)
-      : isSelected ? theme.selectionFill
-      : isActive ? theme.primary.opacity(Theme.statusFillOpacity)
-      : isHovered ? theme.hover : Color.clear
-    return content()
-      .padding(.horizontal, rowGutter)
-      .padding(.vertical, rowPadding)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .scaleEffect(treatment.rowScale(for: phase))
-      .background(fill)
-      // The running row keeps a primary edge even under the cursor, so the
-      // selection never hides which task is the one on the clock.
-      .overlay(alignment: .leading) {
-        if isActive || celebrating {
-          Rectangle()
-            .fill(celebrating ? theme.success : theme.primary)
-            .frame(width: theme.emphasisBorder)
-        }
-      }
-      .overlay(alignment: .bottom) { FocusRule() }
-      .overlay {
-        if hasKeyboard {
-          Rectangle().strokeBorder(theme.focusRing, lineWidth: theme.hairline)
-        }
-      }
-      .overlay { rowAccent(forTaskID: id) }
-      .opacity(treatment.fades && phase == .celebrating ? 0 : 1)
-      .contentShape(Rectangle())
-      .onHover { inside in
-        if inside { hoveredID = id } else if hoveredID == id { hoveredID = nil }
-      }
-      .onTapGesture { setCursor(id); action() }
-  }
-
-  /// `.idle` for every card but the one actually being finished. A daily is
-  /// celebrated under its own identity, so the lookup has to go through the
-  /// task rather than assume the two ids are the same.
-  private func celebrationPhase(forTaskID id: String) -> CelebrationPhase {
-    guard let task = model.task(withID: id) else { return .idle }
-    return manager.celebration.phase(for: completionKind(for: task))
-  }
-
-  @ViewBuilder
-  private func rowAccent(forTaskID id: String) -> some View {
-    if celebrationPhase(forTaskID: id) != .idle, let task = model.task(withID: id) {
-      manager.celebration.rowAccent(for: completionKind(for: task))
-        .allowsHitTesting(false)
-    }
-  }
-
-  private func completionKind(for task: WorkspaceTask) -> CompletionKind {
-    model.dailyItem(for: task).map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id)
+    })
   }
 
   // MARK: - Today's logged work
@@ -785,7 +642,10 @@ struct DayView: View {
 
   // MARK: - What is in the list
 
-  private var activeTaskID: String? { model.activeFocusTask?.id }
+  /// The running block's task, by id. Not `activeFocusTask`, which resolves
+  /// the task through the model's cache and so would redraw the whole day on
+  /// every refresh whether or not anything on it changed.
+  private var activeTaskID: String? { model.activeFocusSession?.activeTaskId }
 
   /// The row under the cursor. The panel keeps its own, because its list can
   /// be a page of search results; the window's is the workspace selection, so
@@ -811,24 +671,42 @@ struct DayView: View {
   private var dayTasks: [WorkspaceTask] { day.map(\.task) }
 
   /// Every row the keyboard can land on, in the order it sees them.
+  ///
+  /// Everything a row draws is settled here, from lookups built once, so the
+  /// rows themselves are plain values: a list name by id rather than a scan
+  /// of the lists per row, a daily by task rather than a scan of the dailies.
   private var rows: [DayRow] {
     let trimmed = query.trimmingCharacters(in: .whitespaces)
+    let activeID = activeTaskID
+    let dailies = Dictionary(
+      model.dailyItems.map { ($0.task.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let logged = model.taskLoggedSeconds
+    func facts(_ task: WorkspaceTask, index: Int?) -> DayTaskFacts {
+      let daily = dailies[task.id]
+      let isDaily = model.isDailyProgressTask(task)
+      return DayTaskFacts(
+        task: task, index: index, isActive: task.id == activeID,
+        completion: daily.map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id),
+        isDaily: isDaily, isDailyDone: isDaily && (daily?.isDoneToday ?? false),
+        cost: costText(for: task, logged: logged[task.id] ?? 0))
+    }
     if trimmed.isEmpty {
+      let listNames = Dictionary(model.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
       return day.enumerated().map { index, entry in
         DayRow(
           id: entry.task.id, title: entry.task.title,
-          listName: model.list(for: entry.task)?.name,
+          listName: listNames[entry.task.listId],
           // Why it is in the day beats when it is due: "overdue" is the thing
           // worth reading, and the deadline is what made it say that.
           detail: detail(for: entry.task, reason: entry.reason),
-          kind: .task(entry.task, index + 1, entry.task.id == activeTaskID))
+          kind: .task(facts(entry.task, index: index + 1)))
       }
     }
     var found: [DayRow] = results.prefix(10).map { result in
       DayRow(
         id: result.task.id, title: result.task.title, listName: result.list.name,
         detail: result.notesSnippet,
-        kind: .task(result.task, nil, result.task.id == activeTaskID))
+        kind: .task(facts(result.task, index: nil)))
     }
     found.append(DayRow(id: Self.createRowID, title: trimmed, listName: nil, detail: nil, kind: .create))
     return found
@@ -836,11 +714,14 @@ struct DayView: View {
 
   /// A derived reason is worth saying; `.planned` is not, because every card
   /// under an empty field is in the day and saying so on each one is noise.
+  ///
+  /// The relative date is read through a cache: formatting one costs tens of
+  /// microseconds, and the list is rebuilt on every arrow key.
   private func detail(for task: WorkspaceTask, reason: DayPlanReason?) -> String? {
     switch reason {
     case .overdue, .dueToday: return reason?.label
     case .startsToday, .running, .planned, nil:
-      return task.dueAt.map { "Due \($0.formatted(.relative(presentation: .named)))" }
+      return task.dueAt.map { "Due \(RelativeDateTextCache.shared.text(for: $0))" }
     }
   }
 
@@ -1032,8 +913,9 @@ struct DailyBadge: View {
 /// One row of the day, whatever put it there. The list only ever sees this.
 private struct DayRow: Identifiable {
   enum Kind {
-    /// The task, its position in the day, and whether it is the one running.
-    case task(WorkspaceTask, Int?, Bool)
+    /// The task, its position in the day, whether it is the one running, and
+    /// the rest of what its row draws.
+    case task(DayTaskFacts)
     case create
   }
 
