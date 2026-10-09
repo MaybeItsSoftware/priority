@@ -260,7 +260,9 @@ struct WorkspaceTaskPlanningBadges: View {
         Label("Due \(due)", systemImage: "calendar")
       }
       if let start = planning?.startAt {
+        // In the warning colour while it holds the task back.
         Label("Start \(start.formatted(date: .abbreviated, time: .shortened))", systemImage: "clock")
+          .foregroundStyle(start > .now ? theme.warning : theme.muted)
       }
       if let groups = planning?.requirementGroups, !groups.isEmpty {
         Label(groups.map { group in
@@ -268,9 +270,17 @@ struct WorkspaceTaskPlanningBadges: View {
             .joined(separator: " or ")
         }.joined(separator: " + "), systemImage: "location")
       }
+      // A start still to come is already the line above, so it is not said
+      // twice; only the other reasons are.
       if let blocked = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
-        Text(blocked.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
-          .foregroundStyle(theme.warning)
+        let reasons = blocked.reasons.filter { reason in
+          if case .startsLater = reason { return planning?.startAt == nil }
+          return true
+        }
+        if !reasons.isEmpty {
+          Text(reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
+            .foregroundStyle(theme.warning)
+        }
       }
     }.font(theme.captionFont).foregroundStyle(theme.muted).expandsWhenSelected(isExpanded, lineLimit: 2)
   }
