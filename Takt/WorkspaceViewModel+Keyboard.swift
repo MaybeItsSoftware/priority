@@ -105,8 +105,14 @@ extension WorkspaceViewModel {
   /// of its own, so a subtask selected there puts the new card below the
   /// card it is drawn on.
   func addTaskBelowSelection() {
-    let card = viewMode == .board
-      ? selectedTaskID.flatMap(boardCardID(owning:)).flatMap(task(withID:)) : nil
+    // The card the selected row is drawn on in the column the keys are in:
+    // a subtask filed in a later column is a card there too, and the draft
+    // belongs beside the row you are looking at, not over in that column.
+    let column = boardColumns.first { $0.id == activeBoardColumnID }
+    let cardID = selectedTaskID.flatMap { id in
+      column.flatMap { boardRows(in: $0).cardByRow[id] } ?? boardCardID(owning: id)
+    }
+    let card = viewMode == .board ? cardID.flatMap(task(withID:)) : nil
     requestRelativeTaskComposerFocus(reference: card)
   }
 
