@@ -199,17 +199,6 @@ struct WorkspaceKanbanColumnView: View {
           .foregroundStyle(theme.dim)
           .monospacedDigit()
         Spacer()
-        if model.boardColumns.count > 1 {
-          Button(role: .destructive) {
-            model.removeKanbanColumn(column)
-          } label: {
-            Image(systemName: "minus")
-          }
-          .buttonStyle(.plain)
-          .foregroundStyle(theme.muted)
-          .focusable()
-          .commandHelp(.planBoardRemoveColumn, note: "Remove \(column.title)")
-        }
       }
 
       }
@@ -235,24 +224,6 @@ struct WorkspaceKanbanColumnView: View {
             // column you are in, so that is where it is typed.
             if model.draftsAtEnd && column.id == model.activeBoardColumnID { draftRow }
 
-            if tasks.isEmpty {
-              VStack(spacing: theme.space.xs) {
-                Image(systemName: "arrow.down.doc")
-                  .font(theme.titleFont)
-                Text(isDropTargeted ? "Drop card here" : "Drop cards here")
-                  .font(theme.captionFont)
-              }
-              .foregroundStyle(isDropTargeted ? theme.primary : theme.dim)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, theme.space.lg)
-              .overlay(
-                Rectangle()
-                  .stroke(
-                    isDropTargeted ? theme.primary : theme.border,
-                    style: StrokeStyle(lineWidth: theme.hairline, dash: [5]))
-              )
-              .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
-            }
 
           }
           .scrollTargetLayout()
