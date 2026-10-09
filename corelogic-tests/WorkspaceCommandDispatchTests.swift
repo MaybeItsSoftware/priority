@@ -157,6 +157,16 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertFalse(WorkspaceCommandCatalog.reachesIntoTextField("cmd+shift+}", on: .outline))
   }
 
+  /// Esc in one of the inspector's fields hands the keyboard back to the
+  /// tasks; in any other field it is the field's.
+  func testEscapeLeavesTheInspectorsFieldsOnly() {
+    XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("escape", on: .inspector))
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "escape", on: .inspector)?.id, .motionDismiss)
+    for surface: WorkspaceCommandSurface in [.outline, .board, .today, .matrix, .sidebar, .done, .timeline] {
+      XCTAssertFalse(WorkspaceCommandCatalog.reachesIntoTextField("escape", on: surface), "\(surface)")
+    }
+  }
+
   func testOrdinarySurfacesPassUnknownKeysOn() {
     for surface in Self.planningPanes + [.sidebar, .inspector, .done] {
       XCTAssertFalse(WorkspaceCommandCatalog.swallowsUnhandledKey("z", on: surface))

@@ -60,6 +60,13 @@ extension WorkspaceCommandCatalog {
     .windowDockNextTab, .windowDockPreviousTab,
   ]
 
+  /// Surfaces where Esc in a text field is the surface's Esc rather than the
+  /// field's. The inspector is a column of fields and opens with the caret in
+  /// its title, so an Esc the field kept was an Esc that did nothing, and the
+  /// way back to the tasks was ⌃Tab or the mouse. What was typed stays in the
+  /// draft; leaving the field does not throw it away.
+  public static let escapeLeavesTextField: Set<WorkspaceCommandSurface> = [.inspector]
+
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.
   /// None of them acts on a task row: they open something, or leave — and
   /// Return adds a task, which it does from everywhere, row or no row. `r`

@@ -224,7 +224,7 @@ struct WorkspaceWaitingInspectorSection: View {
           Label("Waiting on…", systemImage: "hourglass")
         }
         .buttonStyle(FocusActionButtonStyle())
-        .focusable()
+        .keyboardFocusable()
         .commandHelp(.taskWaiting, note: "Move it to Waiting on, with who and when to follow up")
       }
       if let sourceId = details?.followUpOfTaskId, let source = model.task(withID: sourceId) {
@@ -235,6 +235,7 @@ struct WorkspaceWaitingInspectorSection: View {
         .buttonStyle(.plain)
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
+        .keyboardFocusable()
       }
     }
     .onAppear { tag = details?.waitingOn ?? "" }

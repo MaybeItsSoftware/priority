@@ -10,6 +10,39 @@ import SwiftUI
 // drawn flat: a hairline rectangle at the control radius, the theme's faces,
 // and primary only where something is on.
 
+/// A control Tab can reach, with the theme's ring round it while it has the
+/// keyboard.
+///
+/// `.focusable()` alone left the ring to the system, and the panes these
+/// controls sit in turn the system's focus effect off for themselves and
+/// everything in them — so Tab moved through the inspector with nothing on
+/// screen saying where it had got to. The ring is drawn here instead, as a
+/// selection is everywhere else: a border, not a glow.
+private struct KeyboardFocusRing: ViewModifier {
+  @Environment(\.theme) private var theme
+  @FocusState private var hasKeyboard: Bool
+  let radius: CGFloat?
+
+  func body(content: Content) -> some View {
+    content
+      .focusable()
+      .focused($hasKeyboard)
+      .focusEffectDisabled()
+      .overlay {
+        RoundedRectangle(cornerRadius: radius ?? theme.controlRadius, style: .continuous)
+          .strokeBorder(hasKeyboard ? theme.focusRing : .clear, lineWidth: theme.focusRingWidth)
+          .allowsHitTesting(false)
+      }
+  }
+}
+
+extension View {
+  /// Reachable with Tab, Space to press, and ringed while it has the keyboard.
+  func keyboardFocusable(radius: CGFloat? = nil) -> some View {
+    modifier(KeyboardFocusRing(radius: radius))
+  }
+}
+
 /// A label on the left and its control on the right, one line high. Dense
 /// on purpose: the inspector is a panel you scan, not a form you fill in.
 struct ThemedControlRow<Control: View>: View {
@@ -291,7 +324,7 @@ struct ThemedDateField: View {
     .buttonStyle(.plain)
     .fixedSize()
     .themedControlFrame()
-    .focusable()
+    .keyboardFocusable()
     .popover(isPresented: $isPicking, arrowEdge: .bottom) {
       VStack(alignment: .leading, spacing: theme.space.sm) {
         DatePicker("", selection: $selection, displayedComponents: [.date])
@@ -371,7 +404,7 @@ struct ThemedOptionalRow<Value: View>: View {
               .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
-          .focusable()
+          .keyboardFocusable()
           .help("Clear \(title.lowercased())")
           .accessibilityLabel("Clear \(title.lowercased())")
         }
@@ -381,7 +414,7 @@ struct ThemedOptionalRow<Value: View>: View {
             .labelStyle(.titleAndIcon)
         }
         .buttonStyle(FocusChipButtonStyle(isOn: false))
-        .focusable()
+        .keyboardFocusable()
         .accessibilityLabel("Add \(title.lowercased())")
       }
     }

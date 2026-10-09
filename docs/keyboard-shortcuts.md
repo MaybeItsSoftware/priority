@@ -181,8 +181,9 @@ The right dock's three tabs — the inspector, the done rail and the timeline �
 are changed with `Cmd+Shift+{` / `Cmd+Shift+}`, Zed's previous / next tab, and
 with `[` / `]` where no field would take them; the keyboard comes along to the
 new tab. On a task pane the same chords change list. `Esc` on any of the three
-hands the keyboard back to the work and leaves the dock open, and `r` puts
-the dock away.
+hands the keyboard back to the work and leaves the dock open — in the
+inspector that includes `Esc` from inside one of its fields — and `r` puts the
+dock away.
 
 ## Return and Shift-Return
 

@@ -192,7 +192,7 @@ struct WorkspaceTaskPlanningEditor: View {
               if group.count > 1 { Text("(either)").foregroundStyle(theme.muted) }
               Spacer()
               Button { remove(id, from: index) } label: { Image(systemName: "minus.circle") }
-                .buttonStyle(.plain).foregroundStyle(theme.muted).help("Remove requirement")
+                .buttonStyle(.plain).foregroundStyle(theme.muted).keyboardFocusable().help("Remove requirement")
                 .accessibilityLabel("Remove requirement")
             }.font(theme.captionFont)
           }
@@ -200,7 +200,7 @@ struct WorkspaceTaskPlanningEditor: View {
             ForEach(model.focusConditions.filter { !$0.isArchived && !group.contains($0.id) }) { condition in
               Button(condition.name) { edit { $0.requirementGroups?[index].append(condition.id) } }
             }
-          }.font(theme.captionFont)
+          }.font(theme.captionFont).keyboardFocusable()
         }
       }
       ThemedMenu("Add required condition", systemImage: "plus", expands: true) {
@@ -210,10 +210,12 @@ struct WorkspaceTaskPlanningEditor: View {
           Button(condition.name) { edit { $0.requirementGroups = ($0.requirementGroups ?? []) + [[condition.id]] } }
         }
       }
+      .keyboardFocusable()
       Toggle("Must finish in one sitting", isOn: Binding(get: { current.requiresSingleSitting == true }, set: { enabled in
         edit { $0.requiresSingleSitting = enabled ? true : nil }
       }))
         .toggleStyle(.themedSwitch)
+        .keyboardFocusable()
       ThemedControlRow("Minimum block") {
         TextField("Minimum useful block (minutes)", text: Binding(get: { current.minimumBlockMinutes ?? "" }, set: { raw in
           edit { $0.minimumBlockMinutes = raw.isEmpty ? nil : raw }
@@ -226,6 +228,7 @@ struct WorkspaceTaskPlanningEditor: View {
       }
       Button("Apply saved requirements and start to subtasks") { model.applyPlanningToDescendants(of: task) }
         .buttonStyle(FocusActionButtonStyle())
+        .keyboardFocusable()
         .font(theme.captionFont).help("Copies saved conditions, start and block rules; keeps each subtask's own estimate and deadline")
     }
   }

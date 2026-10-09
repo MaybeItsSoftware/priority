@@ -219,8 +219,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         // reference. The catalogue says which (`reachableFromTextField`), so
         // this list cannot drift from the keys it names. ⌘Z is deliberately
         // not one: inside a field it belongs to the text being typed.
+        // Esc is the agent's own, whatever region last had the keyboard.
         guard let key = event.workspaceCommandKey,
-          WorkspaceCommandCatalog.reachesIntoTextField(key, on: self.workspace.commandSurface)
+          WorkspaceCommandCatalog.reachesIntoTextField(key, on: self.workspace.commandSurface),
+          key != "escape" || !self.workspace.agentHoldsKeyboard
         else {
           return self.keepInField(event, in: window) ? nil : event
         }

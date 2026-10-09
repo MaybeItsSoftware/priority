@@ -85,7 +85,9 @@ struct LocalTaskInspector: View {
         .foregroundStyle(theme.muted)
         HStack(spacing: theme.space.xs) {
           Button("Use saved") { model.taskEditor.resolve(task.id, field: field, useSaved: true) }
+            .keyboardFocusable()
           Button("Keep my edit") { model.taskEditor.resolve(task.id, field: field, useSaved: false) }
+            .keyboardFocusable()
         }
         .buttonStyle(FocusActionButtonStyle())
       }
@@ -111,13 +113,13 @@ struct LocalTaskInspector: View {
             Label("Add to queue", systemImage: "plus.circle")
           }
           .buttonStyle(FocusActionButtonStyle(prominent: true))
-          .focusable()
+          .keyboardFocusable()
           .commandHelp(.taskStartFocus, note: "Add this task to the focus queue")
           Button("Open focus") { model.run(.goFocus) }
             .buttonStyle(.plain)
             .font(theme.captionFont)
             .foregroundStyle(theme.primary)
-            .focusable()
+            .keyboardFocusable()
             .commandHelp(.goFocus)
         }
       } else {
@@ -126,7 +128,7 @@ struct LocalTaskInspector: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(FocusActionButtonStyle(prominent: true))
-        .focusable()
+        .keyboardFocusable()
         .commandHelp(.taskStartFocus, note: "Start a block on this task")
       }
     }
@@ -156,7 +158,7 @@ struct LocalTaskInspector: View {
         "Priority", selection: binding(\.priority, fallback: draft.values.priority),
         options: Self.priorityNames.enumerated().map { ThemedPickerOption($0.element, value: $0.offset) }
       )
-      .focusable()
+      .keyboardFocusable()
       .commandHelp(.motionSetPriority)
       ThemedControlRow("Estimate") {
         TextField(
@@ -243,7 +245,7 @@ struct LocalTaskInspector: View {
             })
         )
         .toggleStyle(.themedSwitch)
-        .focusable()
+        .keyboardFocusable()
       }
       ThemedControlRow("Repeat") {
         TextField(
@@ -254,7 +256,7 @@ struct LocalTaskInspector: View {
       }
       Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
         .toggleStyle(.themedSwitch)
-        .focusable()
+        .keyboardFocusable()
         .commandHelp(.taskToggleDaily, note: "Show this ongoing task in Dailies without completing the task itself")
     }
   }
@@ -272,14 +274,14 @@ struct LocalTaskInspector: View {
           Button(list.name) { model.moveTask(task, toListId: list.id) }
         }
       }
-      .focusable()
+      .keyboardFocusable()
       .commandHelp(.taskMove)
       if !task.isList {
         Button { model.addTaskToGoogleCalendar(task) } label: {
           Label("Add to Google Calendar", systemImage: "calendar.badge.plus")
         }
         .buttonStyle(FocusActionButtonStyle())
-        .focusable()
+        .keyboardFocusable()
         .help("Create a linked event using the task's due date or start time")
       }
     }
@@ -304,7 +306,7 @@ struct LocalTaskInspector: View {
     InspectorSection("Structure") {
       Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
         .buttonStyle(FocusActionButtonStyle())
-        .focusable()
+        .keyboardFocusable()
         .commandHelp(task.isList ? .taskPromoteList : .taskConvertToList)
       if task.isList {
         ThemedPicker(
@@ -314,17 +316,18 @@ struct LocalTaskInspector: View {
             set: { model.setNestedListIcon($0, for: task) }
           ),
           options: Self.iconOptions
-        ).focusable()
+        )
+        .keyboardFocusable()
         HStack(spacing: theme.space.xs) {
           Button(task.isPromoted == true ? "Unpin from sidebar" : "Pin to sidebar") {
             model.toggleListPromotion(task)
           }
-          .focusable()
+          .keyboardFocusable()
           .commandHelp(.taskPromoteList)
           Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
-            .focusable()
+            .keyboardFocusable()
             .commandHelp(.taskComplete, note: task.status == .open ? "Complete the list" : "Reopen the list")
-          Button("Archive list") { model.archiveNestedList(task) }.focusable()
+          Button("Archive list") { model.archiveNestedList(task) }.keyboardFocusable()
         }
         .buttonStyle(FocusActionButtonStyle())
       }
@@ -338,12 +341,14 @@ struct LocalTaskInspector: View {
       Button("Save") { model.saveTaskEditor(task) }
         .buttonStyle(FocusActionButtonStyle(prominent: draft.isDirty))
         .keyboardShortcut("s", modifiers: .command)
+        .keyboardFocusable()
         .help("Save · ⌘S")
         .disabled(
           !draft.isDirty || draft.isUnavailable || !draft.conflicts.isEmpty
             || draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       Button("Revert") { model.revertTaskEditor(task) }
         .buttonStyle(FocusActionButtonStyle())
+        .keyboardFocusable()
         .disabled(!draft.isDirty)
       Spacer(minLength: 0)
     }

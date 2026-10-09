@@ -83,6 +83,9 @@ public struct WorkspaceKeyBindings: Sendable {
   }
 
   public func reachesIntoTextField(_ key: String, on surface: WorkspaceCommandSurface) -> Bool {
+    if key == "escape", WorkspaceCommandCatalog.escapeLeavesTextField.contains(surface) {
+      return command(forKey: key, on: surface) != nil
+    }
     guard WorkspaceCommandCatalog.isChord(key), let command = command(forKey: key, on: surface) else {
       return false
     }
