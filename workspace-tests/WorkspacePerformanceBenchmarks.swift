@@ -264,6 +264,41 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
     }
     print(String(format: "PERF   of which the Everything board (unused on Today): %.2f ms", boardMs))
 
+    // Today since the board is set aside while it is not on screen: the
+    // sidebar still reads every tree when the edit could have changed a count,
+    // but nothing walks them for cards or reads the cards' metadata.
+    try time("Today refresh after one edit, board set aside (sidebar+cache)", runs: 7) {
+      title += 1
+      try store.updateTask(id: target.id, title: "Renamed \(title)", notes: "", dueAt: nil, estimateSeconds: nil)
+      let trees = try store.listTrees(in: lists.map(\.id))
+      _ = WorkspaceSidebarIndex(lists: lists, trees: trees)
+      _ = try store.waitingDetails()
+      _ = try store.undoableLabel()
+      _ = try store.redoableLabel()
+    }
+    // An edit that refreshes only the main pane (`reloadOutline(refreshSidebar:
+    // false)`, `reloadBoard()`): before, the whole board; now, no tree at all.
+    try time("Today refresh, main pane only, board read (before)", runs: 7) {
+      title += 1
+      try store.updateTask(id: target.id, title: "Renamed \(title)", notes: "", dueAt: nil, estimateSeconds: nil)
+      let trees = try store.listTrees(in: lists.map(\.id))
+      let tasks = lists.flatMap { trees[$0.id]?.actionableTasks(visibleRootTaskId: $0.visibleRootTaskId) ?? [] }
+      let board = WorkspaceBoardTrees(cardIDs: Set(tasks.map(\.id)), trees: Array(trees.values))
+      var seen = Set<String>()
+      let treeTasks = (tasks + tasks.flatMap { board.descendants[$0.id, default: []].map(\.task) })
+        .filter { seen.insert($0.id).inserted }
+      _ = try store.boardMetadata(for: treeTasks.map(\.id))
+      _ = try store.undoableLabel()
+      _ = try store.redoableLabel()
+    }
+    try time("Today refresh, main pane only, board set aside (after)", runs: 7) {
+      title += 1
+      try store.updateTask(id: target.id, title: "Renamed \(title)", notes: "", dueAt: nil, estimateSeconds: nil)
+      // The columns come from the layouts cached per scope: no read.
+      _ = try store.undoableLabel()
+      _ = try store.redoableLabel()
+    }
+
     // What applying a next-up snapshot costs the main thread: the equality
     // checks `applyNextUp` makes before assigning.
     let a = try store.nextUpSnapshot(workspaceId: workspace.id, context: FocusContext(), runningID: nil)
