@@ -87,7 +87,7 @@ something you already have to know.
 | `gb` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
 | `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
-| `Return` | **Always** add a task, as in Checkvist — below the selection in the outline and the matrix, into the list you are in elsewhere |
+| `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
 | `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |

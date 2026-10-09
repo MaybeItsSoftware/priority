@@ -79,10 +79,12 @@ extension WorkspaceViewModel {
 
   var draftsAtEnd: Bool { isDraftingTask && taskInsertionReference == nil }
 
-  func requestRelativeTaskComposerFocus(above: Bool = false, child: Bool = false) {
+  func requestRelativeTaskComposerFocus(
+    above: Bool = false, child: Bool = false, reference: WorkspaceTask? = nil
+  ) {
     // Today draws its draft only at the foot of the day, so a draft beside
     // a task there would be open with no row on screen to type in.
-    let reference = viewMode == .today ? nil : selectedTask
+    let reference = viewMode == .today ? nil : reference ?? selectedTask
     requestTaskComposerFocus()
     taskInsertionReference = reference
     taskInsertionAbove = above

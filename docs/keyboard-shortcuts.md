@@ -189,8 +189,9 @@ dock away.
 
 They mean the same thing on every task surface:
 
-- **Return always adds a task**, as in Checkvist — below the selected task in
-  the outline and the matrix, into the list you are in elsewhere — and so does
+- **Return always adds a task**, as in Checkvist — below the selected task
+  (on the board, below the card a selected subtask is drawn on), at the foot
+  of the day on Today — and so does
   `Cmd+N`. `Shift+Return` and `Option+Return` add one above the selection,
   `Option+Shift+Return` a subtask. Return is never "open": with nothing
   selected it still adds, so it is never dead.

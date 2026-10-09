@@ -95,16 +95,19 @@ extension WorkspaceViewModel {
 
   // MARK: - What the direction keys mean, per region
 
-  /// ⌘N: below the selected task where a list reads top to bottom — the
-  /// outline and the matrix's rows — and into the composer everywhere else.
-  /// Return used to do this on the outline while it opened the card on the
-  /// board and started it on Today; Return now opens the task everywhere.
+  /// ⌘N: below the selected task — on the outline, the matrix's rows and the
+  /// board — and at the foot of the day on Today, which draws no draft
+  /// beside a task. Return used to do this on the outline while it opened
+  /// the card on the board and started it on Today; Return now opens the
+  /// task everywhere.
+  ///
+  /// On the board a subtask row is drawn on its card and has no draft row
+  /// of its own, so a subtask selected there puts the new card below the
+  /// card it is drawn on.
   func addTaskBelowSelection() {
-    if selectedTask != nil && (viewMode == .outline || viewMode == .matrix) {
-      requestRelativeTaskComposerFocus()
-    } else {
-      requestTaskComposerFocus()
-    }
+    let card = viewMode == .board
+      ? selectedTaskID.flatMap(boardCardID(owning:)).flatMap(task(withID:)) : nil
+    requestRelativeTaskComposerFocus(reference: card)
   }
 
   /// Escape, which means "back out one step" from wherever the keyboard is.

@@ -99,7 +99,7 @@ public enum WorkspaceCommandCatalog {
   private static let task: [WorkspaceCommand] = [
     .init(
       id: .taskNew, title: "Add a task", group: "Task", keys: ["enter", "cmd+n"],
-      note: "Return always adds, as in Checkvist: below the selected task in the outline and the matrix"),
+      note: "Return always adds, as in Checkvist: below the selected task, at the foot of the day on Today"),
     .init(
       id: .taskNewAbove, title: "Add a task above", group: "Task", keys: ["shift+enter", "option+enter"],
       note: "⇧↩ is Checkvist's"),
