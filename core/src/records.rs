@@ -4,7 +4,7 @@
 //!
 //! Dates cross as epoch milliseconds, like everywhere else in the core.
 
-use rusqlite::{Connection, OptionalExtension, Row};
+use rusqlite::{Connection, OptionalExtension, Row, RowIndex, Statement};
 
 use crate::CoreError;
 use crate::time::parse_stored;
@@ -73,7 +73,7 @@ pub struct WorkspaceRow {
 }
 
 /// A stored date column as milliseconds; absent when empty or unreadable.
-pub(crate) fn optional_ms(row: &Row, column: &str) -> rusqlite::Result<Option<i64>> {
+pub(crate) fn optional_ms<I: RowIndex>(row: &Row, column: I) -> rusqlite::Result<Option<i64>> {
     let text: Option<String> = row.get(column)?;
     Ok(text
         .as_deref()
@@ -82,7 +82,7 @@ pub(crate) fn optional_ms(row: &Row, column: &str) -> rusqlite::Result<Option<i6
 }
 
 /// A stored date column that is always written, as milliseconds.
-pub(crate) fn required_ms(row: &Row, column: &str) -> rusqlite::Result<i64> {
+pub(crate) fn required_ms<I: RowIndex>(row: &Row, column: I) -> rusqlite::Result<i64> {
     Ok(optional_ms(row, column)?.unwrap_or(0))
 }
 
@@ -112,6 +112,81 @@ impl TaskRow {
             completed_at_ms: optional_ms(row, "completedAt")?,
             created_at_ms: required_ms(row, "createdAt")?,
             updated_at_ms: required_ms(row, "updatedAt")?,
+        })
+    }
+}
+
+/// Where `TaskRow::from_row`'s columns sit in a statement's results, found
+/// once per statement. Reading a column by name searches the statement's
+/// names on every call, which for a read of every task was half the core's
+/// time; `SELECT *` keeps its own column order, so positions are looked up
+/// rather than assumed.
+pub(crate) struct TaskColumns {
+    id: usize,
+    list_id: usize,
+    parent_task_id: usize,
+    title: usize,
+    notes: usize,
+    status: usize,
+    sort_order: usize,
+    due_at: usize,
+    estimate_seconds: usize,
+    source_system: usize,
+    source_id: usize,
+    item_kind: usize,
+    is_promoted: usize,
+    archived_at: usize,
+    completed_at: usize,
+    created_at: usize,
+    updated_at: usize,
+}
+
+impl TaskColumns {
+    pub(crate) fn of(statement: &Statement) -> rusqlite::Result<Self> {
+        let at = |name: &str| statement.column_index(name);
+        Ok(Self {
+            id: at("id")?,
+            list_id: at("listId")?,
+            parent_task_id: at("parentTaskId")?,
+            title: at("title")?,
+            notes: at("notes")?,
+            status: at("status")?,
+            sort_order: at("sortOrder")?,
+            due_at: at("dueAt")?,
+            estimate_seconds: at("estimateSeconds")?,
+            source_system: at("sourceSystem")?,
+            source_id: at("sourceId")?,
+            item_kind: at("itemKind")?,
+            is_promoted: at("isPromoted")?,
+            archived_at: at("archivedAt")?,
+            completed_at: at("completedAt")?,
+            created_at: at("createdAt")?,
+            updated_at: at("updatedAt")?,
+        })
+    }
+
+    /// `TaskRow::from_row`, by position.
+    pub(crate) fn read(&self, row: &Row) -> rusqlite::Result<TaskRow> {
+        Ok(TaskRow {
+            id: row.get(self.id)?,
+            list_id: row.get(self.list_id)?,
+            parent_task_id: row.get(self.parent_task_id)?,
+            title: row.get(self.title)?,
+            notes: row
+                .get::<_, Option<String>>(self.notes)?
+                .unwrap_or_default(),
+            status: row.get(self.status)?,
+            sort_order: row.get(self.sort_order)?,
+            due_at_ms: optional_ms(row, self.due_at)?,
+            estimate_seconds: row.get(self.estimate_seconds)?,
+            source_system: row.get(self.source_system)?,
+            source_id: row.get(self.source_id)?,
+            item_kind: row.get(self.item_kind)?,
+            is_promoted: row.get(self.is_promoted)?,
+            archived_at_ms: optional_ms(row, self.archived_at)?,
+            completed_at_ms: optional_ms(row, self.completed_at)?,
+            created_at_ms: required_ms(row, self.created_at)?,
+            updated_at_ms: required_ms(row, self.updated_at)?,
         })
     }
 }
@@ -286,14 +361,14 @@ pub fn tasks_in_lists(
     let mut result = Vec::new();
     for chunk in unique.chunks(500) {
         let marks = vec!["?"; chunk.len()].join(", ");
-        result.extend(all(
-            connection,
-            &format!(
-                "SELECT * FROM tasks WHERE listId IN ({marks}) ORDER BY listId, sortOrder, createdAt"
-            ),
-            rusqlite::params_from_iter(chunk),
-            TaskRow::from_row,
-        )?);
+        let mut statement = connection.prepare_cached(&format!(
+            "SELECT * FROM tasks WHERE listId IN ({marks}) ORDER BY listId, sortOrder, createdAt"
+        ))?;
+        let columns = TaskColumns::of(&statement)?;
+        let mut rows = statement.query(rusqlite::params_from_iter(chunk))?;
+        while let Some(row) = rows.next()? {
+            result.push(columns.read(row)?);
+        }
     }
     Ok(result)
 }
