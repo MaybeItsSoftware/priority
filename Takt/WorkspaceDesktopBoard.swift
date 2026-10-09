@@ -153,10 +153,9 @@ struct WorkspaceKanbanColumnView: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
 
-  /// The draft row, at a card's width rather than an outline row's.
+  /// The draft row, drawn as a card.
   private var draftRow: some View {
-    WorkspaceTaskDraftRow()
-      .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
+    WorkspaceTaskDraftRow(isCard: true)
   }
   let column: WorkspaceKanbanColumn
   let width: CGFloat
