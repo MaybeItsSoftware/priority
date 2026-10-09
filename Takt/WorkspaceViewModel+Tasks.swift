@@ -166,6 +166,33 @@ extension WorkspaceViewModel {
     WorkspaceMotion.animate { setFolded(task, !isFolded(task)) }
   }
 
+  /// `.`: shows the selected task's subtasks.
+  func growSelectedTask() {
+    guard let task = selectedTask, isFolded(task) else { return }
+    WorkspaceMotion.animate { setFolded(task, false) }
+  }
+
+  /// `,`: hides the selected task's subtasks, or — on a task with none, or
+  /// already folded — the subtasks of the task it sits under, which takes
+  /// the selection with it.
+  func shrinkSelectedTask() {
+    guard let task = selectedTask else { return }
+    if !isFolded(task) && !descendants(of: task).isEmpty {
+      WorkspaceMotion.animate { setFolded(task, true) }
+    } else if let parent = drawnParent(of: task) {
+      WorkspaceMotion.animate { setFolded(parent, true) }
+    }
+  }
+
+  /// The task a row is drawn beneath on screen: on the board, the card or row
+  /// it hangs from; in the outline, a row above it — never the list's hidden
+  /// root or the task the pane has opened, whose fold would empty the pane.
+  private func drawnParent(of task: WorkspaceTask) -> WorkspaceTask? {
+    if viewMode == .board { return boardParent(of: task) }
+    guard let parentID = TaskOutlineFolding.parentID(of: task.id, in: outlineRows) else { return nil }
+    return self.task(withID: parentID)
+  }
+
   /// Folds or unfolds every branch of the outline on screen. Folding leaves
   /// the selection on the top-level task it was inside.
   func setOutlineFolded(_ folded: Bool) {

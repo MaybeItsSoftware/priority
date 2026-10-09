@@ -221,6 +221,12 @@ public enum WorkspaceCommandCatalog {
       id: .planToggleFold, title: "Show or hide the task's subtasks", group: "Plan", keys: ["za"],
       note: "In the outline, or on the board card or row you are on"),
     .init(
+      id: .planGrowTask, title: "Show the task's subtasks", group: "Plan", keys: ["."],
+      note: "Grows a folded card or branch"),
+    .init(
+      id: .planShrinkTask, title: "Hide the task's subtasks", group: "Plan", keys: ["comma"],
+      note: "On a task with none, folds the task it sits under"),
+    .init(
       id: .planFoldAll, title: "Hide every task's subtasks", group: "Plan",
       keys: ["cmd+left"], surface: .outline),
     .init(

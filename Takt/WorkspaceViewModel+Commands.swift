@@ -163,6 +163,8 @@ extension WorkspaceViewModel {
       if key != "[" || scopeTaskID != nil { leaveSelectedTaskScope() }
     case .planHideCompleted: toggleHiddenCompletedTasks()
     case .planToggleFold: if let task = selectedTask { toggleFold(of: task) }
+    case .planGrowTask: growSelectedTask()
+    case .planShrinkTask: shrinkSelectedTask()
     case .planFoldAll: setOutlineFolded(true)
     case .planUnfoldAll: setOutlineFolded(false)
     case .planBoardNewColumn: presentOverlay(.newBoardColumn)
