@@ -797,7 +797,19 @@ enum WorkspaceSidebarItem: Identifiable {
   var workProgress: WorkProgress = .empty
   /// What the done rail shows: tasks closed within its window, newest first.
   /// Loaded only while the rail is open — see `reloadCompleted()`.
-  var completedTasks: [WorkspaceTask] = []
+  var completedTasks: [WorkspaceTask] = [] {
+    didSet {
+      // Grouped and indexed here, once per load, rather than per render of
+      // the rail and per row of it.
+      doneGroups = CompletedWorkDigest.group(completedTasks, completedAt: { $0.completedAt ?? .distantPast })
+      completedTaskIndex = Dictionary(
+        completedTasks.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+  }
+  /// The rail's rows, grouped by the day they were closed, newest first.
+  private(set) var doneGroups: [CompletedWorkGroup<WorkspaceTask>] = []
+  /// Each completed task's position in `completedTasks`, by id.
+  @ObservationIgnored private(set) var completedTaskIndex: [String: Int] = [:]
   /// The row the rail's cursor is on, or nil for "the newest thing finished".
   var doneCursorID: String?
   /// The timeline breakdown row the keyboard is on, by task key, or nil for

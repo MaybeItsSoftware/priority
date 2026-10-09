@@ -40,13 +40,22 @@ struct WorkspaceDoneRail: View {
   }
 
   private var rows: some View {
-    ScrollViewReader { proxy in
+    // Worked out once here and handed to each row, rather than each row
+    // asking the model: a cursor move then redraws the two rows it touched,
+    // not every row on the rail.
+    let cursorID = model.doneCursorTask?.id
+    let railHasKeyboard = model.keyboardFocusArea == .done
+    let listNames = Dictionary(model.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    return ScrollViewReader { proxy in
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
           ForEach(model.doneGroups) { group in
             Section {
               ForEach(group.items) { task in
-                WorkspaceDoneRow(task: task)
+                WorkspaceDoneRow(
+                  task: task, listName: listNames[task.listId], isCursor: task.id == cursorID,
+                  hasKeyboard: railHasKeyboard && task.id == cursorID)
+                  .equatable()
                   .id(task.id)
               }
             } header: {
@@ -120,13 +129,18 @@ private struct WorkspaceDoneDayHeader: View {
   }
 }
 
-private struct WorkspaceDoneRow: View {
+private struct WorkspaceDoneRow: View, Equatable {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let task: WorkspaceTask
+  let listName: String?
+  let isCursor: Bool
+  let hasKeyboard: Bool
 
-  private var isCursor: Bool { model.doneCursorTask?.id == task.id }
-  private var hasKeyboard: Bool { isCursor && model.keyboardFocusArea == .done }
+  nonisolated static func == (lhs: WorkspaceDoneRow, rhs: WorkspaceDoneRow) -> Bool {
+    lhs.task == rhs.task && lhs.listName == rhs.listName && lhs.isCursor == rhs.isCursor
+      && lhs.hasKeyboard == rhs.hasKeyboard
+  }
 
   /// Cancelled is not completed. Both leave the open list, so both belong here,
   /// but a rail that reads them the same would be telling you that dropping
@@ -147,7 +161,7 @@ private struct WorkspaceDoneRow: View {
           .lineLimit(2)
           .fixedSize(horizontal: false, vertical: true)
         HStack(spacing: theme.space.xs) {
-          if let name = model.lists.first(where: { $0.id == task.listId })?.name {
+          if let name = listName {
             Text(name).lineLimit(1).truncationMode(.middle)
           }
           if let at = task.completedAt {

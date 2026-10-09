@@ -21,18 +21,19 @@ extension WorkspaceViewModel {
   static let doneRailWindowDays = 35
   static let doneRailVisibleKey = "localWorkspaceDoneRailVisibleV1"
 
-  /// The rail's rows, grouped by the day they were closed, newest first.
-  var doneGroups: [CompletedWorkGroup<WorkspaceTask>] {
-    CompletedWorkDigest.group(completedTasks, completedAt: { $0.completedAt ?? .distantPast })
+  /// The row the keyboard is on, defaulting to the newest thing finished so the
+  /// rail is navigable the moment it opens. A lookup, not a scan: the rail
+  /// asks once per render.
+  var doneCursorTask: WorkspaceTask? {
+    if let doneCursorID, let index = doneCursorIndex(of: doneCursorID) { return completedTasks[index] }
+    return completedTasks.first
   }
 
-  /// The row the keyboard is on, defaulting to the newest thing finished so the
-  /// rail is navigable the moment it opens.
-  var doneCursorTask: WorkspaceTask? {
-    if let doneCursorID, let match = completedTasks.first(where: { $0.id == doneCursorID }) {
-      return match
-    }
-    return completedTasks.first
+  /// Where the task sits in `completedTasks`. Reads `completedTasks` so a view
+  /// that asks is told when the rows change, as the scan this replaced was.
+  private func doneCursorIndex(of id: String) -> Int? {
+    guard let index = completedTaskIndex[id], completedTasks.indices.contains(index) else { return nil }
+    return index
   }
 
   func leaveDoneRail() {
@@ -51,11 +52,14 @@ extension WorkspaceViewModel {
     let since = Calendar.current.date(
       byAdding: .day, value: -Self.doneRailWindowDays, to: Date.now) ?? .distantPast
     do {
-      completedTasks = try store.completedTasks(since: since)
+      // Only when it moved: every mutation reloads this, and an assignment
+      // regroups the rail and redraws it whether or not anything changed.
+      let fetched = try store.completedTasks(since: since)
+      if completedTasks != fetched { completedTasks = fetched }
     } catch {
       errorMessage = error.localizedDescription
     }
-    if let doneCursorID, !completedTasks.contains(where: { $0.id == doneCursorID }) {
+    if let doneCursorID, doneCursorIndex(of: doneCursorID) == nil {
       self.doneCursorID = completedTasks.first?.id
     }
   }
@@ -64,7 +68,7 @@ extension WorkspaceViewModel {
   /// are headings over one sequence, not separate lists to be escaped from.
   func moveDoneCursor(by offset: Int) {
     guard !completedTasks.isEmpty else { return }
-    let current = doneCursorTask.flatMap { task in completedTasks.firstIndex(where: { $0.id == task.id }) } ?? 0
+    let current = doneCursorID.flatMap { doneCursorIndex(of: $0) } ?? 0
     let next = CursorStepping.index(from: current, by: offset, count: completedTasks.count)
     doneCursorID = completedTasks[next].id
   }
