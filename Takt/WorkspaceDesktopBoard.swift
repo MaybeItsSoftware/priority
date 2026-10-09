@@ -467,15 +467,15 @@ struct WorkspaceKanbanCard: View {
     }
   }
 
-  /// One level of the tree: the width of a subtask's check, so each indent
-  /// guide runs straight down beneath the check of the task it belongs to.
-  private static func indentStep(_ theme: Theme) -> CGFloat {
+  /// The width of a subtask's mark column.
+  private static func markWidth(_ theme: Theme) -> CGFloat {
     theme.space.lg
   }
 
-  /// The card's whole subtree, every level, drawn the way an editor's project
-  /// panel draws one: a compact row per task, indented a check's width per
-  /// level, with a hairline guide down each level it is nested in. Shown by
+  /// The card's whole subtree, every level, a compact row per task. Every
+  /// row sits flush with the card's content edge, whatever its depth: the
+  /// `└` mark is what says a row hangs under another, and a margin per
+  /// level spent a narrow column's width on saying it again. Shown by
   /// default — the cards used to hide their subtasks behind a disclosure, and
   /// then only in a six-row scroller inside the card.
   ///
@@ -501,7 +501,6 @@ struct WorkspaceKanbanCard: View {
               .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
-          .padding(.leading, Self.indentStep(theme))
           .padding(.vertical, theme.space.xxs)
           .commandHelp(.planEnterTask, note: "Open \(task.title) to see every subtask")
         }
@@ -511,7 +510,7 @@ struct WorkspaceKanbanCard: View {
 
   private func subtaskRow(_ item: TaskOutlineItem, isFolded: Bool?) -> some View {
     let isOpen = item.task.status == .open
-    let step = Self.indentStep(theme)
+    let step = Self.markWidth(theme)
     let isRowSelected = selectedRowID == item.task.id
     return HStack(alignment: isRowSelected ? .firstTextBaseline : .center, spacing: 0) {
       Button {
@@ -544,24 +543,11 @@ struct WorkspaceKanbanCard: View {
     }
     .font(theme.captionFont)
     .padding(.vertical, theme.space.xxs)
-    .padding(.leading, CGFloat(item.depth) * step)
     // The same band as a card's selection, across the tree's width, so the
     // arrow keys can be seen stepping through a card's subtasks.
     .background {
       WorkspaceSelectionBackground(
         isSelected: isRowSelected, hasKeyboard: hasKeyboard && isRowSelected, radius: 0)
-    }
-    // Behind the padded row, so each guide runs its full height and meets
-    // the next row's without a gap.
-    .background(alignment: .leading) {
-      HStack(spacing: 0) {
-        ForEach(0..<item.depth, id: \.self) { _ in
-          Rectangle()
-            .fill(theme.border)
-            .frame(width: theme.hairline)
-            .frame(width: step)
-        }
-      }
     }
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
