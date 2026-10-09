@@ -957,6 +957,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists_packed(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_undo_history(
@@ -1270,6 +1272,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_tasks_by_id(`ptr`: Long,`ids`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_tasks_in_lists(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_tasks_in_lists_packed(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_undo(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1859,6 +1863,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists() and 0xFFFF) != 34639) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists_packed() and 0xFFFF) != 64000) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_undo() and 0xFFFF) != 20533) {
@@ -3052,6 +3059,12 @@ public interface CoreWorkspaceInterface {
      * Every task in the given lists, each list in outline order.
      */
     fun `tasksInLists`(`listIds`: List<kotlin.String>): List<TaskRow>
+    
+    /**
+     * `tasks_in_lists`, packed by `packed_rows::pack_task_rows` so the
+     * rows cross as one buffer rather than field by field.
+     */
+    fun `tasksInListsPacked`(`listIds`: List<kotlin.String>): kotlin.ByteArray
     
     /**
      * Reverses the most recent step; returns its label, or nothing when there
@@ -5705,6 +5718,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * `tasks_in_lists`, packed by `packed_rows::pack_task_rows` so the
+     * rows cross as one buffer rather than field by field.
+     */
+    @Throws(CoreException::class)override fun `tasksInListsPacked`(`listIds`: List<kotlin.String>): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_tasks_in_lists_packed(
+        it,
+        
+        FfiConverterSequenceString.lower(`listIds`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -6322,10 +6354,11 @@ public object FfiConverterTypeBoardPlacement: FfiConverterRustBuffer<BoardPlacem
  */
 data class BoardRead (
     /**
-     * The tasks the board draws: the cards, then the other rows of their
-     * trees, each once.
+     * Packed by `packed_rows::pack_task_rows`: the tasks the board draws,
+     * the cards, then the other rows of their trees, each once. Thousands
+     * of them on Everything's board, so they cross as one buffer.
      */
-    var `rows`: List<TaskRow>
+    var `rows`: kotlin.ByteArray
     , 
     /**
      * The placements of the rows that have one.
@@ -6383,7 +6416,7 @@ data class BoardRead (
 public object FfiConverterTypeBoardRead: FfiConverterRustBuffer<BoardRead> {
     override fun read(buf: ByteBuffer): BoardRead {
         return BoardRead(
-            FfiConverterSequenceTypeTaskRow.read(buf),
+            FfiConverterByteArray.read(buf),
             FfiConverterSequenceTypeBoardPlacement.read(buf),
             FfiConverterSequenceString.read(buf),
             FfiConverterByteArray.read(buf),
@@ -6395,7 +6428,7 @@ public object FfiConverterTypeBoardRead: FfiConverterRustBuffer<BoardRead> {
     }
 
     override fun allocationSize(value: BoardRead) = (
-            FfiConverterSequenceTypeTaskRow.allocationSize(value.`rows`) +
+            FfiConverterByteArray.allocationSize(value.`rows`) +
             FfiConverterSequenceTypeBoardPlacement.allocationSize(value.`placements`) +
             FfiConverterSequenceString.allocationSize(value.`otherIds`) +
             FfiConverterByteArray.allocationSize(value.`cards`) +
@@ -6406,7 +6439,7 @@ public object FfiConverterTypeBoardRead: FfiConverterRustBuffer<BoardRead> {
     )
 
     override fun write(value: BoardRead, buf: ByteBuffer) {
-            FfiConverterSequenceTypeTaskRow.write(value.`rows`, buf)
+            FfiConverterByteArray.write(value.`rows`, buf)
             FfiConverterSequenceTypeBoardPlacement.write(value.`placements`, buf)
             FfiConverterSequenceString.write(value.`otherIds`, buf)
             FfiConverterByteArray.write(value.`cards`, buf)

@@ -104,6 +104,9 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
     }
     print("PERF   tasks in workspace: \(taskCount), lists: \(lists.count)")
     try time("  core.tasksInLists(all) FFI only, no Swift records") { _ = try raw.tasksInLists(listIds: listIDs) }
+    try time("  core.tasksInListsPacked(all) FFI only, packed") { _ = try raw.tasksInListsPacked(listIds: listIDs) }
+    let packed = try raw.tasksInListsPacked(listIds: listIDs)
+    try time("  PackedTaskRows.decode only") { _ = try PackedTaskRows.decode(packed) }
     let rows = try raw.tasksInLists(listIds: listIDs)
     try time("  WorkspaceTask(row) conversion only") { _ = rows.map(WorkspaceTask.init) }
     let trees = try store.listTrees(in: listIDs)
@@ -169,7 +172,8 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
     XCTAssertEqual(coreBoard.parentIDs, swiftBoard.parents.mapValues(\.id))
     XCTAssertEqual(coreBoard.columns.filter { seenIDs.contains($0.key) }, swiftMetadata.columns)
     XCTAssertEqual(coreBoard.positions.filter { seenIDs.contains($0.key) }, swiftMetadata.positions)
-    print("PERF   core board: \(board.rows.count) rows, \(board.cards.count / 4) cards, \(board.otherIds.count) ids, "
+    let boardRows = try PackedTaskRows.decode(board.rows).count
+    print("PERF   core board: \(boardRows) rows (\(board.rows.count) bytes), \(board.cards.count / 4) cards, \(board.otherIds.count) ids, "
       + "\(board.placements.count) placements, \(board.treeRows.count / 4) tree entries")
 
     // Per-refresh small reads.

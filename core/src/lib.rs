@@ -21,6 +21,7 @@ pub mod imports;
 pub mod journal;
 pub mod lists;
 pub mod next_up;
+pub mod packed_rows;
 pub mod periodic;
 pub mod ranking;
 pub mod reads;

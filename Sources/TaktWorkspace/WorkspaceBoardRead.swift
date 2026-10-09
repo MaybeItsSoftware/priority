@@ -63,7 +63,7 @@ extension WorkspaceStore {
     let read = try Self.mappingCoreErrors {
       try core.combinedBoard(listIds: listIds, hideCompletedBeforeMs: cutoffMs)
     }
-    let rows = read.rows.map(WorkspaceTask.init)
+    let rows = try PackedTaskRows.decode(read.rows)
     func id(_ node: Int) -> String {
       node < rows.count ? rows[node].id : read.otherIds[node - rows.count]
     }

@@ -164,7 +164,7 @@ extension WorkspaceStore {
   public func listTree(in listId: String) throws -> WorkspaceListTree {
     WorkspaceListTree(
       listId: listId,
-      tasks: try Self.mappingCoreErrors { try core.tasksInLists(listIds: [listId]) }.map(WorkspaceTask.init))
+      tasks: try PackedTaskRows.decode(Self.mappingCoreErrors { try core.tasksInListsPacked(listIds: [listId]) }))
   }
 
   /// Several lists' rows in one read transaction, so a combined scope sees one
@@ -176,10 +176,10 @@ extension WorkspaceStore {
     // grouping keeps it.
     let ids = Array(Set(listIds))
     var grouped: [String: [WorkspaceTask]] = Dictionary(uniqueKeysWithValues: ids.map { ($0, []) })
-    // The Rust core's `records::tasks_in_lists`: rows arrive in each list's
-    // order, so grouping keeps it.
-    for row in try Self.mappingCoreErrors({ try core.tasksInLists(listIds: ids) }) {
-      grouped[row.listId, default: []].append(WorkspaceTask(row))
+    // The Rust core's `records::tasks_in_lists`, packed: rows arrive in each
+    // list's order, so grouping keeps it.
+    for task in try PackedTaskRows.decode(Self.mappingCoreErrors { try core.tasksInListsPacked(listIds: ids) }) {
+      grouped[task.listId, default: []].append(task)
     }
     return Dictionary(uniqueKeysWithValues: grouped.map { id, tasks in
       (id, WorkspaceListTree(listId: id, tasks: tasks))

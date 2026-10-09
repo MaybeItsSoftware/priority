@@ -1079,6 +1079,13 @@ impl CoreWorkspace {
         records::tasks_in_lists(&self.lock(), &list_ids)
     }
 
+    /// `tasks_in_lists`, packed by `packed_rows::pack_task_rows` so the
+    /// rows cross as one buffer rather than field by field.
+    pub fn tasks_in_lists_packed(&self, list_ids: Vec<String>) -> Result<Vec<u8>, CoreError> {
+        let rows = records::tasks_in_lists(&self.lock(), &list_ids)?;
+        Ok(crate::packed_rows::pack_task_rows(rows.iter()))
+    }
+
     /// What the sidebar draws beneath the given lists, walked here so only
     /// the nested lists and the counts cross.
     pub fn sidebar_index(&self, list_ids: Vec<String>) -> Result<SidebarIndex, CoreError> {

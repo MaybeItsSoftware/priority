@@ -14,8 +14,9 @@
 //! Crossing costs by the value, not the byte: UniFFI's Swift side reads
 //! every integer, option and string on its own, at a fraction of a
 //! microsecond each, which is what made a row cost several microseconds. So
-//! the shape — tens of thousands of indexes — crosses as packed bytes, read
-//! in one go, and placements cross only for the rows that have one.
+//! the rows (`packed_rows`) and the shape — tens of thousands of indexes —
+//! cross as packed bytes, each read in one pass, and placements cross only
+//! for the rows that have one.
 //!
 //! The rules are `WorkspaceListTree.actionableTasks(visibleRootTaskId:)` and
 //! `WorkspaceBoardTrees(cardIDs:trees:)` in Swift, which a test holds this to.
@@ -25,6 +26,7 @@ use std::collections::{HashMap, HashSet};
 use rusqlite::Connection;
 
 use crate::CoreError;
+use crate::packed_rows::pack_task_rows;
 use crate::records::{TaskColumns, TaskRow};
 
 /// A drawn row's column and matrix place, for a row that has either.
@@ -45,9 +47,10 @@ pub struct BoardPlacement {
 /// value each rather than one per index.
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct BoardRead {
-    /// The tasks the board draws: the cards, then the other rows of their
-    /// trees, each once.
-    pub rows: Vec<TaskRow>,
+    /// Packed by `packed_rows::pack_task_rows`: the tasks the board draws,
+    /// the cards, then the other rows of their trees, each once. Thousands
+    /// of them on Everything's board, so they cross as one buffer.
+    pub rows: Vec<u8>,
     /// The placements of the rows that have one.
     pub placements: Vec<BoardPlacement>,
     /// Tasks the board names without drawing: a finished subtask left out,
@@ -271,16 +274,12 @@ pub fn combined_board(
     let mut placements = placements(connection)?;
     let other_ids = other.iter().map(|&index| tasks[index].id.clone()).collect();
     let cards = packed(cards.iter().map(|card| node_of[card]));
-    let mut slots: Vec<Option<TaskRow>> = tasks.into_iter().map(Some).collect();
-    let rows: Vec<TaskRow> = drawn
-        .iter()
-        .map(|&index| slots[index].take().expect("each row drawn once"))
-        .collect();
-    let placements = rows
+    let placements = drawn
         .iter()
         .enumerate()
-        .filter_map(|(row, task)| {
-            let (kanban_column, matrix_urgency, matrix_importance) = placements.remove(&task.id)?;
+        .filter_map(|(row, &index)| {
+            let (kanban_column, matrix_urgency, matrix_importance) =
+                placements.remove(&tasks[index].id)?;
             Some(BoardPlacement {
                 row: row as u32,
                 kanban_column,
@@ -290,7 +289,7 @@ pub fn combined_board(
         })
         .collect();
     Ok(BoardRead {
-        rows,
+        rows: pack_task_rows(drawn.iter().map(|&index| &tasks[index])),
         placements,
         other_ids,
         cards,

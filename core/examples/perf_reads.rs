@@ -41,6 +41,9 @@ fn main() {
     time("tasks_in_lists(all)", 9, || {
         core.tasks_in_lists(lists.clone()).unwrap().len()
     });
+    time("tasks_in_lists_packed(all)", 9, || {
+        core.tasks_in_lists_packed(lists.clone()).unwrap().len()
+    });
     time("tasks_in_lists(one)", 9, || {
         core.tasks_in_lists(vec![lists[5].clone()]).unwrap().len()
     });

@@ -206,14 +206,29 @@ on Android in the same way, so moving them buys less.
     call. Finished rows the pane would hide outright stay in the core, and
     the tree indexes cross as packed `u32` bytes rather than one value at a
     time. The board refresh after one edit went from 92 ms to 68 ms. What
-    is left is the cards themselves: the board draws all 6,594 of them, as
-    full records, and they cost about 6 µs each to cross, some 42 ms of the
-    60 ms read. Cutting that means a cheaper row encoding or a board that
-    reads cards lazily, not more work in the core. `tasks_in_lists` reads
-    its columns by position now, which took its own Rust time from 20 ms
-    to 10 ms. A single list's board still shapes the tree the outline has
-    already read that refresh, since reading it again in the core would
-    cross the same rows twice.
+    was left was the cards themselves: the board draws all 6,594 of them,
+    and as records they cost about 6 µs each to cross, some 42 ms of the
+    60 ms read. `tasks_in_lists` reads its columns by position now, which
+    took its own Rust time from 20 ms to 10 ms. A single list's board still
+    shapes the tree the outline has already read that refresh, since
+    reading it again in the core would cross the same rows twice.
+  - Those 6 µs were UniFFI's Swift side, not the core: it reads a record
+    field by field out of `Data`, a bounds-checked copy per integer and a
+    fresh `[UInt8]` per string, and a `TaskRow` has seventeen fields, nine
+    of them strings or optional strings. So the big row reads cross as one
+    buffer (`packed_rows.rs`: a presence bitmask, the integers, then
+    length-prefixed UTF-8), which `PackedTaskRows` in Swift decodes in one
+    pass over raw memory, sharing one string for a run of rows from the
+    same list. The board's `rows` cross that way, and the Mac's `listTrees`
+    reads `tasks_in_lists_packed`; the record `tasks_in_lists` stays for
+    anything else. The views see the same `WorkspaceTask`s; a test holds
+    the packed decoding to the record path. Measured 2026-10-09: the
+    combined board's read went from 62 ms to 21 ms (the crossing alone
+    from 56 ms to 16 ms), the board refresh after one edit from 77 ms to
+    36 ms, every list's trees from 58 ms to 17 ms, one list's from 1.4 ms
+    to 0.4 ms, and the single-list refresh after one edit from 63 ms to
+    21 ms. Decoding 7,000 rows in Swift takes 2 ms; what remains is the
+    core's own reading and walking.
 - **Two SQLite libraries in one process. Resolved 2026-10-08.** Two
   copies of SQLite sharing a file can each release the other's POSIX locks
   and corrupt it, so the core never brings a second one into an app. On

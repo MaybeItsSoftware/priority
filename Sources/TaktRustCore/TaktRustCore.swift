@@ -1317,6 +1317,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func tasksInLists(listIds: [String]) throws  -> [TaskRow]
     
     /**
+     * `tasks_in_lists`, packed by `packed_rows::pack_task_rows` so the
+     * rows cross as one buffer rather than field by field.
+     */
+    func tasksInListsPacked(listIds: [String]) throws  -> Data
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -3280,6 +3286,20 @@ open func tasksInLists(listIds: [String])throws  -> [TaskRow]  {
 }
     
     /**
+     * `tasks_in_lists`, packed by `packed_rows::pack_task_rows` so the
+     * rows cross as one buffer rather than field by field.
+     */
+open func tasksInListsPacked(listIds: [String])throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_tasks_in_lists_packed(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(listIds),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Reverses the most recent step; returns its label, or nothing when there
      * was nothing to undo.
      */
@@ -3920,10 +3940,11 @@ public func FfiConverterTypeBoardPlacement_lower(_ value: BoardPlacement) -> Rus
  */
 public struct BoardRead: Equatable, Hashable {
     /**
-     * The tasks the board draws: the cards, then the other rows of their
-     * trees, each once.
+     * Packed by `packed_rows::pack_task_rows`: the tasks the board draws,
+     * the cards, then the other rows of their trees, each once. Thousands
+     * of them on Everything's board, so they cross as one buffer.
      */
-    public var rows: [TaskRow]
+    public var rows: Data
     /**
      * The placements of the rows that have one.
      */
@@ -3963,9 +3984,10 @@ public struct BoardRead: Equatable, Hashable {
     // declare one manually.
     public init(
         /**
-         * The tasks the board draws: the cards, then the other rows of their
-         * trees, each once.
-         */rows: [TaskRow], 
+         * Packed by `packed_rows::pack_task_rows`: the tasks the board draws,
+         * the cards, then the other rows of their trees, each once. Thousands
+         * of them on Everything's board, so they cross as one buffer.
+         */rows: Data, 
         /**
          * The placements of the rows that have one.
          */placements: [BoardPlacement], 
@@ -4019,7 +4041,7 @@ public struct FfiConverterTypeBoardRead: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BoardRead {
         return
             try BoardRead(
-                rows: FfiConverterSequenceTypeTaskRow.read(from: &buf), 
+                rows: FfiConverterData.read(from: &buf), 
                 placements: FfiConverterSequenceTypeBoardPlacement.read(from: &buf), 
                 otherIds: FfiConverterSequenceString.read(from: &buf), 
                 cards: FfiConverterData.read(from: &buf), 
@@ -4031,7 +4053,7 @@ public struct FfiConverterTypeBoardRead: FfiConverterRustBuffer {
     }
 
     public static func write(_ value: BoardRead, into buf: inout [UInt8]) {
-        FfiConverterSequenceTypeTaskRow.write(value.rows, into: &buf)
+        FfiConverterData.write(value.rows, into: &buf)
         FfiConverterSequenceTypeBoardPlacement.write(value.placements, into: &buf)
         FfiConverterSequenceString.write(value.otherIds, into: &buf)
         FfiConverterData.write(value.cards, into: &buf)
@@ -10308,6 +10330,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists() != 34639) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_tasks_in_lists_packed() != 64000) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_undo() != 20533) {

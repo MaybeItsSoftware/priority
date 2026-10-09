@@ -41,12 +41,35 @@ fn workspace() -> Connection {
     connection
 }
 
+/// A board with its packed rows unpacked; everything else as it crossed.
+struct Decoded {
+    read: BoardRead,
+    rows: Vec<TaskRow>,
+}
+
+impl std::ops::Deref for Decoded {
+    type Target = BoardRead;
+    fn deref(&self) -> &BoardRead {
+        &self.read
+    }
+}
+
+fn combined_board(
+    connection: &Connection,
+    list_ids: &[String],
+    hide_completed_before_ms: Option<i64>,
+) -> Result<Decoded, CoreError> {
+    let read = super::combined_board(connection, list_ids, hide_completed_before_ms)?;
+    let rows = crate::packed_rows::unpack_task_rows(&read.rows).expect("rows unpack");
+    Ok(Decoded { read, rows })
+}
+
 fn ids() -> Vec<String> {
     ["l", "o"].map(str::to_string).to_vec()
 }
 
 /// A node's id, whichever table it is in.
-fn id(read: &BoardRead, node: u32) -> &str {
+fn id(read: &Decoded, node: u32) -> &str {
     let node = node as usize;
     match read.rows.get(node) {
         Some(row) => &row.id,
@@ -61,14 +84,14 @@ fn unpacked(bytes: &[u8]) -> Vec<u32> {
         .collect()
 }
 
-fn cards(read: &BoardRead) -> Vec<&str> {
+fn cards(read: &Decoded) -> Vec<&str> {
     unpacked(&read.cards)
         .into_iter()
         .map(|node| id(read, node))
         .collect()
 }
 
-fn tree<'a>(read: &'a BoardRead, key: &str) -> Option<Vec<(&'a str, u32)>> {
+fn tree<'a>(read: &'a Decoded, key: &str) -> Option<Vec<(&'a str, u32)>> {
     let keys = unpacked(&read.tree_keys);
     let rows = unpacked(&read.tree_rows);
     let depths = unpacked(&read.tree_depths);
@@ -87,14 +110,14 @@ fn tree<'a>(read: &'a BoardRead, key: &str) -> Option<Vec<(&'a str, u32)>> {
     None
 }
 
-fn parent<'a>(read: &'a BoardRead, child: &str) -> Option<&'a str> {
+fn parent<'a>(read: &'a Decoded, child: &str) -> Option<&'a str> {
     let parents = unpacked(&read.parents);
     let node = (0..parents.len() as u32).find(|&node| id(read, node) == child)?;
     let parent = parents[node as usize];
     (parent != u32::MAX).then(|| id(read, parent))
 }
 
-fn placement<'a>(read: &'a BoardRead, task: &str) -> Option<&'a BoardPlacement> {
+fn placement<'a>(read: &'a Decoded, task: &str) -> Option<&'a BoardPlacement> {
     read.placements
         .iter()
         .find(|placement| read.rows[placement.row as usize].id == task)
