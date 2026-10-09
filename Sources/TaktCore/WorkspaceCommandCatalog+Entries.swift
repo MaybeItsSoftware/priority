@@ -261,10 +261,10 @@ public enum WorkspaceCommandCatalog {
       id: .listNew, title: "Create a list", group: "Lists", keys: ["cmd+shift+n"],
       surfaceKeys: [.sidebar: ["cmd+n", "shift+5"]],
       note: "Beside the sidebar row you are on. ⌘N and % (⇧5) in the sidebar, as Zed's new file"),
-    // ⌘R from anywhere; F2 only in the sidebar, because on a task pane F2
-    // renames the task.
+    // Only in the sidebar: on a task pane F2 renames the task, and ⌘R is the
+    // right dock's.
     .init(
-      id: .listRename, title: "Rename the list or folder", group: "Lists", keys: ["cmd+r"],
+      id: .listRename, title: "Rename the list or folder", group: "Lists", keys: [],
       surfaceKeys: [.sidebar: ["f2", "shift+r"]], note: "From a task pane, the list you are in"),
     .init(id: .listSettings, title: "Open list settings", group: "Lists", keys: ["oo", "cmd+option+i"]),
     .init(id: .listArchive, title: "Archive the current list", group: "Lists", keys: ["cmd+option+a"]),
@@ -325,8 +325,8 @@ public enum WorkspaceCommandCatalog {
       note: "Same pane as ⌥⌘I on a task, without selecting one"),
     .init(
       id: .windowToggleRightDock, title: "Show or hide the right dock", group: "Window",
-      keys: ["r", "cmd+option+b"],
-      note: "On whichever tab it was on, with the keyboard in it. ⌥⌘B is Zed's toggle right dock"),
+      keys: ["cmd+r", "r", "cmd+option+b"],
+      note: "On whichever tab it was on, with the keyboard in it. ⌘R works from inside a field too; ⌥⌘B is Zed's toggle right dock"),
     .init(
       id: .windowToggleDoneRail, title: "Show or hide what you have finished", group: "Window",
       keys: ["cmd+ctrl+d"],

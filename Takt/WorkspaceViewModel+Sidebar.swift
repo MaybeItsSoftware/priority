@@ -309,7 +309,7 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// ⌘R on whatever the sidebar has selected. A folder wins over a list for
+  /// F2 on whatever the sidebar has selected. A folder wins over a list for
   /// the same reason it does everywhere else here: selecting a folder is an
   /// explicit act, where a list is always selected.
   func beginRenamingSelection() {

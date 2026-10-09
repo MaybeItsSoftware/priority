@@ -98,14 +98,14 @@ something you already have to know.
 | `.` / `,` | Grow the task you are on to show its subtasks / shrink it (on a task with none, folds the one it sits under) |
 | `Cmd+Shift+C` / `Cmd+Ctrl+C` | On the board, add a column / remove the one you are in |
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
-| `Cmd+R` | Rename the list you are in (`F2` and `Shift+R` in the sidebar) |
+| `F2` / `Shift+R` | In the sidebar, rename the list or folder you are on |
 | `Shift+Return` / `Alt+Shift+Return` | New task above the selection (Checkvist's) / new subtask |
 | `Cmd+F` / `Cmd+Shift+F` | Search |
 | `Cmd+P` / `gl` | Go to a list — opened empty, it lists the ones you were in most recently first. Every list and nested list, matched by the letters you type (`wsr` finds "Write the spring report"), with its folder beside it. Clicking the list's name at the top of the pane opens it too |
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
-| `r` or `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock, on the tab it was on and with the keyboard in it, or put it away / close all docks (Zed's) |
+| `Cmd+R`, `r` or `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock, on the tab it was on and with the keyboard in it, or put it away / close all docks (Zed's) |
 | `Cmd+Shift+{` / `Cmd+Shift+}`, or `[` / `]` | In the right dock, its previous / next tab — Inspector, Done, Timeline — with the keyboard brought along (Zed's previous / next tab; on a task pane the same chords change list). `Ctrl+Tab` leaves it for the next region |
 | `oo` / `Cmd+Alt+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z`, or `Ctrl+Z` / `Ctrl+Shift+Z`, or `uu` | Undo / redo |

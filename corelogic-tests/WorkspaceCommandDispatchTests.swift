@@ -65,13 +65,14 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "za", on: .board)?.id, .planToggleFold)
   }
 
-  /// Phase 1 made ⌘R sidebar-only by following the catalogue strictly. It
-  /// renames the current list from the task panes too; F2 stays the task's
-  /// rename there and the row's in the sidebar.
-  func testCommandRRenamesTheListFromEveryPane() {
-    for surface in Self.planningPanes + [.sidebar] {
-      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+r", on: surface)?.id, .listRename)
+  /// ⌘R shows and hides the right dock from every pane, the dock's own tabs
+  /// included; renaming the list is F2 and ⇧R in the sidebar, and F2 stays
+  /// the task's rename on a task pane.
+  func testCommandRTogglesTheRightDockFromEveryPane() {
+    for surface in Self.planningPanes + [.sidebar, .inspector, .done, .timeline] {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+r", on: surface)?.id, .windowToggleRightDock)
     }
+    XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("cmd+r", on: .inspector))
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "f2", on: .sidebar)?.id, .listRename)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "f2", on: .outline)?.id, .taskRename)
   }
