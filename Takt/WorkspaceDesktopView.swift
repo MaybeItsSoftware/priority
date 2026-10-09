@@ -95,10 +95,8 @@ struct WorkspaceDesktopView: View {
     // the right dock now, read beside the list rather than instead of it.
     Group {
       taskPane
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-          if let pending = model.pendingTaskDeletion { TaskDeletionPrompt(task: pending) }
-        }
-        .onChange(of: model.selectedTaskID) { _, _ in model.cancelPendingTaskDeletion() }
+        .safeAreaInset(edge: .bottom, spacing: 0) { WorkspaceTaskDeletionInset() }
+        .background { WorkspaceDeletionCanceller() }
     }
     // Switching outline, board, matrix or Today fades rather than cuts. Only
     // the swap is animated: the pane's own reloads stay instant.
@@ -194,6 +192,35 @@ struct WorkspaceDesktopView: View {
         .focused($focusedArea, equals: .tasks)
         .focusEffectDisabled()
     }
+  }
+}
+
+/// The delete prompt under the task pane.
+///
+/// A leaf rather than part of the shell: resolving the pending task reads the
+/// model's task cache, and a read in the shell's body would redraw the whole
+/// window on every refresh.
+private struct WorkspaceTaskDeletionInset: View {
+  @Environment(WorkspaceViewModel.self) private var model
+
+  var body: some View {
+    if model.pendingTaskDeletionID != nil, let pending = model.pendingTaskDeletion {
+      TaskDeletionPrompt(task: pending)
+    }
+  }
+}
+
+/// A delete asked about one task is not a delete of whichever task the cursor
+/// moves to, so moving lets the question go.
+///
+/// A leaf of its own because `onChange(of:)` reads the value in the body it
+/// is attached to: on the shell, every arrow key re-ran the whole window's body.
+private struct WorkspaceDeletionCanceller: View {
+  @Environment(WorkspaceViewModel.self) private var model
+
+  var body: some View {
+    Color.clear
+      .onChange(of: model.selectedTaskID) { _, _ in model.cancelPendingTaskDeletion() }
   }
 }
 
