@@ -284,6 +284,11 @@ extension WorkspaceViewModel {
       column(for: task)?.id ?? ""
     }
     if boardTasksByColumn != grouped { boardTasksByColumn = grouped }
+    let quadrants = MatrixQuadrantIndex(boardTasks) { task in
+      let position = matrixPosition(for: task)
+      return (position.urgency, position.importance)
+    }
+    if matrixQuadrants != quadrants { matrixQuadrants = quadrants }
   }
 
   /// The column a visible card sits in, by id alone — so the board can ask

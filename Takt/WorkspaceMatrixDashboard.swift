@@ -27,10 +27,7 @@ struct WorkspaceMatrixDashboard: View {
   }
 
   var body: some View {
-    let unplaced = model.boardTasks.filter {
-      let position = model.matrixPosition(for: $0)
-      return position.urgency == nil || position.importance == nil
-    }
+    let unplaced = model.matrixQuadrants.unplaced
     return VStack(spacing: 0) {
       // The matrix used to name itself in 22pt caps and never name the list it
       // was showing, which is the one thing the other modes put at the top.
@@ -131,13 +128,6 @@ struct WorkspaceMatrixQuadrant: View {
   /// reads as somewhere to drop onto rather than a label with nothing under it.
   static let minHeight: CGFloat = 160
 
-  private var tasks: [WorkspaceTask] {
-    model.boardTasks.filter {
-      let position = model.matrixPosition(for: $0)
-      return position.urgency == urgency && position.importance == importance
-    }
-  }
-
   /// The quadrant's own key, ⌥1 to ⌥4 in the order the catalogue lists them:
   /// do now, schedule, delegate, eliminate.
   private var placeHelp: String {
@@ -148,6 +138,8 @@ struct WorkspaceMatrixQuadrant: View {
   }
 
   var body: some View {
+    // Looked up once per render, from an index built once per board read.
+    let tasks = model.matrixQuadrants.items(urgency: urgency, importance: importance)
     VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(spacing: theme.space.xs) {
         MicroLabel(title, tint: tint)

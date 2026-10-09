@@ -269,6 +269,9 @@ enum WorkspaceSidebarItem: Identifiable {
   var boardColumnsByID: [String: WorkspaceKanbanColumn] = [:]
   var boardVisibleTaskIDs: Set<String> = []
   var matrixPositions: [String: TaskMatrixPosition] = [:]
+  /// The board's tasks by matrix quadrant, sorted once per board read by
+  /// `rebuildBoardIndex()` so the matrix does not filter the board per render.
+  var matrixQuadrants = MatrixQuadrantIndex<WorkspaceTask>()
   var viewMode: WorkspaceViewMode = .today {
     didSet { if viewMode != oldValue { viewModeDidChange() } }
   }
