@@ -32,7 +32,7 @@ extension WorkspaceViewModel {
       var items: [TaskOutlineItem]
       if isEverythingSelected || folderScopeListIDs != nil {
         items = viewMode == .outline
-          ? try actionableScopeTasks(store: store).map { TaskOutlineItem(task: $0, depth: 0) } : []
+          ? try combinedScopeBoard(store: store, now: Date()).cards.map { TaskOutlineItem(task: $0, depth: 0) } : []
       } else if let selectedListID {
         let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
         let parentID = scopeTaskID ?? selectedList.flatMap {
@@ -56,10 +56,13 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// Every open, doable task in a combined scope, in sidebar order: the same
-  /// answer as `WorkspaceStore.actionableTasks`, shaped from this refresh's
-  /// shared reads.
-  private func actionableScopeTasks(store: WorkspaceStore) throws -> [WorkspaceTask] {
+  /// A combined scope's board, read and walked in the core so that only the
+  /// rows it draws cross: its cards are every open, doable task in the
+  /// scope, in sidebar order, the same answer as
+  /// `WorkspaceStore.actionableTasks`. Finished tasks this pane would hide
+  /// outright are left in the core; ones still lingering come over, for
+  /// `hidesCompletion` to decide and schedule.
+  private func combinedScopeBoard(store: WorkspaceStore, now: Date) throws -> WorkspaceBoardRead {
     let open = lists.filter { $0.completedAt == nil }
     let scoped: [TaskList]
     if let ids = folderScopeListIDs {
@@ -68,8 +71,8 @@ extension WorkspaceViewModel {
     } else {
       scoped = open
     }
-    let trees = try listTrees(for: scoped.map(\.id), store: store)
-    return scoped.flatMap { trees[$0.id]?.actionableTasks(visibleRootTaskId: $0.visibleRootTaskId) ?? [] }
+    let cutoff = hidesCompletedTasks ? now.addingTimeInterval(-Self.completedLingerInterval) : nil
+    return try store.combinedBoard(listIds: scoped.map(\.id), hidingCompletedBefore: cutoff)
   }
 
   var boardConfigurationKey: String {
@@ -119,8 +122,8 @@ extension WorkspaceViewModel {
       boardIsStale = false
       return
     }
-    // Everything's board is every list's open work: every tree read, walked
-    // and every card's metadata fetched, on each edit. Today sits on
+    // Everything's board is every list's open work: thousands of cards and
+    // their trees crossing from the core on each edit. Today sits on
     // Everything and never draws it, so it is set aside until a view that
     // does is shown (`viewModeDidChange`). Emptied rather than left as it
     // was, so nothing reads an old board as current.
@@ -137,11 +140,18 @@ extension WorkspaceViewModel {
     }
     boardIsStale = false
     do {
+      let now = Date()
       var tasks: [WorkspaceTask]
       let parentTaskID: String?
+      // A combined scope's board comes walked from the core, trees, parents
+      // and placements with it; a single list's is shaped from the tree the
+      // outline has already read this refresh.
+      var combined: WorkspaceBoardRead?
       if isEverythingSelected || folderScopeListIDs != nil {
         parentTaskID = nil
-        tasks = try actionableScopeTasks(store: store)
+        let read = try combinedScopeBoard(store: store, now: now)
+        combined = read
+        tasks = read.cards
       } else if let selectedListID {
         let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
         parentTaskID = scopeTaskID ?? selectedList.flatMap {
@@ -153,38 +163,50 @@ extension WorkspaceViewModel {
         tasks = []
       }
       if boardParentTaskID != parentTaskID { boardParentTaskID = parentTaskID }
-      let now = Date()
       tasks.removeAll { ($0.isList && $0.archivedAt != nil) || hidesCompletion(of: $0, now: now) }
       let boardIDs = Set(tasks.map(\.id))
-      let listIDs = Array(Set(tasks.map(\.listId)))
-      let trees = try listTrees(for: listIDs, store: store)
-      // Every level beneath every card, the nested cards' own trees included,
-      // in one walk of rows already read — never a query per card.
-      let board = WorkspaceBoardTrees(cardIDs: boardIDs, trees: listIDs.compactMap { trees[$0] })
+      let allDescendants: [String: [TaskOutlineItem]]
+      let parents: [String: String]
+      if let combined {
+        allDescendants = combined.descendants
+        parents = combined.parentIDs
+      } else {
+        let listIDs = Array(Set(tasks.map(\.listId)))
+        let trees = try listTrees(for: listIDs, store: store)
+        // Every level beneath every card, the nested cards' own trees
+        // included, in one walk of rows already read — never a query per card.
+        let board = WorkspaceBoardTrees(cardIDs: boardIDs, trees: listIDs.compactMap { trees[$0] })
+        allDescendants = board.descendants
+        parents = board.parents.mapValues(\.id)
+      }
       // A card's tree loses its finished rows as the outline does, once their
       // few seconds are up. Row by row, as there: an open task under a closed
       // one stays on show.
-      let descendants = board.descendants.mapValues { rows in
+      let descendants = allDescendants.mapValues { rows in
         rows.filter { !hidesCompletion(of: $0.task, now: now) }
       }
-      let parents = board.parents
       var treeIDs = Set<String>()
       let treeTasks = (tasks + tasks.flatMap { root in
         descendants[root.id, default: []].map(\.task)
       }).filter { treeIDs.insert($0.id).inserted }
-      let metadata = try store.boardMetadata(for: treeTasks.map(\.id))
+      // The combined read carries every row's placement; only the board's
+      // own rows keep theirs, as a read of just those would have answered.
+      let metadata = try combined.map { read in
+        (columns: read.columns.filter { treeIDs.contains($0.key) },
+         positions: read.positions.filter { treeIDs.contains($0.key) })
+      } ?? store.boardMetadata(for: treeTasks.map(\.id))
       let columnsByTask = metadata.columns
       // A subtask nobody filed is in whatever column its parent is in. It
       // used to count as being in the first column, so moving a card out of
       // Backlog left every one of its subtasks behind there as a card of its
       // own — as though each had been filed in Backlog on purpose.
       var effectiveColumns: [String: String] = [:]
-      func effectiveColumn(of task: WorkspaceTask) -> String {
-        if let known = effectiveColumns[task.id] { return known }
-        let column = columnsByTask[task.id]
-          ?? parents[task.id].map { effectiveColumn(of: $0) }
+      func effectiveColumn(ofID id: String) -> String {
+        if let known = effectiveColumns[id] { return known }
+        let column = columnsByTask[id]
+          ?? parents[id].map { effectiveColumn(ofID: $0) }
           ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-        effectiveColumns[task.id] = column
+        effectiveColumns[id] = column
         return column
       }
       let crossColumn = treeTasks.filter { task in
@@ -193,7 +215,7 @@ extension WorkspaceViewModel {
         guard !boardIDs.contains(task.id), let parent = parents[task.id],
           let filed = columnsByTask[task.id]
         else { return false }
-        return filed != effectiveColumn(of: parent)
+        return filed != effectiveColumn(ofID: parent)
       }
       let columns = try resolvedBoardColumns(usedColumnIDs: Set(columnsByTask.values), store: store)
       // Assigned only when they differ, so a refresh that changed nothing on

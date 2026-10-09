@@ -612,6 +612,24 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
+    }
+}
+
 
 
 
@@ -854,6 +872,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Clears the focus order as one "Clear Focus Order" step.
      */
     func clearFocusOrder(nowMs: Int64) throws 
+    
+    /**
+     * A combined scope's board — Everything's or a folder's — selected and
+     * walked here, so only the rows it draws cross. See `board.rs`.
+     */
+    func combinedBoard(listIds: [String], hideCompletedBeforeMs: Int64?) throws  -> BoardRead
     
     /**
      * Turns a standalone list into a task in the Inbox; returns the task's id.
@@ -2028,6 +2052,21 @@ open func clearFocusOrder(nowMs: Int64)throws   {try rustCallWithError(FfiConver
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * A combined scope's board — Everything's or a folder's — selected and
+     * walked here, so only the rows it draws cross. See `board.rs`.
+     */
+open func combinedBoard(listIds: [String], hideCompletedBeforeMs: Int64?)throws  -> BoardRead  {
+    return try  FfiConverterTypeBoardRead_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_combined_board(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(listIds),
+        FfiConverterOptionInt64.lower(hideCompletedBeforeMs),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -3797,6 +3836,225 @@ public func FfiConverterTypeBoardColumn_lift(_ buf: RustBuffer) throws -> BoardC
 #endif
 public func FfiConverterTypeBoardColumn_lower(_ value: BoardColumn) -> RustBuffer {
     return FfiConverterTypeBoardColumn.lower(value)
+}
+
+
+/**
+ * A drawn row's column and matrix place, for a row that has either.
+ */
+public struct BoardPlacement: Equatable, Hashable {
+    /**
+     * An index into `BoardRead.rows`.
+     */
+    public var row: UInt32
+    public var kanbanColumn: String?
+    public var matrixUrgency: Int64?
+    public var matrixImportance: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * An index into `BoardRead.rows`.
+         */row: UInt32, kanbanColumn: String?, matrixUrgency: Int64?, matrixImportance: Int64?) {
+        self.row = row
+        self.kanbanColumn = kanbanColumn
+        self.matrixUrgency = matrixUrgency
+        self.matrixImportance = matrixImportance
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BoardPlacement: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBoardPlacement: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BoardPlacement {
+        return
+            try BoardPlacement(
+                row: FfiConverterUInt32.read(from: &buf), 
+                kanbanColumn: FfiConverterOptionString.read(from: &buf), 
+                matrixUrgency: FfiConverterOptionInt64.read(from: &buf), 
+                matrixImportance: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BoardPlacement, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.row, into: &buf)
+        FfiConverterOptionString.write(value.kanbanColumn, into: &buf)
+        FfiConverterOptionInt64.write(value.matrixUrgency, into: &buf)
+        FfiConverterOptionInt64.write(value.matrixImportance, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardPlacement_lift(_ buf: RustBuffer) throws -> BoardPlacement {
+    return try FfiConverterTypeBoardPlacement.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardPlacement_lower(_ value: BoardPlacement) -> RustBuffer {
+    return FfiConverterTypeBoardPlacement.lower(value)
+}
+
+
+/**
+ * A combined scope's board.
+ *
+ * Tasks are named by *node*: an index into `rows` followed by `other_ids`,
+ * so node `rows.len() + i` is `other_ids[i]`. The fields of indexes are
+ * packed, each a run of little-endian `u32`s, so that they cross as one
+ * value each rather than one per index.
+ */
+public struct BoardRead: Equatable, Hashable {
+    /**
+     * The tasks the board draws: the cards, then the other rows of their
+     * trees, each once.
+     */
+    public var rows: [TaskRow]
+    /**
+     * The placements of the rows that have one.
+     */
+    public var placements: [BoardPlacement]
+    /**
+     * Tasks the board names without drawing: a finished subtask left out,
+     * a list or a finished task a card hangs from.
+     */
+    public var otherIds: [String]
+    /**
+     * Packed: the cards in board order (sidebar order, then outline order),
+     * as indexes into `rows`.
+     */
+    public var cards: Data
+    /**
+     * Packed: each node's parent node, or `u32::MAX` for a task with no
+     * parent the walk reached. Covers every task the walk reached in a list
+     * that has a card.
+     */
+    public var parents: Data
+    /**
+     * Packed: the nodes that have a subtree — every card, and every task
+     * inside a card's tree — each followed by its rows' end in `tree_rows`
+     * and `tree_depths`. Its rows start where the previous key's end.
+     */
+    public var treeKeys: Data
+    /**
+     * Packed: indexes into `rows`, depth first beneath each key.
+     */
+    public var treeRows: Data
+    /**
+     * Packed: each tree row's depth below its key, the key's children 0.
+     */
+    public var treeDepths: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The tasks the board draws: the cards, then the other rows of their
+         * trees, each once.
+         */rows: [TaskRow], 
+        /**
+         * The placements of the rows that have one.
+         */placements: [BoardPlacement], 
+        /**
+         * Tasks the board names without drawing: a finished subtask left out,
+         * a list or a finished task a card hangs from.
+         */otherIds: [String], 
+        /**
+         * Packed: the cards in board order (sidebar order, then outline order),
+         * as indexes into `rows`.
+         */cards: Data, 
+        /**
+         * Packed: each node's parent node, or `u32::MAX` for a task with no
+         * parent the walk reached. Covers every task the walk reached in a list
+         * that has a card.
+         */parents: Data, 
+        /**
+         * Packed: the nodes that have a subtree — every card, and every task
+         * inside a card's tree — each followed by its rows' end in `tree_rows`
+         * and `tree_depths`. Its rows start where the previous key's end.
+         */treeKeys: Data, 
+        /**
+         * Packed: indexes into `rows`, depth first beneath each key.
+         */treeRows: Data, 
+        /**
+         * Packed: each tree row's depth below its key, the key's children 0.
+         */treeDepths: Data) {
+        self.rows = rows
+        self.placements = placements
+        self.otherIds = otherIds
+        self.cards = cards
+        self.parents = parents
+        self.treeKeys = treeKeys
+        self.treeRows = treeRows
+        self.treeDepths = treeDepths
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BoardRead: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBoardRead: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BoardRead {
+        return
+            try BoardRead(
+                rows: FfiConverterSequenceTypeTaskRow.read(from: &buf), 
+                placements: FfiConverterSequenceTypeBoardPlacement.read(from: &buf), 
+                otherIds: FfiConverterSequenceString.read(from: &buf), 
+                cards: FfiConverterData.read(from: &buf), 
+                parents: FfiConverterData.read(from: &buf), 
+                treeKeys: FfiConverterData.read(from: &buf), 
+                treeRows: FfiConverterData.read(from: &buf), 
+                treeDepths: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BoardRead, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeTaskRow.write(value.rows, into: &buf)
+        FfiConverterSequenceTypeBoardPlacement.write(value.placements, into: &buf)
+        FfiConverterSequenceString.write(value.otherIds, into: &buf)
+        FfiConverterData.write(value.cards, into: &buf)
+        FfiConverterData.write(value.parents, into: &buf)
+        FfiConverterData.write(value.treeKeys, into: &buf)
+        FfiConverterData.write(value.treeRows, into: &buf)
+        FfiConverterData.write(value.treeDepths, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardRead_lift(_ buf: RustBuffer) throws -> BoardRead {
+    return try FfiConverterTypeBoardRead.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardRead_lower(_ value: BoardRead) -> RustBuffer {
+    return FfiConverterTypeBoardRead.lower(value)
 }
 
 
@@ -8713,6 +8971,31 @@ fileprivate struct FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeBoardPlacement: FfiConverterRustBuffer {
+    typealias SwiftType = [BoardPlacement]
+
+    public static func write(_ value: [BoardPlacement], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBoardPlacement.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [BoardPlacement] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [BoardPlacement]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBoardPlacement.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer {
     typealias SwiftType = [Candidate]
 
@@ -9770,6 +10053,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order() != 51024) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_combined_board() != 39253) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task() != 37246) {

@@ -200,6 +200,20 @@ on Android in the same way, so moving them buys less.
     down to 0.03 ms. The Mac rereads the chips only when
     `WorkspaceStore.changeStamp()` has moved, so switching lists skips the
     reread.
+  - A combined scope's board (`board.rs`), Everything's or a folder's,
+    selects the actionable cards, walks every card's tree, names every
+    parent and carries each drawn row's column and matrix place in one
+    call. Finished rows the pane would hide outright stay in the core, and
+    the tree indexes cross as packed `u32` bytes rather than one value at a
+    time. The board refresh after one edit went from 92 ms to 68 ms. What
+    is left is the cards themselves: the board draws all 6,594 of them, as
+    full records, and they cost about 6 µs each to cross, some 42 ms of the
+    60 ms read. Cutting that means a cheaper row encoding or a board that
+    reads cards lazily, not more work in the core. `tasks_in_lists` reads
+    its columns by position now, which took its own Rust time from 20 ms
+    to 10 ms. A single list's board still shapes the tree the outline has
+    already read that refresh, since reading it again in the core would
+    cross the same rows twice.
 - **Two SQLite libraries in one process. Resolved 2026-10-08.** Two
   copies of SQLite sharing a file can each release the other's POSIX locks
   and corrupt it, so the core never brings a second one into an app. On

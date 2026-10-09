@@ -9,6 +9,7 @@
 
 uniffi::setup_scaffolding!();
 
+pub mod board;
 pub mod conditions;
 pub mod conversions;
 pub mod dailies;

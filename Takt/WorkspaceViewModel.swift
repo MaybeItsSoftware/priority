@@ -257,7 +257,8 @@ enum WorkspaceSidebarItem: Identifiable {
   var listTaskCounts: [String: Int] = [:]
   var boardCrossColumnTasks: [WorkspaceTask] = []
   var boardDescendants: [String: [TaskOutlineItem]] = [:]
-  var boardTaskParents: [String: WorkspaceTask] = [:]
+  /// Each board task's parent, by id; see `boardParent(of:)`.
+  var boardTaskParents: [String: String] = [:]
   /// The actual parent whose children are visible on the board. A Checkvist
   /// import can contain one root project whose title is identical to its list;
   /// that project is a transport wrapper, not useful work to show as the

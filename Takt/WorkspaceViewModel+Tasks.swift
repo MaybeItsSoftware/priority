@@ -81,7 +81,7 @@ extension WorkspaceViewModel {
   }
 
   func boardParent(of task: WorkspaceTask) -> WorkspaceTask? {
-    boardTaskParents[task.id]
+    boardTaskParents[task.id].flatMap { self.task(withID: $0) }
   }
 
   var currentBoardScopeTitle: String {
@@ -147,7 +147,7 @@ extension WorkspaceViewModel {
     var id = rowID
     while !boardVisibleTaskIDs.contains(id) {
       guard let parent = boardTaskParents[id] else { return nil }
-      id = parent.id
+      id = parent
     }
     return id
   }

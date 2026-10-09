@@ -132,6 +132,12 @@ fn main() {
             .nested_lists
             .len()
     });
+    time("combined_board(all)  [Everything's board]", 9, || {
+        core.combined_board(lists.clone(), Some(now - 3_000))
+            .unwrap()
+            .rows
+            .len()
+    });
     time("all_metadata", 9, || core.all_metadata().unwrap().len());
     time("next_up_candidates", 9, || {
         core.next_up_candidates(now, zone.clone()).unwrap().len()

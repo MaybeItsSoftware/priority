@@ -787,6 +787,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_combined_board(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_condition(
@@ -1099,6 +1101,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_clear_focus_order(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_combined_board(`ptr`: Long,`listIds`: RustBuffer.ByValue,`hideCompletedBeforeMs`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_convert_list_to_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_condition(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`isLocation`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1600,6 +1604,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_clear_focus_order() and 0xFFFF) != 51024) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_combined_board() and 0xFFFF) != 39253) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_convert_list_to_task() and 0xFFFF) != 37246) {
@@ -2248,6 +2255,25 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     }
 }
 
+/**
+ * @suppress
+ */
+public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
+    override fun read(buf: ByteBuffer): ByteArray {
+        val len = buf.getInt()
+        val byteArr = ByteArray(len)
+        buf.get(byteArr)
+        return byteArr
+    }
+    override fun allocationSize(value: ByteArray): ULong {
+        return 4UL + value.size.toULong()
+    }
+    override fun write(value: ByteArray, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        buf.put(value)
+    }
+}
+
 
 // This template implements a class for working with a Rust struct via a handle
 // to the live Rust struct on the other side of the FFI.
@@ -2583,6 +2609,12 @@ public interface CoreWorkspaceInterface {
      * Clears the focus order as one "Clear Focus Order" step.
      */
     fun `clearFocusOrder`(`nowMs`: kotlin.Long)
+    
+    /**
+     * A combined scope's board — Everything's or a folder's — selected and
+     * walked here, so only the rows it draws cross. See `board.rs`.
+     */
+    fun `combinedBoard`(`listIds`: List<kotlin.String>, `hideCompletedBeforeMs`: kotlin.Long?): BoardRead
     
     /**
      * Turns a standalone list into a task in the Inbox; returns the task's id.
@@ -4019,6 +4051,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * A combined scope's board — Everything's or a folder's — selected and
+     * walked here, so only the rows it draws cross. See `board.rs`.
+     */
+    @Throws(CoreException::class)override fun `combinedBoard`(`listIds`: List<kotlin.String>, `hideCompletedBeforeMs`: kotlin.Long?): BoardRead {
+            return FfiConverterTypeBoardRead.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_combined_board(
+        it,
+        
+        FfiConverterSequenceString.lower(`listIds`),
+        FfiConverterOptionalLong.lower(`hideCompletedBeforeMs`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -6201,6 +6253,167 @@ public object FfiConverterTypeBoardColumn: FfiConverterRustBuffer<BoardColumn> {
     override fun write(value: BoardColumn, buf: ByteBuffer) {
             FfiConverterString.write(value.`id`, buf)
             FfiConverterString.write(value.`title`, buf)
+    }
+}
+
+
+
+/**
+ * A drawn row's column and matrix place, for a row that has either.
+ */
+data class BoardPlacement (
+    /**
+     * An index into `BoardRead.rows`.
+     */
+    var `row`: kotlin.UInt
+    , 
+    var `kanbanColumn`: kotlin.String?
+    , 
+    var `matrixUrgency`: kotlin.Long?
+    , 
+    var `matrixImportance`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBoardPlacement: FfiConverterRustBuffer<BoardPlacement> {
+    override fun read(buf: ByteBuffer): BoardPlacement {
+        return BoardPlacement(
+            FfiConverterUInt.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BoardPlacement) = (
+            FfiConverterUInt.allocationSize(value.`row`) +
+            FfiConverterOptionalString.allocationSize(value.`kanbanColumn`) +
+            FfiConverterOptionalLong.allocationSize(value.`matrixUrgency`) +
+            FfiConverterOptionalLong.allocationSize(value.`matrixImportance`)
+    )
+
+    override fun write(value: BoardPlacement, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`row`, buf)
+            FfiConverterOptionalString.write(value.`kanbanColumn`, buf)
+            FfiConverterOptionalLong.write(value.`matrixUrgency`, buf)
+            FfiConverterOptionalLong.write(value.`matrixImportance`, buf)
+    }
+}
+
+
+
+/**
+ * A combined scope's board.
+ *
+ * Tasks are named by *node*: an index into `rows` followed by `other_ids`,
+ * so node `rows.len() + i` is `other_ids[i]`. The fields of indexes are
+ * packed, each a run of little-endian `u32`s, so that they cross as one
+ * value each rather than one per index.
+ */
+data class BoardRead (
+    /**
+     * The tasks the board draws: the cards, then the other rows of their
+     * trees, each once.
+     */
+    var `rows`: List<TaskRow>
+    , 
+    /**
+     * The placements of the rows that have one.
+     */
+    var `placements`: List<BoardPlacement>
+    , 
+    /**
+     * Tasks the board names without drawing: a finished subtask left out,
+     * a list or a finished task a card hangs from.
+     */
+    var `otherIds`: List<kotlin.String>
+    , 
+    /**
+     * Packed: the cards in board order (sidebar order, then outline order),
+     * as indexes into `rows`.
+     */
+    var `cards`: kotlin.ByteArray
+    , 
+    /**
+     * Packed: each node's parent node, or `u32::MAX` for a task with no
+     * parent the walk reached. Covers every task the walk reached in a list
+     * that has a card.
+     */
+    var `parents`: kotlin.ByteArray
+    , 
+    /**
+     * Packed: the nodes that have a subtree — every card, and every task
+     * inside a card's tree — each followed by its rows' end in `tree_rows`
+     * and `tree_depths`. Its rows start where the previous key's end.
+     */
+    var `treeKeys`: kotlin.ByteArray
+    , 
+    /**
+     * Packed: indexes into `rows`, depth first beneath each key.
+     */
+    var `treeRows`: kotlin.ByteArray
+    , 
+    /**
+     * Packed: each tree row's depth below its key, the key's children 0.
+     */
+    var `treeDepths`: kotlin.ByteArray
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBoardRead: FfiConverterRustBuffer<BoardRead> {
+    override fun read(buf: ByteBuffer): BoardRead {
+        return BoardRead(
+            FfiConverterSequenceTypeTaskRow.read(buf),
+            FfiConverterSequenceTypeBoardPlacement.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BoardRead) = (
+            FfiConverterSequenceTypeTaskRow.allocationSize(value.`rows`) +
+            FfiConverterSequenceTypeBoardPlacement.allocationSize(value.`placements`) +
+            FfiConverterSequenceString.allocationSize(value.`otherIds`) +
+            FfiConverterByteArray.allocationSize(value.`cards`) +
+            FfiConverterByteArray.allocationSize(value.`parents`) +
+            FfiConverterByteArray.allocationSize(value.`treeKeys`) +
+            FfiConverterByteArray.allocationSize(value.`treeRows`) +
+            FfiConverterByteArray.allocationSize(value.`treeDepths`)
+    )
+
+    override fun write(value: BoardRead, buf: ByteBuffer) {
+            FfiConverterSequenceTypeTaskRow.write(value.`rows`, buf)
+            FfiConverterSequenceTypeBoardPlacement.write(value.`placements`, buf)
+            FfiConverterSequenceString.write(value.`otherIds`, buf)
+            FfiConverterByteArray.write(value.`cards`, buf)
+            FfiConverterByteArray.write(value.`parents`, buf)
+            FfiConverterByteArray.write(value.`treeKeys`, buf)
+            FfiConverterByteArray.write(value.`treeRows`, buf)
+            FfiConverterByteArray.write(value.`treeDepths`, buf)
     }
 }
 
@@ -10837,6 +11050,34 @@ public object FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer<List<B
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeBoardColumn.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeBoardPlacement: FfiConverterRustBuffer<List<BoardPlacement>> {
+    override fun read(buf: ByteBuffer): List<BoardPlacement> {
+        val len = buf.getInt()
+        return List<BoardPlacement>(len) {
+            FfiConverterTypeBoardPlacement.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<BoardPlacement>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeBoardPlacement.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<BoardPlacement>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeBoardPlacement.write(it, buf)
         }
     }
 }

@@ -145,6 +145,32 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
     try time("  store.boardMetadata(Everything \(allEverythingIDs.count) ids)") {
       _ = try store.boardMetadata(for: allEverythingIDs)
     }
+    let cutoff = Date().addingTimeInterval(-3)
+    try time("store.combinedBoard(all)  [Everything's board, core-walked]") {
+      _ = try store.combinedBoard(listIds: listIDs, hidingCompletedBefore: cutoff)
+    }
+    try time("  core.combinedBoard(all) FFI only, no Swift records") {
+      _ = try raw.combinedBoard(listIds: listIDs, hideCompletedBeforeMs: Int64(cutoff.timeIntervalSince1970 * 1000))
+    }
+    let board = try raw.combinedBoard(listIds: listIDs, hideCompletedBeforeMs: Int64(cutoff.timeIntervalSince1970 * 1000))
+    // The seeded workspace's board, from the core and from the trees, held
+    // to one answer: every card, row, parent and placement.
+    let openLists = lists.filter { $0.completedAt == nil }
+    let coreBoard = try store.combinedBoard(listIds: openLists.map(\.id), hidingCompletedBefore: nil)
+    let swiftCards = openLists.flatMap { trees[$0.id]?.actionableTasks(visibleRootTaskId: $0.visibleRootTaskId) ?? [] }
+    let swiftBoard = WorkspaceBoardTrees(
+      cardIDs: Set(swiftCards.map(\.id)), trees: Array(Set(swiftCards.map(\.listId))).compactMap { trees[$0] })
+    var seenIDs = Set<String>()
+    let swiftTree = (swiftCards + swiftCards.flatMap { swiftBoard.descendants[$0.id, default: []].map(\.task) })
+      .filter { seenIDs.insert($0.id).inserted }
+    let swiftMetadata = try store.boardMetadata(for: swiftTree.map(\.id))
+    XCTAssertEqual(coreBoard.cards, swiftCards)
+    XCTAssertEqual(coreBoard.descendants, swiftBoard.descendants)
+    XCTAssertEqual(coreBoard.parentIDs, swiftBoard.parents.mapValues(\.id))
+    XCTAssertEqual(coreBoard.columns.filter { seenIDs.contains($0.key) }, swiftMetadata.columns)
+    XCTAssertEqual(coreBoard.positions.filter { seenIDs.contains($0.key) }, swiftMetadata.positions)
+    print("PERF   core board: \(board.rows.count) rows, \(board.cards.count / 4) cards, \(board.otherIds.count) ids, "
+      + "\(board.placements.count) placements, \(board.treeRows.count / 4) tree entries")
 
     // Per-refresh small reads.
     try time("store.undoableLabel + redoableLabel  [every refresh]") {
@@ -296,14 +322,35 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
     }
     print(String(format: "PERF   of which the Everything board (unused on Today): %.2f ms", boardMs))
 
+    // The same, as `reloadBoardNow` reads a combined scope's board now: one
+    // core call, its placements cut to the board's rows, the sidebar from the
+    // core's index.
+    try time("Everything board refresh after one edit, core-walked board", runs: 7) {
+      title += 1
+      try store.updateTask(id: target.id, title: "Renamed \(title)", notes: "", dueAt: nil, estimateSeconds: nil)
+      let start = DispatchTime.now().uptimeNanoseconds
+      let read = try store.combinedBoard(
+        listIds: lists.filter { $0.completedAt == nil }.map(\.id), hidingCompletedBefore: Date().addingTimeInterval(-3))
+      var seen = Set<String>()
+      let treeIDs = Set((read.cards + read.cards.flatMap { read.descendants[$0.id, default: []].map(\.task) })
+        .filter { seen.insert($0.id).inserted }.map(\.id))
+      _ = read.columns.filter { treeIDs.contains($0.key) }
+      _ = read.positions.filter { treeIDs.contains($0.key) }
+      boardMs = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+      _ = try store.sidebarIndex(lists: lists)
+      _ = try store.waitingDetails()
+      _ = try store.undoableLabel()
+      _ = try store.redoableLabel()
+    }
+    print(String(format: "PERF   of which the core-walked board: %.2f ms", boardMs))
+
     // Today since the board is set aside while it is not on screen: the
-    // sidebar still reads every tree when the edit could have changed a count,
-    // but nothing walks them for cards or reads the cards' metadata.
+    // sidebar is still refreshed when the edit could have changed a count,
+    // from the core's index, but nothing reads the cards.
     try time("Today refresh after one edit, board set aside (sidebar+cache)", runs: 7) {
       title += 1
       try store.updateTask(id: target.id, title: "Renamed \(title)", notes: "", dueAt: nil, estimateSeconds: nil)
-      let trees = try store.listTrees(in: lists.map(\.id))
-      _ = WorkspaceSidebarIndex(lists: lists, trees: trees)
+      _ = try store.sidebarIndex(lists: lists)
       _ = try store.waitingDetails()
       _ = try store.undoableLabel()
       _ = try store.redoableLabel()

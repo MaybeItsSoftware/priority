@@ -12,6 +12,7 @@ use std::time::Duration;
 use rusqlite::Connection;
 
 use crate::CoreError;
+use crate::board::{self, BoardRead};
 use crate::conditions;
 use crate::conversions::{self, BoardColumn};
 use crate::dailies::{self, DailyEdit};
@@ -1082,6 +1083,16 @@ impl CoreWorkspace {
     /// the nested lists and the counts cross.
     pub fn sidebar_index(&self, list_ids: Vec<String>) -> Result<SidebarIndex, CoreError> {
         sidebar::sidebar_index(&self.lock(), &list_ids)
+    }
+
+    /// A combined scope's board — Everything's or a folder's — selected and
+    /// walked here, so only the rows it draws cross. See `board.rs`.
+    pub fn combined_board(
+        &self,
+        list_ids: Vec<String>,
+        hide_completed_before_ms: Option<i64>,
+    ) -> Result<BoardRead, CoreError> {
+        board::combined_board(&self.lock(), &list_ids, hide_completed_before_ms)
     }
 
     /// A list's outline under a task, or the whole list.
