@@ -428,7 +428,7 @@ struct WorkspaceKanbanCard: View {
     // The keys act on the row the selection is on, which may be a subtask.
     let target = selectedRowID.flatMap { model.task(withID: $0) } ?? task
     if press.modifiers.contains(.option) {
-      if press.key == .leftArrow { model.moveTaskToAdjacentColumn(task, by: -1) } else if press.key == .rightArrow { model.moveTaskToAdjacentColumn(task, by: 1) } else { return .ignored }
+      if press.key == .leftArrow { model.moveTaskToAdjacentColumn(target, by: -1) } else if press.key == .rightArrow { model.moveTaskToAdjacentColumn(target, by: 1) } else { return .ignored }
 
     } else if press.key == .space {
       model.toggleTask(target)

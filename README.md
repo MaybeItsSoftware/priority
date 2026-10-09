@@ -79,7 +79,7 @@ something you already have to know.
 | `Cmd+↑` / `Cmd+↓` | First / last task |
 | `Alt+↑` / `Alt+↓` | Move the task up / down (Zed's move line) — on Today, earlier or later in the day |
 | `Alt+←` / `Alt+→` | Outdent / indent the task — out of, or under, the task above |
-| `Cmd+←` / `Cmd+→`, or `Shift+Alt+←` / `Shift+Alt+→` | Move the card a board column left / right (in the outline `Cmd+←` / `Cmd+→` still fold and unfold everything) |
+| `Cmd+←` / `Cmd+→`, or `Shift+Alt+←` / `Shift+Alt+→` | Move the card, or the subtask row you are on, a board column left / right — a subtask moved past its parent's column becomes a card of its own there (in the outline `Cmd+←` / `Cmd+→` still fold and unfold everything) |
 | `Cmd+Alt+↑` / `Cmd+Alt+↓`, or `Cmd+Shift+{` / `Cmd+Shift+}` | The list above / below in the sidebar — Zed's previous / next tab (in the sidebar itself `Cmd+Alt+↑` / `↓` still move a folder; `Cmd+Alt+←` / `→` outdent and indent the task, as `Alt+←` / `→` do) |
 | `Ctrl+-` / `Ctrl+Shift+-` | Back / forward through the lists you have been in — Zed's go back / go forward |
 | `Shift+Alt+↑` / `Shift+Alt+↓` | Move the task to the list above / below in the sidebar (`mm` picks any list) |

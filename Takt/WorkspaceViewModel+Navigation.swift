@@ -53,13 +53,26 @@ extension WorkspaceViewModel {
     selectedTaskID = tasks(in: column).first?.id
   }
 
+  /// Moves a card, or a subtask row drawn on one, a column along. A subtask
+  /// filed in a column other than its parent's becomes a card of its own
+  /// there, so a step of a task can be further on than the task.
   func moveTaskToAdjacentColumn(_ task: WorkspaceTask, by offset: Int) {
-    guard viewMode == .board, isTaskVisibleOnBoard(task), let column = column(for: task),
+    guard viewMode == .board, let column = boardMoveColumn(for: task),
       let index = boardColumns.firstIndex(where: { $0.id == column.id })
     else { return }
     let destination = min(max(0, index + offset), boardColumns.count - 1)
     guard destination != index else { return }
     moveTask(task, toKanbanColumn: boardColumns[destination])
+  }
+
+  /// The column a move starts from: a card's own, or for a subtask row its
+  /// filed column, else that of the card it is drawn on — an unfiled
+  /// subtask is in whatever column its parent is in.
+  private func boardMoveColumn(for task: WorkspaceTask) -> WorkspaceKanbanColumn? {
+    if isTaskVisibleOnBoard(task) { return column(for: task) }
+    if let filed = boardTaskColumns[task.id], let column = boardColumnsByID[filed] { return column }
+    guard let cardID = boardCardID(owning: task.id), let card = self.task(withID: cardID) else { return nil }
+    return column(for: card)
   }
 
   func moveSelectedTaskToAdjacentColumn(by offset: Int) {
