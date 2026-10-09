@@ -15,12 +15,6 @@ struct WorkspaceProgressDock: View {
   @State private var series = TaskProgressSeries(days: [])
   @State private var hoveredDay: Date?
 
-  /// Reloads when the period changes or any task does.
-  private struct ReloadKey: Equatable {
-    let period: TaskProgressPeriod
-    let revision: Int
-  }
-
   var body: some View {
     VStack(spacing: 0) {
       header
@@ -29,9 +23,7 @@ struct WorkspaceProgressDock: View {
         .padding(.vertical, theme.space.xs)
     }
     .background(theme.paper)
-    .task(id: ReloadKey(period: model.progressPeriod, revision: model.taskContentRevision)) {
-      series = model.loadProgressSeries()
-    }
+    .background { WorkspaceProgressReloader(series: $series) }
     .accessibilityElement(children: .contain)
     .accessibilityLabel("Progress")
   }
@@ -182,5 +174,40 @@ struct WorkspaceHeightHandle: View {
               .onEnded { _ in dragStartHeight = nil }
           )
       )
+  }
+}
+
+/// Reads the dock's series, in a leaf of its own so the refresh counter it
+/// watches redraws nothing but this.
+///
+/// The dock is only mounted while it is showing, so a hidden dock queries
+/// nothing. Showing it, or changing the period, reads at once; a refresh
+/// waits for the writes around it to settle, because `.task(id:)` cancels the
+/// wait when the next one lands, and a burst of edits is then one read.
+private struct WorkspaceProgressReloader: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Binding var series: TaskProgressSeries
+  /// The period `series` was read for; nil until the first read.
+  @State private var loadedPeriod: TaskProgressPeriod?
+
+  /// How long a refresh waits for more writes before reading the series.
+  private static let refreshDebounce = Duration.milliseconds(600)
+
+  /// Reloads when the period changes or any task does.
+  private struct ReloadKey: Equatable {
+    let period: TaskProgressPeriod
+    let revision: Int
+  }
+
+  var body: some View {
+    Color.clear
+      .task(id: ReloadKey(period: model.progressPeriod, revision: model.taskContentRevision)) {
+        if loadedPeriod == model.progressPeriod {
+          try? await Task.sleep(for: Self.refreshDebounce)
+          guard !Task.isCancelled else { return }
+        }
+        series = model.loadProgressSeries()
+        loadedPeriod = model.progressPeriod
+      }
   }
 }
