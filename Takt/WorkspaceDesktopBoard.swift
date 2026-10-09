@@ -222,7 +222,7 @@ struct WorkspaceKanbanColumnView: View {
             }
             // A new card with no task to sit beside lands at the foot of the
             // column you are in, so that is where it is typed.
-            if model.draftsAtEnd && column.id == model.activeBoardColumnID { draftRow }
+            if model.draftsAtEnd(ofColumn: column.id) { draftRow }
 
 
           }

@@ -31,6 +31,9 @@ extension WorkspaceViewModel {
     if isQuickCaptureActive {
       quickCaptureFocusRequest += 1
     } else {
+      // A card typed at the foot of the board goes to the column it was
+      // started in, wherever the selection moves while it is typed.
+      taskDraftColumnID = viewMode == .board ? activeBoardColumnID : nil
       isDraftingTask = true
       taskComposerFocusRequest += 1
     }
@@ -77,7 +80,9 @@ extension WorkspaceViewModel {
   var draftsAtEnd: Bool { isDraftingTask && taskInsertionReference == nil }
 
   func requestRelativeTaskComposerFocus(above: Bool = false, child: Bool = false) {
-    let reference = selectedTask
+    // Today draws its draft only at the foot of the day, so a draft beside
+    // a task there would be open with no row on screen to type in.
+    let reference = viewMode == .today ? nil : selectedTask
     requestTaskComposerFocus()
     taskInsertionReference = reference
     taskInsertionAbove = above

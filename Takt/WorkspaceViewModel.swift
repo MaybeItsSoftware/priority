@@ -464,7 +464,10 @@ enum WorkspaceSidebarItem: Identifiable {
 
   private func refoldOutline() {
     let rows = TaskOutlineFolding.visible(outline, folded: foldedTaskIDs)
-    if outlineRows != rows { outlineRows = rows }
+    guard outlineRows != rows else { return }
+    let draft = viewMode == .outline ? taskDraftSurroundings() : nil
+    outlineRows = rows
+    if let draft { reanchorTaskDraft(from: draft) }
   }
 
   /// The column the arrow keys are in. A subtask row counts as being in the
@@ -556,7 +559,25 @@ enum WorkspaceSidebarItem: Identifiable {
   var taskComposerFocusRequest = 0
   /// Whether a draft row is open in the pane, at the place the task it
   /// becomes will land (`taskInsertionReference` and its two flags say where).
-  var isDraftingTask = false
+  var isDraftingTask = false {
+    didSet {
+      // Closing the row, by any route, drops what was typed in it.
+      guard !isDraftingTask, oldValue else { return }
+      taskDraftText = ""
+      taskDraftSelection = nil
+      taskDraftColumnID = nil
+    }
+  }
+  /// What is typed in the draft row. Held here rather than in the row, which
+  /// is rebuilt whenever the task it is drawn beside changes — and dropped
+  /// when that task leaves the pane — so a rebuilt row picks up where the
+  /// last one was. See `WorkspaceViewModel+TaskDraft.swift`.
+  var taskDraftText = ""
+  /// Where the caret was in it, for a rebuilt row to put it back. Not
+  /// observed: it moves on every key, and nothing draws it.
+  @ObservationIgnored var taskDraftSelection: NSRange?
+  /// The board column a draft at the foot of a column was opened in.
+  var taskDraftColumnID: String?
   /// Quick capture's own field, in the title bar: the one add that is not
   /// into the list on screen, so it is not drawn in it.
   var quickCaptureFocusRequest = 0

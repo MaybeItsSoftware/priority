@@ -1,3 +1,4 @@
+import AppKit
 import TaktCore
 import TaktWorkspace
 import SwiftUI
@@ -11,6 +12,11 @@ import SwiftUI
 /// a run of tasks is typed straight down, the way Checkvist does it. Esc, or
 /// leaving the row empty, closes it; ↑ and ↓ close it and move on through the
 /// tasks from where it sat.
+///
+/// The text is the model's (`taskDraftText`), not the row's: the row is
+/// rebuilt whenever the task it sits beside changes or leaves the pane, and
+/// a rebuilt row takes up the title, caret and keyboard where the last one
+/// left them.
 struct WorkspaceTaskDraftRow: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -24,11 +30,15 @@ struct WorkspaceTaskDraftRow: View {
   /// has none for its title to line up after.
   var isCard = false
 
-  @State private var title = ""
   @FocusState private var isFocused: Bool
+  /// Set while the row is taking the keyboard itself, so the caret goes back
+  /// where it was rather than where AppKit's select-all on focus puts it. A
+  /// click into the field places its own caret and is left alone.
+  @State private var restoresCaret = false
 
   var body: some View {
-    let capture = TaskCapture.parse(title)
+    @Bindable var model = model
+    let capture = TaskCapture.parse(model.taskDraftText)
     HStack(spacing: theme.space.sm) {
       // The glyph column left empty, so the text starts where a task's title
       // does; the ring around the row is what says it is a place to type.
@@ -36,7 +46,7 @@ struct WorkspaceTaskDraftRow: View {
         Color.clear
           .frame(width: WorkspaceRowMetrics.iconWidth, height: 1)
       }
-      TextField("New task", text: $title)
+      TextField("New task", text: $model.taskDraftText)
         .textFieldStyle(.plain)
         .foregroundStyle(theme.ink)
         .focused($isFocused)
@@ -76,6 +86,15 @@ struct WorkspaceTaskDraftRow: View {
     .help(keysHint)
     .onAppear { focusSoon() }
     .onChange(of: model.taskComposerFocusRequest) { _, _ in focusSoon() }
+    .onChange(of: isFocused) { _, focused in
+      guard focused, restoresCaret else { return }
+      restoresCaret = false
+      restoreCaret()
+    }
+    .onChange(of: model.taskDraftText) { _, _ in noteCaret() }
+    // The row going — rebuilt beside another task — keeps the caret for the
+    // next one, arrow-key moves included, which no text change recorded.
+    .onDisappear { noteCaret() }
   }
 
   /// The row's own keys, ahead of the capture syntax, in the tooltip rather
@@ -91,16 +110,50 @@ struct WorkspaceTaskDraftRow: View {
   /// A beat late, so the row is in the window — inside a `List` it is not
   /// yet when `onAppear` runs, and the focus would be dropped.
   private func focusSoon() {
-    DispatchQueue.main.async { isFocused = true }
+    DispatchQueue.main.async {
+      guard !isFocused else { return }
+      restoresCaret = true
+      isFocused = true
+    }
+  }
+
+  /// The field editor while this row has the keyboard, and nil otherwise:
+  /// it is the window's one shared text view, so whose it is matters.
+  private var fieldEditor: NSTextView? {
+    guard isFocused else { return nil }
+    return NSApp.keyWindow?.firstResponder as? NSTextView
+  }
+
+  private func noteCaret() {
+    guard let editor = fieldEditor, editor.string == model.taskDraftText else { return }
+    model.taskDraftSelection = editor.selectedRange()
+  }
+
+  /// Puts the caret back where it was before the row was rebuilt — at the
+  /// end of the text when nothing was noted — rather than leaving the whole
+  /// title selected for the next key to replace.
+  private func restoreCaret() {
+    let length = (model.taskDraftText as NSString).length
+    guard length > 0 else { return }
+    let saved = model.taskDraftSelection ?? NSRange(location: length, length: 0)
+    let location = min(saved.location, length)
+    let range = NSRange(location: location, length: min(saved.length, length - location))
+    // A beat late again: the field selects its text as it takes the
+    // keyboard, after this change is delivered.
+    DispatchQueue.main.async {
+      guard let editor = fieldEditor, editor.string == model.taskDraftText else { return }
+      editor.setSelectedRange(range)
+    }
   }
 
   private func submit() {
-    let text = title
+    let text = model.taskDraftText
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       model.endTaskDraft()
       return
     }
-    title = ""
+    model.taskDraftText = ""
+    model.taskDraftSelection = nil
     model.submitAddField(named: text)
     // The row may be rebuilt under the new task; ask again so it keeps the key.
     model.taskComposerFocusRequest += 1

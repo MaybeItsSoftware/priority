@@ -96,6 +96,9 @@ extension WorkspaceViewModel {
     // Any in-flight ranking was read before whatever just happened.
     writeEpoch += 1
     var reloadedTasks = false
+    // What an open draft row is drawn among, so it can follow the rows it
+    // sat beside rather than leave with them.
+    let draft = taskDraftSurroundings()
     // A reload that asks for another only marks it, and the loop serves it,
     // rather than starting a second refresh inside this one.
     refreshDepth += 1
@@ -121,6 +124,7 @@ extension WorkspaceViewModel {
     if reloadedTasks || wrote {
       rebuildTaskCache()
       refreshHistoryLabels()
+      if let draft { reanchorTaskDraft(from: draft) }
     }
     // The day and the ladder are read from the whole workspace, so any write
     // can change them — a task added on Today most of all, which otherwise

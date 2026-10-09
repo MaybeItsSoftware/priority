@@ -53,7 +53,9 @@ extension WorkspaceViewModel {
       let destinationList = lists.first(where: { $0.id == destinationID })
     else { return nil }
     var created: WorkspaceTask?
-    let column = column ?? boardColumns.first { $0.id == activeBoardColumnID }
+    // A draft files into the column it is drawn at the foot of.
+    let columnID = isDraftingTask ? taskDraftBoardColumnID : activeBoardColumnID
+    let column = column ?? boardColumns.first { $0.id == columnID }
     perform {
       let parentID = isMultiListScope
         ? try visibleRootParentTaskID(for: destinationList, store: store) : boardParentTaskID
