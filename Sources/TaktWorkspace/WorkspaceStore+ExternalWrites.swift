@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 extension WorkspaceStore {
   /// A number that moves when *another* process commits to this database, and
@@ -22,6 +23,17 @@ extension WorkspaceStore {
     }.value
   }
 
+  /// A value that changes whenever the file has, whoever changed it: the
+  /// external token above, and the rows this store's own writes have
+  /// changed (`CoreWorkspace.ownChanges`). Equal stamps mean nothing has been
+  /// written in between, so a read keyed to one need not be made again. A
+  /// write that rolled back can still move it; that only costs a re-read.
+  public func changeStamp() throws -> WorkspaceChangeStamp {
+    try Self.mappingCoreErrors {
+      WorkspaceChangeStamp(external: try core.dataVersion(), own: try core.ownChanges())
+    }
+  }
+
   /// Runs one of this store's writes, which are all the Rust core's
   /// (docs/rust-core-migration.md), with the failures callers react to turned
   /// into the store's own errors. The core's connection does not count its
@@ -29,5 +41,16 @@ extension WorkspaceStore {
   /// `externalChangeToken`.
   func coreWrite<T>(_ call: () throws -> T) throws -> T {
     try Self.mappingCoreErrors(call)
+  }
+}
+
+/// See `WorkspaceStore.changeStamp()`.
+public struct WorkspaceChangeStamp: Equatable, Sendable {
+  public let external: Int64
+  public let own: Int64
+
+  public init(external: Int64, own: Int64) {
+    self.external = external
+    self.own = own
   }
 }

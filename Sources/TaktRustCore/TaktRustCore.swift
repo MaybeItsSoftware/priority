@@ -740,6 +740,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func metadataForTasks(taskIds: [String]) throws  -> [MetadataRow]
     
     /**
+     * The metadata rows that carry planning or a start time.
+     */
+    func planningMetadata() throws  -> [MetadataRow]
+    
+    /**
      * Every preference.
      */
     func preferences() throws  -> [PreferenceRow]
@@ -773,6 +778,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * The stored themes by id.
      */
     func themes() throws  -> [ThemeRow]
+    
+    /**
+     * The metadata rows of waiting tasks and their follow-ups.
+     */
+    func waitingMetadata() throws  -> [MetadataRow]
     
     /**
      * Work blocks recorded in `[from, to)`.
@@ -1061,6 +1071,15 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * A list's outline under a task, or the whole list.
      */
     func outline(listId: String, parentTaskId: String?) throws  -> [OutlineItem]
+    
+    /**
+     * How many rows this handle's own writes have changed since it opened:
+     * SQLite's `total_changes()` on the writing connection. It moves for
+     * every write of the handle's, where `data_version` moves for everyone
+     * else's, so the two together tell a client the file has changed since
+     * it last looked, whoever changed it.
+     */
+    func ownChanges() throws  -> Int64
     
     /**
      * Pauses a running block.
@@ -1707,6 +1726,18 @@ open func metadataForTasks(taskIds: [String])throws  -> [MetadataRow]  {
 }
     
     /**
+     * The metadata rows that carry planning or a start time.
+     */
+open func planningMetadata()throws  -> [MetadataRow]  {
+    return try  FfiConverterSequenceTypeMetadataRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_planning_metadata(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Every preference.
      */
 open func preferences()throws  -> [PreferenceRow]  {
@@ -1792,6 +1823,18 @@ open func themes()throws  -> [ThemeRow]  {
     return try  FfiConverterSequenceTypeThemeRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_themes(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The metadata rows of waiting tasks and their follow-ups.
+     */
+open func waitingMetadata()throws  -> [MetadataRow]  {
+    return try  FfiConverterSequenceTypeMetadataRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_waiting_metadata(
             self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
@@ -2587,6 +2630,22 @@ open func outline(listId: String, parentTaskId: String?)throws  -> [OutlineItem]
             self.uniffiCloneHandle(),
         FfiConverterString.lower(listId),
         FfiConverterOptionString.lower(parentTaskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * How many rows this handle's own writes have changed since it opened:
+     * SQLite's `total_changes()` on the writing connection. It moves for
+     * every write of the handle's, where `data_version` moves for everyone
+     * else's, so the two together tell a client the file has changed since
+     * it last looked, whoever changed it.
+     */
+open func ownChanges()throws  -> Int64  {
+    return try  FfiConverterInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_own_changes(
+            self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
 }
@@ -9644,6 +9703,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_metadata_for_tasks() != 28414) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_planning_metadata() != 49635) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_preferences() != 40625) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -9663,6 +9725,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_themes() != 15304) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_waiting_metadata() != 48738) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_work_blocks_between() != 63782) {
@@ -9831,6 +9896,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_outline() != 55647) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_own_changes() != 53510) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session() != 59685) {

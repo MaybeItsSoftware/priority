@@ -90,6 +90,17 @@ impl CoreWorkspace {
             .query_row("PRAGMA data_version", [], |row| row.get(0))?)
     }
 
+    /// How many rows this handle's own writes have changed since it opened:
+    /// SQLite's `total_changes()` on the writing connection. It moves for
+    /// every write of the handle's, where `data_version` moves for everyone
+    /// else's, so the two together tell a client the file has changed since
+    /// it last looked, whoever changed it.
+    pub fn own_changes(&self) -> Result<i64, CoreError> {
+        Ok(self
+            .lock()
+            .query_row("SELECT total_changes()", [], |row| row.get(0))?)
+    }
+
     /// Reverses the most recent step; returns its label, or nothing when there
     /// was nothing to undo.
     pub fn undo(&self) -> Result<Option<String>, CoreError> {

@@ -76,6 +76,7 @@ mod tests {
         assert_eq!(core.data_version().unwrap(), start, "its own write");
         // The reading connection sees the handle's own commit straight away,
         // and reading through it moves nothing.
+        let changes = core.own_changes().unwrap();
         let inbox = core.inbox(workspace_id.clone()).unwrap().unwrap();
         let task = core
             .create_task(
@@ -106,6 +107,10 @@ mod tests {
             .unwrap();
         assert!(read.ranked.iter().any(|s| s.candidate.id == task));
         assert_eq!(core.data_version().unwrap(), start, "its own reads");
+        let after_write = core.own_changes().unwrap();
+        assert!(after_write > changes, "its own write is counted");
+        assert_eq!(core.waiting_metadata().unwrap().len(), 0);
+        assert_eq!(core.own_changes().unwrap(), after_write, "a read is not");
         let other = rusqlite::Connection::open(&path).unwrap();
         other
             .execute("UPDATE workspaces SET name = 'Elsewhere'", [])

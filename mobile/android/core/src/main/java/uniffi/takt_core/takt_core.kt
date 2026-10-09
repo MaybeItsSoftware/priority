@@ -741,6 +741,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_metadata_for_tasks(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_planning_metadata(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_preferences(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_recent_focus_awards(
@@ -754,6 +756,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_themes(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_waiting_metadata(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_work_blocks_between(
     ): Int
@@ -866,6 +870,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_outdent_task(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_outline(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_own_changes(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session(
     ): Int
@@ -1047,6 +1053,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_metadata_for_tasks(`ptr`: Long,`taskIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_planning_metadata(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_preferences(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_recent_focus_awards(`ptr`: Long,`limit`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1060,6 +1068,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_tasks_closed_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_themes(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_waiting_metadata(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_work_blocks_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1173,6 +1183,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_outline(`ptr`: Long,`listId`: RustBuffer.ByValue,`parentTaskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_own_changes(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     external fun uniffi_takt_core_fn_method_coreworkspace_pause_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_pending_sync_changes(`ptr`: Long,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
@@ -1521,6 +1533,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_metadata_for_tasks() and 0xFFFF) != 28414) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_planning_metadata() and 0xFFFF) != 49635) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_preferences() and 0xFFFF) != 40625) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1540,6 +1555,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_themes() and 0xFFFF) != 15304) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_waiting_metadata() and 0xFFFF) != 48738) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_work_blocks_between() and 0xFFFF) != 63782) {
@@ -1708,6 +1726,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_outline() and 0xFFFF) != 55647) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_own_changes() and 0xFFFF) != 53510) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_pause_focus_session() and 0xFFFF) != 59685) {
@@ -2448,6 +2469,11 @@ public interface CoreWorkspaceInterface {
     fun `metadataForTasks`(`taskIds`: List<kotlin.String>): List<MetadataRow>
     
     /**
+     * The metadata rows that carry planning or a start time.
+     */
+    fun `planningMetadata`(): List<MetadataRow>
+    
+    /**
      * Every preference.
      */
     fun `preferences`(): List<PreferenceRow>
@@ -2481,6 +2507,11 @@ public interface CoreWorkspaceInterface {
      * The stored themes by id.
      */
     fun `themes`(): List<ThemeRow>
+    
+    /**
+     * The metadata rows of waiting tasks and their follow-ups.
+     */
+    fun `waitingMetadata`(): List<MetadataRow>
     
     /**
      * Work blocks recorded in `[from, to)`.
@@ -2769,6 +2800,15 @@ public interface CoreWorkspaceInterface {
      * A list's outline under a task, or the whole list.
      */
     fun `outline`(`listId`: kotlin.String, `parentTaskId`: kotlin.String?): List<OutlineItem>
+    
+    /**
+     * How many rows this handle's own writes have changed since it opened:
+     * SQLite's `total_changes()` on the writing connection. It moves for
+     * every write of the handle's, where `data_version` moves for everyone
+     * else's, so the two together tell a client the file has changed since
+     * it last looked, whoever changed it.
+     */
+    fun `ownChanges`(): kotlin.Long
     
     /**
      * Pauses a running block.
@@ -3563,6 +3603,23 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * The metadata rows that carry planning or a start time.
+     */
+    @Throws(CoreException::class)override fun `planningMetadata`(): List<MetadataRow> {
+            return FfiConverterSequenceTypeMetadataRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_planning_metadata(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Every preference.
      */
     @Throws(CoreException::class)override fun `preferences`(): List<PreferenceRow> {
@@ -3679,6 +3736,23 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     callWithHandle {
     uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_takt_core_fn_method_coreworkspace_themes(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The metadata rows of waiting tasks and their follow-ups.
+     */
+    @Throws(CoreException::class)override fun `waitingMetadata`(): List<MetadataRow> {
+            return FfiConverterSequenceTypeMetadataRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_waiting_metadata(
         it,
         _status)
 }
@@ -4755,6 +4829,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterString.lower(`listId`),
         FfiConverterOptionalString.lower(`parentTaskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * How many rows this handle's own writes have changed since it opened:
+     * SQLite's `total_changes()` on the writing connection. It moves for
+     * every write of the handle's, where `data_version` moves for everyone
+     * else's, so the two together tell a client the file has changed since
+     * it last looked, whoever changed it.
+     */
+    @Throws(CoreException::class)override fun `ownChanges`(): kotlin.Long {
+            return FfiConverterLong.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_own_changes(
+        it,
+        _status)
 }
     }
     )

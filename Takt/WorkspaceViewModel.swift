@@ -612,8 +612,12 @@ enum WorkspaceSidebarItem: Identifiable {
   /// moves them. See `checkForDayChange`.
   @ObservationIgnored var habitDayKey: String?
   /// What each waiting task waits on and when to chase it, for the chips on
-  /// cards and rows. Reread with the task cache.
+  /// cards and rows. Reread with the task cache, when the file has changed.
   var waitingDetails: [String: TaskWaitingDetails] = [:]
+  /// The store and its change stamp `waitingDetails` was read at. While both
+  /// match, nothing has been written, and the reread is skipped: switching
+  /// lists rebuilds the task cache but cannot change who waits on what.
+  @ObservationIgnored var waitingDetailsStamp: (store: ObjectIdentifier, stamp: WorkspaceChangeStamp)?
   /// When the poll next looks for a follow-up that has come due.
   @ObservationIgnored var nextFollowUpCheck: Date = .distantPast
   /// What finishing the current block did — a task closed, or a day's

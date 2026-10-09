@@ -44,6 +44,32 @@ final class WorkspaceExternalWriteTests: XCTestCase {
       .first { $0.id == listID }?.name, "Elsewhere")
   }
 
+  /// The stamp the waiting chips are keyed to: it moves for the store's own
+  /// writes, undo included, and for another process's, and never for a read.
+  func testTheChangeStampMovesForEveryWriteAndNoRead() throws {
+    let start = try store.changeStamp()
+    _ = try store.waitingDetails()
+    _ = try store.taskPlanningValues()
+    _ = try store.tasks(in: listID)
+    XCTAssertEqual(try store.changeStamp(), start)
+
+    let task = try store.createTask(listId: listID, title: "Mine")
+    let afterWrite = try store.changeStamp()
+    XCTAssertNotEqual(afterWrite, start)
+    try store.setWaiting(taskId: task.id, waitingOn: "Sam", followUpAt: nil)
+    XCTAssertEqual(try store.waitingDetails()[task.id]?.waitingOn, "Sam")
+    _ = try store.undo()
+    XCTAssertNotEqual(try store.changeStamp(), afterWrite)
+    XCTAssertNil(try store.waitingDetails()[task.id])
+
+    let beforeOther = try store.changeStamp()
+    let other = try DatabaseQueue(path: databaseURL.path)
+    try other.write { db in
+      try db.execute(sql: "UPDATE task_lists SET name = 'Elsewhere' WHERE id = ?", arguments: [listID])
+    }
+    XCTAssertNotEqual(try store.changeStamp(), beforeOther)
+  }
+
   /// The poll the app runs is the awaited form; it has to agree with the
   /// synchronous one on both counts.
   func testTheAwaitedTokenAgreesWithTheSynchronousOne() async throws {

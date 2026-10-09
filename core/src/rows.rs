@@ -512,6 +512,30 @@ pub fn all_metadata(connection: &Connection) -> Result<Vec<MetadataRow>, CoreErr
     )
 }
 
+/// The metadata rows that say a task waits on someone, when to chase it, or
+/// whose follow-up it is: the few `WorkspaceStore.waitingDetails` reads,
+/// rather than every row.
+pub fn waiting_metadata(connection: &Connection) -> Result<Vec<MetadataRow>, CoreError> {
+    all(
+        connection,
+        "SELECT * FROM task_metadata
+         WHERE waitingOn IS NOT NULL OR waitingFollowUpAt IS NOT NULL OR followUpOfTaskId IS NOT NULL",
+        [],
+        MetadataRow::from_row,
+    )
+}
+
+/// The metadata rows that carry planning, a planning blob or a start time:
+/// the few `WorkspaceStore.taskPlanningValues` reads, rather than every row.
+pub fn planning_metadata(connection: &Connection) -> Result<Vec<MetadataRow>, CoreError> {
+    all(
+        connection,
+        "SELECT * FROM task_metadata WHERE planningJSON IS NOT NULL OR startAt IS NOT NULL",
+        [],
+        MetadataRow::from_row,
+    )
+}
+
 // Focus.
 
 /// The newest session that has not finished. `WorkspaceStore.activeFocusSession`.

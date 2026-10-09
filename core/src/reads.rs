@@ -87,6 +87,16 @@ impl CoreWorkspace {
         rows::all_metadata(&self.read())
     }
 
+    /// The metadata rows of waiting tasks and their follow-ups.
+    pub fn waiting_metadata(&self) -> Result<Vec<MetadataRow>, CoreError> {
+        rows::waiting_metadata(&self.read())
+    }
+
+    /// The metadata rows that carry planning or a start time.
+    pub fn planning_metadata(&self) -> Result<Vec<MetadataRow>, CoreError> {
+        rows::planning_metadata(&self.read())
+    }
+
     /// The newest session that has not finished.
     pub fn active_focus_session(&self) -> Result<Option<SessionRow>, CoreError> {
         rows::active_session(&self.lock())

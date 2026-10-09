@@ -25,10 +25,24 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// Rereads `waitingDetails` if anything has been written since it was last
+  /// read: a local write, undo, a sync pull or another process. Pure
+  /// navigation, which rebuilds the task cache too, skips it.
   func reloadWaitingDetails() {
-    guard let store, let details = try? store.waitingDetails() else { return }
+    guard let store else { return }
+    // Read before the details, so a write landing in between makes the next
+    // call read again rather than keep what this one missed.
+    let stamp = try? store.changeStamp()
+    let key = ObjectIdentifier(store)
+    if !waitingDetailsAreStale, let stamp, let last = waitingDetailsStamp,
+      last.store == key, last.stamp == stamp
+    {
+      return
+    }
+    guard let details = try? store.waitingDetails() else { return }
     waitingDetailsAreStale = false
     if waitingDetails != details { waitingDetails = details }
+    waitingDetailsStamp = stamp.map { (key, $0) }
   }
 
   func waiting(for task: WorkspaceTask) -> TaskWaitingDetails? {

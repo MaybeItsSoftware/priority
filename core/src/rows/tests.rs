@@ -129,6 +129,37 @@ fn metadata_comes_back_for_the_tasks_that_have_it() {
 }
 
 #[test]
+fn the_narrow_metadata_reads_return_only_waiting_or_planned_rows() {
+    let connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO task_metadata (taskId, kanbanColumn, waitingOn, planningJSON, updatedAt) VALUES
+               ('read', 'today', NULL, NULL, '{T}'),
+               ('run', NULL, 'Sam', NULL, '{T}'),
+               ('folder', NULL, NULL, '{{\"dueDate\":\"2026-03-12\"}}', '{T}');"
+        ))
+        .unwrap();
+    let ids = |rows: Vec<MetadataRow>| -> Vec<String> {
+        let mut ids: Vec<String> = rows.into_iter().map(|r| r.task_id).collect();
+        ids.sort();
+        ids
+    };
+    assert_eq!(ids(waiting_metadata(&connection).unwrap()), ["run"]);
+    assert_eq!(ids(planning_metadata(&connection).unwrap()), ["folder"]);
+    connection
+        .execute_batch(
+            "UPDATE task_metadata SET startAt = '2026-03-12 09:00:00.000' WHERE taskId = 'read';
+             UPDATE task_metadata SET waitingOn = NULL, followUpOfTaskId = 'read' WHERE taskId = 'run';",
+        )
+        .unwrap();
+    assert_eq!(ids(waiting_metadata(&connection).unwrap()), ["run"]);
+    assert_eq!(
+        ids(planning_metadata(&connection).unwrap()),
+        ["folder", "read"]
+    );
+}
+
+#[test]
 fn closed_tasks_in_a_window_come_oldest_first_without_lists() {
     let connection = workspace();
     connection

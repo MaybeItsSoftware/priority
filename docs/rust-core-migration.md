@@ -174,8 +174,32 @@ on Android in the same way, so moving them buys less.
   imports only SwiftUI, WidgetKit, AppIntents and ActivityKit. Keep it that
   way, so the extension never has to link the core.
 - **Android ABIs.** Build arm64-v8a and x86_64; the user's phone is arm64.
-- **FFI cost on hot reads.** Ranking returns whole snapshots, not
-  per-task calls, so the boundary is crossed once per refresh.
+- **FFI cost on hot reads. Measured 2026-10-09.** One call per refresh was
+  not enough: each row crossing UniFFI costs about 8 to 10 µs, which is more
+  than the work done on it. Moving logic into the core pays only when fewer
+  rows cross. On a seeded 7,000-task workspace
+  (`workspace-tests/WorkspacePerformanceBenchmarks.swift`,
+  `core/examples/perf_reads.rs`):
+  - The sidebar (`sidebar.rs`) walks every list in the core and returns only
+    the nested lists and one count per list. It used to fetch every task. The
+    sidebar's read went from 93 ms to 5 ms, and the main-thread refresh after
+    one edit from 81 ms to 8 ms.
+  - Next up (`next_up.rs`) reads the candidates, plans the day
+    (`DayPlanSelector` now wraps `next_up::plan`) and ranks them in one
+    call. The Mac and the iPhone's Today and widget keep only the first
+    eight ranked tasks and the day's own tasks. The snapshot went from
+    69 ms to 14 ms; without a limit, as the iPhone's focus screen asks, it
+    is 34 ms.
+  - Its reads use a second, `query_only` connection on the same file, so a
+    main-thread read no longer waits behind it. Measured while a snapshot
+    runs, the worst such read went from 4.6 ms to 1.8 ms. Writes,
+    `data_version` and the journal stay on the first connection, so the
+    external-change token still ignores the app's own commits.
+  - The waiting chips and the planning values read only the metadata rows
+    that carry them (`waiting_metadata`, `planning_metadata`): 5 ms each
+    down to 0.03 ms. The Mac rereads the chips only when
+    `WorkspaceStore.changeStamp()` has moved, so switching lists skips the
+    reread.
 - **Two SQLite libraries in one process. Resolved 2026-10-08.** Two
   copies of SQLite sharing a file can each release the other's POSIX locks
   and corrupt it, so the core never brings a second one into an app. On

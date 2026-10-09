@@ -51,7 +51,7 @@ extension WorkspaceStore {
 extension WorkspaceStore {
   public func taskPlanningValues() throws -> [String: TaskPlanning] {
     var result: [String: TaskPlanning] = [:]
-    for row in try Self.mappingCoreErrors({ try core.allMetadata() }) {
+    for row in try Self.mappingCoreErrors({ try core.planningMetadata() }) {
       let record = TaskMetadata(row)
       if let plan = try Self.planning(record) { result[record.taskId] = plan }
     }

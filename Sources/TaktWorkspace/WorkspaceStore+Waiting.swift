@@ -26,7 +26,7 @@ extension WorkspaceStore {
   /// A small set, read whole so a card's chip is a dictionary lookup.
   public func waitingDetails() throws -> [String: TaskWaitingDetails] {
     var details: [String: TaskWaitingDetails] = [:]
-    for row in try Self.mappingCoreErrors({ try core.allMetadata() })
+    for row in try Self.mappingCoreErrors({ try core.waitingMetadata() })
     where row.waitingOn != nil || row.waitingFollowUpAtMs != nil || row.followUpOfTaskId != nil {
       details[row.taskId] = TaskWaitingDetails(
         waitingOn: row.waitingOn, followUpAt: row.waitingFollowUpAtMs.map(Date.init(coreMilliseconds:)),
