@@ -11,11 +11,15 @@ extension WorkspaceViewModel {
   /// The left dock has an agent tab too; this is the Lists tab's toggle, so
   /// with the agent showing it turns the dock to the lists rather than
   /// putting it away.
+  /// ⌘B, three states like the right dock's: hidden opens it with the
+  /// keyboard on the list you are in, open-but-elsewhere brings the keyboard
+  /// over, and open with the keyboard in it puts it away.
   func toggleSidebar() {
-    if isListsPaneVisible {
+    if isListsPaneVisible && keyboardFocusArea == .sidebar {
       hideLeftDock()
     } else {
       showLeftDock(.lists)
+      returnToCurrentListInSidebar()
     }
   }
 

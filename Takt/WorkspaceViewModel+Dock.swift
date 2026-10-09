@@ -96,8 +96,16 @@ extension WorkspaceViewModel {
   /// `r` and the status bar's dock button: on or off, keeping whichever tab
   /// it was on. Opening it hands it the keyboard, so the dock is worked from
   /// the keys like every other pane; `r` again, from anywhere, puts it away.
+  /// ⌘R: open-but-elsewhere brings the keyboard over before a second press
+  /// puts the dock away, the way ⌘B does for the sidebar.
   func toggleRightDock() {
-    if isRightDockVisible { hideRightDock() } else { toggleDockTab(rightDockTab, onTitle: false) }
+    if isRightDockVisible && keyboardFocusArea != rightDockTab.area {
+      requestKeyboardFocus(rightDockTab.area, onTitle: false)
+    } else if isRightDockVisible {
+      hideRightDock()
+    } else {
+      toggleDockTab(rightDockTab, onTitle: false)
+    }
   }
 
   /// For the rail, one key, three states, the way an editor's panel toggle behaves: hidden
