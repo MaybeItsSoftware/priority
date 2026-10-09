@@ -160,6 +160,16 @@ extension WorkspaceViewModel {
     }
   }
 
+  func moveTimelineCursor(_ key: String) {
+    let summaries = timelineSummaries
+    switch CursorStep(key: key) {
+    case .by(let offset): moveTimelineCursor(by: offset)
+    case .first: timelineCursorID = summaries.first?.id
+    case .last: timelineCursorID = summaries.last?.id
+    case nil: break
+    }
+  }
+
   /// `⌥1`–`⌥4`, in the order the matrix is read: urgent and important first.
   func placeSelectionInQuadrant(_ key: String) {
     guard let task = selectedTask else { return }
@@ -261,8 +271,8 @@ extension WorkspaceViewModel {
   }
 }
 
-/// Where a list-walking key moves a cursor. Shared by the sidebar and the
-/// done rail, whose catalogue rows list the same keys — the sidebar adds
+/// Where a list-walking key moves a cursor. Shared by the sidebar, the
+/// done rail and the timeline, whose catalogue rows list the same keys — the sidebar adds
 /// `gg` and `⇧G`, the ends in Zed's vim project panel.
 private enum CursorStep {
   case by(Int), first, last

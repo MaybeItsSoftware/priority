@@ -71,6 +71,38 @@ public enum FocusDayTimeline {
     }
   }
 
+  /// One task's share of the day: the breakdown under the chart, and the rows
+  /// the timeline's cursor walks.
+  public struct TaskSummary: Identifiable, Equatable, Sendable {
+    /// The task's key — its id where the block names one, else its title.
+    public let id: String
+    public let title: String
+    public let seconds: Int
+    public let blocks: Int
+
+    public init(id: String, title: String, seconds: Int, blocks: Int) {
+      self.id = id
+      self.title = title
+      self.seconds = seconds
+      self.blocks = blocks
+    }
+  }
+
+  /// The day's blocks gathered by task, most time first, ties by key so the
+  /// order does not shuffle between renders. `taskKeys` maps a block id to
+  /// the task it was spent on; a block without one stands for its own title.
+  /// A task's title is its latest block's, since a rename happens between
+  /// blocks rather than during one.
+  public static func summaries(of blocks: [Block], taskKeys: [String: String]) -> [TaskSummary] {
+    Dictionary(grouping: blocks) { taskKeys[$0.id] ?? $0.title }
+      .map { key, values in
+        TaskSummary(
+          id: key, title: values.last?.title ?? "Deleted task",
+          seconds: values.reduce(0) { $0 + $1.seconds }, blocks: values.count)
+      }
+      .sorted { $0.seconds == $1.seconds ? $0.id < $1.id : $0.seconds > $1.seconds }
+  }
+
   /// The narrowest the ruler gets. An afternoon with one 20-minute block in it
   /// should still read as an afternoon, not as a bar filling the pane.
   public static let minimumHours = 5

@@ -85,12 +85,7 @@ struct MainApp: App {
         }
         .commandShortcut(.goFocus)
         Button("Timeline") {
-          let workspace: WorkspaceViewModel = AppDelegate.shared.workspace
-          if workspace.showsTimelineScreen {
-            workspace.dismissTimelineScreen()
-          } else {
-            workspace.presentTimelineScreen()
-          }
+          AppDelegate.shared.workspace.run(.goTimeline)
         }
         .commandShortcut(.goTimeline)
         Divider()

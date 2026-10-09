@@ -342,6 +342,15 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "done:up", "done:down", "done:k", "done:j", "done:space", "done:escape",
       "done:home", "done:end", "done:cmd+up", "done:cmd+down", "done:pageup", "done:pagedown",
       "done:left",
+      // The timeline's breakdown is a list of its own too, walked with the
+      // same keys.
+      "timeline:up", "timeline:down", "timeline:k", "timeline:j", "timeline:home", "timeline:end",
+      "timeline:cmd+up", "timeline:cmd+down", "timeline:pageup", "timeline:pagedown",
+      // In the right dock ⌘{ ⌘} and [ ] change the dock's tab, Zed's previous
+      // and next tab; on a task pane they change list and leave or open a task.
+      "inspector:cmd+shift+{", "inspector:cmd+shift+}", "inspector:[", "inspector:]",
+      "done:cmd+shift+{", "done:cmd+shift+}", "done:[", "done:]",
+      "timeline:cmd+shift+{", "timeline:cmd+shift+}", "timeline:[", "timeline:]",
       // Today is walked with the ordinary keys, but f queues behind a running
       // block rather than replacing it, and ← has no task to leave so goes to
       // the sidebar.

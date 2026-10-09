@@ -775,6 +775,9 @@ enum WorkspaceSidebarItem: Identifiable {
   var completedTasks: [WorkspaceTask] = []
   /// The row the rail's cursor is on, or nil for "the newest thing finished".
   var doneCursorID: String?
+  /// The timeline breakdown row the keyboard is on, by task key, or nil for
+  /// "the task with the most time".
+  var timelineCursorID: String?
   /// The top of the ranking, and why. Nil when there is nothing to do —
   /// which is a real state worth rendering, not an error.
   var nextUp: ScoredNextUp?

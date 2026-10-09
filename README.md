@@ -106,6 +106,7 @@ something you already have to know.
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
 | `r` or `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock, on the tab it was on and with the keyboard in it, or put it away / close all docks (Zed's) |
+| `Cmd+Shift+{` / `Cmd+Shift+}`, or `[` / `]` | In the right dock, its previous / next tab — Inspector, Done, Timeline — with the keyboard brought along (Zed's previous / next tab; on a task pane the same chords change list). `Ctrl+Tab` leaves it for the next region |
 | `oo` / `Cmd+Alt+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z`, or `Ctrl+Z` / `Ctrl+Shift+Z`, or `uu` | Undo / redo |
 | `Cmd+Shift+P` / `Cmd+K` | The command palette — everything the workspace can do, and its key |
@@ -304,7 +305,11 @@ the last window closes on a running block.
 
 `Cmd+9` opens the day's **timeline** as a tab in the right dock, beside the
 inspector and the done rail: every block drawn against an hour ruler, with the
-running one growing live, and the day's breakdown under it. `Esc` puts it away.
+running one growing live, and the day's breakdown under it. `←` / `→` (or `h` /
+`l`) step a day, `t` comes back to today, `↑` / `↓` (or `j` / `k`) walk the
+breakdown and `o` opens the task under the cursor in its own list. `Esc` hands
+the keyboard back to the work and leaves the timeline open; `Cmd+9` or `r`
+puts it away.
 
 ### The focus panel
 

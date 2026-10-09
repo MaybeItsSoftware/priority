@@ -70,7 +70,7 @@ public enum WorkspaceCommandCatalog {
       note: "Pick a task and start it, or bring back the block already running"),
     .init(
       id: .goTimeline, title: "Show the day's timeline", group: "Go", keys: ["cmd+9"],
-      note: "Press again to close it"),
+      note: "A tab of the right dock, with the keyboard in it; again from inside it puts it away"),
     .init(
       id: .goListNavigator, title: "Find or create a list", group: "Go", keys: ["cmd+p", "gl"],
       note: "Zed's file finder, for lists"),
@@ -342,6 +342,20 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .windowCloseAllDocks, title: "Close all docks", group: "Window",
       keys: ["cmd+option+y"], note: "The sidebar, the right dock and the progress graph, as in Zed"),
+    // Zed's previous / next tab, ⌘{ and ⌘}, on the dock's own tabs while the
+    // dock has the keyboard; on a task pane the same chords change list, a
+    // list being the tab there. [ and ] as well wherever no field takes them.
+    .init(
+      id: .windowDockNextTab, title: "Next tab in the right dock", group: "Window", keys: [],
+      surfaceKeys: [
+        .inspector: ["cmd+shift+}", "]"], .done: ["cmd+shift+}", "]"], .timeline: ["cmd+shift+}", "]"],
+      ],
+      note: "Inspector, Done, Timeline, and round again, with the keyboard in it"),
+    .init(
+      id: .windowDockPreviousTab, title: "Previous tab in the right dock", group: "Window", keys: [],
+      surfaceKeys: [
+        .inspector: ["cmd+shift+{", "["], .done: ["cmd+shift+{", "["], .timeline: ["cmd+shift+{", "["],
+      ]),
     .init(
       id: .windowOpenKeymap, title: "Open the keymap file", group: "Window", keys: [],
       note: "keymap.json — your own keys over these. Created empty if it is missing"),
@@ -373,8 +387,15 @@ public enum WorkspaceCommandCatalog {
       keys: ["right", "l"], surface: .timeline),
     .init(id: .timelineToday, title: "Return to today", group: "Timeline", keys: ["t"], surface: .timeline),
     .init(
-      id: .timelineClose, title: "Close the timeline", group: "Timeline", keys: ["escape"],
-      surface: .timeline),
+      id: .motionTimelineSelect, title: "Move through the day's tasks", group: "Timeline",
+      keys: ["down", "up", "j", "k", "home", "end", "cmd+up", "cmd+down", "pageup", "pagedown"],
+      surface: .timeline, kind: .motion, note: "The breakdown under the chart, most time first"),
+    .init(
+      id: .timelineReveal, title: "Open it where it lives", group: "Timeline", keys: ["o"],
+      surface: .timeline, note: "Leaves the timeline and selects the task in its own list"),
+    .init(
+      id: .timelineClose, title: "Leave the timeline", group: "Timeline", keys: ["escape"],
+      surface: .timeline, note: "Back to the work, leaving it open; r or ⌘9 puts it away"),
   ]
 
   // MARK: - Done rail

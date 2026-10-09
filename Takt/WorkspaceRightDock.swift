@@ -54,7 +54,7 @@ struct WorkspaceRightDock: View {
       if model.rightDockTab == .done {
         WorkspaceDoneSummary()
       }
-      WorkspacePaneIconButton("xmark", title: "Close the dock", command: model.rightDockTab.command) {
+      WorkspacePaneIconButton("xmark", title: "Close the dock", command: .windowToggleRightDock) {
         model.hideRightDock()
       }
       .padding(.trailing, theme.space.xs)

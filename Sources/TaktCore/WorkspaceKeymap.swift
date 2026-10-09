@@ -242,7 +242,7 @@ public struct WorkspaceKeymap: Sendable, Equatable {
   public static let readsItsKey: Set<WorkspaceCommandID> = [
     .goCycleRegion, .planMatrixPlace, .listNewTaskDestination,
     .motionSelectEnds, .motionSelectPage, .motionSidebarSelect, .motionBoardColumn,
-    .motionSetPriority, .motionDoneSelect,
+    .motionSetPriority, .motionDoneSelect, .motionTimelineSelect,
   ]
 
   // MARK: - Spelling a key

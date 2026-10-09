@@ -11,9 +11,10 @@ import Foundation
 /// mentioned. The rules for which key means what on which surface live here
 /// instead, where they can be tested, and the router only asks.
 extension WorkspaceCommandSurface {
-  /// The timeline replaces the workspace in the main pane, so it takes the
-  /// keyboard outright: a key it does not answer to must not reach the task
-  /// surface hidden behind it, where `⌫` would delete a task nobody can see.
+  /// The timeline takes the keyboard outright: a key it does not answer to
+  /// must not reach the task surface beside it, where `⌫` would delete a task
+  /// the keyboard is not on. It was a full-pane screen when this was written,
+  /// and is a tab of the right dock now; the reasoning held.
   public var ownsKeyboard: Bool {
     self == .timeline
   }
@@ -37,6 +38,9 @@ extension WorkspaceCommandCatalog {
     .windowUndo, .windowRedo, .windowToggleSidebar, .windowToggleInspectorPane,
     .windowToggleRightDock, .windowToggleDoneRail, .windowToggleAgentPanel, .windowToggleProgressDock,
     .windowCloseAllDocks,
+    // The timeline sits in the right dock beside the work, so the keys that
+    // move between regions have to get out of it as they get out of the rest.
+    .goSidebarRegion, .goTaskRegion, .goInspectorRegion, .goCycleRegion,
   ]
 
   /// Commands whose chord still works with the caret in a text field, because
@@ -52,6 +56,8 @@ extension WorkspaceCommandCatalog {
     // ⌘B, ⌘J, ⌥⌘B and ⌥⌘Y, as in Zed, where they work from inside the editor.
     .windowToggleSidebar, .windowToggleProgressDock, .windowToggleRightDock,
     .windowCloseAllDocks,
+    // ⌘{ and ⌘} in the inspector, whose keyboard is nearly always in a field.
+    .windowDockNextTab, .windowDockPreviousTab,
   ]
 
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.

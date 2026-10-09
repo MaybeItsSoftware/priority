@@ -110,8 +110,8 @@ extension WorkspaceViewModel {
   func cycleKeyboardFocus(by offset: Int) {
     var areas: [WorkspaceFocusArea] = isListsPaneVisible ? [.sidebar, .tasks] : [.tasks]
     // The dock's tab is a stop when it has something to hold the keyboard:
-    // the inspector needs a task, the rail does not.
-    if isRightDockVisible, rightDockTab == .done || selectedTask != nil {
+    // the inspector needs a task, the rail and the timeline do not.
+    if isRightDockVisible, rightDockTab != .inspector || selectedTask != nil {
       areas.append(rightDockTab.area)
     }
     let current = areas.firstIndex(of: keyboardFocusArea) ?? 0

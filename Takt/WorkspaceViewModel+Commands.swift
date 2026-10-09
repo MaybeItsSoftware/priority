@@ -98,8 +98,7 @@ extension WorkspaceViewModel {
       if let inbox = inboxList { selectList(inbox.id) }
       requestKeyboardFocus(.tasks)
     case .goFocus: openFocusPanel()
-    case .goTimeline:
-      if showsTimelineScreen { dismissTimelineScreen() } else { presentTimelineScreen() }
+    case .goTimeline: toggleDockTab(.timeline)
     case .goListNavigator: presentOverlay(.listNavigator)
     case .goSearch: presentSearch()
     case .goCommandPalette: presentOverlay(.commandPalette)
@@ -208,6 +207,7 @@ extension WorkspaceViewModel {
     case .windowToggleInspectorPane: toggleInspector()
     case .windowToggleRightDock: toggleRightDock()
     case .windowCloseAllDocks: closeAllDocks()
+    case .windowDockNextTab, .windowDockPreviousTab: cycleRightDockTab(by: id == .windowDockNextTab ? 1 : -1)
     case .windowOpenKeymap: WorkspaceKeymapStore.shared.openFile()
     case .windowReloadKeymap: WorkspaceKeymapStore.shared.reload(force: true)
     case .windowShowDiagnostics: onShowDiagnostics?()
@@ -219,7 +219,8 @@ extension WorkspaceViewModel {
     case .timelinePreviousDay: moveTimelineDay(by: -1)
     case .timelineNextDay: moveTimelineDay(by: 1)
     case .timelineToday: showTimelineToday()
-    case .timelineClose: dismissTimelineScreen()
+    case .timelineClose: leaveTimeline()
+    case .timelineReveal: revealTimelineTask()
 
     // MARK: Done rail
     case .windowToggleDoneRail: toggleDoneRail()
@@ -253,6 +254,7 @@ extension WorkspaceViewModel {
     case .motionSetPriority:
       if let key, let digit = Int(key) { editTaskValues { $0.priority = digit } }
     case .motionDoneSelect: if let key { moveDoneCursor(key) }
+    case .motionTimelineSelect: if let key { moveTimelineCursor(key) }
     case .todayStart: startSelectedDayTask()
     case .motionTodayLeave: if key != nil { returnToCurrentListInSidebar() }
     }

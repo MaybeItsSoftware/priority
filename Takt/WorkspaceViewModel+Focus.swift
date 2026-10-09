@@ -66,6 +66,67 @@ extension WorkspaceViewModel {
     hideRightDock()
   }
 
+  /// Escape on the timeline: back to the work, leaving the tab where it is,
+  /// as Escape leaves the inspector and the done rail. `r` and ⌘9 put it away.
+  func leaveTimeline() {
+    guard keyboardFocusArea == .timeline else { return }
+    requestKeyboardFocus(.tasks)
+  }
+
+  /// The day on screen as blocks, with the task each was spent on. The
+  /// running block has no stored record, so it is drawn from the session: it
+  /// ends at `now` and grows with it. Only on today — on any other day the
+  /// session on screen is not the one being read back.
+  func timelineBlocks(now: Date) -> (blocks: [FocusDayTimeline.Block], taskKeys: [String: String]) {
+    let logged = focusHistory.filter { $0.seconds > 0 }
+    var blocks = logged.map {
+      FocusDayTimeline.Block(id: $0.id, title: $0.taskTitle, seconds: $0.seconds, endedAt: $0.recordedAt)
+    }
+    var keys: [String: String] = [:]
+    for block in logged { keys[block.id] = block.originalTaskId ?? block.taskId ?? block.taskTitle }
+
+    let live = timelineShowsToday ? activeFocusSession : nil
+    let liveSeconds = live?.activeTaskId == nil ? 0 : live?.elapsedSeconds(now: now) ?? 0
+    if let live, let task = activeFocusTask, liveSeconds > 0 {
+      let id = live.activeBlockId ?? "live/\(live.id)"
+      blocks.append(FocusDayTimeline.Block(id: id, title: task.title, seconds: liveSeconds, endedAt: now, isLive: true))
+      keys[id] = task.id
+    }
+    return (blocks, keys)
+  }
+
+  /// The breakdown's rows, in the order the timeline draws them.
+  var timelineSummaries: [FocusDayTimeline.TaskSummary] {
+    let day = timelineBlocks(now: .now)
+    return FocusDayTimeline.summaries(of: day.blocks, taskKeys: day.taskKeys)
+  }
+
+  /// The row the keyboard is on, defaulting to the task with the most time so
+  /// the breakdown is walkable the moment the tab opens.
+  func timelineCursorSummary(in summaries: [FocusDayTimeline.TaskSummary]) -> FocusDayTimeline.TaskSummary? {
+    summaries.first { $0.id == timelineCursorID } ?? summaries.first
+  }
+
+  func moveTimelineCursor(by offset: Int) {
+    let summaries = timelineSummaries
+    guard !summaries.isEmpty else { return }
+    let current = timelineCursorSummary(in: summaries).flatMap { row in summaries.firstIndex { $0.id == row.id } } ?? 0
+    timelineCursorID = summaries[CursorStepping.index(from: current, by: offset, count: summaries.count)].id
+  }
+
+  /// `o` on the timeline: the task under the cursor, in its own list. A block
+  /// logged against a task since deleted names only a title, and has nowhere
+  /// to go.
+  func revealTimelineTask(_ key: String? = nil) {
+    guard let key = key ?? timelineCursorSummary(in: timelineSummaries)?.id else { return }
+    timelineCursorID = key
+    guard let task = task(withID: key) else {
+      onStatusMessage?("That task is no longer in the workspace.")
+      return
+    }
+    revealTask(task)
+  }
+
   /// Steps the day the timeline is showing. Never past today: the future holds
   /// no logged work, so a day ahead is an empty screen with nothing to say.
   /// Reloading is left to the screen's `onChange`, which the date picker needs

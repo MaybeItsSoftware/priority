@@ -47,10 +47,11 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case windowUndo, windowRedo, windowToggleSidebar, windowToggleInspectorPane, windowToggleRightDock
   case windowToggleDoneRail, windowToggleAgentPanel, windowToggleProgressDock, windowOpenKeymap, windowReloadKeymap
   case windowShowDiagnostics, windowOpenThemesFolder, windowReloadThemes, windowExportTheme
-  case windowCloseAllDocks
+  case windowCloseAllDocks, windowDockNextTab, windowDockPreviousTab
 
   // Timeline surface
   case timelinePreviousDay, timelineNextDay, timelineToday, timelineClose
+  case timelineReveal, motionTimelineSelect
 
   // Done rail
   case doneReveal, doneReopen, doneClose, motionDoneSelect

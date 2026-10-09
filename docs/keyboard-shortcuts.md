@@ -166,8 +166,9 @@ through to the task surface behind it — `Delete`, a digit or `i` there used to
 act on a task nobody could see. The only workspace keys that stay live are the
 window's own (`reachableFromFullPaneScreens` in the catalogue): the view keys,
 which leave the screen for the place you asked for, the palette, the
-reference, search, undo and redo, and the sidebar, agent, inspector and
-done-rail toggles. Chords the catalogue does not know, such as `Cmd+Q` and `Cmd+W`, still
+reference, search, undo and redo, the sidebar, agent, inspector and
+done-rail toggles, and the region keys (`Ctrl+Tab`, `Ctrl+1`–`Ctrl+3`), since
+the timeline sits beside the work rather than over it. Chords the catalogue does not know, such as `Cmd+Q` and `Cmd+W`, still
 reach the app. The palette knows this: it labels each command with the surface
 it belongs to and sorts the ones that apply where you are to the top.
 
@@ -175,6 +176,13 @@ The sidebar, the done rail and the inspector hold a cursor or controls of their
 own, so the bare task keys — `Space`, `x`, `Delete`, the digits, `Tab` — do not
 reach through them to the selected task. They keep the chords, `/`, `?`, `i`
 and `Esc`, and the sidebar and done rail keep the two-letter sequences.
+
+The right dock's three tabs — the inspector, the done rail and the timeline —
+are changed with `Cmd+Shift+{` / `Cmd+Shift+}`, Zed's previous / next tab, and
+with `[` / `]` where no field would take them; the keyboard comes along to the
+new tab. On a task pane the same chords change list. `Esc` on any of the three
+hands the keyboard back to the work and leaves the dock open, and `r` puts
+the dock away.
 
 ## Return and Shift-Return
 

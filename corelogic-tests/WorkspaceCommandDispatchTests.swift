@@ -106,6 +106,57 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     }
   }
 
+  /// The timeline is a tab of the right dock, beside the work, so the keys
+  /// that move between regions get out of it as they get out of the others.
+  func testTheTimelineLetsTheRegionKeysThrough() {
+    let expected: [String: WorkspaceCommandID] = [
+      "ctrl+tab": .goCycleRegion, "ctrl+shift+tab": .goCycleRegion, "ctrl+1": .goSidebarRegion,
+      "ctrl+2": .goTaskRegion, "ctrl+3": .goInspectorRegion, "r": .windowToggleRightDock,
+      "escape": .timelineClose,
+    ]
+    for (key, id) in expected {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: .timeline)?.id, id, key)
+    }
+  }
+
+  /// The timeline's breakdown is walked and opened the way the done rail is.
+  func testTheTimelineWalksItsTasks() {
+    for key in ["j", "k", "down", "up", "home", "end"] {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: .timeline)?.id, .motionTimelineSelect, key)
+    }
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "o", on: .timeline)?.id, .timelineReveal)
+  }
+
+  // MARK: - The right dock's tabs
+
+  /// ⌘{ ⌘} are Zed's previous / next tab. On a task pane a list is the tab;
+  /// in the right dock its own tabs are, and `[` `]` do it where no field
+  /// would take them.
+  func testTheDocksTabsAreZedsPreviousAndNextTab() {
+    for surface: WorkspaceCommandSurface in [.inspector, .done, .timeline] {
+      for key in ["cmd+shift+}", "]"] {
+        XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: surface)?.id, .windowDockNextTab, "\(key) on \(surface)")
+      }
+      for key in ["cmd+shift+{", "["] {
+        XCTAssertEqual(
+          WorkspaceCommandCatalog.command(forKey: key, on: surface)?.id, .windowDockPreviousTab, "\(key) on \(surface)")
+      }
+    }
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+shift+}", on: .outline)?.id, .goNextList)
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "]", on: .outline)?.id, .planEnterTask)
+    XCTAssertNil(WorkspaceCommandCatalog.command(forKey: "]", on: .sidebar))
+  }
+
+  /// The inspector's keyboard is nearly always in a field, so the chords have
+  /// to reach into one; the bare brackets are typed.
+  func testTheDockTabChordsReachIntoTheInspectorsFields() {
+    XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("cmd+shift+}", on: .inspector))
+    XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("cmd+shift+{", on: .inspector))
+    XCTAssertFalse(WorkspaceCommandCatalog.reachesIntoTextField("]", on: .inspector))
+    // On a task pane the same chord changes list, which is not a way out of a field.
+    XCTAssertFalse(WorkspaceCommandCatalog.reachesIntoTextField("cmd+shift+}", on: .outline))
+  }
+
   func testOrdinarySurfacesPassUnknownKeysOn() {
     for surface in Self.planningPanes + [.sidebar, .inspector, .done] {
       XCTAssertFalse(WorkspaceCommandCatalog.swallowsUnhandledKey("z", on: surface))

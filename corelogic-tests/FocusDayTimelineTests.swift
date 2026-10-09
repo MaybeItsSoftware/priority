@@ -106,4 +106,29 @@ final class FocusDayTimelineTests: XCTestCase {
     XCTAssertEqual(layout.placements.last?.block.isLive, true)
     XCTAssertEqual(layout.placements.last?.offsetMinutes, 120)
   }
+
+  func testSummariesGatherATasksBlocksAndPutTheMostTimeFirst() {
+    let summaries = FocusDayTimeline.summaries(
+      of: [
+        block("a1", endedAt: at(9, 30), minutes: 20),
+        block("b1", endedAt: at(10, 30), minutes: 30),
+        block("a2", endedAt: at(11, 30), minutes: 25),
+        block("loose", endedAt: at(12, 30), minutes: 5),
+      ],
+      taskKeys: ["a1": "task-a", "a2": "task-a", "b1": "task-b"])
+
+    XCTAssertEqual(summaries.map(\.id), ["task-a", "task-b", "loose"])
+    XCTAssertEqual(summaries.first?.seconds, 45 * 60)
+    XCTAssertEqual(summaries.first?.blocks, 2)
+    // Its latest block names it.
+    XCTAssertEqual(summaries.first?.title, "a2")
+  }
+
+  func testSummariesWithEqualTimeKeepAStableOrder() {
+    let summaries = FocusDayTimeline.summaries(
+      of: [block("y", endedAt: at(9, 0), minutes: 10), block("x", endedAt: at(10, 0), minutes: 10)],
+      taskKeys: [:])
+
+    XCTAssertEqual(summaries.map(\.id), ["x", "y"])
+  }
 }

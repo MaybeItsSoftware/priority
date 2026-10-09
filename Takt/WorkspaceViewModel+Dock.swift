@@ -126,6 +126,18 @@ extension WorkspaceViewModel {
 
   func toggleInspector() { toggleDockTab(.inspector) }
 
+  /// ⌘{ and ⌘} (or `[` and `]`) while the dock has the keyboard: the tab
+  /// beside this one, round the end, with the keyboard brought along. Unlike
+  /// `toggleDockTab` it never puts the dock away, and the inspector takes the
+  /// keyboard even with nothing selected — its empty state is a stop on the
+  /// way to the next tab, not somewhere to be thrown back to the tasks from.
+  func cycleRightDockTab(by offset: Int) {
+    let tabs = WorkspaceDockTab.allCases
+    let current = tabs.firstIndex(of: rightDockTab) ?? 0
+    let next = tabs[(current + offset % tabs.count + tabs.count) % tabs.count]
+    requestKeyboardFocus(next.area)
+  }
+
   /// The bottom dock has one thing in it and nothing to type into, so it
   /// never takes the keyboard: the key shows it and hides it.
   func toggleBottomDock() { isBottomDockVisible.toggle() }

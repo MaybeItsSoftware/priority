@@ -350,37 +350,70 @@ struct WorkspaceTimelineScreen: View {
 
   // MARK: - By task
 
+  /// The day by task, and the rows the keyboard walks: ↑ ↓ (or j k) move the
+  /// cursor, `o` opens the task in its own list.
   private func breakdown(_ day: TimelineDay) -> some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: theme.space.sm) {
-        MicroLabel("By task")
-        if day.summaries.isEmpty {
-          WorkspaceEmptyMessage("Nothing logged.")
-        }
-        ForEach(day.summaries) { summary in
-          HStack(alignment: .top, spacing: theme.space.sm) {
-            Rectangle()
-              .fill(day.colour(forTask: summary.id))
-              .frame(width: theme.emphasisBorder)
-              .frame(maxHeight: .infinity)
-            VStack(alignment: .leading, spacing: theme.space.xxs) {
-              Text(summary.title)
-                .font(theme.bodyFont())
-                .foregroundStyle(theme.ink)
-                .lineLimit(3)
-              Text(shareLine(summary, of: day))
-                .font(theme.captionFont)
-                .monospacedDigit()
-                .foregroundStyle(theme.muted)
-            }
-            Spacer(minLength: 0)
+    let cursor = model.timelineCursorSummary(in: day.summaries)?.id
+    return ScrollViewReader { proxy in
+      ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+          MicroLabel("By task")
+            .padding(.horizontal, theme.paneGutter)
+            .padding(.bottom, theme.space.sm)
+          if day.summaries.isEmpty {
+            WorkspaceEmptyMessage("Nothing logged.")
           }
-          .fixedSize(horizontal: false, vertical: true)
+          ForEach(day.summaries) { summary in
+            breakdownRow(summary, of: day, isCursor: summary.id == cursor)
+              .id(summary.id)
+          }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, theme.space.lg)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(theme.space.lg)
+      .onChange(of: model.timelineCursorID) { _, id in
+        guard let id else { return }
+        withAnimation(.easeInOut(duration: 0.12)) { proxy.scrollTo(id) }
+      }
     }
+  }
+
+  private func breakdownRow(_ summary: TimelineDay.TaskSummary, of day: TimelineDay, isCursor: Bool) -> some View {
+    HStack(alignment: .top, spacing: theme.space.sm) {
+      Rectangle()
+        .fill(day.colour(forTask: summary.id))
+        .frame(width: theme.emphasisBorder)
+        .frame(maxHeight: .infinity)
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
+        Text(summary.title)
+          .font(theme.bodyFont())
+          .foregroundStyle(theme.ink)
+          .lineLimit(3)
+        Text(shareLine(summary, of: day))
+          .font(theme.captionFont)
+          .monospacedDigit()
+          .foregroundStyle(theme.muted)
+      }
+      Spacer(minLength: 0)
+    }
+    .fixedSize(horizontal: false, vertical: true)
+    .padding(.vertical, theme.rowVerticalPadding)
+    // The whole gutter inside the highlight, as the done rail's rows have it.
+    .padding(.horizontal, theme.paneGutter)
+    .contentShape(Rectangle())
+    .workspaceSelection(isSelected: isCursor, hasKeyboard: isCursor && model.keyboardFocusArea == .timeline)
+    .onTapGesture {
+      model.timelineCursorID = summary.id
+      model.reportKeyboardFocus(.timeline)
+    }
+    .commandHelp(.timelineReveal, note: summary.title)
+    .contextMenu {
+      Button("Open where it lives") { model.revealTimelineTask(summary.id) }
+        .commandShortcut(.timelineReveal)
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityAddTraits(.isButton)
+    .accessibilityAction { model.revealTimelineTask(summary.id) }
   }
 
   private func shareLine(_ summary: TimelineDay.TaskSummary, of day: TimelineDay) -> String {
@@ -424,12 +457,7 @@ private struct TimelineDay {
   private let hues: [String: Color]
   private let taskKeys: [String: String]
 
-  struct TaskSummary: Identifiable {
-    let id: String
-    let title: String
-    let seconds: Int
-    let blocks: Int
-  }
+  typealias TaskSummary = FocusDayTimeline.TaskSummary
 
   @MainActor init(model: WorkspaceViewModel, now: Date, theme: Theme) {
     let calendar = Calendar.current
@@ -437,36 +465,15 @@ private struct TimelineDay {
     isToday = calendar.isDateInToday(model.focusHistoryDate)
 
     let logged = model.focusHistory.filter { $0.seconds > 0 }
-    var assembled = logged.map {
-      FocusDayTimeline.Block(id: $0.id, title: $0.taskTitle, seconds: $0.seconds, endedAt: $0.recordedAt)
-    }
-    var keys: [String: String] = [:]
-    for block in logged { keys[block.id] = block.originalTaskId ?? block.taskId ?? block.taskTitle }
+    let assembled = model.timelineBlocks(now: now)
+    let keys = assembled.taskKeys
 
-    // The running block has no stored record, so it is drawn from the session:
-    // it ends at "now" and grows with it. Only on today — on any other day the
-    // session on screen is not the one being read back.
-    let live = isToday ? model.activeFocusSession : nil
-    let liveSeconds = live?.activeTaskId == nil ? 0 : live?.elapsedSeconds(now: now) ?? 0
-    if let live, let task = model.activeFocusTask, liveSeconds > 0 {
-      let id = live.activeBlockId ?? "live/\(live.id)"
-      assembled.append(FocusDayTimeline.Block(id: id, title: task.title, seconds: liveSeconds, endedAt: now, isLive: true))
-      keys[id] = task.id
-    }
-
-    blocks = assembled
-    layout = FocusDayTimeline.layout(blocks: assembled, day: model.focusHistoryDate, calendar: calendar)
-    totalSeconds = assembled.reduce(0) { $0 + $1.seconds }
+    blocks = assembled.blocks
+    layout = FocusDayTimeline.layout(blocks: blocks, day: model.focusHistoryDate, calendar: calendar)
+    totalSeconds = blocks.reduce(0) { $0 + $1.seconds }
     scoredPoints = logged.compactMap { model.focusHistoryAwards[$0.id]?.points }.reduce(0, +)
     taskKeys = keys
-
-    let grouped = Dictionary(grouping: assembled) { keys[$0.id] ?? $0.title }
-    summaries = grouped.map { key, values in
-      TaskSummary(
-        id: key, title: values.last?.title ?? "Deleted task",
-        seconds: values.reduce(0) { $0 + $1.seconds }, blocks: values.count)
-    }
-    .sorted { $0.seconds == $1.seconds ? $0.id < $1.id : $0.seconds > $1.seconds }
+    summaries = FocusDayTimeline.summaries(of: blocks, taskKeys: keys)
 
     let palette = Self.palette(theme)
     fallbackHue = theme.primary
