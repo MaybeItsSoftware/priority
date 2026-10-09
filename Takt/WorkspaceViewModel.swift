@@ -188,8 +188,10 @@ enum WorkspaceSidebarItem: Identifiable {
   let taskEditor = WorkspaceTaskEditor()
 
   private(set) var workspace: Workspace?
-  private(set) var folders: [ListFolder] = []
-  private(set) var lists: [TaskList] = []
+  // `folders`, `lists`, `expandedFolderIDs` and `nestedLists` are what the
+  // sidebar is drawn from, so each one drops the sidebar's memoised rows.
+  private(set) var folders: [ListFolder] = [] { didSet { sidebarRowsMemo = nil } }
+  private(set) var lists: [TaskList] = [] { didSet { sidebarRowsMemo = nil } }
   private(set) var archivedLists: [TaskList] = []
   /// The outline and board state below is written only by
   /// `WorkspaceViewModel+Loading.swift`; internal rather than `private(set)`
@@ -385,9 +387,16 @@ enum WorkspaceSidebarItem: Identifiable {
   /// list is drawn twice, and only a row id can say which of the two you are
   /// standing on.
   var sidebarCursorID: String?
-  var expandedFolderIDs: Set<String> = []
+  var expandedFolderIDs: Set<String> = [] { didSet { sidebarRowsMemo = nil } }
   var scopeTaskID: String?
-  var nestedLists: [TaskOutlineItem] = []
+  var nestedLists: [TaskOutlineItem] = [] { didSet { sidebarRowsMemo = nil } }
+  /// The sidebar's rows and the cursor's row, worked out once per change of
+  /// what they are drawn from rather than once per row per render. See
+  /// `WorkspaceViewModel+SidebarCursor.swift`.
+  @ObservationIgnored var sidebarRowsMemo: [WorkspaceSidebarRow]? {
+    didSet { sidebarCursorMemo = nil }
+  }
+  @ObservationIgnored var sidebarCursorMemo: SidebarCursorMemo?
   var archivedNestedLists: [WorkspaceTask] = []
   var creationIsNested = false
   var creationTaskParentID: String?

@@ -18,7 +18,22 @@ import TaktWorkspace
 @MainActor
 extension WorkspaceViewModel {
   /// Every row in the sidebar, in the order they are drawn.
-  var sidebarRows: [WorkspaceSidebarRow] { sidebarRows(expandingEveryFolder: false) }
+  ///
+  /// Memoised: every row's background asks whether it is the cursor's, and
+  /// each of those used to rebuild the whole outline, so a render of the
+  /// sidebar cost rows × rows. The memo is dropped by the `didSet` of each
+  /// input; reading the inputs here first keeps a view that asks subscribed
+  /// to them, memo or not.
+  var sidebarRows: [WorkspaceSidebarRow] {
+    _ = lists
+    _ = folders
+    _ = nestedLists
+    _ = expandedFolderIDs
+    if let memo = sidebarRowsMemo { return memo }
+    let rows = sidebarRows(expandingEveryFolder: false)
+    sidebarRowsMemo = rows
+    return rows
+  }
 
   /// Every list, top to bottom as the sidebar draws them with every folder
   /// open — the order ⇧⌥↑ and ⇧⌥↓ step a task through.
@@ -54,12 +69,24 @@ extension WorkspaceViewModel {
   /// window already agrees you are on.
   var sidebarCursorRow: WorkspaceSidebarRow? {
     let rows = sidebarRows
-    if let sidebarCursorID, let row = rows.first(where: { $0.id == sidebarCursorID }) { return row }
-    return WorkspaceSidebarOutline.rowMatching(
-      subjectID: selectedFolderID ?? currentSidebarID,
-      isEverything: selectedFolderID == nil && isEverythingSelected,
-      isToday: viewMode == .today,
-      in: rows)
+    // Everything the answer turns on besides the rows, which drop this memo
+    // themselves when they are rebuilt.
+    let key = SidebarCursorMemo.Key(
+      cursorID: sidebarCursorID, folderID: selectedFolderID, currentID: currentSidebarID,
+      isEverything: isEverythingSelected, isToday: viewMode == .today)
+    if let memo = sidebarCursorMemo, memo.key == key { return memo.row }
+    let row: WorkspaceSidebarRow?
+    if let cursorID = key.cursorID, let match = rows.first(where: { $0.id == cursorID }) {
+      row = match
+    } else {
+      row = WorkspaceSidebarOutline.rowMatching(
+        subjectID: key.folderID ?? key.currentID,
+        isEverything: key.folderID == nil && key.isEverything,
+        isToday: key.isToday,
+        in: rows)
+    }
+    sidebarCursorMemo = SidebarCursorMemo(key: key, row: row)
+    return row
   }
 
   /// Whether this row is the one the keyboard is standing on.
@@ -175,4 +202,19 @@ extension WorkspaceViewModel {
     }
     return true
   }
+}
+
+/// The cursor's row as it was last worked out, and what it was worked out
+/// from. See `WorkspaceViewModel.sidebarCursorRow`.
+struct SidebarCursorMemo {
+  struct Key: Equatable {
+    let cursorID: String?
+    let folderID: String?
+    let currentID: String?
+    let isEverything: Bool
+    let isToday: Bool
+  }
+
+  let key: Key
+  let row: WorkspaceSidebarRow?
 }
