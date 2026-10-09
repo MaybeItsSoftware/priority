@@ -450,31 +450,24 @@ struct WorkspaceKanbanCard: View {
   }
 
   private var cardHeading: some View {
-    // A selected card grows to its whole title, with the handle, the check
-    // and the buttons kept level with the title's first line.
+    // A selected card grows to its whole title, with the mark and the
+    // buttons kept level with the title's first line. The card itself is the
+    // drag source, so it carries no handle, and an open task keeps no blank
+    // slot for a check: space completes it, and only a list or a finished
+    // task has a mark worth the width.
     HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.xs) {
-      Image(systemName: "line.3.horizontal")
-        .font(theme.microLabelFont)
-        .foregroundStyle(theme.dim)
-        .frame(width: theme.space.md, height: theme.space.xl)
-        .contentShape(Rectangle())
-        .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
-        .accessibilityLabel("Drag \(task.title)")
-        .help(
-          "Drag this card to reorder it or move it to another column. "
-            + "\(WorkspaceCommandHelpText.text(for: .taskMoveUp)); "
-            + "\(WorkspaceCommandHelpText.text(for: .planBoardMoveCardLeft)); "
-            + WorkspaceCommandHelpText.text(for: .planBoardMoveCardRight))
-      Button {
-        if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
-      } label: {
-        WorkspaceTaskMarker(task: task)
-          .frame(width: theme.space.lg)
-          .contentShape(Rectangle())
+      if task.isList || task.status != .open {
+        Button {
+          if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
+        } label: {
+          WorkspaceTaskMarker(task: task)
+            .frame(width: theme.space.lg)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .focusable()
+        .commandHelp(task.isList ? .planEnterTask : .taskComplete, note: task.isList ? "Open the list" : nil)
       }
-      .buttonStyle(.plain)
-      .focusable()
-      .commandHelp(task.isList ? .planEnterTask : .taskComplete, note: task.isList ? "Open the list" : nil)
       Button(task.title) {
         model.selectTask(task)
         model.reportKeyboardFocus(.tasks)
@@ -502,12 +495,6 @@ struct WorkspaceKanbanCard: View {
         .commandHelp(.planToggleFold, note: isTreeCollapsed ? "Show subtasks" : "Hide subtasks")
       }
     }
-  }
-
-  /// Where the tree starts: past the heading's drag handle and its gap, so a
-  /// direct child's check sits under the card's own.
-  private static func treeInset(_ theme: Theme) -> CGFloat {
-    theme.space.md + theme.space.xs
   }
 
   /// One level of the tree: the width of a subtask's check, so each indent
@@ -549,7 +536,6 @@ struct WorkspaceKanbanCard: View {
           .commandHelp(.planEnterTask, note: "Open \(task.title) to see every subtask")
         }
       }
-      .padding(.leading, Self.treeInset(theme))
     }
   }
 
