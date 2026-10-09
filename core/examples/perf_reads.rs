@@ -126,6 +126,12 @@ fn main() {
         }
         (counts.len(), nested.len())
     });
+    time("sidebar_index(all)", 9, || {
+        core.sidebar_index(lists.clone())
+            .unwrap()
+            .nested_lists
+            .len()
+    });
     time("all_metadata", 9, || core.all_metadata().unwrap().len());
     time("next_up_candidates", 9, || {
         core.next_up_candidates(now, zone.clone()).unwrap().len()

@@ -112,6 +112,7 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
     let indexB = WorkspaceSidebarIndex(lists: lists, trees: trees)
     try time("  sidebar index == (diff of nestedLists/counts)") { _ = indexA == indexB }
 
+    try time("store.sidebarIndex(lists:)  [core-walked sidebar]") { _ = try store.sidebarIndex(lists: lists) }
     try time("store.listTrees(one list)  [list switch, outline]") { _ = try store.listTrees(in: [list.id]) }
     let tree = try store.listTrees(in: [list.id])[list.id]!
     try time("  tree.visibleOutline(under: nil)") { _ = tree.visibleOutline(under: nil) }
@@ -150,7 +151,8 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
       _ = try store.undoableLabel()
       _ = try store.redoableLabel()
     }
-    try time("store.waitingDetails  [every refresh]") { _ = try store.waitingDetails() }
+    try time("store.waitingDetails  [after a write]") { _ = try store.waitingDetails() }
+    try time("store.changeStamp  [every refresh, gates the above]") { _ = try store.changeStamp() }
     try time("store.tasks(ids: 10)  [task cache top-up]") { _ = try store.tasks(ids: Array(listIDs.prefix(0)) + cards.prefix(10).map(\.id)) }
     try time("store.task(id:)  [cache miss in a view body]") { _ = try store.task(id: cards[3].id) }
     try time("store.externalChangeToken  [1 Hz poll]") { _ = try store.externalChangeToken() }
@@ -166,6 +168,11 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
     // one connection for each of its calls, so main-thread reads queue.
     try time("store.nextUpSnapshot  [after every write, background]", runs: 5) {
       _ = try store.nextUpSnapshot(workspaceId: workspace.id, context: FocusContext(), runningID: nil)
+    }
+    try time("store.nextUpSnapshot(ladderLimit: 8)  [the Mac's]", runs: 5) {
+      _ = try store.nextUpSnapshot(
+        workspaceId: workspace.id, context: FocusContext(), runningID: nil,
+        ladderLimit: WorkspaceNextUpSnapshot.fallbackDayLength)
     }
     try time("  loggedWorkTotals") { _ = try store.loggedWorkTotals() }
     try time("  taskPlanningValues") { _ = try store.taskPlanningValues() }
@@ -216,6 +223,31 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
       for (id, tree) in try store.listTrees(in: missing) { cache[id] = tree }
       _ = WorkspaceSidebarIndex(lists: lists, trees: cache)
       // rebuildTaskCache + refreshHistoryLabels
+      _ = try store.waitingDetails()
+      _ = try store.undoableLabel()
+      _ = try store.redoableLabel()
+    }
+    var sidebarAfterWrite: [Double] = []
+    for _ in 0..<9 {
+      title += 1
+      try store.updateTask(id: target.id, title: "Renamed \(title)", notes: "", dueAt: nil, estimateSeconds: nil)
+      let start = DispatchTime.now().uptimeNanoseconds
+      _ = try store.sidebarIndex(lists: lists)
+      sidebarAfterWrite.append(Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000)
+    }
+    sidebarAfterWrite.sort()
+    print(String(format: "PERF   sidebarIndex straight after a write  median %8.2f ms  min %8.2f ms",
+      sidebarAfterWrite[4], sidebarAfterWrite[0]))
+    try time("refresh after one edit, core sidebar index", runs: 9) {
+      title += 1
+      try store.updateTask(id: target.id, title: "Renamed \(title)", notes: "", dueAt: nil, estimateSeconds: nil)
+      let tree = try store.listTrees(in: [list.id])[list.id]!
+      _ = tree.visibleOutline(under: nil)
+      let cards = tree.children(of: nil)
+      let board = WorkspaceBoardTrees(cardIDs: Set(cards.map(\.id)), trees: [tree])
+      let ids = cards.map(\.id) + board.descendants.values.flatMap { $0.map(\.id) }
+      _ = try store.boardMetadata(for: ids)
+      _ = try store.sidebarIndex(lists: lists)
       _ = try store.waitingDetails()
       _ = try store.undoableLabel()
       _ = try store.redoableLabel()
@@ -301,8 +333,8 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
 
     // What applying a next-up snapshot costs the main thread: the equality
     // checks `applyNextUp` makes before assigning.
-    let a = try store.nextUpSnapshot(workspaceId: workspace.id, context: FocusContext(), runningID: nil)
-    let b = try store.nextUpSnapshot(workspaceId: workspace.id, context: FocusContext(), runningID: nil)
+    let a = try store.nextUpSnapshot(workspaceId: workspace.id, context: FocusContext(), runningID: nil, ladderLimit: 8)
+    let b = try store.nextUpSnapshot(workspaceId: workspace.id, context: FocusContext(), runningID: nil, ladderLimit: 8)
     try time("applyNextUp equality checks (ladder, planning, blocked)") {
       _ = a.ranking.ranked == b.ranking.ranked
       _ = a.planning == b.planning
@@ -356,7 +388,7 @@ final class WorkspacePerformanceBenchmarks: XCTestCase {
       let group = DispatchGroup()
       group.enter()
       DispatchQueue.global(qos: .userInitiated).async {
-        _ = try? store.nextUpSnapshot(workspaceId: workspace.id, context: FocusContext(), runningID: nil)
+        _ = try? store.nextUpSnapshot(workspaceId: workspace.id, context: FocusContext(), runningID: nil, ladderLimit: 8)
         group.leave()
       }
       // Let the snapshot get going, as it does a turn after `perform`.
