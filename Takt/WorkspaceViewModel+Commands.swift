@@ -152,14 +152,8 @@ extension WorkspaceViewModel {
     case .taskMoveToNextList: moveSelectedTaskToAdjacentList(by: 1)
 
     // MARK: Plan
-    // Return is "open the task" on every task surface. With nothing to open
-    // it adds one, so an empty list still answers to it.
-    case .planEnterTask:
-      if key == "enter" && selectedTask == nil { requestTaskComposerFocus() } else { enterSelectedTask() }
-    case .planLeaveTask:
-      // `[` only ever leaves a task. `h` and ← hand the keyboard back to the
-      // sidebar once there is nothing left to leave; the bracket never did.
-      if key != "[" || scopeTaskID != nil { leaveSelectedTaskScope() }
+    case .planEnterTask: enterSelectedTask(fromKey: key)
+    case .planLeaveTask: leaveSelectedTask(fromKey: key)
     case .planHideCompleted: toggleHiddenCompletedTasks()
     case .planToggleFold: if let task = selectedTask { toggleFold(of: task) }
     case .planGrowTask: growSelectedTask()

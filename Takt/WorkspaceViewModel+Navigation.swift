@@ -197,6 +197,51 @@ extension WorkspaceViewModel {
   /// It used to take two more presses on the way — one to clear the
   /// selection and one to widen the list to Everything — so ← out of a list
   /// landed on a different view rather than back on the list.
+  /// Return is "open the task" on every task surface; with nothing to open
+  /// it adds one, so an empty list still answers to it. In the outline → and
+  /// `l` step into a branch first, the way a tree does, and open the task
+  /// only from a row with nothing drawn beneath it. `]`, and the palette,
+  /// always open.
+  func enterSelectedTask(fromKey key: String?) {
+    if key == "enter" && selectedTask == nil {
+      requestTaskComposerFocus()
+    } else if !(["right", "shift+right", "l"].contains(key) && selectOutlineChild()) {
+      enterSelectedTask()
+    }
+  }
+
+  /// ← and `h` step out to the row a subtask hangs from in the outline, then
+  /// leave the task, then hand the keyboard back to the sidebar once there is
+  /// nothing left to leave. `[` only ever leaves a task.
+  func leaveSelectedTask(fromKey key: String?) {
+    if key == "[" {
+      if scopeTaskID != nil { leaveSelectedTaskScope() }
+    } else if !(["left", "shift+left", "h"].contains(key) && selectOutlineParent()) {
+      leaveSelectedTaskScope()
+    }
+  }
+
+  /// Moves the selection to the outline row the selected one hangs from.
+  /// `false`, changing nothing, outside the outline or at its top level.
+  func selectOutlineParent() -> Bool {
+    guard viewMode == .outline, let id = selectedTaskID,
+      let parentID = TaskOutlineFolding.parentID(of: id, in: outlineRows)
+    else { return false }
+    selectedTaskID = parentID
+    return true
+  }
+
+  /// Moves the selection to the first outline row beneath the selected one.
+  /// `false`, changing nothing, outside the outline or on a row with nothing
+  /// drawn beneath it.
+  func selectOutlineChild() -> Bool {
+    guard viewMode == .outline, let id = selectedTaskID,
+      let childID = TaskOutlineFolding.firstChildID(of: id, in: outlineRows)
+    else { return false }
+    selectedTaskID = childID
+    return true
+  }
+
   func leaveSelectedTaskScope() {
     if scopeTaskID != nil {
       leaveTaskScope()
