@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// Why a task is part of today.
 ///
@@ -49,77 +50,21 @@ public struct DayPlanEntry: Sendable, Equatable, Identifiable {
 /// This gathers all of them into one ordered list without writing anything
 /// back — nothing is *moved* into the column, so tomorrow's derivation is not
 /// polluted by today's, and clearing the column still clears the plan.
+///
+/// The Rust core's `next_up::plan`, which `WorkspaceStore.nextUpSnapshot`
+/// runs without the candidates leaving the core: the running block, then the
+/// Today column in its own order, then the overdue and the due today by
+/// deadline, then what starts today. Each task once, under its first reason.
 public enum DayPlanSelector {
   public static func plan(
     candidates: [NextUpCandidate],
-    todayColumnID: String = NextUpSelector.todayColumnID,
     runningID: String? = nil,
     now: Date,
     calendar: Calendar = .current
   ) -> [DayPlanEntry] {
-    let endOfToday = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
-      ?? now
-
-    var entries: [DayPlanEntry] = []
-    var claimed: Set<String> = []
-
-    func claim(_ candidate: NextUpCandidate, _ reason: DayPlanReason) {
-      guard !claimed.contains(candidate.id) else { return }
-      claimed.insert(candidate.id)
-      entries.append(DayPlanEntry(id: candidate.id, reason: reason))
-    }
-
-    if let runningID, let running = candidates.first(where: { $0.id == runningID }) {
-      claim(running, .running)
-    }
-
-    // The column's own arrangement is the one thing here a person chose, so it
-    // is preserved exactly rather than re-sorted by urgency.
-    for candidate in candidates.filter({ $0.kanbanColumn == todayColumnID })
-      .sorted(by: plannedOrder) {
-      claim(candidate, .planned)
-    }
-
-    // A deadline already passed reads before one merely arriving, and within
-    // each the nearer deadline first.
-    let dated = candidates
-      .compactMap { candidate -> (NextUpCandidate, Date)? in
-        guard let deadline = candidate.effectiveDeadline(calendar: calendar) else { return nil }
-        return (candidate, deadline)
-      }
-      .sorted { $0.1 < $1.1 }
-    for (candidate, deadline) in dated where deadline <= now {
-      claim(candidate, .overdue)
-    }
-    for (candidate, deadline) in dated where deadline > now && deadline <= endOfToday {
-      claim(candidate, .dueToday)
-    }
-
-    for candidate in candidates
-      .compactMap({ candidate -> (NextUpCandidate, Date)? in
-        guard let start = candidate.startAt, calendar.isDate(start, inSameDayAs: now) else {
-          return nil
-        }
-        return (candidate, start)
-      })
-      .sorted(by: { $0.1 < $1.1 })
-      .map(\.0) {
-      claim(candidate, .startsToday)
-    }
-
-    return entries
-  }
-
-  /// A rank given by hand wins; without one, the list's own order, and a
-  /// stable tiebreak so the day does not reshuffle between reads.
-  private static func plannedOrder(_ lhs: NextUpCandidate, _ rhs: NextUpCandidate) -> Bool {
-    switch (lhs.focusRank, rhs.focusRank) {
-    case let (left?, right?) where left != right: return left < right
-    case (.some, .none): return true
-    case (.none, .some): return false
-    default: break
-    }
-    if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-    return lhs.id < rhs.id
+    planDay(
+      candidates: candidates.map(\.core), runningId: runningID, nowMs: now.rankingMilliseconds,
+      zone: calendar.timeZone.identifier
+    ).map(DayPlanEntry.init)
   }
 }

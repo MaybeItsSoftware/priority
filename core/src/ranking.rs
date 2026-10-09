@@ -143,7 +143,7 @@ fn buffer(seconds: i64) -> f64 {
 
 /// The end of a due date's local day, or the due time.
 /// `NextUpCandidate.effectiveDeadline`.
-fn effective_deadline(task: &Candidate, zone: Tz) -> Option<i64> {
+pub(crate) fn effective_deadline(task: &Candidate, zone: Tz) -> Option<i64> {
     if let Some(day) = task
         .due_date
         .as_deref()

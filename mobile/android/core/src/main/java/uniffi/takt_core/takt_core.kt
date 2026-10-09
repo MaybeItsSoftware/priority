@@ -687,6 +687,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_availability_reasons(
     ): Int
+    external fun uniffi_takt_core_checksum_func_plan_day(
+    ): Int
     external fun uniffi_takt_core_checksum_func_planned_block_seconds(
     ): Int
     external fun uniffi_takt_core_checksum_func_rank_next_up(
@@ -856,6 +858,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_move_task_within_siblings(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_nest_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_next_up(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates(
     ): Int
@@ -1161,6 +1165,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_nest_list(`ptr`: Long,`id`: RustBuffer.ByValue,`intoListId`: RustBuffer.ByValue,`parentTaskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_next_up(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`runningId`: RustBuffer.ByValue,`ladderLimit`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_next_up_candidates(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_outdent_task(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1286,6 +1292,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_hlc_tick(`clock`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_availability_reasons(`candidate`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_plan_day(`candidates`: RustBuffer.ByValue,`runningId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_planned_block_seconds(`candidate`: RustBuffer.ByValue,`requested`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
@@ -1430,6 +1438,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_availability_reasons() and 0xFFFF) != 63153) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_plan_day() and 0xFFFF) != 42107) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_planned_block_seconds() and 0xFFFF) != 17554) {
@@ -1685,6 +1696,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_nest_list() and 0xFFFF) != 38763) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_next_up() and 0xFFFF) != 25496) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates() and 0xFFFF) != 63552) {
@@ -2061,6 +2075,29 @@ public object FfiConverterInt: FfiConverter<Int, Int> {
 
     override fun write(value: Int, buf: ByteBuffer) {
         buf.putInt(value)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterULong: FfiConverter<ULong, Long> {
+    override fun lift(value: Long): ULong {
+        return value.toULong()
+    }
+
+    override fun read(buf: ByteBuffer): ULong {
+        return lift(buf.getLong())
+    }
+
+    override fun lower(value: ULong): Long {
+        return value.toLong()
+    }
+
+    override fun allocationSize(value: ULong) = 8UL
+
+    override fun write(value: ULong, buf: ByteBuffer) {
+        buf.putLong(value.toLong())
     }
 }
 
@@ -2705,6 +2742,13 @@ public interface CoreWorkspaceInterface {
      * Nests a standalone list inside another list; returns its task's id.
      */
     fun `nestList`(`id`: kotlin.String, `intoListId`: kotlin.String, `parentTaskId`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.String
+    
+    /**
+     * The day and the focus ladder in one read: candidates read, the day
+     * planned and the ladder ranked without crossing, the ladder cut to its
+     * first `ladder_limit` entries and the day's tasks when a limit is given.
+     */
+    fun `nextUp`(`nowMs`: kotlin.Long, `zone`: kotlin.String, `context`: FocusContext, `runningId`: kotlin.String?, `ladderLimit`: kotlin.UInt?): NextUp
     
     fun `nextUpCandidates`(`nowMs`: kotlin.Long, `zone`: kotlin.String): List<Candidate>
     
@@ -4618,6 +4662,30 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`intoListId`),
         FfiConverterOptionalString.lower(`parentTaskId`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The day and the focus ladder in one read: candidates read, the day
+     * planned and the ladder ranked without crossing, the ladder cut to its
+     * first `ladder_limit` entries and the day's tasks when a limit is given.
+     */
+    @Throws(CoreException::class)override fun `nextUp`(`nowMs`: kotlin.Long, `zone`: kotlin.String, `context`: FocusContext, `runningId`: kotlin.String?, `ladderLimit`: kotlin.UInt?): NextUp {
+            return FfiConverterTypeNextUp.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_next_up(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),
+        FfiConverterTypeFocusContext.lower(`context`),
+        FfiConverterOptionalString.lower(`runningId`),
+        FfiConverterOptionalUInt.lower(`ladderLimit`),_status)
 }
     }
     )
@@ -6616,6 +6684,51 @@ public object FfiConverterTypeDayDaily: FfiConverterRustBuffer<DayDaily> {
 
 
 /**
+ * One task in the day and what put it there. `DayPlanEntry`.
+ */
+data class DayEntry (
+    var `id`: kotlin.String
+    , 
+    /**
+     * `DayPlanReason`'s raw value: running, planned, overdue, dueToday or
+     * startsToday.
+     */
+    var `reason`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayEntry: FfiConverterRustBuffer<DayEntry> {
+    override fun read(buf: ByteBuffer): DayEntry {
+        return DayEntry(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayEntry) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`reason`)
+    )
+
+    override fun write(value: DayEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`reason`, buf)
+    }
+}
+
+
+
+/**
  * What [`delete_list`] removed.
  */
 data class DeletedList (
@@ -7909,6 +8022,69 @@ public object FfiConverterTypeNewTask: FfiConverterRustBuffer<NewTask> {
             FfiConverterBoolean.write(value.`atTop`, buf)
             FfiConverterOptionalString.write(value.`adjacentTaskId`, buf)
             FfiConverterBoolean.write(value.`above`, buf)
+    }
+}
+
+
+
+/**
+ * The day and the ladder. `WorkspaceNextUpSnapshot`'s ranking half.
+ */
+data class NextUp (
+    var `dayPlan`: List<DayEntry>
+    , 
+    /**
+     * The ladder, best first. With a limit, its head and every task in the
+     * day, in ladder order; without one, all of it.
+     */
+    var `ranked`: List<Scored>
+    , 
+    /**
+     * How long the whole ladder is, whatever was returned.
+     */
+    var `rankedCount`: kotlin.ULong
+    , 
+    var `blocked`: List<Blocked>
+    , 
+    var `nextEvaluationAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeNextUp: FfiConverterRustBuffer<NextUp> {
+    override fun read(buf: ByteBuffer): NextUp {
+        return NextUp(
+            FfiConverterSequenceTypeDayEntry.read(buf),
+            FfiConverterSequenceTypeScored.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterSequenceTypeBlocked.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: NextUp) = (
+            FfiConverterSequenceTypeDayEntry.allocationSize(value.`dayPlan`) +
+            FfiConverterSequenceTypeScored.allocationSize(value.`ranked`) +
+            FfiConverterULong.allocationSize(value.`rankedCount`) +
+            FfiConverterSequenceTypeBlocked.allocationSize(value.`blocked`) +
+            FfiConverterOptionalLong.allocationSize(value.`nextEvaluationAtMs`)
+    )
+
+    override fun write(value: NextUp, buf: ByteBuffer) {
+            FfiConverterSequenceTypeDayEntry.write(value.`dayPlan`, buf)
+            FfiConverterSequenceTypeScored.write(value.`ranked`, buf)
+            FfiConverterULong.write(value.`rankedCount`, buf)
+            FfiConverterSequenceTypeBlocked.write(value.`blocked`, buf)
+            FfiConverterOptionalLong.write(value.`nextEvaluationAtMs`, buf)
     }
 }
 
@@ -9756,6 +9932,38 @@ public object FfiConverterTypeUnavailable : FfiConverterRustBuffer<Unavailable>{
 /**
  * @suppress
  */
+public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
+    override fun read(buf: ByteBuffer): kotlin.UInt? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterUInt.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.UInt?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterUInt.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.UInt?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterUInt.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
     override fun read(buf: ByteBuffer): kotlin.Long? {
         if (buf.get().toInt() == 0) {
@@ -10668,6 +10876,34 @@ public object FfiConverterSequenceTypeDayDaily: FfiConverterRustBuffer<List<DayD
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeDayEntry: FfiConverterRustBuffer<List<DayEntry>> {
+    override fun read(buf: ByteBuffer): List<DayEntry> {
+        val len = buf.getInt()
+        return List<DayEntry>(len) {
+            FfiConverterTypeDayEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<DayEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeDayEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<DayEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeDayEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer<List<FolderRow>> {
     override fun read(buf: ByteBuffer): List<FolderRow> {
         val len = buf.getInt()
@@ -11413,6 +11649,24 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterTypeCandidate.lower(`candidate`),
         FfiConverterTypeFocusContext.lower(`context`),
         FfiConverterLong.lower(`nowMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Which candidates make up the day at `now`, and why: a pure function, no
+         * database. `DayPlanSelector.plan`.
+         */ fun `planDay`(`candidates`: List<Candidate>, `runningId`: kotlin.String?, `nowMs`: kotlin.Long, `zone`: kotlin.String): List<DayEntry> {
+            return FfiConverterSequenceTypeDayEntry.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_plan_day(
+    
+        
+        FfiConverterSequenceTypeCandidate.lower(`candidates`),
+        FfiConverterOptionalString.lower(`runningId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     )
     }

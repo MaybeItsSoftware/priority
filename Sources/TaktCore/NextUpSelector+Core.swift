@@ -87,3 +87,30 @@ extension NextUpCandidate {
       dailyRemainingSeconds: core.dailyRemainingSeconds.map { Int($0) }, dailyUnavailable: unavailable)
   }
 }
+
+extension TaktCore.FocusContext {
+  /// The context as the core takes it, for a read that ranks inside the core.
+  public var core: TaktRustCore.FocusContext { coreContext }
+}
+
+extension FocusRanking {
+  /// A ranking the core made, every candidate converted from the core's
+  /// record: for a read that ranked inside the core and returned only part of
+  /// the ladder.
+  public init(ranked: [Scored], blocked: [Blocked], nextEvaluationAtMs: Int64?) {
+    self.init(
+      ranked: ranked.map { ScoredNextUp($0, original: NextUpCandidate($0.candidate)) },
+      blocked: blocked.map {
+        BlockedFocusTask(candidate: NextUpCandidate($0.candidate), reasons: $0.reasons.map(TaskUnavailableReason.init))
+      },
+      nextEvaluationAt: nextEvaluationAtMs.map { Date(rankingMilliseconds: $0) })
+  }
+}
+
+extension DayPlanEntry {
+  /// An entry the core planned. An unknown reason, which only a newer core
+  /// could send, reads as planned.
+  public init(_ core: DayEntry) {
+    self.init(id: core.id, reason: DayPlanReason(rawValue: core.reason) ?? .planned)
+  }
+}

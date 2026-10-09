@@ -167,4 +167,33 @@ final class WorkspaceListTreeTests: XCTestCase {
     // The day falls back to the ranking, so its rows travel with it.
     XCTAssertEqual(snapshot.dayTasks[task.id], try store.task(id: task.id))
   }
+
+  /// A limited ladder is the full one's head, plus the day's tasks wherever
+  /// they rank, in ladder order; the day and the blocked list are whole.
+  func testALimitedLadderKeepsItsHeadAndTheDay() throws {
+    // Five tasks started two days ago, which ranks them ahead of a commitment
+    // without putting them in the day; the sixth is in Today, so it ranks last.
+    let now = Date.now
+    var created: [WorkspaceTask] = []
+    for index in 0..<5 {
+      created.append(try store.createTask(
+        listId: list.id, title: "Task \(index)", startAt: now.addingTimeInterval(-2 * 86_400)))
+    }
+    created.append(try store.createTask(
+      listId: list.id, title: "Planned", kanbanColumn: NextUpSelector.todayColumnID))
+    let full = try store.nextUpSnapshot(workspaceId: workspaceID, context: FocusContext(), runningID: nil, now: now)
+    let short = try store.nextUpSnapshot(
+      workspaceId: workspaceID, context: FocusContext(), runningID: nil, now: now, ladderLimit: 2)
+
+    let inDay = Set(full.todayPlan.map(\.id))
+    XCTAssertEqual(
+      short.ranking.ranked.map(\.id),
+      full.ranking.ranked.enumerated().filter { $0.offset < 2 || inDay.contains($0.element.id) }.map(\.element.id))
+    XCTAssertEqual(full.ranking.ranked.last?.id, created[5].id)
+    XCTAssertEqual(short.ranking.ranked.count, 3)
+    XCTAssertEqual(short.ranking.ranked.last?.id, created[5].id)
+    XCTAssertEqual(short.todayPlan, full.todayPlan)
+    XCTAssertEqual(short.ranking.blocked, full.ranking.blocked)
+    XCTAssertEqual(short.ranking.nextEvaluationAt, full.ranking.nextEvaluationAt)
+  }
 }

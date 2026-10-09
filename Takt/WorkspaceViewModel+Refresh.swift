@@ -215,7 +215,7 @@ extension WorkspaceViewModel {
     do {
       let snapshot = try store.nextUpSnapshot(
         workspaceId: workspace?.id, context: effectiveFocusContext,
-        runningID: activeFocusSession?.activeTaskId)
+        runningID: activeFocusSession?.activeTaskId, ladderLimit: WorkspaceNextUpSnapshot.fallbackDayLength)
       applyNextUp(snapshot)
     } catch {
       errorMessage = error.localizedDescription
@@ -234,7 +234,9 @@ extension WorkspaceViewModel {
     let runningID = activeFocusSession?.activeTaskId
     Task.detached(priority: .userInitiated) { [weak self] in
       let result = Result {
-        try store.nextUpSnapshot(workspaceId: workspaceID, context: context, runningID: runningID)
+        try store.nextUpSnapshot(
+          workspaceId: workspaceID, context: context, runningID: runningID,
+          ladderLimit: WorkspaceNextUpSnapshot.fallbackDayLength)
       }
       await self?.finishNextUp(result, generation: generation, epoch: epoch)
     }

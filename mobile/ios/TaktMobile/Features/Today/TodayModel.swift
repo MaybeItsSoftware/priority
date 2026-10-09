@@ -99,7 +99,8 @@ struct DaySnapshot: Equatable, Sendable {
         .filter { $0.item.state == .queued }.map(\.task.id)
     }
     let snapshot = try store.nextUpSnapshot(
-      workspaceId: workspaceID, context: FocusContext(), runningID: session?.activeTaskId, now: now)
+      workspaceId: workspaceID, context: FocusContext(), runningID: session?.activeTaskId, now: now,
+      ladderLimit: WorkspaceNextUpSnapshot.fallbackDayLength)
     day.workProgress = snapshot.workProgress
     if let today = Calendar.current.dateInterval(of: .day, for: now) {
       day.loggedToday = try store.focusWorkBlocks(in: today).reduce(0) { $0 + $1.seconds }

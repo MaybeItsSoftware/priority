@@ -22,6 +22,7 @@ use crate::habits::{self, HabitDraft};
 use crate::imports::{self, BoardBaseline, ImportOutcome, ImportedTaskSeed, LegacyDailySeed};
 use crate::journal::{self, HistoryTarget, UndoStep};
 use crate::lists::{self, CreatedItem, DeletedList, ListSettings};
+use crate::next_up::{self, DayEntry, NextUp};
 use crate::ranking::{self, Ranking, Scored};
 use crate::records::{self, FolderRow, ListRow, OutlineItem, TaskRow, WorkspaceRow};
 use crate::search::{self, SearchHit};
@@ -1099,6 +1100,27 @@ impl CoreWorkspace {
         focus::candidates(&self.lock(), now_ms, &zone)
     }
 
+    /// The day and the focus ladder in one read: candidates read, the day
+    /// planned and the ladder ranked without crossing, the ladder cut to its
+    /// first `ladder_limit` entries and the day's tasks when a limit is given.
+    pub fn next_up(
+        &self,
+        now_ms: i64,
+        zone: String,
+        context: FocusContext,
+        running_id: Option<String>,
+        ladder_limit: Option<u32>,
+    ) -> Result<NextUp, CoreError> {
+        next_up::next_up(
+            &self.lock(),
+            now_ms,
+            &zone,
+            &context,
+            running_id.as_deref(),
+            ladder_limit,
+        )
+    }
+
     /// Ranks tasks in Today's focus order as one "Reorder Today" step.
     pub fn arrange_day(&self, ordered_task_ids: Vec<String>, now_ms: i64) -> Result<(), CoreError> {
         journal::journalled(&mut self.lock(), "Reorder Today", |tx| {
@@ -1208,6 +1230,18 @@ pub fn rank_next_up(
     context: FocusContext,
 ) -> Ranking {
     ranking::evaluate(&candidates, now_ms, &zone, &context)
+}
+
+/// Which candidates make up the day at `now`, and why: a pure function, no
+/// database. `DayPlanSelector.plan`.
+#[uniffi::export]
+pub fn plan_day(
+    candidates: Vec<Candidate>,
+    running_id: Option<String>,
+    now_ms: i64,
+    zone: String,
+) -> Vec<DayEntry> {
+    next_up::plan(&candidates, running_id.as_deref(), now_ms, &zone)
 }
 
 /// Why a candidate is not available in `context` at `now`; empty when it is.

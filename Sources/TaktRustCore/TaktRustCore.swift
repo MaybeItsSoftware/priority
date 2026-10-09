@@ -497,6 +497,22 @@ fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
     typealias FfiType = Int64
     typealias SwiftType = Int64
@@ -1018,6 +1034,13 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Nests a standalone list inside another list; returns its task's id.
      */
     func nestList(id: String, intoListId: String, parentTaskId: String?, nowMs: Int64) throws  -> String
+    
+    /**
+     * The day and the focus ladder in one read: candidates read, the day
+     * planned and the ladder ranked without crossing, the ladder cut to its
+     * first `ladder_limit` entries and the day's tasks when a limit is given.
+     */
+    func nextUp(nowMs: Int64, zone: String, context: FocusContext, runningId: String?, ladderLimit: UInt32?) throws  -> NextUp
     
     func nextUpCandidates(nowMs: Int64, zone: String) throws  -> [Candidate]
     
@@ -2491,6 +2514,25 @@ open func nestList(id: String, intoListId: String, parentTaskId: String?, nowMs:
         FfiConverterString.lower(intoListId),
         FfiConverterOptionString.lower(parentTaskId),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The day and the focus ladder in one read: candidates read, the day
+     * planned and the ladder ranked without crossing, the ladder cut to its
+     * first `ladder_limit` entries and the day's tasks when a limit is given.
+     */
+open func nextUp(nowMs: Int64, zone: String, context: FocusContext, runningId: String?, ladderLimit: UInt32?)throws  -> NextUp  {
+    return try  FfiConverterTypeNextUp_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_next_up(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),
+        FfiConverterTypeFocusContext_lower(context),
+        FfiConverterOptionString.lower(runningId),
+        FfiConverterOptionUInt32.lower(ladderLimit),uniffiCallStatus
     )
 })
 }
@@ -4374,6 +4416,71 @@ public func FfiConverterTypeDayDaily_lower(_ value: DayDaily) -> RustBuffer {
 
 
 /**
+ * One task in the day and what put it there. `DayPlanEntry`.
+ */
+public struct DayEntry: Equatable, Hashable {
+    public var id: String
+    /**
+     * `DayPlanReason`'s raw value: running, planned, overdue, dueToday or
+     * startsToday.
+     */
+    public var reason: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, 
+        /**
+         * `DayPlanReason`'s raw value: running, planned, overdue, dueToday or
+         * startsToday.
+         */reason: String) {
+        self.id = id
+        self.reason = reason
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayEntry {
+        return
+            try DayEntry(
+                id: FfiConverterString.read(from: &buf), 
+                reason: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayEntry, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.reason, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayEntry_lift(_ buf: RustBuffer) throws -> DayEntry {
+    return try FfiConverterTypeDayEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayEntry_lower(_ value: DayEntry) -> RustBuffer {
+    return FfiConverterTypeDayEntry.lower(value)
+}
+
+
+/**
  * What [`delete_list`] removed.
  */
 public struct DeletedList: Equatable, Hashable {
@@ -5948,6 +6055,89 @@ public func FfiConverterTypeNewTask_lift(_ buf: RustBuffer) throws -> NewTask {
 #endif
 public func FfiConverterTypeNewTask_lower(_ value: NewTask) -> RustBuffer {
     return FfiConverterTypeNewTask.lower(value)
+}
+
+
+/**
+ * The day and the ladder. `WorkspaceNextUpSnapshot`'s ranking half.
+ */
+public struct NextUp: Equatable, Hashable {
+    public var dayPlan: [DayEntry]
+    /**
+     * The ladder, best first. With a limit, its head and every task in the
+     * day, in ladder order; without one, all of it.
+     */
+    public var ranked: [Scored]
+    /**
+     * How long the whole ladder is, whatever was returned.
+     */
+    public var rankedCount: UInt64
+    public var blocked: [Blocked]
+    public var nextEvaluationAtMs: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(dayPlan: [DayEntry], 
+        /**
+         * The ladder, best first. With a limit, its head and every task in the
+         * day, in ladder order; without one, all of it.
+         */ranked: [Scored], 
+        /**
+         * How long the whole ladder is, whatever was returned.
+         */rankedCount: UInt64, blocked: [Blocked], nextEvaluationAtMs: Int64?) {
+        self.dayPlan = dayPlan
+        self.ranked = ranked
+        self.rankedCount = rankedCount
+        self.blocked = blocked
+        self.nextEvaluationAtMs = nextEvaluationAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NextUp: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNextUp: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NextUp {
+        return
+            try NextUp(
+                dayPlan: FfiConverterSequenceTypeDayEntry.read(from: &buf), 
+                ranked: FfiConverterSequenceTypeScored.read(from: &buf), 
+                rankedCount: FfiConverterUInt64.read(from: &buf), 
+                blocked: FfiConverterSequenceTypeBlocked.read(from: &buf), 
+                nextEvaluationAtMs: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NextUp, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeDayEntry.write(value.dayPlan, into: &buf)
+        FfiConverterSequenceTypeScored.write(value.ranked, into: &buf)
+        FfiConverterUInt64.write(value.rankedCount, into: &buf)
+        FfiConverterSequenceTypeBlocked.write(value.blocked, into: &buf)
+        FfiConverterOptionInt64.write(value.nextEvaluationAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNextUp_lift(_ buf: RustBuffer) throws -> NextUp {
+    return try FfiConverterTypeNextUp.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNextUp_lower(_ value: NextUp) -> RustBuffer {
+    return FfiConverterTypeNextUp.lower(value)
 }
 
 
@@ -7817,6 +8007,30 @@ public func FfiConverterTypeUnavailable_lower(_ value: Unavailable) -> RustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = UInt32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     typealias SwiftType = Int64?
 
@@ -8549,6 +8763,31 @@ fileprivate struct FfiConverterSequenceTypeDayDaily: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeDayEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [DayEntry]
+
+    public static func write(_ value: [DayEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDayEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DayEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DayEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDayEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer {
     typealias SwiftType = [FolderRow]
 
@@ -9205,6 +9444,21 @@ public func availabilityReasons(candidate: Candidate, context: FocusContext, now
 })
 }
 /**
+ * Which candidates make up the day at `now`, and why: a pure function, no
+ * database. `DayPlanSelector.plan`.
+ */
+public func planDay(candidates: [Candidate], runningId: String?, nowMs: Int64, zone: String) -> [DayEntry]  {
+    return try!  FfiConverterSequenceTypeDayEntry.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_plan_day(
+        FfiConverterSequenceTypeCandidate.lower(candidates),
+        FfiConverterOptionString.lower(runningId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
  * The block length to run for a candidate, given what was asked for.
  */
 public func plannedBlockSeconds(candidate: Candidate, requested: Int64?, context: FocusContext, nowMs: Int64) -> Int64  {
@@ -9291,6 +9545,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_availability_reasons() != 63153) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_plan_day() != 42107) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_planned_block_seconds() != 17554) {
@@ -9546,6 +9803,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_nest_list() != 38763) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_next_up() != 25496) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_next_up_candidates() != 63552) {

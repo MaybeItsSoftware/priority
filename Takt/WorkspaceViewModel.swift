@@ -818,8 +818,11 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The top of the ranking, and why. Nil when there is nothing to do —
   /// which is a real state worth rendering, not an error.
   var nextUp: ScoredNextUp?
-  /// Everything worth doing, most important first. Today's Focus button and
-  /// the panel's fallback shortlist read it.
+  /// The head of what is worth doing, most important first, and every task in
+  /// the day further down. Today's Focus button and the panel's fallback
+  /// shortlist read it. Not the whole ladder: the core cuts it to
+  /// `WorkspaceNextUpSnapshot.fallbackDayLength` plus the day, so a write does
+  /// not carry thousands of ranked tasks across to the main thread.
   var focusLadder: [ScoredNextUp] = []
   var focusConditions: [TaskCondition] = []
   var taskLoggedSeconds: [String: Int] = [:]

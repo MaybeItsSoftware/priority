@@ -17,7 +17,8 @@ enum WidgetSnapshotBuilder {
     let session = try store.activeFocusSession()
     let runningID = session?.activeTaskId
     let snapshot = try store.nextUpSnapshot(
-      workspaceId: workspaceID, context: FocusContext(), runningID: runningID, now: now)
+      workspaceId: workspaceID, context: FocusContext(), runningID: runningID, now: now,
+      ladderLimit: WorkspaceNextUpSnapshot.fallbackDayLength)
     let listNames = Dictionary(
       try store.lists(in: workspaceID, includingArchived: true).map { ($0.id, $0.name) },
       uniquingKeysWith: { first, _ in first })

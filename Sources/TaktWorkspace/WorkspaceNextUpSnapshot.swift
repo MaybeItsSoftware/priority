@@ -1,5 +1,6 @@
 import Foundation
 import TaktCore
+import TaktRustCore
 
 /// Everything the day and the focus ladder are drawn from, gathered in one go.
 ///
@@ -28,22 +29,31 @@ public struct WorkspaceNextUpSnapshot: Sendable {
 }
 
 extension WorkspaceStore {
-  /// Safe to call from any thread: it only reads, and the pool serves reads
-  /// concurrently with the writer.
+  /// Safe to call from any thread: it only reads.
+  ///
+  /// The candidates are read, the day planned and the ladder ranked in one
+  /// call to the Rust core (`next_up::next_up`), so the candidates never cross
+  /// on their own. The day is gathered from every candidate rather than from
+  /// the ranked ones: a task due today that a condition rules out is still
+  /// part of today. With a `ladderLimit` the ladder holds only its first so
+  /// many entries plus every task in the day further down, which is what the
+  /// Mac draws and looks up; without one it is the whole ladder.
   public func nextUpSnapshot(
-    workspaceId: String?, context: FocusContext, runningID: String?, now: Date = .now
+    workspaceId: String?, context: TaktCore.FocusContext, runningID: String?, now: Date = .now,
+    ladderLimit: Int? = nil, calendar: Calendar = .current
   ) throws -> WorkspaceNextUpSnapshot {
     let loggedSeconds = try loggedWorkTotals()
     let planning = try taskPlanningValues()
     let conditions = try workspaceId.map { try self.conditions(in: $0) } ?? []
-    let candidates = try nextUpCandidates(now: now)
-    // The day is gathered from every candidate rather than from the ranked
-    // ones: a task due today that a condition currently rules out is still
-    // part of today, and leaving it out would be the panel quietly deciding
-    // the day was shorter than it is.
-    let plan = DayPlanSelector.plan(candidates: candidates, runningID: runningID, now: now)
-    let progress = try workProgress(now: now)
-    let ranking = NextUpSelector.evaluate(candidates, now: now, context: context)
+    let read = try Self.mappingCoreErrors {
+      try core.nextUp(
+        nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier, context: context.core,
+        runningId: runningID, ladderLimit: ladderLimit.map { UInt32(max(0, $0)) })
+    }
+    let plan = read.dayPlan.map(DayPlanEntry.init)
+    let ranking = FocusRanking(
+      ranked: read.ranked, blocked: read.blocked, nextEvaluationAtMs: read.nextEvaluationAtMs)
+    let progress = try workProgress(now: now, calendar: calendar)
     let dayIDs = plan.map(\.id) + ranking.ranked.prefix(WorkspaceNextUpSnapshot.fallbackDayLength).map(\.candidate.id)
     return WorkspaceNextUpSnapshot(
       loggedSeconds: loggedSeconds, planning: planning, conditions: conditions,
