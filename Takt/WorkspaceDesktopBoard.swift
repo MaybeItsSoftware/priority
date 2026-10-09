@@ -703,30 +703,47 @@ struct WorkspaceKanbanCard: View {
       .accessibilityLabel(
         item.task.isList ? "Open \(item.task.title)" : (isOpen ? "Complete \(item.task.title)" : "Reopen \(item.task.title)"))
       .commandHelp(item.task.isList ? .planEnterTask : .taskComplete, note: item.task.isList ? "Open the list" : nil)
-      Button(item.task.title) {
-        model.selectTask(item.task)
-        model.reportKeyboardFocus(.tasks)
+      if let rowLink, leadsOut {
+        // The title is the card's further on, so the row draws none: the
+        // hairline leaves straight from the mark, and is what a click on the
+        // row lands on. A fold sits before it, so the line runs on to the
+        // card's edge.
+        if let isFolded {
+          WorkspaceFoldButton(isFolded: isFolded, title: item.task.title) { model.toggleFold(of: item.task) }
+        }
+        Button {
+          model.selectTask(item.task)
+          model.reportKeyboardFocus(.tasks)
+        } label: {
+          WorkspaceBoardLinkLeader(colour: linkColour(rowLink.childID))
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(item.task.title)
+        .help(item.task.title)
+      } else {
+        Button(item.task.title) {
+          model.selectTask(item.task)
+          model.reportKeyboardFocus(.tasks)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isOpen ? theme.ink : theme.muted)
+        .strikethrough(!isOpen)
+        .multilineTextAlignment(.leading)
+        .expandsWhenSelected(isRowSelected)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .help(item.task.title)
       }
-      .buttonStyle(.plain)
-      .foregroundStyle(isOpen ? theme.ink : theme.muted)
-      .strikethrough(!isOpen)
-      .multilineTextAlignment(.leading)
-      .expandsWhenSelected(isRowSelected)
-      .frame(maxWidth: leadsOut ? nil : .infinity, alignment: .leading)
-      .help(item.task.title)
       // Trailing, as the card's own fold is.
-      if let isFolded {
+      if let isFolded, !leadsOut {
         WorkspaceFoldButton(isFolded: isFolded, title: item.task.title) { model.toggleFold(of: item.task) }
       }
-      if let rowLink {
-        if leadsOut {
-          WorkspaceBoardLinkLeader(colour: linkColour(rowLink.childID))
-        } else {
-          Image(systemName: rowLink.pointsForward ? "arrow.right" : "arrow.left")
-            .foregroundStyle(theme.dim)
-            .help(rowLink.pointsForward ? "Further on, as a card of its own" : "Further back, as a card of its own")
-            .accessibilityHidden(true)
-        }
+      if let rowLink, !leadsOut {
+        Image(systemName: rowLink.pointsForward ? "arrow.right" : "arrow.left")
+          .foregroundStyle(theme.dim)
+          .help(rowLink.pointsForward ? "Further on, as a card of its own" : "Further back, as a card of its own")
+          .accessibilityHidden(true)
       }
     }
     .font(theme.captionFont)
