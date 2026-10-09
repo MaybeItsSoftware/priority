@@ -194,7 +194,7 @@ struct WorkspaceWaitingInspectorSection: View {
 
   private var isWaiting: Bool {
     details?.waitingOn != nil || details?.followUpAt != nil
-      || model.boardTaskColumns[task.id] == WaitingFollowUp.waitingColumnID
+      || model.kanbanColumnID(ofTaskID: task.id) == WaitingFollowUp.waitingColumnID
   }
 
   var body: some View {

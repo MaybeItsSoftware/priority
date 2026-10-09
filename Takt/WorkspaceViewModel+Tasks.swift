@@ -259,6 +259,19 @@ extension WorkspaceViewModel {
     return boardColumnsByID[id] ?? boardColumns.first
   }
 
+  /// The column a task is filed in, whether or not it is on the board: a
+  /// task off it, or every task while the board is set aside, is read on its
+  /// own and kept until the next refresh.
+  func kanbanColumnID(ofTaskID id: String) -> String? {
+    if let column = boardTaskColumns[id] { return column }
+    let revision = taskContentRevision
+    if offBoardColumnCache.revision != revision { offBoardColumnCache = (revision, [:]) }
+    if let cached = offBoardColumnCache.columns[id] { return cached }
+    let column = store.flatMap { try? $0.boardMetadata(for: [id]).columns[id] }
+    offBoardColumnCache.columns[id] = .some(column)
+    return column
+  }
+
   /// Assigns only what changed: every card and column reads these, and an
   /// assignment is a redraw whether or not the value moved.
   func rebuildBoardIndex() {

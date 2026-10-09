@@ -153,6 +153,8 @@ extension WorkspaceViewModel {
     // Read on the next line, so it cannot wait for the background ranking.
     reloadNextUpNow()
     let available = Set(focusLadder.map(\.id))
+    // The Today column, in board order, even while Today hides the board.
+    loadBoardIfStale()
     let planned = todayTasks.filter { available.contains($0.id) }
     guard let first = planned.first else { errorMessage = "No Today task is available in this context and time window."; return }
     perform {

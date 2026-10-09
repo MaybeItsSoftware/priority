@@ -267,7 +267,16 @@ enum WorkspaceSidebarItem: Identifiable {
   var boardColumnsByID: [String: WorkspaceKanbanColumn] = [:]
   var boardVisibleTaskIDs: Set<String> = []
   var matrixPositions: [String: TaskMatrixPosition] = [:]
-  var viewMode: WorkspaceViewMode = .today
+  var viewMode: WorkspaceViewMode = .today {
+    didSet { if viewMode != oldValue { viewModeDidChange() } }
+  }
+  /// Whether the board's state was emptied rather than read, because the
+  /// combined scope it belongs to is showing something else. See
+  /// `reloadBoardNow`.
+  @ObservationIgnored var boardIsStale = true
+  /// Columns of tasks off the board, read one at a time for the inspector and
+  /// kept until the next refresh. See `kanbanColumnID(ofTaskID:)`.
+  @ObservationIgnored var offBoardColumnCache: (revision: Int, columns: [String: String?]) = (-1, [:])
   /// Virtual parent of every active list. The tasks remain stored in their
   /// own lists; this flag only changes which roots the views present.
   var isEverythingSelected = UserDefaults.standard.bool(forKey: WorkspaceViewModel.everythingScopeKey)

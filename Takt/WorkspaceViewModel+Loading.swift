@@ -78,22 +78,64 @@ extension WorkspaceViewModel {
     return "\(selectedListID ?? "none")/\(scopeTaskID ?? "root")"
   }
 
-  /// - Parameter schedulesCompletionExpiry: false when the outline reload
-  ///   that called this schedules it itself, so one reload arms one timer.
-  func reloadBoardNow(schedulesCompletionExpiry: Bool = true) {
+  /// Whether the main pane is drawing the board's cards: the board itself,
+  /// or the matrix, which places the same cards.
+  var isBoardOnScreen: Bool { viewMode == .board || viewMode == .matrix }
+
+  /// Called when the view mode changes. A board set aside while Today or the
+  /// outline was showing is read now that it is wanted — inside a block, with
+  /// the block's refresh; outside one, on the next turn, unless the change
+  /// arrives with a reload of its own first, as every scope change does.
+  func viewModeDidChange() {
+    guard boardIsStale, isBoardOnScreen else { return }
+    pendingRefresh.insert(.board)
+    guard refreshDepth == 0 else { return }
+    Task { @MainActor [weak self] in self?.flushPendingRefresh() }
+  }
+
+  /// Reads a board set aside, for a caller that wants its cards whatever is
+  /// on screen — the Today column's order when focus starts from Today.
+  func loadBoardIfStale() {
+    guard boardIsStale else { return }
+    reloadBoardNow(force: true)
+    // Read outside a refresh, so nothing else would empty the trees it
+    // shared, and the next refresh would take them as current.
+    listTreeCache = [:]
+  }
+
+  /// - Parameters:
+  ///   - schedulesCompletionExpiry: false when the outline reload that called
+  ///     this schedules it itself, so one reload arms one timer.
+  ///   - force: reads a combined scope's board even when nothing on screen
+  ///     draws it.
+  func reloadBoardNow(schedulesCompletionExpiry: Bool = true, force: Bool = false) {
     defer {
       rebuildBoardIndex()
       if schedulesCompletionExpiry { scheduleCompletionExpiry() }
     }
     guard let store else {
-      boardTasks = []
-      boardCrossColumnTasks = []
-      boardDescendants = [:]
-      boardTaskParents = [:]
+      clearBoard()
       boardParentTaskID = nil
-      boardTreeTasks = []
+      boardIsStale = false
       return
     }
+    // Everything's board is every list's open work: every tree read, walked
+    // and every card's metadata fetched, on each edit. Today sits on
+    // Everything and never draws it, so it is set aside until a view that
+    // does is shown (`viewModeDidChange`). Emptied rather than left as it
+    // was, so nothing reads an old board as current.
+    if !force, isEverythingSelected || folderScopeListIDs != nil, !isBoardOnScreen {
+      clearBoard()
+      if boardParentTaskID != nil { boardParentTaskID = nil }
+      // The columns are kept, for the Today column a task can be filed in
+      // from Today. Without the cards, only the layout's own.
+      if let columns = try? resolvedBoardColumns(usedColumnIDs: [], store: store), boardColumns != columns {
+        boardColumns = columns
+      }
+      boardIsStale = true
+      return
+    }
+    boardIsStale = false
     do {
       var tasks: [WorkspaceTask]
       let parentTaskID: String?
@@ -167,6 +209,18 @@ extension WorkspaceViewModel {
     } catch {
       errorMessage = error.localizedDescription
     }
+  }
+
+  /// Empties the cards and what was read about them, assigning only what
+  /// is not already empty.
+  private func clearBoard() {
+    boardTreeTasks = []
+    if !boardTasks.isEmpty { boardTasks = [] }
+    if !boardCrossColumnTasks.isEmpty { boardCrossColumnTasks = [] }
+    if !boardDescendants.isEmpty { boardDescendants = [:] }
+    if !boardTaskParents.isEmpty { boardTaskParents = [:] }
+    if !boardTaskColumns.isEmpty { boardTaskColumns = [:] }
+    if !matrixPositions.isEmpty { matrixPositions = [:] }
   }
 
   /// How long a task you have just ticked off stays put before it goes, so
