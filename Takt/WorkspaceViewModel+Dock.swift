@@ -97,7 +97,7 @@ extension WorkspaceViewModel {
   /// it was on. Opening it hands it the keyboard, so the dock is worked from
   /// the keys like every other pane; `r` again, from anywhere, puts it away.
   func toggleRightDock() {
-    if isRightDockVisible { hideRightDock() } else { toggleDockTab(rightDockTab) }
+    if isRightDockVisible { hideRightDock() } else { toggleDockTab(rightDockTab, onTitle: false) }
   }
 
   /// For the rail, one key, three states, the way an editor's panel toggle behaves: hidden
@@ -108,7 +108,7 @@ extension WorkspaceViewModel {
   ///
   /// The inspector only takes the keyboard when there is a task to inspect;
   /// with none it opens on its empty state and the keys stay on the tasks.
-  func toggleDockTab(_ tab: WorkspaceDockTab) {
+  func toggleDockTab(_ tab: WorkspaceDockTab, onTitle: Bool = true) {
     let isShowing = isRightDockVisible && rightDockTab == tab
     // The inspector hides from anywhere: `i` on a task is "show me this" and
     // pressed again "enough", without first walking into the pane.
@@ -121,7 +121,7 @@ extension WorkspaceViewModel {
       if selectedTask == nil { selectedTaskID = visibleNavigationTasks.first?.id }
       if selectedTask == nil { return }
     }
-    requestKeyboardFocus(tab.area)
+    requestKeyboardFocus(tab.area, onTitle: onTitle)
   }
 
   func toggleInspector() { toggleDockTab(.inspector) }

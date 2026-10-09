@@ -22,11 +22,11 @@ struct LocalTaskInspector: View {
     }
     .onAppear {
       model.openTaskEditor(task)
-      if requestedFocusArea == .inspector { titleIsFocused = true }
+      if requestedFocusArea == .inspector && model.inspectorFocusesTitle { titleIsFocused = true }
     }
     .onChange(of: task.id) { _, _ in model.openTaskEditor(task) }
     .onChange(of: focusRequest) { _, _ in
-      if requestedFocusArea == .inspector { titleIsFocused = true }
+      if requestedFocusArea == .inspector && model.inspectorFocusesTitle { titleIsFocused = true }
     }
     .onDisappear { model.taskEditor.flush() }
   }

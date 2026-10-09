@@ -84,8 +84,9 @@ extension WorkspaceViewModel {
     taskInsertionIsChild = child
   }
 
-  func requestKeyboardFocus(_ area: WorkspaceFocusArea) {
+  func requestKeyboardFocus(_ area: WorkspaceFocusArea, onTitle: Bool = true) {
     desktopShortcutSequence.reset()
+    inspectorFocusesTitle = onTitle
     if area == .tasks && selectedTaskID == nil && !(viewMode == .board && focusedBoardColumnID != nil) {
       selectedTaskID = visibleNavigationTasks.first?.id
     }

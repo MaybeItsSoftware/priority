@@ -592,6 +592,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// than `private(set)` so those methods can live there.
   var keyboardFocusArea: WorkspaceFocusArea = .tasks
   var requestedFocusArea: WorkspaceFocusArea = .tasks
+  /// Whether the inspector, given the keyboard, puts the caret in the task's
+  /// title. `i` does — it means "edit this" — but `r` leaves the keyboard on
+  /// the pane, or the `r` that should put the dock away would be typed.
+  var inspectorFocusesTitle = true
   /// Plain navigation keys only belong to the focused list/board surface.
   /// Buttons, menus, and other controls keep their native keyboard behavior.
   var keyboardNavigationSurfaceActive = false
