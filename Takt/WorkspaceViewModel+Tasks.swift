@@ -119,7 +119,26 @@ extension WorkspaceViewModel {
   /// Every row the arrow keys stop on in a column, top to bottom: each card,
   /// then the subtask rows drawn on it.
   func boardRowIDs(in column: WorkspaceKanbanColumn) -> [String] {
-    tasks(in: column).flatMap { card in [card.id] + boardTreeRows(of: card).map(\.task.id) }
+    boardRows(in: column).ids
+  }
+
+  /// A column's rows and the card each is drawn on, from the index
+  /// `rebuildBoardRowIndex()` keeps.
+  func boardRows(in column: WorkspaceKanbanColumn) -> BoardColumnRows {
+    boardRowsByColumn[column.id] ?? .empty
+  }
+
+  /// Flattens every card's drawn tree once, so an arrow key looks rows up
+  /// rather than walking each card's subtasks. Run whenever the board is read
+  /// and whenever a fold changes, the only two things the rows turn on.
+  func rebuildBoardRowIndex() {
+    var index: [String: BoardColumnRows] = [:]
+    for column in boardColumns {
+      index[column.id] = BoardColumnRows(cards: tasks(in: column).map { card in
+        (id: card.id, rowIDs: boardTreeRows(of: card).map(\.task.id))
+      })
+    }
+    if boardRowsByColumn != index { boardRowsByColumn = index }
   }
 
   /// The card a row is drawn on: the row itself when it is a card, else the
@@ -289,6 +308,7 @@ extension WorkspaceViewModel {
       return (position.urgency, position.importance)
     }
     if matrixQuadrants != quadrants { matrixQuadrants = quadrants }
+    rebuildBoardRowIndex()
   }
 
   /// The column a visible card sits in, by id alone — so the board can ask

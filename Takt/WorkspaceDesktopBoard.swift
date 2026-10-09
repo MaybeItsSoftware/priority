@@ -181,9 +181,9 @@ struct WorkspaceKanbanColumnView: View {
 
   var body: some View {
     let tasks = model.tasks(in: column)
-    let selectedCardID = selectedRowID.flatMap { id in
-      tasks.first { $0.id == id || model.boardTreeRows(of: $0).contains { $0.task.id == id } }?.id
-    }
+    // The card the selected row is drawn on, looked up in the index the
+    // board keeps rather than found by walking each card's subtasks.
+    let selectedCardID = selectedRowID.flatMap { model.boardRows(in: column).cardByRow[$0] }
     VStack(alignment: .leading, spacing: theme.space.sm) {
       VStack(alignment: .leading, spacing: theme.space.sm) {
       HStack(spacing: theme.space.xs) {

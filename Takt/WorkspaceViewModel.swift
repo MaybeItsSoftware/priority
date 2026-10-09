@@ -453,9 +453,13 @@ enum WorkspaceSidebarItem: Identifiable {
       guard foldedTaskIDs != oldValue else { return }
       UserDefaults.standard.set(Array(foldedTaskIDs).sorted(), forKey: Self.foldedTasksKey)
       refoldOutline()
+      rebuildBoardRowIndex()
     }
   }
   private static let foldedTasksKey = "localWorkspaceFoldedTasksV1"
+  /// Each board column's rows and the card each is drawn on. Rebuilt by
+  /// `rebuildBoardRowIndex()` when the board is read or a fold changes.
+  var boardRowsByColumn: [String: BoardColumnRows] = [:]
 
   private func refoldOutline() {
     let rows = TaskOutlineFolding.visible(outline, folded: foldedTaskIDs)
@@ -469,7 +473,7 @@ enum WorkspaceSidebarItem: Identifiable {
   var activeBoardColumnID: String? {
     let focused = boardColumns.first(where: { $0.id == focusedBoardColumnID })
     if let selectedTaskID {
-      if let focused, boardRowIDs(in: focused).contains(selectedTaskID) { return focused.id }
+      if let focused, boardRows(in: focused).contains(selectedTaskID) { return focused.id }
       if let columnID = boardColumnID(forTaskID: selectedTaskID) { return columnID }
       if let owner = boardCardID(owning: selectedTaskID), let columnID = boardColumnID(forTaskID: owner) {
         return columnID
