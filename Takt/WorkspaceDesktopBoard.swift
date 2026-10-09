@@ -230,13 +230,6 @@ struct WorkspaceKanbanColumnView: View {
           // gap between.
           LazyVStack(alignment: .leading, spacing: -theme.hairline) {
             ForEach(tasks) { task in
-              // The gap that drops a card level with the row it stands for in
-              // an earlier column. A view of its own rather than padding on
-              // the card, so scrolling to the card centres the card and not
-              // the gap; a rule taller, as the card overlaps it by one.
-              if let gap = linkLayout.gapAbove[task.id], gap >= 0.5 {
-                Color.clear.frame(height: CGFloat(gap) + theme.hairline)
-              }
               if model.draftsBeside(task.id, above: true) { draftRow }
               WorkspaceKanbanCard(
                 task: task, column: column,
@@ -248,6 +241,13 @@ struct WorkspaceKanbanColumnView: View {
                   $0.childID == task.id || $0.sourceCardID == task.id ? $0.childID : nil
                 })
                 .environment(model)
+                // The gap that drops a card level with the row it stands for
+                // in an earlier column, a rule taller as the card overlaps it
+                // by one. Padding on the card, always there, rather than a
+                // view that comes and goes: the lazy stack re-laid the column
+                // out every time the gap appeared or went, and the card
+                // flickered as the links settled.
+                .padding(.top, cardGap(above: task.id))
                 .id(task.id)
               if model.draftsBeside(task.id, above: false) { draftRow }
             }
@@ -317,6 +317,11 @@ struct WorkspaceKanbanColumnView: View {
   /// starts or ends do they move one.
   private var measuresLinks: Bool {
     model.boardLinks.measuredColumns.contains(columnIndex)
+  }
+
+  private func cardGap(above cardID: String) -> CGFloat {
+    guard let gap = linkLayout.gapAbove[cardID], gap >= 0.5 else { return 0 }
+    return CGFloat(gap) + theme.hairline
   }
 
   /// The space let in above each linked row on a card, by row.
@@ -641,14 +646,13 @@ struct WorkspaceKanbanCard: View {
       let spaceThrough = spaceThroughRows(rows)
       VStack(alignment: .leading, spacing: 0) {
         ForEach(rows) { item in
-          // Space let in above a row to draw it level with the card it
-          // stands for in a later column.
-          if let space = spaceAboveRows[item.id], space >= 0.5 {
-            Color.clear.frame(height: space)
-          }
           subtaskRow(
             item, isFolded: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil,
             spaceAbove: spaceThrough[item.id] ?? 0)
+            // Space let in above a row to draw it level with the card it
+            // stands for in a later column, as padding for the same reason
+            // as the column's gaps.
+            .padding(.top, spaceAboveRows[item.id] ?? 0)
         }
         if items.count > limit {
           Button {
@@ -759,8 +763,11 @@ struct WorkspaceKanbanCard: View {
     // The same band as a card's selection, across the tree's width, so the
     // arrow keys can be seen stepping through a card's subtasks.
     .background {
+      // A row that leads out to its card further on is selected as its
+      // hairline, which turns the selection colour all the way across: a
+      // band as well put a second box round the one line.
       WorkspaceSelectionBackground(
-        isSelected: isRowSelected, hasKeyboard: hasKeyboard && isRowSelected, radius: 0)
+        isSelected: isRowSelected && !leadsOut, hasKeyboard: hasKeyboard && isRowSelected && !leadsOut, radius: 0)
     }
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }
