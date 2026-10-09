@@ -135,12 +135,16 @@ extension WorkspaceViewModel {
   /// and whenever a fold changes, the only two things the rows turn on.
   func rebuildBoardRowIndex() {
     var index: [String: BoardColumnRows] = [:]
+    var columns: [[(id: String, rowIDs: [String])]] = []
     for column in boardColumns {
-      index[column.id] = BoardColumnRows(cards: tasks(in: column).map { card in
+      let cards = tasks(in: column).map { card in
         (id: card.id, rowIDs: boardTreeRows(of: card).map(\.task.id))
-      })
+      }
+      columns.append(cards)
+      index[column.id] = BoardColumnRows(cards: cards)
     }
     if boardRowsByColumn != index { boardRowsByColumn = index }
+    rebuildBoardLinks(columns: columns)
   }
 
   /// The card a row is drawn on: the row itself when it is a card, else the
