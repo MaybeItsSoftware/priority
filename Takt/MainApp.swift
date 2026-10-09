@@ -107,6 +107,10 @@ struct MainApp: App {
           AppDelegate.shared.workspace.toggleInspector()
         }
         .commandShortcut(.windowToggleInspectorPane)
+        Button("Right Dock") {
+          AppDelegate.shared.workspace.toggleRightDock()
+        }
+        .commandShortcut(.windowToggleRightDock)
         Button("Done") {
           AppDelegate.shared.workspace.toggleDoneRail()
         }

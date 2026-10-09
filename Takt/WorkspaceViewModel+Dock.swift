@@ -93,9 +93,11 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// The status bar's dock button: on or off, keeping whichever tab it was on.
+  /// `r` and the status bar's dock button: on or off, keeping whichever tab
+  /// it was on. Opening it hands it the keyboard, so the dock is worked from
+  /// the keys like every other pane; `r` again, from anywhere, puts it away.
   func toggleRightDock() {
-    if isRightDockVisible { hideRightDock() } else { showRightDock(rightDockTab) }
+    if isRightDockVisible { hideRightDock() } else { toggleDockTab(rightDockTab) }
   }
 
   /// For the rail, one key, three states, the way an editor's panel toggle behaves: hidden

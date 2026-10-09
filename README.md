@@ -105,7 +105,7 @@ something you already have to know.
 | `Cmd+Ctrl+I` / `Cmd+Ctrl+D` | The right dock on its Inspector / Done tab, or put it away |
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
-| `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock / close all docks (Zed's) |
+| `r` or `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock, on the tab it was on and with the keyboard in it, or put it away / close all docks (Zed's) |
 | `oo` / `Cmd+Alt+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z`, or `Ctrl+Z` / `Ctrl+Shift+Z`, or `uu` | Undo / redo |
 | `Cmd+Shift+P` / `Cmd+K` | The command palette — everything the workspace can do, and its key |

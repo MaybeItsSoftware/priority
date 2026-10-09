@@ -321,8 +321,12 @@ public enum WorkspaceCommandCatalog {
       keys: ["cmd+b", "cmd+ctrl+s"], note: "⌘B toggles the left dock, as in Zed"),
     .init(
       id: .windowToggleInspectorPane, title: "Show or hide the inspector", group: "Window",
-      keys: ["cmd+ctrl+i", "cmd+option+b"],
-      note: "Same pane as ⌥⌘I on a task, without selecting one. ⌥⌘B is Zed's toggle right dock"),
+      keys: ["cmd+ctrl+i"],
+      note: "Same pane as ⌥⌘I on a task, without selecting one"),
+    .init(
+      id: .windowToggleRightDock, title: "Show or hide the right dock", group: "Window",
+      keys: ["r", "cmd+option+b"],
+      note: "On whichever tab it was on, with the keyboard in it. ⌥⌘B is Zed's toggle right dock"),
     .init(
       id: .windowToggleDoneRail, title: "Show or hide what you have finished", group: "Window",
       keys: ["cmd+ctrl+d"],
@@ -385,7 +389,7 @@ public enum WorkspaceCommandCatalog {
       id: .doneReveal, title: "Open it where it lives", group: "Done", keys: ["o"],
       surface: .done, note: "Leaves the rail and selects the task in its own list"),
     .init(
-      id: .doneReopen, title: "Put it back on the list", group: "Done", keys: ["space", "r"],
+      id: .doneReopen, title: "Put it back on the list", group: "Done", keys: ["space"],
       surface: .done),
     .init(
       id: .doneClose, title: "Leave the rail", group: "Done", keys: ["escape", "left"],

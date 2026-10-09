@@ -35,7 +35,7 @@ extension WorkspaceCommandCatalog {
     .goToday, .goBoard, .goOutline, .goMatrix, .goEverything, .goInbox, .goFocus, .goTimeline,
     .goSearch, .goCommandPalette, .goKeyboardReference,
     .windowUndo, .windowRedo, .windowToggleSidebar, .windowToggleInspectorPane,
-    .windowToggleDoneRail, .windowToggleAgentPanel, .windowToggleProgressDock,
+    .windowToggleRightDock, .windowToggleDoneRail, .windowToggleAgentPanel, .windowToggleProgressDock,
     .windowCloseAllDocks,
   ]
 
@@ -50,14 +50,15 @@ extension WorkspaceCommandCatalog {
     // The agent's own field is a text field, and this is how you leave it.
     .windowToggleAgentPanel,
     // ⌘B, ⌘J, ⌥⌘B and ⌥⌘Y, as in Zed, where they work from inside the editor.
-    .windowToggleSidebar, .windowToggleProgressDock, .windowToggleInspectorPane,
+    .windowToggleSidebar, .windowToggleProgressDock, .windowToggleRightDock,
     .windowCloseAllDocks,
   ]
 
   /// Bare keys a region (sidebar, inspector, done rail) takes from `.anywhere`.
   /// None of them acts on a task row: they open something, or leave — and
-  /// Return adds a task, which it does from everywhere, row or no row.
-  static let regionBareKeys: Set<String> = ["/", "?", "i", "escape", "enter"]
+  /// Return adds a task, which it does from everywhere, row or no row. `r`
+  /// is the right dock's, so the key that opened it puts it away from inside.
+  static let regionBareKeys: Set<String> = ["/", "?", "i", "r", "escape", "enter"]
 
   /// The command a key means on the surface on screen, or `nil` when it means
   /// nothing there.

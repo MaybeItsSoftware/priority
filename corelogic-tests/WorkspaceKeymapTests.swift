@@ -52,8 +52,8 @@ final class WorkspaceKeymapTests: XCTestCase {
     XCTAssertTrue(issues.isEmpty, "\(issues)")
     XCTAssertEqual(bindings.command(forKey: "x", on: .outline)?.id, .taskDelete)
     XCTAssertEqual(bindings.byID[.taskComplete]?.keys, ["space"])
-    // A different surface's own `r` is a different binding, and stays.
-    XCTAssertEqual(bindings.command(forKey: "r", on: .done)?.id, .doneReopen)
+    // A different surface's own Space is a different binding, and stays.
+    XCTAssertEqual(bindings.command(forKey: "space", on: .done)?.id, .doneReopen)
   }
 
   func testAContextBindsOnThatSurfaceOnly() {
