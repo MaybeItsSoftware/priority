@@ -26,6 +26,7 @@ use crate::ranking::{self, Ranking, Scored};
 use crate::records::{self, FolderRow, ListRow, OutlineItem, TaskRow, WorkspaceRow};
 use crate::search::{self, SearchHit};
 use crate::setup;
+use crate::sidebar::{self, SidebarIndex};
 use crate::sync::{self, IncomingRow, LocalSyncState, PendingChanges};
 use crate::tasks::{self, DeletedTask, NewTask};
 use crate::today;
@@ -1039,6 +1040,12 @@ impl CoreWorkspace {
     /// Every task in the given lists, each list in outline order.
     pub fn tasks_in_lists(&self, list_ids: Vec<String>) -> Result<Vec<TaskRow>, CoreError> {
         records::tasks_in_lists(&self.lock(), &list_ids)
+    }
+
+    /// What the sidebar draws beneath the given lists, walked here so only
+    /// the nested lists and the counts cross.
+    pub fn sidebar_index(&self, list_ids: Vec<String>) -> Result<SidebarIndex, CoreError> {
+        sidebar::sidebar_index(&self.lock(), &list_ids)
     }
 
     /// A list's outline under a task, or the whole list.

@@ -19,12 +19,11 @@ struct WorkspaceStructure: Sendable, Equatable {
   static func load(store: WorkspaceStore, workspaceId: String) throws -> WorkspaceStructure {
     let all = try store.lists(in: workspaceId, includingArchived: true)
     let active = all.filter { !$0.isArchived }
-    let trees = try store.listTrees(in: active.map(\.id))
     return WorkspaceStructure(
       folders: try store.folders(in: workspaceId),
       lists: active,
       archivedLists: all.filter(\.isArchived),
-      sidebar: WorkspaceSidebarIndex(lists: active, trees: trees))
+      sidebar: try store.sidebarIndex(lists: active))
   }
 
   var inbox: TaskList? { lists.first { $0.systemRole == .inbox } }

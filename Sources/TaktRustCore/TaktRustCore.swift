@@ -1212,6 +1212,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, nowMs: Int64) throws 
     
     /**
+     * What the sidebar draws beneath the given lists, walked here so only
+     * the nested lists and the counts cross.
+     */
+    func sidebarIndex(listIds: [String]) throws  -> SidebarIndex
+    
+    /**
      * Starts a focus session on a task, or returns the one running.
      */
     func startFocusSession(taskId: String, plannedSeconds: Int64?, workSeconds: Int64, breakSeconds: Int64, context: FocusContext?, overrideAvailability: Bool, nowMs: Int64, zone: String) throws  -> String
@@ -3030,6 +3036,20 @@ open func setWaiting(taskId: String, waitingOn: String?, followUpAtMs: Int64?, n
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * What the sidebar draws beneath the given lists, walked here so only
+     * the nested lists and the counts cross.
+     */
+open func sidebarIndex(listIds: [String])throws  -> SidebarIndex  {
+    return try  FfiConverterTypeSidebarIndex_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_sidebar_index(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(listIds),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -5481,6 +5501,63 @@ public func FfiConverterTypeListSettings_lower(_ value: ListSettings) -> RustBuf
 
 
 /**
+ * One list's task count. `WorkspaceSidebarIndex.taskCounts`.
+ */
+public struct ListTaskCount: Equatable, Hashable {
+    public var listId: String
+    public var count: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(listId: String, count: Int64) {
+        self.listId = listId
+        self.count = count
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ListTaskCount: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeListTaskCount: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ListTaskCount {
+        return
+            try ListTaskCount(
+                listId: FfiConverterString.read(from: &buf), 
+                count: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ListTaskCount, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterInt64.write(value.count, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeListTaskCount_lift(_ buf: RustBuffer) throws -> ListTaskCount {
+    return try FfiConverterTypeListTaskCount.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeListTaskCount_lower(_ value: ListTaskCount) -> RustBuffer {
+    return FfiConverterTypeListTaskCount.lower(value)
+}
+
+
+/**
  * What the device remembers about its sync.
  */
 public struct LocalSyncState: Equatable, Hashable {
@@ -6734,6 +6811,68 @@ public func FfiConverterTypeSessionRow_lift(_ buf: RustBuffer) throws -> Session
 #endif
 public func FfiConverterTypeSessionRow_lower(_ value: SessionRow) -> RustBuffer {
     return FfiConverterTypeSessionRow.lower(value)
+}
+
+
+/**
+ * `WorkspaceSidebarIndex`: the nested lists to draw, with their depth among
+ * lists; the archived ones the restore menu offers; each list's task count.
+ */
+public struct SidebarIndex: Equatable, Hashable {
+    public var nestedLists: [OutlineItem]
+    public var archivedNestedLists: [TaskRow]
+    public var taskCounts: [ListTaskCount]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(nestedLists: [OutlineItem], archivedNestedLists: [TaskRow], taskCounts: [ListTaskCount]) {
+        self.nestedLists = nestedLists
+        self.archivedNestedLists = archivedNestedLists
+        self.taskCounts = taskCounts
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SidebarIndex: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSidebarIndex: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SidebarIndex {
+        return
+            try SidebarIndex(
+                nestedLists: FfiConverterSequenceTypeOutlineItem.read(from: &buf), 
+                archivedNestedLists: FfiConverterSequenceTypeTaskRow.read(from: &buf), 
+                taskCounts: FfiConverterSequenceTypeListTaskCount.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SidebarIndex, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeOutlineItem.write(value.nestedLists, into: &buf)
+        FfiConverterSequenceTypeTaskRow.write(value.archivedNestedLists, into: &buf)
+        FfiConverterSequenceTypeListTaskCount.write(value.taskCounts, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarIndex_lift(_ buf: RustBuffer) throws -> SidebarIndex {
+    return try FfiConverterTypeSidebarIndex.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarIndex_lower(_ value: SidebarIndex) -> RustBuffer {
+    return FfiConverterTypeSidebarIndex.lower(value)
 }
 
 
@@ -8560,6 +8699,31 @@ fileprivate struct FfiConverterSequenceTypeListRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeListTaskCount: FfiConverterRustBuffer {
+    typealias SwiftType = [ListTaskCount]
+
+    public static func write(_ value: [ListTaskCount], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeListTaskCount.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ListTaskCount] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ListTaskCount]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeListTaskCount.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeLoggedWork: FfiConverterRustBuffer {
     typealias SwiftType = [LoggedWork]
 
@@ -9496,6 +9660,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_waiting() != 1116) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_sidebar_index() != 50190) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() != 4001) {

@@ -92,6 +92,18 @@ final class WorkspaceListTreeTests: XCTestCase {
     XCTAssertEqual(index.archivedNestedLists.map(\.id), [seeded.archived.id])
   }
 
+  /// The core walks the sidebar itself so that only its answer crosses; it
+  /// has to be the answer the trees give.
+  func testCoreSidebarIndexMatchesTheTrees() throws {
+    _ = try seed()
+    let wrapper = try store.createTask(listId: other.id, title: "Wrapper", kind: .list)
+    _ = try store.createTask(listId: other.id, title: "Inner", parentTaskId: wrapper.id, kind: .list)
+    let lists = try store.lists(in: workspaceID)
+    let fromTrees = WorkspaceSidebarIndex(lists: lists, trees: try store.listTrees(in: lists.map(\.id)))
+    XCTAssertEqual(try store.sidebarIndex(lists: lists), fromTrees)
+    XCTAssertEqual(try store.sidebarIndex(lists: []), WorkspaceSidebarIndex(nestedLists: [], archivedNestedLists: [], taskCounts: [:]))
+  }
+
   /// A card's tree runs to every level, depths counted from the card, and a
   /// task inside it has a tree of its own — the case of a subtask surfaced as
   /// a card in another column, or a card on a board scoped into a parent.

@@ -933,6 +933,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_waiting(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_sidebar_index(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_start_focus_session(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_sync_state(
@@ -1235,6 +1237,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_waiting(`ptr`: Long,`taskId`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,`followUpAtMs`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_sidebar_index(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_start_focus_session(`ptr`: Long,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`workSeconds`: Long,`breakSeconds`: Long,`context`: RustBuffer.ByValue,`overrideAvailability`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_sync_state(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1795,6 +1799,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_waiting() and 0xFFFF) != 1116) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_sidebar_index() and 0xFFFF) != 50190) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() and 0xFFFF) != 4001) {
@@ -2890,6 +2897,12 @@ public interface CoreWorkspaceInterface {
      * Sets what a task waits on and when to chase it, as one "Waiting On" step.
      */
     fun `setWaiting`(`taskId`: kotlin.String, `waitingOn`: kotlin.String?, `followUpAtMs`: kotlin.Long?, `nowMs`: kotlin.Long)
+    
+    /**
+     * What the sidebar draws beneath the given lists, walked here so only
+     * the nested lists and the counts cross.
+     */
+    fun `sidebarIndex`(`listIds`: List<kotlin.String>): SidebarIndex
     
     /**
      * Starts a focus session on a task, or returns the one running.
@@ -5346,6 +5359,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * What the sidebar draws beneath the given lists, walked here so only
+     * the nested lists and the counts cross.
+     */
+    @Throws(CoreException::class)override fun `sidebarIndex`(`listIds`: List<kotlin.String>): SidebarIndex {
+            return FfiConverterTypeSidebarIndex.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_sidebar_index(
+        it,
+        
+        FfiConverterSequenceString.lower(`listIds`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Starts a focus session on a task, or returns the one running.
      */
     @Throws(CoreException::class)override fun `startFocusSession`(`taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `workSeconds`: kotlin.Long, `breakSeconds`: kotlin.Long, `context`: FocusContext?, `overrideAvailability`: kotlin.Boolean, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.String {
@@ -7493,6 +7525,47 @@ public object FfiConverterTypeListSettings: FfiConverterRustBuffer<ListSettings>
 
 
 /**
+ * One list's task count. `WorkspaceSidebarIndex.taskCounts`.
+ */
+data class ListTaskCount (
+    var `listId`: kotlin.String
+    , 
+    var `count`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeListTaskCount: FfiConverterRustBuffer<ListTaskCount> {
+    override fun read(buf: ByteBuffer): ListTaskCount {
+        return ListTaskCount(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ListTaskCount) = (
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterLong.allocationSize(value.`count`)
+    )
+
+    override fun write(value: ListTaskCount, buf: ByteBuffer) {
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterLong.write(value.`count`, buf)
+    }
+}
+
+
+
+/**
  * What the device remembers about its sync.
  */
 data class LocalSyncState (
@@ -8509,6 +8582,53 @@ public object FfiConverterTypeSessionRow: FfiConverterRustBuffer<SessionRow> {
             FfiConverterOptionalLong.write(value.`accumulatedSeconds`, buf)
             FfiConverterOptionalLong.write(value.`pausedAtMs`, buf)
             FfiConverterOptionalLong.write(value.`checkpointAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * `WorkspaceSidebarIndex`: the nested lists to draw, with their depth among
+ * lists; the archived ones the restore menu offers; each list's task count.
+ */
+data class SidebarIndex (
+    var `nestedLists`: List<OutlineItem>
+    , 
+    var `archivedNestedLists`: List<TaskRow>
+    , 
+    var `taskCounts`: List<ListTaskCount>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSidebarIndex: FfiConverterRustBuffer<SidebarIndex> {
+    override fun read(buf: ByteBuffer): SidebarIndex {
+        return SidebarIndex(
+            FfiConverterSequenceTypeOutlineItem.read(buf),
+            FfiConverterSequenceTypeTaskRow.read(buf),
+            FfiConverterSequenceTypeListTaskCount.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SidebarIndex) = (
+            FfiConverterSequenceTypeOutlineItem.allocationSize(value.`nestedLists`) +
+            FfiConverterSequenceTypeTaskRow.allocationSize(value.`archivedNestedLists`) +
+            FfiConverterSequenceTypeListTaskCount.allocationSize(value.`taskCounts`)
+    )
+
+    override fun write(value: SidebarIndex, buf: ByteBuffer) {
+            FfiConverterSequenceTypeOutlineItem.write(value.`nestedLists`, buf)
+            FfiConverterSequenceTypeTaskRow.write(value.`archivedNestedLists`, buf)
+            FfiConverterSequenceTypeListTaskCount.write(value.`taskCounts`, buf)
     }
 }
 
@@ -10706,6 +10826,34 @@ public object FfiConverterSequenceTypeListRow: FfiConverterRustBuffer<List<ListR
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeListRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeListTaskCount: FfiConverterRustBuffer<List<ListTaskCount>> {
+    override fun read(buf: ByteBuffer): List<ListTaskCount> {
+        val len = buf.getInt()
+        return List<ListTaskCount>(len) {
+            FfiConverterTypeListTaskCount.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ListTaskCount>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeListTaskCount.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ListTaskCount>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeListTaskCount.write(it, buf)
         }
     }
 }

@@ -186,6 +186,19 @@ extension WorkspaceStore {
     })
   }
 
+  /// The sidebar's index for `lists`, walked in the Rust core
+  /// (`sidebar::sidebar_index`) so only the nested lists and the counts cross
+  /// rather than every task. The same answer as
+  /// `WorkspaceSidebarIndex(lists:trees:)` over every list's tree.
+  public func sidebarIndex(lists: [TaskList]) throws -> WorkspaceSidebarIndex {
+    guard !lists.isEmpty else { return WorkspaceSidebarIndex(nestedLists: [], archivedNestedLists: [], taskCounts: [:]) }
+    let index = try Self.mappingCoreErrors { try core.sidebarIndex(listIds: lists.map(\.id)) }
+    return WorkspaceSidebarIndex(
+      nestedLists: index.nestedLists.map(TaskOutlineItem.init),
+      archivedNestedLists: index.archivedNestedLists.map(WorkspaceTask.init),
+      taskCounts: Dictionary(index.taskCounts.map { ($0.listId, Int($0.count)) }, uniquingKeysWith: { first, _ in first }))
+  }
+
   public func tasks(ids: [String]) throws -> [String: WorkspaceTask] {
     guard !ids.isEmpty else { return [:] }
     let rows = try Self.mappingCoreErrors { try core.tasksById(ids: Array(Set(ids))) }

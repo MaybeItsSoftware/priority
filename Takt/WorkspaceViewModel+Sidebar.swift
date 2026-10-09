@@ -165,7 +165,9 @@ extension WorkspaceViewModel {
   func reloadNestedListsNow() {
     guard let store else { return }
     do {
-      let index = WorkspaceSidebarIndex(lists: lists, trees: try listTrees(for: lists.map(\.id), store: store))
+      // Walked in the core, so only the nested lists and the counts cross:
+      // reading every list's rows here was most of a write's refresh.
+      let index = try store.sidebarIndex(lists: lists)
       if nestedLists != index.nestedLists { nestedLists = index.nestedLists }
       if archivedNestedLists != index.archivedNestedLists { archivedNestedLists = index.archivedNestedLists }
       if listTaskCounts != index.taskCounts { listTaskCounts = index.taskCounts }

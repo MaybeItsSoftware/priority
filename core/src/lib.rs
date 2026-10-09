@@ -27,6 +27,7 @@ pub mod rows;
 pub mod schema;
 pub mod search;
 pub mod setup;
+pub mod sidebar;
 pub mod sync;
 pub mod tasks;
 pub mod time;
