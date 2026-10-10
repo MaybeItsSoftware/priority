@@ -465,11 +465,63 @@ covered the old copies pass against it.
    the CLI's alone. There is no Kotlin caller, and the CLI did not gain an
    MCP-install command.
 
+   **The phones' screens.** The iPhone's feature models and Android's
+   view models were audited pair by pair for shaping both did over the
+   core's rows; what moved is what let fewer rows cross or retired a second
+   copy. Review's timeline (`core/src/review.rs`, `review_timeline`) keeps,
+   lays out, groups and scores the day's blocks and hands back indices, and
+   its progress charts are one read, `CoreWorkspace.review_progress`, which
+   reads the period's completions, creations and blocks and buckets them by
+   local day, so only the 7, 30 or 90 days cross. `TimelineDay` and
+   `ProgressSummary` keep their types on both phones. Android's next-up
+   snapshot read the candidates out, then sent them back in twice (to plan
+   the day and to rank); it now makes the one `next_up` call the Mac and
+   iPhone make (`NextUpSelector.read`), 13.9 ms to 10.5 ms for 2,496
+   candidates on a 5,000-task list on the JVM, and Today, the widget and the
+   focus service ask for the ladder's head only, as the iPhone's do. The
+   inspector's subtask and logged-work counts are `task_work_facts`
+   (`core/src/task_work.rs`): the iPhone read the task's whole list to walk
+   its branch and Android ran SQL of its own for the blocks; four numbers
+   cross now. The iPhone's board reads its scope through `scopeRead` and
+   shapes it with `WorkspaceScopeShaping.board`, the Mac's path, so
+   Everything's and a folder's board are walked in the core (`board.rs`)
+   instead of reading every list's tree twice: 168 ms to 79 ms on the
+   7,000-task benchmark. A combined scope's outline draws only the cards, so
+   `actionable_tasks_packed` returns those alone, picked by the same
+   selection `combined_board` uses: `WorkspaceStore.actionableTasks` went
+   from 55 ms to 23 ms there. The iPhone's Today takes its logged time from
+   the week's totals it already reads rather than reading the day's blocks.
+   Where the copies disagreed, the iPhone's answer won: the best day of a
+   tie is the first (Kotlin's `TaskProgressSeries.bestDay` took the last,
+   under a comment that said Swift did), block seconds are summed as stored
+   where Android clamped a negative to zero (charts and inspector alike), and
+   a cancelled subtask counts as done. What stays native, and why. The done
+   rail groups through `CompletedWorkDigest`, already the core's, over tasks
+   it draws one by one, so they cross anyway; Android's timeline also marks
+   the day's finished tasks, which the iPhone does not draw. Android's list
+   screen shows Everything as every list's outline under a header, so its
+   outline needs every tree and its board shapes the same trees, as above.
+   The iPhone's Lists tree is SwiftUI composed over the structure already in
+   memory, crossing nothing (Android's already uses the core's sidebar
+   outline; its `openCounts` stays as the oracle for hand-built trees); the
+   two still differ in that the iPhone puts sub-folders before a folder's
+   lists and shows totals, Android lists first and open counts. The focus
+   screen's start objections and wording, the requirement editing in the
+   inspector, a stage's seed length and the conditions' visibility are per
+   tap or per keystroke and cross no rows; they differ too (Android clamps a
+   start to the planned length and turns the store's refusal into an
+   override, dedupes requirement groups, and seeds a stage from a blocked
+   candidate where the iPhone uses the task's estimate), which is product
+   behaviour to settle, not shaping. Android's hide-completed outline drops a
+   closed task's whole branch where the Mac and iPhone keep its open
+   subtasks; it is still Android's own shaping.
+
    What stays in Swift and Kotlin after step 9 is presentation (views,
    locale formatting, colour conversion), platform transport (HTTP, auth,
    OAuth, the long poll, moving bodies the core makes and reads), per-point geometry and fold state that lives only
-   in UI memory, and the Mac's Checkvist-era engines, which work on tasks
-   the core never holds. Each paragraph above says why for its own cluster.
+   in UI memory, per-tap logic that reads no rows, and the Mac's
+   Checkvist-era engines, which work on tasks the core never holds. Each
+   paragraph above says why for its own cluster.
 
 ## Risks
 
