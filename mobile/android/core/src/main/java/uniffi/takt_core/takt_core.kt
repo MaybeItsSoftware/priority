@@ -677,6 +677,24 @@ internal object IntegrityCheckingUniffiLib {
     internal fun ensureInitialized() = Unit
     external fun uniffi_takt_core_checksum_func_core_version(
     ): Int
+    external fun uniffi_takt_core_checksum_func_affine_body_under(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_affine_checklist_matches(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_affine_checklist_read(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_affine_checklist_rewrite(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_affine_checklist_section(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_affine_merged(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_affine_task_document(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_affine_task_id_in_permalink(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_affine_task_title(
+    ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_key(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_offset(
@@ -712,6 +730,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_func_day_log_summary(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_log_weekly_buckets(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_google_tasks_plan(
     ): Int
     external fun uniffi_takt_core_checksum_func_clamped_focus_multiplier(
     ): Int
@@ -1515,6 +1535,24 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_affine_body_under(`heading`: RustBuffer.ByValue,`markdown`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_affine_checklist_matches(`items`: RustBuffer.ByValue,`tasks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_affine_checklist_read(`markdown`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_affine_checklist_rewrite(`existing`: RustBuffer.ByValue,`tasks`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,`tickedAny`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_affine_checklist_section(`tasks`: RustBuffer.ByValue,`carriedOver`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_affine_merged(`section`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_affine_task_document(`permalink`: RustBuffer.ByValue,`taskId`: Long,`notes`: RustBuffer.ByValue,`syncedAt`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_affine_task_id_in_permalink(`permalink`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_affine_task_title(`content`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_key(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_offset(`boundary`: RustBuffer.ByValue,`offset`: Long,`fromMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1550,6 +1588,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_day_log_summary(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`onMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_log_weekly_buckets(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_google_tasks_plan(`localLists`: RustBuffer.ByValue,`localTasks`: RustBuffer.ByValue,`remoteLists`: RustBuffer.ByValue,`remoteTasks`: RustBuffer.ByValue,`ledgerTasks`: RustBuffer.ByValue,`ledgerLists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_clamped_focus_multiplier(`multiplier`: Double,uniffi_out_err: UniffiRustCallStatus, 
     ): Double
@@ -1801,6 +1841,33 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_core_version() and 0xFFFF) != 3784) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_affine_body_under() and 0xFFFF) != 53160) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_affine_checklist_matches() and 0xFFFF) != 10604) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_affine_checklist_read() and 0xFFFF) != 22446) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_affine_checklist_rewrite() and 0xFFFF) != 11578) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_affine_checklist_section() and 0xFFFF) != 22489) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_affine_merged() and 0xFFFF) != 34494) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_affine_task_document() and 0xFFFF) != 62655) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_affine_task_id_in_permalink() and 0xFFFF) != 7955) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_affine_task_title() and 0xFFFF) != 5213) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_day_boundary_day_key() and 0xFFFF) != 60525) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1853,6 +1920,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_log_weekly_buckets() and 0xFFFF) != 50056) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_google_tasks_plan() and 0xFFFF) != 64663) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_clamped_focus_multiplier() and 0xFFFF) != 31070) {
@@ -7250,6 +7320,166 @@ public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
 
 
 /**
+ * A todo line read back out of a checklist.
+ */
+data class AffineChecklistItem (
+    /**
+     * None for an item Takt did not write.
+     */
+    var `taskId`: kotlin.Long?
+    , 
+    var `title`: kotlin.String
+    , 
+    var `isChecked`: kotlin.Boolean
+    , 
+    var `depth`: kotlin.Long
+    , 
+    /**
+     * The line as read, so an item Takt does not own goes back unchanged.
+     */
+    var `raw`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAffineChecklistItem: FfiConverterRustBuffer<AffineChecklistItem> {
+    override fun read(buf: ByteBuffer): AffineChecklistItem {
+        return AffineChecklistItem(
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AffineChecklistItem) = (
+            FfiConverterOptionalLong.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterBoolean.allocationSize(value.`isChecked`) +
+            FfiConverterLong.allocationSize(value.`depth`) +
+            FfiConverterString.allocationSize(value.`raw`)
+    )
+
+    override fun write(value: AffineChecklistItem, buf: ByteBuffer) {
+            FfiConverterOptionalLong.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterBoolean.write(value.`isChecked`, buf)
+            FfiConverterLong.write(value.`depth`, buf)
+            FfiConverterString.write(value.`raw`, buf)
+    }
+}
+
+
+
+/**
+ * Everything a sync reads out of a checklist, in one pass.
+ */
+data class AffineChecklistRead (
+    /**
+     * Every todo line in the section, in document order.
+     */
+    var `items`: List<AffineChecklistItem>
+    , 
+    /**
+     * Lines in the section Takt did not write: hand-typed items and prose.
+     */
+    var `unownedLines`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAffineChecklistRead: FfiConverterRustBuffer<AffineChecklistRead> {
+    override fun read(buf: ByteBuffer): AffineChecklistRead {
+        return AffineChecklistRead(
+            FfiConverterSequenceTypeAffineChecklistItem.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AffineChecklistRead) = (
+            FfiConverterSequenceTypeAffineChecklistItem.allocationSize(value.`items`) +
+            FfiConverterSequenceString.allocationSize(value.`unownedLines`)
+    )
+
+    override fun write(value: AffineChecklistRead, buf: ByteBuffer) {
+            FfiConverterSequenceTypeAffineChecklistItem.write(value.`items`, buf)
+            FfiConverterSequenceString.write(value.`unownedLines`, buf)
+    }
+}
+
+
+
+/**
+ * A task as it is written into a checklist.
+ */
+data class AffineChecklistTask (
+    var `id`: kotlin.Long
+    , 
+    var `title`: kotlin.String
+    , 
+    var `permalink`: kotlin.String?
+    , 
+    var `depth`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAffineChecklistTask: FfiConverterRustBuffer<AffineChecklistTask> {
+    override fun read(buf: ByteBuffer): AffineChecklistTask {
+        return AffineChecklistTask(
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AffineChecklistTask) = (
+            FfiConverterLong.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterOptionalString.allocationSize(value.`permalink`) +
+            FfiConverterLong.allocationSize(value.`depth`)
+    )
+
+    override fun write(value: AffineChecklistTask, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterOptionalString.write(value.`permalink`, buf)
+            FfiConverterLong.write(value.`depth`, buf)
+    }
+}
+
+
+
+/**
  * A row of `focus_awards`. `FocusAward`.
  */
 data class AwardRow (
@@ -10814,6 +11044,481 @@ public object FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer<FollowUpPlan>
             FfiConverterString.write(value.`sourceTaskId`, buf)
             FfiConverterString.write(value.`title`, buf)
             FfiConverterLong.write(value.`dueAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * Something Takt overwrote because it had the final say.
+ */
+data class GoogleTasksConflict (
+    var `localId`: kotlin.String
+    , 
+    var `remoteId`: kotlin.String
+    , 
+    var `field`: GoogleTasksConflictField
+    , 
+    var `localValue`: kotlin.String
+    , 
+    var `remoteValue`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksConflict: FfiConverterRustBuffer<GoogleTasksConflict> {
+    override fun read(buf: ByteBuffer): GoogleTasksConflict {
+        return GoogleTasksConflict(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeGoogleTasksConflictField.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksConflict) = (
+            FfiConverterString.allocationSize(value.`localId`) +
+            FfiConverterString.allocationSize(value.`remoteId`) +
+            FfiConverterTypeGoogleTasksConflictField.allocationSize(value.`field`) +
+            FfiConverterString.allocationSize(value.`localValue`) +
+            FfiConverterString.allocationSize(value.`remoteValue`)
+    )
+
+    override fun write(value: GoogleTasksConflict, buf: ByteBuffer) {
+            FfiConverterString.write(value.`localId`, buf)
+            FfiConverterString.write(value.`remoteId`, buf)
+            FfiConverterTypeGoogleTasksConflictField.write(value.`field`, buf)
+            FfiConverterString.write(value.`localValue`, buf)
+            FfiConverterString.write(value.`remoteValue`, buf)
+    }
+}
+
+
+
+/**
+ * What was pushed to Google last time for one local task. Without it a
+ * remote edit and Takt's own echo look the same.
+ */
+data class GoogleTasksLedgerEntry (
+    var `localId`: kotlin.String
+    , 
+    var `remoteId`: kotlin.String
+    , 
+    var `remoteListId`: kotlin.String
+    , 
+    var `pushedTitle`: kotlin.String
+    , 
+    var `pushedNotes`: kotlin.String
+    , 
+    var `pushedDue`: kotlin.String?
+    , 
+    var `pushedCompleted`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksLedgerEntry: FfiConverterRustBuffer<GoogleTasksLedgerEntry> {
+    override fun read(buf: ByteBuffer): GoogleTasksLedgerEntry {
+        return GoogleTasksLedgerEntry(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksLedgerEntry) = (
+            FfiConverterString.allocationSize(value.`localId`) +
+            FfiConverterString.allocationSize(value.`remoteId`) +
+            FfiConverterString.allocationSize(value.`remoteListId`) +
+            FfiConverterString.allocationSize(value.`pushedTitle`) +
+            FfiConverterString.allocationSize(value.`pushedNotes`) +
+            FfiConverterOptionalString.allocationSize(value.`pushedDue`) +
+            FfiConverterBoolean.allocationSize(value.`pushedCompleted`)
+    )
+
+    override fun write(value: GoogleTasksLedgerEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`localId`, buf)
+            FfiConverterString.write(value.`remoteId`, buf)
+            FfiConverterString.write(value.`remoteListId`, buf)
+            FfiConverterString.write(value.`pushedTitle`, buf)
+            FfiConverterString.write(value.`pushedNotes`, buf)
+            FfiConverterOptionalString.write(value.`pushedDue`, buf)
+            FfiConverterBoolean.write(value.`pushedCompleted`, buf)
+    }
+}
+
+
+
+/**
+ * A local list and the Google list mirroring it.
+ */
+data class GoogleTasksListMapping (
+    var `localListId`: kotlin.String
+    , 
+    var `remoteListId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksListMapping: FfiConverterRustBuffer<GoogleTasksListMapping> {
+    override fun read(buf: ByteBuffer): GoogleTasksListMapping {
+        return GoogleTasksListMapping(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksListMapping) = (
+            FfiConverterString.allocationSize(value.`localListId`) +
+            FfiConverterString.allocationSize(value.`remoteListId`)
+    )
+
+    override fun write(value: GoogleTasksListMapping, buf: ByteBuffer) {
+            FfiConverterString.write(value.`localListId`, buf)
+            FfiConverterString.write(value.`remoteListId`, buf)
+    }
+}
+
+
+
+data class GoogleTasksLocalList (
+    var `id`: kotlin.String
+    , 
+    var `name`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksLocalList: FfiConverterRustBuffer<GoogleTasksLocalList> {
+    override fun read(buf: ByteBuffer): GoogleTasksLocalList {
+        return GoogleTasksLocalList(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksLocalList) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`name`)
+    )
+
+    override fun write(value: GoogleTasksLocalList, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`name`, buf)
+    }
+}
+
+
+
+data class GoogleTasksLocalTask (
+    var `id`: kotlin.String
+    , 
+    var `listId`: kotlin.String
+    , 
+    var `parentId`: kotlin.String?
+    , 
+    var `title`: kotlin.String
+    , 
+    var `notes`: kotlin.String
+    , 
+    /**
+     * The due day in Google's form, `yyyy-MM-ddT00:00:00.000Z`.
+     */
+    var `due`: kotlin.String?
+    , 
+    var `isCompleted`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksLocalTask: FfiConverterRustBuffer<GoogleTasksLocalTask> {
+    override fun read(buf: ByteBuffer): GoogleTasksLocalTask {
+        return GoogleTasksLocalTask(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksLocalTask) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterOptionalString.allocationSize(value.`parentId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`notes`) +
+            FfiConverterOptionalString.allocationSize(value.`due`) +
+            FfiConverterBoolean.allocationSize(value.`isCompleted`)
+    )
+
+    override fun write(value: GoogleTasksLocalTask, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterOptionalString.write(value.`parentId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`notes`, buf)
+            FfiConverterOptionalString.write(value.`due`, buf)
+            FfiConverterBoolean.write(value.`isCompleted`, buf)
+    }
+}
+
+
+
+data class GoogleTasksPayload (
+    var `title`: kotlin.String
+    , 
+    var `notes`: kotlin.String
+    , 
+    var `due`: kotlin.String?
+    , 
+    var `isCompleted`: kotlin.Boolean
+    , 
+    /**
+     * The Google task this one hangs under, when the local parent is mirrored
+     * in the same list and is itself top level.
+     */
+    var `parentRemoteId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksPayload: FfiConverterRustBuffer<GoogleTasksPayload> {
+    override fun read(buf: ByteBuffer): GoogleTasksPayload {
+        return GoogleTasksPayload(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksPayload) = (
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`notes`) +
+            FfiConverterOptionalString.allocationSize(value.`due`) +
+            FfiConverterBoolean.allocationSize(value.`isCompleted`) +
+            FfiConverterOptionalString.allocationSize(value.`parentRemoteId`)
+    )
+
+    override fun write(value: GoogleTasksPayload, buf: ByteBuffer) {
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`notes`, buf)
+            FfiConverterOptionalString.write(value.`due`, buf)
+            FfiConverterBoolean.write(value.`isCompleted`, buf)
+            FfiConverterOptionalString.write(value.`parentRemoteId`, buf)
+    }
+}
+
+
+
+data class GoogleTasksPlan (
+    var `operations`: List<GoogleTasksOperation>
+    , 
+    var `conflicts`: List<GoogleTasksConflict>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksPlan: FfiConverterRustBuffer<GoogleTasksPlan> {
+    override fun read(buf: ByteBuffer): GoogleTasksPlan {
+        return GoogleTasksPlan(
+            FfiConverterSequenceTypeGoogleTasksOperation.read(buf),
+            FfiConverterSequenceTypeGoogleTasksConflict.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksPlan) = (
+            FfiConverterSequenceTypeGoogleTasksOperation.allocationSize(value.`operations`) +
+            FfiConverterSequenceTypeGoogleTasksConflict.allocationSize(value.`conflicts`)
+    )
+
+    override fun write(value: GoogleTasksPlan, buf: ByteBuffer) {
+            FfiConverterSequenceTypeGoogleTasksOperation.write(value.`operations`, buf)
+            FfiConverterSequenceTypeGoogleTasksConflict.write(value.`conflicts`, buf)
+    }
+}
+
+
+
+data class GoogleTasksRemoteList (
+    var `id`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksRemoteList: FfiConverterRustBuffer<GoogleTasksRemoteList> {
+    override fun read(buf: ByteBuffer): GoogleTasksRemoteList {
+        return GoogleTasksRemoteList(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksRemoteList) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`)
+    )
+
+    override fun write(value: GoogleTasksRemoteList, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+    }
+}
+
+
+
+data class GoogleTasksRemoteTask (
+    var `id`: kotlin.String
+    , 
+    var `listId`: kotlin.String
+    , 
+    var `parentId`: kotlin.String?
+    , 
+    var `title`: kotlin.String
+    , 
+    var `notes`: kotlin.String
+    , 
+    /**
+     * Google's own RFC 3339 string, verbatim.
+     */
+    var `due`: kotlin.String?
+    , 
+    var `isCompleted`: kotlin.Boolean
+    , 
+    /**
+     * Google marks a deleted task for a while rather than dropping it.
+     */
+    var `isDeleted`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksRemoteTask: FfiConverterRustBuffer<GoogleTasksRemoteTask> {
+    override fun read(buf: ByteBuffer): GoogleTasksRemoteTask {
+        return GoogleTasksRemoteTask(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GoogleTasksRemoteTask) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterOptionalString.allocationSize(value.`parentId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`notes`) +
+            FfiConverterOptionalString.allocationSize(value.`due`) +
+            FfiConverterBoolean.allocationSize(value.`isCompleted`) +
+            FfiConverterBoolean.allocationSize(value.`isDeleted`)
+    )
+
+    override fun write(value: GoogleTasksRemoteTask, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterOptionalString.write(value.`parentId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`notes`, buf)
+            FfiConverterOptionalString.write(value.`due`, buf)
+            FfiConverterBoolean.write(value.`isCompleted`, buf)
+            FfiConverterBoolean.write(value.`isDeleted`, buf)
     }
 }
 
@@ -14995,6 +15700,381 @@ public object FfiConverterTypeExportFormat: FfiConverterRustBuffer<ExportFormat>
 
 
 
+
+enum class GoogleTasksConflictField {
+    
+    TITLE,
+    NOTES,
+    DUE,
+    EXISTENCE;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksConflictField: FfiConverterRustBuffer<GoogleTasksConflictField> {
+    override fun read(buf: ByteBuffer) = try {
+        GoogleTasksConflictField.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: GoogleTasksConflictField) = 4UL
+
+    override fun write(value: GoogleTasksConflictField, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class GoogleTasksOperation {
+    
+    data class CreateList(
+        val `localListId`: kotlin.String, 
+        val `title`: kotlin.String) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * An unmapped Google list with exactly the title of a local list that has
+     * no copy: the mirror finding its own list again after losing the ledger.
+     */
+    data class AdoptRemoteList(
+        val `localListId`: kotlin.String, 
+        val `remoteListId`: kotlin.String) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class RenameList(
+        val `remoteListId`: kotlin.String, 
+        val `title`: kotlin.String) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class DeleteList(
+        val `remoteListId`: kotlin.String, 
+        val `localListId`: kotlin.String) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class CreateTask(
+        val `localId`: kotlin.String, 
+        val `remoteListId`: kotlin.String, 
+        val `payload`: uniffi.takt_core.GoogleTasksPayload) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class UpdateTask(
+        val `localId`: kotlin.String, 
+        val `remoteId`: kotlin.String, 
+        val `remoteListId`: kotlin.String, 
+        val `payload`: uniffi.takt_core.GoogleTasksPayload) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class DeleteTask(
+        val `remoteId`: kotlin.String, 
+        val `remoteListId`: kotlin.String, 
+        val `localId`: kotlin.String) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class CompleteLocalTask(
+        val `localId`: kotlin.String) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class MergeNotesIntoLocalTask(
+        val `localId`: kotlin.String, 
+        val `notes`: kotlin.String) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class AdoptRemoteTask(
+        val `remoteId`: kotlin.String, 
+        val `remoteListId`: kotlin.String, 
+        val `localListId`: kotlin.String, 
+        val `payload`: uniffi.takt_core.GoogleTasksPayload) : GoogleTasksOperation()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGoogleTasksOperation : FfiConverterRustBuffer<GoogleTasksOperation>{
+    override fun read(buf: ByteBuffer): GoogleTasksOperation {
+        return when(buf.getInt()) {
+            1 -> GoogleTasksOperation.CreateList(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            2 -> GoogleTasksOperation.AdoptRemoteList(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            3 -> GoogleTasksOperation.RenameList(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            4 -> GoogleTasksOperation.DeleteList(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            5 -> GoogleTasksOperation.CreateTask(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterTypeGoogleTasksPayload.read(buf),
+                )
+            6 -> GoogleTasksOperation.UpdateTask(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterTypeGoogleTasksPayload.read(buf),
+                )
+            7 -> GoogleTasksOperation.DeleteTask(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            8 -> GoogleTasksOperation.CompleteLocalTask(
+                FfiConverterString.read(buf),
+                )
+            9 -> GoogleTasksOperation.MergeNotesIntoLocalTask(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            10 -> GoogleTasksOperation.AdoptRemoteTask(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterTypeGoogleTasksPayload.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: GoogleTasksOperation): ULong = when(value) {
+        is GoogleTasksOperation.CreateList -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`localListId`)
+                + FfiConverterString.allocationSize(value.`title`)
+            )
+        }
+        is GoogleTasksOperation.AdoptRemoteList -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`localListId`)
+                + FfiConverterString.allocationSize(value.`remoteListId`)
+            )
+        }
+        is GoogleTasksOperation.RenameList -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`remoteListId`)
+                + FfiConverterString.allocationSize(value.`title`)
+            )
+        }
+        is GoogleTasksOperation.DeleteList -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`remoteListId`)
+                + FfiConverterString.allocationSize(value.`localListId`)
+            )
+        }
+        is GoogleTasksOperation.CreateTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`localId`)
+                + FfiConverterString.allocationSize(value.`remoteListId`)
+                + FfiConverterTypeGoogleTasksPayload.allocationSize(value.`payload`)
+            )
+        }
+        is GoogleTasksOperation.UpdateTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`localId`)
+                + FfiConverterString.allocationSize(value.`remoteId`)
+                + FfiConverterString.allocationSize(value.`remoteListId`)
+                + FfiConverterTypeGoogleTasksPayload.allocationSize(value.`payload`)
+            )
+        }
+        is GoogleTasksOperation.DeleteTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`remoteId`)
+                + FfiConverterString.allocationSize(value.`remoteListId`)
+                + FfiConverterString.allocationSize(value.`localId`)
+            )
+        }
+        is GoogleTasksOperation.CompleteLocalTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`localId`)
+            )
+        }
+        is GoogleTasksOperation.MergeNotesIntoLocalTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`localId`)
+                + FfiConverterString.allocationSize(value.`notes`)
+            )
+        }
+        is GoogleTasksOperation.AdoptRemoteTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`remoteId`)
+                + FfiConverterString.allocationSize(value.`remoteListId`)
+                + FfiConverterString.allocationSize(value.`localListId`)
+                + FfiConverterTypeGoogleTasksPayload.allocationSize(value.`payload`)
+            )
+        }
+    }
+
+    override fun write(value: GoogleTasksOperation, buf: ByteBuffer) {
+        when(value) {
+            is GoogleTasksOperation.CreateList -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`localListId`, buf)
+                FfiConverterString.write(value.`title`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.AdoptRemoteList -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`localListId`, buf)
+                FfiConverterString.write(value.`remoteListId`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.RenameList -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`remoteListId`, buf)
+                FfiConverterString.write(value.`title`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.DeleteList -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`remoteListId`, buf)
+                FfiConverterString.write(value.`localListId`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.CreateTask -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`localId`, buf)
+                FfiConverterString.write(value.`remoteListId`, buf)
+                FfiConverterTypeGoogleTasksPayload.write(value.`payload`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.UpdateTask -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`localId`, buf)
+                FfiConverterString.write(value.`remoteId`, buf)
+                FfiConverterString.write(value.`remoteListId`, buf)
+                FfiConverterTypeGoogleTasksPayload.write(value.`payload`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.DeleteTask -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`remoteId`, buf)
+                FfiConverterString.write(value.`remoteListId`, buf)
+                FfiConverterString.write(value.`localId`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.CompleteLocalTask -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`localId`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.MergeNotesIntoLocalTask -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`localId`, buf)
+                FfiConverterString.write(value.`notes`, buf)
+                Unit
+            }
+            is GoogleTasksOperation.AdoptRemoteTask -> {
+                buf.putInt(10)
+                FfiConverterString.write(value.`remoteId`, buf)
+                FfiConverterString.write(value.`remoteListId`, buf)
+                FfiConverterString.write(value.`localListId`, buf)
+                FfiConverterTypeGoogleTasksPayload.write(value.`payload`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
 /**
  * How hard a completion lands. `CompletionMilestone`.
  */
@@ -17119,6 +18199,62 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeAffineChecklistItem: FfiConverterRustBuffer<List<AffineChecklistItem>> {
+    override fun read(buf: ByteBuffer): List<AffineChecklistItem> {
+        val len = buf.getInt()
+        return List<AffineChecklistItem>(len) {
+            FfiConverterTypeAffineChecklistItem.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<AffineChecklistItem>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeAffineChecklistItem.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<AffineChecklistItem>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeAffineChecklistItem.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeAffineChecklistTask: FfiConverterRustBuffer<List<AffineChecklistTask>> {
+    override fun read(buf: ByteBuffer): List<AffineChecklistTask> {
+        val len = buf.getInt()
+        return List<AffineChecklistTask>(len) {
+            FfiConverterTypeAffineChecklistTask.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<AffineChecklistTask>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeAffineChecklistTask.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<AffineChecklistTask>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeAffineChecklistTask.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeAwardRow: FfiConverterRustBuffer<List<AwardRow>> {
     override fun read(buf: ByteBuffer): List<AwardRow> {
         val len = buf.getInt()
@@ -17809,6 +18945,202 @@ public object FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer<List<Fol
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeFolderRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleTasksConflict: FfiConverterRustBuffer<List<GoogleTasksConflict>> {
+    override fun read(buf: ByteBuffer): List<GoogleTasksConflict> {
+        val len = buf.getInt()
+        return List<GoogleTasksConflict>(len) {
+            FfiConverterTypeGoogleTasksConflict.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleTasksConflict>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleTasksConflict.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleTasksConflict>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleTasksConflict.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleTasksLedgerEntry: FfiConverterRustBuffer<List<GoogleTasksLedgerEntry>> {
+    override fun read(buf: ByteBuffer): List<GoogleTasksLedgerEntry> {
+        val len = buf.getInt()
+        return List<GoogleTasksLedgerEntry>(len) {
+            FfiConverterTypeGoogleTasksLedgerEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleTasksLedgerEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleTasksLedgerEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleTasksLedgerEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleTasksLedgerEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleTasksListMapping: FfiConverterRustBuffer<List<GoogleTasksListMapping>> {
+    override fun read(buf: ByteBuffer): List<GoogleTasksListMapping> {
+        val len = buf.getInt()
+        return List<GoogleTasksListMapping>(len) {
+            FfiConverterTypeGoogleTasksListMapping.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleTasksListMapping>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleTasksListMapping.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleTasksListMapping>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleTasksListMapping.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleTasksLocalList: FfiConverterRustBuffer<List<GoogleTasksLocalList>> {
+    override fun read(buf: ByteBuffer): List<GoogleTasksLocalList> {
+        val len = buf.getInt()
+        return List<GoogleTasksLocalList>(len) {
+            FfiConverterTypeGoogleTasksLocalList.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleTasksLocalList>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleTasksLocalList.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleTasksLocalList>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleTasksLocalList.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleTasksLocalTask: FfiConverterRustBuffer<List<GoogleTasksLocalTask>> {
+    override fun read(buf: ByteBuffer): List<GoogleTasksLocalTask> {
+        val len = buf.getInt()
+        return List<GoogleTasksLocalTask>(len) {
+            FfiConverterTypeGoogleTasksLocalTask.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleTasksLocalTask>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleTasksLocalTask.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleTasksLocalTask>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleTasksLocalTask.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleTasksRemoteList: FfiConverterRustBuffer<List<GoogleTasksRemoteList>> {
+    override fun read(buf: ByteBuffer): List<GoogleTasksRemoteList> {
+        val len = buf.getInt()
+        return List<GoogleTasksRemoteList>(len) {
+            FfiConverterTypeGoogleTasksRemoteList.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleTasksRemoteList>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleTasksRemoteList.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleTasksRemoteList>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleTasksRemoteList.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeGoogleTasksRemoteTask: FfiConverterRustBuffer<List<GoogleTasksRemoteTask>> {
+    override fun read(buf: ByteBuffer): List<GoogleTasksRemoteTask> {
+        val len = buf.getInt()
+        return List<GoogleTasksRemoteTask>(len) {
+            FfiConverterTypeGoogleTasksRemoteTask.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleTasksRemoteTask>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleTasksRemoteTask.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleTasksRemoteTask>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleTasksRemoteTask.write(it, buf)
         }
     }
 }
@@ -18631,6 +19963,34 @@ public object FfiConverterSequenceTypeCoreThemeIssue: FfiConverterRustBuffer<Lis
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeGoogleTasksOperation: FfiConverterRustBuffer<List<GoogleTasksOperation>> {
+    override fun read(buf: ByteBuffer): List<GoogleTasksOperation> {
+        val len = buf.getInt()
+        return List<GoogleTasksOperation>(len) {
+            FfiConverterTypeGoogleTasksOperation.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<GoogleTasksOperation>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeGoogleTasksOperation.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<GoogleTasksOperation>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeGoogleTasksOperation.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeUnavailable: FfiConverterRustBuffer<List<Unavailable>> {
     override fun read(buf: ByteBuffer): List<Unavailable> {
         val len = buf.getInt()
@@ -18848,6 +20208,160 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_core_version(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * What is written under `heading`, heading line excluded, or None when the
+         * document has no such heading: "the section is empty" and "there is no
+         * section" mean different things to a caller deciding whether to create it.
+         */ fun `affineBodyUnder`(`heading`: kotlin.String, `markdown`: kotlin.String): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_body_under(
+    
+        
+        FfiConverterString.lower(`heading`),
+        FfiConverterString.lower(`markdown`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether the items already say what Takt is about to write. Compared item
+         * by item, because the text differs by escaping every time.
+         */ fun `affineChecklistMatches`(`items`: List<AffineChecklistItem>, `tasks`: List<AffineChecklistTask>): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_checklist_matches(
+    
+        
+        FfiConverterSequenceTypeAffineChecklistItem.lower(`items`),
+        FfiConverterSequenceTypeAffineChecklistTask.lower(`tasks`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The section's todo items and the lines Takt does not own, in one pass.
+         * A document without the heading reads as nothing rather than everything.
+         */ fun `affineChecklistRead`(`markdown`: kotlin.String, `heading`: kotlin.String): AffineChecklistRead {
+            return FfiConverterTypeAffineChecklistRead.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_checklist_read(
+    
+        
+        FfiConverterString.lower(`markdown`),
+        FfiConverterString.lower(`heading`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The document with its checklist rewritten to `tasks`, keeping the lines
+         * Takt does not own, or None when nothing was ticked (`ticked_any` false)
+         * and the checklist already says the same: rewriting would churn the
+         * document's history for no change anyone made.
+         */ fun `affineChecklistRewrite`(`existing`: kotlin.String, `tasks`: List<AffineChecklistTask>, `heading`: kotlin.String, `tickedAny`: kotlin.Boolean): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_checklist_rewrite(
+    
+        
+        FfiConverterString.lower(`existing`),
+        FfiConverterSequenceTypeAffineChecklistTask.lower(`tasks`),
+        FfiConverterString.lower(`heading`),
+        FfiConverterBoolean.lower(`tickedAny`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The checklist section. `carried_over` is lines found in the section that
+         * Takt did not write: the section is Takt's to rewrite, but a note someone
+         * typed into it is not Takt's to delete.
+         */ fun `affineChecklistSection`(`tasks`: List<AffineChecklistTask>, `carriedOver`: List<kotlin.String>, `heading`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_checklist_section(
+    
+        
+        FfiConverterSequenceTypeAffineChecklistTask.lower(`tasks`),
+        FfiConverterSequenceString.lower(`carriedOver`),
+        FfiConverterString.lower(`heading`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Splices `section` into `existing`, replacing the block `heading` already
+         * owns and appending one otherwise. The block ends at the next heading of
+         * the same level or shallower, so a `###` Takt wrote goes with it and the
+         * `##` the user wrote below survives.
+         */ fun `affineMerged`(`section`: kotlin.String, `heading`: kotlin.String, `existing`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_merged(
+    
+        
+        FfiConverterString.lower(`section`),
+        FfiConverterString.lower(`heading`),
+        FfiConverterString.lower(`existing`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The body of a task's document, without the title AFFiNE carries
+         * separately. `synced_at` is the caller's formatted stamp.
+         */ fun `affineTaskDocument`(`permalink`: kotlin.String?, `taskId`: kotlin.Long, `notes`: List<kotlin.String>, `syncedAt`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_task_document(
+    
+        
+        FfiConverterOptionalString.lower(`permalink`),
+        FfiConverterLong.lower(`taskId`),
+        FfiConverterSequenceString.lower(`notes`),
+        FfiConverterString.lower(`syncedAt`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The task id a Checkvist permalink ends with (`#t<id>`). Matching on that
+         * rather than the host keeps a self-hosted or rewritten link working.
+         */ fun `affineTaskIdInPermalink`(`permalink`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_task_id_in_permalink(
+    
+        
+        FfiConverterString.lower(`permalink`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A document title for a task, on one line: a newline would arrive in
+         * AFFiNE as a title plus a stray paragraph.
+         */ fun `affineTaskTitle`(`content`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_affine_task_title(
+    
+        
+        FfiConverterString.lower(`content`),_status)
 }
     )
     }
@@ -19091,6 +20605,32 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterTypeDayLogBoundary.lower(`boundary`),
         FfiConverterLong.lower(`endingOnMs`),
         FfiConverterLong.lower(`weeks`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Works out what has to happen for the two sides to agree.
+         *
+         * The ledger is `ledger_tasks` (keyed by local task id) and `ledger_lists`
+         * (keyed by local list id); a key given twice keeps its first entry. Lists
+         * and tasks the ledger no longer has a local side for are deleted in the
+         * order the ledger lists them. A Google list the ledger does not map is left
+         * alone unless a local list without a copy has exactly its title, in which
+         * case it is adopted: the mirror owns the lists it made and nothing else.
+         */ fun `googleTasksPlan`(`localLists`: List<GoogleTasksLocalList>, `localTasks`: List<GoogleTasksLocalTask>, `remoteLists`: List<GoogleTasksRemoteList>, `remoteTasks`: List<GoogleTasksRemoteTask>, `ledgerTasks`: List<GoogleTasksLedgerEntry>, `ledgerLists`: List<GoogleTasksListMapping>): GoogleTasksPlan {
+            return FfiConverterTypeGoogleTasksPlan.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_google_tasks_plan(
+    
+        
+        FfiConverterSequenceTypeGoogleTasksLocalList.lower(`localLists`),
+        FfiConverterSequenceTypeGoogleTasksLocalTask.lower(`localTasks`),
+        FfiConverterSequenceTypeGoogleTasksRemoteList.lower(`remoteLists`),
+        FfiConverterSequenceTypeGoogleTasksRemoteTask.lower(`remoteTasks`),
+        FfiConverterSequenceTypeGoogleTasksLedgerEntry.lower(`ledgerTasks`),
+        FfiConverterSequenceTypeGoogleTasksListMapping.lower(`ledgerLists`),_status)
 }
     )
     }

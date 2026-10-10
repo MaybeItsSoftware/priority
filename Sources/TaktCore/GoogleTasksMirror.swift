@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// Reconciling Priority's lists with Google Tasks.
 ///
@@ -242,6 +243,11 @@ public enum GoogleTasksMirror {
   /// exactly its title, in which case it is adopted as that list's copy — the
   /// mirror owns the lists it created and nothing else, and a title match is
   /// how it recognises one of its own after the ledger has been lost.
+  ///
+  /// The rules are the Rust core's (`core/src/google_tasks.rs`), called once
+  /// per pass. Local due dates are reduced to Google's day string here, in
+  /// `calendar`, before they cross; the ledger crosses sorted by local id, so
+  /// lists and tasks gone from Priority are deleted in that order.
   public static func plan(
     localLists: [LocalList],
     localTasks: [LocalTask],
@@ -250,220 +256,31 @@ public enum GoogleTasksMirror {
     ledger: Ledger,
     calendar: Calendar = .current
   ) -> Plan {
-    var operations: [Operation] = []
-    var conflicts: [Conflict] = []
-
-    let remoteListsByID = Dictionary(remoteLists.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-    let localListsByID = Dictionary(localLists.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-
-    // --- Lists -------------------------------------------------------------
-    // A local list with no usable mapping — never mirrored, or mapped to a
-    // Google list that has since been deleted — first looks for an unmapped
-    // Google list with exactly its title and adopts that; only when there is
-    // none does it create one. Without the adoption step, losing the ledger
-    // file would mean a second copy of every list in Google, and then every
-    // task in those copies being adopted back as a duplicate. The match is
-    // exact and case-sensitive: the mirror pushes names verbatim, so its own
-    // lists match verbatim, and a looser match would start claiming lists it
-    // never made.
-    var listMapping: [String: String] = [:]
-    // Google lists already spoken for, by the ledger or by an adoption earlier
-    // in this pass, so two local lists with one title cannot both take the
-    // same Google list.
-    var claimedRemoteListIDs = Set(ledger.lists.values)
-    for list in localLists {
-      if let remoteListID = ledger.lists[list.id], remoteListsByID[remoteListID] != nil {
-        listMapping[list.id] = remoteListID
-        if remoteListsByID[remoteListID]?.title != list.name {
-          operations.append(.renameList(remoteListID: remoteListID, title: list.name))
-        }
-        continue
-      }
-      // Adopted lists, like created ones, wait a pass before their tasks are
-      // mirrored: the executor only reads tasks from lists the ledger knew
-      // about when the pass began, so planning tasks against this list now
-      // would be planning against a remote side it has not seen.
-      if let match = remoteLists.first(where: {
-        $0.title == list.name && !claimedRemoteListIDs.contains($0.id)
-      }) {
-        claimedRemoteListIDs.insert(match.id)
-        operations.append(.adoptRemoteList(localListID: list.id, remoteListID: match.id))
-        continue
-      }
-      operations.append(.createList(localListID: list.id, title: list.name))
-    }
-    // Mapped to a list Priority no longer has: archived, deleted, or renamed
-    // into nothing. The Google copy follows it.
-    for (localListID, remoteListID) in ledger.lists
-    where localListsByID[localListID] == nil && remoteListsByID[remoteListID] != nil {
-      operations.append(.deleteList(remoteListID: remoteListID, localListID: localListID))
-    }
-
-    // --- Tasks -------------------------------------------------------------
-    let remoteTasksByID = Dictionary(remoteTasks.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-    let localTasksByID = Dictionary(localTasks.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-    let parentRemoteIDs = parentMapping(localTasks: localTasks, localTasksByID: localTasksByID, ledger: ledger)
-
-    for task in localTasks {
-      let due = task.due.map { formatDueDate($0, calendar: calendar) }
-      // A task in a list that has no Google copy yet waits for the next pass,
-      // once creating the list has handed back an id.
-      guard let remoteListID = listMapping[task.listID] else { continue }
-
-      guard let entry = ledger.tasks[task.id] else {
-        // Completed before it was ever mirrored: nothing to put on a phone.
-        if task.isCompleted { continue }
-        operations.append(
-          .createTask(
-            localID: task.id, remoteListID: remoteListID,
-            payload: TaskPayload(
-              title: task.title, notes: task.notes, due: due, isCompleted: false,
-              parentRemoteID: parentRemoteIDs[task.id])))
-        continue
-      }
-
-      let local = TaskPayload(
-        title: task.title, notes: task.notes, due: due, isCompleted: task.isCompleted,
-        parentRemoteID: parentRemoteIDs[task.id])
-
-      guard let remote = remoteTasksByID[entry.remoteID], !remote.isDeleted else {
-        // Deleted on the Google side. Priority still has it, so Priority is
-        // right — it comes back, and the deletion is recorded as overwritten.
-        if !task.isCompleted {
-          operations.append(
-            .createTask(localID: task.id, remoteListID: remoteListID, payload: local))
-          conflicts.append(
-            Conflict(
-              localID: task.id, remoteID: entry.remoteID, field: .existence,
-              localValue: task.title, remoteValue: "deleted in Google Tasks"))
-        }
-        continue
-      }
-
-      // Completion is not a disagreement: whoever ticked it off, it is done.
-      if remote.isCompleted && !task.isCompleted && !entry.pushedCompleted {
-        operations.append(.completeLocalTask(localID: task.id))
-        continue
-      }
-
-      var wantsPush = false
-
-      // Notes added on the Google side are an addition, not an edit, as long
-      // as Priority has not written anything new of its own to disagree with.
-      if remote.notes != entry.pushedNotes {
-        let localUnchanged = task.notes == entry.pushedNotes
-        if localUnchanged && isAdditive(remote.notes, to: entry.pushedNotes) {
-          operations.append(.mergeNotesIntoLocalTask(localID: task.id, notes: remote.notes))
-          continue
-        }
-        conflicts.append(
-          Conflict(
-            localID: task.id, remoteID: remote.id, field: .notes,
-            localValue: task.notes, remoteValue: remote.notes))
-        wantsPush = true
-      }
-
-      if remote.title != entry.pushedTitle {
-        conflicts.append(
-          Conflict(
-            localID: task.id, remoteID: remote.id, field: .title,
-            localValue: task.title, remoteValue: remote.title))
-        wantsPush = true
-      }
-
-      if remote.due != entry.pushedDue {
-        conflicts.append(
-          Conflict(
-            localID: task.id, remoteID: remote.id, field: .due,
-            localValue: due ?? "none", remoteValue: remote.due ?? "none"))
-        wantsPush = true
-      }
-
-      // Priority moved: push it. This covers the ordinary case as well as the
-      // reverting half of a conflict, which is the same write either way.
-      if local.title != entry.pushedTitle || local.notes != entry.pushedNotes
-        || local.due != entry.pushedDue || local.isCompleted != entry.pushedCompleted
-      {
-        wantsPush = true
-      }
-      // The remote copy drifted from what Priority believes it pushed, even
-      // if Priority itself has not changed. Put it back.
-      if remote.title != local.title || remote.notes != local.notes || remote.due != local.due {
-        wantsPush = true
-      }
-
-      if wantsPush {
-        operations.append(
-          .updateTask(
-            localID: task.id, remoteID: remote.id, remoteListID: entry.remoteListID,
-            payload: local))
-      }
-    }
-
-    // Mirrored once, gone from Priority now: delete the Google copy.
-    for (localID, entry) in ledger.tasks where localTasksByID[localID] == nil {
-      guard let remote = remoteTasksByID[entry.remoteID], !remote.isDeleted else { continue }
-      operations.append(
-        .deleteTask(remoteID: entry.remoteID, remoteListID: entry.remoteListID, localID: localID))
-    }
-
-    // Typed into Google Tasks directly: adopted rather than deleted, because
-    // authority decides who wins an argument, not who is allowed to write.
-    //
-    // A blank title is skipped rather than adopted. Google lets a task exist
-    // with no title — it is what a new row looks like before anything is
-    // typed into it — and Priority does not, so there is nothing to adopt yet.
-    // Giving it a placeholder name instead would be worse than nothing: the
-    // next pass would see "Untitled" locally against "" in Google and push the
-    // placeholder back as a title conflict, turning a blank row somebody was
-    // still typing into a task called Untitled on both sides. Left alone, it
-    // is adopted on the pass after it gets a name.
-    let mirroredRemoteIDs = Set(ledger.tasks.values.map(\.remoteID))
-    let localListIDsByRemoteListID = Dictionary(
-      listMapping.map { ($0.value, $0.key) }, uniquingKeysWith: { a, _ in a })
-    for remote in remoteTasks
-    where !remote.isDeleted && !remote.isCompleted && !mirroredRemoteIDs.contains(remote.id)
-      && !remote.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    {
-      guard let localListID = localListIDsByRemoteListID[remote.listID] else { continue }
-      operations.append(
-        .adoptRemoteTask(
-          remoteID: remote.id, remoteListID: remote.listID, localListID: localListID,
-          payload: TaskPayload(
-            title: remote.title, notes: remote.notes, due: remote.due, isCompleted: false)))
-    }
-
-    return Plan(operations: operations, conflicts: conflicts)
-  }
-
-  // MARK: - Helpers
-
-  /// Google Tasks nests exactly one level. Priority's trees are as deep as you
-  /// like, so a task whose parent is itself a child is mirrored at the top
-  /// level rather than silently vanishing into a nesting Google will refuse.
-  private static func parentMapping(
-    localTasks: [LocalTask],
-    localTasksByID: [String: LocalTask],
-    ledger: Ledger
-  ) -> [String: String] {
-    var mapping: [String: String] = [:]
-    for task in localTasks {
-      guard let parentID = task.parentID, let parent = localTasksByID[parentID] else { continue }
-      // A grandchild: its parent already occupies the one level Google allows.
-      if parent.parentID != nil, localTasksByID[parent.parentID!] != nil { continue }
-      guard parent.listID == task.listID, let parentEntry = ledger.tasks[parentID] else { continue }
-      mapping[task.id] = parentEntry.remoteID
-    }
-    return mapping
-  }
-
-  /// Whether one piece of text only *adds* to another: same start, more after
-  /// it. Anything else is a rewrite, and a rewrite is a disagreement.
-  static func isAdditive(_ candidate: String, to original: String) -> Bool {
-    if original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      return !candidate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-    return candidate.hasPrefix(original) && candidate.count > original.count
+    let plan = googleTasksPlan(
+      localLists: localLists.map { GoogleTasksLocalList(id: $0.id, name: $0.name) },
+      localTasks: localTasks.map {
+        GoogleTasksLocalTask(
+          id: $0.id, listId: $0.listID, parentId: $0.parentID, title: $0.title, notes: $0.notes,
+          due: $0.due.map { formatDueDate($0, calendar: calendar) }, isCompleted: $0.isCompleted)
+      },
+      remoteLists: remoteLists.map { GoogleTasksRemoteList(id: $0.id, title: $0.title) },
+      remoteTasks: remoteTasks.map {
+        GoogleTasksRemoteTask(
+          id: $0.id, listId: $0.listID, parentId: $0.parentID, title: $0.title, notes: $0.notes,
+          due: $0.due, isCompleted: $0.isCompleted, isDeleted: $0.isDeleted)
+      },
+      ledgerTasks: ledger.tasks.sorted { $0.key < $1.key }.map { localID, entry in
+        GoogleTasksLedgerEntry(
+          localId: localID, remoteId: entry.remoteID, remoteListId: entry.remoteListID,
+          pushedTitle: entry.pushedTitle, pushedNotes: entry.pushedNotes,
+          pushedDue: entry.pushedDue, pushedCompleted: entry.pushedCompleted)
+      },
+      ledgerLists: ledger.lists.sorted { $0.key < $1.key }.map {
+        GoogleTasksListMapping(localListId: $0.key, remoteListId: $0.value)
+      })
+    return Plan(
+      operations: plan.operations.map(Operation.init),
+      conflicts: plan.conflicts.map(Conflict.init))
   }
 
   /// Reads Google's due string back as a day in the user's own calendar.
@@ -489,5 +306,60 @@ public enum GoogleTasksMirror {
     return String(
       format: "%04d-%02d-%02dT00:00:00.000Z",
       components.year ?? 1970, components.month ?? 1, components.day ?? 1)
+  }
+}
+
+// MARK: - From the core
+
+extension GoogleTasksMirror.TaskPayload {
+  init(_ core: GoogleTasksPayload) {
+    self.init(
+      title: core.title, notes: core.notes, due: core.due, isCompleted: core.isCompleted,
+      parentRemoteID: core.parentRemoteId)
+  }
+}
+
+extension GoogleTasksMirror.Operation {
+  init(_ core: GoogleTasksOperation) {
+    switch core {
+    case .createList(let localListId, let title):
+      self = .createList(localListID: localListId, title: title)
+    case .adoptRemoteList(let localListId, let remoteListId):
+      self = .adoptRemoteList(localListID: localListId, remoteListID: remoteListId)
+    case .renameList(let remoteListId, let title):
+      self = .renameList(remoteListID: remoteListId, title: title)
+    case .deleteList(let remoteListId, let localListId):
+      self = .deleteList(remoteListID: remoteListId, localListID: localListId)
+    case .createTask(let localId, let remoteListId, let payload):
+      self = .createTask(localID: localId, remoteListID: remoteListId, payload: .init(payload))
+    case .updateTask(let localId, let remoteId, let remoteListId, let payload):
+      self = .updateTask(
+        localID: localId, remoteID: remoteId, remoteListID: remoteListId, payload: .init(payload))
+    case .deleteTask(let remoteId, let remoteListId, let localId):
+      self = .deleteTask(remoteID: remoteId, remoteListID: remoteListId, localID: localId)
+    case .completeLocalTask(let localId):
+      self = .completeLocalTask(localID: localId)
+    case .mergeNotesIntoLocalTask(let localId, let notes):
+      self = .mergeNotesIntoLocalTask(localID: localId, notes: notes)
+    case .adoptRemoteTask(let remoteId, let remoteListId, let localListId, let payload):
+      self = .adoptRemoteTask(
+        remoteID: remoteId, remoteListID: remoteListId, localListID: localListId,
+        payload: .init(payload))
+    }
+  }
+}
+
+extension GoogleTasksMirror.Conflict {
+  init(_ core: GoogleTasksConflict) {
+    let field: GoogleTasksMirror.ConflictField =
+      switch core.field {
+      case .title: .title
+      case .notes: .notes
+      case .due: .due
+      case .existence: .existence
+      }
+    self.init(
+      localID: core.localId, remoteID: core.remoteId, field: field, localValue: core.localValue,
+      remoteValue: core.remoteValue)
   }
 }

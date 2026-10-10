@@ -241,15 +241,16 @@ final class AFFiNEExportService {
       throw AFFiNEMCPError.documentNotRewritable(title: documentTitle)
     }
 
-    let ticked = AFFiNEChecklistMarkdown.tickedTaskIds(in: existing.markdown)
+    let ticked = AFFiNEChecklistMarkdown.reading(existing.markdown).tickedTaskIds
     let remaining = ticked.isEmpty ? tasks : await closingTicked(ticked)
-    let carriedOver = AFFiNEChecklistMarkdown.unownedLines(in: existing.markdown)
-    let items = AFFiNEChecklistMarkdown.items(in: existing.markdown)
 
     // Nothing ticked and nothing moved. Worth checking, because the document
     // is read on every sync and rewriting it would churn its history for no
-    // change anyone made.
-    if ticked.isEmpty, AFFiNEChecklistMarkdown.matches(items, tasks: remaining) {
+    // change anyone made. The rewrite carries the lines Priority did not write.
+    guard
+      let merged = AFFiNEChecklistMarkdown.rewritten(
+        existing.markdown, tasks: remaining, tickedAny: !ticked.isEmpty)
+    else {
       return AFFiNEChecklistOutcome(
         document: AFFiNEDocumentRef(
           docId: docId,
@@ -264,11 +265,6 @@ final class AFFiNEExportService {
       )
     }
 
-    let merged = AFFiNEDocumentMarkdown.merged(
-      section: AFFiNEChecklistMarkdown.section(tasks: remaining, carriedOver: carriedOver),
-      heading: AFFiNEChecklistMarkdown.heading,
-      into: existing.markdown
-    )
     let document = try await replaceDocument(
       docId: docId, title: documentTitle, markdown: merged, using: caller)
     return AFFiNEChecklistOutcome(document: document, closedTaskIds: ticked)

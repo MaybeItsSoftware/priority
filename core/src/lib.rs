@@ -9,6 +9,7 @@
 
 uniffi::setup_scaffolding!();
 
+pub mod affine;
 pub mod board;
 pub mod conditions;
 pub mod conversions;
@@ -18,6 +19,7 @@ pub mod editor;
 pub mod error;
 pub mod export;
 pub mod focus;
+pub mod google_tasks;
 pub mod habits;
 pub mod imports;
 pub mod journal;
@@ -35,6 +37,7 @@ pub mod schema;
 pub mod search;
 pub mod setup;
 pub mod sidebar;
+mod swift_text;
 pub mod sync;
 pub mod tasks;
 pub mod theme;

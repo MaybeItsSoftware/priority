@@ -3911,6 +3911,221 @@ public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt6
 
 
 /**
+ * A todo line read back out of a checklist.
+ */
+public struct AffineChecklistItem: Equatable, Hashable {
+    /**
+     * None for an item Takt did not write.
+     */
+    public var taskId: Int64?
+    public var title: String
+    public var isChecked: Bool
+    public var depth: Int64
+    /**
+     * The line as read, so an item Takt does not own goes back unchanged.
+     */
+    public var raw: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * None for an item Takt did not write.
+         */taskId: Int64?, title: String, isChecked: Bool, depth: Int64, 
+        /**
+         * The line as read, so an item Takt does not own goes back unchanged.
+         */raw: String) {
+        self.taskId = taskId
+        self.title = title
+        self.isChecked = isChecked
+        self.depth = depth
+        self.raw = raw
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AffineChecklistItem: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAffineChecklistItem: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AffineChecklistItem {
+        return
+            try AffineChecklistItem(
+                taskId: FfiConverterOptionInt64.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                isChecked: FfiConverterBool.read(from: &buf), 
+                depth: FfiConverterInt64.read(from: &buf), 
+                raw: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AffineChecklistItem, into buf: inout [UInt8]) {
+        FfiConverterOptionInt64.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterBool.write(value.isChecked, into: &buf)
+        FfiConverterInt64.write(value.depth, into: &buf)
+        FfiConverterString.write(value.raw, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAffineChecklistItem_lift(_ buf: RustBuffer) throws -> AffineChecklistItem {
+    return try FfiConverterTypeAffineChecklistItem.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAffineChecklistItem_lower(_ value: AffineChecklistItem) -> RustBuffer {
+    return FfiConverterTypeAffineChecklistItem.lower(value)
+}
+
+
+/**
+ * Everything a sync reads out of a checklist, in one pass.
+ */
+public struct AffineChecklistRead: Equatable, Hashable {
+    /**
+     * Every todo line in the section, in document order.
+     */
+    public var items: [AffineChecklistItem]
+    /**
+     * Lines in the section Takt did not write: hand-typed items and prose.
+     */
+    public var unownedLines: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Every todo line in the section, in document order.
+         */items: [AffineChecklistItem], 
+        /**
+         * Lines in the section Takt did not write: hand-typed items and prose.
+         */unownedLines: [String]) {
+        self.items = items
+        self.unownedLines = unownedLines
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AffineChecklistRead: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAffineChecklistRead: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AffineChecklistRead {
+        return
+            try AffineChecklistRead(
+                items: FfiConverterSequenceTypeAffineChecklistItem.read(from: &buf), 
+                unownedLines: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AffineChecklistRead, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeAffineChecklistItem.write(value.items, into: &buf)
+        FfiConverterSequenceString.write(value.unownedLines, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAffineChecklistRead_lift(_ buf: RustBuffer) throws -> AffineChecklistRead {
+    return try FfiConverterTypeAffineChecklistRead.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAffineChecklistRead_lower(_ value: AffineChecklistRead) -> RustBuffer {
+    return FfiConverterTypeAffineChecklistRead.lower(value)
+}
+
+
+/**
+ * A task as it is written into a checklist.
+ */
+public struct AffineChecklistTask: Equatable, Hashable {
+    public var id: Int64
+    public var title: String
+    public var permalink: String?
+    public var depth: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Int64, title: String, permalink: String?, depth: Int64) {
+        self.id = id
+        self.title = title
+        self.permalink = permalink
+        self.depth = depth
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AffineChecklistTask: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAffineChecklistTask: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AffineChecklistTask {
+        return
+            try AffineChecklistTask(
+                id: FfiConverterInt64.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                permalink: FfiConverterOptionString.read(from: &buf), 
+                depth: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AffineChecklistTask, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterOptionString.write(value.permalink, into: &buf)
+        FfiConverterInt64.write(value.depth, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAffineChecklistTask_lift(_ buf: RustBuffer) throws -> AffineChecklistTask {
+    return try FfiConverterTypeAffineChecklistTask.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAffineChecklistTask_lower(_ value: AffineChecklistTask) -> RustBuffer {
+    return FfiConverterTypeAffineChecklistTask.lower(value)
+}
+
+
+/**
  * A row of `focus_awards`. `FocusAward`.
  */
 public struct AwardRow: Equatable, Hashable {
@@ -8471,6 +8686,616 @@ public func FfiConverterTypeFollowUpPlan_lift(_ buf: RustBuffer) throws -> Follo
 #endif
 public func FfiConverterTypeFollowUpPlan_lower(_ value: FollowUpPlan) -> RustBuffer {
     return FfiConverterTypeFollowUpPlan.lower(value)
+}
+
+
+/**
+ * Something Takt overwrote because it had the final say.
+ */
+public struct GoogleTasksConflict: Equatable, Hashable {
+    public var localId: String
+    public var remoteId: String
+    public var field: GoogleTasksConflictField
+    public var localValue: String
+    public var remoteValue: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(localId: String, remoteId: String, field: GoogleTasksConflictField, localValue: String, remoteValue: String) {
+        self.localId = localId
+        self.remoteId = remoteId
+        self.field = field
+        self.localValue = localValue
+        self.remoteValue = remoteValue
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksConflict: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksConflict: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksConflict {
+        return
+            try GoogleTasksConflict(
+                localId: FfiConverterString.read(from: &buf), 
+                remoteId: FfiConverterString.read(from: &buf), 
+                field: FfiConverterTypeGoogleTasksConflictField.read(from: &buf), 
+                localValue: FfiConverterString.read(from: &buf), 
+                remoteValue: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksConflict, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.localId, into: &buf)
+        FfiConverterString.write(value.remoteId, into: &buf)
+        FfiConverterTypeGoogleTasksConflictField.write(value.field, into: &buf)
+        FfiConverterString.write(value.localValue, into: &buf)
+        FfiConverterString.write(value.remoteValue, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksConflict_lift(_ buf: RustBuffer) throws -> GoogleTasksConflict {
+    return try FfiConverterTypeGoogleTasksConflict.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksConflict_lower(_ value: GoogleTasksConflict) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksConflict.lower(value)
+}
+
+
+/**
+ * What was pushed to Google last time for one local task. Without it a
+ * remote edit and Takt's own echo look the same.
+ */
+public struct GoogleTasksLedgerEntry: Equatable, Hashable {
+    public var localId: String
+    public var remoteId: String
+    public var remoteListId: String
+    public var pushedTitle: String
+    public var pushedNotes: String
+    public var pushedDue: String?
+    public var pushedCompleted: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(localId: String, remoteId: String, remoteListId: String, pushedTitle: String, pushedNotes: String, pushedDue: String?, pushedCompleted: Bool) {
+        self.localId = localId
+        self.remoteId = remoteId
+        self.remoteListId = remoteListId
+        self.pushedTitle = pushedTitle
+        self.pushedNotes = pushedNotes
+        self.pushedDue = pushedDue
+        self.pushedCompleted = pushedCompleted
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksLedgerEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksLedgerEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksLedgerEntry {
+        return
+            try GoogleTasksLedgerEntry(
+                localId: FfiConverterString.read(from: &buf), 
+                remoteId: FfiConverterString.read(from: &buf), 
+                remoteListId: FfiConverterString.read(from: &buf), 
+                pushedTitle: FfiConverterString.read(from: &buf), 
+                pushedNotes: FfiConverterString.read(from: &buf), 
+                pushedDue: FfiConverterOptionString.read(from: &buf), 
+                pushedCompleted: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksLedgerEntry, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.localId, into: &buf)
+        FfiConverterString.write(value.remoteId, into: &buf)
+        FfiConverterString.write(value.remoteListId, into: &buf)
+        FfiConverterString.write(value.pushedTitle, into: &buf)
+        FfiConverterString.write(value.pushedNotes, into: &buf)
+        FfiConverterOptionString.write(value.pushedDue, into: &buf)
+        FfiConverterBool.write(value.pushedCompleted, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksLedgerEntry_lift(_ buf: RustBuffer) throws -> GoogleTasksLedgerEntry {
+    return try FfiConverterTypeGoogleTasksLedgerEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksLedgerEntry_lower(_ value: GoogleTasksLedgerEntry) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksLedgerEntry.lower(value)
+}
+
+
+/**
+ * A local list and the Google list mirroring it.
+ */
+public struct GoogleTasksListMapping: Equatable, Hashable {
+    public var localListId: String
+    public var remoteListId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(localListId: String, remoteListId: String) {
+        self.localListId = localListId
+        self.remoteListId = remoteListId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksListMapping: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksListMapping: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksListMapping {
+        return
+            try GoogleTasksListMapping(
+                localListId: FfiConverterString.read(from: &buf), 
+                remoteListId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksListMapping, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.localListId, into: &buf)
+        FfiConverterString.write(value.remoteListId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksListMapping_lift(_ buf: RustBuffer) throws -> GoogleTasksListMapping {
+    return try FfiConverterTypeGoogleTasksListMapping.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksListMapping_lower(_ value: GoogleTasksListMapping) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksListMapping.lower(value)
+}
+
+
+public struct GoogleTasksLocalList: Equatable, Hashable {
+    public var id: String
+    public var name: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String) {
+        self.id = id
+        self.name = name
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksLocalList: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksLocalList: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksLocalList {
+        return
+            try GoogleTasksLocalList(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksLocalList, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksLocalList_lift(_ buf: RustBuffer) throws -> GoogleTasksLocalList {
+    return try FfiConverterTypeGoogleTasksLocalList.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksLocalList_lower(_ value: GoogleTasksLocalList) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksLocalList.lower(value)
+}
+
+
+public struct GoogleTasksLocalTask: Equatable, Hashable {
+    public var id: String
+    public var listId: String
+    public var parentId: String?
+    public var title: String
+    public var notes: String
+    /**
+     * The due day in Google's form, `yyyy-MM-ddT00:00:00.000Z`.
+     */
+    public var due: String?
+    public var isCompleted: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, listId: String, parentId: String?, title: String, notes: String, 
+        /**
+         * The due day in Google's form, `yyyy-MM-ddT00:00:00.000Z`.
+         */due: String?, isCompleted: Bool) {
+        self.id = id
+        self.listId = listId
+        self.parentId = parentId
+        self.title = title
+        self.notes = notes
+        self.due = due
+        self.isCompleted = isCompleted
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksLocalTask: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksLocalTask: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksLocalTask {
+        return
+            try GoogleTasksLocalTask(
+                id: FfiConverterString.read(from: &buf), 
+                listId: FfiConverterString.read(from: &buf), 
+                parentId: FfiConverterOptionString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                notes: FfiConverterString.read(from: &buf), 
+                due: FfiConverterOptionString.read(from: &buf), 
+                isCompleted: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksLocalTask, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterOptionString.write(value.parentId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.notes, into: &buf)
+        FfiConverterOptionString.write(value.due, into: &buf)
+        FfiConverterBool.write(value.isCompleted, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksLocalTask_lift(_ buf: RustBuffer) throws -> GoogleTasksLocalTask {
+    return try FfiConverterTypeGoogleTasksLocalTask.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksLocalTask_lower(_ value: GoogleTasksLocalTask) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksLocalTask.lower(value)
+}
+
+
+public struct GoogleTasksPayload: Equatable, Hashable {
+    public var title: String
+    public var notes: String
+    public var due: String?
+    public var isCompleted: Bool
+    /**
+     * The Google task this one hangs under, when the local parent is mirrored
+     * in the same list and is itself top level.
+     */
+    public var parentRemoteId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(title: String, notes: String, due: String?, isCompleted: Bool, 
+        /**
+         * The Google task this one hangs under, when the local parent is mirrored
+         * in the same list and is itself top level.
+         */parentRemoteId: String?) {
+        self.title = title
+        self.notes = notes
+        self.due = due
+        self.isCompleted = isCompleted
+        self.parentRemoteId = parentRemoteId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksPayload: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksPayload: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksPayload {
+        return
+            try GoogleTasksPayload(
+                title: FfiConverterString.read(from: &buf), 
+                notes: FfiConverterString.read(from: &buf), 
+                due: FfiConverterOptionString.read(from: &buf), 
+                isCompleted: FfiConverterBool.read(from: &buf), 
+                parentRemoteId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksPayload, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.notes, into: &buf)
+        FfiConverterOptionString.write(value.due, into: &buf)
+        FfiConverterBool.write(value.isCompleted, into: &buf)
+        FfiConverterOptionString.write(value.parentRemoteId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksPayload_lift(_ buf: RustBuffer) throws -> GoogleTasksPayload {
+    return try FfiConverterTypeGoogleTasksPayload.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksPayload_lower(_ value: GoogleTasksPayload) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksPayload.lower(value)
+}
+
+
+public struct GoogleTasksPlan: Equatable, Hashable {
+    public var operations: [GoogleTasksOperation]
+    public var conflicts: [GoogleTasksConflict]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operations: [GoogleTasksOperation], conflicts: [GoogleTasksConflict]) {
+        self.operations = operations
+        self.conflicts = conflicts
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksPlan: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksPlan: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksPlan {
+        return
+            try GoogleTasksPlan(
+                operations: FfiConverterSequenceTypeGoogleTasksOperation.read(from: &buf), 
+                conflicts: FfiConverterSequenceTypeGoogleTasksConflict.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksPlan, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeGoogleTasksOperation.write(value.operations, into: &buf)
+        FfiConverterSequenceTypeGoogleTasksConflict.write(value.conflicts, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksPlan_lift(_ buf: RustBuffer) throws -> GoogleTasksPlan {
+    return try FfiConverterTypeGoogleTasksPlan.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksPlan_lower(_ value: GoogleTasksPlan) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksPlan.lower(value)
+}
+
+
+public struct GoogleTasksRemoteList: Equatable, Hashable {
+    public var id: String
+    public var title: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String) {
+        self.id = id
+        self.title = title
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksRemoteList: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksRemoteList: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksRemoteList {
+        return
+            try GoogleTasksRemoteList(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksRemoteList, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksRemoteList_lift(_ buf: RustBuffer) throws -> GoogleTasksRemoteList {
+    return try FfiConverterTypeGoogleTasksRemoteList.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksRemoteList_lower(_ value: GoogleTasksRemoteList) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksRemoteList.lower(value)
+}
+
+
+public struct GoogleTasksRemoteTask: Equatable, Hashable {
+    public var id: String
+    public var listId: String
+    public var parentId: String?
+    public var title: String
+    public var notes: String
+    /**
+     * Google's own RFC 3339 string, verbatim.
+     */
+    public var due: String?
+    public var isCompleted: Bool
+    /**
+     * Google marks a deleted task for a while rather than dropping it.
+     */
+    public var isDeleted: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, listId: String, parentId: String?, title: String, notes: String, 
+        /**
+         * Google's own RFC 3339 string, verbatim.
+         */due: String?, isCompleted: Bool, 
+        /**
+         * Google marks a deleted task for a while rather than dropping it.
+         */isDeleted: Bool) {
+        self.id = id
+        self.listId = listId
+        self.parentId = parentId
+        self.title = title
+        self.notes = notes
+        self.due = due
+        self.isCompleted = isCompleted
+        self.isDeleted = isDeleted
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GoogleTasksRemoteTask: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksRemoteTask: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksRemoteTask {
+        return
+            try GoogleTasksRemoteTask(
+                id: FfiConverterString.read(from: &buf), 
+                listId: FfiConverterString.read(from: &buf), 
+                parentId: FfiConverterOptionString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                notes: FfiConverterString.read(from: &buf), 
+                due: FfiConverterOptionString.read(from: &buf), 
+                isCompleted: FfiConverterBool.read(from: &buf), 
+                isDeleted: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GoogleTasksRemoteTask, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterOptionString.write(value.parentId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.notes, into: &buf)
+        FfiConverterOptionString.write(value.due, into: &buf)
+        FfiConverterBool.write(value.isCompleted, into: &buf)
+        FfiConverterBool.write(value.isDeleted, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksRemoteTask_lift(_ buf: RustBuffer) throws -> GoogleTasksRemoteTask {
+    return try FfiConverterTypeGoogleTasksRemoteTask.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksRemoteTask_lower(_ value: GoogleTasksRemoteTask) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksRemoteTask.lower(value)
 }
 
 
@@ -13321,6 +14146,257 @@ public func FfiConverterTypeExportFormat_lower(_ value: ExportFormat) -> RustBuf
 
 
 
+
+public enum GoogleTasksConflictField: Equatable, Hashable {
+    
+    case title
+    case notes
+    case due
+    case existence
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GoogleTasksConflictField: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksConflictField: FfiConverterRustBuffer {
+    typealias SwiftType = GoogleTasksConflictField
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksConflictField {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .title
+        
+        case 2: return .notes
+        
+        case 3: return .due
+        
+        case 4: return .existence
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GoogleTasksConflictField, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .title:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .notes:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .due:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .existence:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksConflictField_lift(_ buf: RustBuffer) throws -> GoogleTasksConflictField {
+    return try FfiConverterTypeGoogleTasksConflictField.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksConflictField_lower(_ value: GoogleTasksConflictField) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksConflictField.lower(value)
+}
+
+
+
+
+public enum GoogleTasksOperation: Equatable, Hashable {
+    
+    case createList(localListId: String, title: String
+    )
+    /**
+     * An unmapped Google list with exactly the title of a local list that has
+     * no copy: the mirror finding its own list again after losing the ledger.
+     */
+    case adoptRemoteList(localListId: String, remoteListId: String
+    )
+    case renameList(remoteListId: String, title: String
+    )
+    case deleteList(remoteListId: String, localListId: String
+    )
+    case createTask(localId: String, remoteListId: String, payload: GoogleTasksPayload
+    )
+    case updateTask(localId: String, remoteId: String, remoteListId: String, payload: GoogleTasksPayload
+    )
+    case deleteTask(remoteId: String, remoteListId: String, localId: String
+    )
+    case completeLocalTask(localId: String
+    )
+    case mergeNotesIntoLocalTask(localId: String, notes: String
+    )
+    case adoptRemoteTask(remoteId: String, remoteListId: String, localListId: String, payload: GoogleTasksPayload
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GoogleTasksOperation: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGoogleTasksOperation: FfiConverterRustBuffer {
+    typealias SwiftType = GoogleTasksOperation
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GoogleTasksOperation {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .createList(localListId: try FfiConverterString.read(from: &buf), title: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .adoptRemoteList(localListId: try FfiConverterString.read(from: &buf), remoteListId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .renameList(remoteListId: try FfiConverterString.read(from: &buf), title: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .deleteList(remoteListId: try FfiConverterString.read(from: &buf), localListId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .createTask(localId: try FfiConverterString.read(from: &buf), remoteListId: try FfiConverterString.read(from: &buf), payload: try FfiConverterTypeGoogleTasksPayload.read(from: &buf)
+        )
+        
+        case 6: return .updateTask(localId: try FfiConverterString.read(from: &buf), remoteId: try FfiConverterString.read(from: &buf), remoteListId: try FfiConverterString.read(from: &buf), payload: try FfiConverterTypeGoogleTasksPayload.read(from: &buf)
+        )
+        
+        case 7: return .deleteTask(remoteId: try FfiConverterString.read(from: &buf), remoteListId: try FfiConverterString.read(from: &buf), localId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .completeLocalTask(localId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 9: return .mergeNotesIntoLocalTask(localId: try FfiConverterString.read(from: &buf), notes: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .adoptRemoteTask(remoteId: try FfiConverterString.read(from: &buf), remoteListId: try FfiConverterString.read(from: &buf), localListId: try FfiConverterString.read(from: &buf), payload: try FfiConverterTypeGoogleTasksPayload.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GoogleTasksOperation, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .createList(localListId,title):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(localListId, into: &buf)
+            FfiConverterString.write(title, into: &buf)
+            
+        
+        case let .adoptRemoteList(localListId,remoteListId):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(localListId, into: &buf)
+            FfiConverterString.write(remoteListId, into: &buf)
+            
+        
+        case let .renameList(remoteListId,title):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(remoteListId, into: &buf)
+            FfiConverterString.write(title, into: &buf)
+            
+        
+        case let .deleteList(remoteListId,localListId):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(remoteListId, into: &buf)
+            FfiConverterString.write(localListId, into: &buf)
+            
+        
+        case let .createTask(localId,remoteListId,payload):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(localId, into: &buf)
+            FfiConverterString.write(remoteListId, into: &buf)
+            FfiConverterTypeGoogleTasksPayload.write(payload, into: &buf)
+            
+        
+        case let .updateTask(localId,remoteId,remoteListId,payload):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(localId, into: &buf)
+            FfiConverterString.write(remoteId, into: &buf)
+            FfiConverterString.write(remoteListId, into: &buf)
+            FfiConverterTypeGoogleTasksPayload.write(payload, into: &buf)
+            
+        
+        case let .deleteTask(remoteId,remoteListId,localId):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(remoteId, into: &buf)
+            FfiConverterString.write(remoteListId, into: &buf)
+            FfiConverterString.write(localId, into: &buf)
+            
+        
+        case let .completeLocalTask(localId):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(localId, into: &buf)
+            
+        
+        case let .mergeNotesIntoLocalTask(localId,notes):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(localId, into: &buf)
+            FfiConverterString.write(notes, into: &buf)
+            
+        
+        case let .adoptRemoteTask(remoteId,remoteListId,localListId,payload):
+            writeInt(&buf, Int32(10))
+            FfiConverterString.write(remoteId, into: &buf)
+            FfiConverterString.write(remoteListId, into: &buf)
+            FfiConverterString.write(localListId, into: &buf)
+            FfiConverterTypeGoogleTasksPayload.write(payload, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksOperation_lift(_ buf: RustBuffer) throws -> GoogleTasksOperation {
+    return try FfiConverterTypeGoogleTasksOperation.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGoogleTasksOperation_lower(_ value: GoogleTasksOperation) -> RustBuffer {
+    return FfiConverterTypeGoogleTasksOperation.lower(value)
+}
+
+
+
 /**
  * How hard a completion lands. `CompletionMilestone`.
  */
@@ -15041,6 +16117,56 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeAffineChecklistItem: FfiConverterRustBuffer {
+    typealias SwiftType = [AffineChecklistItem]
+
+    public static func write(_ value: [AffineChecklistItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAffineChecklistItem.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AffineChecklistItem] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AffineChecklistItem]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAffineChecklistItem.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeAffineChecklistTask: FfiConverterRustBuffer {
+    typealias SwiftType = [AffineChecklistTask]
+
+    public static func write(_ value: [AffineChecklistTask], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAffineChecklistTask.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AffineChecklistTask] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AffineChecklistTask]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAffineChecklistTask.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeAwardRow: FfiConverterRustBuffer {
     typealias SwiftType = [AwardRow]
 
@@ -15658,6 +16784,181 @@ fileprivate struct FfiConverterSequenceTypeFolderRow: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeFolderRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleTasksConflict: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleTasksConflict]
+
+    public static func write(_ value: [GoogleTasksConflict], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleTasksConflict.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleTasksConflict] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleTasksConflict]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleTasksConflict.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleTasksLedgerEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleTasksLedgerEntry]
+
+    public static func write(_ value: [GoogleTasksLedgerEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleTasksLedgerEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleTasksLedgerEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleTasksLedgerEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleTasksLedgerEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleTasksListMapping: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleTasksListMapping]
+
+    public static func write(_ value: [GoogleTasksListMapping], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleTasksListMapping.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleTasksListMapping] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleTasksListMapping]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleTasksListMapping.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleTasksLocalList: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleTasksLocalList]
+
+    public static func write(_ value: [GoogleTasksLocalList], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleTasksLocalList.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleTasksLocalList] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleTasksLocalList]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleTasksLocalList.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleTasksLocalTask: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleTasksLocalTask]
+
+    public static func write(_ value: [GoogleTasksLocalTask], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleTasksLocalTask.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleTasksLocalTask] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleTasksLocalTask]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleTasksLocalTask.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleTasksRemoteList: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleTasksRemoteList]
+
+    public static func write(_ value: [GoogleTasksRemoteList], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleTasksRemoteList.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleTasksRemoteList] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleTasksRemoteList]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleTasksRemoteList.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGoogleTasksRemoteTask: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleTasksRemoteTask]
+
+    public static func write(_ value: [GoogleTasksRemoteTask], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleTasksRemoteTask.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleTasksRemoteTask] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleTasksRemoteTask]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleTasksRemoteTask.read(from: &buf))
         }
         return seq
     }
@@ -16391,6 +17692,31 @@ fileprivate struct FfiConverterSequenceTypeCoreThemeIssue: FfiConverterRustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeGoogleTasksOperation: FfiConverterRustBuffer {
+    typealias SwiftType = [GoogleTasksOperation]
+
+    public static func write(_ value: [GoogleTasksOperation], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGoogleTasksOperation.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GoogleTasksOperation] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GoogleTasksOperation]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGoogleTasksOperation.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeUnavailable: FfiConverterRustBuffer {
     typealias SwiftType = [Unavailable]
 
@@ -16552,6 +17878,133 @@ public func coreVersion() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_core_version(uniffiCallStatus
+    )
+})
+}
+/**
+ * What is written under `heading`, heading line excluded, or None when the
+ * document has no such heading: "the section is empty" and "there is no
+ * section" mean different things to a caller deciding whether to create it.
+ */
+public func affineBodyUnder(heading: String, markdown: String) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_body_under(
+        FfiConverterString.lower(heading),
+        FfiConverterString.lower(markdown),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether the items already say what Takt is about to write. Compared item
+ * by item, because the text differs by escaping every time.
+ */
+public func affineChecklistMatches(items: [AffineChecklistItem], tasks: [AffineChecklistTask]) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_checklist_matches(
+        FfiConverterSequenceTypeAffineChecklistItem.lower(items),
+        FfiConverterSequenceTypeAffineChecklistTask.lower(tasks),uniffiCallStatus
+    )
+})
+}
+/**
+ * The section's todo items and the lines Takt does not own, in one pass.
+ * A document without the heading reads as nothing rather than everything.
+ */
+public func affineChecklistRead(markdown: String, heading: String) -> AffineChecklistRead  {
+    return try!  FfiConverterTypeAffineChecklistRead_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_checklist_read(
+        FfiConverterString.lower(markdown),
+        FfiConverterString.lower(heading),uniffiCallStatus
+    )
+})
+}
+/**
+ * The document with its checklist rewritten to `tasks`, keeping the lines
+ * Takt does not own, or None when nothing was ticked (`ticked_any` false)
+ * and the checklist already says the same: rewriting would churn the
+ * document's history for no change anyone made.
+ */
+public func affineChecklistRewrite(existing: String, tasks: [AffineChecklistTask], heading: String, tickedAny: Bool) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_checklist_rewrite(
+        FfiConverterString.lower(existing),
+        FfiConverterSequenceTypeAffineChecklistTask.lower(tasks),
+        FfiConverterString.lower(heading),
+        FfiConverterBool.lower(tickedAny),uniffiCallStatus
+    )
+})
+}
+/**
+ * The checklist section. `carried_over` is lines found in the section that
+ * Takt did not write: the section is Takt's to rewrite, but a note someone
+ * typed into it is not Takt's to delete.
+ */
+public func affineChecklistSection(tasks: [AffineChecklistTask], carriedOver: [String], heading: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_checklist_section(
+        FfiConverterSequenceTypeAffineChecklistTask.lower(tasks),
+        FfiConverterSequenceString.lower(carriedOver),
+        FfiConverterString.lower(heading),uniffiCallStatus
+    )
+})
+}
+/**
+ * Splices `section` into `existing`, replacing the block `heading` already
+ * owns and appending one otherwise. The block ends at the next heading of
+ * the same level or shallower, so a `###` Takt wrote goes with it and the
+ * `##` the user wrote below survives.
+ */
+public func affineMerged(section: String, heading: String, existing: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_merged(
+        FfiConverterString.lower(section),
+        FfiConverterString.lower(heading),
+        FfiConverterString.lower(existing),uniffiCallStatus
+    )
+})
+}
+/**
+ * The body of a task's document, without the title AFFiNE carries
+ * separately. `synced_at` is the caller's formatted stamp.
+ */
+public func affineTaskDocument(permalink: String?, taskId: Int64, notes: [String], syncedAt: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_task_document(
+        FfiConverterOptionString.lower(permalink),
+        FfiConverterInt64.lower(taskId),
+        FfiConverterSequenceString.lower(notes),
+        FfiConverterString.lower(syncedAt),uniffiCallStatus
+    )
+})
+}
+/**
+ * The task id a Checkvist permalink ends with (`#t<id>`). Matching on that
+ * rather than the host keeps a self-hosted or rewritten link working.
+ */
+public func affineTaskIdInPermalink(permalink: String) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_task_id_in_permalink(
+        FfiConverterString.lower(permalink),uniffiCallStatus
+    )
+})
+}
+/**
+ * A document title for a task, on one line: a newline would arrive in
+ * AFFiNE as a title plus a stray paragraph.
+ */
+public func affineTaskTitle(content: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_affine_task_title(
+        FfiConverterString.lower(content),uniffiCallStatus
     )
 })
 }
@@ -16740,6 +18193,29 @@ public func dayLogWeeklyBuckets(events: [DayLogRecord], boundary: DayLogBoundary
         FfiConverterTypeDayLogBoundary_lower(boundary),
         FfiConverterInt64.lower(endingOnMs),
         FfiConverterInt64.lower(weeks),uniffiCallStatus
+    )
+})
+}
+/**
+ * Works out what has to happen for the two sides to agree.
+ *
+ * The ledger is `ledger_tasks` (keyed by local task id) and `ledger_lists`
+ * (keyed by local list id); a key given twice keeps its first entry. Lists
+ * and tasks the ledger no longer has a local side for are deleted in the
+ * order the ledger lists them. A Google list the ledger does not map is left
+ * alone unless a local list without a copy has exactly its title, in which
+ * case it is adopted: the mirror owns the lists it made and nothing else.
+ */
+public func googleTasksPlan(localLists: [GoogleTasksLocalList], localTasks: [GoogleTasksLocalTask], remoteLists: [GoogleTasksRemoteList], remoteTasks: [GoogleTasksRemoteTask], ledgerTasks: [GoogleTasksLedgerEntry], ledgerLists: [GoogleTasksListMapping]) -> GoogleTasksPlan  {
+    return try!  FfiConverterTypeGoogleTasksPlan_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_google_tasks_plan(
+        FfiConverterSequenceTypeGoogleTasksLocalList.lower(localLists),
+        FfiConverterSequenceTypeGoogleTasksLocalTask.lower(localTasks),
+        FfiConverterSequenceTypeGoogleTasksRemoteList.lower(remoteLists),
+        FfiConverterSequenceTypeGoogleTasksRemoteTask.lower(remoteTasks),
+        FfiConverterSequenceTypeGoogleTasksLedgerEntry.lower(ledgerTasks),
+        FfiConverterSequenceTypeGoogleTasksListMapping.lower(ledgerLists),uniffiCallStatus
     )
 })
 }
@@ -17565,6 +19041,33 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_core_version() != 3784) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_affine_body_under() != 53160) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_affine_checklist_matches() != 10604) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_affine_checklist_read() != 22446) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_affine_checklist_rewrite() != 11578) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_affine_checklist_section() != 22489) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_affine_merged() != 34494) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_affine_task_document() != 62655) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_affine_task_id_in_permalink() != 7955) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_affine_task_title() != 5213) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_day_boundary_day_key() != 60525) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -17617,6 +19120,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_day_log_weekly_buckets() != 50056) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_google_tasks_plan() != 64663) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_clamped_focus_multiplier() != 31070) {
