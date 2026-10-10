@@ -56,43 +56,33 @@ struct TimelineDay: Equatable, Sendable {
     }
   }
 
+  /// The Rust core's `review::review_timeline`, which keeps, lays out, groups
+  /// and scores the blocks and hands back indices into them.
   static func build(
     day: Date, blocks: [Input], awards: [FocusAward], live: (id: String, taskID: String, title: String, seconds: Int)?,
     now: Date = .now, calendar: Calendar = .current
   ) -> TimelineDay {
-    let logged = blocks.filter { $0.seconds > 0 }
-    var assembled = logged.map {
+    var given = blocks.map {
       FocusDayTimeline.Block(id: $0.id, title: $0.title, seconds: $0.seconds, endedAt: $0.recordedAt)
     }
-    var keys: [String: String] = [:]
-    for block in logged { keys[block.id] = block.taskKey }
-    if let live, live.seconds > 0, calendar.isDate(day, inSameDayAs: now) {
-      assembled.append(FocusDayTimeline.Block(id: live.id, title: live.title, seconds: live.seconds, endedAt: now, isLive: true))
-      keys[live.id] = live.taskID
+    var keys = blocks.map(\.taskKey)
+    if let live {
+      given.append(FocusDayTimeline.Block(id: live.id, title: live.title, seconds: live.seconds, endedAt: now, isLive: true))
+      keys.append(live.taskID)
     }
-    let awardsByID = Dictionary(awards.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    let grouped = Dictionary(grouping: assembled) { (block: FocusDayTimeline.Block) -> String in
-      keys[block.id] ?? block.title
-    }
-    var summaries: [TaskSummary] = []
-    for (key, values) in grouped {
-      let seconds = values.reduce(0) { $0 + $1.seconds }
-      summaries.append(TaskSummary(
-        id: key, title: values.last?.title ?? "Deleted task", seconds: seconds, blocks: values.count, hue: 0))
-    }
-    summaries.sort { $0.seconds == $1.seconds ? $0.id < $1.id : $0.seconds > $1.seconds }
-    summaries = summaries.enumerated().map { index, summary in
-      TaskSummary(id: summary.id, title: summary.title, seconds: summary.seconds, blocks: summary.blocks, hue: index)
-    }
-    let points = logged.compactMap { awardsByID[$0.id]?.points }.reduce(0, +)
+    let shaped = FocusDayTimeline.reviewDay(
+      blocks: given, taskKeys: keys, awards: awards.map { (id: $0.id, points: $0.points) }, day: day, now: now,
+      calendar: calendar)
     return TimelineDay(
       date: day,
-      layout: FocusDayTimeline.layout(blocks: assembled, day: day, calendar: calendar),
-      totalSeconds: assembled.reduce(0) { $0 + $1.seconds },
-      points: points,
-      summaries: summaries,
-      taskKeys: keys,
-      awards: awardsByID)
+      layout: shaped.layout,
+      totalSeconds: shaped.totalSeconds,
+      points: shaped.points,
+      summaries: shaped.summaries.enumerated().map { hue, summary in
+        TaskSummary(id: summary.id, title: summary.title, seconds: summary.seconds, blocks: summary.blocks, hue: hue)
+      },
+      taskKeys: shaped.taskKeys,
+      awards: Dictionary(awards.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }))
   }
 
   func hue(forBlock id: String) -> Int {
@@ -116,23 +106,17 @@ struct ProgressSummary: Equatable, Sendable {
   var totalAdded = 0
   var focusMinutes = 0
   var bestDay: ProgressDay?
+}
 
-  static func build(
-    period: TaskProgressPeriod, completions: [Date], creations: [Date], blocks: [(seconds: Int, recordedAt: Date)],
-    now: Date = .now, calendar: Calendar = .current
-  ) -> ProgressSummary {
-    let series = TaskProgressSeries.build(
-      period: period, completions: completions, creations: creations, now: now, calendar: calendar)
-    let minutes = blocks.reduce(into: [Date: Int]()) { result, block in
-      result[calendar.startOfDay(for: block.recordedAt), default: 0] += block.seconds
+extension ProgressSummary {
+  /// The core's reading, in the chart's types.
+  init(_ read: ReviewProgressDays) {
+    let days = read.days.map {
+      ProgressDay(day: $0.dayStart, completed: $0.completed, added: $0.added, focusMinutes: $0.focusMinutes)
     }
-    let days = series.days.map {
-      ProgressDay(day: $0.dayStart, completed: $0.completed, added: $0.added, focusMinutes: minutes[$0.dayStart, default: 0] / 60)
-    }
-    return ProgressSummary(
-      days: days, totalCompleted: series.totalCompleted, totalAdded: series.totalAdded,
-      focusMinutes: days.reduce(0) { $0 + $1.focusMinutes },
-      bestDay: days.filter { $0.completed > 0 }.max { $0.completed < $1.completed })
+    self.init(
+      days: days, totalCompleted: read.totalCompleted, totalAdded: read.totalAdded, focusMinutes: read.focusMinutes,
+      bestDay: read.bestDay.map { days[$0] })
   }
 }
 
@@ -242,13 +226,7 @@ final class ReviewModel {
   }
 
   nonisolated static func readProgress(store: WorkspaceStore, period: TaskProgressPeriod, now: Date) -> ProgressSummary {
-    let interval = TaskProgressSeries.interval(for: period, now: now)
-    return ProgressSummary.build(
-      period: period,
-      completions: (try? store.taskCompletions(in: interval)) ?? [],
-      creations: (try? store.taskCreations(in: interval)) ?? [],
-      blocks: ((try? store.focusWorkBlocks(in: interval)) ?? []).map { (seconds: $0.seconds, recordedAt: $0.recordedAt) },
-      now: now)
+    (try? store.reviewProgress(period: period, now: now)).map(ProgressSummary.init) ?? ProgressSummary()
   }
 
   // MARK: - Done actions

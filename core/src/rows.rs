@@ -627,6 +627,26 @@ pub fn work_blocks_between(
     )
 }
 
+/// The seconds and moment of each work block recorded in `[from, to)`, for
+/// sums that need neither titles nor ids.
+pub fn work_block_seconds_between(
+    connection: &Connection,
+    from_ms: i64,
+    to_ms: i64,
+) -> Result<Vec<crate::progress::WorkBlockSeconds>, CoreError> {
+    all(
+        connection,
+        "SELECT seconds, recordedAt FROM focus_work_blocks WHERE recordedAt >= ?1 AND recordedAt < ?2",
+        [stored(from_ms), stored(to_ms)],
+        |row| {
+            Ok(crate::progress::WorkBlockSeconds {
+                seconds: row.get("seconds")?,
+                recorded_at_ms: required_ms(row, "recordedAt")?,
+            })
+        },
+    )
+}
+
 /// One award by id.
 pub fn award(connection: &Connection, id: &str) -> Result<Option<AwardRow>, CoreError> {
     Ok(all(

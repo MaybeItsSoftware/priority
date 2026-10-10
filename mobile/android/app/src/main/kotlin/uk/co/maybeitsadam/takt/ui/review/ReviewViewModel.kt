@@ -22,7 +22,6 @@ import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.core.FocusPointsSummary
 import uk.co.maybeitsadam.takt.core.TaskProgressPeriod
-import uk.co.maybeitsadam.takt.core.TaskProgressSeries
 import uk.co.maybeitsadam.takt.data.workspace.observeCompletedTasks
 import uk.co.maybeitsadam.takt.data.workspace.observeReviewDay
 import uk.co.maybeitsadam.takt.data.workspace.observeReviewProgress
@@ -111,18 +110,8 @@ class ReviewViewModel(private val container: AppContainer) : ViewModel() {
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val progress: StateFlow<ProgressSummary> = _period.flatMapLatest { period ->
-        val interval = TaskProgressSeries.interval(period, Instant.now(), zone)
-        container.withSession { session -> session.repository.observeReviewProgress(interval.start, interval.end) }
-            .map { records ->
-                ProgressSummary.build(
-                    period = period,
-                    completions = records.completions,
-                    creations = records.creations,
-                    blocks = records.blocks.map { it.seconds to it.recordedAt },
-                    now = Instant.now(),
-                    zone = zone,
-                )
-            }
+        container.withSession { session -> session.repository.observeReviewProgress(period) }
+            .map { ProgressSummary.of(period, it) }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressSummary())
 
     /** The "Focus points" setting: off hides every points display. */

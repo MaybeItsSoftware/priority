@@ -49,6 +49,27 @@ extension WorkspaceStore {
     }.map(WorkspaceTask.init)
   }
 
+  /// The progress charts over `period`, a day at a time: completions,
+  /// creations and focus minutes bucketed into local days in the core
+  /// (`review::read_review_progress`), so only the days cross.
+  public func reviewProgress(
+    period: TaskProgressPeriod, now: Date = .now, calendar: Calendar = .current
+  ) throws -> ReviewProgressDays {
+    let read = try Self.mappingCoreErrors {
+      try core.reviewProgress(
+        days: UInt32(period.days), nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier)
+    }
+    return ReviewProgressDays(
+      days: read.days.map {
+        ReviewProgressDays.Day(
+          dayStart: Date(coreMilliseconds: $0.dayStartMs), completed: Int($0.completed), added: Int($0.added),
+          focusMinutes: Int($0.focusMinutes), cumulativeCompleted: Int($0.cumulativeCompleted),
+          cumulativeAdded: Int($0.cumulativeAdded))
+      },
+      totalCompleted: Int(read.totalCompleted), totalAdded: Int(read.totalAdded),
+      focusMinutes: Int(read.focusMinutes), bestDay: read.bestDay.map(Int.init))
+  }
+
   /// Today measured against the week it is part of: the Rust core's
   /// `progress::work_progress`, which reads and sums the rows itself.
   public func workProgress(now: Date = .now, calendar: Calendar = .current) throws -> WorkProgress {
@@ -120,4 +141,25 @@ extension WorkspaceStore {
     }
     return StaleFocusResolution(core: outcome)
   }
+}
+
+/// The Review screen's progress charts, shaped in the core.
+public struct ReviewProgressDays: Equatable, Sendable {
+  public struct Day: Equatable, Sendable {
+    public let dayStart: Date
+    public let completed: Int
+    public let added: Int
+    /// Whole minutes of focus logged that day.
+    public let focusMinutes: Int
+    public let cumulativeCompleted: Int
+    public let cumulativeAdded: Int
+  }
+
+  public let days: [Day]
+  public let totalCompleted: Int
+  public let totalAdded: Int
+  public let focusMinutes: Int
+  /// Index into `days`: the first of the days that closed the most, when any
+  /// closed one.
+  public let bestDay: Int?
 }

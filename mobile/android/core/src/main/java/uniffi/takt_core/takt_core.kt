@@ -839,6 +839,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_daily_is_due(
     ): Int
+    external fun uniffi_takt_core_checksum_func_review_timeline(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_summarise_review_progress(
+    ): Int
     external fun uniffi_takt_core_checksum_func_migrate_workspace(
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
@@ -1036,6 +1040,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_work_blocks_between(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_work_blocks_for_task(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_review_progress(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes(
     ): Int
@@ -1408,6 +1414,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_work_blocks_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_work_blocks_for_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_review_progress(`ptr`: Long,`days`: Int,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_acknowledge_sync_changes(`ptr`: Long,`throughSeq`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -1803,6 +1811,10 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_daily_is_due(`weekdaysMask`: Long,`intervalDays`: RustBuffer.ByValue,`anchorMs`: Long,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_func_review_timeline(`blocks`: RustBuffer.ByValue,`awards`: RustBuffer.ByValue,`dayMs`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_summarise_review_progress(`days`: Int,`completionsMs`: RustBuffer.ByValue,`creationsMs`: RustBuffer.ByValue,`blocks`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_migrations(uniffi_out_err: UniffiRustCallStatus, 
@@ -2268,6 +2280,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_workspace_daily_is_due() and 0xFFFF) != 26735) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_review_timeline() and 0xFFFF) != 40278) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_summarise_review_progress() and 0xFFFF) != 54122) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_migrate_workspace() and 0xFFFF) != 222) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2563,6 +2581,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_work_blocks_for_task() and 0xFFFF) != 6070) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_review_progress() and 0xFFFF) != 23968) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() and 0xFFFF) != 39097) {
@@ -4072,6 +4093,12 @@ public interface CoreWorkspaceInterface {
     fun `workBlocksForTask`(`taskId`: kotlin.String): List<WorkBlockRow>
     
     /**
+     * The progress charts over the `days` ending today, read and bucketed
+     * in the core. `ReviewModel.readProgress`.
+     */
+    fun `reviewProgress`(`days`: kotlin.UInt, `nowMs`: kotlin.Long, `zone`: kotlin.String): ReviewProgress
+    
+    /**
      * Forgets the outbox entries the server has accepted.
      */
     fun `acknowledgeSyncChanges`(`throughSeq`: kotlin.Long)
@@ -5438,6 +5465,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterString.lower(`taskId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The progress charts over the `days` ending today, read and bucketed
+     * in the core. `ReviewModel.readProgress`.
+     */
+    @Throws(CoreException::class)override fun `reviewProgress`(`days`: kotlin.UInt, `nowMs`: kotlin.Long, `zone`: kotlin.String): ReviewProgress {
+            return FfiConverterTypeReviewProgress.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_review_progress(
+        it,
+        
+        FfiConverterUInt.lower(`days`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     }
     )
@@ -14275,6 +14323,300 @@ public object FfiConverterTypeRanking: FfiConverterRustBuffer<Ranking> {
 
 
 /**
+ * An award as the timeline counts it: it shares its block's id.
+ */
+data class ReviewAwardPoints (
+    var `id`: kotlin.String
+    , 
+    var `points`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReviewAwardPoints: FfiConverterRustBuffer<ReviewAwardPoints> {
+    override fun read(buf: ByteBuffer): ReviewAwardPoints {
+        return ReviewAwardPoints(
+            FfiConverterString.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ReviewAwardPoints) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterDouble.allocationSize(value.`points`)
+    )
+
+    override fun write(value: ReviewAwardPoints, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterDouble.write(value.`points`, buf)
+    }
+}
+
+
+
+/**
+ * The period's charts and their totals. `ProgressSummary`.
+ */
+data class ReviewProgress (
+    var `days`: List<ReviewProgressDay>
+    , 
+    var `totalCompleted`: kotlin.Long
+    , 
+    var `totalAdded`: kotlin.Long
+    , 
+    var `focusMinutes`: kotlin.Long
+    , 
+    /**
+     * The first of the days that closed the most, when any closed one.
+     */
+    var `bestDay`: kotlin.UInt?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReviewProgress: FfiConverterRustBuffer<ReviewProgress> {
+    override fun read(buf: ByteBuffer): ReviewProgress {
+        return ReviewProgress(
+            FfiConverterSequenceTypeReviewProgressDay.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ReviewProgress) = (
+            FfiConverterSequenceTypeReviewProgressDay.allocationSize(value.`days`) +
+            FfiConverterLong.allocationSize(value.`totalCompleted`) +
+            FfiConverterLong.allocationSize(value.`totalAdded`) +
+            FfiConverterLong.allocationSize(value.`focusMinutes`) +
+            FfiConverterOptionalUInt.allocationSize(value.`bestDay`)
+    )
+
+    override fun write(value: ReviewProgress, buf: ByteBuffer) {
+            FfiConverterSequenceTypeReviewProgressDay.write(value.`days`, buf)
+            FfiConverterLong.write(value.`totalCompleted`, buf)
+            FfiConverterLong.write(value.`totalAdded`, buf)
+            FfiConverterLong.write(value.`focusMinutes`, buf)
+            FfiConverterOptionalUInt.write(value.`bestDay`, buf)
+    }
+}
+
+
+
+/**
+ * A day of the progress charts. `ProgressDay`.
+ */
+data class ReviewProgressDay (
+    var `dayStartMs`: kotlin.Long
+    , 
+    var `completed`: kotlin.Long
+    , 
+    var `added`: kotlin.Long
+    , 
+    /**
+     * Whole minutes of focus logged that day.
+     */
+    var `focusMinutes`: kotlin.Long
+    , 
+    var `cumulativeCompleted`: kotlin.Long
+    , 
+    var `cumulativeAdded`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReviewProgressDay: FfiConverterRustBuffer<ReviewProgressDay> {
+    override fun read(buf: ByteBuffer): ReviewProgressDay {
+        return ReviewProgressDay(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ReviewProgressDay) = (
+            FfiConverterLong.allocationSize(value.`dayStartMs`) +
+            FfiConverterLong.allocationSize(value.`completed`) +
+            FfiConverterLong.allocationSize(value.`added`) +
+            FfiConverterLong.allocationSize(value.`focusMinutes`) +
+            FfiConverterLong.allocationSize(value.`cumulativeCompleted`) +
+            FfiConverterLong.allocationSize(value.`cumulativeAdded`)
+    )
+
+    override fun write(value: ReviewProgressDay, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`dayStartMs`, buf)
+            FfiConverterLong.write(value.`completed`, buf)
+            FfiConverterLong.write(value.`added`, buf)
+            FfiConverterLong.write(value.`focusMinutes`, buf)
+            FfiConverterLong.write(value.`cumulativeCompleted`, buf)
+            FfiConverterLong.write(value.`cumulativeAdded`, buf)
+    }
+}
+
+
+
+/**
+ * One day of focus, shaped. Every index is into the blocks given.
+ */
+data class ReviewTimeline (
+    /**
+     * The blocks the day shows, in the order given: logged blocks with time
+     * in them, then the running block when it is today's and has started.
+     */
+    var `kept`: List<kotlin.UInt>
+    , 
+    var `layout`: TimelineLayout
+    , 
+    /**
+     * Most time first, ties by key; a summary's place is its hue.
+     */
+    var `summaries`: List<TimelineSummary>
+    , 
+    var `totalSeconds`: kotlin.Long
+    , 
+    /**
+     * The awards of the logged blocks kept.
+     */
+    var `points`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReviewTimeline: FfiConverterRustBuffer<ReviewTimeline> {
+    override fun read(buf: ByteBuffer): ReviewTimeline {
+        return ReviewTimeline(
+            FfiConverterSequenceUInt.read(buf),
+            FfiConverterTypeTimelineLayout.read(buf),
+            FfiConverterSequenceTypeTimelineSummary.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ReviewTimeline) = (
+            FfiConverterSequenceUInt.allocationSize(value.`kept`) +
+            FfiConverterTypeTimelineLayout.allocationSize(value.`layout`) +
+            FfiConverterSequenceTypeTimelineSummary.allocationSize(value.`summaries`) +
+            FfiConverterLong.allocationSize(value.`totalSeconds`) +
+            FfiConverterDouble.allocationSize(value.`points`)
+    )
+
+    override fun write(value: ReviewTimeline, buf: ByteBuffer) {
+            FfiConverterSequenceUInt.write(value.`kept`, buf)
+            FfiConverterTypeTimelineLayout.write(value.`layout`, buf)
+            FfiConverterSequenceTypeTimelineSummary.write(value.`summaries`, buf)
+            FfiConverterLong.write(value.`totalSeconds`, buf)
+            FfiConverterDouble.write(value.`points`, buf)
+    }
+}
+
+
+
+/**
+ * A block of the day as the timeline is given it: a logged block, or the
+ * one running now. `TimelineDay.Input`.
+ */
+data class ReviewTimelineBlock (
+    var `id`: kotlin.String
+    , 
+    /**
+     * The task the block belongs to, kept across renames and deletion.
+     */
+    var `taskKey`: kotlin.String
+    , 
+    var `seconds`: kotlin.Long
+    , 
+    /**
+     * When the block was logged. Ignored for the running block, which ends
+     * now.
+     */
+    var `endedAtMs`: kotlin.Long
+    , 
+    var `isLive`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReviewTimelineBlock: FfiConverterRustBuffer<ReviewTimelineBlock> {
+    override fun read(buf: ByteBuffer): ReviewTimelineBlock {
+        return ReviewTimelineBlock(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ReviewTimelineBlock) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`taskKey`) +
+            FfiConverterLong.allocationSize(value.`seconds`) +
+            FfiConverterLong.allocationSize(value.`endedAtMs`) +
+            FfiConverterBoolean.allocationSize(value.`isLive`)
+    )
+
+    override fun write(value: ReviewTimelineBlock, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`taskKey`, buf)
+            FfiConverterLong.write(value.`seconds`, buf)
+            FfiConverterLong.write(value.`endedAtMs`, buf)
+            FfiConverterBoolean.write(value.`isLive`, buf)
+    }
+}
+
+
+
+/**
  * An available task with why it is where it is. `ScoredNextUp`.
  */
 data class Scored (
@@ -22176,6 +22518,90 @@ public object FfiConverterSequenceTypeQueueEntry: FfiConverterRustBuffer<List<Qu
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeReviewAwardPoints: FfiConverterRustBuffer<List<ReviewAwardPoints>> {
+    override fun read(buf: ByteBuffer): List<ReviewAwardPoints> {
+        val len = buf.getInt()
+        return List<ReviewAwardPoints>(len) {
+            FfiConverterTypeReviewAwardPoints.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ReviewAwardPoints>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeReviewAwardPoints.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ReviewAwardPoints>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeReviewAwardPoints.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeReviewProgressDay: FfiConverterRustBuffer<List<ReviewProgressDay>> {
+    override fun read(buf: ByteBuffer): List<ReviewProgressDay> {
+        val len = buf.getInt()
+        return List<ReviewProgressDay>(len) {
+            FfiConverterTypeReviewProgressDay.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ReviewProgressDay>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeReviewProgressDay.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ReviewProgressDay>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeReviewProgressDay.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeReviewTimelineBlock: FfiConverterRustBuffer<List<ReviewTimelineBlock>> {
+    override fun read(buf: ByteBuffer): List<ReviewTimelineBlock> {
+        val len = buf.getInt()
+        return List<ReviewTimelineBlock>(len) {
+            FfiConverterTypeReviewTimelineBlock.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ReviewTimelineBlock>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeReviewTimelineBlock.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ReviewTimelineBlock>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeReviewTimelineBlock.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeScored: FfiConverterRustBuffer<List<Scored>> {
     override fun read(buf: ByteBuffer): List<Scored> {
         val len = buf.getInt()
@@ -24268,6 +24694,46 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterOptionalLong.lower(`intervalDays`),
         FfiConverterLong.lower(`anchorMs`),
         FfiConverterLong.lower(`dayMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Lays out the day containing `day_ms` from its blocks, groups them by
+         * task and adds up their points. `TimelineDay.build`.
+         */ fun `reviewTimeline`(`blocks`: List<ReviewTimelineBlock>, `awards`: List<ReviewAwardPoints>, `dayMs`: kotlin.Long, `nowMs`: kotlin.Long, `zone`: kotlin.String): ReviewTimeline {
+            return FfiConverterTypeReviewTimeline.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_review_timeline(
+    
+        
+        FfiConverterSequenceTypeReviewTimelineBlock.lower(`blocks`),
+        FfiConverterSequenceTypeReviewAwardPoints.lower(`awards`),
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The period's days from the moments given: completions, creations and
+         * focus blocks bucketed into local days, every day present.
+         * `ProgressSummary.build`.
+         */ fun `summariseReviewProgress`(`days`: kotlin.UInt, `completionsMs`: List<kotlin.Long>, `creationsMs`: List<kotlin.Long>, `blocks`: List<WorkBlockSeconds>, `nowMs`: kotlin.Long, `zone`: kotlin.String): ReviewProgress {
+            return FfiConverterTypeReviewProgress.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_summarise_review_progress(
+    
+        
+        FfiConverterUInt.lower(`days`),
+        FfiConverterSequenceLong.lower(`completionsMs`),
+        FfiConverterSequenceLong.lower(`creationsMs`),
+        FfiConverterSequenceTypeWorkBlockSeconds.lower(`blocks`),
+        FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
 }
     )

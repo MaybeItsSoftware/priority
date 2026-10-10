@@ -105,6 +105,57 @@ public enum FocusDayTimeline {
     }
   }
 
+  /// A day of focus as the phones' Review timeline draws it: the blocks
+  /// kept, laid out, grouped by task (a summary's place is its hue) and
+  /// scored.
+  public struct ReviewDay: Equatable, Sendable {
+    public let layout: Layout
+    /// Most time first, ties by key.
+    public let summaries: [TaskSummary]
+    /// Block id to task key, for the blocks kept.
+    public let taskKeys: [String: String]
+    public let totalSeconds: Int
+    public let points: Double
+  }
+
+  /// Shapes one day of the Review timeline. `blocks` are the day's logged
+  /// blocks, then the running one, if any, marked `isLive` and ending `now`;
+  /// `taskKeys` names each block's task, one per block. A block with no time
+  /// is left out, and so is the running block on any day but today's. Points
+  /// are the awards (which share their block's id) of the logged blocks kept.
+  /// The Rust core's `review::review_timeline`, which hands back indices into
+  /// `blocks`, so a title never crosses back.
+  public static func reviewDay(
+    blocks: [Block], taskKeys: [String], awards: [(id: String, points: Double)],
+    day: Date, now: Date, calendar: Calendar = .current
+  ) -> ReviewDay {
+    let shaped = reviewTimeline(
+      blocks: zip(blocks, taskKeys).map { block, key in
+        ReviewTimelineBlock(
+          id: block.id, taskKey: key, seconds: Int64(block.seconds), endedAtMs: block.endedAt.rankingMilliseconds,
+          isLive: block.isLive)
+      },
+      awards: awards.map { ReviewAwardPoints(id: $0.id, points: $0.points) },
+      dayMs: day.rankingMilliseconds, nowMs: now.rankingMilliseconds, zone: calendar.timeZone.identifier)
+    var keys: [String: String] = [:]
+    for index in shaped.kept { keys[blocks[Int(index)].id] = taskKeys[Int(index)] }
+    return ReviewDay(
+      layout: Layout(
+        start: Date(rankingMilliseconds: shaped.layout.startMs), end: Date(rankingMilliseconds: shaped.layout.endMs),
+        placements: shaped.layout.placements.map {
+          Placement(
+            block: blocks[Int($0.block)], offsetMinutes: $0.offsetMinutes, minutes: $0.minutes, lane: Int($0.lane))
+        },
+        laneCount: Int(shaped.layout.laneCount)),
+      summaries: shaped.summaries.map {
+        TaskSummary(
+          id: $0.key, title: blocks[Int($0.latest)].title, seconds: Int($0.seconds), blocks: Int($0.blocks))
+      },
+      taskKeys: keys,
+      totalSeconds: Int(shaped.totalSeconds),
+      points: shaped.points)
+  }
+
   /// The narrowest the ruler gets. An afternoon with one 20-minute block in it
   /// should still read as an afternoon, not as a bar filling the pane.
   public static let minimumHours = 5

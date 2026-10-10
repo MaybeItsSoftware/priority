@@ -1128,6 +1128,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func workBlocksForTask(taskId: String) throws  -> [WorkBlockRow]
     
     /**
+     * The progress charts over the `days` ending today, read and bucketed
+     * in the core. `ReviewModel.readProgress`.
+     */
+    func reviewProgress(days: UInt32, nowMs: Int64, zone: String) throws  -> ReviewProgress
+    
+    /**
      * Forgets the outbox entries the server has accepted.
      */
     func acknowledgeSyncChanges(throughSeq: Int64) throws 
@@ -2279,6 +2285,22 @@ open func workBlocksForTask(taskId: String)throws  -> [WorkBlockRow]  {
     uniffi_takt_core_fn_method_coreworkspace_work_blocks_for_task(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(taskId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The progress charts over the `days` ending today, read and bucketed
+     * in the core. `ReviewModel.readProgress`.
+     */
+open func reviewProgress(days: UInt32, nowMs: Int64, zone: String)throws  -> ReviewProgress  {
+    return try  FfiConverterTypeReviewProgress_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_review_progress(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt32.lower(days),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
     )
 })
 }
@@ -12114,6 +12136,390 @@ public func FfiConverterTypeRanking_lower(_ value: Ranking) -> RustBuffer {
 
 
 /**
+ * An award as the timeline counts it: it shares its block's id.
+ */
+public struct ReviewAwardPoints: Equatable, Hashable {
+    public var id: String
+    public var points: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, points: Double) {
+        self.id = id
+        self.points = points
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ReviewAwardPoints: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReviewAwardPoints: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ReviewAwardPoints {
+        return
+            try ReviewAwardPoints(
+                id: FfiConverterString.read(from: &buf), 
+                points: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ReviewAwardPoints, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterDouble.write(value.points, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewAwardPoints_lift(_ buf: RustBuffer) throws -> ReviewAwardPoints {
+    return try FfiConverterTypeReviewAwardPoints.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewAwardPoints_lower(_ value: ReviewAwardPoints) -> RustBuffer {
+    return FfiConverterTypeReviewAwardPoints.lower(value)
+}
+
+
+/**
+ * The period's charts and their totals. `ProgressSummary`.
+ */
+public struct ReviewProgress: Equatable, Hashable {
+    public var days: [ReviewProgressDay]
+    public var totalCompleted: Int64
+    public var totalAdded: Int64
+    public var focusMinutes: Int64
+    /**
+     * The first of the days that closed the most, when any closed one.
+     */
+    public var bestDay: UInt32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(days: [ReviewProgressDay], totalCompleted: Int64, totalAdded: Int64, focusMinutes: Int64, 
+        /**
+         * The first of the days that closed the most, when any closed one.
+         */bestDay: UInt32?) {
+        self.days = days
+        self.totalCompleted = totalCompleted
+        self.totalAdded = totalAdded
+        self.focusMinutes = focusMinutes
+        self.bestDay = bestDay
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ReviewProgress: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReviewProgress: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ReviewProgress {
+        return
+            try ReviewProgress(
+                days: FfiConverterSequenceTypeReviewProgressDay.read(from: &buf), 
+                totalCompleted: FfiConverterInt64.read(from: &buf), 
+                totalAdded: FfiConverterInt64.read(from: &buf), 
+                focusMinutes: FfiConverterInt64.read(from: &buf), 
+                bestDay: FfiConverterOptionUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ReviewProgress, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeReviewProgressDay.write(value.days, into: &buf)
+        FfiConverterInt64.write(value.totalCompleted, into: &buf)
+        FfiConverterInt64.write(value.totalAdded, into: &buf)
+        FfiConverterInt64.write(value.focusMinutes, into: &buf)
+        FfiConverterOptionUInt32.write(value.bestDay, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewProgress_lift(_ buf: RustBuffer) throws -> ReviewProgress {
+    return try FfiConverterTypeReviewProgress.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewProgress_lower(_ value: ReviewProgress) -> RustBuffer {
+    return FfiConverterTypeReviewProgress.lower(value)
+}
+
+
+/**
+ * A day of the progress charts. `ProgressDay`.
+ */
+public struct ReviewProgressDay: Equatable, Hashable {
+    public var dayStartMs: Int64
+    public var completed: Int64
+    public var added: Int64
+    /**
+     * Whole minutes of focus logged that day.
+     */
+    public var focusMinutes: Int64
+    public var cumulativeCompleted: Int64
+    public var cumulativeAdded: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(dayStartMs: Int64, completed: Int64, added: Int64, 
+        /**
+         * Whole minutes of focus logged that day.
+         */focusMinutes: Int64, cumulativeCompleted: Int64, cumulativeAdded: Int64) {
+        self.dayStartMs = dayStartMs
+        self.completed = completed
+        self.added = added
+        self.focusMinutes = focusMinutes
+        self.cumulativeCompleted = cumulativeCompleted
+        self.cumulativeAdded = cumulativeAdded
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ReviewProgressDay: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReviewProgressDay: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ReviewProgressDay {
+        return
+            try ReviewProgressDay(
+                dayStartMs: FfiConverterInt64.read(from: &buf), 
+                completed: FfiConverterInt64.read(from: &buf), 
+                added: FfiConverterInt64.read(from: &buf), 
+                focusMinutes: FfiConverterInt64.read(from: &buf), 
+                cumulativeCompleted: FfiConverterInt64.read(from: &buf), 
+                cumulativeAdded: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ReviewProgressDay, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.dayStartMs, into: &buf)
+        FfiConverterInt64.write(value.completed, into: &buf)
+        FfiConverterInt64.write(value.added, into: &buf)
+        FfiConverterInt64.write(value.focusMinutes, into: &buf)
+        FfiConverterInt64.write(value.cumulativeCompleted, into: &buf)
+        FfiConverterInt64.write(value.cumulativeAdded, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewProgressDay_lift(_ buf: RustBuffer) throws -> ReviewProgressDay {
+    return try FfiConverterTypeReviewProgressDay.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewProgressDay_lower(_ value: ReviewProgressDay) -> RustBuffer {
+    return FfiConverterTypeReviewProgressDay.lower(value)
+}
+
+
+/**
+ * One day of focus, shaped. Every index is into the blocks given.
+ */
+public struct ReviewTimeline: Equatable, Hashable {
+    /**
+     * The blocks the day shows, in the order given: logged blocks with time
+     * in them, then the running block when it is today's and has started.
+     */
+    public var kept: [UInt32]
+    public var layout: TimelineLayout
+    /**
+     * Most time first, ties by key; a summary's place is its hue.
+     */
+    public var summaries: [TimelineSummary]
+    public var totalSeconds: Int64
+    /**
+     * The awards of the logged blocks kept.
+     */
+    public var points: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The blocks the day shows, in the order given: logged blocks with time
+         * in them, then the running block when it is today's and has started.
+         */kept: [UInt32], layout: TimelineLayout, 
+        /**
+         * Most time first, ties by key; a summary's place is its hue.
+         */summaries: [TimelineSummary], totalSeconds: Int64, 
+        /**
+         * The awards of the logged blocks kept.
+         */points: Double) {
+        self.kept = kept
+        self.layout = layout
+        self.summaries = summaries
+        self.totalSeconds = totalSeconds
+        self.points = points
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ReviewTimeline: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReviewTimeline: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ReviewTimeline {
+        return
+            try ReviewTimeline(
+                kept: FfiConverterSequenceUInt32.read(from: &buf), 
+                layout: FfiConverterTypeTimelineLayout.read(from: &buf), 
+                summaries: FfiConverterSequenceTypeTimelineSummary.read(from: &buf), 
+                totalSeconds: FfiConverterInt64.read(from: &buf), 
+                points: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ReviewTimeline, into buf: inout [UInt8]) {
+        FfiConverterSequenceUInt32.write(value.kept, into: &buf)
+        FfiConverterTypeTimelineLayout.write(value.layout, into: &buf)
+        FfiConverterSequenceTypeTimelineSummary.write(value.summaries, into: &buf)
+        FfiConverterInt64.write(value.totalSeconds, into: &buf)
+        FfiConverterDouble.write(value.points, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewTimeline_lift(_ buf: RustBuffer) throws -> ReviewTimeline {
+    return try FfiConverterTypeReviewTimeline.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewTimeline_lower(_ value: ReviewTimeline) -> RustBuffer {
+    return FfiConverterTypeReviewTimeline.lower(value)
+}
+
+
+/**
+ * A block of the day as the timeline is given it: a logged block, or the
+ * one running now. `TimelineDay.Input`.
+ */
+public struct ReviewTimelineBlock: Equatable, Hashable {
+    public var id: String
+    /**
+     * The task the block belongs to, kept across renames and deletion.
+     */
+    public var taskKey: String
+    public var seconds: Int64
+    /**
+     * When the block was logged. Ignored for the running block, which ends
+     * now.
+     */
+    public var endedAtMs: Int64
+    public var isLive: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, 
+        /**
+         * The task the block belongs to, kept across renames and deletion.
+         */taskKey: String, seconds: Int64, 
+        /**
+         * When the block was logged. Ignored for the running block, which ends
+         * now.
+         */endedAtMs: Int64, isLive: Bool) {
+        self.id = id
+        self.taskKey = taskKey
+        self.seconds = seconds
+        self.endedAtMs = endedAtMs
+        self.isLive = isLive
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ReviewTimelineBlock: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReviewTimelineBlock: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ReviewTimelineBlock {
+        return
+            try ReviewTimelineBlock(
+                id: FfiConverterString.read(from: &buf), 
+                taskKey: FfiConverterString.read(from: &buf), 
+                seconds: FfiConverterInt64.read(from: &buf), 
+                endedAtMs: FfiConverterInt64.read(from: &buf), 
+                isLive: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ReviewTimelineBlock, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.taskKey, into: &buf)
+        FfiConverterInt64.write(value.seconds, into: &buf)
+        FfiConverterInt64.write(value.endedAtMs, into: &buf)
+        FfiConverterBool.write(value.isLive, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewTimelineBlock_lift(_ buf: RustBuffer) throws -> ReviewTimelineBlock {
+    return try FfiConverterTypeReviewTimelineBlock.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReviewTimelineBlock_lower(_ value: ReviewTimelineBlock) -> RustBuffer {
+    return FfiConverterTypeReviewTimelineBlock.lower(value)
+}
+
+
+/**
  * An available task with why it is where it is. `ScoredNextUp`.
  */
 public struct Scored: Equatable, Hashable {
@@ -19305,6 +19711,81 @@ fileprivate struct FfiConverterSequenceTypeQueueEntry: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeReviewAwardPoints: FfiConverterRustBuffer {
+    typealias SwiftType = [ReviewAwardPoints]
+
+    public static func write(_ value: [ReviewAwardPoints], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeReviewAwardPoints.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ReviewAwardPoints] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ReviewAwardPoints]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeReviewAwardPoints.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeReviewProgressDay: FfiConverterRustBuffer {
+    typealias SwiftType = [ReviewProgressDay]
+
+    public static func write(_ value: [ReviewProgressDay], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeReviewProgressDay.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ReviewProgressDay] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ReviewProgressDay]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeReviewProgressDay.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeReviewTimelineBlock: FfiConverterRustBuffer {
+    typealias SwiftType = [ReviewTimelineBlock]
+
+    public static func write(_ value: [ReviewTimelineBlock], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeReviewTimelineBlock.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ReviewTimelineBlock] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ReviewTimelineBlock]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeReviewTimelineBlock.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeScored: FfiConverterRustBuffer {
     typealias SwiftType = [Scored]
 
@@ -21040,6 +21521,40 @@ public func workspaceDailyIsDue(weekdaysMask: Int64, intervalDays: Int64?, ancho
 })
 }
 /**
+ * Lays out the day containing `day_ms` from its blocks, groups them by
+ * task and adds up their points. `TimelineDay.build`.
+ */
+public func reviewTimeline(blocks: [ReviewTimelineBlock], awards: [ReviewAwardPoints], dayMs: Int64, nowMs: Int64, zone: String) -> ReviewTimeline  {
+    return try!  FfiConverterTypeReviewTimeline_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_review_timeline(
+        FfiConverterSequenceTypeReviewTimelineBlock.lower(blocks),
+        FfiConverterSequenceTypeReviewAwardPoints.lower(awards),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * The period's days from the moments given: completions, creations and
+ * focus blocks bucketed into local days, every day present.
+ * `ProgressSummary.build`.
+ */
+public func summariseReviewProgress(days: UInt32, completionsMs: [Int64], creationsMs: [Int64], blocks: [WorkBlockSeconds], nowMs: Int64, zone: String) -> ReviewProgress  {
+    return try!  FfiConverterTypeReviewProgress_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_summarise_review_progress(
+        FfiConverterUInt32.lower(days),
+        FfiConverterSequenceInt64.lower(completionsMs),
+        FfiConverterSequenceInt64.lower(creationsMs),
+        FfiConverterSequenceTypeWorkBlockSeconds.lower(blocks),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
  * Brings the database at `path` up to date, creating it if it does not
  * exist, and returns the identifier of the newest migration it now has.
  *
@@ -21887,6 +22402,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_workspace_daily_is_due() != 26735) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_review_timeline() != 40278) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_summarise_review_progress() != 54122) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_migrate_workspace() != 222) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -22182,6 +22703,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_work_blocks_for_task() != 6070) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_review_progress() != 23968) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() != 39097) {

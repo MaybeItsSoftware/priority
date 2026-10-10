@@ -9,6 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.co.maybeitsadam.takt.core.TaskList
+import uk.co.maybeitsadam.takt.core.TaskProgressPeriod
 import uk.co.maybeitsadam.takt.core.TaskStatus
 import uk.co.maybeitsadam.takt.data.TestWorkspace
 
@@ -44,10 +45,14 @@ class WorkspaceReviewReadsTest {
         val session = store.startFocusSession(taskId = task.id)
         store.completeActiveFocusTask(sessionId = session.id, elapsedSeconds = 600)
 
-        val records = store.observeReviewProgress(wide.first, wide.second).first()
-        assertEquals(2, records.creations.size)
-        assertEquals(1, records.completions.size)
-        assertEquals(600, records.blocks.sumOf { it.seconds })
+        val progress = store.observeReviewProgress(TaskProgressPeriod.WEEK).first()
+        assertEquals(7, progress.days.size)
+        assertEquals(2, progress.totalAdded)
+        assertEquals(1, progress.totalCompleted)
+        assertEquals(10, progress.focusMinutes)
+        assertEquals(6, progress.bestDay)
+        assertEquals(10, progress.days.last().focusMinutes)
+        assertEquals(2, progress.days.last().cumulativeAdded)
     }
 
     @Test

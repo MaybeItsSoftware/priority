@@ -2,6 +2,9 @@ package uk.co.maybeitsadam.takt.data.workspace
 
 import java.time.Instant
 import kotlinx.coroutines.flow.Flow
+import uk.co.maybeitsadam.takt.core.ReviewProgressDays
+import uk.co.maybeitsadam.takt.core.TaskProgressPeriod
+import uk.co.maybeitsadam.takt.core.coreName
 import uk.co.maybeitsadam.takt.core.FocusAward
 import uk.co.maybeitsadam.takt.core.FocusSession
 import uk.co.maybeitsadam.takt.core.FocusWorkBlock
@@ -23,13 +26,6 @@ data class ReviewDayRecords(
     val closedTasks: List<WorkspaceTask>,
 )
 
-/** The raw timestamps the progress charts bucket into days. */
-data class ReviewProgressRecords(
-    val completions: List<Instant>,
-    val creations: List<Instant>,
-    val blocks: List<FocusWorkBlock>,
-)
-
 /** Blocks, awards and closed tasks in `[start, end)`, plus the running session. */
 fun WorkspaceRepository.observeReviewDay(start: Instant, end: Instant): Flow<ReviewDayRecords> =
     database.observe(setOf("focus_work_blocks", "focus_awards", "focus_sessions", "tasks")) { db ->
@@ -49,14 +45,13 @@ fun WorkspaceRepository.observeCompletedTasks(since: Instant, limit: Int = 300):
         db.core.completedTasksSince(since.coreMillis, limit.toLong()).map { it.toTask() }
     }
 
-/** Completions, creations and focus blocks in `[start, end)`, from one read. */
-fun WorkspaceRepository.observeReviewProgress(start: Instant, end: Instant): Flow<ReviewProgressRecords> =
+/**
+ * The progress charts over [period], read and bucketed into days in the core
+ * (`review::read_review_progress`), so only the days cross.
+ */
+fun WorkspaceRepository.observeReviewProgress(period: TaskProgressPeriod): Flow<ReviewProgressDays> =
     database.observe(setOf("tasks", "focus_work_blocks")) { db ->
-        ReviewProgressRecords(
-            completions = completionsIn(db, start, end),
-            creations = db.core.taskCreationsBetween(start.coreMillis, end.coreMillis).map(Instant::ofEpochMilli),
-            blocks = workBlocksIn(db, start, end),
-        )
+        ReviewProgressDays.of(db.core.reviewProgress(period.days.toUInt(), now().coreMillis, zone.coreName))
     }
 
 /** The journal, newest first, re-read whenever it changes: [WorkspaceRepository.history], live. */

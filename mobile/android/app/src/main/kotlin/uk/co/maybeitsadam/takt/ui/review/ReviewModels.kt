@@ -24,7 +24,7 @@ import uk.co.maybeitsadam.takt.core.FocusAward
 import uk.co.maybeitsadam.takt.core.FocusDayTimeline
 import uk.co.maybeitsadam.takt.core.FocusWorkBlock
 import uk.co.maybeitsadam.takt.core.TaskProgressPeriod
-import uk.co.maybeitsadam.takt.core.TaskProgressSeries
+import uk.co.maybeitsadam.takt.core.ReviewProgressDays
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 
 /** The three faces of Review. */
@@ -85,29 +85,23 @@ data class TimelineDay(
             now: Instant = Instant.now(),
             zone: ZoneId = ZoneId.systemDefault(),
         ): TimelineDay {
-            val logged = blocks.filter { it.seconds > 0 }
-            val assembled = logged.map { FocusDayTimeline.Block(it.id, it.title, it.seconds, it.recordedAt) }.toMutableList()
-            val keys = logged.associate { it.id to it.taskKey }.toMutableMap()
-            if (live != null && live.seconds > 0 && now.atZone(zone).toLocalDate() == day) {
-                assembled += FocusDayTimeline.Block(live.id, live.title, live.seconds, now, isLive = true)
-                keys[live.id] = live.taskId
+            val given = blocks.map { FocusDayTimeline.Block(it.id, it.title, it.seconds, it.recordedAt) }.toMutableList()
+            val keys = blocks.map { it.taskKey }.toMutableList()
+            if (live != null) {
+                given += FocusDayTimeline.Block(live.id, live.title, live.seconds, now, isLive = true)
+                keys += live.taskId
             }
-            val awardsById = awards.associateBy { it.id }
-            val grouped = assembled.groupBy { keys[it.id] ?: it.title }
-            val summaries = grouped.map { (key, values) ->
-                TaskSummary(key, values.lastOrNull()?.title ?: "Deleted task", values.sumOf { it.seconds }, values.size, 0)
-            }
-                .sortedWith(compareByDescending<TaskSummary> { it.seconds }.thenBy { it.id })
-                .mapIndexed { index, summary -> summary.copy(hue = index) }
-            // An award shares its block's id.
-            val points = logged.mapNotNull { awardsById[it.id]?.points }.sum()
+            val shaped = FocusDayTimeline.reviewDay(
+                given, keys, awards.map { it.id to it.points }, day.atStartOfDay(zone).toInstant(), now, zone,
+            )
             return TimelineDay(
                 day = day,
-                layout = FocusDayTimeline.layout(assembled, day.atStartOfDay(zone).toInstant(), zone),
-                totalSeconds = assembled.sumOf { it.seconds },
-                points = points,
-                summaries = summaries.toImmutableList(),
-                taskKeys = keys.toImmutableMap(),
+                layout = shaped.layout,
+                totalSeconds = shaped.totalSeconds,
+                points = shaped.points,
+                summaries = shaped.summaries.mapIndexed { hue, it -> TaskSummary(it.id, it.title, it.seconds, it.blocks, hue) }
+                    .toImmutableList(),
+                taskKeys = shaped.taskKeys.toImmutableMap(),
                 completions = completions.mapNotNull { task ->
                     task.completedAt?.let { TimelineCompletion(task.id, task.listId, task.title, it, task.status == TaskStatus.CANCELLED) }
                 }.sortedBy { it.at }.toImmutableList(),
@@ -139,7 +133,22 @@ data class ProgressSummary(
     val net: Int get() = totalCompleted - totalAdded
 
     companion object {
-        /** Port of iOS `ProgressSummary.build`, plus a running total of tasks added. */
+        /** The core's reading (`ReviewProgressDays`), in the charts' types. */
+        fun of(period: TaskProgressPeriod, read: ReviewProgressDays): ProgressSummary {
+            val days = read.days.map {
+                ProgressDay(it.dayStart, it.completed, it.added, it.focusMinutes, it.cumulativeCompleted, it.cumulativeAdded)
+            }
+            return ProgressSummary(
+                period = period,
+                days = days.toImmutableList(),
+                totalCompleted = read.totalCompleted,
+                totalAdded = read.totalAdded,
+                focusMinutes = read.focusMinutes,
+                bestDay = read.bestDay?.let { days[it] },
+            )
+        }
+
+        /** From moments in hand, for tests: the core's `summarise_review_progress`. */
         fun build(
             period: TaskProgressPeriod,
             completions: List<Instant>,
@@ -147,29 +156,7 @@ data class ProgressSummary(
             blocks: List<Pair<Int, Instant>>,
             now: Instant = Instant.now(),
             zone: ZoneId = ZoneId.systemDefault(),
-        ): ProgressSummary {
-            val series = TaskProgressSeries.build(period, completions, creations, now, zone)
-            val seconds = HashMap<Instant, Int>()
-            for ((s, at) in blocks) {
-                val key = at.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant()
-                seconds[key] = (seconds[key] ?: 0) + maxOf(0, s)
-            }
-            var added = 0
-            val days = series.days.map {
-                added += it.added
-                ProgressDay(it.dayStart, it.completed, it.added, (seconds[it.dayStart] ?: 0) / 60, it.cumulativeCompleted, added)
-            }
-            var best: ProgressDay? = null
-            for (day in days) if (day.completed > 0 && (best == null || day.completed >= best.completed)) best = day
-            return ProgressSummary(
-                period = period,
-                days = days.toImmutableList(),
-                totalCompleted = series.totalCompleted,
-                totalAdded = series.totalAdded,
-                focusMinutes = days.sumOf { it.focusMinutes },
-                bestDay = best,
-            )
-        }
+        ): ProgressSummary = of(period, ReviewProgressDays.summarise(period, completions, creations, blocks, now, zone))
     }
 }
 

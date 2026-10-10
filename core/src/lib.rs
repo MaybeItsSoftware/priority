@@ -36,6 +36,7 @@ pub mod ranking;
 pub mod reads;
 pub mod records;
 pub mod recurrence;
+pub mod review;
 pub mod rows;
 pub mod schema;
 pub mod search;

@@ -41,9 +41,9 @@ data class TaskProgressSeries(val days: List<TaskProgressDay>) {
     val net: Int get() = totalCompleted - totalAdded
     val bestDay: TaskProgressDay?
         get() {
-            // Swift's `max(by:)` returns the last of equal maxima.
+            // Swift's `max(by:)` returns the first of equal maxima.
             var best: TaskProgressDay? = null
-            for (day in days) if (best == null || best.completed <= day.completed) best = day
+            for (day in days) if (best == null || best.completed < day.completed) best = day
             return best?.takeIf { it.completed > 0 }
         }
 
@@ -76,6 +76,63 @@ data class TaskProgressSeries(val days: List<TaskProgressDay>) {
                     it.cumulativeCompleted.toInt(),
                 )
             },
+        )
+    }
+}
+
+/**
+ * Review's progress charts, a day at a time: completions, creations and focus
+ * minutes bucketed into local days by the Rust core's `review` module.
+ */
+data class ReviewProgressDays(
+    val days: List<Day>,
+    val totalCompleted: Int,
+    val totalAdded: Int,
+    val focusMinutes: Int,
+    /** Index into [days]: the first of the days that closed the most, when any closed one. */
+    val bestDay: Int?,
+) {
+    data class Day(
+        val dayStart: Instant,
+        val completed: Int,
+        val added: Int,
+        /** Whole minutes of focus logged that day. */
+        val focusMinutes: Int,
+        val cumulativeCompleted: Int,
+        val cumulativeAdded: Int,
+    )
+
+    companion object {
+        fun of(core: uniffi.takt_core.ReviewProgress) = ReviewProgressDays(
+            days = core.days.map {
+                Day(
+                    Instant.ofEpochMilli(it.dayStartMs), it.completed.toInt(), it.added.toInt(), it.focusMinutes.toInt(),
+                    it.cumulativeCompleted.toInt(), it.cumulativeAdded.toInt(),
+                )
+            },
+            totalCompleted = core.totalCompleted.toInt(),
+            totalAdded = core.totalAdded.toInt(),
+            focusMinutes = core.focusMinutes.toInt(),
+            bestDay = core.bestDay?.toInt(),
+        )
+
+        /** The same from moments in hand: `review::summarise_review_progress`. */
+        fun summarise(
+            period: TaskProgressPeriod,
+            completions: List<Instant>,
+            creations: List<Instant>,
+            blocks: List<Pair<Int, Instant>>,
+            now: Instant,
+            zone: ZoneId = ZoneId.systemDefault(),
+        ): ReviewProgressDays = of(
+            uniffi.takt_core.summariseReviewProgress(
+                period.days.toUInt(),
+                completions.map { it.coreMillis },
+                creations.map { it.coreMillis },
+                blocks.map { (seconds, at) -> uniffi.takt_core.WorkBlockSeconds(seconds.toLong(), at.coreMillis) },
+                now.coreMillis,
+                zone.coreName,
+            ),
         )
     }
 }
