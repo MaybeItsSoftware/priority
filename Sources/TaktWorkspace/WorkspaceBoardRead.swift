@@ -56,12 +56,20 @@ extension WorkspaceStore {
   ///   and it is still named as a parent. A task finished at or after it is
   ///   kept, so the caller decides about those itself. `nil` keeps them all.
   public func combinedBoard(listIds: [String], hidingCompletedBefore cutoff: Date?) throws -> WorkspaceBoardRead {
+    try combinedBoard(listIds: listIds, hidingCompletedBefore: cutoff, using: core)
+  }
+
+  /// The same read, on `handle` — this store's own, or the background one
+  /// (`backgroundCore()`).
+  func combinedBoard(
+    listIds: [String], hidingCompletedBefore cutoff: Date?, using handle: CoreWorkspace
+  ) throws -> WorkspaceBoardRead {
     guard !listIds.isEmpty else { return .empty }
     // Rounded down, so a task the core leaves out finished strictly before
     // the cutoff.
     let cutoffMs = cutoff.map { Int64(($0.timeIntervalSince1970 * 1000).rounded(.down)) }
     let read = try Self.mappingCoreErrors {
-      try core.combinedBoard(listIds: listIds, hideCompletedBeforeMs: cutoffMs)
+      try handle.combinedBoard(listIds: listIds, hideCompletedBeforeMs: cutoffMs)
     }
     let rows = try PackedTaskRows.decode(read.rows)
     func id(_ node: Int) -> String {

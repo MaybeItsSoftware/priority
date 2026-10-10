@@ -14,6 +14,17 @@ public final class WorkspaceStore: @unchecked Sendable {
   /// Internal rather than private so the sibling files — the same type, split
   /// only for size — can reach it.
   let core: CoreWorkspace
+  /// The file, for the background handle below.
+  private let databasePath: String
+  /// A second handle on the same file, opened the first time it is asked
+  /// for, for the reads a client makes off its main thread to keep what it
+  /// shows resident (`scopeRead(_:hidingCompletedBefore:inBackground:)`).
+  /// `core` serialises every call on one connection, so a 20 ms background
+  /// read of Everything made there was 20 ms a keystroke's write could wait
+  /// behind. On a handle of its own, it waits on nothing the main thread
+  /// does; WAL lets it read while the main handle writes.
+  private var backgroundCoreStorage: CoreWorkspace?
+  private let backgroundCoreLock = NSLock()
 
   public convenience init() throws {
     try self.init(databaseURL: WorkspaceStore.defaultDatabaseURL())
@@ -28,6 +39,17 @@ public final class WorkspaceStore: @unchecked Sendable {
     // sets a five-second busy timeout, as the CLI does, and WAL.
     _ = try migrateWorkspace(path: databaseURL.path)
     self.core = try CoreWorkspace.open(path: databaseURL.path)
+    self.databasePath = databaseURL.path
+  }
+
+  /// See `backgroundCoreStorage`. Safe from any thread.
+  func backgroundCore() throws -> CoreWorkspace {
+    backgroundCoreLock.lock()
+    defer { backgroundCoreLock.unlock() }
+    if let handle = backgroundCoreStorage { return handle }
+    let handle = try Self.mappingCoreErrors { try CoreWorkspace.open(path: databasePath) }
+    backgroundCoreStorage = handle
+    return handle
   }
 
   public static func defaultDatabaseURL() -> URL {
@@ -308,12 +330,18 @@ public final class WorkspaceStore: @unchecked Sendable {
   public func boardMetadata(for taskIDs: [String]) throws -> (
     columns: [String: String], positions: [String: TaskMatrixPosition]
   ) {
+    try boardMetadata(for: taskIDs, using: core)
+  }
+
+  func boardMetadata(for taskIDs: [String], using handle: CoreWorkspace) throws -> (
+    columns: [String: String], positions: [String: TaskMatrixPosition]
+  ) {
     guard !taskIDs.isEmpty else { return ([:], [:]) }
     var columns: [String: String] = [:]
     var positions = Dictionary(uniqueKeysWithValues: Set(taskIDs).map {
       ($0, TaskMatrixPosition(urgency: nil, importance: nil))
     })
-    for record in try Self.mappingCoreErrors({ try core.metadataForTasks(taskIds: taskIDs) }) {
+    for record in try Self.mappingCoreErrors({ try handle.metadataForTasks(taskIds: taskIDs) }) {
       columns[record.taskId] = record.kanbanColumn
       positions[record.taskId] = TaskMatrixPosition(
         urgency: record.matrixUrgency.map { Int($0) }, importance: record.matrixImportance.map { Int($0) })

@@ -162,9 +162,13 @@ public struct WorkspaceBoardTrees: Sendable, Equatable {
 extension WorkspaceStore {
   /// One list's rows, read once.
   public func listTree(in listId: String) throws -> WorkspaceListTree {
+    try listTree(in: listId, using: core)
+  }
+
+  func listTree(in listId: String, using handle: CoreWorkspace) throws -> WorkspaceListTree {
     WorkspaceListTree(
       listId: listId,
-      tasks: try PackedTaskRows.decode(Self.mappingCoreErrors { try core.tasksInListsPacked(listIds: [listId]) }))
+      tasks: try PackedTaskRows.decode(Self.mappingCoreErrors { try handle.tasksInListsPacked(listIds: [listId]) }))
   }
 
   /// Several lists' rows in one read transaction, so a combined scope sees one
