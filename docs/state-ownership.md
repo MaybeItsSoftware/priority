@@ -26,17 +26,18 @@
    read of `TaskListViewModel.cache` (or of any accessor that calls
    `ensureVisibleTasksCacheValid()`).
 4. That rebuild reconstructs the *entire* derived cache (visible tasks, tag index, due buckets,
-   priority ranks, rolled-up timer elapsed) from the raw state, delegating math to the pure
-   engines (`TaskVisibilityEngine`, `TaskFilterEngine`, `TimerStore`).
-5. Views observe and re-render.
+   priority ranks) from the raw state, delegating math to the pure engines
+   (`TaskVisibilityEngine`, `TaskFilterEngine`).
+5. Readers — no longer views: the services, the Google Calendar settings page and the daily
+   log's plan — see the new state on their next read.
 
 Invalidation is coarse: any producer change marks the whole cache dirty and the next read
 triggers a full rebuild. Fine for menu-bar-sized lists; not granular.
 
 Rebuilding lazily rather than eagerly matters because writes arrive in bursts — deleting a task
 touches `tasks`, both priority queues and the eisenhower levels, which is four invalidations for
-one user action. Reading `cache` always validates first, so external readers
-(`KanbanManager`, `KanbanTaskDataSourceAdapter`) cannot observe a stale snapshot.
+one user action. Reading `cache` always validates first, so an external reader cannot observe
+a stale snapshot.
 Inside `TaskListViewModel`, use the private `cacheStorage` to avoid re-entering the validity
 check on hot paths.
 
@@ -102,23 +103,21 @@ Owns the toggles that shape what's visible, *and* the rebuilt `cache`. These `di
 is exposed as `var cache: CacheState`, whose getter rebuilds via
 `ensureVisibleTasksCacheValid()` when dirty.
 
-Also owns the cache-derived view helpers consolidated here in step 3.7d (they read the
-`cache` directly rather than forwarding through `AppCoordinator`): `priorityBadgeLabel` /
-`eisenhowerBadgeLabel` / `priorityRank` / `absolutePriorityRank` / `priorityPath`,
-`rootDueBucket`, `rootDueSectionHeader` / `remainderSectionHeader` / `rootDueSectionCount` /
-`remainderStartIndex`, `rootLevelTagNames`, `isDescendant`, and the outline accessors
-(`outlineRows` / `outlineDepth(atVisibleIndex:)` / `isExpanded`). `visibleTasks` is the
-flattened outline: `TaskVisibilityEngine` picks the rows a tab wants, then
-`TaskOutlineBuilder` inserts the children of expanded rows after them, with
-`cache.outlineDepths` holding the indent per row. Views read these via
-`@Environment(TaskListViewModel.self)`.
+No view draws it any more. What is left is what something reachable reads:
+`visibleTasks`, `currentTask`, `currentLevelTasks`, `isDescendant` and
+`subtreeBlockRange` for `TaskMutationService` and `SyncService` (through the host
+conformance), `currentTask` for the Google Calendar settings page's "Create event from
+selected task", and `rootDueBucket(for:)` for the daily log's plan. `visibleTasks` is the
+flattened outline: `TaskVisibilityEngine` picks the rows the persisted tab wants, then
+`TaskOutlineBuilder` inserts the children of expanded rows after them. The badge,
+section-header, breadcrumb and roll-up helpers the popover's rows drew were deleted in
+Phase 6 step 4 of the roadmap.
 
 
 ### Feature managers (each owns its slice + persists to `PreferencesStore`)
 | Manager | Owns | Cache-relevant |
 |---|---|---|
 | `TimerManager` | `timedTaskId`, `timerByTaskId`, `timerRunning`; `timerMode`/`timerBarLeading` (prefs-backed) | `timerByTaskId` feeds rolled-up elapsed in the cache |
-| `KanbanManager` | `kanbanColumns`, `kanbanFocusedColumnIndex`, `kanbanSelectedTaskId`, `kanbanFilterSubtasks`, `kanbanFilterParentId`, `addingToColumnId`, `addText`, `manualOrderByColumnId` | reads tasks/cache via `dataSource` (the coordinator) |
 | `QuickEntryManager` | `searchText` (fires bus), `quickEntryText`, `quickEntryMode`, `isQuickEntryFocused`, `editCursorAtEnd`, `pendingDeleteConfirmation`, `completingTaskId`, `commandSuggestionIndex`, `keyBuffer` | `searchText`/mode drive `isSearchFilterActive` → visibility |
 | `FocusSessionManager` | `promptTaskId`, `session`, `phase`, `durationMinutes`, `breakDurationMinutes`, `lastFocusedTaskId` | drives focus alerts; pauses timer via `onFocusBlockEnded` |
 | `StartDateManager` | `taskStartDatesByTaskId` | yes (affects `hideFuture` visibility) |
@@ -127,11 +126,9 @@ flattened outline: `TaskVisibilityEngine` picks the rows a tab wants, then
 | `IntegrationCoordinator` | `obsidian/googleCalendar/mcpIntegrationEnabled`, `obsidianInboxPath`, `mcpServerCommandPath`, `pendingObsidianSyncTaskIds`, `googleCalendarEventLinksByTaskKey` | reads tasks/listId/currentTask/credentials via `dataSource` |
 
 ### `AppCoordinator` — genuinely owns (everything else is forwarding)
-`statusMessage` (auto-clears after 3s), `onboardingCompleted`, `activeOnboardingDialog`,
-`dismissedOnboardingDialogs`, `isApplyingLaunchAtLoginChange`, `orderedRootTaskViews`
-(stored directly in `UserDefaults`), and the extracted **services**: `taskNavigationService`,
-`taskMutationService`, `syncService`, `undoService`, `lifecycle`, plus `commandExecutor` and
-`reachabilityMonitor`.
+`statusMessage` (auto-clears after 3s), `showsDiagnostics` (the main window's diagnostics
+sheet), `isApplyingLaunchAtLoginChange`, and the extracted **services**:
+`taskMutationService`, `syncService`, `undoService`, `lifecycle`, plus `reachabilityMonitor`.
 
 The Phase-3 forwarder cull is finished: `AppCoordinator` no longer re-exposes
 `tasks` / `currentParentId` / `hideFuture` / `username` / `listId` / `availableLists` /
@@ -140,15 +137,15 @@ The Phase-3 forwarder cull is finished: `AppCoordinator` no longer re-exposes
 `@Environment(TaskRepository.self)` / `@Environment(NavigationState.self)` /
 `@Environment(TaskListViewModel.self)`; non-view callers via `manager.repository.X` /
 `manager.navigationState.X` / `manager.taskListViewModel.X`. The Phase-3 services
-(`SyncService`, `TaskMutationService`, `TaskNavigationService`) all take a strong
+(`SyncService`, `TaskMutationService`) both take a strong
 `TaskRepository` reference in their initializers and read auth/list state from there
 directly — no coordinator forwarder hop.
 
 `SyncService` and `TaskMutationService` no longer hold `AppCoordinator` at all: they take a
 `weak` `SyncHost` / `TaskMutationHost` (`Takt/TaskServiceHosts.swift`), which
 `AppCoordinator` conforms to in `AppCoordinator+ServiceHosts.swift`. Anything those services
-need from a sibling manager — selection, undo, quick-entry focus, kanban ordering, recurrence
-rules, the completion haptics — is a host member rather than a `coordinator.someManager.X`
+need from a sibling manager — selection, undo, quick-entry focus, recurrence rules, the
+completion haptics — is a host member rather than a `coordinator.someManager.X`
 reach-through, which is what lets both services live in `TaktAppLogic` and be tested
 against `StubTaskServiceHost`. When you give one of them a new dependency, add it to the host
 protocol.
@@ -159,7 +156,7 @@ protocol.
 `absolutePriorityTaskIds`, `taskEisenhowerLevels`, `expandedTaskIds`,
 `checkvistIntegrationEnabled`, `isNetworkReachable`), `NavigationState` (`currentParentId`), `QuickEntryManager`
 (`searchText`), `TimerManager` (`timerByTaskId`), `StartDateManager` (`taskStartDatesByTaskId`),
-`KanbanManager`, `FocusSessionManager`. The lone **subscriber** is `AppCoordinator` →
+`FocusSessionManager`. The lone **subscriber** is `AppCoordinator` →
 `TaskListViewModel.invalidateCaches()`.
 
 `TaskListViewModel`'s own view-shaping toggles bypass the bus and call `invalidateCaches()`
@@ -201,8 +198,8 @@ serve two surfaces showing different tabs — switching tab in the window
 switches it in the panel, by construction.
 
 Making them independent means extracting a per-window context holding
-`NavigationState`, `TaskListViewModel`, `QuickEntryManager`, the kanban and
-daily selections, `statusMessage`, and the celebration / shortcut-overlay flags,
+`NavigationState`, `TaskListViewModel`, `QuickEntryManager`, the daily
+selection, `statusMessage`, and the celebration / shortcut-overlay flags,
 while `TaskRepository`, `PreferencesManager`, `TimerManager` and the
 integrations stay global. It also means multicasting `CacheInvalidationBus`,
 which today has exactly one subscriber. The host protocols in

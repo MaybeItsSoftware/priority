@@ -21,10 +21,10 @@ code is right; fix this section.
 
 | | Then (plan written) | Now |
 |---|---|---|
-| `AppCoordinator` | 2,205 LOC / 9 files | **525 LOC / 2 files** (`AppCoordinator.swift`, `+ServiceHosts.swift`) |
+| `AppCoordinator` | 2,205 LOC / 9 files | **713 LOC / 2 files** (`AppCoordinator.swift`, `+ServiceHosts.swift`; counted 2026-10-10) |
 | `PopoverView.swift` | 2,068 LOC | 1,461 LOC |
 | `SettingsView.swift` | 1,473 LOC | 526 LOC |
-| `KanbanManager.swift` | 778 LOC | 625 LOC (rules and selection moved to `TaktCore`) |
+| `KanbanManager.swift` | 778 LOC | **deleted** 2026-10-10 with the board engines it alone read |
 | `KeyboardShortcutRouter.swift` | 1,011 LOC | 923 LOC across 2 files; gates, sequences and guards in `TaktCore` |
 | MCP implementations | 3 (Swift, Python, Rust) | **1** (the Rust CLI, bundled in the app) |
 | How the app gets `TaktCore` | compiled its sources | **links the package product** |
@@ -132,7 +132,8 @@ leave the manager gathering inputs and applying results.
 
 **Done since the audit:**
 
-- `KanbanFilter` — membership and ordering. 23 tests.
+- `KanbanFilter` — membership and ordering. 23 tests. *(Deleted 2026-10-10 with
+  `KanbanManager`; see the entry at the end of the history.)*
 - `KanbanSelection` — the other half of `KanbanManager`: which card is selected
   and which column has focus. Works on a grid of task ids per column, so it
   knows nothing about `CheckvistTask` or how the board filtered itself. 26
@@ -471,6 +472,21 @@ follow. Recorded here rather than silently left stale:
 - 2026-10-07: a lint pass cleared everything that was not a tracked length or
   complexity warning. The counts above are history from here on; the live
   number is in `TODO.md` and nowhere else.
+- 2026-10-10, roadmap Phase 6 step 4: the legacy-only managers went.
+  `CommandExecutor` (no caller since the popover), `TaskNavigationService` and
+  `TaskNavigationCoordinator` (reached only from it), `KanbanManager` and
+  `KanbanTaskDataSourceAdapter`, `PopoverChromeManager` (its diagnostics flag
+  moved onto `AppCoordinator`), and the `TaktCore` engines only they read:
+  `KanbanColumn`, `KanbanSwimlanes`, `KanbanFilter`, `KanbanSelection`,
+  `KanbanManualOrder`, `EisenhowerInheritance`, `MatrixSpread`,
+  `MatrixClustering`. `TaskListViewModel` was trimmed to what the services and
+  integrations read. Still here, because something reachable reads them:
+  `TaskListViewModel`, `CacheState`, `CacheInvalidationBus`,
+  `TaskVisibilityEngine` and `TaskFilterEngine` (the Checkvist cursor that
+  `SyncService` and `TaskMutationService` keep, the Google Calendar settings
+  page's "Create event from selected task", the daily log's plan), and the
+  services' current-task mutations, whose only caller was the executor but
+  which their tests still pin.
 
 ## Out of Scope
 

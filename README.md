@@ -427,11 +427,11 @@ because "what can I press here" is a fair question about them.
 ### Typed commands
 
 Separately from the palette above, `CommandEngine` parses a text command
-language inherited from the Checkvist-era menu bar panel. **It currently has no
-surface** — `AppCoordinator.executeCommandInput` has no callers — so the
-families below parse and are tested but cannot be reached from the app. They
-are documented because the parser is still there and still correct, not because
-you can type them today. Most accept several spellings: `unrepeat`, `no
+language inherited from the Checkvist-era menu bar panel. **It has no
+surface**: the executor that ran these commands had no caller once the panel
+went, and was deleted. The families below parse and are tested but cannot be
+reached from the app. They are documented because the parser is still there and
+still correct, not because you can type them today. Most accept several spellings: `unrepeat`, `no
 repeat`, `remove repeat` and `clear repeat` all do the same thing.
 
 | Family | Commands |

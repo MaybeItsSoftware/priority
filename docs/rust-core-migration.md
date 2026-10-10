@@ -240,10 +240,16 @@ covered the old copies pass against it.
    same scope, as the Mac's single-list board does, because reading them
    again in the core would cross the same rows twice. Kotlin's
    `KanbanColumn` had no caller outside its tests and is deleted. The Swift-only engines
-   work on the Checkvist-era tasks `TaskListViewModel` and `KanbanManager`
-   keep in memory, which the core never holds: `KanbanFilter`,
-   `KanbanSelection`, `KanbanManualOrder`, `TaskVisibilityEngine`,
-   `TaskFilterEngine`, `MatrixClustering` and `MatrixSpread`.
+   worked on the Checkvist-era tasks `TaskListViewModel` and `KanbanManager`
+   kept in memory, which the core never holds, so none of them moved. Since
+   the desktop roadmap's Phase 6 step 4 (2026-10-10) most are gone instead:
+   `KanbanManager` drew nothing once the popover went, and `KanbanFilter`,
+   `KanbanSelection`, `KanbanManualOrder`, `MatrixClustering` and
+   `MatrixSpread` (with the Mac's own `KanbanColumn`, `KanbanSwimlanes` and
+   `EisenhowerInheritance`) were deleted with it. `TaskVisibilityEngine` and
+   `TaskFilterEngine` stay native, for the same reason as before: they shape
+   the Checkvist cursor `TaskListViewModel` still keeps for the sync and
+   mutation services, which the core does not hold.
    `MatrixNavigation` and `MatrixViewport` had no callers outside their
    tests and are deleted. `BoardLinks` solves the board's link geometry from measured card
    heights a frame at a time. It overlaps `board.rs` only in which card a
