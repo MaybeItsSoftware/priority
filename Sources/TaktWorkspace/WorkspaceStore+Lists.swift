@@ -85,10 +85,12 @@ extension WorkspaceStore {
     } else {
       scoped = all
     }
-    let trees = try listTrees(in: scoped.map(\.id))
-    return scoped.flatMap { list in
-      trees[list.id]?.actionableTasks(visibleRootTaskId: list.visibleRootTaskId) ?? []
-    }
+    guard !scoped.isEmpty else { return [] }
+    // Picked in the Rust core (`board::actionable_tasks`), by the rule
+    // `WorkspaceListTree.actionableTasks(visibleRootTaskId:)` states, so
+    // only the cards cross rather than every task in every list.
+    return try PackedTaskRows.decode(
+      Self.mappingCoreErrors { try core.actionableTasksPacked(listIds: scoped.map(\.id)) })
   }
 
   public func visibleOutline(in listId: String, parentTaskId: String? = nil) throws -> [TaskOutlineItem] {

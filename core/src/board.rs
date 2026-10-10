@@ -93,69 +93,9 @@ pub fn combined_board(
     hide_completed_before_ms: Option<i64>,
 ) -> Result<BoardRead, CoreError> {
     let (tasks, visible_roots) = read_tasks(connection, list_ids)?;
-    // Children by list and parent ("" for a root), in sibling order.
-    let mut children: HashMap<(&str, &str), Vec<usize>> = HashMap::with_capacity(tasks.len());
-    for (index, task) in tasks.iter().enumerate() {
-        let parent = task.parent_task_id.as_deref().unwrap_or("");
-        children
-            .entry((task.list_id.as_str(), parent))
-            .or_default()
-            .push(index);
-    }
+    let Selection { outlines, cards } = select(&tasks, &visible_roots, list_ids);
     let is_list = |task: &TaskRow| task.item_kind.as_deref() == Some("list");
     let is_open = |task: &TaskRow| !matches!(task.status.as_str(), "completed" | "cancelled");
-
-    // Each list's outline once, depth first in sibling order, each task once.
-    let mut outlines: HashMap<&str, Vec<(usize, usize)>> = HashMap::new();
-    for list_id in list_ids {
-        if outlines.contains_key(list_id.as_str()) {
-            continue;
-        }
-        let mut items = Vec::new();
-        let mut visited: HashSet<usize> = HashSet::new();
-        let mut stack: Vec<(usize, usize)> = children
-            .get(&(list_id.as_str(), ""))
-            .into_iter()
-            .flatten()
-            .rev()
-            .map(|&index| (index, 0))
-            .collect();
-        while let Some((index, depth)) = stack.pop() {
-            if !visited.insert(index) {
-                continue;
-            }
-            items.push((index, depth));
-            if let Some(kids) = children.get(&(list_id.as_str(), tasks[index].id.as_str())) {
-                stack.extend(kids.iter().rev().map(|&kid| (kid, depth + 1)));
-            }
-        }
-        outlines.insert(list_id.as_str(), items);
-    }
-
-    // The cards: `actionableTasks(visibleRootTaskId:)`, list by list. A task
-    // beneath a list that is archived or not open is out, and so is the
-    // list's own visible root.
-    let mut cards: Vec<usize> = Vec::new();
-    for list_id in list_ids {
-        let visible_root = visible_roots.get(list_id).cloned().flatten();
-        let mut ancestors: Vec<(usize, usize, bool)> = Vec::new();
-        for &(index, depth) in &outlines[list_id.as_str()] {
-            while ancestors.last().is_some_and(|(_, d, _)| *d >= depth) {
-                ancestors.pop();
-            }
-            let task = &tasks[index];
-            let suppresses = is_list(task) && (task.archived_at_ms.is_some() || !is_open(task));
-            let inactive = suppresses || ancestors.last().is_some_and(|(_, _, i)| *i);
-            if !is_list(task)
-                && visible_root.as_deref() != Some(task.id.as_str())
-                && !inactive
-                && is_open(task)
-            {
-                cards.push(index);
-            }
-            ancestors.push((index, depth, inactive));
-        }
-    }
 
     // `WorkspaceBoardTrees`: every list holding a card, walked without its
     // archived lists, for each task's parent and each card's tree.
@@ -298,6 +238,101 @@ pub fn combined_board(
         tree_rows: packed(tree_rows),
         tree_depths: packed(tree_depths),
     })
+}
+
+/// Each list's outline, and the cards picked from them.
+struct Selection<'a> {
+    /// Each list's outline, depth first in sibling order, each task once.
+    outlines: HashMap<&'a str, Vec<(usize, usize)>>,
+    /// The cards in board order, as indexes into the tasks.
+    cards: Vec<usize>,
+}
+
+/// Picks the cards of `list_ids` out of `tasks`, list by list.
+fn select<'a>(
+    tasks: &'a [TaskRow],
+    visible_roots: &HashMap<String, Option<String>>,
+    list_ids: &'a [String],
+) -> Selection<'a> {
+    // Children by list and parent ("" for a root), in sibling order.
+    let mut children: HashMap<(&str, &str), Vec<usize>> = HashMap::with_capacity(tasks.len());
+    for (index, task) in tasks.iter().enumerate() {
+        let parent = task.parent_task_id.as_deref().unwrap_or("");
+        children
+            .entry((task.list_id.as_str(), parent))
+            .or_default()
+            .push(index);
+    }
+    let is_list = |task: &TaskRow| task.item_kind.as_deref() == Some("list");
+    let is_open = |task: &TaskRow| !matches!(task.status.as_str(), "completed" | "cancelled");
+
+    // Each list's outline once, depth first in sibling order, each task once.
+    let mut outlines: HashMap<&str, Vec<(usize, usize)>> = HashMap::new();
+    for list_id in list_ids {
+        if outlines.contains_key(list_id.as_str()) {
+            continue;
+        }
+        let mut items = Vec::new();
+        let mut visited: HashSet<usize> = HashSet::new();
+        let mut stack: Vec<(usize, usize)> = children
+            .get(&(list_id.as_str(), ""))
+            .into_iter()
+            .flatten()
+            .rev()
+            .map(|&index| (index, 0))
+            .collect();
+        while let Some((index, depth)) = stack.pop() {
+            if !visited.insert(index) {
+                continue;
+            }
+            items.push((index, depth));
+            if let Some(kids) = children.get(&(list_id.as_str(), tasks[index].id.as_str())) {
+                stack.extend(kids.iter().rev().map(|&kid| (kid, depth + 1)));
+            }
+        }
+        outlines.insert(list_id.as_str(), items);
+    }
+
+    // The cards: `actionableTasks(visibleRootTaskId:)`, list by list. A task
+    // beneath a list that is archived or not open is out, and so is the
+    // list's own visible root.
+    let mut cards: Vec<usize> = Vec::new();
+    for list_id in list_ids {
+        let visible_root = visible_roots.get(list_id).cloned().flatten();
+        let mut ancestors: Vec<(usize, usize, bool)> = Vec::new();
+        for &(index, depth) in &outlines[list_id.as_str()] {
+            while ancestors.last().is_some_and(|(_, d, _)| *d >= depth) {
+                ancestors.pop();
+            }
+            let task = &tasks[index];
+            let suppresses = is_list(task) && (task.archived_at_ms.is_some() || !is_open(task));
+            let inactive = suppresses || ancestors.last().is_some_and(|(_, _, i)| *i);
+            if !is_list(task)
+                && visible_root.as_deref() != Some(task.id.as_str())
+                && !inactive
+                && is_open(task)
+            {
+                cards.push(index);
+            }
+            ancestors.push((index, depth, inactive));
+        }
+    }
+    Selection { outlines, cards }
+}
+
+/// The open, doable tasks of `list_ids`, in that order, packed by
+/// `packed_rows::pack_task_rows`: a combined scope's outline, which draws
+/// the cards flat and so needs none of the trees beneath them.
+/// `WorkspaceStore.actionableTasks(in:limitedTo:)`.
+pub fn actionable_tasks(
+    connection: &Connection,
+    list_ids: &[String],
+) -> Result<Vec<u8>, CoreError> {
+    let (tasks, visible_roots) = read_tasks(connection, list_ids)?;
+    let selection = select(&tasks, &visible_roots, list_ids);
+    Ok(pack_task_rows(
+        selection.cards.iter().map(|&index| &tasks[index]),
+    ))
 }
 
 /// Every task in the lists, in `tasks_in_lists`' order, and each list's

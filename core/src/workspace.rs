@@ -1141,6 +1141,12 @@ impl CoreWorkspace {
         board::combined_board(&self.lock(), &list_ids, hide_completed_before_ms)
     }
 
+    /// A combined scope's cards alone, packed, for an outline that draws
+    /// them flat. See `board::actionable_tasks`.
+    pub fn actionable_tasks_packed(&self, list_ids: Vec<String>) -> Result<Vec<u8>, CoreError> {
+        board::actionable_tasks(&self.read(), &list_ids)
+    }
+
     /// A list's outline under a task, or the whole list.
     pub fn outline(
         &self,

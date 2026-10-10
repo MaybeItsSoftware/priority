@@ -130,6 +130,26 @@ fn cards_are_the_open_tasks_outside_closed_lists_and_the_visible_root() {
 }
 
 #[test]
+fn the_actionable_read_carries_the_cards_alone_in_board_order() {
+    let connection = workspace();
+    let rows =
+        crate::packed_rows::unpack_task_rows(&actionable_tasks(&connection, &ids()).unwrap())
+            .unwrap();
+    let read = combined_board(&connection, &ids(), None).unwrap();
+    let titles: Vec<&str> = rows.iter().map(|row| row.id.as_str()).collect();
+    assert_eq!(titles, cards(&read));
+    let reversed: Vec<String> = ids().into_iter().rev().collect();
+    let rows =
+        crate::packed_rows::unpack_task_rows(&actionable_tasks(&connection, &reversed).unwrap())
+            .unwrap();
+    assert_eq!(
+        rows.iter().map(|row| row.id.as_str()).collect::<Vec<_>>(),
+        ["chore", "project", "detail", "paper"]
+    );
+    assert!(actionable_tasks(&connection, &[]).unwrap().len() <= 8);
+}
+
+#[test]
 fn trees_keep_every_level_and_name_each_parent() {
     let read = combined_board(&workspace(), &ids(), None).unwrap();
     assert_eq!(

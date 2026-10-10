@@ -1047,6 +1047,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_apply_planning_to_descendants(
@@ -1423,6 +1425,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_acknowledge_sync_changes(`ptr`: Long,`throughSeq`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_actionable_tasks_packed(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_add_to_focus_queue(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_apply_planning_to_descendants(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2594,6 +2598,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() and 0xFFFF) != 39097) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed() and 0xFFFF) != 11098) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() and 0xFFFF) != 31877) {
@@ -4116,6 +4123,12 @@ public interface CoreWorkspaceInterface {
     fun `acknowledgeSyncChanges`(`throughSeq`: kotlin.Long)
     
     /**
+     * A combined scope's cards alone, packed, for an outline that draws
+     * them flat. See `board::actionable_tasks`.
+     */
+    fun `actionableTasksPacked`(`listIds`: List<kotlin.String>): kotlin.ByteArray
+    
+    /**
      * Queues a task in a focus session.
      */
     fun `addToFocusQueue`(`sessionId`: kotlin.String, `taskId`: kotlin.String, `plannedSeconds`: kotlin.Long?, `nowMs`: kotlin.Long)
@@ -5537,6 +5550,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * A combined scope's cards alone, packed, for an outline that draws
+     * them flat. See `board::actionable_tasks`.
+     */
+    @Throws(CoreException::class)override fun `actionableTasksPacked`(`listIds`: List<kotlin.String>): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_actionable_tasks_packed(
+        it,
+        
+        FfiConverterSequenceString.lower(`listIds`),_status)
+}
+    }
+    )
+    }
     
 
     

@@ -1144,6 +1144,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func acknowledgeSyncChanges(throughSeq: Int64) throws 
     
     /**
+     * A combined scope's cards alone, packed, for an outline that draws
+     * them flat. See `board::actionable_tasks`.
+     */
+    func actionableTasksPacked(listIds: [String]) throws  -> Data
+    
+    /**
      * Queues a task in a focus session.
      */
     func addToFocusQueue(sessionId: String, taskId: String, plannedSeconds: Int64?, nowMs: Int64) throws 
@@ -2333,6 +2339,20 @@ open func acknowledgeSyncChanges(throughSeq: Int64)throws   {try rustCallWithErr
         FfiConverterInt64.lower(throughSeq),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * A combined scope's cards alone, packed, for an outline that draws
+     * them flat. See `board::actionable_tasks`.
+     */
+open func actionableTasksPacked(listIds: [String])throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_actionable_tasks_packed(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(listIds),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -22813,6 +22833,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() != 39097) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_actionable_tasks_packed() != 11098) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue() != 31877) {
