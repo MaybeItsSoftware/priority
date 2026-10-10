@@ -1,12 +1,16 @@
 package uk.co.maybeitsadam.takt.core.theme
 
+import uniffi.takt_core.themeContrastRatio
+import uniffi.takt_core.themeRelativeLuminance
 import java.util.Locale
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
 
-// Port of Sources/TaktCore/Theming/ThemeColorValue.swift.
+// Counterpart of Sources/TaktCore/Theming/ThemeColorValue.swift. Resolving and
+// auditing a theme is the Rust core's; the hex parse stays here because list
+// colours are parsed per row in composables, where a call into the core would
+// cost more than the parse.
 
 /**
  * A colour as a theme states it: sRGB channels and alpha in 0…1, clamped on
@@ -33,18 +37,10 @@ class ThemeColorValue(red: Double, green: Double, blue: Double, alpha: Double = 
     fun withAlpha(newAlpha: Double): ThemeColorValue = ThemeColorValue(red, green, blue, newAlpha)
 
     /** WCAG relative luminance. Alpha is ignored. */
-    val relativeLuminance: Double
-        get() {
-            fun linear(channel: Double) =
-                if (channel <= 0.03928) channel / 12.92 else ((channel + 0.055) / 1.055).pow(2.4)
-            return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
-        }
+    val relativeLuminance: Double get() = themeRelativeLuminance(core)
 
-    fun contrastRatio(against: ThemeColorValue): Double {
-        val first = relativeLuminance
-        val second = against.relativeLuminance
-        return (max(first, second) + 0.05) / (min(first, second) + 0.05)
-    }
+    /** WCAG contrast ratio, 1…21, the core's, as the audit measures it. */
+    fun contrastRatio(against: ThemeColorValue): Double = themeContrastRatio(core, against.core)
 
     override fun equals(other: Any?): Boolean = other is ThemeColorValue &&
         red == other.red && green == other.green && blue == other.blue && alpha == other.alpha

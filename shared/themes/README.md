@@ -1,14 +1,19 @@
 # Shared themes
 
-Generated from Swift. Do not edit by hand: change
-`Sources/TaktCore/Theming/` and run
+Generated from the Rust core (`core/src/theme`), which every app resolves
+themes with. Do not edit by hand: change `core/src/theme/` and run either
 
 ```bash
+TAKT_REGENERATE_THEMES=1 cargo test --manifest-path core/Cargo.toml theme
 TAKT_REGENERATE_THEMES=1 swift test --filter TaktCoreTests.ThemeConformanceTests
 ```
 
-`ThemeConformanceTests` fails whenever these files differ from what Swift
-produces. The theme format itself is in [`docs/themes.md`](../../docs/themes.md).
+The core's own tests (`core/src/theme/tests.rs`) rebuild every file here from
+its inputs and fail on any byte that differs; so do `ThemeConformanceTests`
+through the Swift bindings, and Android's `ThemeConformanceTest` through the
+Kotlin ones. A new case is added to the list in
+`corelogic-tests/ThemeConformanceTests.swift`. The theme format itself is in
+[`docs/themes.md`](../../docs/themes.md).
 
 ## `priority.json`, `chalk.json`, `chalk-dark.json`
 

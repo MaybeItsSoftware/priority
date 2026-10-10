@@ -8,26 +8,11 @@ kotlin {
 }
 
 /**
- * The built-in themes are defined once, in Swift, and exported as complete
- * JSON to `shared/themes/` (docs/themes.md). They are copied onto this
- * module's classpath on every build rather than checked in twice, the same
- * way `:data` copies the workspace schema, so a colour changed on the Mac
- * reaches Android with the next build. A missing folder copies nothing, and
- * `BuiltInThemeSpecifications` falls back to its own definition.
+ * The built-in themes and the resolver are the Rust core's (docs/themes.md),
+ * reached through the bindings below. `shared/themes/` holds what the core
+ * writes; the tests read it in place to hold this module to it.
  */
 val sharedThemes = rootProject.layout.projectDirectory.dir("../../shared/themes")
-
-val copySharedThemes = tasks.register<Sync>("copySharedThemes") {
-    from(sharedThemes) {
-        include("*.json")
-        into("uk/co/maybeitsadam/takt/core/theme/builtin")
-    }
-    into(layout.buildDirectory.dir("generated/sharedThemes"))
-}
-
-sourceSets.main {
-    resources.srcDir(copySharedThemes)
-}
 
 // The Rust core's Kotlin bindings (src/main/java/uniffi) are written by
 // :data's buildRustCore, which builds the core's libraries alongside them, so
@@ -38,10 +23,11 @@ tasks.withType<Test>().configureEach {
     // The bindings load the core through JNA; on the JVM that is the host
     // build scripts/build_core_android.sh leaves in core/target.
     systemProperty("jna.library.path", rootProject.file("../../core/target/release").absolutePath)
-    // The resolution cases the Swift tests write; ThemeConformanceTest reads them in place.
-    val conformance = sharedThemes.dir("conformance").asFile
-    inputs.files(fileTree(conformance)).withPropertyName("themeConformance")
-    systemProperty("priority.themeConformanceDir", conformance.absolutePath)
+    // The built-in files and resolution cases the core writes; the theme tests read them in place.
+    val shared = sharedThemes.asFile
+    inputs.files(fileTree(shared)).withPropertyName("sharedThemes")
+    systemProperty("priority.themeConformanceDir", shared.resolve("conformance").absolutePath)
+    systemProperty("priority.sharedThemesDir", shared.absolutePath)
 }
 
 dependencies {

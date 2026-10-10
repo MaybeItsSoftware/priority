@@ -356,18 +356,18 @@ platform with no minimum.
 
 ### Built-ins are shared files
 
-The built-ins are defined once, in Swift (`BuiltInThemeSpecifications`), and
-exported as complete JSON to `shared/themes/priority.json`,
-`shared/themes/chalk.json` (Zed) and `shared/themes/chalk-dark.json` (Zed
-Dark). A Swift test
-fails if those files and the Swift definitions disagree; run it with
-`TAKT_REGENERATE_THEMES=1` to rewrite them. The Android app reads those files
-from its assets (a Gradle task copies them in, the same way it copies the
-workspace schema), so the three apps cannot drift apart on a hex value.
+The built-ins are defined once, in the Rust core
+(`core/src/theme/builtins.rs`), which the Mac, the iPhone and Android all
+take them from, and exported as complete JSON to
+`shared/themes/priority.json`, `shared/themes/chalk.json` (Zed),
+`shared/themes/chalk-dark.json` (Zed Dark) and `shared/themes/grape.json`.
+The core's tests fail if those files and its definitions disagree; run them
+with `TAKT_REGENERATE_THEMES=1` to rewrite them. There is one resolver, so the
+three apps cannot drift apart on a hex value.
 
 `shared/themes/conformance/` holds resolution cases: input files plus the
 expected resolved theme for each platform and appearance. They are written by
-the Swift tests, and the Kotlin resolver must reproduce them exactly.
+the core, and every client is held to them through its own bindings.
 
 ### The chosen theme follows you
 
@@ -450,9 +450,18 @@ missing: without a base it falls back to the default's.
 
 ## For developers
 
-The format is decoded in `TaktCore`
-(`Sources/TaktCore/Theming/ThemeFile.swift` and `ThemeFileLoader.swift`)
-and tested in `corelogic-tests/ThemeFileTests.swift`.
+The format is read, merged, audited and written by the Rust core
+(`core/src/theme/`: `json.rs` reads and writes the JSON dialect Swift's
+`JSONDecoder` and `JSONEncoder` defined, `file.rs` the format, `merge.rs` and
+`loader.rs` resolution, `audit.rs` the audit, `seeds.rs` the seed arithmetic,
+`builtins.rs` the built-ins, `export.rs` and `conformance.rs` the files it
+writes) and tested there (`core/src/theme/tests.rs`). `TaktCore`
+(`Sources/TaktCore/Theming/`, conversions in `Theme+Core.swift`) and Android's
+`:core` (`core/theme/`, conversions in `ThemeCore.kt`) keep their own types
+and call it once per folder or file; `corelogic-tests/ThemeFileTests.swift`
+and `ThemeFileTest.kt` test it through them. What stays native is what a view
+reads per render: a palette's role lookup and the hex parse list colours go
+through.
 
 - **Platforms.** `ThemeFileLoader.load(_:platform:)` resolves a folder for
   one `ThemePlatform` (`.macos`, `.ios`, `.android`). The default is `.macos`,
@@ -466,11 +475,13 @@ and tested in `corelogic-tests/ThemeFileTests.swift`.
 - **Seeds.** `ThemeSeeds` grows a palette table from up to six colours; the
   loader applies a file's `seeds` after the base and before its `palette`. `ThemeStructureAudit` warns about a `touchTarget`
   between 0 and 44.
-- **Shared files.** `ThemeConformance` (in `TaktCore`) builds the
-  complete built-in files and the canonical resolved form, and
+- **Shared files.** The core's `conformance.rs` builds the complete
+  built-in files and the canonical resolved form (`ThemeConformance` in
+  `TaktCore` is its Swift face), and
   `corelogic-tests/ThemeConformanceTests.swift` holds `shared/themes/` to it:
   the cases are listed in that test. Add a case there, then regenerate with
   `TAKT_REGENERATE_THEMES=1 swift test --filter TaktCoreTests.ThemeConformanceTests`.
+  The core's own test rebuilds every committed case from its inputs.
   The format is in [`shared/themes/README.md`](../shared/themes/README.md).
 - **Sync.** The rows are `WorkspaceStore.themes()`, `upsertTheme(id:json:)`,
   `deleteTheme(id:)`, `preference(_:)` and `setPreference(_:_:)`

@@ -1,6 +1,10 @@
 package uk.co.maybeitsadam.takt.core.theme
 
-// Port of Sources/TaktCore/Theming/ThemeSeeds.swift.
+import uniffi.takt_core.CoreThemeSeeds
+import uniffi.takt_core.themeMix
+import uniffi.takt_core.themeSeedRoles
+
+// The arithmetic is the Rust core's (core/src/theme/seeds.rs); this is its type.
 
 /**
  * The few colours a whole palette can be grown from.
@@ -10,10 +14,9 @@ package uk.co.maybeitsadam.takt.core.theme
  * colours. The eleven neutrals are mixed from them by fixed proportions. Any
  * role the theme also states in `palette` wins over the derived one.
  *
- * The arithmetic is part of the format, and `shared/themes/conformance/`
- * holds this port to Swift's answers. Channels are 0–255 integers, and a mix
- * is `round(a + (b − a) × t)`, computed in that order in doubles and rounded
- * half away from zero.
+ * The arithmetic is part of the format and lives in the core, so every
+ * client grows the same palette. Channels are 0–255 integers, and a mix is
+ * `round(a + (b − a) × t)`, rounded half away from zero.
  */
 data class ThemeSeeds(
     val background: ThemeColorValue? = null,
@@ -23,7 +26,7 @@ data class ThemeSeeds(
     val danger: ThemeColorValue? = null,
     val warning: ThemeColorValue? = null,
 ) {
-    /** Declaration order is the Swift `allCases` order. */
+    /** Declaration order is the format's order. */
     enum class Key(val raw: String) {
         BACKGROUND("background"),
         FOREGROUND("foreground"),
@@ -72,40 +75,16 @@ data class ThemeSeeds(
      * step lighter.
      */
     fun roles(appearance: ThemeAppearance): Map<ThemeColorRole, ThemeColorValue>? {
-        val background = background ?: return null
-        val foreground = foreground ?: return null
-        val roles = LinkedHashMap<ThemeColorRole, ThemeColorValue>()
-        roles[ThemeColorRole.PAPER] = background
-        roles[ThemeColorRole.INK] = foreground
-        for ((role, step) in NEUTRAL_STEPS) roles[role] = mix(background, foreground, step)
-        roles[ThemeColorRole.RAISED] = if (appearance == ThemeAppearance.LIGHT) {
-            mix(background, ThemeColorValue(1.0, 1.0, 1.0), 0.6)
-        } else {
-            mix(background, foreground, 0.04)
-        }
-        accent?.let { roles[ThemeColorRole.PRIMARY] = it }
-        success?.let { roles[ThemeColorRole.SUCCESS] = it }
-        danger?.let { roles[ThemeColorRole.DANGER] = it }
-        warning?.let { roles[ThemeColorRole.WARNING] = it }
-        return roles
+        val seeds = CoreThemeSeeds(
+            background?.core, foreground?.core, accent?.core, success?.core, danger?.core, warning?.core,
+        )
+        return themeSeedRoles(seeds, appearance.core)?.entries
+            ?.mapNotNull { (key, value) -> ThemeColorRole.of(key)?.let { it to ThemeColorValue.of(value) } }
+            ?.sortedBy { it.first.ordinal }
+            ?.toMap(LinkedHashMap())
     }
 
     companion object {
-        /**
-         * How far from the background towards the foreground each neutral
-         * sits. The page is 0 and the text is 1.
-         */
-        val NEUTRAL_STEPS: List<Pair<ThemeColorRole, Double>> = listOf(
-            ThemeColorRole.ALT_ROW to 0.025,
-            ThemeColorRole.HOVER to 0.05,
-            ThemeColorRole.WELL to 0.07,
-            ThemeColorRole.BORDER_MUTED to 0.07,
-            ThemeColorRole.BORDER to 0.12,
-            ThemeColorRole.INPUT_BORDER to 0.2,
-            ThemeColorRole.DIM_TEXT to 0.38,
-            ThemeColorRole.MUTED_TEXT to 0.75,
-        )
-
         /**
          * The seeds a resolved table already implies: its page, its ink, its
          * primary and its status colours. A file's seeds are laid over these.
@@ -119,17 +98,8 @@ data class ThemeSeeds(
             warning = table[ThemeColorRole.WARNING],
         )
 
-        /**
-         * [a] moved [t] of the way to [b], per channel, on whole 0–255 steps.
-         * The result is opaque.
-         */
-        fun mix(a: ThemeColorValue, b: ThemeColorValue, t: Double): ThemeColorValue {
-            fun channel(from: Double, to: Double): Double {
-                val start = schoolbookRound(from * 255)
-                val end = schoolbookRound(to * 255)
-                return schoolbookRound(start + (end - start) * t) / 255
-            }
-            return ThemeColorValue(channel(a.red, b.red), channel(a.green, b.green), channel(a.blue, b.blue))
-        }
+        /** [a] moved [t] of the way to [b], per channel, on whole 0–255 steps. The result is opaque. */
+        fun mix(a: ThemeColorValue, b: ThemeColorValue, t: Double): ThemeColorValue =
+            ThemeColorValue.of(themeMix(a.core, b.core, t))
     }
 }

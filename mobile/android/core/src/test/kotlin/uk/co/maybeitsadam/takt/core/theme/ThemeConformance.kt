@@ -15,10 +15,10 @@ import kotlinx.serialization.json.put
 
 /**
  * Runs one case from `shared/themes/conformance/` the way
- * `shared/themes/README.md` describes, and says how Kotlin differs from it.
+ * `shared/themes/README.md` describes, and says how this module differs from it.
  */
 object ThemeConformance {
-    /** Every way Kotlin's resolution differs from the case; empty when it conforms. */
+    /** Every way this module's resolution differs from the case; empty when it conforms. */
     fun check(name: String, text: String): List<String> {
         val case = Json.parseToJsonElement(text).jsonObject
         val files = case["files"]?.jsonArray ?: return listOf("$name: no \"files\"")
@@ -42,11 +42,11 @@ object ThemeConformance {
             val expectedShape = expectedIssues.map { "${it.str("source")} ${it.str("severity")}" }
             if (issues.map(shape) != expectedShape) {
                 failures += "$name ${platform.raw}: issues ${issues.map { "${shape(it)}: ${it.message}" }} " +
-                    "but Swift reported ${expectedIssues.map { "${it.str("source")} ${it.str("severity")}: ${it.str("message")}" }}"
+                    "but the case says ${expectedIssues.map { "${it.str("source")} ${it.str("severity")}: ${it.str("message")}" }}"
             } else {
                 issues.zip(expectedIssues).forEach { (actual, expected) ->
                     if (actual.message != expected.str("message")) {
-                        failures += "$name ${platform.raw}: \"${actual.message}\" is worded \"${expected.str("message")}\" in Swift"
+                        failures += "$name ${platform.raw}: \"${actual.message}\" is worded \"${expected.str("message")}\" in the case"
                     }
                 }
             }

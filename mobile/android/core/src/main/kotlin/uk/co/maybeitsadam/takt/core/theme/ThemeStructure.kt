@@ -1,5 +1,7 @@
 package uk.co.maybeitsadam.takt.core.theme
 
+import uniffi.takt_core.themeProportionedScale
+
 // Port of Sources/TaktCore/Theming/ThemeStructure.swift. Every size is in
 // points, which Android draws as dp (and sp for type).
 
@@ -84,13 +86,7 @@ data class ThemeTypeScale(
 ) {
     companion object {
         /** The scale a body size implies, when a theme gives a size and no scale. */
-        fun proportioned(fromBody: Double): ThemeTypeScale = ThemeTypeScale(
-            caption = schoolbookRound(fromBody * 0.85),
-            body = fromBody,
-            title = schoolbookRound(fromBody * 1.25),
-            display = schoolbookRound(fromBody * 2.2),
-            hero = schoolbookRound(fromBody * 5),
-        )
+        fun proportioned(fromBody: Double): ThemeTypeScale = themeProportionedScale(fromBody).local()
     }
 }
 

@@ -248,6 +248,28 @@ covered the old copies pass against it.
    heights a frame at a time. It overlaps `board.rs` only in which card a
    subtask hangs from, which the board read already carries.
 
+   **Themes.** `core/src/theme/` holds the whole theme format: a reader and
+   writer for the JSON dialect Swift's `JSONDecoder` and `JSONEncoder`
+   defined (a trailing comma is accepted, a key stated twice keeps its first
+   value, a type error names its path in the same words, output is
+   pretty-printed with sorted keys), the file and its unknown-key warnings,
+   seeds, the merge and `extends` resolution, the audit, the four built-in
+   themes, export, and the shared files. Its tests rebuild every file in
+   `shared/themes/` byte for byte from their inputs, and regenerating them
+   from Swift leaves them unchanged. `TaktCore` and Android's `:core` keep
+   their own theme types and call the core once per folder, file or theme,
+   converting in `Theme+Core.swift` and `ThemeCore.kt`; Android no longer
+   copies the built-in files onto its classpath, because the core hands them
+   over. What stays native is what a view reads per render: a palette's role
+   lookup, and the hex parse list colours go through in row views, which a
+   call across the boundary would cost more than. `ThemeTypographyOverride`
+   (the reader's fonts, applied through the core's merge) and the Mac's
+   `ThemeFolderMirror` stay native too. Where the two ports had disagreed,
+   Swift's behaviour is what the core does: fullwidth hex digits read as 0
+   rather than failing, a non-integral number in a message reads as Swift
+   writes it (`1e-05`, not `1.0E-5`), and the built-in scrim is exactly 0.7
+   alpha on Android as on the Mac, where it was 179/255 read from a file.
+
 Pure-logic engines in `TaktCore` (the command parser, recurrence, visibility,
 theming) stay in Swift until steps 1 to 8 are done. They are not duplicated
 on Android in the same way, so moving them buys less.

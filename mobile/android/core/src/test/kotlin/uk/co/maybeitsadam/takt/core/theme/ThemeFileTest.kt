@@ -531,12 +531,15 @@ class ThemeFileTest {
 
     @Test
     fun theSharedBuiltInsStateEveryValueAndLoadCleanly() {
+        val folder = java.io.File(System.getProperty("priority.sharedThemesDir") ?: "../../shared/themes")
+        val sources = listOf("priority.json", "chalk.json", "chalk-dark.json", "grape.json").map {
+            ThemeFileSource(it, folder.resolve(it).readText())
+        }
         for (platform in ThemePlatform.entries) {
-            val library = BuiltInThemeSpecifications.library(platform)
-            assertTrue(library.issues.filterNot { it.isAudit }.toString(), library.issues.none { !it.isAudit })
-            // Nothing of the bootstrap base underneath survives: a different one changes nothing.
-            val other = BuiltInThemeSpecifications.bootstrap.copy(
-                structure = BuiltInThemeSpecifications.bootstrap.structure.copy(
+            // Laid over a base nothing like any of them, so every value has to come from the file.
+            val grape = BuiltInThemeSpecifications.grape(platform)
+            val other = grape.copy(
+                structure = grape.structure.copy(
                     radius = ThemeRadiusScale(7.0, 7.0, 7.0, 7.0, 7.0),
                     border = ThemeBorderScale(7.0, 7.0, 7.0),
                     spacing = ThemeSpacingScale(7.0, 7.0, 7.0, 7.0, 7.0, 7.0),
@@ -545,10 +548,20 @@ class ThemeFileTest {
                     usesGradientsOnChrome = true,
                 ),
             )
-            val again = ThemeFileLoader.load(
-                BuiltInThemeSpecifications.sharedSources(), platform, builtIns = emptyList(), defaultBase = other,
+            val library = ThemeFileLoader.load(sources, platform, builtIns = emptyList(), defaultBase = other)
+            assertTrue(library.issues.filterNot { it.isAudit }.toString(), library.issues.none { !it.isAudit })
+            // A file states colours in whole 255ths; the built-in scrim is 0.7 exactly.
+            fun ThemeSpecification.inHex() = copy(
+                palette = ThemePalette(
+                    palette.light.mapValues { ThemeColorValue.hex(it.value.hexString)!! },
+                    palette.dark.mapValues { ThemeColorValue.hex(it.value.hexString)!! },
+                ),
             )
-            assertEquals(library.themes, again.themes)
+            // The folder loads in file-name order; the built-ins come default first.
+            assertEquals(
+                BuiltInThemeSpecifications.all(platform).map { it.inHex() }.sortedBy { it.identifier },
+                library.themes.map { it.inHex() }.sortedBy { it.identifier },
+            )
         }
     }
 
