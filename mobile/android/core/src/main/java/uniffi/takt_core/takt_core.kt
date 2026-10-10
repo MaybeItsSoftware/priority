@@ -695,6 +695,18 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_affine_task_title(
     ): Int
+    external fun uniffi_takt_core_checksum_func_capture_date_time(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_capture_detail_labels(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_capture_due(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_capture_estimate(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_capture_parse(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_checkvist_due_date(
+    ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_key(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_offset(
@@ -1553,6 +1565,18 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_affine_task_title(`content`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_capture_date_time(`text`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`defaultHour`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_capture_detail_labels(`capture`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_capture_due(`word`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_capture_estimate(`word`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_capture_parse(`text`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_checkvist_due_date(`due`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_key(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_offset(`boundary`: RustBuffer.ByValue,`offset`: Long,`fromMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1866,6 +1890,24 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_affine_task_title() and 0xFFFF) != 5213) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_capture_date_time() and 0xFFFF) != 25581) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_capture_detail_labels() and 0xFFFF) != 1360) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_capture_due() and 0xFFFF) != 19525) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_capture_estimate() and 0xFFFF) != 49166) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_capture_parse() and 0xFFFF) != 14203) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_checkvist_due_date() and 0xFFFF) != 16968) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_boundary_day_key() and 0xFFFF) != 60525) {
@@ -8026,6 +8068,80 @@ public object FfiConverterTypeCandidate: FfiConverterRustBuffer<Candidate> {
             FfiConverterBoolean.write(value.`requiresSingleSitting`, buf)
             FfiConverterOptionalLong.write(value.`dailyRemainingSeconds`, buf)
             FfiConverterOptionalString.write(value.`dailyUnavailable`, buf)
+    }
+}
+
+
+
+/**
+ * What [`capture_parse`] read off a typed title.
+ */
+data class CaptureParts (
+    /**
+     * The title left once the trailing tokens are read off; the trimmed text
+     * as typed when none were.
+     */
+    var `title`: kotlin.String
+    , 
+    var `estimateSeconds`: kotlin.Long?
+    , 
+    /**
+     * The start of the day it is due, in the caller's zone.
+     */
+    var `dueAtMs`: kotlin.Long?
+    , 
+    var `tags`: List<kotlin.String>
+    , 
+    /**
+     * 1 to 4, the range the workspace stores.
+     */
+    var `priority`: kotlin.Long?
+    , 
+    /**
+     * Who it waits on, from `wait:Sam`.
+     */
+    var `waitingOn`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCaptureParts: FfiConverterRustBuffer<CaptureParts> {
+    override fun read(buf: ByteBuffer): CaptureParts {
+        return CaptureParts(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CaptureParts) = (
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
+            FfiConverterOptionalLong.allocationSize(value.`dueAtMs`) +
+            FfiConverterSequenceString.allocationSize(value.`tags`) +
+            FfiConverterOptionalLong.allocationSize(value.`priority`) +
+            FfiConverterOptionalString.allocationSize(value.`waitingOn`)
+    )
+
+    override fun write(value: CaptureParts, buf: ByteBuffer) {
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
+            FfiConverterOptionalLong.write(value.`dueAtMs`, buf)
+            FfiConverterSequenceString.write(value.`tags`, buf)
+            FfiConverterOptionalLong.write(value.`priority`, buf)
+            FfiConverterOptionalString.write(value.`waitingOn`, buf)
     }
 }
 
@@ -20362,6 +20478,127 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterString.lower(`content`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A day and a time of day, as the follow-up field reads them: the add
+         * field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`, each with or
+         * without the `@`), a time (`9am`, `9:30pm`, `14:00`, `noon`), or both in
+         * either order, with an optional `at` between.
+         *
+         * A day with no time is at `default_hour`. A time with no day is today, or
+         * tomorrow once that time has passed; a weekday whose time has passed today
+         * is next week's. `None` for anything else.
+         */ fun `captureDateTime`(`text`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String, `defaultHour`: kotlin.Long): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_capture_date_time(
+    
+        
+        FfiConverterString.lower(`text`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),
+        FfiConverterLong.lower(`defaultHour`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Short labels for what was found, in the order the field shows them:
+         * `45m`, `Fri 3 Oct`, `#work`, `!1`, `waiting on Sam`.
+         */ fun `captureDetailLabels`(`capture`: CaptureParts, `nowMs`: kotlin.Long, `zone`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_capture_detail_labels(
+    
+        
+        FfiConverterTypeCaptureParts.lower(`capture`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `today`, `tomorrow`, a weekday (the next one, today included), `3d` or
+         * `2w` from today, or a `yyyy-mm-dd` date: the start of that day in `zone`.
+         */ fun `captureDue`(`word`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_capture_due(
+    
+        
+        FfiConverterString.lower(`word`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `30m`, `90min`, `1h`, `1.5h`, `2hrs`, `1h30m`, `1h30`, each optionally
+         * after a `~`. Seconds, or `None` for anything else, for nothing, or for
+         * more than a day.
+         */ fun `captureEstimate`(`word`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_capture_estimate(
+    
+        
+        FfiConverterString.lower(`word`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Parses `text` as typed into an add field. See the module for the rules.
+         */ fun `captureParse`(`text`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): CaptureParts {
+            return FfiConverterTypeCaptureParts.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_capture_parse(
+    
+        
+        FfiConverterString.lower(`text`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Checkvist's `due` string as a moment, when it names one: `DueDateParsing`.
+         *
+         * Checkvist stores a due date as free text and returns it in whichever shape
+         * it was entered: ISO 8601 with or without a time, `yyyy/MM/dd`, an unpadded
+         * `yyyy-M-d`, sometimes with a trailing zone. It also stores keywords like
+         * `asap` that never resolve to a date at all, which is why the answer is
+         * optional rather than an error.
+         *
+         * This is what the Mac's Foundation parsers actually answered, measured
+         * rather than read off their format strings: an internet date-time (`T`,
+         * seconds, an offset, optional fractional seconds) is that moment, and
+         * anything else that starts with a year, month and day, separated by `-` or
+         * `/`, is that day's midnight in UTC, whatever follows it. Foundation's
+         * ISO 8601 full-date reading is that lenient, and it ran before the
+         * zone-aware formatters, which therefore never saw a date: so
+         * `2026/10/02 09:00:00 +0100` is the 2nd at midnight UTC, not 08:00. A month
+         * outside 1 to 12 or a day of 0 is no date; a day past the month's end rolls
+         * into the next (`2026-02-31` is 3 March), as Foundation's did.
+         */ fun `checkvistDueDate`(`due`: kotlin.String?): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_checkvist_due_date(
+    
+        
+        FfiConverterOptionalString.lower(`due`),_status)
 }
     )
     }

@@ -270,13 +270,14 @@ class WorkspaceRepository(
         estimateSeconds: Int? = null,
         tags: List<String> = emptyList(),
         priority: Int? = null,
+        waitingOn: String? = null,
         now: Instant = now(),
     ): WorkspaceTask {
         val new = uniffi.takt_core.NewTask(
             listId = listId, title = title, parentTaskId = parentTaskId, kind = kind.raw, notes = "",
             kanbanColumn = kanbanColumn, startAtMs = startAt?.toEpochMilli(), dueAtMs = dueAt?.toEpochMilli(),
             estimateSeconds = estimateSeconds?.toLong(), tags = tags, priority = priority?.toLong(),
-            waitingOn = null, externalLinks = emptyList(), atTop = atTop, adjacentTaskId = adjacentTaskId,
+            waitingOn = waitingOn, externalLinks = emptyList(), atTop = atTop, adjacentTaskId = adjacentTaskId,
             above = above,
         )
         val id = coreWrite { it.createTask(new, now.toEpochMilli()) }
@@ -798,7 +799,8 @@ class WorkspaceRepository(
         return createTask(
             listId = listId, title = capture.title, parentTaskId = parentTaskId, kanbanColumn = kanbanColumn,
             startAt = startAt, atTop = atTop, adjacentTaskId = adjacentTaskId, above = above, dueAt = capture.dueAt,
-            estimateSeconds = capture.estimateSeconds, tags = capture.tags, priority = capture.priority, now = now,
+            estimateSeconds = capture.estimateSeconds, tags = capture.tags, priority = capture.priority,
+            waitingOn = capture.waitingOn, now = now,
         )
     }
 

@@ -9,7 +9,7 @@ import kotlinx.collections.immutable.toImmutableList
 import uk.co.maybeitsadam.takt.core.TaskCapture
 
 /** What kind of token a chip shows, which decides its colour. */
-enum class CaptureChipKind { ESTIMATE, DUE, TAG, PRIORITY }
+enum class CaptureChipKind { ESTIMATE, DUE, TAG, PRIORITY, WAITING }
 
 @Immutable
 data class CaptureChip(val label: String, val kind: CaptureChipKind, val priority: Int? = null)
@@ -41,7 +41,8 @@ data class CapturePreview(
             if (capture.estimateSeconds != null) chips += CaptureChip(labels[next++], CaptureChipKind.ESTIMATE)
             if (capture.dueAt != null) chips += CaptureChip(labels[next++], CaptureChipKind.DUE)
             repeat(capture.tags.size) { chips += CaptureChip(labels[next++], CaptureChipKind.TAG) }
-            if (capture.priority != null) chips += CaptureChip(labels[next], CaptureChipKind.PRIORITY, capture.priority)
+            if (capture.priority != null) chips += CaptureChip(labels[next++], CaptureChipKind.PRIORITY, capture.priority)
+            if (capture.waitingOn != null) chips += CaptureChip(labels[next], CaptureChipKind.WAITING)
             return CapturePreview(capture.title, chips.toImmutableList())
         }
 

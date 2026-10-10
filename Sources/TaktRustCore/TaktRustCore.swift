@@ -4815,6 +4815,105 @@ public func FfiConverterTypeCandidate_lower(_ value: Candidate) -> RustBuffer {
 
 
 /**
+ * What [`capture_parse`] read off a typed title.
+ */
+public struct CaptureParts: Equatable, Hashable {
+    /**
+     * The title left once the trailing tokens are read off; the trimmed text
+     * as typed when none were.
+     */
+    public var title: String
+    public var estimateSeconds: Int64?
+    /**
+     * The start of the day it is due, in the caller's zone.
+     */
+    public var dueAtMs: Int64?
+    public var tags: [String]
+    /**
+     * 1 to 4, the range the workspace stores.
+     */
+    public var priority: Int64?
+    /**
+     * Who it waits on, from `wait:Sam`.
+     */
+    public var waitingOn: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The title left once the trailing tokens are read off; the trimmed text
+         * as typed when none were.
+         */title: String, estimateSeconds: Int64?, 
+        /**
+         * The start of the day it is due, in the caller's zone.
+         */dueAtMs: Int64?, tags: [String], 
+        /**
+         * 1 to 4, the range the workspace stores.
+         */priority: Int64?, 
+        /**
+         * Who it waits on, from `wait:Sam`.
+         */waitingOn: String?) {
+        self.title = title
+        self.estimateSeconds = estimateSeconds
+        self.dueAtMs = dueAtMs
+        self.tags = tags
+        self.priority = priority
+        self.waitingOn = waitingOn
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CaptureParts: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCaptureParts: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CaptureParts {
+        return
+            try CaptureParts(
+                title: FfiConverterString.read(from: &buf), 
+                estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                dueAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                tags: FfiConverterSequenceString.read(from: &buf), 
+                priority: FfiConverterOptionInt64.read(from: &buf), 
+                waitingOn: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CaptureParts, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
+        FfiConverterOptionInt64.write(value.dueAtMs, into: &buf)
+        FfiConverterSequenceString.write(value.tags, into: &buf)
+        FfiConverterOptionInt64.write(value.priority, into: &buf)
+        FfiConverterOptionString.write(value.waitingOn, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureParts_lift(_ buf: RustBuffer) throws -> CaptureParts {
+    return try FfiConverterTypeCaptureParts.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureParts_lower(_ value: CaptureParts) -> RustBuffer {
+    return FfiConverterTypeCaptureParts.lower(value)
+}
+
+
+/**
  * One day of finished work: indices into the caller's items, newest first.
  */
 public struct CompletedDay: Equatable, Hashable {
@@ -18009,6 +18108,109 @@ public func affineTaskTitle(content: String) -> String  {
 })
 }
 /**
+ * A day and a time of day, as the follow-up field reads them: the add
+ * field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`, each with or
+ * without the `@`), a time (`9am`, `9:30pm`, `14:00`, `noon`), or both in
+ * either order, with an optional `at` between.
+ *
+ * A day with no time is at `default_hour`. A time with no day is today, or
+ * tomorrow once that time has passed; a weekday whose time has passed today
+ * is next week's. `None` for anything else.
+ */
+public func captureDateTime(text: String, nowMs: Int64, zone: String, defaultHour: Int64) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_capture_date_time(
+        FfiConverterString.lower(text),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),
+        FfiConverterInt64.lower(defaultHour),uniffiCallStatus
+    )
+})
+}
+/**
+ * Short labels for what was found, in the order the field shows them:
+ * `45m`, `Fri 3 Oct`, `#work`, `!1`, `waiting on Sam`.
+ */
+public func captureDetailLabels(capture: CaptureParts, nowMs: Int64, zone: String) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_capture_detail_labels(
+        FfiConverterTypeCaptureParts_lower(capture),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * `today`, `tomorrow`, a weekday (the next one, today included), `3d` or
+ * `2w` from today, or a `yyyy-mm-dd` date: the start of that day in `zone`.
+ */
+public func captureDue(word: String, nowMs: Int64, zone: String) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_capture_due(
+        FfiConverterString.lower(word),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * `30m`, `90min`, `1h`, `1.5h`, `2hrs`, `1h30m`, `1h30`, each optionally
+ * after a `~`. Seconds, or `None` for anything else, for nothing, or for
+ * more than a day.
+ */
+public func captureEstimate(word: String) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_capture_estimate(
+        FfiConverterString.lower(word),uniffiCallStatus
+    )
+})
+}
+/**
+ * Parses `text` as typed into an add field. See the module for the rules.
+ */
+public func captureParse(text: String, nowMs: Int64, zone: String) -> CaptureParts  {
+    return try!  FfiConverterTypeCaptureParts_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_capture_parse(
+        FfiConverterString.lower(text),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * Checkvist's `due` string as a moment, when it names one: `DueDateParsing`.
+ *
+ * Checkvist stores a due date as free text and returns it in whichever shape
+ * it was entered: ISO 8601 with or without a time, `yyyy/MM/dd`, an unpadded
+ * `yyyy-M-d`, sometimes with a trailing zone. It also stores keywords like
+ * `asap` that never resolve to a date at all, which is why the answer is
+ * optional rather than an error.
+ *
+ * This is what the Mac's Foundation parsers actually answered, measured
+ * rather than read off their format strings: an internet date-time (`T`,
+ * seconds, an offset, optional fractional seconds) is that moment, and
+ * anything else that starts with a year, month and day, separated by `-` or
+ * `/`, is that day's midnight in UTC, whatever follows it. Foundation's
+ * ISO 8601 full-date reading is that lenient, and it ran before the
+ * zone-aware formatters, which therefore never saw a date: so
+ * `2026/10/02 09:00:00 +0100` is the 2nd at midnight UTC, not 08:00. A month
+ * outside 1 to 12 or a day of 0 is no date; a day past the month's end rolls
+ * into the next (`2026-02-31` is 3 March), as Foundation's did.
+ */
+public func checkvistDueDate(due: String?) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_due_date(
+        FfiConverterOptionString.lower(due),uniffiCallStatus
+    )
+})
+}
+/**
  * `yyyy-MM-dd` for the logical day containing `at_ms`.
  */
 public func dayBoundaryDayKey(boundary: DayLogBoundary, atMs: Int64) -> String  {
@@ -19066,6 +19268,24 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_affine_task_title() != 5213) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_capture_date_time() != 25581) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_capture_detail_labels() != 1360) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_capture_due() != 19525) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_capture_estimate() != 49166) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_capture_parse() != 14203) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_due_date() != 16968) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_day_boundary_day_key() != 60525) {
