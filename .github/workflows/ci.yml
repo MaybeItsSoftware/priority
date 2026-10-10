@@ -51,7 +51,9 @@ jobs:
             exit 1
           fi
           EXECUTABLE="${XCTEST_PATH}/Contents/MacOS/$(basename "${XCTEST_PATH}" .xctest)"
-          COV_DIR=$(dirname "${BIN_PATH}")/codecov
+          # Ask SwiftPM where it wrote coverage rather than guessing: the
+          # folder moved from beside the bin path to inside it.
+          COV_DIR=$(dirname "$(swift test --show-codecov-path)")
           PROFDATA=$(find "${COV_DIR}" -name 'default.profdata' 2>/dev/null | head -1)
           if [ -z "$PROFDATA" ]; then
             echo "::error::No default.profdata under ${COV_DIR} — swift test ran without producing coverage."
