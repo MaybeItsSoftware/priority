@@ -270,6 +270,32 @@ covered the old copies pass against it.
    writes it (`1e-05`, not `1.0E-5`), and the built-in scrim is exactly 0.7
    alpha on Android as on the Mac, where it was 179/255 read from a file.
 
+   **Export.** `core/src/export.rs` writes the whole workspace, every list
+   (archived too) in the sidebar's order with its task tree depth first, as
+   Markdown or JSON: `CoreWorkspace.export_workspace(workspace_id, format,
+   exported_at_ms)` reads and writes it in one call on the reader
+   connection, so no row crosses and the clients get one string. The bytes
+   are the ones the Mac wrote with Foundation's `JSONEncoder`
+   (`.prettyPrinted, .sortedKeys, .iso8601`): the theme writer in
+   `theme/json.rs` gained a `Json::Integer` and a slash-escaping entry point
+   for it, since the export writes `/` as `\/` where themes do not. The
+   Mac's builder is kept as a test oracle in
+   `workspace-tests/WorkspaceExportTests.swift`, which seeds a store with
+   every field set and unset, slashes, quotes, controls, U+2028, emoji, CRLF
+   notes, archived and completed lists and nested lists, and holds the
+   core's JSON and Markdown to `JSONEncoder` and the old loop byte for byte;
+   the fixtures Android's port was pinned to moved to `core/src/export/`.
+   `WorkspaceViewModel+Export.swift` (94 lines to 24) and Android's
+   `WorkspaceExport.kt` (187 to 19) are now a call and the formats' names,
+   extensions and MIME types (`WorkspaceStore+Export.swift`,
+   `WorkspaceRepositoryExport.kt`). One difference between the ports was found and Swift's
+   behaviour kept: Swift splits notes into `>` lines by `Character`, and
+   `\r\n` is one character that is not `\n`, so a Windows line ending never
+   split a note on the Mac while Kotlin split it and left a stray `\r`.
+   There is no `takt export`: every CLI command is a call into the shared
+   tool table, so a command there would have been an MCP tool too, and the
+   iPhone has no export.
+
 Pure-logic engines in `TaktCore` (the command parser, recurrence, visibility,
 theming) stay in Swift until steps 1 to 8 are done. They are not duplicated
 on Android in the same way, so moving them buys less.
