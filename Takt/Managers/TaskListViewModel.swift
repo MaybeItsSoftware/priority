@@ -125,10 +125,6 @@ import TaktCore
   private var hostCurrentSiblingIndex: Int { host?.currentSiblingIndex ?? 0 }
   private var hostIsSearchFilterActive: Bool { host?.isSearchFilterActive ?? false }
   private var hostSearchText: String { host?.searchText ?? "" }
-  private var hostTimerElapsedByTaskId: [Int: TimeInterval] {
-    host?.timerElapsedByTaskId ?? [:]
-  }
-  private var hostShowsBreadcrumbContext: Bool { host?.showsTaskBreadcrumbContext ?? false }
 
   /// Marks the derived caches stale. The rebuild is deferred to the next read
   /// of `cache` (or of any accessor that calls
@@ -172,10 +168,6 @@ import TaktCore
     }
     cacheStorage.priorityRank = rankByTaskId
     cacheStorage.absolutePriorityRank = absoluteRankByTaskId
-    cacheStorage.priorityPath = Self.computePriorityPaths(
-      rankByTaskId: rankByTaskId,
-      taskById: cacheStorage.taskById
-    )
     cacheStorage.dirty = false
     let visibility = computeVisibility()
     // Children revealed by expansion are ordered the same way the view orders
@@ -196,13 +188,6 @@ import TaktCore
       }
     )
     cacheStorage.visibleTasks = rows.map(\.task)
-    cacheStorage.outlineDepths = rows.map(\.depth)
-    cacheStorage.remainderStartIndex = visibility.remainderStartIndex
-    let nodes = tasks.map { TimerNode(id: $0.id, parentId: $0.parentId) }
-    cacheStorage.childCount = TimerStore.childCountByTaskId(nodes: nodes)
-    cacheStorage.rolledUpElapsed = TimerStore.rolledUpElapsedByTaskId(
-      nodes: nodes, ownElapsed: hostTimerElapsedByTaskId)
-    cacheStorage.rootLevelTagNames = computeRootLevelTagNames(limit: 30)
   }
 
   private func computeVisibility() -> TaskVisibilityEngine.Result<CheckvistTask> {
@@ -260,23 +245,6 @@ import TaktCore
         }
       ))
   }
-  private func computeRootLevelTagNames(limit: Int) -> [String] {
-    var counts: [String: Int] = [:]
-    for tags in cacheStorage.tagsByTaskId.values {
-      for tag in tags {
-        counts[tag, default: 0] += 1
-      }
-    }
-    return
-      counts
-      .sorted { lhs, rhs in
-        if lhs.value != rhs.value { return lhs.value > rhs.value }
-        return lhs.key < rhs.key
-      }
-      .prefix(limit)
-      .map(\.key)
-  }
-
   func rootDueBucket(for task: CheckvistTask) -> RootDueBucket {
     if let cached = cacheStorage.rootDueBucket[task.id] { return cached }
     return TaskFilterEngine.classifyDueBucket(task: task)
@@ -323,131 +291,7 @@ import TaktCore
     }
   }
 
-  // MARK: - View-derived badge / section helpers
-  // Consolidated from `AppCoordinator+TaskScoping` (Phase 3 follow-up): these read
-  // purely from the rebuilt `cache` (+ `repository`/`navigationState`/`quickEntry`
-  // this VM already owns), so they belong with the cache rather than forwarded
-  // through the coordinator. Views read them via `@Environment(TaskListViewModel.self)`.
-
-  func priorityRank(for task: CheckvistTask) -> Int? {
-    ensureVisibleTasksCacheValid()
-    return cacheStorage.priorityRank[task.id]
-  }
-
-  func absolutePriorityRank(for task: CheckvistTask) -> Int? {
-    ensureVisibleTasksCacheValid()
-    return cacheStorage.absolutePriorityRank[task.id]
-  }
-
-  func priorityPath(for task: CheckvistTask) -> String? {
-    ensureVisibleTasksCacheValid()
-    return cacheStorage.priorityPath[task.id]
-  }
-
-  func priorityBadgeLabel(for task: CheckvistTask) -> String? {
-    if let absolute = absolutePriorityRank(for: task) {
-      return "A\(absolute)"
-    }
-    if let scoped = priorityPath(for: task) {
-      return "P\(scoped)"
-    }
-    return nil
-  }
-
-  func eisenhowerBadgeLabel(for task: CheckvistTask) -> String? {
-    guard let level = repository.taskEisenhowerLevels[task.id],
-      MatrixGeometry.isPlaced(urgency: level.urgency, importance: level.importance)
-    else { return nil }
-    return "M(\(formatEisenhowerCoordinate(level.urgency)),\(formatEisenhowerCoordinate(level.importance)))"
-  }
-
-  private func formatEisenhowerCoordinate(_ value: Double) -> String {
-    if value.rounded() == value {
-      return String(Int(value))
-    }
-    return String(format: "%.1f", value)
-  }
-
-  /// Exposes the boundary (if any) at which non-matching "remainder" tasks begin
-  /// within `visibleTasks`. Computed by `TaskVisibilityEngine` for due/tags/priority
-  /// root views.
-  var remainderStartIndex: Int? {
-    ensureVisibleTasksCacheValid()
-    return cacheStorage.remainderStartIndex
-  }
-
   var isRootLevel: Bool { hostCurrentParentId == 0 }
-
-  var shouldShowRootScopeSection: Bool { !hostIsSearchFilterActive }
-
-  var rootScopeShowsFilterControls: Bool {
-    guard shouldShowRootScopeSection && isRootLevel else { return false }
-    switch rootTaskView {
-    case .due, .tags:
-      return true
-    case .all, .priority, .kanban, .eisenhower, .daily:
-      return false
-    }
-  }
-
-  private var shouldShowDueSectionHeaders: Bool {
-    isRootLevel && shouldShowRootScopeSection && rootTaskView == .due
-      && selectedRootDueBucket == nil
-  }
-
-  func rootDueSectionHeader(atVisibleIndex index: Int, visibleTasks: [CheckvistTask]) -> String? {
-    guard shouldShowDueSectionHeaders, visibleTasks.indices.contains(index) else { return nil }
-    // Due-bucket section headers only apply to the matching portion of the list.
-    // Remainder tasks get their own header via `remainderSectionHeader`.
-    if let remainderStart = remainderStartIndex, index >= remainderStart { return nil }
-    // Expanded children belong to the row above them, not to a bucket of their
-    // own — a subtask due next month must not push a "Next month" header into
-    // the middle of today's section.
-    guard outlineDepth(atVisibleIndex: index) == 0 else { return nil }
-    let currentBucket = rootDueBucket(for: visibleTasks[index])
-    guard let previousIndex = (0..<index).reversed().first(where: { outlineDepth(atVisibleIndex: $0) == 0 })
-    else { return currentBucket.title }
-    let previousBucket = rootDueBucket(for: visibleTasks[previousIndex])
-    return previousBucket == currentBucket ? nil : currentBucket.title
-  }
-
-  /// Returns the header title to display just before the task at the given index, or
-  /// nil when no remainder header belongs there. Only the boundary index produces a
-  /// header.
-  func remainderSectionHeader(atVisibleIndex index: Int) -> String? {
-    guard let start = remainderStartIndex, index == start else { return nil }
-    switch rootTaskView {
-    case .due:
-      return start == 0 ? "All tasks" : "Other tasks"
-    case .tags:
-      return start == 0 ? "Untagged" : "Other tasks"
-    case .priority:
-      return start == 0 ? "Unprioritised" : "Other tasks"
-    case .all, .kanban, .eisenhower, .daily:
-      return nil
-    }
-  }
-
-  func rootDueSectionCount(in visibleTasks: [CheckvistTask]) -> Int {
-    guard shouldShowDueSectionHeaders, !visibleTasks.isEmpty else { return 0 }
-    var total = 0
-    var previousBucket: RootDueBucket?
-    for (index, task) in visibleTasks.enumerated() {
-      // Mirrors `rootDueSectionHeader`: only top-level rows start a section.
-      guard outlineDepth(atVisibleIndex: index) == 0 else { continue }
-      let bucket = rootDueBucket(for: task)
-      if bucket != previousBucket {
-        total += 1
-        previousBucket = bucket
-      }
-    }
-    return total
-  }
-
-  func rootLevelTagNames(limit: Int = 8) -> [String] {
-    ensureVisibleTasksCacheValid()
-    return Array(cacheStorage.rootLevelTagNames.prefix(limit))
-  }
 
   /// Returns true if task is a descendant of the given parentId (or IS at that level).
   ///
@@ -459,39 +303,7 @@ import TaktCore
     return TaskFilterEngine.isDescendant(task, of: rootId, taskById: cacheStorage.taskById)
   }
 
-  /// Computes a hierarchical priority path per ranked task. For each ranked task, walks
-  /// from the root of its ancestor chain down to itself; each ancestor contributes its
-  /// own rank-in-parent-scope or "=" if unranked in that scope.
-  static func computePriorityPaths(
-    rankByTaskId: [Int: Int],
-    taskById: [Int: CheckvistTask]
-  ) -> [Int: String] {
-    var result: [Int: String] = [:]
-    for taskId in rankByTaskId.keys {
-      guard let task = taskById[taskId] else { continue }
-      var chain: [CheckvistTask] = []
-      var cursor: CheckvistTask? = task
-      // See `TaskFilterEngine.isDescendant` for why the visited set is here.
-      var seen: Set<Int> = []
-      while let current = cursor, seen.insert(current.id).inserted {
-        chain.append(current)
-        if let pid = current.parentId, pid != 0, let parent = taskById[pid] {
-          cursor = parent
-        } else {
-          cursor = nil
-        }
-      }
-      chain.reverse()  // root-first
-      let segments: [String] = chain.map { node in
-        if let rank = rankByTaskId[node.id] { return String(rank) }
-        return "="
-      }
-      result[taskId] = segments.joined(separator: ".")
-    }
-    return result
-  }
-
-  // MARK: - Task Scoping & Timing Helpers
+  // MARK: - Task Scoping
 
   /// Tasks visible at the current level, sorted by position
   var currentLevelTasks: [CheckvistTask] {
@@ -521,53 +333,6 @@ import TaktCore
     return level[clampedIndex]
   }
 
-  var currentTaskText: String { currentTask?.content ?? "" }
-
-  /// Breadcrumb chain from root down to (but not including) current task
-  var breadcrumbs: [CheckvistTask] {
-    ensureVisibleTasksCacheValid()
-    var result: [CheckvistTask] = []
-    var parentId = hostCurrentParentId
-    // See `TaskFilterEngine.isDescendant` for why the visited set is here.
-    var seen: Set<Int> = []
-    while parentId != 0, seen.insert(parentId).inserted {
-      if let parent = cacheStorage.taskById[parentId] {
-        result.append(parent)
-        parentId = parent.parentId ?? 0
-      } else {
-        break
-      }
-    }
-    result.reverse()
-    return result
-  }
-
-  /// Children of the currently focused task
-  var currentTaskChildren: [CheckvistTask] {
-    guard let task = currentTask else { return [] }
-    return repository.tasks.filter { ($0.parentId ?? 0) == task.id }
-  }
-
-  /// `visibleTasks` with its indent levels — what the outline actually is.
-  var outlineRows: [TaskOutlineRow] {
-    let tasks = visibleTasks
-    ensureVisibleTasksCacheValid()
-    let depths = cacheStorage.outlineDepths
-    return tasks.enumerated().map { index, task in
-      TaskOutlineRow(task: task, depth: index < depths.count ? depths[index] : 0)
-    }
-  }
-
-  func outlineDepth(atVisibleIndex index: Int) -> Int {
-    ensureVisibleTasksCacheValid()
-    guard cacheStorage.outlineDepths.indices.contains(index) else { return 0 }
-    return cacheStorage.outlineDepths[index]
-  }
-
-  func isExpanded(_ task: CheckvistTask) -> Bool {
-    repository.expandedTaskIds.contains(task.id)
-  }
-
   var visibleTasks: [CheckvistTask] {
     // The `_ = repository.x` roll-call that used to sit here is gone:
     // `ensureVisibleTasksCacheValid()` reads `cacheVersion`, which every one of
@@ -575,23 +340,6 @@ import TaktCore
     // cannot fall behind the set of things the rebuild actually reads.
     ensureVisibleTasksCacheValid()
     return cacheStorage.visibleTasks
-  }
-
-  func shouldShowBreadcrumbPath(for task: CheckvistTask, depth: Int = 0) -> Bool {
-    // An expanded child sits directly under its parent, so its path is on
-    // screen already; repeating it above every subtask is noise.
-    guard depth == 0 else { return false }
-    let pid = task.parentId ?? 0
-    if isRootLevel && shouldShowRootScopeSection && rootTaskView != .all {
-      return pid != 0
-    }
-    if isSearchFilterActive {
-      return pid != hostCurrentParentId
-    }
-    if hostShowsBreadcrumbContext {
-      return pid != 0
-    }
-    return false
   }
 
   var isSearchFilterActive: Bool { hostIsSearchFilterActive }
@@ -610,27 +358,5 @@ import TaktCore
       }
     }
     return start..<end
-  }
-
-  func totalElapsed(forTaskId taskId: Int) -> TimeInterval {
-    rolledUpElapsedByTaskId()[taskId] ?? 0
-  }
-
-  func totalElapsed(for task: CheckvistTask) -> TimeInterval {
-    totalElapsed(forTaskId: task.id)
-  }
-
-  func childCountByTaskId() -> [Int: Int] {
-    ensureVisibleTasksCacheValid()
-    return cacheStorage.childCount
-  }
-
-  func rolledUpElapsedByTaskId() -> [Int: TimeInterval] {
-    // Touch the observable dictionary so SwiftUI re-renders on per-second
-    // ticks. Without this, callers only read the @ObservationIgnored cache
-    // and never establish a dependency on `hostTimerElapsedByTaskId`.
-    _ = hostTimerElapsedByTaskId
-    ensureVisibleTasksCacheValid()
-    return cacheStorage.rolledUpElapsed
   }
 }

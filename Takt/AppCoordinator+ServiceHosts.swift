@@ -238,16 +238,14 @@ extension AppCoordinator: SyncHost {
 
 // MARK: - TaskListViewModelHost
 
-/// Four managers, all read-only from the view model's side. Each forwards to
-/// the real `@Observable` object rather than caching a copy, so SwiftUI's
-/// dependency tracking still registers on the underlying property.
-/// `currentParentId`, `currentSiblingIndex` and `timerElapsedByTaskId` are
-/// already provided above for the mutation and sync hosts — the same facts,
-/// wanted by three different collaborators, which is the point of stating them
-/// once on the coordinator.
+/// Read-only from the view model's side. Each forwards to the real
+/// `@Observable` object rather than caching a copy, so SwiftUI's dependency
+/// tracking still registers on the underlying property. `currentParentId` and
+/// `currentSiblingIndex` are already provided above for the mutation and sync
+/// hosts — the same facts, wanted by three different collaborators, which is
+/// the point of stating them once on the coordinator.
 extension AppCoordinator: TaskListViewModelHost {
   var isSearchFilterActive: Bool { quickEntry.isSearchFilterActive }
   var searchText: String { quickEntry.searchText }
-  var showsTaskBreadcrumbContext: Bool { preferences.showTaskBreadcrumbContext }
   var matrixSelectedTaskId: Int? { navigationState.matrixSelectedTaskId }
 }

@@ -163,10 +163,6 @@ protocol TaskListViewModelHost: AnyObject {
   /// Whether a search is narrowing the list.
   var isSearchFilterActive: Bool { get }
   var searchText: String { get }
-  /// Accumulated time per task, for the roll-up columns.
-  var timerElapsedByTaskId: [Int: TimeInterval] { get }
-  /// Whether rows show their ancestor path.
-  var showsTaskBreadcrumbContext: Bool { get }
   /// The matrix's own selection, which replaces the list's when the matrix is
   /// the active view — an id here rather than a task, because the view model
   /// can resolve it from a cache it already keeps.

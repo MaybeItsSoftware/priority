@@ -13,15 +13,13 @@ import XCTest
 @MainActor
 final class TaskListViewModelTests: XCTestCase {
 
-  /// A stand-in for the five managers. Every member is a read the view model
+  /// A stand-in for the managers. Every member is a read the view model
   /// makes, which is the whole surface `TaskListViewModelHost` describes.
   private final class StubHost: TaskListViewModelHost {
     var currentParentId = 0
     var currentSiblingIndex = 0
     var isSearchFilterActive = false
     var searchText = ""
-    var timerElapsedByTaskId: [Int: TimeInterval] = [:]
-    var showsTaskBreadcrumbContext = false
     var matrixSelectedTaskId: Int?
   }
 
@@ -214,27 +212,6 @@ final class TaskListViewModelTests: XCTestCase {
   }
 
   // MARK: - Ancestor walks
-
-  func testBreadcrumbsRunFromTheRootDownToTheCurrentScope() {
-    let (viewModel, host, _) = makeViewModel(tasks: [
-      task(1, "grandparent"), task(2, "parent", parentId: 1), task(3, "child", parentId: 2),
-    ])
-    host.currentParentId = 3
-
-    XCTAssertEqual(viewModel.breadcrumbs.map(\.id), [1, 2, 3])
-  }
-
-  /// A parent chain that points back at itself would spin forever. The data
-  /// should never contain one — but it arrives over the network, and a hang is
-  /// a worse failure than a wrong breadcrumb.
-  func testACycleInTheParentChainTerminates() {
-    let (viewModel, host, _) = makeViewModel(tasks: [
-      task(1, "a", parentId: 2), task(2, "b", parentId: 1),
-    ])
-    host.currentParentId = 1
-
-    XCTAssertLessThanOrEqual(viewModel.breadcrumbs.count, 2)
-  }
 
   func testIsDescendantWalksTheWholeChain() {
     let (viewModel, _, _) = makeViewModel(tasks: [
