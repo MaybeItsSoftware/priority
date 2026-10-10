@@ -43,22 +43,26 @@ struct WorkspaceMatrixDashboard: View {
         WorkspacePaneCount(count: unplaced.count, noun: "unplaced")
       }
       ScrollView {
-        VStack(alignment: .leading, spacing: 0) {
+        // Lazy, with the unplaced rows as its own children: Everything's
+        // matrix can have thousands of them, and an eager stack laid every
+        // one out on the switch. Each row carries the spacing and padding
+        // the section's stack used to give it, so nothing moves.
+        LazyVStack(alignment: .leading, spacing: 0) {
           if !unplaced.isEmpty || model.isDraftingTask {
-            VStack(alignment: .leading, spacing: theme.space.xs) {
-              MicroLabel("Unplaced")
-              ForEach(unplaced) { task in
-                WorkspaceMatrixTaskRow(task: task)
-                  .environment(model)
-              }
-              // A new task has no urgency or importance yet, so it is
-              // unplaced: it is typed where it will first appear.
-              if model.isDraftingTask {
-                WorkspaceTaskDraftRow(namesDestination: true)
-              }
+            MicroLabel("Unplaced")
+              .unplacedRow(theme, top: theme.space.md)
+            ForEach(unplaced) { task in
+              WorkspaceMatrixTaskRow(task: task)
+                .environment(model)
+                .unplacedRow(theme, top: theme.space.xs)
             }
-            .padding(theme.space.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // A new task has no urgency or importance yet, so it is
+            // unplaced: it is typed where it will first appear.
+            if model.isDraftingTask {
+              WorkspaceTaskDraftRow(namesDestination: true)
+                .unplacedRow(theme, top: theme.space.xs)
+            }
+            Color.clear.frame(height: theme.space.md)
             FocusRule()
           }
           // A 2×2 grid ruled with hairlines — one surface cut into four, the
@@ -112,6 +116,15 @@ struct WorkspaceMatrixDashboard: View {
   /// line up with the pane title above them.
   static func edgeInset(_ theme: Theme) -> CGFloat {
     max(FocusSurfaceMetrics.gutter - theme.space.md, 0)
+  }
+}
+
+extension View {
+  /// One row of the matrix's unplaced section, inset as the section was.
+  fileprivate func unplacedRow(_ theme: Theme, top: CGFloat) -> some View {
+    padding(.horizontal, theme.space.md)
+      .padding(.top, top)
+      .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
