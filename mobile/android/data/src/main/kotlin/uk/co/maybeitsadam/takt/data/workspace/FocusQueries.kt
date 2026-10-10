@@ -4,7 +4,6 @@ import java.time.Instant
 import java.time.ZoneId
 import uk.co.maybeitsadam.takt.core.DailyContribution
 import uk.co.maybeitsadam.takt.core.DailyItem
-import uk.co.maybeitsadam.takt.core.DayPlanSelector
 import uk.co.maybeitsadam.takt.core.FocusAward
 import uk.co.maybeitsadam.takt.core.FocusContext
 import uk.co.maybeitsadam.takt.core.FocusPointsSummary
@@ -138,9 +137,7 @@ internal fun nextUpSnapshot(
     now: Instant,
     zone: ZoneId,
 ): WorkspaceNextUpSnapshot {
-    val candidates = focusCandidates(core, now, zone)
-    val plan = DayPlanSelector.plan(candidates = candidates, runningID = runningId, now = now, zone = zone)
-    val ranking = NextUpSelector.evaluate(candidates, now, zone, context)
+    val (plan, ranking) = NextUpSelector.read(core, now, zone, context, runningId)
     return WorkspaceNextUpSnapshot(
         loggedSeconds = loggedWorkTotals(db),
         planning = taskPlanningValues(db),

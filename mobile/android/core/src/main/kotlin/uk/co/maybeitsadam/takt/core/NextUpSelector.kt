@@ -184,6 +184,34 @@ object NextUpSelector {
         )
     }
 
+    /**
+     * Reads the candidates, plans the day from all of them and ranks them in
+     * one call to the Rust core (`next_up::next_up`), as the Mac and iPhone
+     * do, so the candidates cross once, ranked, rather than out and back in
+     * twice. With a [ladderLimit] the ladder holds its first so many entries
+     * plus every task in the day further down.
+     */
+    fun read(
+        core: uniffi.takt_core.CoreWorkspace,
+        now: Instant,
+        zone: ZoneId,
+        context: FocusContext,
+        runningId: String?,
+        ladderLimit: Int? = null,
+    ): Pair<List<DayPlanEntry>, FocusRanking> {
+        val read = core.nextUp(now.coreMillis, zone.coreName, context.core, runningId, ladderLimit?.coerceAtLeast(0)?.toUInt())
+        // A candidate blocked and ranked never both; each crosses once.
+        val ranking = FocusRanking(
+            ranked = read.ranked.map { it.scored(NextUpCandidate(it.candidate)) },
+            blocked = read.blocked.map { blocked ->
+                BlockedFocusTask(NextUpCandidate(blocked.candidate), blocked.reasons.map { it.reason })
+            },
+            nextEvaluationAt = read.nextEvaluationAtMs?.let(Instant::ofEpochMilli),
+        )
+        val plan = read.dayPlan.map { DayPlanEntry(it.id, DayPlanReason.of(it.reason) ?: DayPlanReason.PLANNED) }
+        return plan to ranking
+    }
+
     fun score(task: NextUpCandidate, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): ScoredNextUp =
         uniffi.takt_core.scoreNextUp(task.core, now.coreMillis, zone.coreName).scored(task)
 }

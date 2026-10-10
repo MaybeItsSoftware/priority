@@ -3,8 +3,8 @@ package uk.co.maybeitsadam.takt.core
 /**
  * Everything the day and the focus ladder are drawn from, gathered in one read.
  * Port of the value half of `WorkspaceNextUpSnapshot.swift`; the store builds it
- * (see `nextUpSnapshot` in the data layer) from `DayPlanSelector.plan` over every
- * candidate and `NextUpSelector.evaluate`.
+ * (see `nextUpSnapshot` in the data layer) from one `NextUpSelector.read`, the
+ * Rust core's `next_up`, which plans the day and ranks the ladder.
  */
 data class WorkspaceNextUpSnapshot(
     val loggedSeconds: Map<String, Int>,
