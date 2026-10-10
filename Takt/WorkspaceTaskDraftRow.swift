@@ -41,7 +41,7 @@ struct WorkspaceTaskDraftRow: View {
     let capture = TaskCapture.parse(model.taskDraftText)
     HStack(spacing: theme.space.sm) {
       // The glyph column left empty, so the text starts where a task's title
-      // does; the ring around the row is what says it is a place to type.
+      // does; the selected band and the caret say it is a place to type.
       if !isCard {
         Color.clear
           .frame(width: WorkspaceRowMetrics.iconWidth, height: 1)
@@ -161,7 +161,7 @@ struct WorkspaceTaskDraftRow: View {
   }
 }
 
-/// The draft's frame: a ringed outline row, or a card with the keyboard on it.
+/// The draft's frame: a selected outline row, or a card with the keyboard on it.
 private struct DraftChrome: ViewModifier {
   @Environment(\.theme) private var theme
   let isCard: Bool
@@ -190,16 +190,16 @@ private struct DraftChrome: ViewModifier {
           .allowsHitTesting(false)
         }
     } else {
-      // Drawn as the row with the keyboard: a ring, not a fill, so it reads
-      // as a place to type rather than one more task.
+      // Drawn as the row with the keyboard, in the same square band a
+      // selected row draws, edge to edge. It used to be a rounded ring inset
+      // from the row, the style selection itself gave up, so it sat under a
+      // selected row as a different kind of thing from it.
       content
         .padding(.leading, CGFloat(depth) * WorkspaceRowMetrics.indent(theme))
         .padding(.vertical, theme.rowVerticalPadding)
         .padding(.horizontal, theme.paneGutter)
-        .overlay(
-          RoundedRectangle(cornerRadius: theme.controlRadius)
-            .strokeBorder(theme.focusRing, lineWidth: theme.focusRingWidth)
-            .padding(.horizontal, theme.space.xs))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(WorkspaceSelectionBackground(isSelected: true, hasKeyboard: true))
     }
   }
 }
