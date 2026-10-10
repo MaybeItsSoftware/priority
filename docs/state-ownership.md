@@ -238,10 +238,15 @@ Everything above is the legacy Checkvist stack. The desktop window reads
   that changes scope and then asks what is on screen sees the new scope. Any
   other read of derived state after a reload in the same block must call
   `flushPendingRefresh()` itself.
-- Each list is read once per refresh (`WorkspaceListTree`, cached in
-  `listTreeCache`); the outline, board, descendants and sidebar are shaped from
-  it in memory. Pass `refreshSidebar: false` when a change cannot touch a list
-  or a count — a plain task's status or title.
+- The main pane's scope — one list, or Everything or a folder together — is
+  read once (`WorkspaceScopeRead`) and kept resident between switches in
+  `WorkspaceScopeCache` (`WorkspaceViewModel+ScopeCache.swift`) with the
+  `changeStamp()` it was read at; the outline, board and matrix are shaped
+  from it once and kept with it. A switch to a scope whose stamp still holds
+  reads nothing. See `docs/performance.md` for what is resident, when it is
+  dropped and what runs off the main thread. Pass `refreshSidebar: false`
+  when a change cannot touch a list or a count — a plain task's status or
+  title.
 - `.nextUp` is ranked off the main thread (`WorkspaceNextUpSnapshot`) and
   applied when it lands, unless something was written meanwhile
   (`writeEpoch`), in which case it is read again. `reloadNextUpNow()` is the
