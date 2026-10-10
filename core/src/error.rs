@@ -50,6 +50,8 @@ pub enum CoreError {
     Unavailable,
     #[error("A task cannot be moved into itself or one of its subtasks.")]
     InvalidTaskMove,
+    #[error("{detail}")]
+    File { detail: String },
 }
 
 impl From<rusqlite::Error> for CoreError {

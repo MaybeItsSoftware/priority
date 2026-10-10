@@ -677,6 +677,42 @@ internal object IntegrityCheckingUniffiLib {
     internal fun ensureInitialized() = Unit
     external fun uniffi_takt_core_checksum_func_core_version(
     ): Int
+    external fun uniffi_takt_core_checksum_func_day_boundary_day_key(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_boundary_day_offset(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_boundary_days_ending_on(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_boundary_logical_day(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_boundary_week_start(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_boundary_weeks_ending_on(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_append(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_completed_daily_ids(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_daily_buckets(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_first_recorded_day(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_focus_duration(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_load(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_net_completions(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_prior_completion_streak(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_recorded_day_count(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_section(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_summary(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_log_weekly_buckets(
+    ): Int
     external fun uniffi_takt_core_checksum_func_clamped_focus_multiplier(
     ): Int
     external fun uniffi_takt_core_checksum_func_completed_day_kind(
@@ -804,6 +840,28 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_func_score_next_up(
     ): Int
     external fun uniffi_takt_core_checksum_func_suggested_block_seconds(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_completed_daily_ids(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_daily_buckets(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_event_count(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_events(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_first_recorded_day(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_prior_completion_streak(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_record(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_recorded_day_count(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_reload(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_summary(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coredaylog_weekly_buckets(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_export_workspace(
     ): Int
@@ -1101,6 +1159,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_workspaces(
     ): Int
+    external fun uniffi_takt_core_checksum_constructor_coredaylog_open(
+    ): Int
     external fun uniffi_takt_core_checksum_constructor_coreworkspace_open(
     ): Int
     external fun ffi_takt_core_uniffi_contract_version(
@@ -1123,6 +1183,34 @@ internal object UniffiLib {
     }
 
     internal fun ensureInitialized() = Unit
+    external fun uniffi_takt_core_fn_clone_coredaylog(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_free_coredaylog(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_constructor_coredaylog_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_method_coredaylog_completed_daily_ids(`ptr`: Long,`boundary`: RustBuffer.ByValue,`onMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coredaylog_daily_buckets(`ptr`: Long,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`days`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coredaylog_event_count(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_method_coredaylog_events(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coredaylog_first_recorded_day(`ptr`: Long,`boundary`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coredaylog_prior_completion_streak(`ptr`: Long,`boundary`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_takt_core_fn_method_coredaylog_record(`ptr`: Long,`event`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coredaylog_recorded_day_count(`ptr`: Long,`boundary`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_takt_core_fn_method_coredaylog_reload(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_method_coredaylog_summary(`ptr`: Long,`boundary`: RustBuffer.ByValue,`onMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coredaylog_weekly_buckets(`ptr`: Long,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_clone_coreworkspace(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_takt_core_fn_free_coreworkspace(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1427,6 +1515,42 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_boundary_day_key(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_boundary_day_offset(`boundary`: RustBuffer.ByValue,`offset`: Long,`fromMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_func_day_boundary_days_ending_on(`boundary`: RustBuffer.ByValue,`atMs`: Long,`count`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_boundary_logical_day(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_func_day_boundary_week_start(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_func_day_boundary_weeks_ending_on(`boundary`: RustBuffer.ByValue,`atMs`: Long,`count`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_append(`path`: RustBuffer.ByValue,`event`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_func_day_log_completed_daily_ids(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`onMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_daily_buckets(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`days`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_first_recorded_day(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_focus_duration(`seconds`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_load(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_net_completions(`events`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_prior_completion_streak(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_takt_core_fn_func_day_log_recorded_day_count(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_takt_core_fn_func_day_log_section(`day`: RustBuffer.ByValue,`titles`: RustBuffer.ByValue,`dailies`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_summary(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`onMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_log_weekly_buckets(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_clamped_focus_multiplier(`multiplier`: Double,uniffi_out_err: UniffiRustCallStatus, 
     ): Double
     external fun uniffi_takt_core_fn_func_completed_day_kind(`dayMs`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1677,6 +1801,60 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_core_version() and 0xFFFF) != 3784) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_day_boundary_day_key() and 0xFFFF) != 60525) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_boundary_day_offset() and 0xFFFF) != 27742) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_boundary_days_ending_on() and 0xFFFF) != 64376) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_boundary_logical_day() and 0xFFFF) != 18576) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_boundary_week_start() and 0xFFFF) != 48465) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_boundary_weeks_ending_on() and 0xFFFF) != 32909) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_append() and 0xFFFF) != 20575) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_completed_daily_ids() and 0xFFFF) != 59422) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_daily_buckets() and 0xFFFF) != 46960) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_first_recorded_day() and 0xFFFF) != 37473) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_focus_duration() and 0xFFFF) != 16286) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_load() and 0xFFFF) != 2793) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_net_completions() and 0xFFFF) != 63585) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_prior_completion_streak() and 0xFFFF) != 27597) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_recorded_day_count() and 0xFFFF) != 11976) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_section() and 0xFFFF) != 10161) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_summary() and 0xFFFF) != 33493) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_log_weekly_buckets() and 0xFFFF) != 50056) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_clamped_focus_multiplier() and 0xFFFF) != 31070) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1867,6 +2045,39 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_suggested_block_seconds() and 0xFFFF) != 3786) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_completed_daily_ids() and 0xFFFF) != 39399) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_daily_buckets() and 0xFFFF) != 49470) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_event_count() and 0xFFFF) != 38234) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_events() and 0xFFFF) != 26972) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_first_recorded_day() and 0xFFFF) != 40706) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_prior_completion_streak() and 0xFFFF) != 33575) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_record() and 0xFFFF) != 23901) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_recorded_day_count() and 0xFFFF) != 11059) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_reload() and 0xFFFF) != 46429) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_summary() and 0xFFFF) != 26222) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coredaylog_weekly_buckets() and 0xFFFF) != 65133) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_export_workspace() and 0xFFFF) != 22213) {
@@ -2313,6 +2524,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_workspaces() and 0xFFFF) != 24930) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_constructor_coredaylog_open() and 0xFFFF) != 4515) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_constructor_coreworkspace_open() and 0xFFFF) != 50515) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2711,6 +2925,467 @@ public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
     override fun write(value: ByteArray, buf: ByteBuffer) {
         buf.putInt(value.size)
         buf.put(value)
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * The log held in memory, read from and appended to its file here, so a
+ * client asks for a projection in one call instead of passing its whole
+ * history across the boundary for each one.
+ */
+public interface CoreDayLogInterface {
+    
+    fun `completedDailyIds`(`boundary`: DayLogBoundary, `onMs`: kotlin.Long): List<kotlin.String>
+    
+    fun `dailyBuckets`(`boundary`: DayLogBoundary, `endingOnMs`: kotlin.Long, `days`: kotlin.Long): List<DayLogBucket>
+    
+    fun `eventCount`(): kotlin.ULong
+    
+    fun `events`(): List<DayLogRecord>
+    
+    fun `firstRecordedDay`(`boundary`: DayLogBoundary): kotlin.Long?
+    
+    fun `priorCompletionStreak`(`boundary`: DayLogBoundary, `nowMs`: kotlin.Long): kotlin.UInt
+    
+    /**
+     * Records `event` in memory and appends it to the file. A failed write
+     * still leaves it in memory, so the session stays right and only
+     * durability is lost; the error says so.
+     */
+    fun `record`(`event`: DayLogRecord)
+    
+    fun `recordedDayCount`(`boundary`: DayLogBoundary): kotlin.UInt
+    
+    /**
+     * Rereads the file, returning whether anything differs from what was
+     * held: another process (the MCP server) may have appended.
+     */
+    fun `reload`(): kotlin.Boolean
+    
+    fun `summary`(`boundary`: DayLogBoundary, `onMs`: kotlin.Long): DayLogDay
+    
+    fun `weeklyBuckets`(`boundary`: DayLogBoundary, `endingOnMs`: kotlin.Long, `weeks`: kotlin.Long): List<DayLogBucket>
+    
+    companion object
+}
+
+/**
+ * The log held in memory, read from and appended to its file here, so a
+ * client asks for a projection in one call instead of passing its whole
+ * history across the boundary for each one.
+ */
+open class CoreDayLog: Disposable, AutoCloseable, CoreDayLogInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_takt_core_fn_free_coredaylog(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_takt_core_fn_clone_coredaylog(handle, status)
+        }
+    }
+
+    override fun `completedDailyIds`(`boundary`: DayLogBoundary, `onMs`: kotlin.Long): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_completed_daily_ids(
+        it,
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`onMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `dailyBuckets`(`boundary`: DayLogBoundary, `endingOnMs`: kotlin.Long, `days`: kotlin.Long): List<DayLogBucket> {
+            return FfiConverterSequenceTypeDayLogBucket.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_daily_buckets(
+        it,
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`endingOnMs`),
+        FfiConverterLong.lower(`days`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `eventCount`(): kotlin.ULong {
+            return FfiConverterULong.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_event_count(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `events`(): List<DayLogRecord> {
+            return FfiConverterSequenceTypeDayLogRecord.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_events(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `firstRecordedDay`(`boundary`: DayLogBoundary): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_first_recorded_day(
+        it,
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `priorCompletionStreak`(`boundary`: DayLogBoundary, `nowMs`: kotlin.Long): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_prior_completion_streak(
+        it,
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Records `event` in memory and appends it to the file. A failed write
+     * still leaves it in memory, so the session stays right and only
+     * durability is lost; the error says so.
+     */
+    @Throws(CoreException::class)override fun `record`(`event`: DayLogRecord)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_record(
+        it,
+        
+        FfiConverterTypeDayLogRecord.lower(`event`),_status)
+}
+    }
+    
+    
+
+    override fun `recordedDayCount`(`boundary`: DayLogBoundary): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_recorded_day_count(
+        it,
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Rereads the file, returning whether anything differs from what was
+     * held: another process (the MCP server) may have appended.
+     */override fun `reload`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_reload(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `summary`(`boundary`: DayLogBoundary, `onMs`: kotlin.Long): DayLogDay {
+            return FfiConverterTypeDayLogDay.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_summary(
+        it,
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`onMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `weeklyBuckets`(`boundary`: DayLogBoundary, `endingOnMs`: kotlin.Long, `weeks`: kotlin.Long): List<DayLogBucket> {
+            return FfiConverterSequenceTypeDayLogBucket.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coredaylog_weekly_buckets(
+        it,
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`endingOnMs`),
+        FfiConverterLong.lower(`weeks`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    companion object {
+        
+    /**
+     * The log at `path`, read now; a missing file is an empty log.
+     */ fun `open`(`path`: kotlin.String): CoreDayLog {
+            return FfiConverterTypeCoreDayLog.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_constructor_coredaylog_open(
+    
+        
+        FfiConverterString.lower(`path`),_status)
+}
+    )
+    }
+    
+
+        
+    }
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreDayLog: FfiConverter<CoreDayLog, Long> {
+    override fun lower(value: CoreDayLog): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): CoreDayLog {
+        return CoreDayLog(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): CoreDayLog {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: CoreDayLog) = 8UL
+
+    override fun write(value: CoreDayLog, buf: ByteBuffer) {
+        buf.putLong(lower(value))
     }
 }
 
@@ -9404,6 +10079,304 @@ public object FfiConverterTypeDayEntry: FfiConverterRustBuffer<DayEntry> {
 
 
 /**
+ * Where logical days begin: at `rollover_hour` in `zone`, not at midnight,
+ * so work finished at 01:30 belongs to the day that began the previous
+ * morning. `first_weekday` is Foundation's numbering (1 = Sunday) and only
+ * decides where the weekly chart's weeks start.
+ */
+data class DayLogBoundary (
+    var `rolloverHour`: kotlin.Int
+    , 
+    var `zone`: kotlin.String
+    , 
+    var `firstWeekday`: kotlin.UByte
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayLogBoundary: FfiConverterRustBuffer<DayLogBoundary> {
+    override fun read(buf: ByteBuffer): DayLogBoundary {
+        return DayLogBoundary(
+            FfiConverterInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUByte.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayLogBoundary) = (
+            FfiConverterInt.allocationSize(value.`rolloverHour`) +
+            FfiConverterString.allocationSize(value.`zone`) +
+            FfiConverterUByte.allocationSize(value.`firstWeekday`)
+    )
+
+    override fun write(value: DayLogBoundary, buf: ByteBuffer) {
+            FfiConverterInt.write(value.`rolloverHour`, buf)
+            FfiConverterString.write(value.`zone`, buf)
+            FfiConverterUByte.write(value.`firstWeekday`, buf)
+    }
+}
+
+
+
+/**
+ * One bar of the chart: the instant its logical day (or week) began, that
+ * day's key, and the dailies ticked in it.
+ */
+data class DayLogBucket (
+    var `dayMs`: kotlin.Long
+    , 
+    var `key`: kotlin.String
+    , 
+    var `completed`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayLogBucket: FfiConverterRustBuffer<DayLogBucket> {
+    override fun read(buf: ByteBuffer): DayLogBucket {
+        return DayLogBucket(
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayLogBucket) = (
+            FfiConverterLong.allocationSize(value.`dayMs`) +
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterLong.allocationSize(value.`completed`)
+    )
+
+    override fun write(value: DayLogBucket, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`dayMs`, buf)
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterLong.write(value.`completed`, buf)
+    }
+}
+
+
+
+/**
+ * A daily as the note renders it: expected on the day, ticked or not.
+ */
+data class DayLogDaily (
+    var `id`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayLogDaily: FfiConverterRustBuffer<DayLogDaily> {
+    override fun read(buf: ByteBuffer): DayLogDaily {
+        return DayLogDaily(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayLogDaily) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`title`)
+    )
+
+    override fun write(value: DayLogDaily, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`title`, buf)
+    }
+}
+
+
+
+/**
+ * Everything the Daily view and the note need about one logical day.
+ * `unfinished_task_ids` names the fact, not the judgement: the renderer says
+ * "left" for today and "slipped" for a day already closed.
+ */
+data class DayLogDay (
+    var `key`: kotlin.String
+    , 
+    var `dayMs`: kotlin.Long
+    , 
+    var `completed`: List<DayLogRecord>
+    , 
+    var `plannedTaskIds`: List<kotlin.Long>
+    , 
+    var `unfinishedTaskIds`: List<kotlin.Long>
+    , 
+    var `deferredTaskIds`: List<kotlin.Long>
+    , 
+    var `invalidatedTaskIds`: List<kotlin.Long>
+    , 
+    var `focusSeconds`: kotlin.Long
+    , 
+    /**
+     * In the order they were first ticked.
+     */
+    var `completedDailyIds`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayLogDay: FfiConverterRustBuffer<DayLogDay> {
+    override fun read(buf: ByteBuffer): DayLogDay {
+        return DayLogDay(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterSequenceTypeDayLogRecord.read(buf),
+            FfiConverterSequenceLong.read(buf),
+            FfiConverterSequenceLong.read(buf),
+            FfiConverterSequenceLong.read(buf),
+            FfiConverterSequenceLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayLogDay) = (
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterLong.allocationSize(value.`dayMs`) +
+            FfiConverterSequenceTypeDayLogRecord.allocationSize(value.`completed`) +
+            FfiConverterSequenceLong.allocationSize(value.`plannedTaskIds`) +
+            FfiConverterSequenceLong.allocationSize(value.`unfinishedTaskIds`) +
+            FfiConverterSequenceLong.allocationSize(value.`deferredTaskIds`) +
+            FfiConverterSequenceLong.allocationSize(value.`invalidatedTaskIds`) +
+            FfiConverterLong.allocationSize(value.`focusSeconds`) +
+            FfiConverterSequenceString.allocationSize(value.`completedDailyIds`)
+    )
+
+    override fun write(value: DayLogDay, buf: ByteBuffer) {
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterLong.write(value.`dayMs`, buf)
+            FfiConverterSequenceTypeDayLogRecord.write(value.`completed`, buf)
+            FfiConverterSequenceLong.write(value.`plannedTaskIds`, buf)
+            FfiConverterSequenceLong.write(value.`unfinishedTaskIds`, buf)
+            FfiConverterSequenceLong.write(value.`deferredTaskIds`, buf)
+            FfiConverterSequenceLong.write(value.`invalidatedTaskIds`, buf)
+            FfiConverterLong.write(value.`focusSeconds`, buf)
+            FfiConverterSequenceString.write(value.`completedDailyIds`, buf)
+    }
+}
+
+
+
+/**
+ * One line of the log. `title` is denormalised on purpose: a day has to
+ * still read correctly after its task is renamed or deleted. `task_id` is 0
+ * for the dailies and the plan snapshot, which are not about one task.
+ */
+data class DayLogRecord (
+    var `kind`: DayLogRecordKind
+    , 
+    /**
+     * Milliseconds since 1970. The file holds whole seconds.
+     */
+    var `atMs`: kotlin.Long
+    , 
+    var `taskId`: kotlin.Long
+    , 
+    var `title`: kotlin.String
+    , 
+    /**
+     * `FocusSessionEnded` only.
+     */
+    var `durationSeconds`: kotlin.Long?
+    , 
+    /**
+     * `PlanSnapshot` only.
+     */
+    var `plannedTaskIds`: List<kotlin.Long>?
+    , 
+    /**
+     * `DailyCompleted` and `DailyUncompleted` only.
+     */
+    var `dailyId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayLogRecord: FfiConverterRustBuffer<DayLogRecord> {
+    override fun read(buf: ByteBuffer): DayLogRecord {
+        return DayLogRecord(
+            FfiConverterTypeDayLogRecordKind.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalSequenceLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayLogRecord) = (
+            FfiConverterTypeDayLogRecordKind.allocationSize(value.`kind`) +
+            FfiConverterLong.allocationSize(value.`atMs`) +
+            FfiConverterLong.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterOptionalLong.allocationSize(value.`durationSeconds`) +
+            FfiConverterOptionalSequenceLong.allocationSize(value.`plannedTaskIds`) +
+            FfiConverterOptionalString.allocationSize(value.`dailyId`)
+    )
+
+    override fun write(value: DayLogRecord, buf: ByteBuffer) {
+            FfiConverterTypeDayLogRecordKind.write(value.`kind`, buf)
+            FfiConverterLong.write(value.`atMs`, buf)
+            FfiConverterLong.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterOptionalLong.write(value.`durationSeconds`, buf)
+            FfiConverterOptionalSequenceLong.write(value.`plannedTaskIds`, buf)
+            FfiConverterOptionalString.write(value.`dailyId`, buf)
+    }
+}
+
+
+
+/**
  * What [`delete_list`] removed.
  */
 data class DeletedList (
@@ -13018,6 +13991,14 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class File(
+        
+        val `detail`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
 
     
 
@@ -13074,6 +14055,9 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             20 -> CoreException.NoActiveFocusTask()
             21 -> CoreException.Unavailable()
             22 -> CoreException.InvalidTaskMove()
+            23 -> CoreException.File(
+                FfiConverterString.read(buf),
+                )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -13176,6 +14160,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is CoreException.File -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
         }
     }
 
@@ -13275,6 +14264,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             }
             is CoreException.InvalidTaskMove -> {
                 buf.putInt(22)
+                Unit
+            }
+            is CoreException.File -> {
+                buf.putInt(23)
+                FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -13901,6 +14895,61 @@ public object FfiConverterTypeCoreThemePlatform: FfiConverterRustBuffer<CoreThem
     override fun allocationSize(value: CoreThemePlatform) = 4UL
 
     override fun write(value: CoreThemePlatform, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * The kinds of thing the log records, by the raw values the file stores.
+ */
+
+enum class DayLogRecordKind {
+    
+    COMPLETED,
+    REOPENED,
+    /**
+     * "Won't do": recorded, never counted as a completion.
+     */
+    INVALIDATED,
+    FOCUS_SESSION_ENDED,
+    /**
+     * A due date pushed on purpose; kept out of the unfinished list.
+     */
+    DEFERRED,
+    /**
+     * The tasks due or starting on the day, captured once at rollover.
+     */
+    PLAN_SNAPSHOT,
+    /**
+     * A daily ticked off; nets only within its own day.
+     */
+    DAILY_COMPLETED,
+    DAILY_UNCOMPLETED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayLogRecordKind: FfiConverterRustBuffer<DayLogRecordKind> {
+    override fun read(buf: ByteBuffer) = try {
+        DayLogRecordKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: DayLogRecordKind) = 4UL
+
+    override fun write(value: DayLogRecordKind, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -15794,6 +16843,38 @@ public object FfiConverterOptionalSequenceUInt: FfiConverterRustBuffer<List<kotl
 /**
  * @suppress
  */
+public object FfiConverterOptionalSequenceLong: FfiConverterRustBuffer<List<kotlin.Long>?> {
+    override fun read(buf: ByteBuffer): List<kotlin.Long>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceLong.read(buf)
+    }
+
+    override fun allocationSize(value: List<kotlin.Long>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceLong.allocationSize(value)
+        }
+    }
+
+    override fun write(value: List<kotlin.Long>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceLong.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalSequenceString: FfiConverterRustBuffer<List<kotlin.String>?> {
     override fun read(buf: ByteBuffer): List<kotlin.String>? {
         if (buf.get().toInt() == 0) {
@@ -16588,6 +17669,90 @@ public object FfiConverterSequenceTypeDayEntry: FfiConverterRustBuffer<List<DayE
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeDayEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeDayLogBucket: FfiConverterRustBuffer<List<DayLogBucket>> {
+    override fun read(buf: ByteBuffer): List<DayLogBucket> {
+        val len = buf.getInt()
+        return List<DayLogBucket>(len) {
+            FfiConverterTypeDayLogBucket.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<DayLogBucket>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeDayLogBucket.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<DayLogBucket>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeDayLogBucket.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeDayLogDaily: FfiConverterRustBuffer<List<DayLogDaily>> {
+    override fun read(buf: ByteBuffer): List<DayLogDaily> {
+        val len = buf.getInt()
+        return List<DayLogDaily>(len) {
+            FfiConverterTypeDayLogDaily.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<DayLogDaily>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeDayLogDaily.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<DayLogDaily>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeDayLogDaily.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeDayLogRecord: FfiConverterRustBuffer<List<DayLogRecord>> {
+    override fun read(buf: ByteBuffer): List<DayLogRecord> {
+        val len = buf.getInt()
+        return List<DayLogRecord>(len) {
+            FfiConverterTypeDayLogRecord.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<DayLogRecord>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeDayLogRecord.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<DayLogRecord>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeDayLogRecord.write(it, buf)
         }
     }
 }
@@ -17522,6 +18687,45 @@ public object FfiConverterSequenceSequenceString: FfiConverterRustBuffer<List<Li
 /**
  * @suppress
  */
+public object FfiConverterMapLongString: FfiConverterRustBuffer<Map<kotlin.Long, kotlin.String>> {
+    override fun read(buf: ByteBuffer): Map<kotlin.Long, kotlin.String> {
+        val len = buf.getInt()
+        return buildMap<kotlin.Long, kotlin.String>(len) {
+            repeat(len) {
+                val k = FfiConverterLong.read(buf)
+                val v = FfiConverterString.read(buf)
+                this[k] = v
+            }
+        }
+    }
+
+    override fun allocationSize(value: Map<kotlin.Long, kotlin.String>): ULong {
+        val spaceForMapSize = 4UL
+        val spaceForChildren = value.map { (k, v) ->
+            FfiConverterLong.allocationSize(k) +
+            FfiConverterString.allocationSize(v)
+        }.sum()
+        return spaceForMapSize + spaceForChildren
+    }
+
+    override fun write(value: Map<kotlin.Long, kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        // The parens on `(k, v)` here ensure we're calling the right method,
+        // which is important for compatibility with older android devices.
+        // Ref https://blog.danlew.net/2017/03/16/kotlin-puzzler-whose-line-is-it-anyways/
+        value.forEach { (k, v) ->
+            FfiConverterLong.write(k, buf)
+            FfiConverterString.write(v, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.String, kotlin.String>> {
     override fun read(buf: ByteBuffer): Map<kotlin.String, kotlin.String> {
         val len = buf.getInt()
@@ -17644,6 +18848,249 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_core_version(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * `yyyy-MM-dd` for the logical day containing `at_ms`.
+         */ fun `dayBoundaryDayKey`(`boundary`: DayLogBoundary, `atMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_boundary_day_key(
+    
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`atMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The logical day `offset` days from the one containing `from_ms`.
+         */ fun `dayBoundaryDayOffset`(`boundary`: DayLogBoundary, `offset`: kotlin.Long, `fromMs`: kotlin.Long): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_boundary_day_offset(
+    
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`offset`),
+        FfiConverterLong.lower(`fromMs`),_status)
+}
+    )
+    }
+    
+ fun `dayBoundaryDaysEndingOn`(`boundary`: DayLogBoundary, `atMs`: kotlin.Long, `count`: kotlin.Long): List<kotlin.Long> {
+            return FfiConverterSequenceLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_boundary_days_ending_on(
+    
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`atMs`),
+        FfiConverterLong.lower(`count`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The instant the logical day containing `at_ms` began.
+         */ fun `dayBoundaryLogicalDay`(`boundary`: DayLogBoundary, `atMs`: kotlin.Long): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_boundary_logical_day(
+    
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`atMs`),_status)
+}
+    )
+    }
+    
+ fun `dayBoundaryWeekStart`(`boundary`: DayLogBoundary, `atMs`: kotlin.Long): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_boundary_week_start(
+    
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`atMs`),_status)
+}
+    )
+    }
+    
+ fun `dayBoundaryWeeksEndingOn`(`boundary`: DayLogBoundary, `atMs`: kotlin.Long, `count`: kotlin.Long): List<kotlin.Long> {
+            return FfiConverterSequenceLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_boundary_weeks_ending_on(
+    
+        
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`atMs`),
+        FfiConverterLong.lower(`count`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Appends `event` to the file at `path`.
+         */
+    @Throws(CoreException::class) fun `dayLogAppend`(`path`: kotlin.String, `event`: DayLogRecord)
+        = 
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_append(
+    
+        
+        FfiConverterString.lower(`path`),
+        FfiConverterTypeDayLogRecord.lower(`event`),_status)
+}
+    
+    
+ fun `dayLogCompletedDailyIds`(`events`: List<DayLogRecord>, `boundary`: DayLogBoundary, `onMs`: kotlin.Long): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_completed_daily_ids(
+    
+        
+        FfiConverterSequenceTypeDayLogRecord.lower(`events`),
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`onMs`),_status)
+}
+    )
+    }
+    
+ fun `dayLogDailyBuckets`(`events`: List<DayLogRecord>, `boundary`: DayLogBoundary, `endingOnMs`: kotlin.Long, `days`: kotlin.Long): List<DayLogBucket> {
+            return FfiConverterSequenceTypeDayLogBucket.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_daily_buckets(
+    
+        
+        FfiConverterSequenceTypeDayLogRecord.lower(`events`),
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`endingOnMs`),
+        FfiConverterLong.lower(`days`),_status)
+}
+    )
+    }
+    
+ fun `dayLogFirstRecordedDay`(`events`: List<DayLogRecord>, `boundary`: DayLogBoundary): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_first_recorded_day(
+    
+        
+        FfiConverterSequenceTypeDayLogRecord.lower(`events`),
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),_status)
+}
+    )
+    }
+    
+ fun `dayLogFocusDuration`(`seconds`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_focus_duration(
+    
+        
+        FfiConverterLong.lower(`seconds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Every event in the file at `path`.
+         */ fun `dayLogLoad`(`path`: kotlin.String): List<DayLogRecord> {
+            return FfiConverterSequenceTypeDayLogRecord.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_load(
+    
+        
+        FfiConverterString.lower(`path`),_status)
+}
+    )
+    }
+    
+ fun `dayLogNetCompletions`(`events`: List<DayLogRecord>): List<DayLogRecord> {
+            return FfiConverterSequenceTypeDayLogRecord.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_net_completions(
+    
+        
+        FfiConverterSequenceTypeDayLogRecord.lower(`events`),_status)
+}
+    )
+    }
+    
+ fun `dayLogPriorCompletionStreak`(`events`: List<DayLogRecord>, `boundary`: DayLogBoundary, `nowMs`: kotlin.Long): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_prior_completion_streak(
+    
+        
+        FfiConverterSequenceTypeDayLogRecord.lower(`events`),
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    )
+    }
+    
+ fun `dayLogRecordedDayCount`(`events`: List<DayLogRecord>, `boundary`: DayLogBoundary): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_recorded_day_count(
+    
+        
+        FfiConverterSequenceTypeDayLogRecord.lower(`events`),
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The managed note block for `day`; see `section`.
+         */ fun `dayLogSection`(`day`: DayLogDay, `titles`: Map<kotlin.Long, kotlin.String>, `dailies`: List<DayLogDaily>, `heading`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_section(
+    
+        
+        FfiConverterTypeDayLogDay.lower(`day`),
+        FfiConverterMapLongString.lower(`titles`),
+        FfiConverterSequenceTypeDayLogDaily.lower(`dailies`),
+        FfiConverterString.lower(`heading`),_status)
+}
+    )
+    }
+    
+ fun `dayLogSummary`(`events`: List<DayLogRecord>, `boundary`: DayLogBoundary, `onMs`: kotlin.Long): DayLogDay {
+            return FfiConverterTypeDayLogDay.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_summary(
+    
+        
+        FfiConverterSequenceTypeDayLogRecord.lower(`events`),
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`onMs`),_status)
+}
+    )
+    }
+    
+ fun `dayLogWeeklyBuckets`(`events`: List<DayLogRecord>, `boundary`: DayLogBoundary, `endingOnMs`: kotlin.Long, `weeks`: kotlin.Long): List<DayLogBucket> {
+            return FfiConverterSequenceTypeDayLogBucket.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_log_weekly_buckets(
+    
+        
+        FfiConverterSequenceTypeDayLogRecord.lower(`events`),
+        FfiConverterTypeDayLogBoundary.lower(`boundary`),
+        FfiConverterLong.lower(`endingOnMs`),
+        FfiConverterLong.lower(`weeks`),_status)
 }
     )
     }

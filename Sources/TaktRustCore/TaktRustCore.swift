@@ -650,6 +650,287 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 
 
 /**
+ * The log held in memory, read from and appended to its file here, so a
+ * client asks for a projection in one call instead of passing its whole
+ * history across the boundary for each one.
+ */
+public protocol CoreDayLogProtocol: AnyObject, Sendable {
+    
+    func completedDailyIds(boundary: DayLogBoundary, onMs: Int64)  -> [String]
+    
+    func dailyBuckets(boundary: DayLogBoundary, endingOnMs: Int64, days: Int64)  -> [DayLogBucket]
+    
+    func eventCount()  -> UInt64
+    
+    func events()  -> [DayLogRecord]
+    
+    func firstRecordedDay(boundary: DayLogBoundary)  -> Int64?
+    
+    func priorCompletionStreak(boundary: DayLogBoundary, nowMs: Int64)  -> UInt32
+    
+    /**
+     * Records `event` in memory and appends it to the file. A failed write
+     * still leaves it in memory, so the session stays right and only
+     * durability is lost; the error says so.
+     */
+    func record(event: DayLogRecord) throws 
+    
+    func recordedDayCount(boundary: DayLogBoundary)  -> UInt32
+    
+    /**
+     * Rereads the file, returning whether anything differs from what was
+     * held: another process (the MCP server) may have appended.
+     */
+    func reload()  -> Bool
+    
+    func summary(boundary: DayLogBoundary, onMs: Int64)  -> DayLogDay
+    
+    func weeklyBuckets(boundary: DayLogBoundary, endingOnMs: Int64, weeks: Int64)  -> [DayLogBucket]
+    
+}
+/**
+ * The log held in memory, read from and appended to its file here, so a
+ * client asks for a projection in one call instead of passing its whole
+ * history across the boundary for each one.
+ */
+open class CoreDayLog: CoreDayLogProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_takt_core_fn_clone_coredaylog(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_takt_core_fn_free_coredaylog(handle, $0) }
+    }
+
+    
+    /**
+     * The log at `path`, read now; a missing file is an empty log.
+     */
+public static func `open`(path: String) -> CoreDayLog  {
+    return try!  FfiConverterTypeCoreDayLog_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_constructor_coredaylog_open(
+        FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+open func completedDailyIds(boundary: DayLogBoundary, onMs: Int64) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_completed_daily_ids(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(onMs),uniffiCallStatus
+    )
+})
+}
+    
+open func dailyBuckets(boundary: DayLogBoundary, endingOnMs: Int64, days: Int64) -> [DayLogBucket]  {
+    return try!  FfiConverterSequenceTypeDayLogBucket.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_daily_buckets(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(endingOnMs),
+        FfiConverterInt64.lower(days),uniffiCallStatus
+    )
+})
+}
+    
+open func eventCount() -> UInt64  {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_event_count(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func events() -> [DayLogRecord]  {
+    return try!  FfiConverterSequenceTypeDayLogRecord.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_events(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func firstRecordedDay(boundary: DayLogBoundary) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_first_recorded_day(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayLogBoundary_lower(boundary),uniffiCallStatus
+    )
+})
+}
+    
+open func priorCompletionStreak(boundary: DayLogBoundary, nowMs: Int64) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_prior_completion_streak(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Records `event` in memory and appends it to the file. A failed write
+     * still leaves it in memory, so the session stays right and only
+     * durability is lost; the error says so.
+     */
+open func record(event: DayLogRecord)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_record(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayLogRecord_lower(event),uniffiCallStatus
+    )
+}
+}
+    
+open func recordedDayCount(boundary: DayLogBoundary) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_recorded_day_count(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayLogBoundary_lower(boundary),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Rereads the file, returning whether anything differs from what was
+     * held: another process (the MCP server) may have appended.
+     */
+open func reload() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_reload(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func summary(boundary: DayLogBoundary, onMs: Int64) -> DayLogDay  {
+    return try!  FfiConverterTypeDayLogDay_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_summary(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(onMs),uniffiCallStatus
+    )
+})
+}
+    
+open func weeklyBuckets(boundary: DayLogBoundary, endingOnMs: Int64, weeks: Int64) -> [DayLogBucket]  {
+    return try!  FfiConverterSequenceTypeDayLogBucket.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coredaylog_weekly_buckets(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(endingOnMs),
+        FfiConverterInt64.lower(weeks),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreDayLog: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = CoreDayLog
+
+    public static func lift(_ handle: UInt64) throws -> CoreDayLog {
+        return CoreDayLog(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: CoreDayLog) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreDayLog {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: CoreDayLog, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreDayLog_lift(_ handle: UInt64) throws -> CoreDayLog {
+    return try FfiConverterTypeCoreDayLog.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreDayLog_lower(_ value: CoreDayLog) -> UInt64 {
+    return FfiConverterTypeCoreDayLog.lower(value)
+}
+
+
+
+
+
+
+/**
  * An open workspace database.
  *
  * Two connections. Every write, and most reads, go through `connection`,
@@ -7245,6 +7526,385 @@ public func FfiConverterTypeDayEntry_lower(_ value: DayEntry) -> RustBuffer {
 
 
 /**
+ * Where logical days begin: at `rollover_hour` in `zone`, not at midnight,
+ * so work finished at 01:30 belongs to the day that began the previous
+ * morning. `first_weekday` is Foundation's numbering (1 = Sunday) and only
+ * decides where the weekly chart's weeks start.
+ */
+public struct DayLogBoundary: Equatable, Hashable {
+    public var rolloverHour: Int32
+    public var zone: String
+    public var firstWeekday: UInt8
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(rolloverHour: Int32, zone: String, firstWeekday: UInt8) {
+        self.rolloverHour = rolloverHour
+        self.zone = zone
+        self.firstWeekday = firstWeekday
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayLogBoundary: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayLogBoundary: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayLogBoundary {
+        return
+            try DayLogBoundary(
+                rolloverHour: FfiConverterInt32.read(from: &buf), 
+                zone: FfiConverterString.read(from: &buf), 
+                firstWeekday: FfiConverterUInt8.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayLogBoundary, into buf: inout [UInt8]) {
+        FfiConverterInt32.write(value.rolloverHour, into: &buf)
+        FfiConverterString.write(value.zone, into: &buf)
+        FfiConverterUInt8.write(value.firstWeekday, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogBoundary_lift(_ buf: RustBuffer) throws -> DayLogBoundary {
+    return try FfiConverterTypeDayLogBoundary.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogBoundary_lower(_ value: DayLogBoundary) -> RustBuffer {
+    return FfiConverterTypeDayLogBoundary.lower(value)
+}
+
+
+/**
+ * One bar of the chart: the instant its logical day (or week) began, that
+ * day's key, and the dailies ticked in it.
+ */
+public struct DayLogBucket: Equatable, Hashable {
+    public var dayMs: Int64
+    public var key: String
+    public var completed: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(dayMs: Int64, key: String, completed: Int64) {
+        self.dayMs = dayMs
+        self.key = key
+        self.completed = completed
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayLogBucket: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayLogBucket: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayLogBucket {
+        return
+            try DayLogBucket(
+                dayMs: FfiConverterInt64.read(from: &buf), 
+                key: FfiConverterString.read(from: &buf), 
+                completed: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayLogBucket, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.dayMs, into: &buf)
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterInt64.write(value.completed, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogBucket_lift(_ buf: RustBuffer) throws -> DayLogBucket {
+    return try FfiConverterTypeDayLogBucket.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogBucket_lower(_ value: DayLogBucket) -> RustBuffer {
+    return FfiConverterTypeDayLogBucket.lower(value)
+}
+
+
+/**
+ * A daily as the note renders it: expected on the day, ticked or not.
+ */
+public struct DayLogDaily: Equatable, Hashable {
+    public var id: String
+    public var title: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String) {
+        self.id = id
+        self.title = title
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayLogDaily: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayLogDaily: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayLogDaily {
+        return
+            try DayLogDaily(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayLogDaily, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogDaily_lift(_ buf: RustBuffer) throws -> DayLogDaily {
+    return try FfiConverterTypeDayLogDaily.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogDaily_lower(_ value: DayLogDaily) -> RustBuffer {
+    return FfiConverterTypeDayLogDaily.lower(value)
+}
+
+
+/**
+ * Everything the Daily view and the note need about one logical day.
+ * `unfinished_task_ids` names the fact, not the judgement: the renderer says
+ * "left" for today and "slipped" for a day already closed.
+ */
+public struct DayLogDay: Equatable, Hashable {
+    public var key: String
+    public var dayMs: Int64
+    public var completed: [DayLogRecord]
+    public var plannedTaskIds: [Int64]
+    public var unfinishedTaskIds: [Int64]
+    public var deferredTaskIds: [Int64]
+    public var invalidatedTaskIds: [Int64]
+    public var focusSeconds: Int64
+    /**
+     * In the order they were first ticked.
+     */
+    public var completedDailyIds: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(key: String, dayMs: Int64, completed: [DayLogRecord], plannedTaskIds: [Int64], unfinishedTaskIds: [Int64], deferredTaskIds: [Int64], invalidatedTaskIds: [Int64], focusSeconds: Int64, 
+        /**
+         * In the order they were first ticked.
+         */completedDailyIds: [String]) {
+        self.key = key
+        self.dayMs = dayMs
+        self.completed = completed
+        self.plannedTaskIds = plannedTaskIds
+        self.unfinishedTaskIds = unfinishedTaskIds
+        self.deferredTaskIds = deferredTaskIds
+        self.invalidatedTaskIds = invalidatedTaskIds
+        self.focusSeconds = focusSeconds
+        self.completedDailyIds = completedDailyIds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayLogDay: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayLogDay: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayLogDay {
+        return
+            try DayLogDay(
+                key: FfiConverterString.read(from: &buf), 
+                dayMs: FfiConverterInt64.read(from: &buf), 
+                completed: FfiConverterSequenceTypeDayLogRecord.read(from: &buf), 
+                plannedTaskIds: FfiConverterSequenceInt64.read(from: &buf), 
+                unfinishedTaskIds: FfiConverterSequenceInt64.read(from: &buf), 
+                deferredTaskIds: FfiConverterSequenceInt64.read(from: &buf), 
+                invalidatedTaskIds: FfiConverterSequenceInt64.read(from: &buf), 
+                focusSeconds: FfiConverterInt64.read(from: &buf), 
+                completedDailyIds: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayLogDay, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterInt64.write(value.dayMs, into: &buf)
+        FfiConverterSequenceTypeDayLogRecord.write(value.completed, into: &buf)
+        FfiConverterSequenceInt64.write(value.plannedTaskIds, into: &buf)
+        FfiConverterSequenceInt64.write(value.unfinishedTaskIds, into: &buf)
+        FfiConverterSequenceInt64.write(value.deferredTaskIds, into: &buf)
+        FfiConverterSequenceInt64.write(value.invalidatedTaskIds, into: &buf)
+        FfiConverterInt64.write(value.focusSeconds, into: &buf)
+        FfiConverterSequenceString.write(value.completedDailyIds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogDay_lift(_ buf: RustBuffer) throws -> DayLogDay {
+    return try FfiConverterTypeDayLogDay.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogDay_lower(_ value: DayLogDay) -> RustBuffer {
+    return FfiConverterTypeDayLogDay.lower(value)
+}
+
+
+/**
+ * One line of the log. `title` is denormalised on purpose: a day has to
+ * still read correctly after its task is renamed or deleted. `task_id` is 0
+ * for the dailies and the plan snapshot, which are not about one task.
+ */
+public struct DayLogRecord: Equatable, Hashable {
+    public var kind: DayLogRecordKind
+    /**
+     * Milliseconds since 1970. The file holds whole seconds.
+     */
+    public var atMs: Int64
+    public var taskId: Int64
+    public var title: String
+    /**
+     * `FocusSessionEnded` only.
+     */
+    public var durationSeconds: Int64?
+    /**
+     * `PlanSnapshot` only.
+     */
+    public var plannedTaskIds: [Int64]?
+    /**
+     * `DailyCompleted` and `DailyUncompleted` only.
+     */
+    public var dailyId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(kind: DayLogRecordKind, 
+        /**
+         * Milliseconds since 1970. The file holds whole seconds.
+         */atMs: Int64, taskId: Int64, title: String, 
+        /**
+         * `FocusSessionEnded` only.
+         */durationSeconds: Int64?, 
+        /**
+         * `PlanSnapshot` only.
+         */plannedTaskIds: [Int64]?, 
+        /**
+         * `DailyCompleted` and `DailyUncompleted` only.
+         */dailyId: String?) {
+        self.kind = kind
+        self.atMs = atMs
+        self.taskId = taskId
+        self.title = title
+        self.durationSeconds = durationSeconds
+        self.plannedTaskIds = plannedTaskIds
+        self.dailyId = dailyId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayLogRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayLogRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayLogRecord {
+        return
+            try DayLogRecord(
+                kind: FfiConverterTypeDayLogRecordKind.read(from: &buf), 
+                atMs: FfiConverterInt64.read(from: &buf), 
+                taskId: FfiConverterInt64.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                durationSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                plannedTaskIds: FfiConverterOptionSequenceInt64.read(from: &buf), 
+                dailyId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayLogRecord, into buf: inout [UInt8]) {
+        FfiConverterTypeDayLogRecordKind.write(value.kind, into: &buf)
+        FfiConverterInt64.write(value.atMs, into: &buf)
+        FfiConverterInt64.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterOptionInt64.write(value.durationSeconds, into: &buf)
+        FfiConverterOptionSequenceInt64.write(value.plannedTaskIds, into: &buf)
+        FfiConverterOptionString.write(value.dailyId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogRecord_lift(_ buf: RustBuffer) throws -> DayLogRecord {
+    return try FfiConverterTypeDayLogRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogRecord_lower(_ value: DayLogRecord) -> RustBuffer {
+    return FfiConverterTypeDayLogRecord.lower(value)
+}
+
+
+/**
  * What [`delete_list`] removed.
  */
 public struct DeletedList: Equatable, Hashable {
@@ -11695,6 +12355,8 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case NoActiveFocusTask
     case Unavailable
     case InvalidTaskMove
+    case File(detail: String
+    )
 
     
 
@@ -11761,6 +12423,9 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 20: return .NoActiveFocusTask
         case 21: return .Unavailable
         case 22: return .InvalidTaskMove
+        case 23: return .File(
+            detail: try FfiConverterString.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -11868,6 +12533,11 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case .InvalidTaskMove:
             writeInt(&buf, Int32(22))
         
+        
+        case let .File(detail):
+            writeInt(&buf, Int32(23))
+            FfiConverterString.write(detail, into: &buf)
+            
         }
     }
 }
@@ -12455,6 +13125,129 @@ public func FfiConverterTypeCoreThemePlatform_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeCoreThemePlatform_lower(_ value: CoreThemePlatform) -> RustBuffer {
     return FfiConverterTypeCoreThemePlatform.lower(value)
+}
+
+
+
+/**
+ * The kinds of thing the log records, by the raw values the file stores.
+ */
+
+public enum DayLogRecordKind: Equatable, Hashable {
+    
+    case completed
+    case reopened
+    /**
+     * "Won't do": recorded, never counted as a completion.
+     */
+    case invalidated
+    case focusSessionEnded
+    /**
+     * A due date pushed on purpose; kept out of the unfinished list.
+     */
+    case deferred
+    /**
+     * The tasks due or starting on the day, captured once at rollover.
+     */
+    case planSnapshot
+    /**
+     * A daily ticked off; nets only within its own day.
+     */
+    case dailyCompleted
+    case dailyUncompleted
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension DayLogRecordKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayLogRecordKind: FfiConverterRustBuffer {
+    typealias SwiftType = DayLogRecordKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayLogRecordKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .completed
+        
+        case 2: return .reopened
+        
+        case 3: return .invalidated
+        
+        case 4: return .focusSessionEnded
+        
+        case 5: return .deferred
+        
+        case 6: return .planSnapshot
+        
+        case 7: return .dailyCompleted
+        
+        case 8: return .dailyUncompleted
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: DayLogRecordKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .completed:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .reopened:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .invalidated:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .focusSessionEnded:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .deferred:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .planSnapshot:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .dailyCompleted:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .dailyUncompleted:
+            writeInt(&buf, Int32(8))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogRecordKind_lift(_ buf: RustBuffer) throws -> DayLogRecordKind {
+    return try FfiConverterTypeDayLogRecordKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayLogRecordKind_lower(_ value: DayLogRecordKind) -> RustBuffer {
+    return FfiConverterTypeDayLogRecordKind.lower(value)
 }
 
 
@@ -14029,6 +14822,30 @@ fileprivate struct FfiConverterOptionSequenceUInt32: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceInt64: FfiConverterRustBuffer {
+    typealias SwiftType = [Int64]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceInt64.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]?
 
@@ -14716,6 +15533,81 @@ fileprivate struct FfiConverterSequenceTypeDayEntry: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeDayEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeDayLogBucket: FfiConverterRustBuffer {
+    typealias SwiftType = [DayLogBucket]
+
+    public static func write(_ value: [DayLogBucket], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDayLogBucket.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DayLogBucket] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DayLogBucket]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDayLogBucket.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeDayLogDaily: FfiConverterRustBuffer {
+    typealias SwiftType = [DayLogDaily]
+
+    public static func write(_ value: [DayLogDaily], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDayLogDaily.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DayLogDaily] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DayLogDaily]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDayLogDaily.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeDayLogRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [DayLogRecord]
+
+    public static func write(_ value: [DayLogRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDayLogRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DayLogRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DayLogRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDayLogRecord.read(from: &buf))
         }
         return seq
     }
@@ -15549,6 +16441,32 @@ fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterDictionaryInt64String: FfiConverterRustBuffer {
+    public static func write(_ value: [Int64: String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterInt64.write(key, into: &buf)
+            FfiConverterString.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Int64: String] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [Int64: String]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterInt64.read(from: &buf)
+            let value = try FfiConverterString.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDictionaryStringString: FfiConverterRustBuffer {
     public static func write(_ value: [String: String], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -15634,6 +16552,194 @@ public func coreVersion() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_core_version(uniffiCallStatus
+    )
+})
+}
+/**
+ * `yyyy-MM-dd` for the logical day containing `at_ms`.
+ */
+public func dayBoundaryDayKey(boundary: DayLogBoundary, atMs: Int64) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_boundary_day_key(
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(atMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * The logical day `offset` days from the one containing `from_ms`.
+ */
+public func dayBoundaryDayOffset(boundary: DayLogBoundary, offset: Int64, fromMs: Int64) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_boundary_day_offset(
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(offset),
+        FfiConverterInt64.lower(fromMs),uniffiCallStatus
+    )
+})
+}
+public func dayBoundaryDaysEndingOn(boundary: DayLogBoundary, atMs: Int64, count: Int64) -> [Int64]  {
+    return try!  FfiConverterSequenceInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_boundary_days_ending_on(
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(atMs),
+        FfiConverterInt64.lower(count),uniffiCallStatus
+    )
+})
+}
+/**
+ * The instant the logical day containing `at_ms` began.
+ */
+public func dayBoundaryLogicalDay(boundary: DayLogBoundary, atMs: Int64) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_boundary_logical_day(
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(atMs),uniffiCallStatus
+    )
+})
+}
+public func dayBoundaryWeekStart(boundary: DayLogBoundary, atMs: Int64) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_boundary_week_start(
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(atMs),uniffiCallStatus
+    )
+})
+}
+public func dayBoundaryWeeksEndingOn(boundary: DayLogBoundary, atMs: Int64, count: Int64) -> [Int64]  {
+    return try!  FfiConverterSequenceInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_boundary_weeks_ending_on(
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(atMs),
+        FfiConverterInt64.lower(count),uniffiCallStatus
+    )
+})
+}
+/**
+ * Appends `event` to the file at `path`.
+ */
+public func dayLogAppend(path: String, event: DayLogRecord)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_append(
+        FfiConverterString.lower(path),
+        FfiConverterTypeDayLogRecord_lower(event),uniffiCallStatus
+    )
+}
+}
+public func dayLogCompletedDailyIds(events: [DayLogRecord], boundary: DayLogBoundary, onMs: Int64) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_completed_daily_ids(
+        FfiConverterSequenceTypeDayLogRecord.lower(events),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(onMs),uniffiCallStatus
+    )
+})
+}
+public func dayLogDailyBuckets(events: [DayLogRecord], boundary: DayLogBoundary, endingOnMs: Int64, days: Int64) -> [DayLogBucket]  {
+    return try!  FfiConverterSequenceTypeDayLogBucket.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_daily_buckets(
+        FfiConverterSequenceTypeDayLogRecord.lower(events),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(endingOnMs),
+        FfiConverterInt64.lower(days),uniffiCallStatus
+    )
+})
+}
+public func dayLogFirstRecordedDay(events: [DayLogRecord], boundary: DayLogBoundary) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_first_recorded_day(
+        FfiConverterSequenceTypeDayLogRecord.lower(events),
+        FfiConverterTypeDayLogBoundary_lower(boundary),uniffiCallStatus
+    )
+})
+}
+public func dayLogFocusDuration(seconds: Int64) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_focus_duration(
+        FfiConverterInt64.lower(seconds),uniffiCallStatus
+    )
+})
+}
+/**
+ * Every event in the file at `path`.
+ */
+public func dayLogLoad(path: String) -> [DayLogRecord]  {
+    return try!  FfiConverterSequenceTypeDayLogRecord.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_load(
+        FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+public func dayLogNetCompletions(events: [DayLogRecord]) -> [DayLogRecord]  {
+    return try!  FfiConverterSequenceTypeDayLogRecord.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_net_completions(
+        FfiConverterSequenceTypeDayLogRecord.lower(events),uniffiCallStatus
+    )
+})
+}
+public func dayLogPriorCompletionStreak(events: [DayLogRecord], boundary: DayLogBoundary, nowMs: Int64) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_prior_completion_streak(
+        FfiConverterSequenceTypeDayLogRecord.lower(events),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+public func dayLogRecordedDayCount(events: [DayLogRecord], boundary: DayLogBoundary) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_recorded_day_count(
+        FfiConverterSequenceTypeDayLogRecord.lower(events),
+        FfiConverterTypeDayLogBoundary_lower(boundary),uniffiCallStatus
+    )
+})
+}
+/**
+ * The managed note block for `day`; see `section`.
+ */
+public func dayLogSection(day: DayLogDay, titles: [Int64: String], dailies: [DayLogDaily], heading: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_section(
+        FfiConverterTypeDayLogDay_lower(day),
+        FfiConverterDictionaryInt64String.lower(titles),
+        FfiConverterSequenceTypeDayLogDaily.lower(dailies),
+        FfiConverterString.lower(heading),uniffiCallStatus
+    )
+})
+}
+public func dayLogSummary(events: [DayLogRecord], boundary: DayLogBoundary, onMs: Int64) -> DayLogDay  {
+    return try!  FfiConverterTypeDayLogDay_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_summary(
+        FfiConverterSequenceTypeDayLogRecord.lower(events),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(onMs),uniffiCallStatus
+    )
+})
+}
+public func dayLogWeeklyBuckets(events: [DayLogRecord], boundary: DayLogBoundary, endingOnMs: Int64, weeks: Int64) -> [DayLogBucket]  {
+    return try!  FfiConverterSequenceTypeDayLogBucket.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_log_weekly_buckets(
+        FfiConverterSequenceTypeDayLogRecord.lower(events),
+        FfiConverterTypeDayLogBoundary_lower(boundary),
+        FfiConverterInt64.lower(endingOnMs),
+        FfiConverterInt64.lower(weeks),uniffiCallStatus
     )
 })
 }
@@ -16459,6 +17565,60 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_core_version() != 3784) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_day_boundary_day_key() != 60525) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_boundary_day_offset() != 27742) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_boundary_days_ending_on() != 64376) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_boundary_logical_day() != 18576) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_boundary_week_start() != 48465) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_boundary_weeks_ending_on() != 32909) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_append() != 20575) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_completed_daily_ids() != 59422) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_daily_buckets() != 46960) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_first_recorded_day() != 37473) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_focus_duration() != 16286) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_load() != 2793) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_net_completions() != 63585) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_prior_completion_streak() != 27597) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_recorded_day_count() != 11976) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_section() != 10161) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_summary() != 33493) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_log_weekly_buckets() != 50056) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_clamped_focus_multiplier() != 31070) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -16649,6 +17809,39 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_suggested_block_seconds() != 3786) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_completed_daily_ids() != 39399) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_daily_buckets() != 49470) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_event_count() != 38234) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_events() != 26972) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_first_recorded_day() != 40706) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_prior_completion_streak() != 33575) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_record() != 23901) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_recorded_day_count() != 11059) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_reload() != 46429) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_summary() != 26222) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coredaylog_weekly_buckets() != 65133) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_export_workspace() != 22213) {
@@ -17093,6 +18286,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_workspaces() != 24930) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_constructor_coredaylog_open() != 4515) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_constructor_coreworkspace_open() != 50515) {
