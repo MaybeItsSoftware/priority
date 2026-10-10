@@ -1,5 +1,6 @@
 import Foundation
 import TaktCore
+import TaktRustCore
 
 public struct TaskCondition: Codable, Identifiable, Equatable, Sendable {
   public let id: String
@@ -13,6 +14,8 @@ public struct TaskCondition: Codable, Identifiable, Equatable, Sendable {
 
 /// Stored alongside metadata so complete planning edits share one undo step.
 /// References are stable catalogue IDs; all groups match, any member may match.
+/// The stored JSON, its normalisation and the refusals' wording are the Rust
+/// core's (`core/src/planning.rs`). `Codable` stays for the editor drafts file.
 public struct TaskPlanning: Codable, Equatable, Sendable {
   public var startAt: Date?
   public var dueDate: String?
@@ -26,11 +29,10 @@ public struct TaskPlanning: Codable, Equatable, Sendable {
     self.minimumBlockSeconds = minimumBlockSeconds; self.requiresSingleSitting = requiresSingleSitting
   }
 
+  /// Empty groups and a false single-sitting flag collapse to absent; all-absent is nil.
+  /// The start is kept as given: the core only drops fields, and its milliseconds would round it.
   public var normalized: TaskPlanning? {
-    var result = self
-    if result.requirementGroups?.isEmpty == true { result.requirementGroups = nil }
-    if result.requiresSingleSitting == false { result.requiresSingleSitting = nil }
-    return result == TaskPlanning() ? nil : result
+    taskPlanningNormalized(planning: core).map { var result = TaskPlanning($0); result.startAt = startAt; return result }
   }
 }
 
@@ -47,13 +49,14 @@ public struct FocusWorkBlock: Codable, Identifiable, Sendable, Equatable {
 public enum TaskPlanningError: LocalizedError {
   case invalidCondition, invalidSchedule, invalidMinimum, estimateRequired, invalidDate, unavailable
   public var errorDescription: String? {
-    switch self {
-    case .invalidCondition: "A required condition is missing, archived or belongs to another workspace."
-    case .invalidSchedule: "Start must be before the deadline."
-    case .invalidMinimum: "Enter a minimum useful block of at least one minute."
-    case .estimateRequired: "One-sitting tasks need a positive estimate at least as long as their minimum block."
-    case .invalidDate: "Choose a valid calendar date."
-    case .unavailable: "This task or planned block is no longer available in the current conditions and time window."
+    let core: PlanningError = switch self {
+    case .invalidCondition: .invalidCondition
+    case .invalidSchedule: .invalidSchedule
+    case .invalidMinimum: .invalidMinimum
+    case .estimateRequired: .estimateRequired
+    case .invalidDate: .invalidDate
+    case .unavailable: .unavailable
     }
+    return taskPlanningErrorMessage(error: core)
   }
 }

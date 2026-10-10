@@ -785,6 +785,14 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_google_tasks_plan(
     ): Int
+    external fun uniffi_takt_core_checksum_func_task_planning_decode(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_task_planning_encode(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_task_planning_error_message(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_task_planning_normalized(
+    ): Int
     external fun uniffi_takt_core_checksum_func_clamped_focus_multiplier(
     ): Int
     external fun uniffi_takt_core_checksum_func_completed_day_kind(
@@ -1030,6 +1038,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_task_counts(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_task_creations_between(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_task_planning_values(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between(
     ): Int
@@ -1409,6 +1419,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_task_creations_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_task_planning_values(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_tasks_closed_between(`ptr`: Long,`fromMs`: Long,`toMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_themes(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1764,6 +1776,14 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_day_log_weekly_buckets(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_google_tasks_plan(`localLists`: RustBuffer.ByValue,`localTasks`: RustBuffer.ByValue,`remoteLists`: RustBuffer.ByValue,`remoteTasks`: RustBuffer.ByValue,`ledgerTasks`: RustBuffer.ByValue,`ledgerLists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_task_planning_decode(`json`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_task_planning_encode(`planning`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_task_planning_error_message(`error`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_task_planning_normalized(`planning`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_clamped_focus_multiplier(`multiplier`: Double,uniffi_out_err: UniffiRustCallStatus, 
     ): Double
@@ -2207,6 +2227,18 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_google_tasks_plan() and 0xFFFF) != 64663) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_task_planning_decode() and 0xFFFF) != 24542) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_task_planning_encode() and 0xFFFF) != 1431) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_task_planning_error_message() and 0xFFFF) != 50725) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_task_planning_normalized() and 0xFFFF) != 51454) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_clamped_focus_multiplier() and 0xFFFF) != 31070) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2574,6 +2606,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_creations_between() and 0xFFFF) != 9426) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_planning_values() and 0xFFFF) != 7251) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between() and 0xFFFF) != 41355) {
@@ -4082,6 +4117,12 @@ public interface CoreWorkspaceInterface {
     fun `taskCreationsBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<kotlin.Long>
     
     /**
+     * Every task's planning, decoded and normalised in the core, so only
+     * the tasks that have one cross, already parsed.
+     */
+    fun `taskPlanningValues`(): List<TaskPlanningEntry>
+    
+    /**
      * Tasks closed in `[from, to)`, oldest first.
      */
     fun `tasksClosedBetween`(`fromMs`: kotlin.Long, `toMs`: kotlin.Long): List<TaskRow>
@@ -5400,6 +5441,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         
         FfiConverterLong.lower(`fromMs`),
         FfiConverterLong.lower(`toMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Every task's planning, decoded and normalised in the core, so only
+     * the tasks that have one cross, already parsed.
+     */
+    @Throws(CoreException::class)override fun `taskPlanningValues`(): List<TaskPlanningEntry> {
+            return FfiConverterSequenceTypeTaskPlanningEntry.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task_planning_values(
+        it,
+        _status)
 }
     }
     )
@@ -14068,7 +14127,7 @@ public object FfiConverterTypePendingChanges: FfiConverterRustBuffer<PendingChan
 
 /**
  * When and how a task can be worked on. All groups of requirements must be
- * met, and any condition in a group meets it.
+ * met, and any condition in a group meets it. `TaskPlanning`.
  */
 data class Planning (
     var `startAtMs`: kotlin.Long?
@@ -15538,6 +15597,47 @@ public object FfiConverterTypeTaskCounts: FfiConverterRustBuffer<TaskCounts> {
             FfiConverterLong.write(value.`open`, buf)
             FfiConverterLong.write(value.`completed`, buf)
             FfiConverterSequenceTypeListCount.write(value.`byList`, buf)
+    }
+}
+
+
+
+/**
+ * One task's planning, as `taskPlanningValues` maps it.
+ */
+data class TaskPlanningEntry (
+    var `taskId`: kotlin.String
+    , 
+    var `planning`: Planning
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTaskPlanningEntry: FfiConverterRustBuffer<TaskPlanningEntry> {
+    override fun read(buf: ByteBuffer): TaskPlanningEntry {
+        return TaskPlanningEntry(
+            FfiConverterString.read(buf),
+            FfiConverterTypePlanning.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: TaskPlanningEntry) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterTypePlanning.allocationSize(value.`planning`)
+    )
+
+    override fun write(value: TaskPlanningEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterTypePlanning.write(value.`planning`, buf)
     }
 }
 
@@ -19395,6 +19495,47 @@ public object FfiConverterTypePeriodicCadence : FfiConverterRustBuffer<PeriodicC
 
 
 /**
+ * Why a planning edit was refused. `TaskPlanningError`.
+ */
+
+enum class PlanningError {
+    
+    INVALID_CONDITION,
+    INVALID_SCHEDULE,
+    INVALID_MINIMUM,
+    ESTIMATE_REQUIRED,
+    INVALID_DATE,
+    UNAVAILABLE;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePlanningError: FfiConverterRustBuffer<PlanningError> {
+    override fun read(buf: ByteBuffer) = try {
+        PlanningError.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: PlanningError) = 4UL
+
+    override fun write(value: PlanningError, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * What a row is, and which input its `subject` indexes.
  */
 
@@ -22920,6 +23061,34 @@ public object FfiConverterSequenceTypeSyncAccountDevice: FfiConverterRustBuffer<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeTaskPlanningEntry: FfiConverterRustBuffer<List<TaskPlanningEntry>> {
+    override fun read(buf: ByteBuffer): List<TaskPlanningEntry> {
+        val len = buf.getInt()
+        return List<TaskPlanningEntry>(len) {
+            FfiConverterTypeTaskPlanningEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<TaskPlanningEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeTaskPlanningEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<TaskPlanningEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeTaskPlanningEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeTaskProgressCount: FfiConverterRustBuffer<List<TaskProgressCount>> {
     override fun read(buf: ByteBuffer): List<TaskProgressCount> {
         val len = buf.getInt()
@@ -24354,6 +24523,64 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterSequenceTypeGoogleTasksRemoteTask.lower(`remoteTasks`),
         FfiConverterSequenceTypeGoogleTasksLedgerEntry.lower(`ledgerTasks`),
         FfiConverterSequenceTypeGoogleTasksListMapping.lower(`ledgerLists`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Reads stored planning JSON. `JSONDecoder().decode(TaskPlanning.self, …)`.
+         */
+    @Throws(CoreException::class) fun `taskPlanningDecode`(`json`: kotlin.String): Planning {
+            return FfiConverterTypePlanning.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_task_planning_decode(
+    
+        
+        FfiConverterString.lower(`json`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The JSON Swift's `JSONEncoder` writes for a planning.
+         */ fun `taskPlanningEncode`(`planning`: Planning): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_task_planning_encode(
+    
+        
+        FfiConverterTypePlanning.lower(`planning`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The sentence a refusal shows: the same text the core's own error carries.
+         */ fun `taskPlanningErrorMessage`(`error`: PlanningError): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_task_planning_error_message(
+    
+        
+        FfiConverterTypePlanningError.lower(`error`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Empty groups and a false single-sitting flag collapse to absent, and a
+         * planning with nothing left is none. `TaskPlanning.normalized`.
+         */ fun `taskPlanningNormalized`(`planning`: Planning): Planning? {
+            return FfiConverterOptionalTypePlanning.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_task_planning_normalized(
+    
+        
+        FfiConverterTypePlanning.lower(`planning`),_status)
 }
     )
     }

@@ -31,6 +31,7 @@ pub mod lists;
 pub mod next_up;
 pub mod packed_rows;
 pub mod periodic;
+pub mod planning;
 pub mod progress;
 pub mod ranking;
 pub mod reads;

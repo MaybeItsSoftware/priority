@@ -18,6 +18,7 @@ use crate::dailies;
 use crate::habits;
 use crate::lists::new_id;
 use crate::periodic;
+use crate::planning::Planning;
 use crate::time::{parse_stored, stored};
 
 /// The circumstances a sitting is planned in: which conditions hold, when the
@@ -262,13 +263,14 @@ pub fn candidates(
         {
             continue;
         }
+        // Unreadable planning is no planning here, so one bad blob cannot
+        // empty the ladder.
         let planning = row
             .planning
             .as_deref()
-            .and_then(|json| serde_json::from_str::<serde_json::Value>(json).ok());
-        let due_date = planning
-            .as_ref()
-            .and_then(|p| p["dueDate"].as_str().map(str::to_string));
+            .and_then(|json| Planning::from_json(json).ok())
+            .unwrap_or_default();
+        let due_date = planning.due_date;
         let mut daily_unavailable = None;
         if let Some(daily_id) = &row.daily_id {
             let shows = if row
@@ -295,25 +297,6 @@ pub fn candidates(
                 continue;
             }
         }
-        let groups = planning
-            .as_ref()
-            .and_then(|p| p["requirementGroups"].as_array().cloned())
-            .map(|groups| {
-                groups
-                    .iter()
-                    .map(|group| {
-                        group
-                            .as_array()
-                            .map(|ids| {
-                                ids.iter()
-                                    .filter_map(|id| id.as_str().map(str::to_string))
-                                    .collect()
-                            })
-                            .unwrap_or_default()
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
         result.push(Candidate {
             is_daily_due_today: row.daily_id.is_some() && daily_unavailable.is_none(),
             due_at_ms: millis(row.due_at.as_deref()),
@@ -327,15 +310,10 @@ pub fn candidates(
             sort_order: row.sort_order,
             created_at_ms: millis(Some(&row.created_at)).unwrap_or(0),
             due_date,
-            requirement_groups: groups,
+            requirement_groups: planning.requirement_groups.unwrap_or_default(),
             logged_seconds: work.get(&row.id).copied().unwrap_or(0),
-            minimum_block_seconds: planning
-                .as_ref()
-                .and_then(|p| p["minimumBlockSeconds"].as_i64()),
-            requires_single_sitting: planning
-                .as_ref()
-                .and_then(|p| p["requiresSingleSitting"].as_bool())
-                .unwrap_or(false),
+            minimum_block_seconds: planning.minimum_block_seconds,
+            requires_single_sitting: planning.requires_single_sitting.unwrap_or(false),
             daily_remaining_seconds: row
                 .daily_id
                 .as_ref()

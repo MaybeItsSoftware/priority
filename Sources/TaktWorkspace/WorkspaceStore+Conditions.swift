@@ -39,22 +39,12 @@ extension WorkspaceStore {
     }
   }
 
-  static func planning(_ metadata: TaskMetadata?) throws -> TaskPlanning? {
-    var result = try metadata?.planningJSON.map { try JSONDecoder().decode(TaskPlanning.self, from: Data($0.utf8)) }
-      ?? TaskPlanning()
-    result.startAt = metadata?.startAt
-    return result.normalized
-  }
-
 }
 
 extension WorkspaceStore {
   public func taskPlanningValues() throws -> [String: TaskPlanning] {
-    var result: [String: TaskPlanning] = [:]
-    for row in try Self.mappingCoreErrors({ try core.planningMetadata() }) {
-      let record = TaskMetadata(row)
-      if let plan = try Self.planning(record) { result[record.taskId] = plan }
-    }
-    return result
+    // Decoded and normalised in the core: one crossing, only the planned tasks.
+    let entries = try Self.mappingCoreErrors { try core.taskPlanningValues() }
+    return Dictionary(entries.map { ($0.taskId, TaskPlanning($0.planning)) }, uniquingKeysWith: { _, last in last })
   }
 }

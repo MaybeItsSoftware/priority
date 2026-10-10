@@ -11,95 +11,13 @@ use std::collections::BTreeSet;
 
 use chrono::{Duration, NaiveDate};
 use rusqlite::{OptionalExtension, Transaction, params};
-use serde_json::Value;
 
 use crate::CoreError;
 use crate::dailies;
 use crate::periodic;
+pub use crate::planning::Planning;
 use crate::tasks::normalized_strings;
 use crate::time::{decode_strings, non_empty_name, parse_stored, stored, swift_json_strings};
-
-/// When and how a task can be worked on. All groups of requirements must be
-/// met, and any condition in a group meets it.
-#[derive(Debug, Clone, Default, PartialEq, Eq, uniffi::Record)]
-pub struct Planning {
-    pub start_at_ms: Option<i64>,
-    /// A calendar date, `yyyy-MM-dd`, the task is due by the end of.
-    pub due_date: Option<String>,
-    pub requirement_groups: Option<Vec<Vec<String>>>,
-    pub minimum_block_seconds: Option<i64>,
-    pub requires_single_sitting: Option<bool>,
-}
-
-impl Planning {
-    /// Empty groups and a false single-sitting flag are the same as none, and
-    /// a planning with nothing in it is no planning. `TaskPlanning.normalized`.
-    pub fn normalized(&self) -> Option<Planning> {
-        let mut result = self.clone();
-        if result
-            .requirement_groups
-            .as_ref()
-            .is_some_and(Vec::is_empty)
-        {
-            result.requirement_groups = None;
-        }
-        if result.requires_single_sitting == Some(false) {
-            result.requires_single_sitting = None;
-        }
-        (result != Planning::default()).then_some(result)
-    }
-
-    /// The stored JSON, without the start (kept in its own column), in the
-    /// order Swift's synthesised `Codable` writes the fields. Built by hand:
-    /// `serde_json` sorts object keys, and its `preserve_order` feature would
-    /// unify into the CLI and unsort the JSON it prints.
-    fn to_json(&self) -> String {
-        let mut fields = Vec::new();
-        if let Some(due) = &self.due_date {
-            fields.push(format!("\"dueDate\":{}", Value::from(due.clone())));
-        }
-        if let Some(groups) = &self.requirement_groups {
-            fields.push(format!(
-                "\"requirementGroups\":{}",
-                Value::from(groups.clone())
-            ));
-        }
-        if let Some(minimum) = self.minimum_block_seconds {
-            fields.push(format!("\"minimumBlockSeconds\":{minimum}"));
-        }
-        if let Some(single) = self.requires_single_sitting {
-            fields.push(format!("\"requiresSingleSitting\":{single}"));
-        }
-        format!("{{{}}}", fields.join(",")).replace('/', "\\/")
-    }
-
-    fn from_json(text: &str) -> Result<Planning, CoreError> {
-        let value: Value = serde_json::from_str(text).map_err(|error| CoreError::Database {
-            detail: format!("A task's planning could not be read: {error}"),
-        })?;
-        Ok(Planning {
-            start_at_ms: None,
-            due_date: value["dueDate"].as_str().map(str::to_string),
-            requirement_groups: value["requirementGroups"].as_array().map(|groups| {
-                groups
-                    .iter()
-                    .map(|group| {
-                        group
-                            .as_array()
-                            .map(|ids| {
-                                ids.iter()
-                                    .filter_map(|id| id.as_str().map(str::to_string))
-                                    .collect()
-                            })
-                            .unwrap_or_default()
-                    })
-                    .collect()
-            }),
-            minimum_block_seconds: value["minimumBlockSeconds"].as_i64(),
-            requires_single_sitting: value["requiresSingleSitting"].as_bool(),
-        })
-    }
-}
 
 /// The parts of a task's metadata the editor shows.
 #[derive(Debug, Clone, Default, PartialEq, Eq, uniffi::Record)]

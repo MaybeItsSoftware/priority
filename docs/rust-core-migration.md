@@ -516,6 +516,13 @@ covered the old copies pass against it.
    closed task's whole branch where the Mac and iPhone keep its open
    subtasks; it is still Android's own shaping.
 
+   **Planning.** The `planningJSON` codec, its normalisation and the
+   refusals' wording are the core's alone (`core/src/planning.rs`, read by
+   the editor and the focus ladder too); Swift's and Kotlin's `TaskPlanning`
+   wrap it, and `taskPlanningValues` is one crossing that returns only the
+   planned tasks already decoded, where Android used to cross every metadata
+   row and parse each in Kotlin.
+
    What stays in Swift and Kotlin after step 9 is presentation (views,
    locale formatting, colour conversion), platform transport (HTTP, auth,
    OAuth, the long poll, moving bodies the core makes and reads), per-point geometry and fold state that lives only

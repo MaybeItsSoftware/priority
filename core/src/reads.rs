@@ -3,6 +3,7 @@
 //! (`rows.rs`). Kept apart from `workspace.rs`, whose methods write.
 
 use crate::CoreError;
+use crate::planning::{self, TaskPlanningEntry};
 use crate::records::TaskRow;
 use crate::rows::{
     self, AwardRow, CompletionContext, ConditionRow, ContributionRow, DailyRow, DayDaily,
@@ -95,6 +96,12 @@ impl CoreWorkspace {
     /// The metadata rows that carry planning or a start time.
     pub fn planning_metadata(&self) -> Result<Vec<MetadataRow>, CoreError> {
         rows::planning_metadata(&self.read())
+    }
+
+    /// Every task's planning, decoded and normalised in the core, so only
+    /// the tasks that have one cross, already parsed.
+    pub fn task_planning_values(&self) -> Result<Vec<TaskPlanningEntry>, CoreError> {
+        planning::planning_values(&self.read())
     }
 
     /// The newest session that has not finished.

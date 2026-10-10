@@ -65,10 +65,9 @@ data class FocusCompletion(
 internal fun conditionsIn(db: Db, workspaceId: String): List<TaskCondition> =
     db.core.conditions(workspaceId).map { it.toCondition() }
 
+/** Decoded and normalised in the core: one crossing, only the planned tasks. */
 internal fun taskPlanningValues(db: Db): Map<String, TaskPlanning> =
-    db.core.allMetadata().map { it.toMetadata() }
-        .mapNotNull { record -> planning(record)?.let { record.taskId to it } }
-        .toMap()
+    db.core.taskPlanningValues().associate { it.taskId to TaskPlanning.fromCore(it.planning) }
 
 internal fun hasManualFocusOrder(db: Db): Boolean = db.core.hasManualFocusOrder()
 

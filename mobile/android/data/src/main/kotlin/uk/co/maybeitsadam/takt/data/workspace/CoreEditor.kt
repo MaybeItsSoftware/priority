@@ -7,14 +7,6 @@ import uk.co.maybeitsadam.takt.core.TaskPlanning
 // One way only: what a save leaves behind is re-read through the driver, so
 // the values on screen are the ones this side decodes.
 
-internal fun TaskPlanning.toCore() = uniffi.takt_core.Planning(
-    startAtMs = startAt?.toEpochMilli(),
-    dueDate = dueDate,
-    requirementGroups = requirementGroups,
-    minimumBlockSeconds = minimumBlockSeconds?.toLong(),
-    requiresSingleSitting = requiresSingleSitting,
-)
-
 internal fun TaskEditorMetadata.toCore() = uniffi.takt_core.EditorMetadata(
     priority = priority?.toLong(),
     tags = tags,
@@ -34,14 +26,6 @@ internal fun TaskEditorSnapshot.toCore() = uniffi.takt_core.EditorSnapshot(
     planning = planning?.toCore(),
 )
 
-internal fun uniffi.takt_core.Planning.toPlanning() = TaskPlanning(
-    startAt = startAtMs?.let(java.time.Instant::ofEpochMilli),
-    dueDate = dueDate,
-    requirementGroups = requirementGroups,
-    minimumBlockSeconds = minimumBlockSeconds?.toInt(),
-    requiresSingleSitting = requiresSingleSitting,
-)
-
 internal fun uniffi.takt_core.EditorSnapshot.toSnapshot() = TaskEditorSnapshot(
     workspaceId = workspaceId,
     taskId = taskId,
@@ -56,7 +40,7 @@ internal fun uniffi.takt_core.EditorSnapshot.toSnapshot() = TaskEditorSnapshot(
         externalLinks = metadata.externalLinks,
     ),
     dailyProgress = dailyProgress,
-    planning = planning?.toPlanning(),
+    planning = planning?.let(TaskPlanning::fromCore),
 )
 
 internal fun uk.co.maybeitsadam.takt.core.FocusContext.toCore() = uniffi.takt_core.FocusContext(

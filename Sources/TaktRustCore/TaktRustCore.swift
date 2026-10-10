@@ -1103,6 +1103,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func taskCreationsBetween(fromMs: Int64, toMs: Int64) throws  -> [Int64]
     
     /**
+     * Every task's planning, decoded and normalised in the core, so only
+     * the tasks that have one cross, already parsed.
+     */
+    func taskPlanningValues() throws  -> [TaskPlanningEntry]
+    
+    /**
      * Tasks closed in `[from, to)`, oldest first.
      */
     func tasksClosedBetween(fromMs: Int64, toMs: Int64) throws  -> [TaskRow]
@@ -2231,6 +2237,19 @@ open func taskCreationsBetween(fromMs: Int64, toMs: Int64)throws  -> [Int64]  {
             self.uniffiCloneHandle(),
         FfiConverterInt64.lower(fromMs),
         FfiConverterInt64.lower(toMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Every task's planning, decoded and normalised in the core, so only
+     * the tasks that have one cross, already parsed.
+     */
+open func taskPlanningValues()throws  -> [TaskPlanningEntry]  {
+    return try  FfiConverterSequenceTypeTaskPlanningEntry.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_task_planning_values(
+            self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
 }
@@ -11768,7 +11787,7 @@ public func FfiConverterTypePendingChanges_lower(_ value: PendingChanges) -> Rus
 
 /**
  * When and how a task can be worked on. All groups of requirements must be
- * met, and any condition in a group meets it.
+ * met, and any condition in a group meets it. `TaskPlanning`.
  */
 public struct Planning: Equatable, Hashable {
     public var startAtMs: Int64?
@@ -13714,6 +13733,63 @@ public func FfiConverterTypeTaskCounts_lift(_ buf: RustBuffer) throws -> TaskCou
 #endif
 public func FfiConverterTypeTaskCounts_lower(_ value: TaskCounts) -> RustBuffer {
     return FfiConverterTypeTaskCounts.lower(value)
+}
+
+
+/**
+ * One task's planning, as `taskPlanningValues` maps it.
+ */
+public struct TaskPlanningEntry: Equatable, Hashable {
+    public var taskId: String
+    public var planning: Planning
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, planning: Planning) {
+        self.taskId = taskId
+        self.planning = planning
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TaskPlanningEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTaskPlanningEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaskPlanningEntry {
+        return
+            try TaskPlanningEntry(
+                taskId: FfiConverterString.read(from: &buf), 
+                planning: FfiConverterTypePlanning.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TaskPlanningEntry, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterTypePlanning.write(value.planning, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskPlanningEntry_lift(_ buf: RustBuffer) throws -> TaskPlanningEntry {
+    return try FfiConverterTypeTaskPlanningEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskPlanningEntry_lower(_ value: TaskPlanningEntry) -> RustBuffer {
+    return FfiConverterTypeTaskPlanningEntry.lower(value)
 }
 
 
@@ -17084,6 +17160,103 @@ public func FfiConverterTypePeriodicCadence_lower(_ value: PeriodicCadence) -> R
 
 
 /**
+ * Why a planning edit was refused. `TaskPlanningError`.
+ */
+
+public enum PlanningError: Equatable, Hashable {
+    
+    case invalidCondition
+    case invalidSchedule
+    case invalidMinimum
+    case estimateRequired
+    case invalidDate
+    case unavailable
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PlanningError: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePlanningError: FfiConverterRustBuffer {
+    typealias SwiftType = PlanningError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PlanningError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .invalidCondition
+        
+        case 2: return .invalidSchedule
+        
+        case 3: return .invalidMinimum
+        
+        case 4: return .estimateRequired
+        
+        case 5: return .invalidDate
+        
+        case 6: return .unavailable
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PlanningError, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .invalidCondition:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .invalidSchedule:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .invalidMinimum:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .estimateRequired:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .invalidDate:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .unavailable:
+            writeInt(&buf, Int32(6))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanningError_lift(_ buf: RustBuffer) throws -> PlanningError {
+    return try FfiConverterTypePlanningError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePlanningError_lower(_ value: PlanningError) -> RustBuffer {
+    return FfiConverterTypePlanningError.lower(value)
+}
+
+
+
+/**
  * What a row is, and which input its `subject` indexes.
  */
 
@@ -20082,6 +20255,31 @@ fileprivate struct FfiConverterSequenceTypeSyncAccountDevice: FfiConverterRustBu
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeTaskPlanningEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [TaskPlanningEntry]
+
+    public static func write(_ value: [TaskPlanningEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTaskPlanningEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TaskPlanningEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TaskPlanningEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTaskPlanningEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeTaskProgressCount: FfiConverterRustBuffer {
     typealias SwiftType = [TaskProgressCount]
 
@@ -21256,6 +21454,51 @@ public func googleTasksPlan(localLists: [GoogleTasksLocalList], localTasks: [Goo
         FfiConverterSequenceTypeGoogleTasksRemoteTask.lower(remoteTasks),
         FfiConverterSequenceTypeGoogleTasksLedgerEntry.lower(ledgerTasks),
         FfiConverterSequenceTypeGoogleTasksListMapping.lower(ledgerLists),uniffiCallStatus
+    )
+})
+}
+/**
+ * Reads stored planning JSON. `JSONDecoder().decode(TaskPlanning.self, …)`.
+ */
+public func taskPlanningDecode(json: String)throws  -> Planning  {
+    return try  FfiConverterTypePlanning_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_task_planning_decode(
+        FfiConverterString.lower(json),uniffiCallStatus
+    )
+})
+}
+/**
+ * The JSON Swift's `JSONEncoder` writes for a planning.
+ */
+public func taskPlanningEncode(planning: Planning) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_task_planning_encode(
+        FfiConverterTypePlanning_lower(planning),uniffiCallStatus
+    )
+})
+}
+/**
+ * The sentence a refusal shows: the same text the core's own error carries.
+ */
+public func taskPlanningErrorMessage(error: PlanningError) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_task_planning_error_message(
+        FfiConverterTypePlanningError_lower(error),uniffiCallStatus
+    )
+})
+}
+/**
+ * Empty groups and a false single-sitting flag collapse to absent, and a
+ * planning with nothing left is none. `TaskPlanning.normalized`.
+ */
+public func taskPlanningNormalized(planning: Planning) -> Planning?  {
+    return try!  FfiConverterOptionTypePlanning.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_task_planning_normalized(
+        FfiConverterTypePlanning_lower(planning),uniffiCallStatus
     )
 })
 }
@@ -22442,6 +22685,18 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_google_tasks_plan() != 64663) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_task_planning_decode() != 24542) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_task_planning_encode() != 1431) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_task_planning_error_message() != 50725) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_task_planning_normalized() != 51454) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_clamped_focus_multiplier() != 31070) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -22809,6 +23064,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_task_creations_between() != 9426) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_task_planning_values() != 7251) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_tasks_closed_between() != 41355) {
