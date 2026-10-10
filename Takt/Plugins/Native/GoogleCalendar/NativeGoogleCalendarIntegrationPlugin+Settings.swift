@@ -49,7 +49,7 @@ private struct GoogleCalendarIntegrationPluginSettingsView: View {
         SettingsToggleRow("Open created event in browser", isOn: $plugin.openCreatedEventInBrowser)
 
         Button("Create event from selected task") {
-          manager.integrations.openTaskInGoogleCalendar()
+          manager.integrations.createEventFromSelectedTask()
         }
         .disabled(!plugin.isAuthenticated)
       } else {

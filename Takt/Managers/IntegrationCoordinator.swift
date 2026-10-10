@@ -36,6 +36,10 @@ protocol IntegrationDataSource: AnyObject {
   /// in AFFiNE. Owned by the caller because closing a task is the mutation
   /// service's job, not an integration's.
   @ObservationIgnored var onCloseTasks: (([Int]) async -> Void)?
+  /// Adds the desktop workspace's selected task to Google Calendar and answers
+  /// whether there was one to add. Set by `AppDelegate`, which owns the
+  /// workspace; the coordinator is built before it.
+  @ObservationIgnored var addSelectedWorkspaceTaskToGoogleCalendar: (() -> Bool)?
 
   // MARK: - Integration enable flags
 
@@ -257,47 +261,26 @@ protocol IntegrationDataSource: AnyObject {
     return outcome.eventID
   }
 
-  func openTaskInGoogleCalendar(taskId explicitTaskId: Int? = nil) {
+  /// The settings page's "Create event from selected task".
+  ///
+  /// Acts on the desktop window's selected task, through the same path as the
+  /// inspector's "Add to Google Calendar", so the event is the same whichever
+  /// button made it. It used to act on the legacy Checkvist cursor, which
+  /// nothing on screen shows or moves any more.
+  func createEventFromSelectedTask() {
     guard googleCalendarIntegrationEnabled else {
       onError?("Enable Google Calendar integration in Preferences first.")
       return
     }
-    guard let ds = dataSource else { onError?("Internal error: no data source."); return }
-
-    let selectedTask: CheckvistTask?
-    if let explicitTaskId {
-      selectedTask = ds.tasks.first(where: { $0.id == explicitTaskId })
-    } else {
-      selectedTask = ds.currentTask
+    guard let addSelectedWorkspaceTaskToGoogleCalendar else {
+      onError?("Internal error: no workspace.")
+      return
     }
-    guard let selectedTask else {
+    guard addSelectedWorkspaceTaskToGoogleCalendar() else {
       onError?("No task selected.")
       return
     }
-
-    let listId = ds.listId
-
-    Task { @MainActor [weak self] in
-      guard let self else { return }
-      do {
-        let outcome = try await self.googleCalendarPlugin.createEvent(
-          task: selectedTask,
-          listId: listId,
-          now: Date()
-        )
-        self.recordGoogleCalendarEventLink(
-          taskId: selectedTask.id,
-          listId: listId,
-          eventURL: outcome.urlToOpen
-        )
-        if let url = outcome.urlToOpen, url.scheme?.lowercased() == "https" {
-          NSWorkspace.shared.open(url)
-        }
-        self.onError?(nil)
-      } catch {
-        self.onError?(error.localizedDescription)
-      }
-    }
+    onError?(nil)
   }
 
   func openSavedGoogleCalendarEventLink(taskId explicitTaskId: Int? = nil) {

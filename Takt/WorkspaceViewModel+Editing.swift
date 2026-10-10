@@ -23,39 +23,37 @@ extension WorkspaceViewModel {
     taskEditor.revert(task.id, store: store)
   }
 
+  /// Adds the selected task to Google Calendar, exactly as the inspector's
+  /// button would. Answers false, and does nothing, when nothing is selected
+  /// or the selection is a list, which the inspector offers no event for.
+  ///
+  /// This is what the Google Calendar settings page's "Create event from
+  /// selected task" acts on: the desktop window's selection, the only one the
+  /// user can see or move.
+  @discardableResult
+  func addSelectedTaskToGoogleCalendar() -> Bool {
+    guard let task = selectedTask, !task.isList else { return false }
+    addTaskToGoogleCalendar(task)
+    return true
+  }
+
   func addTaskToGoogleCalendar(_ task: WorkspaceTask) {
     guard let store, let creator = googleCalendarEventCreator else {
       errorMessage = "Google Calendar is not available."
       return
     }
     let listTitle = list(for: task)?.name ?? "Takt"
-    let snapshot: TaskEditorSnapshot
+    let timing: CalendarEventTiming
     do {
-      snapshot = try store.taskEditorSnapshot(for: task.id)
+      timing = try store.taskEditorSnapshot(for: task.id).calendarEventTiming()
     } catch {
       errorMessage = error.localizedDescription
       return
     }
-    let planning = snapshot.planning
-    let date: Date?
-    let isAllDay: Bool
-    if let exactDue = snapshot.dueAt {
-      date = exactDue
-      isAllDay = false
-    } else if let dueDay = planning?.dueDate.flatMap({ TaskCalendarDate.date($0) }) {
-      date = dueDay
-      isAllDay = true
-    } else if let start = planning?.startAt {
-      date = start
-      isAllDay = false
-    } else {
-      date = nil
-      isAllDay = false
-    }
 
     Task { @MainActor in
       do {
-        let eventID = try await creator(task.title, task.id, listTitle, date, isAllDay)
+        let eventID = try await creator(task.title, task.id, listTitle, timing.date, timing.isAllDay)
         // Clearing this event off the calendar later is how the task gets
         // completed, so the pairing has to be remembered now.
         if let eventID { onGoogleCalendarEventCreated?(task.id, eventID) }

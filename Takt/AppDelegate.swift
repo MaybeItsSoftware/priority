@@ -95,6 +95,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       return try await integrations.createGoogleCalendarEvent(
         title: title, taskID: taskID, listTitle: listTitle, date: date, isAllDay: isAllDay)
     }
+    // The settings page's "Create event from selected task" acts on this
+    // window's selection, the same way the inspector's button does.
+    checkvistManager.integrations.addSelectedWorkspaceTaskToGoogleCalendar = { [weak workspace] in
+      workspace?.addSelectedTaskToGoogleCalendar() ?? false
+    }
     // The mirror needs the workspace, and the workspace has only just been
     // built — the coordinator is constructed before it.
     checkvistManager.workspaceStoreProvider = { [weak workspace] in workspace?.store }
