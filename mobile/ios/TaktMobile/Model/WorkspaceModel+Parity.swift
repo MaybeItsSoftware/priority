@@ -13,16 +13,10 @@ struct TaskProgress: Equatable, Sendable {
 
   static func load(store: WorkspaceStore, taskID: String) throws -> TaskProgress {
     guard let task = try store.task(id: taskID) else { return TaskProgress() }
-    let tree = try store.listTrees(in: [task.listId])[task.listId]
-    var progress = TaskProgress(estimateSeconds: task.estimateSeconds)
-    var stack = tree?.children(of: taskID) ?? []
-    while let next = stack.popLast() {
-      progress.subtasks += 1
-      if next.status != .open { progress.subtasksDone += 1 }
-      stack += tree?.children(of: next.id) ?? []
-    }
-    progress.loggedSeconds = try store.workBlocks(for: taskID).reduce(0) { $0 + $1.seconds }
-    return progress
+    let facts = try store.taskWorkFacts(for: taskID)
+    return TaskProgress(
+      subtasks: facts.subtasks, subtasksDone: facts.subtasksDone, loggedSeconds: facts.loggedSeconds,
+      estimateSeconds: task.estimateSeconds)
   }
 
   /// "3 of 5 subtasks done · worked 1h 10m of 2h".

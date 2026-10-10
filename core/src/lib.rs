@@ -44,6 +44,7 @@ pub mod setup;
 pub mod sidebar;
 mod swift_text;
 pub mod sync;
+pub mod task_work;
 pub mod tasks;
 pub mod theme;
 pub mod time;

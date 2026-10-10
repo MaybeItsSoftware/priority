@@ -1043,6 +1043,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_review_progress(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_task_work_facts(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_add_to_focus_queue(
@@ -1416,6 +1418,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_work_blocks_for_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_review_progress(`ptr`: Long,`days`: Int,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_task_work_facts(`ptr`: Long,`taskId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_acknowledge_sync_changes(`ptr`: Long,`throughSeq`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -2584,6 +2588,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_review_progress() and 0xFFFF) != 23968) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_task_work_facts() and 0xFFFF) != 33291) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() and 0xFFFF) != 39097) {
@@ -4099,6 +4106,11 @@ public interface CoreWorkspaceInterface {
     fun `reviewProgress`(`days`: kotlin.UInt, `nowMs`: kotlin.Long, `zone`: kotlin.String): ReviewProgress
     
     /**
+     * A task's subtasks and logged work, counted in the core.
+     */
+    fun `taskWorkFacts`(`taskId`: kotlin.String): TaskWorkFacts
+    
+    /**
      * Forgets the outbox entries the server has accepted.
      */
     fun `acknowledgeSyncChanges`(`throughSeq`: kotlin.Long)
@@ -5486,6 +5498,24 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterUInt.lower(`days`),
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A task's subtasks and logged work, counted in the core.
+     */
+    @Throws(CoreException::class)override fun `taskWorkFacts`(`taskId`: kotlin.String): TaskWorkFacts {
+            return FfiConverterTypeTaskWorkFacts.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_task_work_facts(
+        it,
+        
+        FfiConverterString.lower(`taskId`),_status)
 }
     }
     )
@@ -15649,6 +15679,66 @@ public object FfiConverterTypeTaskRow: FfiConverterRustBuffer<TaskRow> {
             FfiConverterOptionalLong.write(value.`completedAtMs`, buf)
             FfiConverterLong.write(value.`createdAtMs`, buf)
             FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * A task's subtasks and logged work.
+ */
+data class TaskWorkFacts (
+    /**
+     * Every task below it in its list, at any depth.
+     */
+    var `subtasks`: kotlin.UInt
+    , 
+    /**
+     * Those of them no longer open: completed or cancelled.
+     */
+    var `subtasksDone`: kotlin.UInt
+    , 
+    /**
+     * Seconds of work logged against it, across renames (`originalTaskId`).
+     */
+    var `loggedSeconds`: kotlin.Long
+    , 
+    var `workBlocks`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTaskWorkFacts: FfiConverterRustBuffer<TaskWorkFacts> {
+    override fun read(buf: ByteBuffer): TaskWorkFacts {
+        return TaskWorkFacts(
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: TaskWorkFacts) = (
+            FfiConverterUInt.allocationSize(value.`subtasks`) +
+            FfiConverterUInt.allocationSize(value.`subtasksDone`) +
+            FfiConverterLong.allocationSize(value.`loggedSeconds`) +
+            FfiConverterUInt.allocationSize(value.`workBlocks`)
+    )
+
+    override fun write(value: TaskWorkFacts, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`subtasks`, buf)
+            FfiConverterUInt.write(value.`subtasksDone`, buf)
+            FfiConverterLong.write(value.`loggedSeconds`, buf)
+            FfiConverterUInt.write(value.`workBlocks`, buf)
     }
 }
 

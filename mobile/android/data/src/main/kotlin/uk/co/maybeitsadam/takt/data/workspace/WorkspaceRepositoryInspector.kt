@@ -38,16 +38,14 @@ fun WorkspaceRepository.observeTaskInspectorFacts(taskId: String): Flow<TaskInsp
 private fun inspectorFacts(db: Db, taskId: String): TaskInspectorFacts {
     val metadata = db.metadata(taskId)
     val daily = db.queryOne("SELECT * FROM dailies WHERE taskId = ? AND archivedAt IS NULL", taskId) { it.toDaily() }
-    val blocks = db.query(
-        "SELECT * FROM focus_work_blocks WHERE taskId = ? OR originalTaskId = ?",
-        taskId, taskId,
-    ) { it.toWorkBlock() }
+    // Counted in the core (`task_work::task_work_facts`), as the iPhone's are.
+    val work = db.core.taskWorkFacts(taskId)
     return TaskInspectorFacts(
         kanbanColumn = metadata?.kanbanColumn,
         matrix = TaskMatrixPosition(metadata?.matrixUrgency, metadata?.matrixImportance),
         daily = daily,
-        loggedSeconds = blocks.sumOf { maxOf(0, it.seconds) },
-        workBlockCount = blocks.size,
+        loggedSeconds = work.loggedSeconds.toInt(),
+        workBlockCount = work.workBlocks.toInt(),
         waitingOn = metadata?.waitingOn,
         followUpAt = metadata?.waitingFollowUpAt,
     )

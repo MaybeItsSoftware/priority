@@ -44,11 +44,12 @@ final class ParityTests: XCTestCase {
     let parent = try XCTUnwrap(model.createTask("Parent", listID: inbox.id))
     let child = try model.store.createTask(listId: inbox.id, title: "Child", parentTaskId: parent.id)
     _ = try model.store.createTask(listId: inbox.id, title: "Grandchild", parentTaskId: child.id)
+    // Closing a task closes its open subtasks with it, so both are done.
     try model.store.setStatus(.completed, for: child.id)
     let progress = try TaskProgress.load(store: model.store, taskID: parent.id)
     XCTAssertEqual(progress.subtasks, 2)
-    XCTAssertEqual(progress.subtasksDone, 1)
-    XCTAssertEqual(progress.summary, "1 of 2 subtasks done")
+    XCTAssertEqual(progress.subtasksDone, 2)
+    XCTAssertEqual(progress.summary, "2 of 2 subtasks done")
   }
 
   func testRestoringTheLastArchivedListAndFoldingEveryFolder() throws {

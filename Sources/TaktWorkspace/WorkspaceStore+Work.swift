@@ -8,6 +8,16 @@ extension WorkspaceStore {
     })
   }
 
+  /// A task's subtasks at any depth, how many of them are closed, and the
+  /// work logged against it across renames, counted in the Rust core
+  /// (`task_work::task_work_facts`) so neither the list nor the blocks cross.
+  public func taskWorkFacts(
+    for taskId: String
+  ) throws -> (subtasks: Int, subtasksDone: Int, loggedSeconds: Int, workBlocks: Int) {
+    let facts = try Self.mappingCoreErrors { try core.taskWorkFacts(taskId: taskId) }
+    return (Int(facts.subtasks), Int(facts.subtasksDone), Int(facts.loggedSeconds), Int(facts.workBlocks))
+  }
+
   public func workBlocks(for taskId: String) throws -> [FocusWorkBlock] {
     try Self.mappingCoreErrors { try core.workBlocksForTask(taskId: taskId) }.map(FocusWorkBlock.init)
   }

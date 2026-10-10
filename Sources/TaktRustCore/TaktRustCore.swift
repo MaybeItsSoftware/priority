@@ -1134,6 +1134,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func reviewProgress(days: UInt32, nowMs: Int64, zone: String) throws  -> ReviewProgress
     
     /**
+     * A task's subtasks and logged work, counted in the core.
+     */
+    func taskWorkFacts(taskId: String) throws  -> TaskWorkFacts
+    
+    /**
      * Forgets the outbox entries the server has accepted.
      */
     func acknowledgeSyncChanges(throughSeq: Int64) throws 
@@ -2301,6 +2306,19 @@ open func reviewProgress(days: UInt32, nowMs: Int64, zone: String)throws  -> Rev
         FfiConverterUInt32.lower(days),
         FfiConverterInt64.lower(nowMs),
         FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A task's subtasks and logged work, counted in the core.
+     */
+open func taskWorkFacts(taskId: String)throws  -> TaskWorkFacts  {
+    return try  FfiConverterTypeTaskWorkFacts_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_task_work_facts(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(taskId),uniffiCallStatus
     )
 })
 }
@@ -13874,6 +13892,89 @@ public func FfiConverterTypeTaskRow_lower(_ value: TaskRow) -> RustBuffer {
 
 
 /**
+ * A task's subtasks and logged work.
+ */
+public struct TaskWorkFacts: Equatable, Hashable {
+    /**
+     * Every task below it in its list, at any depth.
+     */
+    public var subtasks: UInt32
+    /**
+     * Those of them no longer open: completed or cancelled.
+     */
+    public var subtasksDone: UInt32
+    /**
+     * Seconds of work logged against it, across renames (`originalTaskId`).
+     */
+    public var loggedSeconds: Int64
+    public var workBlocks: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Every task below it in its list, at any depth.
+         */subtasks: UInt32, 
+        /**
+         * Those of them no longer open: completed or cancelled.
+         */subtasksDone: UInt32, 
+        /**
+         * Seconds of work logged against it, across renames (`originalTaskId`).
+         */loggedSeconds: Int64, workBlocks: UInt32) {
+        self.subtasks = subtasks
+        self.subtasksDone = subtasksDone
+        self.loggedSeconds = loggedSeconds
+        self.workBlocks = workBlocks
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TaskWorkFacts: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTaskWorkFacts: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaskWorkFacts {
+        return
+            try TaskWorkFacts(
+                subtasks: FfiConverterUInt32.read(from: &buf), 
+                subtasksDone: FfiConverterUInt32.read(from: &buf), 
+                loggedSeconds: FfiConverterInt64.read(from: &buf), 
+                workBlocks: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TaskWorkFacts, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.subtasks, into: &buf)
+        FfiConverterUInt32.write(value.subtasksDone, into: &buf)
+        FfiConverterInt64.write(value.loggedSeconds, into: &buf)
+        FfiConverterUInt32.write(value.workBlocks, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskWorkFacts_lift(_ buf: RustBuffer) throws -> TaskWorkFacts {
+    return try FfiConverterTypeTaskWorkFacts.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskWorkFacts_lower(_ value: TaskWorkFacts) -> RustBuffer {
+    return FfiConverterTypeTaskWorkFacts.lower(value)
+}
+
+
+/**
  * A row of `themes`. `StoredTheme`.
  */
 public struct ThemeRow: Equatable, Hashable {
@@ -22706,6 +22807,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_review_progress() != 23968) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_task_work_facts() != 33291) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_acknowledge_sync_changes() != 39097) {
