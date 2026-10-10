@@ -195,7 +195,6 @@ let appLogicTargetExcludes = [
   "Takt/Managers/IntegrationCoordinator+AFFiNE.swift",
   "Takt/Managers/MenuBarController.swift",
   "Takt/Managers/NavigationState.swift",
-  "Takt/Managers/PopoverChromeManager.swift",
   "Takt/Managers/PreferencesManager.swift",
   "Takt/Managers/QuickEntryManager.swift",
   "Takt/Managers/RecurrenceManager.swift",

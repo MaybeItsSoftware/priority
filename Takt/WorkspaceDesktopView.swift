@@ -143,7 +143,7 @@ struct WorkspaceDesktopView: View {
     // It stays a sheet rather than an overlay: it is a report as tall as the
     // window, with Copy and Export buttons, read and then put away — not
     // something you pass through on the way to the next keystroke.
-    .sheet(isPresented: Bindable(manager.popoverChrome).showsDiagnostics) {
+    .sheet(isPresented: Bindable(manager).showsDiagnostics) {
       DiagnosticsView()
         .environment(manager)
         .frame(minWidth: 620, minHeight: 520)

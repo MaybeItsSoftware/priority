@@ -66,7 +66,7 @@ struct DiagnosticsView: View {
           .textSelection(.enabled)
       }
       Spacer(minLength: 0)
-      Button("Done") { manager.popoverChrome.showsDiagnostics = false }
+      Button("Done") { manager.showsDiagnostics = false }
         .buttonStyle(FocusActionButtonStyle(prominent: true))
         .keyboardShortcut(.defaultAction)
         .help("Close diagnostics · ↩")

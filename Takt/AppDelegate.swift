@@ -163,7 +163,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       checkvistManager?.googleCalendarCompletions.watch(eventID: eventID, forTask: taskID)
     }
     workspace.onShowDiagnostics = { [weak checkvistManager] in
-      checkvistManager?.popoverChrome.showsDiagnostics = true
+      checkvistManager?.showsDiagnostics = true
     }
     workspace.onStatusMessage = { [weak checkvistManager] message in
       checkvistManager?.statusMessage = message

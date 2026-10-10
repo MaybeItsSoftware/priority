@@ -40,7 +40,7 @@ extension SettingsView {
         detail: "What state the app is in, what is unhealthy, and what went wrong this session."
       ) {
         Button("Open diagnostics") {
-          checkvistManager.popoverChrome.showsDiagnostics = true
+          checkvistManager.showsDiagnostics = true
           AppDelegate.shared.showMainWindow()
         }
         .commandHelp(.windowShowDiagnostics)

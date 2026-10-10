@@ -93,8 +93,11 @@ import SwiftUI
   /// Which `ThemePlugin` the app renders through. Like `celebration`, it
   /// retains the registry because the choice is switchable at runtime.
   let theme: ThemeManager
-  /// Popover chrome — the dock row, the resize strip, per-view heights.
-  let popoverChrome: PopoverChromeManager
+  /// Whether the diagnostics sheet is up. Not persisted: it is something you
+  /// open when something is wrong, not a mode you work in. Only the main
+  /// window shows it — a sheet needs a titled window to attach to, and the
+  /// focus panel is a non-activating one.
+  var showsDiagnostics = false
   /// What has failed this session. Nothing else in the app retains a failure
   /// for longer than the three seconds `statusMessage` lasts.
   let diagnosticsLog = DiagnosticsLog()
@@ -224,7 +227,6 @@ import SwiftUI
       preferencesStore: preferencesStore,
       plugin: resolvedDailyLogPlugin
     )
-    self.popoverChrome = PopoverChromeManager(preferencesStore: preferencesStore)
     // OnboardingService will compute onboardingCompleted in its init.
 
     if storedPluginSelectionOnboardingCompletedFlag == nil {

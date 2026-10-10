@@ -293,7 +293,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 
   func windowWillClose(_ notification: Notification) {
     guard (notification.object as? NSWindow) === window else { return }
-    manager.popoverChrome.showsDiagnostics = false
+    manager.showsDiagnostics = false
     onVisibilityChanged?(false)
   }
 }
