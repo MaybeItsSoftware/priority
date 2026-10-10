@@ -743,6 +743,56 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_hlc_tick(
     ): Int
+    external fun uniffi_takt_core_checksum_func_theme_builtin_platform_structures(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_builtins(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_conformance_case(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_contrast_findings(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_contrast_ratio(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_decode(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_file_encode(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_file_from_specification(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_identifier(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_issue_message(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_issue_severity(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_load(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_merge_structure(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_mix(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_proportioned_scale(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_relative_luminance(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_resolve(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_resolved(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_seed_roles(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_shared_file(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_shared_files(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_structure_difference(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_structure_findings(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_structure_stated(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_theme_validate(
+    ): Int
     external fun uniffi_takt_core_checksum_func_availability_reasons(
     ): Int
     external fun uniffi_takt_core_checksum_func_plan_day(
@@ -1439,6 +1489,56 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_hlc_tick(`clock`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_builtin_platform_structures(`identifier`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_builtins(`platform`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_conformance_case(`files`: RustBuffer.ByValue,`selected`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_contrast_findings(`specification`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_contrast_ratio(`a`: RustBuffer.ByValue,`b`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Double
+    external fun uniffi_takt_core_fn_func_theme_decode(`data`: RustBuffer.ByValue,`source`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_file_encode(`file`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_file_from_specification(`specification`: RustBuffer.ByValue,`variants`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_identifier(`file`: RustBuffer.ByValue,`source`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_issue_message(`issue`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_issue_severity(`issue`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_load(`sources`: RustBuffer.ByValue,`platform`: RustBuffer.ByValue,`builtIns`: RustBuffer.ByValue,`defaultBase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_merge_structure(`overrides`: RustBuffer.ByValue,`base`: RustBuffer.ByValue,`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_mix(`a`: RustBuffer.ByValue,`b`: RustBuffer.ByValue,`t`: Double,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_proportioned_scale(`body`: Double,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_relative_luminance(`color`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Double
+    external fun uniffi_takt_core_fn_func_theme_resolve(`file`: RustBuffer.ByValue,`source`: RustBuffer.ByValue,`base`: RustBuffer.ByValue,`platform`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_resolved(`specification`: RustBuffer.ByValue,`requested`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_seed_roles(`seeds`: RustBuffer.ByValue,`appearance`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_shared_file(`identifier`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_shared_files(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_structure_difference(`base`: RustBuffer.ByValue,`target`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_structure_findings(`structure`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_structure_stated(`structure`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_theme_validate(`specification`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_availability_reasons(`candidate`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_plan_day(`candidates`: RustBuffer.ByValue,`runningId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1670,6 +1770,81 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_hlc_tick() and 0xFFFF) != 54173) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_builtin_platform_structures() and 0xFFFF) != 43492) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_builtins() and 0xFFFF) != 9982) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_conformance_case() and 0xFFFF) != 22428) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_contrast_findings() and 0xFFFF) != 38745) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_contrast_ratio() and 0xFFFF) != 45146) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_decode() and 0xFFFF) != 31625) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_file_encode() and 0xFFFF) != 50413) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_file_from_specification() and 0xFFFF) != 59581) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_identifier() and 0xFFFF) != 10670) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_issue_message() and 0xFFFF) != 56147) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_issue_severity() and 0xFFFF) != 13787) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_load() and 0xFFFF) != 55635) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_merge_structure() and 0xFFFF) != 42698) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_mix() and 0xFFFF) != 5192) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_proportioned_scale() and 0xFFFF) != 29611) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_relative_luminance() and 0xFFFF) != 22004) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_resolve() and 0xFFFF) != 28904) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_resolved() and 0xFFFF) != 50866) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_seed_roles() and 0xFFFF) != 61344) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_shared_file() and 0xFFFF) != 44208) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_shared_files() and 0xFFFF) != 13538) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_structure_difference() and 0xFFFF) != 4637) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_structure_findings() and 0xFFFF) != 22216) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_structure_stated() and 0xFFFF) != 27329) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_theme_validate() and 0xFFFF) != 53916) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_availability_reasons() and 0xFFFF) != 63153) {
@@ -7143,6 +7318,1738 @@ public object FfiConverterTypeContributionRow: FfiConverterRustBuffer<Contributi
 
 
 
+data class CoreThemeBorder (
+    var `hairline`: kotlin.Double
+    , 
+    var `emphasis`: kotlin.Double
+    , 
+    var `focusRing`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeBorder: FfiConverterRustBuffer<CoreThemeBorder> {
+    override fun read(buf: ByteBuffer): CoreThemeBorder {
+        return CoreThemeBorder(
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeBorder) = (
+            FfiConverterDouble.allocationSize(value.`hairline`) +
+            FfiConverterDouble.allocationSize(value.`emphasis`) +
+            FfiConverterDouble.allocationSize(value.`focusRing`)
+    )
+
+    override fun write(value: CoreThemeBorder, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`hairline`, buf)
+            FfiConverterDouble.write(value.`emphasis`, buf)
+            FfiConverterDouble.write(value.`focusRing`, buf)
+    }
+}
+
+
+
+/**
+ * A colour: four channels in 0…1.
+ */
+data class CoreThemeColor (
+    var `red`: kotlin.Double
+    , 
+    var `green`: kotlin.Double
+    , 
+    var `blue`: kotlin.Double
+    , 
+    var `alpha`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeColor: FfiConverterRustBuffer<CoreThemeColor> {
+    override fun read(buf: ByteBuffer): CoreThemeColor {
+        return CoreThemeColor(
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeColor) = (
+            FfiConverterDouble.allocationSize(value.`red`) +
+            FfiConverterDouble.allocationSize(value.`green`) +
+            FfiConverterDouble.allocationSize(value.`blue`) +
+            FfiConverterDouble.allocationSize(value.`alpha`)
+    )
+
+    override fun write(value: CoreThemeColor, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`red`, buf)
+            FfiConverterDouble.write(value.`green`, buf)
+            FfiConverterDouble.write(value.`blue`, buf)
+            FfiConverterDouble.write(value.`alpha`, buf)
+    }
+}
+
+
+
+/**
+ * One file decoded: the file, or `None` and why not.
+ */
+data class CoreThemeDecoded (
+    var `file`: CoreThemeFile?
+    , 
+    var `issues`: List<CoreThemeFileIssue>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeDecoded: FfiConverterRustBuffer<CoreThemeDecoded> {
+    override fun read(buf: ByteBuffer): CoreThemeDecoded {
+        return CoreThemeDecoded(
+            FfiConverterOptionalTypeCoreThemeFile.read(buf),
+            FfiConverterSequenceTypeCoreThemeFileIssue.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeDecoded) = (
+            FfiConverterOptionalTypeCoreThemeFile.allocationSize(value.`file`) +
+            FfiConverterSequenceTypeCoreThemeFileIssue.allocationSize(value.`issues`)
+    )
+
+    override fun write(value: CoreThemeDecoded, buf: ByteBuffer) {
+            FfiConverterOptionalTypeCoreThemeFile.write(value.`file`, buf)
+            FfiConverterSequenceTypeCoreThemeFileIssue.write(value.`issues`, buf)
+    }
+}
+
+
+
+data class CoreThemeFile (
+    var `identifier`: kotlin.String?
+    , 
+    var `name`: kotlin.String?
+    , 
+    var `summary`: kotlin.String?
+    , 
+    var `lockedAppearance`: CoreThemeFileLock
+    , 
+    var `extends`: CoreThemeFileBase
+    , 
+    var `seeds`: CoreThemeFilePalette?
+    , 
+    var `palette`: CoreThemeFilePalette?
+    , 
+    var `structure`: CoreThemeFileStructure?
+    , 
+    var `platforms`: CoreThemeFilePlatforms?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFile: FfiConverterRustBuffer<CoreThemeFile> {
+    override fun read(buf: ByteBuffer): CoreThemeFile {
+        return CoreThemeFile(
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeCoreThemeFileLock.read(buf),
+            FfiConverterTypeCoreThemeFileBase.read(buf),
+            FfiConverterOptionalTypeCoreThemeFilePalette.read(buf),
+            FfiConverterOptionalTypeCoreThemeFilePalette.read(buf),
+            FfiConverterOptionalTypeCoreThemeFileStructure.read(buf),
+            FfiConverterOptionalTypeCoreThemeFilePlatforms.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFile) = (
+            FfiConverterOptionalString.allocationSize(value.`identifier`) +
+            FfiConverterOptionalString.allocationSize(value.`name`) +
+            FfiConverterOptionalString.allocationSize(value.`summary`) +
+            FfiConverterTypeCoreThemeFileLock.allocationSize(value.`lockedAppearance`) +
+            FfiConverterTypeCoreThemeFileBase.allocationSize(value.`extends`) +
+            FfiConverterOptionalTypeCoreThemeFilePalette.allocationSize(value.`seeds`) +
+            FfiConverterOptionalTypeCoreThemeFilePalette.allocationSize(value.`palette`) +
+            FfiConverterOptionalTypeCoreThemeFileStructure.allocationSize(value.`structure`) +
+            FfiConverterOptionalTypeCoreThemeFilePlatforms.allocationSize(value.`platforms`)
+    )
+
+    override fun write(value: CoreThemeFile, buf: ByteBuffer) {
+            FfiConverterOptionalString.write(value.`identifier`, buf)
+            FfiConverterOptionalString.write(value.`name`, buf)
+            FfiConverterOptionalString.write(value.`summary`, buf)
+            FfiConverterTypeCoreThemeFileLock.write(value.`lockedAppearance`, buf)
+            FfiConverterTypeCoreThemeFileBase.write(value.`extends`, buf)
+            FfiConverterOptionalTypeCoreThemeFilePalette.write(value.`seeds`, buf)
+            FfiConverterOptionalTypeCoreThemeFilePalette.write(value.`palette`, buf)
+            FfiConverterOptionalTypeCoreThemeFileStructure.write(value.`structure`, buf)
+            FfiConverterOptionalTypeCoreThemeFilePlatforms.write(value.`platforms`, buf)
+    }
+}
+
+
+
+data class CoreThemeFileBorder (
+    var `hairline`: kotlin.Double?
+    , 
+    var `emphasis`: kotlin.Double?
+    , 
+    var `focusRing`: kotlin.Double?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileBorder: FfiConverterRustBuffer<CoreThemeFileBorder> {
+    override fun read(buf: ByteBuffer): CoreThemeFileBorder {
+        return CoreThemeFileBorder(
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileBorder) = (
+            FfiConverterOptionalDouble.allocationSize(value.`hairline`) +
+            FfiConverterOptionalDouble.allocationSize(value.`emphasis`) +
+            FfiConverterOptionalDouble.allocationSize(value.`focusRing`)
+    )
+
+    override fun write(value: CoreThemeFileBorder, buf: ByteBuffer) {
+            FfiConverterOptionalDouble.write(value.`hairline`, buf)
+            FfiConverterOptionalDouble.write(value.`emphasis`, buf)
+            FfiConverterOptionalDouble.write(value.`focusRing`, buf)
+    }
+}
+
+
+
+data class CoreThemeFileFace (
+    var `families`: List<kotlin.String>?
+    , 
+    var `design`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileFace: FfiConverterRustBuffer<CoreThemeFileFace> {
+    override fun read(buf: ByteBuffer): CoreThemeFileFace {
+        return CoreThemeFileFace(
+            FfiConverterOptionalSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileFace) = (
+            FfiConverterOptionalSequenceString.allocationSize(value.`families`) +
+            FfiConverterOptionalString.allocationSize(value.`design`)
+    )
+
+    override fun write(value: CoreThemeFileFace, buf: ByteBuffer) {
+            FfiConverterOptionalSequenceString.write(value.`families`, buf)
+            FfiConverterOptionalString.write(value.`design`, buf)
+    }
+}
+
+
+
+/**
+ * Something a theme file got wrong, in a sentence someone editing it can act on.
+ */
+data class CoreThemeFileIssue (
+    /**
+     * The file name, e.g. `dusk.json`.
+     */
+    var `source`: kotlin.String
+    , 
+    var `severity`: CoreThemeIssueSeverity
+    , 
+    var `message`: kotlin.String
+    , 
+    /**
+     * A finding of the audit of the theme the file produced, as opposed to
+     * a problem with what the file says.
+     */
+    var `isAudit`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileIssue: FfiConverterRustBuffer<CoreThemeFileIssue> {
+    override fun read(buf: ByteBuffer): CoreThemeFileIssue {
+        return CoreThemeFileIssue(
+            FfiConverterString.read(buf),
+            FfiConverterTypeCoreThemeIssueSeverity.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileIssue) = (
+            FfiConverterString.allocationSize(value.`source`) +
+            FfiConverterTypeCoreThemeIssueSeverity.allocationSize(value.`severity`) +
+            FfiConverterString.allocationSize(value.`message`) +
+            FfiConverterBoolean.allocationSize(value.`isAudit`)
+    )
+
+    override fun write(value: CoreThemeFileIssue, buf: ByteBuffer) {
+            FfiConverterString.write(value.`source`, buf)
+            FfiConverterTypeCoreThemeIssueSeverity.write(value.`severity`, buf)
+            FfiConverterString.write(value.`message`, buf)
+            FfiConverterBoolean.write(value.`isAudit`, buf)
+    }
+}
+
+
+
+data class CoreThemeFileMicroLabel (
+    var `size`: kotlin.Double?
+    , 
+    var `weight`: kotlin.String?
+    , 
+    var `tracking`: kotlin.Double?
+    , 
+    var `uppercase`: kotlin.Boolean?
+    , 
+    var `role`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileMicroLabel: FfiConverterRustBuffer<CoreThemeFileMicroLabel> {
+    override fun read(buf: ByteBuffer): CoreThemeFileMicroLabel {
+        return CoreThemeFileMicroLabel(
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileMicroLabel) = (
+            FfiConverterOptionalDouble.allocationSize(value.`size`) +
+            FfiConverterOptionalString.allocationSize(value.`weight`) +
+            FfiConverterOptionalDouble.allocationSize(value.`tracking`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`uppercase`) +
+            FfiConverterOptionalString.allocationSize(value.`role`)
+    )
+
+    override fun write(value: CoreThemeFileMicroLabel, buf: ByteBuffer) {
+            FfiConverterOptionalDouble.write(value.`size`, buf)
+            FfiConverterOptionalString.write(value.`weight`, buf)
+            FfiConverterOptionalDouble.write(value.`tracking`, buf)
+            FfiConverterOptionalBoolean.write(value.`uppercase`, buf)
+            FfiConverterOptionalString.write(value.`role`, buf)
+    }
+}
+
+
+
+/**
+ * What became of one file.
+ */
+data class CoreThemeFileOutcome (
+    var `source`: kotlin.String
+    , 
+    /**
+     * `None` when the theme was skipped; `skipped_reason` says why.
+     */
+    var `specification`: CoreThemeSpecification?
+    , 
+    var `skippedReason`: kotlin.String?
+    , 
+    /**
+     * Everything reported about this file, worst first, the audit included.
+     */
+    var `issues`: List<CoreThemeFileIssue>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileOutcome: FfiConverterRustBuffer<CoreThemeFileOutcome> {
+    override fun read(buf: ByteBuffer): CoreThemeFileOutcome {
+        return CoreThemeFileOutcome(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalTypeCoreThemeSpecification.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceTypeCoreThemeFileIssue.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileOutcome) = (
+            FfiConverterString.allocationSize(value.`source`) +
+            FfiConverterOptionalTypeCoreThemeSpecification.allocationSize(value.`specification`) +
+            FfiConverterOptionalString.allocationSize(value.`skippedReason`) +
+            FfiConverterSequenceTypeCoreThemeFileIssue.allocationSize(value.`issues`)
+    )
+
+    override fun write(value: CoreThemeFileOutcome, buf: ByteBuffer) {
+            FfiConverterString.write(value.`source`, buf)
+            FfiConverterOptionalTypeCoreThemeSpecification.write(value.`specification`, buf)
+            FfiConverterOptionalString.write(value.`skippedReason`, buf)
+            FfiConverterSequenceTypeCoreThemeFileIssue.write(value.`issues`, buf)
+    }
+}
+
+
+
+/**
+ * Name → hex per appearance: a role under `palette`, a seed under `seeds`.
+ */
+data class CoreThemeFilePalette (
+    var `light`: Map<kotlin.String, kotlin.String>?
+    , 
+    var `dark`: Map<kotlin.String, kotlin.String>?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFilePalette: FfiConverterRustBuffer<CoreThemeFilePalette> {
+    override fun read(buf: ByteBuffer): CoreThemeFilePalette {
+        return CoreThemeFilePalette(
+            FfiConverterOptionalMapStringString.read(buf),
+            FfiConverterOptionalMapStringString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFilePalette) = (
+            FfiConverterOptionalMapStringString.allocationSize(value.`light`) +
+            FfiConverterOptionalMapStringString.allocationSize(value.`dark`)
+    )
+
+    override fun write(value: CoreThemeFilePalette, buf: ByteBuffer) {
+            FfiConverterOptionalMapStringString.write(value.`light`, buf)
+            FfiConverterOptionalMapStringString.write(value.`dark`, buf)
+    }
+}
+
+
+
+/**
+ * One platform's entry under `platforms`: structure only.
+ */
+data class CoreThemeFilePlatformOverride (
+    var `structure`: CoreThemeFileStructure?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFilePlatformOverride: FfiConverterRustBuffer<CoreThemeFilePlatformOverride> {
+    override fun read(buf: ByteBuffer): CoreThemeFilePlatformOverride {
+        return CoreThemeFilePlatformOverride(
+            FfiConverterOptionalTypeCoreThemeFileStructure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFilePlatformOverride) = (
+            FfiConverterOptionalTypeCoreThemeFileStructure.allocationSize(value.`structure`)
+    )
+
+    override fun write(value: CoreThemeFilePlatformOverride, buf: ByteBuffer) {
+            FfiConverterOptionalTypeCoreThemeFileStructure.write(value.`structure`, buf)
+    }
+}
+
+
+
+data class CoreThemeFilePlatforms (
+    var `macos`: CoreThemeFilePlatformOverride?
+    , 
+    var `ios`: CoreThemeFilePlatformOverride?
+    , 
+    var `android`: CoreThemeFilePlatformOverride?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFilePlatforms: FfiConverterRustBuffer<CoreThemeFilePlatforms> {
+    override fun read(buf: ByteBuffer): CoreThemeFilePlatforms {
+        return CoreThemeFilePlatforms(
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.read(buf),
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.read(buf),
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFilePlatforms) = (
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.allocationSize(value.`macos`) +
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.allocationSize(value.`ios`) +
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.allocationSize(value.`android`)
+    )
+
+    override fun write(value: CoreThemeFilePlatforms, buf: ByteBuffer) {
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.write(value.`macos`, buf)
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.write(value.`ios`, buf)
+            FfiConverterOptionalTypeCoreThemeFilePlatformOverride.write(value.`android`, buf)
+    }
+}
+
+
+
+data class CoreThemeFileRadius (
+    var `panel`: kotlin.Double?
+    , 
+    var `row`: kotlin.Double?
+    , 
+    var `control`: kotlin.Double?
+    , 
+    var `pill`: kotlin.Double?
+    , 
+    var `shell`: kotlin.Double?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileRadius: FfiConverterRustBuffer<CoreThemeFileRadius> {
+    override fun read(buf: ByteBuffer): CoreThemeFileRadius {
+        return CoreThemeFileRadius(
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileRadius) = (
+            FfiConverterOptionalDouble.allocationSize(value.`panel`) +
+            FfiConverterOptionalDouble.allocationSize(value.`row`) +
+            FfiConverterOptionalDouble.allocationSize(value.`control`) +
+            FfiConverterOptionalDouble.allocationSize(value.`pill`) +
+            FfiConverterOptionalDouble.allocationSize(value.`shell`)
+    )
+
+    override fun write(value: CoreThemeFileRadius, buf: ByteBuffer) {
+            FfiConverterOptionalDouble.write(value.`panel`, buf)
+            FfiConverterOptionalDouble.write(value.`row`, buf)
+            FfiConverterOptionalDouble.write(value.`control`, buf)
+            FfiConverterOptionalDouble.write(value.`pill`, buf)
+            FfiConverterOptionalDouble.write(value.`shell`, buf)
+    }
+}
+
+
+
+/**
+ * One file's bytes, named.
+ */
+data class CoreThemeFileSource (
+    var `name`: kotlin.String
+    , 
+    var `data`: kotlin.ByteArray
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileSource: FfiConverterRustBuffer<CoreThemeFileSource> {
+    override fun read(buf: ByteBuffer): CoreThemeFileSource {
+        return CoreThemeFileSource(
+            FfiConverterString.read(buf),
+            FfiConverterByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileSource) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterByteArray.allocationSize(value.`data`)
+    )
+
+    override fun write(value: CoreThemeFileSource, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterByteArray.write(value.`data`, buf)
+    }
+}
+
+
+
+data class CoreThemeFileSpacing (
+    var `xxs`: kotlin.Double?
+    , 
+    var `xs`: kotlin.Double?
+    , 
+    var `sm`: kotlin.Double?
+    , 
+    var `md`: kotlin.Double?
+    , 
+    var `lg`: kotlin.Double?
+    , 
+    var `xl`: kotlin.Double?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileSpacing: FfiConverterRustBuffer<CoreThemeFileSpacing> {
+    override fun read(buf: ByteBuffer): CoreThemeFileSpacing {
+        return CoreThemeFileSpacing(
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileSpacing) = (
+            FfiConverterOptionalDouble.allocationSize(value.`xxs`) +
+            FfiConverterOptionalDouble.allocationSize(value.`xs`) +
+            FfiConverterOptionalDouble.allocationSize(value.`sm`) +
+            FfiConverterOptionalDouble.allocationSize(value.`md`) +
+            FfiConverterOptionalDouble.allocationSize(value.`lg`) +
+            FfiConverterOptionalDouble.allocationSize(value.`xl`)
+    )
+
+    override fun write(value: CoreThemeFileSpacing, buf: ByteBuffer) {
+            FfiConverterOptionalDouble.write(value.`xxs`, buf)
+            FfiConverterOptionalDouble.write(value.`xs`, buf)
+            FfiConverterOptionalDouble.write(value.`sm`, buf)
+            FfiConverterOptionalDouble.write(value.`md`, buf)
+            FfiConverterOptionalDouble.write(value.`lg`, buf)
+            FfiConverterOptionalDouble.write(value.`xl`, buf)
+    }
+}
+
+
+
+data class CoreThemeFileStructure (
+    var `radius`: CoreThemeFileRadius?
+    , 
+    var `border`: CoreThemeFileBorder?
+    , 
+    var `spacing`: CoreThemeFileSpacing?
+    , 
+    var `typography`: CoreThemeFileTypography?
+    , 
+    var `touchTarget`: kotlin.Double?
+    , 
+    var `usesShadows`: kotlin.Boolean?
+    , 
+    var `usesGradientsOnChrome`: kotlin.Boolean?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileStructure: FfiConverterRustBuffer<CoreThemeFileStructure> {
+    override fun read(buf: ByteBuffer): CoreThemeFileStructure {
+        return CoreThemeFileStructure(
+            FfiConverterOptionalTypeCoreThemeFileRadius.read(buf),
+            FfiConverterOptionalTypeCoreThemeFileBorder.read(buf),
+            FfiConverterOptionalTypeCoreThemeFileSpacing.read(buf),
+            FfiConverterOptionalTypeCoreThemeFileTypography.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileStructure) = (
+            FfiConverterOptionalTypeCoreThemeFileRadius.allocationSize(value.`radius`) +
+            FfiConverterOptionalTypeCoreThemeFileBorder.allocationSize(value.`border`) +
+            FfiConverterOptionalTypeCoreThemeFileSpacing.allocationSize(value.`spacing`) +
+            FfiConverterOptionalTypeCoreThemeFileTypography.allocationSize(value.`typography`) +
+            FfiConverterOptionalDouble.allocationSize(value.`touchTarget`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`usesShadows`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`usesGradientsOnChrome`)
+    )
+
+    override fun write(value: CoreThemeFileStructure, buf: ByteBuffer) {
+            FfiConverterOptionalTypeCoreThemeFileRadius.write(value.`radius`, buf)
+            FfiConverterOptionalTypeCoreThemeFileBorder.write(value.`border`, buf)
+            FfiConverterOptionalTypeCoreThemeFileSpacing.write(value.`spacing`, buf)
+            FfiConverterOptionalTypeCoreThemeFileTypography.write(value.`typography`, buf)
+            FfiConverterOptionalDouble.write(value.`touchTarget`, buf)
+            FfiConverterOptionalBoolean.write(value.`usesShadows`, buf)
+            FfiConverterOptionalBoolean.write(value.`usesGradientsOnChrome`, buf)
+    }
+}
+
+
+
+data class CoreThemeFileTypeScale (
+    var `caption`: kotlin.Double?
+    , 
+    var `body`: kotlin.Double?
+    , 
+    var `title`: kotlin.Double?
+    , 
+    var `display`: kotlin.Double?
+    , 
+    var `hero`: kotlin.Double?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileTypeScale: FfiConverterRustBuffer<CoreThemeFileTypeScale> {
+    override fun read(buf: ByteBuffer): CoreThemeFileTypeScale {
+        return CoreThemeFileTypeScale(
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileTypeScale) = (
+            FfiConverterOptionalDouble.allocationSize(value.`caption`) +
+            FfiConverterOptionalDouble.allocationSize(value.`body`) +
+            FfiConverterOptionalDouble.allocationSize(value.`title`) +
+            FfiConverterOptionalDouble.allocationSize(value.`display`) +
+            FfiConverterOptionalDouble.allocationSize(value.`hero`)
+    )
+
+    override fun write(value: CoreThemeFileTypeScale, buf: ByteBuffer) {
+            FfiConverterOptionalDouble.write(value.`caption`, buf)
+            FfiConverterOptionalDouble.write(value.`body`, buf)
+            FfiConverterOptionalDouble.write(value.`title`, buf)
+            FfiConverterOptionalDouble.write(value.`display`, buf)
+            FfiConverterOptionalDouble.write(value.`hero`, buf)
+    }
+}
+
+
+
+data class CoreThemeFileTypography (
+    var `display`: CoreThemeFileFace?
+    , 
+    var `body`: CoreThemeFileFace?
+    , 
+    var `mono`: CoreThemeFileFace?
+    , 
+    var `bodySize`: kotlin.Double?
+    , 
+    var `scale`: CoreThemeFileTypeScale?
+    , 
+    var `microLabel`: CoreThemeFileMicroLabel?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileTypography: FfiConverterRustBuffer<CoreThemeFileTypography> {
+    override fun read(buf: ByteBuffer): CoreThemeFileTypography {
+        return CoreThemeFileTypography(
+            FfiConverterOptionalTypeCoreThemeFileFace.read(buf),
+            FfiConverterOptionalTypeCoreThemeFileFace.read(buf),
+            FfiConverterOptionalTypeCoreThemeFileFace.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalTypeCoreThemeFileTypeScale.read(buf),
+            FfiConverterOptionalTypeCoreThemeFileMicroLabel.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFileTypography) = (
+            FfiConverterOptionalTypeCoreThemeFileFace.allocationSize(value.`display`) +
+            FfiConverterOptionalTypeCoreThemeFileFace.allocationSize(value.`body`) +
+            FfiConverterOptionalTypeCoreThemeFileFace.allocationSize(value.`mono`) +
+            FfiConverterOptionalDouble.allocationSize(value.`bodySize`) +
+            FfiConverterOptionalTypeCoreThemeFileTypeScale.allocationSize(value.`scale`) +
+            FfiConverterOptionalTypeCoreThemeFileMicroLabel.allocationSize(value.`microLabel`)
+    )
+
+    override fun write(value: CoreThemeFileTypography, buf: ByteBuffer) {
+            FfiConverterOptionalTypeCoreThemeFileFace.write(value.`display`, buf)
+            FfiConverterOptionalTypeCoreThemeFileFace.write(value.`body`, buf)
+            FfiConverterOptionalTypeCoreThemeFileFace.write(value.`mono`, buf)
+            FfiConverterOptionalDouble.write(value.`bodySize`, buf)
+            FfiConverterOptionalTypeCoreThemeFileTypeScale.write(value.`scale`, buf)
+            FfiConverterOptionalTypeCoreThemeFileMicroLabel.write(value.`microLabel`, buf)
+    }
+}
+
+
+
+data class CoreThemeFontFace (
+    /**
+     * Most-wanted first. Empty means "use the design".
+     */
+    var `families`: List<kotlin.String>
+    , 
+    /**
+     * `serif`, `sans`, `monospaced` or `rounded`.
+     */
+    var `design`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFontFace: FfiConverterRustBuffer<CoreThemeFontFace> {
+    override fun read(buf: ByteBuffer): CoreThemeFontFace {
+        return CoreThemeFontFace(
+            FfiConverterSequenceString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeFontFace) = (
+            FfiConverterSequenceString.allocationSize(value.`families`) +
+            FfiConverterString.allocationSize(value.`design`)
+    )
+
+    override fun write(value: CoreThemeFontFace, buf: ByteBuffer) {
+            FfiConverterSequenceString.write(value.`families`, buf)
+            FfiConverterString.write(value.`design`, buf)
+    }
+}
+
+
+
+/**
+ * A structure merged, and what was wrong with the overrides.
+ */
+data class CoreThemeMergedStructure (
+    var `structure`: CoreThemeStructure
+    , 
+    var `reports`: List<CoreThemeReport>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeMergedStructure: FfiConverterRustBuffer<CoreThemeMergedStructure> {
+    override fun read(buf: ByteBuffer): CoreThemeMergedStructure {
+        return CoreThemeMergedStructure(
+            FfiConverterTypeCoreThemeStructure.read(buf),
+            FfiConverterSequenceTypeCoreThemeReport.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeMergedStructure) = (
+            FfiConverterTypeCoreThemeStructure.allocationSize(value.`structure`) +
+            FfiConverterSequenceTypeCoreThemeReport.allocationSize(value.`reports`)
+    )
+
+    override fun write(value: CoreThemeMergedStructure, buf: ByteBuffer) {
+            FfiConverterTypeCoreThemeStructure.write(value.`structure`, buf)
+            FfiConverterSequenceTypeCoreThemeReport.write(value.`reports`, buf)
+    }
+}
+
+
+
+data class CoreThemeMicroLabel (
+    var `size`: kotlin.Double
+    , 
+    /**
+     * `regular`, `medium`, `semibold`, `bold` or `black`.
+     */
+    var `weight`: kotlin.String
+    , 
+    /**
+     * In em.
+     */
+    var `tracking`: kotlin.Double
+    , 
+    var `isUppercased`: kotlin.Boolean
+    , 
+    /**
+     * A colour role.
+     */
+    var `role`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeMicroLabel: FfiConverterRustBuffer<CoreThemeMicroLabel> {
+    override fun read(buf: ByteBuffer): CoreThemeMicroLabel {
+        return CoreThemeMicroLabel(
+            FfiConverterDouble.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeMicroLabel) = (
+            FfiConverterDouble.allocationSize(value.`size`) +
+            FfiConverterString.allocationSize(value.`weight`) +
+            FfiConverterDouble.allocationSize(value.`tracking`) +
+            FfiConverterBoolean.allocationSize(value.`isUppercased`) +
+            FfiConverterString.allocationSize(value.`role`)
+    )
+
+    override fun write(value: CoreThemeMicroLabel, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`size`, buf)
+            FfiConverterString.write(value.`weight`, buf)
+            FfiConverterDouble.write(value.`tracking`, buf)
+            FfiConverterBoolean.write(value.`isUppercased`, buf)
+            FfiConverterString.write(value.`role`, buf)
+    }
+}
+
+
+
+/**
+ * One input file of a case, as text: it may be invalid JSON on purpose.
+ */
+data class CoreThemeNamedText (
+    var `name`: kotlin.String
+    , 
+    var `json`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeNamedText: FfiConverterRustBuffer<CoreThemeNamedText> {
+    override fun read(buf: ByteBuffer): CoreThemeNamedText {
+        return CoreThemeNamedText(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeNamedText) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`json`)
+    )
+
+    override fun write(value: CoreThemeNamedText, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`json`, buf)
+    }
+}
+
+
+
+/**
+ * Two tables of literal colour, one per appearance.
+ */
+data class CoreThemePalette (
+    var `light`: Map<kotlin.String, CoreThemeColor>
+    , 
+    var `dark`: Map<kotlin.String, CoreThemeColor>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemePalette: FfiConverterRustBuffer<CoreThemePalette> {
+    override fun read(buf: ByteBuffer): CoreThemePalette {
+        return CoreThemePalette(
+            FfiConverterMapStringTypeCoreThemeColor.read(buf),
+            FfiConverterMapStringTypeCoreThemeColor.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemePalette) = (
+            FfiConverterMapStringTypeCoreThemeColor.allocationSize(value.`light`) +
+            FfiConverterMapStringTypeCoreThemeColor.allocationSize(value.`dark`)
+    )
+
+    override fun write(value: CoreThemePalette, buf: ByteBuffer) {
+            FfiConverterMapStringTypeCoreThemeColor.write(value.`light`, buf)
+            FfiConverterMapStringTypeCoreThemeColor.write(value.`dark`, buf)
+    }
+}
+
+
+
+/**
+ * A theme as one platform resolved it.
+ */
+data class CoreThemePlatformSpecification (
+    var `platform`: CoreThemePlatform
+    , 
+    var `specification`: CoreThemeSpecification
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemePlatformSpecification: FfiConverterRustBuffer<CoreThemePlatformSpecification> {
+    override fun read(buf: ByteBuffer): CoreThemePlatformSpecification {
+        return CoreThemePlatformSpecification(
+            FfiConverterTypeCoreThemePlatform.read(buf),
+            FfiConverterTypeCoreThemeSpecification.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemePlatformSpecification) = (
+            FfiConverterTypeCoreThemePlatform.allocationSize(value.`platform`) +
+            FfiConverterTypeCoreThemeSpecification.allocationSize(value.`specification`)
+    )
+
+    override fun write(value: CoreThemePlatformSpecification, buf: ByteBuffer) {
+            FfiConverterTypeCoreThemePlatform.write(value.`platform`, buf)
+            FfiConverterTypeCoreThemeSpecification.write(value.`specification`, buf)
+    }
+}
+
+
+
+/**
+ * A built-in's partial structure for one platform.
+ */
+data class CoreThemePlatformStructure (
+    var `platform`: CoreThemePlatform
+    , 
+    var `structure`: CoreThemeFileStructure
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemePlatformStructure: FfiConverterRustBuffer<CoreThemePlatformStructure> {
+    override fun read(buf: ByteBuffer): CoreThemePlatformStructure {
+        return CoreThemePlatformStructure(
+            FfiConverterTypeCoreThemePlatform.read(buf),
+            FfiConverterTypeCoreThemeFileStructure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemePlatformStructure) = (
+            FfiConverterTypeCoreThemePlatform.allocationSize(value.`platform`) +
+            FfiConverterTypeCoreThemeFileStructure.allocationSize(value.`structure`)
+    )
+
+    override fun write(value: CoreThemePlatformStructure, buf: ByteBuffer) {
+            FfiConverterTypeCoreThemePlatform.write(value.`platform`, buf)
+            FfiConverterTypeCoreThemeFileStructure.write(value.`structure`, buf)
+    }
+}
+
+
+
+data class CoreThemeRadius (
+    var `panel`: kotlin.Double
+    , 
+    var `row`: kotlin.Double
+    , 
+    var `control`: kotlin.Double
+    , 
+    var `pill`: kotlin.Double
+    , 
+    var `shell`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeRadius: FfiConverterRustBuffer<CoreThemeRadius> {
+    override fun read(buf: ByteBuffer): CoreThemeRadius {
+        return CoreThemeRadius(
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeRadius) = (
+            FfiConverterDouble.allocationSize(value.`panel`) +
+            FfiConverterDouble.allocationSize(value.`row`) +
+            FfiConverterDouble.allocationSize(value.`control`) +
+            FfiConverterDouble.allocationSize(value.`pill`) +
+            FfiConverterDouble.allocationSize(value.`shell`)
+    )
+
+    override fun write(value: CoreThemeRadius, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`panel`, buf)
+            FfiConverterDouble.write(value.`row`, buf)
+            FfiConverterDouble.write(value.`control`, buf)
+            FfiConverterDouble.write(value.`pill`, buf)
+            FfiConverterDouble.write(value.`shell`, buf)
+    }
+}
+
+
+
+data class CoreThemeReport (
+    var `severity`: CoreThemeIssueSeverity
+    , 
+    var `message`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeReport: FfiConverterRustBuffer<CoreThemeReport> {
+    override fun read(buf: ByteBuffer): CoreThemeReport {
+        return CoreThemeReport(
+            FfiConverterTypeCoreThemeIssueSeverity.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeReport) = (
+            FfiConverterTypeCoreThemeIssueSeverity.allocationSize(value.`severity`) +
+            FfiConverterString.allocationSize(value.`message`)
+    )
+
+    override fun write(value: CoreThemeReport, buf: ByteBuffer) {
+            FfiConverterTypeCoreThemeIssueSeverity.write(value.`severity`, buf)
+            FfiConverterString.write(value.`message`, buf)
+    }
+}
+
+
+
+/**
+ * A theme fully resolved for one platform and one requested appearance.
+ */
+data class CoreThemeResolved (
+    var `identifier`: kotlin.String
+    , 
+    var `name`: kotlin.String
+    , 
+    var `lockedAppearance`: CoreThemeAppearance?
+    , 
+    /**
+     * The appearance actually drawn: the lock, or the one asked for.
+     */
+    var `appearance`: CoreThemeAppearance
+    , 
+    /**
+     * Every role, lowercase `#rrggbb` or `#rrggbbaa`, as drawn.
+     */
+    var `colors`: Map<kotlin.String, kotlin.String>
+    , 
+    var `structure`: CoreThemeStructure
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeResolved: FfiConverterRustBuffer<CoreThemeResolved> {
+    override fun read(buf: ByteBuffer): CoreThemeResolved {
+        return CoreThemeResolved(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalTypeCoreThemeAppearance.read(buf),
+            FfiConverterTypeCoreThemeAppearance.read(buf),
+            FfiConverterMapStringString.read(buf),
+            FfiConverterTypeCoreThemeStructure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeResolved) = (
+            FfiConverterString.allocationSize(value.`identifier`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterOptionalTypeCoreThemeAppearance.allocationSize(value.`lockedAppearance`) +
+            FfiConverterTypeCoreThemeAppearance.allocationSize(value.`appearance`) +
+            FfiConverterMapStringString.allocationSize(value.`colors`) +
+            FfiConverterTypeCoreThemeStructure.allocationSize(value.`structure`)
+    )
+
+    override fun write(value: CoreThemeResolved, buf: ByteBuffer) {
+            FfiConverterString.write(value.`identifier`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterOptionalTypeCoreThemeAppearance.write(value.`lockedAppearance`, buf)
+            FfiConverterTypeCoreThemeAppearance.write(value.`appearance`, buf)
+            FfiConverterMapStringString.write(value.`colors`, buf)
+            FfiConverterTypeCoreThemeStructure.write(value.`structure`, buf)
+    }
+}
+
+
+
+data class CoreThemeSeeds (
+    var `background`: CoreThemeColor?
+    , 
+    var `foreground`: CoreThemeColor?
+    , 
+    var `accent`: CoreThemeColor?
+    , 
+    var `success`: CoreThemeColor?
+    , 
+    var `danger`: CoreThemeColor?
+    , 
+    var `warning`: CoreThemeColor?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeSeeds: FfiConverterRustBuffer<CoreThemeSeeds> {
+    override fun read(buf: ByteBuffer): CoreThemeSeeds {
+        return CoreThemeSeeds(
+            FfiConverterOptionalTypeCoreThemeColor.read(buf),
+            FfiConverterOptionalTypeCoreThemeColor.read(buf),
+            FfiConverterOptionalTypeCoreThemeColor.read(buf),
+            FfiConverterOptionalTypeCoreThemeColor.read(buf),
+            FfiConverterOptionalTypeCoreThemeColor.read(buf),
+            FfiConverterOptionalTypeCoreThemeColor.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeSeeds) = (
+            FfiConverterOptionalTypeCoreThemeColor.allocationSize(value.`background`) +
+            FfiConverterOptionalTypeCoreThemeColor.allocationSize(value.`foreground`) +
+            FfiConverterOptionalTypeCoreThemeColor.allocationSize(value.`accent`) +
+            FfiConverterOptionalTypeCoreThemeColor.allocationSize(value.`success`) +
+            FfiConverterOptionalTypeCoreThemeColor.allocationSize(value.`danger`) +
+            FfiConverterOptionalTypeCoreThemeColor.allocationSize(value.`warning`)
+    )
+
+    override fun write(value: CoreThemeSeeds, buf: ByteBuffer) {
+            FfiConverterOptionalTypeCoreThemeColor.write(value.`background`, buf)
+            FfiConverterOptionalTypeCoreThemeColor.write(value.`foreground`, buf)
+            FfiConverterOptionalTypeCoreThemeColor.write(value.`accent`, buf)
+            FfiConverterOptionalTypeCoreThemeColor.write(value.`success`, buf)
+            FfiConverterOptionalTypeCoreThemeColor.write(value.`danger`, buf)
+            FfiConverterOptionalTypeCoreThemeColor.write(value.`warning`, buf)
+    }
+}
+
+
+
+data class CoreThemeSpacing (
+    var `xxs`: kotlin.Double
+    , 
+    var `xs`: kotlin.Double
+    , 
+    var `sm`: kotlin.Double
+    , 
+    var `md`: kotlin.Double
+    , 
+    var `lg`: kotlin.Double
+    , 
+    var `xl`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeSpacing: FfiConverterRustBuffer<CoreThemeSpacing> {
+    override fun read(buf: ByteBuffer): CoreThemeSpacing {
+        return CoreThemeSpacing(
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeSpacing) = (
+            FfiConverterDouble.allocationSize(value.`xxs`) +
+            FfiConverterDouble.allocationSize(value.`xs`) +
+            FfiConverterDouble.allocationSize(value.`sm`) +
+            FfiConverterDouble.allocationSize(value.`md`) +
+            FfiConverterDouble.allocationSize(value.`lg`) +
+            FfiConverterDouble.allocationSize(value.`xl`)
+    )
+
+    override fun write(value: CoreThemeSpacing, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`xxs`, buf)
+            FfiConverterDouble.write(value.`xs`, buf)
+            FfiConverterDouble.write(value.`sm`, buf)
+            FfiConverterDouble.write(value.`md`, buf)
+            FfiConverterDouble.write(value.`lg`, buf)
+            FfiConverterDouble.write(value.`xl`, buf)
+    }
+}
+
+
+
+/**
+ * A whole theme.
+ */
+data class CoreThemeSpecification (
+    var `identifier`: kotlin.String
+    , 
+    var `name`: kotlin.String
+    , 
+    var `summary`: kotlin.String
+    , 
+    /**
+     * A theme that exists in one appearance only.
+     */
+    var `lockedAppearance`: CoreThemeAppearance?
+    , 
+    var `palette`: CoreThemePalette
+    , 
+    var `structure`: CoreThemeStructure
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeSpecification: FfiConverterRustBuffer<CoreThemeSpecification> {
+    override fun read(buf: ByteBuffer): CoreThemeSpecification {
+        return CoreThemeSpecification(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalTypeCoreThemeAppearance.read(buf),
+            FfiConverterTypeCoreThemePalette.read(buf),
+            FfiConverterTypeCoreThemeStructure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeSpecification) = (
+            FfiConverterString.allocationSize(value.`identifier`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`summary`) +
+            FfiConverterOptionalTypeCoreThemeAppearance.allocationSize(value.`lockedAppearance`) +
+            FfiConverterTypeCoreThemePalette.allocationSize(value.`palette`) +
+            FfiConverterTypeCoreThemeStructure.allocationSize(value.`structure`)
+    )
+
+    override fun write(value: CoreThemeSpecification, buf: ByteBuffer) {
+            FfiConverterString.write(value.`identifier`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`summary`, buf)
+            FfiConverterOptionalTypeCoreThemeAppearance.write(value.`lockedAppearance`, buf)
+            FfiConverterTypeCoreThemePalette.write(value.`palette`, buf)
+            FfiConverterTypeCoreThemeStructure.write(value.`structure`, buf)
+    }
+}
+
+
+
+/**
+ * Everything about a theme that is not colour.
+ */
+data class CoreThemeStructure (
+    var `radius`: CoreThemeRadius
+    , 
+    var `border`: CoreThemeBorder
+    , 
+    var `spacing`: CoreThemeSpacing
+    , 
+    var `typography`: CoreThemeTypography
+    , 
+    /**
+     * The minimum hit area, in points; 0 for a pointer platform.
+     */
+    var `touchTarget`: kotlin.Double
+    , 
+    var `usesShadows`: kotlin.Boolean
+    , 
+    var `usesGradientsOnChrome`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeStructure: FfiConverterRustBuffer<CoreThemeStructure> {
+    override fun read(buf: ByteBuffer): CoreThemeStructure {
+        return CoreThemeStructure(
+            FfiConverterTypeCoreThemeRadius.read(buf),
+            FfiConverterTypeCoreThemeBorder.read(buf),
+            FfiConverterTypeCoreThemeSpacing.read(buf),
+            FfiConverterTypeCoreThemeTypography.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeStructure) = (
+            FfiConverterTypeCoreThemeRadius.allocationSize(value.`radius`) +
+            FfiConverterTypeCoreThemeBorder.allocationSize(value.`border`) +
+            FfiConverterTypeCoreThemeSpacing.allocationSize(value.`spacing`) +
+            FfiConverterTypeCoreThemeTypography.allocationSize(value.`typography`) +
+            FfiConverterDouble.allocationSize(value.`touchTarget`) +
+            FfiConverterBoolean.allocationSize(value.`usesShadows`) +
+            FfiConverterBoolean.allocationSize(value.`usesGradientsOnChrome`)
+    )
+
+    override fun write(value: CoreThemeStructure, buf: ByteBuffer) {
+            FfiConverterTypeCoreThemeRadius.write(value.`radius`, buf)
+            FfiConverterTypeCoreThemeBorder.write(value.`border`, buf)
+            FfiConverterTypeCoreThemeSpacing.write(value.`spacing`, buf)
+            FfiConverterTypeCoreThemeTypography.write(value.`typography`, buf)
+            FfiConverterDouble.write(value.`touchTarget`, buf)
+            FfiConverterBoolean.write(value.`usesShadows`, buf)
+            FfiConverterBoolean.write(value.`usesGradientsOnChrome`, buf)
+    }
+}
+
+
+
+data class CoreThemeTypeScale (
+    var `caption`: kotlin.Double
+    , 
+    var `body`: kotlin.Double
+    , 
+    var `title`: kotlin.Double
+    , 
+    var `display`: kotlin.Double
+    , 
+    var `hero`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeTypeScale: FfiConverterRustBuffer<CoreThemeTypeScale> {
+    override fun read(buf: ByteBuffer): CoreThemeTypeScale {
+        return CoreThemeTypeScale(
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeTypeScale) = (
+            FfiConverterDouble.allocationSize(value.`caption`) +
+            FfiConverterDouble.allocationSize(value.`body`) +
+            FfiConverterDouble.allocationSize(value.`title`) +
+            FfiConverterDouble.allocationSize(value.`display`) +
+            FfiConverterDouble.allocationSize(value.`hero`)
+    )
+
+    override fun write(value: CoreThemeTypeScale, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`caption`, buf)
+            FfiConverterDouble.write(value.`body`, buf)
+            FfiConverterDouble.write(value.`title`, buf)
+            FfiConverterDouble.write(value.`display`, buf)
+            FfiConverterDouble.write(value.`hero`, buf)
+    }
+}
+
+
+
+data class CoreThemeTypography (
+    var `display`: CoreThemeFontFace
+    , 
+    var `body`: CoreThemeFontFace
+    , 
+    var `mono`: CoreThemeFontFace
+    , 
+    var `bodySize`: kotlin.Double
+    , 
+    var `scale`: CoreThemeTypeScale
+    , 
+    var `microLabel`: CoreThemeMicroLabel
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeTypography: FfiConverterRustBuffer<CoreThemeTypography> {
+    override fun read(buf: ByteBuffer): CoreThemeTypography {
+        return CoreThemeTypography(
+            FfiConverterTypeCoreThemeFontFace.read(buf),
+            FfiConverterTypeCoreThemeFontFace.read(buf),
+            FfiConverterTypeCoreThemeFontFace.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterTypeCoreThemeTypeScale.read(buf),
+            FfiConverterTypeCoreThemeMicroLabel.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreThemeTypography) = (
+            FfiConverterTypeCoreThemeFontFace.allocationSize(value.`display`) +
+            FfiConverterTypeCoreThemeFontFace.allocationSize(value.`body`) +
+            FfiConverterTypeCoreThemeFontFace.allocationSize(value.`mono`) +
+            FfiConverterDouble.allocationSize(value.`bodySize`) +
+            FfiConverterTypeCoreThemeTypeScale.allocationSize(value.`scale`) +
+            FfiConverterTypeCoreThemeMicroLabel.allocationSize(value.`microLabel`)
+    )
+
+    override fun write(value: CoreThemeTypography, buf: ByteBuffer) {
+            FfiConverterTypeCoreThemeFontFace.write(value.`display`, buf)
+            FfiConverterTypeCoreThemeFontFace.write(value.`body`, buf)
+            FfiConverterTypeCoreThemeFontFace.write(value.`mono`, buf)
+            FfiConverterDouble.write(value.`bodySize`, buf)
+            FfiConverterTypeCoreThemeTypeScale.write(value.`scale`, buf)
+            FfiConverterTypeCoreThemeMicroLabel.write(value.`microLabel`, buf)
+    }
+}
+
+
+
 /**
  * A folder or list [`create_folder`] or [`create_list`] made: what a client
  * needs to build its own model of it, beside what it already passed in.
@@ -11344,6 +13251,631 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
 
 
 /**
+ * Which of a palette's two tables is in force.
+ */
+
+enum class CoreThemeAppearance {
+    
+    LIGHT,
+    DARK;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeAppearance: FfiConverterRustBuffer<CoreThemeAppearance> {
+    override fun read(buf: ByteBuffer) = try {
+        CoreThemeAppearance.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: CoreThemeAppearance) = 4UL
+
+    override fun write(value: CoreThemeAppearance, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * What the file inherits every value it does not state from.
+ */
+sealed class CoreThemeFileBase {
+    
+    /**
+     * Key absent: the default theme.
+     */
+    object DefaultTheme : CoreThemeFileBase()
+    
+    
+    /**
+     * `"extends": "<identifier>"`.
+     */
+    data class Theme(
+        val `identifier`: kotlin.String) : CoreThemeFileBase()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * `"extends": null`: no colours inherited.
+     */
+    object Nothing : CoreThemeFileBase()
+    
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileBase : FfiConverterRustBuffer<CoreThemeFileBase>{
+    override fun read(buf: ByteBuffer): CoreThemeFileBase {
+        return when(buf.getInt()) {
+            1 -> CoreThemeFileBase.DefaultTheme
+            2 -> CoreThemeFileBase.Theme(
+                FfiConverterString.read(buf),
+                )
+            3 -> CoreThemeFileBase.Nothing
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: CoreThemeFileBase): ULong = when(value) {
+        is CoreThemeFileBase.DefaultTheme -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is CoreThemeFileBase.Theme -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`identifier`)
+            )
+        }
+        is CoreThemeFileBase.Nothing -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: CoreThemeFileBase, buf: ByteBuffer) {
+        when(value) {
+            is CoreThemeFileBase.DefaultTheme -> {
+                buf.putInt(1)
+                Unit
+            }
+            is CoreThemeFileBase.Theme -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`identifier`, buf)
+                Unit
+            }
+            is CoreThemeFileBase.Nothing -> {
+                buf.putInt(3)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * `lockedAppearance`: absent inherits, `null` clears, a string sets.
+ */
+sealed class CoreThemeFileLock {
+    
+    object Inherit : CoreThemeFileLock()
+    
+    
+    object Unlocked : CoreThemeFileLock()
+    
+    
+    /**
+     * Carried raw, so an unknown value is a reported issue.
+     */
+    data class Locked(
+        val `raw`: kotlin.String) : CoreThemeFileLock()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeFileLock : FfiConverterRustBuffer<CoreThemeFileLock>{
+    override fun read(buf: ByteBuffer): CoreThemeFileLock {
+        return when(buf.getInt()) {
+            1 -> CoreThemeFileLock.Inherit
+            2 -> CoreThemeFileLock.Unlocked
+            3 -> CoreThemeFileLock.Locked(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: CoreThemeFileLock): ULong = when(value) {
+        is CoreThemeFileLock.Inherit -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is CoreThemeFileLock.Unlocked -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is CoreThemeFileLock.Locked -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`raw`)
+            )
+        }
+    }
+
+    override fun write(value: CoreThemeFileLock, buf: ByteBuffer) {
+        when(value) {
+            is CoreThemeFileLock.Inherit -> {
+                buf.putInt(1)
+                Unit
+            }
+            is CoreThemeFileLock.Unlocked -> {
+                buf.putInt(2)
+                Unit
+            }
+            is CoreThemeFileLock.Locked -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`raw`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * One finding.
+ */
+sealed class CoreThemeIssue {
+    
+    data class MissingRole(
+        val `role`: kotlin.String, 
+        val `appearance`: uniffi.takt_core.CoreThemeAppearance) : CoreThemeIssue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Running text under 4.5:1 on the paper.
+     */
+    data class BodyTextBelowAa(
+        val `role`: kotlin.String, 
+        val `appearance`: uniffi.takt_core.CoreThemeAppearance, 
+        val `ratio`: kotlin.Double) : CoreThemeIssue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * An accent under 4.5:1: headlines, fills and controls, never a paragraph.
+     */
+    data class LargeTextOnly(
+        val `role`: kotlin.String, 
+        val `appearance`: uniffi.takt_core.CoreThemeAppearance, 
+        val `ratio`: kotlin.Double) : CoreThemeIssue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * `primary` under 3:1, too low even for a focus ring.
+     */
+    data class AccentBelowUiMinimum(
+        val `role`: kotlin.String, 
+        val `appearance`: uniffi.takt_core.CoreThemeAppearance, 
+        val `ratio`: kotlin.Double) : CoreThemeIssue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class RaisedIndistinctFromPaper(
+        val `appearance`: uniffi.takt_core.CoreThemeAppearance, 
+        val `ratio`: kotlin.Double) : CoreThemeIssue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object ShadowsUsed : CoreThemeIssue()
+    
+    
+    object GradientsOnChrome : CoreThemeIssue()
+    
+    
+    object RadiusScaleOutOfOrder : CoreThemeIssue()
+    
+    
+    data class ShellRadiusOffScale(
+        val `value`: kotlin.Double) : CoreThemeIssue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class HairlineTooHeavy(
+        val `value`: kotlin.Double) : CoreThemeIssue()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class TouchTargetTooSmall(
+        val `value`: kotlin.Double) : CoreThemeIssue()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeIssue : FfiConverterRustBuffer<CoreThemeIssue>{
+    override fun read(buf: ByteBuffer): CoreThemeIssue {
+        return when(buf.getInt()) {
+            1 -> CoreThemeIssue.MissingRole(
+                FfiConverterString.read(buf),
+                FfiConverterTypeCoreThemeAppearance.read(buf),
+                )
+            2 -> CoreThemeIssue.BodyTextBelowAa(
+                FfiConverterString.read(buf),
+                FfiConverterTypeCoreThemeAppearance.read(buf),
+                FfiConverterDouble.read(buf),
+                )
+            3 -> CoreThemeIssue.LargeTextOnly(
+                FfiConverterString.read(buf),
+                FfiConverterTypeCoreThemeAppearance.read(buf),
+                FfiConverterDouble.read(buf),
+                )
+            4 -> CoreThemeIssue.AccentBelowUiMinimum(
+                FfiConverterString.read(buf),
+                FfiConverterTypeCoreThemeAppearance.read(buf),
+                FfiConverterDouble.read(buf),
+                )
+            5 -> CoreThemeIssue.RaisedIndistinctFromPaper(
+                FfiConverterTypeCoreThemeAppearance.read(buf),
+                FfiConverterDouble.read(buf),
+                )
+            6 -> CoreThemeIssue.ShadowsUsed
+            7 -> CoreThemeIssue.GradientsOnChrome
+            8 -> CoreThemeIssue.RadiusScaleOutOfOrder
+            9 -> CoreThemeIssue.ShellRadiusOffScale(
+                FfiConverterDouble.read(buf),
+                )
+            10 -> CoreThemeIssue.HairlineTooHeavy(
+                FfiConverterDouble.read(buf),
+                )
+            11 -> CoreThemeIssue.TouchTargetTooSmall(
+                FfiConverterDouble.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: CoreThemeIssue): ULong = when(value) {
+        is CoreThemeIssue.MissingRole -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`role`)
+                + FfiConverterTypeCoreThemeAppearance.allocationSize(value.`appearance`)
+            )
+        }
+        is CoreThemeIssue.BodyTextBelowAa -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`role`)
+                + FfiConverterTypeCoreThemeAppearance.allocationSize(value.`appearance`)
+                + FfiConverterDouble.allocationSize(value.`ratio`)
+            )
+        }
+        is CoreThemeIssue.LargeTextOnly -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`role`)
+                + FfiConverterTypeCoreThemeAppearance.allocationSize(value.`appearance`)
+                + FfiConverterDouble.allocationSize(value.`ratio`)
+            )
+        }
+        is CoreThemeIssue.AccentBelowUiMinimum -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`role`)
+                + FfiConverterTypeCoreThemeAppearance.allocationSize(value.`appearance`)
+                + FfiConverterDouble.allocationSize(value.`ratio`)
+            )
+        }
+        is CoreThemeIssue.RaisedIndistinctFromPaper -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeCoreThemeAppearance.allocationSize(value.`appearance`)
+                + FfiConverterDouble.allocationSize(value.`ratio`)
+            )
+        }
+        is CoreThemeIssue.ShadowsUsed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is CoreThemeIssue.GradientsOnChrome -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is CoreThemeIssue.RadiusScaleOutOfOrder -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is CoreThemeIssue.ShellRadiusOffScale -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterDouble.allocationSize(value.`value`)
+            )
+        }
+        is CoreThemeIssue.HairlineTooHeavy -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterDouble.allocationSize(value.`value`)
+            )
+        }
+        is CoreThemeIssue.TouchTargetTooSmall -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterDouble.allocationSize(value.`value`)
+            )
+        }
+    }
+
+    override fun write(value: CoreThemeIssue, buf: ByteBuffer) {
+        when(value) {
+            is CoreThemeIssue.MissingRole -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`role`, buf)
+                FfiConverterTypeCoreThemeAppearance.write(value.`appearance`, buf)
+                Unit
+            }
+            is CoreThemeIssue.BodyTextBelowAa -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`role`, buf)
+                FfiConverterTypeCoreThemeAppearance.write(value.`appearance`, buf)
+                FfiConverterDouble.write(value.`ratio`, buf)
+                Unit
+            }
+            is CoreThemeIssue.LargeTextOnly -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`role`, buf)
+                FfiConverterTypeCoreThemeAppearance.write(value.`appearance`, buf)
+                FfiConverterDouble.write(value.`ratio`, buf)
+                Unit
+            }
+            is CoreThemeIssue.AccentBelowUiMinimum -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`role`, buf)
+                FfiConverterTypeCoreThemeAppearance.write(value.`appearance`, buf)
+                FfiConverterDouble.write(value.`ratio`, buf)
+                Unit
+            }
+            is CoreThemeIssue.RaisedIndistinctFromPaper -> {
+                buf.putInt(5)
+                FfiConverterTypeCoreThemeAppearance.write(value.`appearance`, buf)
+                FfiConverterDouble.write(value.`ratio`, buf)
+                Unit
+            }
+            is CoreThemeIssue.ShadowsUsed -> {
+                buf.putInt(6)
+                Unit
+            }
+            is CoreThemeIssue.GradientsOnChrome -> {
+                buf.putInt(7)
+                Unit
+            }
+            is CoreThemeIssue.RadiusScaleOutOfOrder -> {
+                buf.putInt(8)
+                Unit
+            }
+            is CoreThemeIssue.ShellRadiusOffScale -> {
+                buf.putInt(9)
+                FfiConverterDouble.write(value.`value`, buf)
+                Unit
+            }
+            is CoreThemeIssue.HairlineTooHeavy -> {
+                buf.putInt(10)
+                FfiConverterDouble.write(value.`value`, buf)
+                Unit
+            }
+            is CoreThemeIssue.TouchTargetTooSmall -> {
+                buf.putInt(11)
+                FfiConverterDouble.write(value.`value`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class CoreThemeIssueSeverity {
+    
+    /**
+     * Something will render wrong.
+     */
+    ERROR,
+    /**
+     * It renders, but a rule of the house style is being bent.
+     */
+    WARNING,
+    /**
+     * True, worth knowing, and intended.
+     */
+    NOTE;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemeIssueSeverity: FfiConverterRustBuffer<CoreThemeIssueSeverity> {
+    override fun read(buf: ByteBuffer) = try {
+        CoreThemeIssueSeverity.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: CoreThemeIssueSeverity) = 4UL
+
+    override fun write(value: CoreThemeIssueSeverity, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * The app a theme is resolved for. The palette is the same on all three;
+ * the structure is not.
+ */
+
+enum class CoreThemePlatform {
+    
+    MACOS,
+    IOS,
+    ANDROID;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreThemePlatform: FfiConverterRustBuffer<CoreThemePlatform> {
+    override fun read(buf: ByteBuffer) = try {
+        CoreThemePlatform.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: CoreThemePlatform) = 4UL
+
+    override fun write(value: CoreThemePlatform, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * How hard a completion lands. `CompletionMilestone`.
  */
 sealed class MilestoneOccasion {
@@ -12263,6 +14795,454 @@ public object FfiConverterOptionalTypeContributionRow: FfiConverterRustBuffer<Co
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeCoreThemeColor: FfiConverterRustBuffer<CoreThemeColor?> {
+    override fun read(buf: ByteBuffer): CoreThemeColor? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeColor.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeColor?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeColor.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeColor?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeColor.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFile: FfiConverterRustBuffer<CoreThemeFile?> {
+    override fun read(buf: ByteBuffer): CoreThemeFile? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFile.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFile?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFile.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFile?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFile.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFileBorder: FfiConverterRustBuffer<CoreThemeFileBorder?> {
+    override fun read(buf: ByteBuffer): CoreThemeFileBorder? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFileBorder.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFileBorder?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFileBorder.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFileBorder?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFileBorder.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFileFace: FfiConverterRustBuffer<CoreThemeFileFace?> {
+    override fun read(buf: ByteBuffer): CoreThemeFileFace? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFileFace.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFileFace?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFileFace.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFileFace?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFileFace.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFileMicroLabel: FfiConverterRustBuffer<CoreThemeFileMicroLabel?> {
+    override fun read(buf: ByteBuffer): CoreThemeFileMicroLabel? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFileMicroLabel.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFileMicroLabel?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFileMicroLabel.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFileMicroLabel?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFileMicroLabel.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFilePalette: FfiConverterRustBuffer<CoreThemeFilePalette?> {
+    override fun read(buf: ByteBuffer): CoreThemeFilePalette? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFilePalette.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFilePalette?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFilePalette.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFilePalette?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFilePalette.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFilePlatformOverride: FfiConverterRustBuffer<CoreThemeFilePlatformOverride?> {
+    override fun read(buf: ByteBuffer): CoreThemeFilePlatformOverride? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFilePlatformOverride.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFilePlatformOverride?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFilePlatformOverride.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFilePlatformOverride?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFilePlatformOverride.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFilePlatforms: FfiConverterRustBuffer<CoreThemeFilePlatforms?> {
+    override fun read(buf: ByteBuffer): CoreThemeFilePlatforms? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFilePlatforms.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFilePlatforms?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFilePlatforms.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFilePlatforms?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFilePlatforms.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFileRadius: FfiConverterRustBuffer<CoreThemeFileRadius?> {
+    override fun read(buf: ByteBuffer): CoreThemeFileRadius? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFileRadius.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFileRadius?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFileRadius.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFileRadius?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFileRadius.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFileSpacing: FfiConverterRustBuffer<CoreThemeFileSpacing?> {
+    override fun read(buf: ByteBuffer): CoreThemeFileSpacing? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFileSpacing.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFileSpacing?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFileSpacing.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFileSpacing?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFileSpacing.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFileStructure: FfiConverterRustBuffer<CoreThemeFileStructure?> {
+    override fun read(buf: ByteBuffer): CoreThemeFileStructure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFileStructure.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFileStructure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFileStructure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFileStructure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFileStructure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFileTypeScale: FfiConverterRustBuffer<CoreThemeFileTypeScale?> {
+    override fun read(buf: ByteBuffer): CoreThemeFileTypeScale? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFileTypeScale.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFileTypeScale?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFileTypeScale.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFileTypeScale?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFileTypeScale.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeFileTypography: FfiConverterRustBuffer<CoreThemeFileTypography?> {
+    override fun read(buf: ByteBuffer): CoreThemeFileTypography? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeFileTypography.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeFileTypography?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeFileTypography.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeFileTypography?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeFileTypography.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCoreThemeSpecification: FfiConverterRustBuffer<CoreThemeSpecification?> {
+    override fun read(buf: ByteBuffer): CoreThemeSpecification? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeSpecification.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeSpecification?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeSpecification.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeSpecification?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeSpecification.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeDailyRow: FfiConverterRustBuffer<DailyRow?> {
     override fun read(buf: ByteBuffer): DailyRow? {
         if (buf.get().toInt() == 0) {
@@ -12647,6 +15627,38 @@ public object FfiConverterOptionalTypeTaskRow: FfiConverterRustBuffer<TaskRow?> 
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeCoreThemeAppearance: FfiConverterRustBuffer<CoreThemeAppearance?> {
+    override fun read(buf: ByteBuffer): CoreThemeAppearance? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCoreThemeAppearance.read(buf)
+    }
+
+    override fun allocationSize(value: CoreThemeAppearance?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCoreThemeAppearance.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CoreThemeAppearance?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCoreThemeAppearance.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypePeriodicCadence: FfiConverterRustBuffer<PeriodicCadence?> {
     override fun read(buf: ByteBuffer): PeriodicCadence? {
         if (buf.get().toInt() == 0) {
@@ -12711,6 +15723,70 @@ public object FfiConverterOptionalSequenceUInt: FfiConverterRustBuffer<List<kotl
 /**
  * @suppress
  */
+public object FfiConverterOptionalSequenceString: FfiConverterRustBuffer<List<kotlin.String>?> {
+    override fun read(buf: ByteBuffer): List<kotlin.String>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceString.read(buf)
+    }
+
+    override fun allocationSize(value: List<kotlin.String>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: List<kotlin.String>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalSequenceTypeCoreThemeSpecification: FfiConverterRustBuffer<List<CoreThemeSpecification>?> {
+    override fun read(buf: ByteBuffer): List<CoreThemeSpecification>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceTypeCoreThemeSpecification.read(buf)
+    }
+
+    override fun allocationSize(value: List<CoreThemeSpecification>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceTypeCoreThemeSpecification.allocationSize(value)
+        }
+    }
+
+    override fun write(value: List<CoreThemeSpecification>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceTypeCoreThemeSpecification.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalSequenceSequenceString: FfiConverterRustBuffer<List<List<kotlin.String>>?> {
     override fun read(buf: ByteBuffer): List<List<kotlin.String>>? {
         if (buf.get().toInt() == 0) {
@@ -12733,6 +15809,70 @@ public object FfiConverterOptionalSequenceSequenceString: FfiConverterRustBuffer
         } else {
             buf.put(1)
             FfiConverterSequenceSequenceString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalMapStringString: FfiConverterRustBuffer<Map<kotlin.String, kotlin.String>?> {
+    override fun read(buf: ByteBuffer): Map<kotlin.String, kotlin.String>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterMapStringString.read(buf)
+    }
+
+    override fun allocationSize(value: Map<kotlin.String, kotlin.String>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterMapStringString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: Map<kotlin.String, kotlin.String>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterMapStringString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalMapStringTypeCoreThemeColor: FfiConverterRustBuffer<Map<kotlin.String, CoreThemeColor>?> {
+    override fun read(buf: ByteBuffer): Map<kotlin.String, CoreThemeColor>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterMapStringTypeCoreThemeColor.read(buf)
+    }
+
+    override fun allocationSize(value: Map<kotlin.String, CoreThemeColor>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterMapStringTypeCoreThemeColor.allocationSize(value)
+        }
+    }
+
+    override fun write(value: Map<kotlin.String, CoreThemeColor>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterMapStringTypeCoreThemeColor.write(value, buf)
         }
     }
 }
@@ -13069,6 +16209,230 @@ public object FfiConverterSequenceTypeContributionRow: FfiConverterRustBuffer<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeContributionRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCoreThemeFileIssue: FfiConverterRustBuffer<List<CoreThemeFileIssue>> {
+    override fun read(buf: ByteBuffer): List<CoreThemeFileIssue> {
+        val len = buf.getInt()
+        return List<CoreThemeFileIssue>(len) {
+            FfiConverterTypeCoreThemeFileIssue.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemeFileIssue>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemeFileIssue.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemeFileIssue>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemeFileIssue.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCoreThemeFileOutcome: FfiConverterRustBuffer<List<CoreThemeFileOutcome>> {
+    override fun read(buf: ByteBuffer): List<CoreThemeFileOutcome> {
+        val len = buf.getInt()
+        return List<CoreThemeFileOutcome>(len) {
+            FfiConverterTypeCoreThemeFileOutcome.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemeFileOutcome>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemeFileOutcome.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemeFileOutcome>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemeFileOutcome.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCoreThemeFileSource: FfiConverterRustBuffer<List<CoreThemeFileSource>> {
+    override fun read(buf: ByteBuffer): List<CoreThemeFileSource> {
+        val len = buf.getInt()
+        return List<CoreThemeFileSource>(len) {
+            FfiConverterTypeCoreThemeFileSource.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemeFileSource>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemeFileSource.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemeFileSource>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemeFileSource.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCoreThemeNamedText: FfiConverterRustBuffer<List<CoreThemeNamedText>> {
+    override fun read(buf: ByteBuffer): List<CoreThemeNamedText> {
+        val len = buf.getInt()
+        return List<CoreThemeNamedText>(len) {
+            FfiConverterTypeCoreThemeNamedText.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemeNamedText>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemeNamedText.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemeNamedText>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemeNamedText.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCoreThemePlatformSpecification: FfiConverterRustBuffer<List<CoreThemePlatformSpecification>> {
+    override fun read(buf: ByteBuffer): List<CoreThemePlatformSpecification> {
+        val len = buf.getInt()
+        return List<CoreThemePlatformSpecification>(len) {
+            FfiConverterTypeCoreThemePlatformSpecification.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemePlatformSpecification>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemePlatformSpecification.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemePlatformSpecification>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemePlatformSpecification.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCoreThemePlatformStructure: FfiConverterRustBuffer<List<CoreThemePlatformStructure>> {
+    override fun read(buf: ByteBuffer): List<CoreThemePlatformStructure> {
+        val len = buf.getInt()
+        return List<CoreThemePlatformStructure>(len) {
+            FfiConverterTypeCoreThemePlatformStructure.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemePlatformStructure>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemePlatformStructure.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemePlatformStructure>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemePlatformStructure.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCoreThemeReport: FfiConverterRustBuffer<List<CoreThemeReport>> {
+    override fun read(buf: ByteBuffer): List<CoreThemeReport> {
+        val len = buf.getInt()
+        return List<CoreThemeReport>(len) {
+            FfiConverterTypeCoreThemeReport.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemeReport>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemeReport.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemeReport>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemeReport.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCoreThemeSpecification: FfiConverterRustBuffer<List<CoreThemeSpecification>> {
+    override fun read(buf: ByteBuffer): List<CoreThemeSpecification> {
+        val len = buf.getInt()
+        return List<CoreThemeSpecification>(len) {
+            FfiConverterTypeCoreThemeSpecification.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemeSpecification>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemeSpecification.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemeSpecification>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemeSpecification.write(it, buf)
         }
     }
 }
@@ -14003,6 +17367,34 @@ public object FfiConverterSequenceTypeWorkspaceRow: FfiConverterRustBuffer<List<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeCoreThemeIssue: FfiConverterRustBuffer<List<CoreThemeIssue>> {
+    override fun read(buf: ByteBuffer): List<CoreThemeIssue> {
+        val len = buf.getInt()
+        return List<CoreThemeIssue>(len) {
+            FfiConverterTypeCoreThemeIssue.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CoreThemeIssue>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCoreThemeIssue.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CoreThemeIssue>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCoreThemeIssue.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeUnavailable: FfiConverterRustBuffer<List<Unavailable>> {
     override fun read(buf: ByteBuffer): List<Unavailable> {
         val len = buf.getInt()
@@ -14049,6 +17441,84 @@ public object FfiConverterSequenceSequenceString: FfiConverterRustBuffer<List<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterSequenceString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.String, kotlin.String>> {
+    override fun read(buf: ByteBuffer): Map<kotlin.String, kotlin.String> {
+        val len = buf.getInt()
+        return buildMap<kotlin.String, kotlin.String>(len) {
+            repeat(len) {
+                val k = FfiConverterString.read(buf)
+                val v = FfiConverterString.read(buf)
+                this[k] = v
+            }
+        }
+    }
+
+    override fun allocationSize(value: Map<kotlin.String, kotlin.String>): ULong {
+        val spaceForMapSize = 4UL
+        val spaceForChildren = value.map { (k, v) ->
+            FfiConverterString.allocationSize(k) +
+            FfiConverterString.allocationSize(v)
+        }.sum()
+        return spaceForMapSize + spaceForChildren
+    }
+
+    override fun write(value: Map<kotlin.String, kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        // The parens on `(k, v)` here ensure we're calling the right method,
+        // which is important for compatibility with older android devices.
+        // Ref https://blog.danlew.net/2017/03/16/kotlin-puzzler-whose-line-is-it-anyways/
+        value.forEach { (k, v) ->
+            FfiConverterString.write(k, buf)
+            FfiConverterString.write(v, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterMapStringTypeCoreThemeColor: FfiConverterRustBuffer<Map<kotlin.String, CoreThemeColor>> {
+    override fun read(buf: ByteBuffer): Map<kotlin.String, CoreThemeColor> {
+        val len = buf.getInt()
+        return buildMap<kotlin.String, CoreThemeColor>(len) {
+            repeat(len) {
+                val k = FfiConverterString.read(buf)
+                val v = FfiConverterTypeCoreThemeColor.read(buf)
+                this[k] = v
+            }
+        }
+    }
+
+    override fun allocationSize(value: Map<kotlin.String, CoreThemeColor>): ULong {
+        val spaceForMapSize = 4UL
+        val spaceForChildren = value.map { (k, v) ->
+            FfiConverterString.allocationSize(k) +
+            FfiConverterTypeCoreThemeColor.allocationSize(v)
+        }.sum()
+        return spaceForMapSize + spaceForChildren
+    }
+
+    override fun write(value: Map<kotlin.String, CoreThemeColor>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        // The parens on `(k, v)` here ensure we're calling the right method,
+        // which is important for compatibility with older android devices.
+        // Ref https://blog.danlew.net/2017/03/16/kotlin-puzzler-whose-line-is-it-anyways/
+        value.forEach { (k, v) ->
+            FfiConverterString.write(k, buf)
+            FfiConverterTypeCoreThemeColor.write(v, buf)
         }
     }
 }
@@ -14676,6 +18146,328 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterOptionalString.lower(`clock`),
         FfiConverterString.lower(`deviceId`),
         FfiConverterLong.lower(`wallMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * What the built-in `identifier` lays over its own structure on each phone.
+         */ fun `themeBuiltinPlatformStructures`(`identifier`: kotlin.String): List<CoreThemePlatformStructure> {
+            return FfiConverterSequenceTypeCoreThemePlatformStructure.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_builtin_platform_structures(
+    
+        
+        FfiConverterString.lower(`identifier`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The built-ins as `platform` resolves them, the default first.
+         */ fun `themeBuiltins`(`platform`: CoreThemePlatform): List<CoreThemeSpecification> {
+            return FfiConverterSequenceTypeCoreThemeSpecification.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_builtins(
+    
+        
+        FfiConverterTypeCoreThemePlatform.lower(`platform`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A conformance case, as the bytes `shared/themes/conformance/` holds.
+         */ fun `themeConformanceCase`(`files`: List<CoreThemeNamedText>, `selected`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_conformance_case(
+    
+        
+        FfiConverterSequenceTypeCoreThemeNamedText.lower(`files`),
+        FfiConverterString.lower(`selected`),_status)
+}
+    )
+    }
+    
+ fun `themeContrastFindings`(`specification`: CoreThemeSpecification): List<CoreThemeIssue> {
+            return FfiConverterSequenceTypeCoreThemeIssue.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_contrast_findings(
+    
+        
+        FfiConverterTypeCoreThemeSpecification.lower(`specification`),_status)
+}
+    )
+    }
+    
+ fun `themeContrastRatio`(`a`: CoreThemeColor, `b`: CoreThemeColor): kotlin.Double {
+            return FfiConverterDouble.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_contrast_ratio(
+    
+        
+        FfiConverterTypeCoreThemeColor.lower(`a`),
+        FfiConverterTypeCoreThemeColor.lower(`b`),_status)
+}
+    )
+    }
+    
+ fun `themeDecode`(`data`: kotlin.ByteArray, `source`: kotlin.String): CoreThemeDecoded {
+            return FfiConverterTypeCoreThemeDecoded.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_decode(
+    
+        
+        FfiConverterByteArray.lower(`data`),
+        FfiConverterString.lower(`source`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The file pretty-printed with sorted keys; `None` if a number in it is not finite.
+         */ fun `themeFileEncode`(`file`: CoreThemeFile): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_file_encode(
+    
+        
+        FfiConverterTypeCoreThemeFile.lower(`file`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Every value of `specification` as a file that extends the default, with
+         * each variant's differences under `platforms`.
+         */ fun `themeFileFromSpecification`(`specification`: CoreThemeSpecification, `variants`: List<CoreThemePlatformSpecification>): CoreThemeFile {
+            return FfiConverterTypeCoreThemeFile.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_file_from_specification(
+    
+        
+        FfiConverterTypeCoreThemeSpecification.lower(`specification`),
+        FfiConverterSequenceTypeCoreThemePlatformSpecification.lower(`variants`),_status)
+}
+    )
+    }
+    
+ fun `themeIdentifier`(`file`: CoreThemeFile, `source`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_identifier(
+    
+        
+        FfiConverterTypeCoreThemeFile.lower(`file`),
+        FfiConverterString.lower(`source`),_status)
+}
+    )
+    }
+    
+ fun `themeIssueMessage`(`issue`: CoreThemeIssue): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_issue_message(
+    
+        
+        FfiConverterTypeCoreThemeIssue.lower(`issue`),_status)
+}
+    )
+    }
+    
+ fun `themeIssueSeverity`(`issue`: CoreThemeIssue): CoreThemeIssueSeverity {
+            return FfiConverterTypeCoreThemeIssueSeverity.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_issue_severity(
+    
+        
+        FfiConverterTypeCoreThemeIssue.lower(`issue`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Loads a folder of files for `platform`. `built_ins` and `default_base`
+         * default to the built-ins as resolved for it.
+         */ fun `themeLoad`(`sources`: List<CoreThemeFileSource>, `platform`: CoreThemePlatform, `builtIns`: List<CoreThemeSpecification>?, `defaultBase`: CoreThemeSpecification?): List<CoreThemeFileOutcome> {
+            return FfiConverterSequenceTypeCoreThemeFileOutcome.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_load(
+    
+        
+        FfiConverterSequenceTypeCoreThemeFileSource.lower(`sources`),
+        FfiConverterTypeCoreThemePlatform.lower(`platform`),
+        FfiConverterOptionalSequenceTypeCoreThemeSpecification.lower(`builtIns`),
+        FfiConverterOptionalTypeCoreThemeSpecification.lower(`defaultBase`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Lays a partial structure over a whole one, reporting under `path`.
+         */ fun `themeMergeStructure`(`overrides`: CoreThemeFileStructure?, `base`: CoreThemeStructure, `path`: kotlin.String): CoreThemeMergedStructure {
+            return FfiConverterTypeCoreThemeMergedStructure.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_merge_structure(
+    
+        
+        FfiConverterOptionalTypeCoreThemeFileStructure.lower(`overrides`),
+        FfiConverterTypeCoreThemeStructure.lower(`base`),
+        FfiConverterString.lower(`path`),_status)
+}
+    )
+    }
+    
+ fun `themeMix`(`a`: CoreThemeColor, `b`: CoreThemeColor, `t`: kotlin.Double): CoreThemeColor {
+            return FfiConverterTypeCoreThemeColor.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_mix(
+    
+        
+        FfiConverterTypeCoreThemeColor.lower(`a`),
+        FfiConverterTypeCoreThemeColor.lower(`b`),
+        FfiConverterDouble.lower(`t`),_status)
+}
+    )
+    }
+    
+ fun `themeProportionedScale`(`body`: kotlin.Double): CoreThemeTypeScale {
+            return FfiConverterTypeCoreThemeTypeScale.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_proportioned_scale(
+    
+        
+        FfiConverterDouble.lower(`body`),_status)
+}
+    )
+    }
+    
+ fun `themeRelativeLuminance`(`color`: CoreThemeColor): kotlin.Double {
+            return FfiConverterDouble.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_relative_luminance(
+    
+        
+        FfiConverterTypeCoreThemeColor.lower(`color`),_status)
+}
+    )
+    }
+    
+ fun `themeResolve`(`file`: CoreThemeFile, `source`: kotlin.String, `base`: CoreThemeSpecification?, `platform`: CoreThemePlatform): CoreThemeFileOutcome {
+            return FfiConverterTypeCoreThemeFileOutcome.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_resolve(
+    
+        
+        FfiConverterTypeCoreThemeFile.lower(`file`),
+        FfiConverterString.lower(`source`),
+        FfiConverterOptionalTypeCoreThemeSpecification.lower(`base`),
+        FfiConverterTypeCoreThemePlatform.lower(`platform`),_status)
+}
+    )
+    }
+    
+ fun `themeResolved`(`specification`: CoreThemeSpecification, `requested`: CoreThemeAppearance): CoreThemeResolved {
+            return FfiConverterTypeCoreThemeResolved.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_resolved(
+    
+        
+        FfiConverterTypeCoreThemeSpecification.lower(`specification`),
+        FfiConverterTypeCoreThemeAppearance.lower(`requested`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The roles `seeds` paint in `appearance`, or `None` without both a
+         * background and a foreground.
+         */ fun `themeSeedRoles`(`seeds`: CoreThemeSeeds, `appearance`: CoreThemeAppearance): Map<kotlin.String, CoreThemeColor>? {
+            return FfiConverterOptionalMapStringTypeCoreThemeColor.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_seed_roles(
+    
+        
+        FfiConverterTypeCoreThemeSeeds.lower(`seeds`),
+        FfiConverterTypeCoreThemeAppearance.lower(`appearance`),_status)
+}
+    )
+    }
+    
+ fun `themeSharedFile`(`identifier`: kotlin.String): CoreThemeFile? {
+            return FfiConverterOptionalTypeCoreThemeFile.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_shared_file(
+    
+        
+        FfiConverterString.lower(`identifier`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The built-ins as the complete files `shared/themes/` holds.
+         */ fun `themeSharedFiles`(): List<CoreThemeNamedText> {
+            return FfiConverterSequenceTypeCoreThemeNamedText.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_shared_files(
+    
+        _status)
+}
+    )
+    }
+    
+ fun `themeStructureDifference`(`base`: CoreThemeStructure, `target`: CoreThemeStructure): CoreThemeFileStructure? {
+            return FfiConverterOptionalTypeCoreThemeFileStructure.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_structure_difference(
+    
+        
+        FfiConverterTypeCoreThemeStructure.lower(`base`),
+        FfiConverterTypeCoreThemeStructure.lower(`target`),_status)
+}
+    )
+    }
+    
+ fun `themeStructureFindings`(`structure`: CoreThemeStructure): List<CoreThemeIssue> {
+            return FfiConverterSequenceTypeCoreThemeIssue.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_structure_findings(
+    
+        
+        FfiConverterTypeCoreThemeStructure.lower(`structure`),_status)
+}
+    )
+    }
+    
+ fun `themeStructureStated`(`structure`: CoreThemeStructure): CoreThemeFileStructure {
+            return FfiConverterTypeCoreThemeFileStructure.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_structure_stated(
+    
+        
+        FfiConverterTypeCoreThemeStructure.lower(`structure`),_status)
+}
+    )
+    }
+    
+ fun `themeValidate`(`specification`: CoreThemeSpecification): List<CoreThemeIssue> {
+            return FfiConverterSequenceTypeCoreThemeIssue.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_theme_validate(
+    
+        
+        FfiConverterTypeCoreThemeSpecification.lower(`specification`),_status)
 }
     )
     }

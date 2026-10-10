@@ -35,6 +35,7 @@ pub mod setup;
 pub mod sidebar;
 pub mod sync;
 pub mod tasks;
+pub mod theme;
 pub mod time;
 pub mod today;
 pub mod waiting;

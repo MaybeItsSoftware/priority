@@ -1,12 +1,14 @@
 import Foundation
+import TaktRustCore
 
 /// A colour, as the theming layer stores one: four channels in 0…1, with no
 /// AppKit or SwiftUI anywhere near it.
 ///
 /// `TaktCore` cannot import either, which is the whole reason this type
-/// exists rather than the app's `Color`. It also means the interesting part —
-/// parsing a palette, flipping it between appearances, and checking that the
-/// result is legible — is testable without a window.
+/// exists rather than the app's `Color`. Resolving and auditing a theme is the
+/// Rust core's (`core/src/theme`); the hex parse stays here as well because
+/// list colours are parsed per row in view bodies, where a call across the
+/// boundary would cost more than the parse.
 public struct ThemeColorValue: Equatable, Hashable, Sendable, Codable {
   public let red: Double
   public let green: Double
@@ -72,20 +74,12 @@ public struct ThemeColorValue: Equatable, Hashable, Sendable, Codable {
   /// WCAG 2.1 relative luminance, of the opaque colour. Alpha is ignored:
   /// there is no backdrop to composite against here, and a tinted fill's
   /// legibility is checked against the role it sits on rather than the tint.
-  public var relativeLuminance: Double {
-    func linear(_ channel: Double) -> Double {
-      channel <= 0.03928 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
-    }
-    return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
-  }
+  public var relativeLuminance: Double { themeRelativeLuminance(color: core) }
 
-  /// WCAG 2.1 contrast ratio, 1…21, symmetric in its arguments.
+  /// WCAG 2.1 contrast ratio, 1…21, symmetric in its arguments. The core's,
+  /// the same arithmetic the theme audit uses.
   public func contrastRatio(against other: ThemeColorValue) -> Double {
-    let first = relativeLuminance
-    let second = other.relativeLuminance
-    let lighter = max(first, second)
-    let darker = min(first, second)
-    return (lighter + 0.05) / (darker + 0.05)
+    themeContrastRatio(a: core, b: other.core)
   }
 
   private static func clamped(_ value: Double) -> Double {

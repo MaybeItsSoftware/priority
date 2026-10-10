@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// The few colours a whole palette can be grown from.
 ///
@@ -79,52 +80,28 @@ public struct ThemeSeeds: Equatable, Sendable {
     return merged
   }
 
-  /// How far from the background towards the foreground each neutral sits.
-  /// The page is 0 and the text is 1; a hairline is an eighth of the way.
-  static let neutralSteps: [(ThemeColorRole, Double)] = [
-    (.altRow, 0.025),
-    (.hover, 0.05),
-    (.well, 0.07),
-    (.borderMuted, 0.07),
-    (.border, 0.12),
-    (.inputBorder, 0.2),
-    (.dimText, 0.38),
-    (.mutedText, 0.75),
-  ]
-
   /// The roles these seeds paint in `appearance`, or `nil` without both a
   /// background and a foreground — there is nothing to mix between.
   ///
   /// `raised` is the one neutral that does not head towards the text: a card
   /// sits *above* the page, which in the light is whiter and in the dark is a
-  /// step lighter.
+  /// step lighter. The arithmetic is the Rust core's (`core/src/theme/seeds.rs`).
   public func roles(in appearance: ThemeAppearance) -> [ThemeColorRole: ThemeColorValue]? {
-    guard let background, let foreground else { return nil }
-    var roles: [ThemeColorRole: ThemeColorValue] = [.paper: background, .ink: foreground]
-    for (role, step) in Self.neutralSteps {
-      roles[role] = Self.mix(background, foreground, step)
+    let seeds = CoreThemeSeeds(
+      background: background?.core, foreground: foreground?.core, accent: accent?.core,
+      success: success?.core, danger: danger?.core, warning: warning?.core)
+    return themeSeedRoles(seeds: seeds, appearance: appearance.core).map { roles in
+      Dictionary(
+        uniqueKeysWithValues: roles.compactMap { key, value in
+          ThemeColorRole(rawValue: key).map { ($0, ThemeColorValue(value)) }
+        })
     }
-    roles[.raised] =
-      appearance == .light
-      ? Self.mix(background, ThemeColorValue(red: 1, green: 1, blue: 1), 0.6)
-      : Self.mix(background, foreground, 0.04)
-    if let accent { roles[.primary] = accent }
-    if let success { roles[.success] = success }
-    if let danger { roles[.danger] = danger }
-    if let warning { roles[.warning] = warning }
-    return roles
   }
 
   /// `a` moved `t` of the way to `b`, per channel, on whole 0–255 steps. The
   /// result is opaque: seeds describe surfaces, and a translucent page has
   /// nothing behind it to be translucent over.
   public static func mix(_ a: ThemeColorValue, _ b: ThemeColorValue, _ t: Double) -> ThemeColorValue {
-    func channel(_ from: Double, _ to: Double) -> Double {
-      let start = (from * 255).rounded()
-      let end = (to * 255).rounded()
-      return (start + (end - start) * t).rounded() / 255
-    }
-    return ThemeColorValue(
-      red: channel(a.red, b.red), green: channel(a.green, b.green), blue: channel(a.blue, b.blue))
+    ThemeColorValue(themeMix(a: a.core, b: b.core, t: t))
   }
 }

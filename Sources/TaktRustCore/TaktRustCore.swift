@@ -4581,6 +4581,2251 @@ public func FfiConverterTypeContributionRow_lower(_ value: ContributionRow) -> R
 }
 
 
+public struct CoreThemeBorder: Equatable, Hashable {
+    public var hairline: Double
+    public var emphasis: Double
+    public var focusRing: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(hairline: Double, emphasis: Double, focusRing: Double) {
+        self.hairline = hairline
+        self.emphasis = emphasis
+        self.focusRing = focusRing
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeBorder: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeBorder: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeBorder {
+        return
+            try CoreThemeBorder(
+                hairline: FfiConverterDouble.read(from: &buf), 
+                emphasis: FfiConverterDouble.read(from: &buf), 
+                focusRing: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeBorder, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.hairline, into: &buf)
+        FfiConverterDouble.write(value.emphasis, into: &buf)
+        FfiConverterDouble.write(value.focusRing, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeBorder_lift(_ buf: RustBuffer) throws -> CoreThemeBorder {
+    return try FfiConverterTypeCoreThemeBorder.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeBorder_lower(_ value: CoreThemeBorder) -> RustBuffer {
+    return FfiConverterTypeCoreThemeBorder.lower(value)
+}
+
+
+/**
+ * A colour: four channels in 0…1.
+ */
+public struct CoreThemeColor: Equatable, Hashable {
+    public var red: Double
+    public var green: Double
+    public var blue: Double
+    public var alpha: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(red: Double, green: Double, blue: Double, alpha: Double) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeColor: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeColor: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeColor {
+        return
+            try CoreThemeColor(
+                red: FfiConverterDouble.read(from: &buf), 
+                green: FfiConverterDouble.read(from: &buf), 
+                blue: FfiConverterDouble.read(from: &buf), 
+                alpha: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeColor, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.red, into: &buf)
+        FfiConverterDouble.write(value.green, into: &buf)
+        FfiConverterDouble.write(value.blue, into: &buf)
+        FfiConverterDouble.write(value.alpha, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeColor_lift(_ buf: RustBuffer) throws -> CoreThemeColor {
+    return try FfiConverterTypeCoreThemeColor.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeColor_lower(_ value: CoreThemeColor) -> RustBuffer {
+    return FfiConverterTypeCoreThemeColor.lower(value)
+}
+
+
+/**
+ * One file decoded: the file, or `None` and why not.
+ */
+public struct CoreThemeDecoded: Equatable, Hashable {
+    public var file: CoreThemeFile?
+    public var issues: [CoreThemeFileIssue]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(file: CoreThemeFile?, issues: [CoreThemeFileIssue]) {
+        self.file = file
+        self.issues = issues
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeDecoded: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeDecoded: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeDecoded {
+        return
+            try CoreThemeDecoded(
+                file: FfiConverterOptionTypeCoreThemeFile.read(from: &buf), 
+                issues: FfiConverterSequenceTypeCoreThemeFileIssue.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeDecoded, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeCoreThemeFile.write(value.file, into: &buf)
+        FfiConverterSequenceTypeCoreThemeFileIssue.write(value.issues, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeDecoded_lift(_ buf: RustBuffer) throws -> CoreThemeDecoded {
+    return try FfiConverterTypeCoreThemeDecoded.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeDecoded_lower(_ value: CoreThemeDecoded) -> RustBuffer {
+    return FfiConverterTypeCoreThemeDecoded.lower(value)
+}
+
+
+public struct CoreThemeFile: Equatable, Hashable {
+    public var identifier: String?
+    public var name: String?
+    public var summary: String?
+    public var lockedAppearance: CoreThemeFileLock
+    public var extends: CoreThemeFileBase
+    public var seeds: CoreThemeFilePalette?
+    public var palette: CoreThemeFilePalette?
+    public var structure: CoreThemeFileStructure?
+    public var platforms: CoreThemeFilePlatforms?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(identifier: String?, name: String?, summary: String?, lockedAppearance: CoreThemeFileLock, extends: CoreThemeFileBase, seeds: CoreThemeFilePalette?, palette: CoreThemeFilePalette?, structure: CoreThemeFileStructure?, platforms: CoreThemeFilePlatforms?) {
+        self.identifier = identifier
+        self.name = name
+        self.summary = summary
+        self.lockedAppearance = lockedAppearance
+        self.extends = extends
+        self.seeds = seeds
+        self.palette = palette
+        self.structure = structure
+        self.platforms = platforms
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFile: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFile: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFile {
+        return
+            try CoreThemeFile(
+                identifier: FfiConverterOptionString.read(from: &buf), 
+                name: FfiConverterOptionString.read(from: &buf), 
+                summary: FfiConverterOptionString.read(from: &buf), 
+                lockedAppearance: FfiConverterTypeCoreThemeFileLock.read(from: &buf), 
+                extends: FfiConverterTypeCoreThemeFileBase.read(from: &buf), 
+                seeds: FfiConverterOptionTypeCoreThemeFilePalette.read(from: &buf), 
+                palette: FfiConverterOptionTypeCoreThemeFilePalette.read(from: &buf), 
+                structure: FfiConverterOptionTypeCoreThemeFileStructure.read(from: &buf), 
+                platforms: FfiConverterOptionTypeCoreThemeFilePlatforms.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFile, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.identifier, into: &buf)
+        FfiConverterOptionString.write(value.name, into: &buf)
+        FfiConverterOptionString.write(value.summary, into: &buf)
+        FfiConverterTypeCoreThemeFileLock.write(value.lockedAppearance, into: &buf)
+        FfiConverterTypeCoreThemeFileBase.write(value.extends, into: &buf)
+        FfiConverterOptionTypeCoreThemeFilePalette.write(value.seeds, into: &buf)
+        FfiConverterOptionTypeCoreThemeFilePalette.write(value.palette, into: &buf)
+        FfiConverterOptionTypeCoreThemeFileStructure.write(value.structure, into: &buf)
+        FfiConverterOptionTypeCoreThemeFilePlatforms.write(value.platforms, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFile_lift(_ buf: RustBuffer) throws -> CoreThemeFile {
+    return try FfiConverterTypeCoreThemeFile.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFile_lower(_ value: CoreThemeFile) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFile.lower(value)
+}
+
+
+public struct CoreThemeFileBorder: Equatable, Hashable {
+    public var hairline: Double?
+    public var emphasis: Double?
+    public var focusRing: Double?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(hairline: Double?, emphasis: Double?, focusRing: Double?) {
+        self.hairline = hairline
+        self.emphasis = emphasis
+        self.focusRing = focusRing
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileBorder: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileBorder: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileBorder {
+        return
+            try CoreThemeFileBorder(
+                hairline: FfiConverterOptionDouble.read(from: &buf), 
+                emphasis: FfiConverterOptionDouble.read(from: &buf), 
+                focusRing: FfiConverterOptionDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileBorder, into buf: inout [UInt8]) {
+        FfiConverterOptionDouble.write(value.hairline, into: &buf)
+        FfiConverterOptionDouble.write(value.emphasis, into: &buf)
+        FfiConverterOptionDouble.write(value.focusRing, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileBorder_lift(_ buf: RustBuffer) throws -> CoreThemeFileBorder {
+    return try FfiConverterTypeCoreThemeFileBorder.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileBorder_lower(_ value: CoreThemeFileBorder) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileBorder.lower(value)
+}
+
+
+public struct CoreThemeFileFace: Equatable, Hashable {
+    public var families: [String]?
+    public var design: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(families: [String]?, design: String?) {
+        self.families = families
+        self.design = design
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileFace: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileFace: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileFace {
+        return
+            try CoreThemeFileFace(
+                families: FfiConverterOptionSequenceString.read(from: &buf), 
+                design: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileFace, into buf: inout [UInt8]) {
+        FfiConverterOptionSequenceString.write(value.families, into: &buf)
+        FfiConverterOptionString.write(value.design, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileFace_lift(_ buf: RustBuffer) throws -> CoreThemeFileFace {
+    return try FfiConverterTypeCoreThemeFileFace.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileFace_lower(_ value: CoreThemeFileFace) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileFace.lower(value)
+}
+
+
+/**
+ * Something a theme file got wrong, in a sentence someone editing it can act on.
+ */
+public struct CoreThemeFileIssue: Equatable, Hashable {
+    /**
+     * The file name, e.g. `dusk.json`.
+     */
+    public var source: String
+    public var severity: CoreThemeIssueSeverity
+    public var message: String
+    /**
+     * A finding of the audit of the theme the file produced, as opposed to
+     * a problem with what the file says.
+     */
+    public var isAudit: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The file name, e.g. `dusk.json`.
+         */source: String, severity: CoreThemeIssueSeverity, message: String, 
+        /**
+         * A finding of the audit of the theme the file produced, as opposed to
+         * a problem with what the file says.
+         */isAudit: Bool) {
+        self.source = source
+        self.severity = severity
+        self.message = message
+        self.isAudit = isAudit
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileIssue: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileIssue: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileIssue {
+        return
+            try CoreThemeFileIssue(
+                source: FfiConverterString.read(from: &buf), 
+                severity: FfiConverterTypeCoreThemeIssueSeverity.read(from: &buf), 
+                message: FfiConverterString.read(from: &buf), 
+                isAudit: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileIssue, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.source, into: &buf)
+        FfiConverterTypeCoreThemeIssueSeverity.write(value.severity, into: &buf)
+        FfiConverterString.write(value.message, into: &buf)
+        FfiConverterBool.write(value.isAudit, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileIssue_lift(_ buf: RustBuffer) throws -> CoreThemeFileIssue {
+    return try FfiConverterTypeCoreThemeFileIssue.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileIssue_lower(_ value: CoreThemeFileIssue) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileIssue.lower(value)
+}
+
+
+public struct CoreThemeFileMicroLabel: Equatable, Hashable {
+    public var size: Double?
+    public var weight: String?
+    public var tracking: Double?
+    public var uppercase: Bool?
+    public var role: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(size: Double?, weight: String?, tracking: Double?, uppercase: Bool?, role: String?) {
+        self.size = size
+        self.weight = weight
+        self.tracking = tracking
+        self.uppercase = uppercase
+        self.role = role
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileMicroLabel: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileMicroLabel: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileMicroLabel {
+        return
+            try CoreThemeFileMicroLabel(
+                size: FfiConverterOptionDouble.read(from: &buf), 
+                weight: FfiConverterOptionString.read(from: &buf), 
+                tracking: FfiConverterOptionDouble.read(from: &buf), 
+                uppercase: FfiConverterOptionBool.read(from: &buf), 
+                role: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileMicroLabel, into buf: inout [UInt8]) {
+        FfiConverterOptionDouble.write(value.size, into: &buf)
+        FfiConverterOptionString.write(value.weight, into: &buf)
+        FfiConverterOptionDouble.write(value.tracking, into: &buf)
+        FfiConverterOptionBool.write(value.uppercase, into: &buf)
+        FfiConverterOptionString.write(value.role, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileMicroLabel_lift(_ buf: RustBuffer) throws -> CoreThemeFileMicroLabel {
+    return try FfiConverterTypeCoreThemeFileMicroLabel.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileMicroLabel_lower(_ value: CoreThemeFileMicroLabel) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileMicroLabel.lower(value)
+}
+
+
+/**
+ * What became of one file.
+ */
+public struct CoreThemeFileOutcome: Equatable, Hashable {
+    public var source: String
+    /**
+     * `None` when the theme was skipped; `skipped_reason` says why.
+     */
+    public var specification: CoreThemeSpecification?
+    public var skippedReason: String?
+    /**
+     * Everything reported about this file, worst first, the audit included.
+     */
+    public var issues: [CoreThemeFileIssue]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(source: String, 
+        /**
+         * `None` when the theme was skipped; `skipped_reason` says why.
+         */specification: CoreThemeSpecification?, skippedReason: String?, 
+        /**
+         * Everything reported about this file, worst first, the audit included.
+         */issues: [CoreThemeFileIssue]) {
+        self.source = source
+        self.specification = specification
+        self.skippedReason = skippedReason
+        self.issues = issues
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileOutcome: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileOutcome {
+        return
+            try CoreThemeFileOutcome(
+                source: FfiConverterString.read(from: &buf), 
+                specification: FfiConverterOptionTypeCoreThemeSpecification.read(from: &buf), 
+                skippedReason: FfiConverterOptionString.read(from: &buf), 
+                issues: FfiConverterSequenceTypeCoreThemeFileIssue.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileOutcome, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.source, into: &buf)
+        FfiConverterOptionTypeCoreThemeSpecification.write(value.specification, into: &buf)
+        FfiConverterOptionString.write(value.skippedReason, into: &buf)
+        FfiConverterSequenceTypeCoreThemeFileIssue.write(value.issues, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileOutcome_lift(_ buf: RustBuffer) throws -> CoreThemeFileOutcome {
+    return try FfiConverterTypeCoreThemeFileOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileOutcome_lower(_ value: CoreThemeFileOutcome) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileOutcome.lower(value)
+}
+
+
+/**
+ * Name → hex per appearance: a role under `palette`, a seed under `seeds`.
+ */
+public struct CoreThemeFilePalette: Equatable, Hashable {
+    public var light: [String: String]?
+    public var dark: [String: String]?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(light: [String: String]?, dark: [String: String]?) {
+        self.light = light
+        self.dark = dark
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFilePalette: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFilePalette: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFilePalette {
+        return
+            try CoreThemeFilePalette(
+                light: FfiConverterOptionDictionaryStringString.read(from: &buf), 
+                dark: FfiConverterOptionDictionaryStringString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFilePalette, into buf: inout [UInt8]) {
+        FfiConverterOptionDictionaryStringString.write(value.light, into: &buf)
+        FfiConverterOptionDictionaryStringString.write(value.dark, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFilePalette_lift(_ buf: RustBuffer) throws -> CoreThemeFilePalette {
+    return try FfiConverterTypeCoreThemeFilePalette.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFilePalette_lower(_ value: CoreThemeFilePalette) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFilePalette.lower(value)
+}
+
+
+/**
+ * One platform's entry under `platforms`: structure only.
+ */
+public struct CoreThemeFilePlatformOverride: Equatable, Hashable {
+    public var structure: CoreThemeFileStructure?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(structure: CoreThemeFileStructure?) {
+        self.structure = structure
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFilePlatformOverride: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFilePlatformOverride: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFilePlatformOverride {
+        return
+            try CoreThemeFilePlatformOverride(
+                structure: FfiConverterOptionTypeCoreThemeFileStructure.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFilePlatformOverride, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeCoreThemeFileStructure.write(value.structure, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFilePlatformOverride_lift(_ buf: RustBuffer) throws -> CoreThemeFilePlatformOverride {
+    return try FfiConverterTypeCoreThemeFilePlatformOverride.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFilePlatformOverride_lower(_ value: CoreThemeFilePlatformOverride) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFilePlatformOverride.lower(value)
+}
+
+
+public struct CoreThemeFilePlatforms: Equatable, Hashable {
+    public var macos: CoreThemeFilePlatformOverride?
+    public var ios: CoreThemeFilePlatformOverride?
+    public var android: CoreThemeFilePlatformOverride?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(macos: CoreThemeFilePlatformOverride?, ios: CoreThemeFilePlatformOverride?, android: CoreThemeFilePlatformOverride?) {
+        self.macos = macos
+        self.ios = ios
+        self.android = android
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFilePlatforms: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFilePlatforms: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFilePlatforms {
+        return
+            try CoreThemeFilePlatforms(
+                macos: FfiConverterOptionTypeCoreThemeFilePlatformOverride.read(from: &buf), 
+                ios: FfiConverterOptionTypeCoreThemeFilePlatformOverride.read(from: &buf), 
+                android: FfiConverterOptionTypeCoreThemeFilePlatformOverride.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFilePlatforms, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeCoreThemeFilePlatformOverride.write(value.macos, into: &buf)
+        FfiConverterOptionTypeCoreThemeFilePlatformOverride.write(value.ios, into: &buf)
+        FfiConverterOptionTypeCoreThemeFilePlatformOverride.write(value.android, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFilePlatforms_lift(_ buf: RustBuffer) throws -> CoreThemeFilePlatforms {
+    return try FfiConverterTypeCoreThemeFilePlatforms.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFilePlatforms_lower(_ value: CoreThemeFilePlatforms) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFilePlatforms.lower(value)
+}
+
+
+public struct CoreThemeFileRadius: Equatable, Hashable {
+    public var panel: Double?
+    public var row: Double?
+    public var control: Double?
+    public var pill: Double?
+    public var shell: Double?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(panel: Double?, row: Double?, control: Double?, pill: Double?, shell: Double?) {
+        self.panel = panel
+        self.row = row
+        self.control = control
+        self.pill = pill
+        self.shell = shell
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileRadius: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileRadius: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileRadius {
+        return
+            try CoreThemeFileRadius(
+                panel: FfiConverterOptionDouble.read(from: &buf), 
+                row: FfiConverterOptionDouble.read(from: &buf), 
+                control: FfiConverterOptionDouble.read(from: &buf), 
+                pill: FfiConverterOptionDouble.read(from: &buf), 
+                shell: FfiConverterOptionDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileRadius, into buf: inout [UInt8]) {
+        FfiConverterOptionDouble.write(value.panel, into: &buf)
+        FfiConverterOptionDouble.write(value.row, into: &buf)
+        FfiConverterOptionDouble.write(value.control, into: &buf)
+        FfiConverterOptionDouble.write(value.pill, into: &buf)
+        FfiConverterOptionDouble.write(value.shell, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileRadius_lift(_ buf: RustBuffer) throws -> CoreThemeFileRadius {
+    return try FfiConverterTypeCoreThemeFileRadius.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileRadius_lower(_ value: CoreThemeFileRadius) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileRadius.lower(value)
+}
+
+
+/**
+ * One file's bytes, named.
+ */
+public struct CoreThemeFileSource: Equatable, Hashable {
+    public var name: String
+    public var data: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, data: Data) {
+        self.name = name
+        self.data = data
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileSource: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileSource: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileSource {
+        return
+            try CoreThemeFileSource(
+                name: FfiConverterString.read(from: &buf), 
+                data: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileSource, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterData.write(value.data, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileSource_lift(_ buf: RustBuffer) throws -> CoreThemeFileSource {
+    return try FfiConverterTypeCoreThemeFileSource.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileSource_lower(_ value: CoreThemeFileSource) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileSource.lower(value)
+}
+
+
+public struct CoreThemeFileSpacing: Equatable, Hashable {
+    public var xxs: Double?
+    public var xs: Double?
+    public var sm: Double?
+    public var md: Double?
+    public var lg: Double?
+    public var xl: Double?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(xxs: Double?, xs: Double?, sm: Double?, md: Double?, lg: Double?, xl: Double?) {
+        self.xxs = xxs
+        self.xs = xs
+        self.sm = sm
+        self.md = md
+        self.lg = lg
+        self.xl = xl
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileSpacing: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileSpacing: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileSpacing {
+        return
+            try CoreThemeFileSpacing(
+                xxs: FfiConverterOptionDouble.read(from: &buf), 
+                xs: FfiConverterOptionDouble.read(from: &buf), 
+                sm: FfiConverterOptionDouble.read(from: &buf), 
+                md: FfiConverterOptionDouble.read(from: &buf), 
+                lg: FfiConverterOptionDouble.read(from: &buf), 
+                xl: FfiConverterOptionDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileSpacing, into buf: inout [UInt8]) {
+        FfiConverterOptionDouble.write(value.xxs, into: &buf)
+        FfiConverterOptionDouble.write(value.xs, into: &buf)
+        FfiConverterOptionDouble.write(value.sm, into: &buf)
+        FfiConverterOptionDouble.write(value.md, into: &buf)
+        FfiConverterOptionDouble.write(value.lg, into: &buf)
+        FfiConverterOptionDouble.write(value.xl, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileSpacing_lift(_ buf: RustBuffer) throws -> CoreThemeFileSpacing {
+    return try FfiConverterTypeCoreThemeFileSpacing.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileSpacing_lower(_ value: CoreThemeFileSpacing) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileSpacing.lower(value)
+}
+
+
+public struct CoreThemeFileStructure: Equatable, Hashable {
+    public var radius: CoreThemeFileRadius?
+    public var border: CoreThemeFileBorder?
+    public var spacing: CoreThemeFileSpacing?
+    public var typography: CoreThemeFileTypography?
+    public var touchTarget: Double?
+    public var usesShadows: Bool?
+    public var usesGradientsOnChrome: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(radius: CoreThemeFileRadius?, border: CoreThemeFileBorder?, spacing: CoreThemeFileSpacing?, typography: CoreThemeFileTypography?, touchTarget: Double?, usesShadows: Bool?, usesGradientsOnChrome: Bool?) {
+        self.radius = radius
+        self.border = border
+        self.spacing = spacing
+        self.typography = typography
+        self.touchTarget = touchTarget
+        self.usesShadows = usesShadows
+        self.usesGradientsOnChrome = usesGradientsOnChrome
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileStructure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileStructure: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileStructure {
+        return
+            try CoreThemeFileStructure(
+                radius: FfiConverterOptionTypeCoreThemeFileRadius.read(from: &buf), 
+                border: FfiConverterOptionTypeCoreThemeFileBorder.read(from: &buf), 
+                spacing: FfiConverterOptionTypeCoreThemeFileSpacing.read(from: &buf), 
+                typography: FfiConverterOptionTypeCoreThemeFileTypography.read(from: &buf), 
+                touchTarget: FfiConverterOptionDouble.read(from: &buf), 
+                usesShadows: FfiConverterOptionBool.read(from: &buf), 
+                usesGradientsOnChrome: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileStructure, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeCoreThemeFileRadius.write(value.radius, into: &buf)
+        FfiConverterOptionTypeCoreThemeFileBorder.write(value.border, into: &buf)
+        FfiConverterOptionTypeCoreThemeFileSpacing.write(value.spacing, into: &buf)
+        FfiConverterOptionTypeCoreThemeFileTypography.write(value.typography, into: &buf)
+        FfiConverterOptionDouble.write(value.touchTarget, into: &buf)
+        FfiConverterOptionBool.write(value.usesShadows, into: &buf)
+        FfiConverterOptionBool.write(value.usesGradientsOnChrome, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileStructure_lift(_ buf: RustBuffer) throws -> CoreThemeFileStructure {
+    return try FfiConverterTypeCoreThemeFileStructure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileStructure_lower(_ value: CoreThemeFileStructure) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileStructure.lower(value)
+}
+
+
+public struct CoreThemeFileTypeScale: Equatable, Hashable {
+    public var caption: Double?
+    public var body: Double?
+    public var title: Double?
+    public var display: Double?
+    public var hero: Double?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(caption: Double?, body: Double?, title: Double?, display: Double?, hero: Double?) {
+        self.caption = caption
+        self.body = body
+        self.title = title
+        self.display = display
+        self.hero = hero
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileTypeScale: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileTypeScale: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileTypeScale {
+        return
+            try CoreThemeFileTypeScale(
+                caption: FfiConverterOptionDouble.read(from: &buf), 
+                body: FfiConverterOptionDouble.read(from: &buf), 
+                title: FfiConverterOptionDouble.read(from: &buf), 
+                display: FfiConverterOptionDouble.read(from: &buf), 
+                hero: FfiConverterOptionDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileTypeScale, into buf: inout [UInt8]) {
+        FfiConverterOptionDouble.write(value.caption, into: &buf)
+        FfiConverterOptionDouble.write(value.body, into: &buf)
+        FfiConverterOptionDouble.write(value.title, into: &buf)
+        FfiConverterOptionDouble.write(value.display, into: &buf)
+        FfiConverterOptionDouble.write(value.hero, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileTypeScale_lift(_ buf: RustBuffer) throws -> CoreThemeFileTypeScale {
+    return try FfiConverterTypeCoreThemeFileTypeScale.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileTypeScale_lower(_ value: CoreThemeFileTypeScale) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileTypeScale.lower(value)
+}
+
+
+public struct CoreThemeFileTypography: Equatable, Hashable {
+    public var display: CoreThemeFileFace?
+    public var body: CoreThemeFileFace?
+    public var mono: CoreThemeFileFace?
+    public var bodySize: Double?
+    public var scale: CoreThemeFileTypeScale?
+    public var microLabel: CoreThemeFileMicroLabel?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(display: CoreThemeFileFace?, body: CoreThemeFileFace?, mono: CoreThemeFileFace?, bodySize: Double?, scale: CoreThemeFileTypeScale?, microLabel: CoreThemeFileMicroLabel?) {
+        self.display = display
+        self.body = body
+        self.mono = mono
+        self.bodySize = bodySize
+        self.scale = scale
+        self.microLabel = microLabel
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFileTypography: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileTypography: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileTypography {
+        return
+            try CoreThemeFileTypography(
+                display: FfiConverterOptionTypeCoreThemeFileFace.read(from: &buf), 
+                body: FfiConverterOptionTypeCoreThemeFileFace.read(from: &buf), 
+                mono: FfiConverterOptionTypeCoreThemeFileFace.read(from: &buf), 
+                bodySize: FfiConverterOptionDouble.read(from: &buf), 
+                scale: FfiConverterOptionTypeCoreThemeFileTypeScale.read(from: &buf), 
+                microLabel: FfiConverterOptionTypeCoreThemeFileMicroLabel.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFileTypography, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeCoreThemeFileFace.write(value.display, into: &buf)
+        FfiConverterOptionTypeCoreThemeFileFace.write(value.body, into: &buf)
+        FfiConverterOptionTypeCoreThemeFileFace.write(value.mono, into: &buf)
+        FfiConverterOptionDouble.write(value.bodySize, into: &buf)
+        FfiConverterOptionTypeCoreThemeFileTypeScale.write(value.scale, into: &buf)
+        FfiConverterOptionTypeCoreThemeFileMicroLabel.write(value.microLabel, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileTypography_lift(_ buf: RustBuffer) throws -> CoreThemeFileTypography {
+    return try FfiConverterTypeCoreThemeFileTypography.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileTypography_lower(_ value: CoreThemeFileTypography) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileTypography.lower(value)
+}
+
+
+public struct CoreThemeFontFace: Equatable, Hashable {
+    /**
+     * Most-wanted first. Empty means "use the design".
+     */
+    public var families: [String]
+    /**
+     * `serif`, `sans`, `monospaced` or `rounded`.
+     */
+    public var design: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Most-wanted first. Empty means "use the design".
+         */families: [String], 
+        /**
+         * `serif`, `sans`, `monospaced` or `rounded`.
+         */design: String) {
+        self.families = families
+        self.design = design
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeFontFace: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFontFace: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFontFace {
+        return
+            try CoreThemeFontFace(
+                families: FfiConverterSequenceString.read(from: &buf), 
+                design: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeFontFace, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.families, into: &buf)
+        FfiConverterString.write(value.design, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFontFace_lift(_ buf: RustBuffer) throws -> CoreThemeFontFace {
+    return try FfiConverterTypeCoreThemeFontFace.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFontFace_lower(_ value: CoreThemeFontFace) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFontFace.lower(value)
+}
+
+
+/**
+ * A structure merged, and what was wrong with the overrides.
+ */
+public struct CoreThemeMergedStructure: Equatable, Hashable {
+    public var structure: CoreThemeStructure
+    public var reports: [CoreThemeReport]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(structure: CoreThemeStructure, reports: [CoreThemeReport]) {
+        self.structure = structure
+        self.reports = reports
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeMergedStructure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeMergedStructure: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeMergedStructure {
+        return
+            try CoreThemeMergedStructure(
+                structure: FfiConverterTypeCoreThemeStructure.read(from: &buf), 
+                reports: FfiConverterSequenceTypeCoreThemeReport.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeMergedStructure, into buf: inout [UInt8]) {
+        FfiConverterTypeCoreThemeStructure.write(value.structure, into: &buf)
+        FfiConverterSequenceTypeCoreThemeReport.write(value.reports, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeMergedStructure_lift(_ buf: RustBuffer) throws -> CoreThemeMergedStructure {
+    return try FfiConverterTypeCoreThemeMergedStructure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeMergedStructure_lower(_ value: CoreThemeMergedStructure) -> RustBuffer {
+    return FfiConverterTypeCoreThemeMergedStructure.lower(value)
+}
+
+
+public struct CoreThemeMicroLabel: Equatable, Hashable {
+    public var size: Double
+    /**
+     * `regular`, `medium`, `semibold`, `bold` or `black`.
+     */
+    public var weight: String
+    /**
+     * In em.
+     */
+    public var tracking: Double
+    public var isUppercased: Bool
+    /**
+     * A colour role.
+     */
+    public var role: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(size: Double, 
+        /**
+         * `regular`, `medium`, `semibold`, `bold` or `black`.
+         */weight: String, 
+        /**
+         * In em.
+         */tracking: Double, isUppercased: Bool, 
+        /**
+         * A colour role.
+         */role: String) {
+        self.size = size
+        self.weight = weight
+        self.tracking = tracking
+        self.isUppercased = isUppercased
+        self.role = role
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeMicroLabel: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeMicroLabel: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeMicroLabel {
+        return
+            try CoreThemeMicroLabel(
+                size: FfiConverterDouble.read(from: &buf), 
+                weight: FfiConverterString.read(from: &buf), 
+                tracking: FfiConverterDouble.read(from: &buf), 
+                isUppercased: FfiConverterBool.read(from: &buf), 
+                role: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeMicroLabel, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.size, into: &buf)
+        FfiConverterString.write(value.weight, into: &buf)
+        FfiConverterDouble.write(value.tracking, into: &buf)
+        FfiConverterBool.write(value.isUppercased, into: &buf)
+        FfiConverterString.write(value.role, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeMicroLabel_lift(_ buf: RustBuffer) throws -> CoreThemeMicroLabel {
+    return try FfiConverterTypeCoreThemeMicroLabel.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeMicroLabel_lower(_ value: CoreThemeMicroLabel) -> RustBuffer {
+    return FfiConverterTypeCoreThemeMicroLabel.lower(value)
+}
+
+
+/**
+ * One input file of a case, as text: it may be invalid JSON on purpose.
+ */
+public struct CoreThemeNamedText: Equatable, Hashable {
+    public var name: String
+    public var json: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, json: String) {
+        self.name = name
+        self.json = json
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeNamedText: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeNamedText: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeNamedText {
+        return
+            try CoreThemeNamedText(
+                name: FfiConverterString.read(from: &buf), 
+                json: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeNamedText, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.json, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeNamedText_lift(_ buf: RustBuffer) throws -> CoreThemeNamedText {
+    return try FfiConverterTypeCoreThemeNamedText.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeNamedText_lower(_ value: CoreThemeNamedText) -> RustBuffer {
+    return FfiConverterTypeCoreThemeNamedText.lower(value)
+}
+
+
+/**
+ * Two tables of literal colour, one per appearance.
+ */
+public struct CoreThemePalette: Equatable, Hashable {
+    public var light: [String: CoreThemeColor]
+    public var dark: [String: CoreThemeColor]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(light: [String: CoreThemeColor], dark: [String: CoreThemeColor]) {
+        self.light = light
+        self.dark = dark
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemePalette: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemePalette: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemePalette {
+        return
+            try CoreThemePalette(
+                light: FfiConverterDictionaryStringTypeCoreThemeColor.read(from: &buf), 
+                dark: FfiConverterDictionaryStringTypeCoreThemeColor.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemePalette, into buf: inout [UInt8]) {
+        FfiConverterDictionaryStringTypeCoreThemeColor.write(value.light, into: &buf)
+        FfiConverterDictionaryStringTypeCoreThemeColor.write(value.dark, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemePalette_lift(_ buf: RustBuffer) throws -> CoreThemePalette {
+    return try FfiConverterTypeCoreThemePalette.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemePalette_lower(_ value: CoreThemePalette) -> RustBuffer {
+    return FfiConverterTypeCoreThemePalette.lower(value)
+}
+
+
+/**
+ * A theme as one platform resolved it.
+ */
+public struct CoreThemePlatformSpecification: Equatable, Hashable {
+    public var platform: CoreThemePlatform
+    public var specification: CoreThemeSpecification
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(platform: CoreThemePlatform, specification: CoreThemeSpecification) {
+        self.platform = platform
+        self.specification = specification
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemePlatformSpecification: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemePlatformSpecification: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemePlatformSpecification {
+        return
+            try CoreThemePlatformSpecification(
+                platform: FfiConverterTypeCoreThemePlatform.read(from: &buf), 
+                specification: FfiConverterTypeCoreThemeSpecification.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemePlatformSpecification, into buf: inout [UInt8]) {
+        FfiConverterTypeCoreThemePlatform.write(value.platform, into: &buf)
+        FfiConverterTypeCoreThemeSpecification.write(value.specification, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemePlatformSpecification_lift(_ buf: RustBuffer) throws -> CoreThemePlatformSpecification {
+    return try FfiConverterTypeCoreThemePlatformSpecification.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemePlatformSpecification_lower(_ value: CoreThemePlatformSpecification) -> RustBuffer {
+    return FfiConverterTypeCoreThemePlatformSpecification.lower(value)
+}
+
+
+/**
+ * A built-in's partial structure for one platform.
+ */
+public struct CoreThemePlatformStructure: Equatable, Hashable {
+    public var platform: CoreThemePlatform
+    public var structure: CoreThemeFileStructure
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(platform: CoreThemePlatform, structure: CoreThemeFileStructure) {
+        self.platform = platform
+        self.structure = structure
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemePlatformStructure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemePlatformStructure: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemePlatformStructure {
+        return
+            try CoreThemePlatformStructure(
+                platform: FfiConverterTypeCoreThemePlatform.read(from: &buf), 
+                structure: FfiConverterTypeCoreThemeFileStructure.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemePlatformStructure, into buf: inout [UInt8]) {
+        FfiConverterTypeCoreThemePlatform.write(value.platform, into: &buf)
+        FfiConverterTypeCoreThemeFileStructure.write(value.structure, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemePlatformStructure_lift(_ buf: RustBuffer) throws -> CoreThemePlatformStructure {
+    return try FfiConverterTypeCoreThemePlatformStructure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemePlatformStructure_lower(_ value: CoreThemePlatformStructure) -> RustBuffer {
+    return FfiConverterTypeCoreThemePlatformStructure.lower(value)
+}
+
+
+public struct CoreThemeRadius: Equatable, Hashable {
+    public var panel: Double
+    public var row: Double
+    public var control: Double
+    public var pill: Double
+    public var shell: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(panel: Double, row: Double, control: Double, pill: Double, shell: Double) {
+        self.panel = panel
+        self.row = row
+        self.control = control
+        self.pill = pill
+        self.shell = shell
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeRadius: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeRadius: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeRadius {
+        return
+            try CoreThemeRadius(
+                panel: FfiConverterDouble.read(from: &buf), 
+                row: FfiConverterDouble.read(from: &buf), 
+                control: FfiConverterDouble.read(from: &buf), 
+                pill: FfiConverterDouble.read(from: &buf), 
+                shell: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeRadius, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.panel, into: &buf)
+        FfiConverterDouble.write(value.row, into: &buf)
+        FfiConverterDouble.write(value.control, into: &buf)
+        FfiConverterDouble.write(value.pill, into: &buf)
+        FfiConverterDouble.write(value.shell, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeRadius_lift(_ buf: RustBuffer) throws -> CoreThemeRadius {
+    return try FfiConverterTypeCoreThemeRadius.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeRadius_lower(_ value: CoreThemeRadius) -> RustBuffer {
+    return FfiConverterTypeCoreThemeRadius.lower(value)
+}
+
+
+public struct CoreThemeReport: Equatable, Hashable {
+    public var severity: CoreThemeIssueSeverity
+    public var message: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(severity: CoreThemeIssueSeverity, message: String) {
+        self.severity = severity
+        self.message = message
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeReport: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeReport: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeReport {
+        return
+            try CoreThemeReport(
+                severity: FfiConverterTypeCoreThemeIssueSeverity.read(from: &buf), 
+                message: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeReport, into buf: inout [UInt8]) {
+        FfiConverterTypeCoreThemeIssueSeverity.write(value.severity, into: &buf)
+        FfiConverterString.write(value.message, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeReport_lift(_ buf: RustBuffer) throws -> CoreThemeReport {
+    return try FfiConverterTypeCoreThemeReport.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeReport_lower(_ value: CoreThemeReport) -> RustBuffer {
+    return FfiConverterTypeCoreThemeReport.lower(value)
+}
+
+
+/**
+ * A theme fully resolved for one platform and one requested appearance.
+ */
+public struct CoreThemeResolved: Equatable, Hashable {
+    public var identifier: String
+    public var name: String
+    public var lockedAppearance: CoreThemeAppearance?
+    /**
+     * The appearance actually drawn: the lock, or the one asked for.
+     */
+    public var appearance: CoreThemeAppearance
+    /**
+     * Every role, lowercase `#rrggbb` or `#rrggbbaa`, as drawn.
+     */
+    public var colors: [String: String]
+    public var structure: CoreThemeStructure
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(identifier: String, name: String, lockedAppearance: CoreThemeAppearance?, 
+        /**
+         * The appearance actually drawn: the lock, or the one asked for.
+         */appearance: CoreThemeAppearance, 
+        /**
+         * Every role, lowercase `#rrggbb` or `#rrggbbaa`, as drawn.
+         */colors: [String: String], structure: CoreThemeStructure) {
+        self.identifier = identifier
+        self.name = name
+        self.lockedAppearance = lockedAppearance
+        self.appearance = appearance
+        self.colors = colors
+        self.structure = structure
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeResolved: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeResolved: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeResolved {
+        return
+            try CoreThemeResolved(
+                identifier: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                lockedAppearance: FfiConverterOptionTypeCoreThemeAppearance.read(from: &buf), 
+                appearance: FfiConverterTypeCoreThemeAppearance.read(from: &buf), 
+                colors: FfiConverterDictionaryStringString.read(from: &buf), 
+                structure: FfiConverterTypeCoreThemeStructure.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeResolved, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.identifier, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionTypeCoreThemeAppearance.write(value.lockedAppearance, into: &buf)
+        FfiConverterTypeCoreThemeAppearance.write(value.appearance, into: &buf)
+        FfiConverterDictionaryStringString.write(value.colors, into: &buf)
+        FfiConverterTypeCoreThemeStructure.write(value.structure, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeResolved_lift(_ buf: RustBuffer) throws -> CoreThemeResolved {
+    return try FfiConverterTypeCoreThemeResolved.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeResolved_lower(_ value: CoreThemeResolved) -> RustBuffer {
+    return FfiConverterTypeCoreThemeResolved.lower(value)
+}
+
+
+public struct CoreThemeSeeds: Equatable, Hashable {
+    public var background: CoreThemeColor?
+    public var foreground: CoreThemeColor?
+    public var accent: CoreThemeColor?
+    public var success: CoreThemeColor?
+    public var danger: CoreThemeColor?
+    public var warning: CoreThemeColor?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(background: CoreThemeColor?, foreground: CoreThemeColor?, accent: CoreThemeColor?, success: CoreThemeColor?, danger: CoreThemeColor?, warning: CoreThemeColor?) {
+        self.background = background
+        self.foreground = foreground
+        self.accent = accent
+        self.success = success
+        self.danger = danger
+        self.warning = warning
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeSeeds: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeSeeds: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeSeeds {
+        return
+            try CoreThemeSeeds(
+                background: FfiConverterOptionTypeCoreThemeColor.read(from: &buf), 
+                foreground: FfiConverterOptionTypeCoreThemeColor.read(from: &buf), 
+                accent: FfiConverterOptionTypeCoreThemeColor.read(from: &buf), 
+                success: FfiConverterOptionTypeCoreThemeColor.read(from: &buf), 
+                danger: FfiConverterOptionTypeCoreThemeColor.read(from: &buf), 
+                warning: FfiConverterOptionTypeCoreThemeColor.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeSeeds, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeCoreThemeColor.write(value.background, into: &buf)
+        FfiConverterOptionTypeCoreThemeColor.write(value.foreground, into: &buf)
+        FfiConverterOptionTypeCoreThemeColor.write(value.accent, into: &buf)
+        FfiConverterOptionTypeCoreThemeColor.write(value.success, into: &buf)
+        FfiConverterOptionTypeCoreThemeColor.write(value.danger, into: &buf)
+        FfiConverterOptionTypeCoreThemeColor.write(value.warning, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeSeeds_lift(_ buf: RustBuffer) throws -> CoreThemeSeeds {
+    return try FfiConverterTypeCoreThemeSeeds.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeSeeds_lower(_ value: CoreThemeSeeds) -> RustBuffer {
+    return FfiConverterTypeCoreThemeSeeds.lower(value)
+}
+
+
+public struct CoreThemeSpacing: Equatable, Hashable {
+    public var xxs: Double
+    public var xs: Double
+    public var sm: Double
+    public var md: Double
+    public var lg: Double
+    public var xl: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(xxs: Double, xs: Double, sm: Double, md: Double, lg: Double, xl: Double) {
+        self.xxs = xxs
+        self.xs = xs
+        self.sm = sm
+        self.md = md
+        self.lg = lg
+        self.xl = xl
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeSpacing: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeSpacing: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeSpacing {
+        return
+            try CoreThemeSpacing(
+                xxs: FfiConverterDouble.read(from: &buf), 
+                xs: FfiConverterDouble.read(from: &buf), 
+                sm: FfiConverterDouble.read(from: &buf), 
+                md: FfiConverterDouble.read(from: &buf), 
+                lg: FfiConverterDouble.read(from: &buf), 
+                xl: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeSpacing, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.xxs, into: &buf)
+        FfiConverterDouble.write(value.xs, into: &buf)
+        FfiConverterDouble.write(value.sm, into: &buf)
+        FfiConverterDouble.write(value.md, into: &buf)
+        FfiConverterDouble.write(value.lg, into: &buf)
+        FfiConverterDouble.write(value.xl, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeSpacing_lift(_ buf: RustBuffer) throws -> CoreThemeSpacing {
+    return try FfiConverterTypeCoreThemeSpacing.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeSpacing_lower(_ value: CoreThemeSpacing) -> RustBuffer {
+    return FfiConverterTypeCoreThemeSpacing.lower(value)
+}
+
+
+/**
+ * A whole theme.
+ */
+public struct CoreThemeSpecification: Equatable, Hashable {
+    public var identifier: String
+    public var name: String
+    public var summary: String
+    /**
+     * A theme that exists in one appearance only.
+     */
+    public var lockedAppearance: CoreThemeAppearance?
+    public var palette: CoreThemePalette
+    public var structure: CoreThemeStructure
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(identifier: String, name: String, summary: String, 
+        /**
+         * A theme that exists in one appearance only.
+         */lockedAppearance: CoreThemeAppearance?, palette: CoreThemePalette, structure: CoreThemeStructure) {
+        self.identifier = identifier
+        self.name = name
+        self.summary = summary
+        self.lockedAppearance = lockedAppearance
+        self.palette = palette
+        self.structure = structure
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeSpecification: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeSpecification: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeSpecification {
+        return
+            try CoreThemeSpecification(
+                identifier: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                summary: FfiConverterString.read(from: &buf), 
+                lockedAppearance: FfiConverterOptionTypeCoreThemeAppearance.read(from: &buf), 
+                palette: FfiConverterTypeCoreThemePalette.read(from: &buf), 
+                structure: FfiConverterTypeCoreThemeStructure.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeSpecification, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.identifier, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.summary, into: &buf)
+        FfiConverterOptionTypeCoreThemeAppearance.write(value.lockedAppearance, into: &buf)
+        FfiConverterTypeCoreThemePalette.write(value.palette, into: &buf)
+        FfiConverterTypeCoreThemeStructure.write(value.structure, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeSpecification_lift(_ buf: RustBuffer) throws -> CoreThemeSpecification {
+    return try FfiConverterTypeCoreThemeSpecification.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeSpecification_lower(_ value: CoreThemeSpecification) -> RustBuffer {
+    return FfiConverterTypeCoreThemeSpecification.lower(value)
+}
+
+
+/**
+ * Everything about a theme that is not colour.
+ */
+public struct CoreThemeStructure: Equatable, Hashable {
+    public var radius: CoreThemeRadius
+    public var border: CoreThemeBorder
+    public var spacing: CoreThemeSpacing
+    public var typography: CoreThemeTypography
+    /**
+     * The minimum hit area, in points; 0 for a pointer platform.
+     */
+    public var touchTarget: Double
+    public var usesShadows: Bool
+    public var usesGradientsOnChrome: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(radius: CoreThemeRadius, border: CoreThemeBorder, spacing: CoreThemeSpacing, typography: CoreThemeTypography, 
+        /**
+         * The minimum hit area, in points; 0 for a pointer platform.
+         */touchTarget: Double, usesShadows: Bool, usesGradientsOnChrome: Bool) {
+        self.radius = radius
+        self.border = border
+        self.spacing = spacing
+        self.typography = typography
+        self.touchTarget = touchTarget
+        self.usesShadows = usesShadows
+        self.usesGradientsOnChrome = usesGradientsOnChrome
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeStructure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeStructure: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeStructure {
+        return
+            try CoreThemeStructure(
+                radius: FfiConverterTypeCoreThemeRadius.read(from: &buf), 
+                border: FfiConverterTypeCoreThemeBorder.read(from: &buf), 
+                spacing: FfiConverterTypeCoreThemeSpacing.read(from: &buf), 
+                typography: FfiConverterTypeCoreThemeTypography.read(from: &buf), 
+                touchTarget: FfiConverterDouble.read(from: &buf), 
+                usesShadows: FfiConverterBool.read(from: &buf), 
+                usesGradientsOnChrome: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeStructure, into buf: inout [UInt8]) {
+        FfiConverterTypeCoreThemeRadius.write(value.radius, into: &buf)
+        FfiConverterTypeCoreThemeBorder.write(value.border, into: &buf)
+        FfiConverterTypeCoreThemeSpacing.write(value.spacing, into: &buf)
+        FfiConverterTypeCoreThemeTypography.write(value.typography, into: &buf)
+        FfiConverterDouble.write(value.touchTarget, into: &buf)
+        FfiConverterBool.write(value.usesShadows, into: &buf)
+        FfiConverterBool.write(value.usesGradientsOnChrome, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeStructure_lift(_ buf: RustBuffer) throws -> CoreThemeStructure {
+    return try FfiConverterTypeCoreThemeStructure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeStructure_lower(_ value: CoreThemeStructure) -> RustBuffer {
+    return FfiConverterTypeCoreThemeStructure.lower(value)
+}
+
+
+public struct CoreThemeTypeScale: Equatable, Hashable {
+    public var caption: Double
+    public var body: Double
+    public var title: Double
+    public var display: Double
+    public var hero: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(caption: Double, body: Double, title: Double, display: Double, hero: Double) {
+        self.caption = caption
+        self.body = body
+        self.title = title
+        self.display = display
+        self.hero = hero
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeTypeScale: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeTypeScale: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeTypeScale {
+        return
+            try CoreThemeTypeScale(
+                caption: FfiConverterDouble.read(from: &buf), 
+                body: FfiConverterDouble.read(from: &buf), 
+                title: FfiConverterDouble.read(from: &buf), 
+                display: FfiConverterDouble.read(from: &buf), 
+                hero: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeTypeScale, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.caption, into: &buf)
+        FfiConverterDouble.write(value.body, into: &buf)
+        FfiConverterDouble.write(value.title, into: &buf)
+        FfiConverterDouble.write(value.display, into: &buf)
+        FfiConverterDouble.write(value.hero, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeTypeScale_lift(_ buf: RustBuffer) throws -> CoreThemeTypeScale {
+    return try FfiConverterTypeCoreThemeTypeScale.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeTypeScale_lower(_ value: CoreThemeTypeScale) -> RustBuffer {
+    return FfiConverterTypeCoreThemeTypeScale.lower(value)
+}
+
+
+public struct CoreThemeTypography: Equatable, Hashable {
+    public var display: CoreThemeFontFace
+    public var body: CoreThemeFontFace
+    public var mono: CoreThemeFontFace
+    public var bodySize: Double
+    public var scale: CoreThemeTypeScale
+    public var microLabel: CoreThemeMicroLabel
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(display: CoreThemeFontFace, body: CoreThemeFontFace, mono: CoreThemeFontFace, bodySize: Double, scale: CoreThemeTypeScale, microLabel: CoreThemeMicroLabel) {
+        self.display = display
+        self.body = body
+        self.mono = mono
+        self.bodySize = bodySize
+        self.scale = scale
+        self.microLabel = microLabel
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CoreThemeTypography: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeTypography: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeTypography {
+        return
+            try CoreThemeTypography(
+                display: FfiConverterTypeCoreThemeFontFace.read(from: &buf), 
+                body: FfiConverterTypeCoreThemeFontFace.read(from: &buf), 
+                mono: FfiConverterTypeCoreThemeFontFace.read(from: &buf), 
+                bodySize: FfiConverterDouble.read(from: &buf), 
+                scale: FfiConverterTypeCoreThemeTypeScale.read(from: &buf), 
+                microLabel: FfiConverterTypeCoreThemeMicroLabel.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CoreThemeTypography, into buf: inout [UInt8]) {
+        FfiConverterTypeCoreThemeFontFace.write(value.display, into: &buf)
+        FfiConverterTypeCoreThemeFontFace.write(value.body, into: &buf)
+        FfiConverterTypeCoreThemeFontFace.write(value.mono, into: &buf)
+        FfiConverterDouble.write(value.bodySize, into: &buf)
+        FfiConverterTypeCoreThemeTypeScale.write(value.scale, into: &buf)
+        FfiConverterTypeCoreThemeMicroLabel.write(value.microLabel, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeTypography_lift(_ buf: RustBuffer) throws -> CoreThemeTypography {
+    return try FfiConverterTypeCoreThemeTypography.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeTypography_lower(_ value: CoreThemeTypography) -> RustBuffer {
+    return FfiConverterTypeCoreThemeTypography.lower(value)
+}
+
+
 /**
  * A folder or list [`create_folder`] or [`create_list`] made: what a client
  * needs to build its own model of it, beside what it already passed in.
@@ -9622,6 +11867,577 @@ public func FfiConverterTypeCoreError_lower(_ value: CoreError) -> RustBuffer {
 
 
 /**
+ * Which of a palette's two tables is in force.
+ */
+
+public enum CoreThemeAppearance: Equatable, Hashable {
+    
+    case light
+    case dark
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CoreThemeAppearance: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeAppearance: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeAppearance
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeAppearance {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .light
+        
+        case 2: return .dark
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CoreThemeAppearance, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .light:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .dark:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeAppearance_lift(_ buf: RustBuffer) throws -> CoreThemeAppearance {
+    return try FfiConverterTypeCoreThemeAppearance.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeAppearance_lower(_ value: CoreThemeAppearance) -> RustBuffer {
+    return FfiConverterTypeCoreThemeAppearance.lower(value)
+}
+
+
+
+/**
+ * What the file inherits every value it does not state from.
+ */
+
+public enum CoreThemeFileBase: Equatable, Hashable {
+    
+    /**
+     * Key absent: the default theme.
+     */
+    case defaultTheme
+    /**
+     * `"extends": "<identifier>"`.
+     */
+    case theme(identifier: String
+    )
+    /**
+     * `"extends": null`: no colours inherited.
+     */
+    case nothing
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CoreThemeFileBase: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileBase: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileBase
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileBase {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .defaultTheme
+        
+        case 2: return .theme(identifier: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .nothing
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CoreThemeFileBase, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .defaultTheme:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .theme(identifier):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(identifier, into: &buf)
+            
+        
+        case .nothing:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileBase_lift(_ buf: RustBuffer) throws -> CoreThemeFileBase {
+    return try FfiConverterTypeCoreThemeFileBase.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileBase_lower(_ value: CoreThemeFileBase) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileBase.lower(value)
+}
+
+
+
+/**
+ * `lockedAppearance`: absent inherits, `null` clears, a string sets.
+ */
+
+public enum CoreThemeFileLock: Equatable, Hashable {
+    
+    case inherit
+    case unlocked
+    /**
+     * Carried raw, so an unknown value is a reported issue.
+     */
+    case locked(raw: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CoreThemeFileLock: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeFileLock: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileLock
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeFileLock {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .inherit
+        
+        case 2: return .unlocked
+        
+        case 3: return .locked(raw: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CoreThemeFileLock, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .inherit:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .unlocked:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .locked(raw):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(raw, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileLock_lift(_ buf: RustBuffer) throws -> CoreThemeFileLock {
+    return try FfiConverterTypeCoreThemeFileLock.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeFileLock_lower(_ value: CoreThemeFileLock) -> RustBuffer {
+    return FfiConverterTypeCoreThemeFileLock.lower(value)
+}
+
+
+
+/**
+ * One finding.
+ */
+
+public enum CoreThemeIssue: Equatable, Hashable {
+    
+    case missingRole(role: String, appearance: CoreThemeAppearance
+    )
+    /**
+     * Running text under 4.5:1 on the paper.
+     */
+    case bodyTextBelowAa(role: String, appearance: CoreThemeAppearance, ratio: Double
+    )
+    /**
+     * An accent under 4.5:1: headlines, fills and controls, never a paragraph.
+     */
+    case largeTextOnly(role: String, appearance: CoreThemeAppearance, ratio: Double
+    )
+    /**
+     * `primary` under 3:1, too low even for a focus ring.
+     */
+    case accentBelowUiMinimum(role: String, appearance: CoreThemeAppearance, ratio: Double
+    )
+    case raisedIndistinctFromPaper(appearance: CoreThemeAppearance, ratio: Double
+    )
+    case shadowsUsed
+    case gradientsOnChrome
+    case radiusScaleOutOfOrder
+    case shellRadiusOffScale(value: Double
+    )
+    case hairlineTooHeavy(value: Double
+    )
+    case touchTargetTooSmall(value: Double
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CoreThemeIssue: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeIssue: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeIssue
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeIssue {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .missingRole(role: try FfiConverterString.read(from: &buf), appearance: try FfiConverterTypeCoreThemeAppearance.read(from: &buf)
+        )
+        
+        case 2: return .bodyTextBelowAa(role: try FfiConverterString.read(from: &buf), appearance: try FfiConverterTypeCoreThemeAppearance.read(from: &buf), ratio: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 3: return .largeTextOnly(role: try FfiConverterString.read(from: &buf), appearance: try FfiConverterTypeCoreThemeAppearance.read(from: &buf), ratio: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 4: return .accentBelowUiMinimum(role: try FfiConverterString.read(from: &buf), appearance: try FfiConverterTypeCoreThemeAppearance.read(from: &buf), ratio: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 5: return .raisedIndistinctFromPaper(appearance: try FfiConverterTypeCoreThemeAppearance.read(from: &buf), ratio: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 6: return .shadowsUsed
+        
+        case 7: return .gradientsOnChrome
+        
+        case 8: return .radiusScaleOutOfOrder
+        
+        case 9: return .shellRadiusOffScale(value: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 10: return .hairlineTooHeavy(value: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 11: return .touchTargetTooSmall(value: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CoreThemeIssue, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .missingRole(role,appearance):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(role, into: &buf)
+            FfiConverterTypeCoreThemeAppearance.write(appearance, into: &buf)
+            
+        
+        case let .bodyTextBelowAa(role,appearance,ratio):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(role, into: &buf)
+            FfiConverterTypeCoreThemeAppearance.write(appearance, into: &buf)
+            FfiConverterDouble.write(ratio, into: &buf)
+            
+        
+        case let .largeTextOnly(role,appearance,ratio):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(role, into: &buf)
+            FfiConverterTypeCoreThemeAppearance.write(appearance, into: &buf)
+            FfiConverterDouble.write(ratio, into: &buf)
+            
+        
+        case let .accentBelowUiMinimum(role,appearance,ratio):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(role, into: &buf)
+            FfiConverterTypeCoreThemeAppearance.write(appearance, into: &buf)
+            FfiConverterDouble.write(ratio, into: &buf)
+            
+        
+        case let .raisedIndistinctFromPaper(appearance,ratio):
+            writeInt(&buf, Int32(5))
+            FfiConverterTypeCoreThemeAppearance.write(appearance, into: &buf)
+            FfiConverterDouble.write(ratio, into: &buf)
+            
+        
+        case .shadowsUsed:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .gradientsOnChrome:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .radiusScaleOutOfOrder:
+            writeInt(&buf, Int32(8))
+        
+        
+        case let .shellRadiusOffScale(value):
+            writeInt(&buf, Int32(9))
+            FfiConverterDouble.write(value, into: &buf)
+            
+        
+        case let .hairlineTooHeavy(value):
+            writeInt(&buf, Int32(10))
+            FfiConverterDouble.write(value, into: &buf)
+            
+        
+        case let .touchTargetTooSmall(value):
+            writeInt(&buf, Int32(11))
+            FfiConverterDouble.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeIssue_lift(_ buf: RustBuffer) throws -> CoreThemeIssue {
+    return try FfiConverterTypeCoreThemeIssue.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeIssue_lower(_ value: CoreThemeIssue) -> RustBuffer {
+    return FfiConverterTypeCoreThemeIssue.lower(value)
+}
+
+
+
+
+public enum CoreThemeIssueSeverity: Equatable, Hashable {
+    
+    /**
+     * Something will render wrong.
+     */
+    case error
+    /**
+     * It renders, but a rule of the house style is being bent.
+     */
+    case warning
+    /**
+     * True, worth knowing, and intended.
+     */
+    case note
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CoreThemeIssueSeverity: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemeIssueSeverity: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeIssueSeverity
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemeIssueSeverity {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .error
+        
+        case 2: return .warning
+        
+        case 3: return .note
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CoreThemeIssueSeverity, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .error:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .warning:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .note:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeIssueSeverity_lift(_ buf: RustBuffer) throws -> CoreThemeIssueSeverity {
+    return try FfiConverterTypeCoreThemeIssueSeverity.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemeIssueSeverity_lower(_ value: CoreThemeIssueSeverity) -> RustBuffer {
+    return FfiConverterTypeCoreThemeIssueSeverity.lower(value)
+}
+
+
+
+/**
+ * The app a theme is resolved for. The palette is the same on all three;
+ * the structure is not.
+ */
+
+public enum CoreThemePlatform: Equatable, Hashable {
+    
+    case macos
+    case ios
+    case android
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CoreThemePlatform: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCoreThemePlatform: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemePlatform
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreThemePlatform {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .macos
+        
+        case 2: return .ios
+        
+        case 3: return .android
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CoreThemePlatform, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .macos:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .ios:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .android:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemePlatform_lift(_ buf: RustBuffer) throws -> CoreThemePlatform {
+    return try FfiConverterTypeCoreThemePlatform.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCoreThemePlatform_lower(_ value: CoreThemePlatform) -> RustBuffer {
+    return FfiConverterTypeCoreThemePlatform.lower(value)
+}
+
+
+
+/**
  * How hard a completion lands. `CompletionMilestone`.
  */
 
@@ -10426,6 +13242,342 @@ fileprivate struct FfiConverterOptionTypeContributionRow: FfiConverterRustBuffer
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeCoreThemeColor: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeColor?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeColor.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeColor.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFile: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFile?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFile.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFile.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFileBorder: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileBorder?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFileBorder.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFileBorder.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFileFace: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileFace?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFileFace.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFileFace.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFileMicroLabel: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileMicroLabel?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFileMicroLabel.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFileMicroLabel.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFilePalette: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFilePalette?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFilePalette.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFilePalette.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFilePlatformOverride: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFilePlatformOverride?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFilePlatformOverride.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFilePlatformOverride.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFilePlatforms: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFilePlatforms?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFilePlatforms.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFilePlatforms.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFileRadius: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileRadius?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFileRadius.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFileRadius.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFileSpacing: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileSpacing?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFileSpacing.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFileSpacing.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFileStructure: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileStructure?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFileStructure.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFileStructure.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFileTypeScale: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileTypeScale?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFileTypeScale.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFileTypeScale.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeFileTypography: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeFileTypography?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeFileTypography.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeFileTypography.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCoreThemeSpecification: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeSpecification?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeSpecification.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeSpecification.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeDailyRow: FfiConverterRustBuffer {
     typealias SwiftType = DailyRow?
 
@@ -10714,6 +13866,30 @@ fileprivate struct FfiConverterOptionTypeTaskRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeCoreThemeAppearance: FfiConverterRustBuffer {
+    typealias SwiftType = CoreThemeAppearance?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCoreThemeAppearance.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCoreThemeAppearance.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypePeriodicCadence: FfiConverterRustBuffer {
     typealias SwiftType = PeriodicCadence?
 
@@ -10762,6 +13938,54 @@ fileprivate struct FfiConverterOptionSequenceUInt32: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionSequenceTypeCoreThemeSpecification: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemeSpecification]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeCoreThemeSpecification.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeCoreThemeSpecification.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [[String]]?
 
@@ -10778,6 +14002,54 @@ fileprivate struct FfiConverterOptionSequenceSequenceString: FfiConverterRustBuf
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterSequenceSequenceString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionDictionaryStringString: FfiConverterRustBuffer {
+    typealias SwiftType = [String: String]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterDictionaryStringString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterDictionaryStringString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionDictionaryStringTypeCoreThemeColor: FfiConverterRustBuffer {
+    typealias SwiftType = [String: CoreThemeColor]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterDictionaryStringTypeCoreThemeColor.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterDictionaryStringTypeCoreThemeColor.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -11078,6 +14350,206 @@ fileprivate struct FfiConverterSequenceTypeContributionRow: FfiConverterRustBuff
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeContributionRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCoreThemeFileIssue: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemeFileIssue]
+
+    public static func write(_ value: [CoreThemeFileIssue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemeFileIssue.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemeFileIssue] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemeFileIssue]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemeFileIssue.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCoreThemeFileOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemeFileOutcome]
+
+    public static func write(_ value: [CoreThemeFileOutcome], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemeFileOutcome.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemeFileOutcome] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemeFileOutcome]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemeFileOutcome.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCoreThemeFileSource: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemeFileSource]
+
+    public static func write(_ value: [CoreThemeFileSource], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemeFileSource.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemeFileSource] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemeFileSource]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemeFileSource.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCoreThemeNamedText: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemeNamedText]
+
+    public static func write(_ value: [CoreThemeNamedText], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemeNamedText.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemeNamedText] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemeNamedText]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemeNamedText.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCoreThemePlatformSpecification: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemePlatformSpecification]
+
+    public static func write(_ value: [CoreThemePlatformSpecification], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemePlatformSpecification.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemePlatformSpecification] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemePlatformSpecification]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemePlatformSpecification.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCoreThemePlatformStructure: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemePlatformStructure]
+
+    public static func write(_ value: [CoreThemePlatformStructure], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemePlatformStructure.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemePlatformStructure] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemePlatformStructure]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemePlatformStructure.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCoreThemeReport: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemeReport]
+
+    public static func write(_ value: [CoreThemeReport], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemeReport.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemeReport] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemeReport]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemeReport.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCoreThemeSpecification: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemeSpecification]
+
+    public static func write(_ value: [CoreThemeSpecification], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemeSpecification.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemeSpecification] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemeSpecification]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemeSpecification.read(from: &buf))
         }
         return seq
     }
@@ -11911,6 +15383,31 @@ fileprivate struct FfiConverterSequenceTypeWorkspaceRow: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeCoreThemeIssue: FfiConverterRustBuffer {
+    typealias SwiftType = [CoreThemeIssue]
+
+    public static func write(_ value: [CoreThemeIssue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCoreThemeIssue.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CoreThemeIssue] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CoreThemeIssue]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCoreThemeIssue.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeUnavailable: FfiConverterRustBuffer {
     typealias SwiftType = [Unavailable]
 
@@ -11955,6 +15452,58 @@ fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
             seq.append(try FfiConverterSequenceString.read(from: &buf))
         }
         return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterDictionaryStringString: FfiConverterRustBuffer {
+    public static func write(_ value: [String: String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterString.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: String] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: String]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterString.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterDictionaryStringTypeCoreThemeColor: FfiConverterRustBuffer {
+    public static func write(_ value: [String: CoreThemeColor], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterTypeCoreThemeColor.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: CoreThemeColor] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: CoreThemeColor]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterTypeCoreThemeColor.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
     }
 }
 
@@ -12471,6 +16020,253 @@ public func hlcTick(clock: String?, deviceId: String, wallMs: Int64) -> String? 
 })
 }
 /**
+ * What the built-in `identifier` lays over its own structure on each phone.
+ */
+public func themeBuiltinPlatformStructures(identifier: String) -> [CoreThemePlatformStructure]  {
+    return try!  FfiConverterSequenceTypeCoreThemePlatformStructure.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_builtin_platform_structures(
+        FfiConverterString.lower(identifier),uniffiCallStatus
+    )
+})
+}
+/**
+ * The built-ins as `platform` resolves them, the default first.
+ */
+public func themeBuiltins(platform: CoreThemePlatform) -> [CoreThemeSpecification]  {
+    return try!  FfiConverterSequenceTypeCoreThemeSpecification.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_builtins(
+        FfiConverterTypeCoreThemePlatform_lower(platform),uniffiCallStatus
+    )
+})
+}
+/**
+ * A conformance case, as the bytes `shared/themes/conformance/` holds.
+ */
+public func themeConformanceCase(files: [CoreThemeNamedText], selected: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_conformance_case(
+        FfiConverterSequenceTypeCoreThemeNamedText.lower(files),
+        FfiConverterString.lower(selected),uniffiCallStatus
+    )
+})
+}
+public func themeContrastFindings(specification: CoreThemeSpecification) -> [CoreThemeIssue]  {
+    return try!  FfiConverterSequenceTypeCoreThemeIssue.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_contrast_findings(
+        FfiConverterTypeCoreThemeSpecification_lower(specification),uniffiCallStatus
+    )
+})
+}
+public func themeContrastRatio(a: CoreThemeColor, b: CoreThemeColor) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_contrast_ratio(
+        FfiConverterTypeCoreThemeColor_lower(a),
+        FfiConverterTypeCoreThemeColor_lower(b),uniffiCallStatus
+    )
+})
+}
+public func themeDecode(data: Data, source: String) -> CoreThemeDecoded  {
+    return try!  FfiConverterTypeCoreThemeDecoded_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_decode(
+        FfiConverterData.lower(data),
+        FfiConverterString.lower(source),uniffiCallStatus
+    )
+})
+}
+/**
+ * The file pretty-printed with sorted keys; `None` if a number in it is not finite.
+ */
+public func themeFileEncode(file: CoreThemeFile) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_file_encode(
+        FfiConverterTypeCoreThemeFile_lower(file),uniffiCallStatus
+    )
+})
+}
+/**
+ * Every value of `specification` as a file that extends the default, with
+ * each variant's differences under `platforms`.
+ */
+public func themeFileFromSpecification(specification: CoreThemeSpecification, variants: [CoreThemePlatformSpecification]) -> CoreThemeFile  {
+    return try!  FfiConverterTypeCoreThemeFile_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_file_from_specification(
+        FfiConverterTypeCoreThemeSpecification_lower(specification),
+        FfiConverterSequenceTypeCoreThemePlatformSpecification.lower(variants),uniffiCallStatus
+    )
+})
+}
+public func themeIdentifier(file: CoreThemeFile, source: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_identifier(
+        FfiConverterTypeCoreThemeFile_lower(file),
+        FfiConverterString.lower(source),uniffiCallStatus
+    )
+})
+}
+public func themeIssueMessage(issue: CoreThemeIssue) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_issue_message(
+        FfiConverterTypeCoreThemeIssue_lower(issue),uniffiCallStatus
+    )
+})
+}
+public func themeIssueSeverity(issue: CoreThemeIssue) -> CoreThemeIssueSeverity  {
+    return try!  FfiConverterTypeCoreThemeIssueSeverity_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_issue_severity(
+        FfiConverterTypeCoreThemeIssue_lower(issue),uniffiCallStatus
+    )
+})
+}
+/**
+ * Loads a folder of files for `platform`. `built_ins` and `default_base`
+ * default to the built-ins as resolved for it.
+ */
+public func themeLoad(sources: [CoreThemeFileSource], platform: CoreThemePlatform, builtIns: [CoreThemeSpecification]?, defaultBase: CoreThemeSpecification?) -> [CoreThemeFileOutcome]  {
+    return try!  FfiConverterSequenceTypeCoreThemeFileOutcome.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_load(
+        FfiConverterSequenceTypeCoreThemeFileSource.lower(sources),
+        FfiConverterTypeCoreThemePlatform_lower(platform),
+        FfiConverterOptionSequenceTypeCoreThemeSpecification.lower(builtIns),
+        FfiConverterOptionTypeCoreThemeSpecification.lower(defaultBase),uniffiCallStatus
+    )
+})
+}
+/**
+ * Lays a partial structure over a whole one, reporting under `path`.
+ */
+public func themeMergeStructure(overrides: CoreThemeFileStructure?, base: CoreThemeStructure, path: String) -> CoreThemeMergedStructure  {
+    return try!  FfiConverterTypeCoreThemeMergedStructure_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_merge_structure(
+        FfiConverterOptionTypeCoreThemeFileStructure.lower(overrides),
+        FfiConverterTypeCoreThemeStructure_lower(base),
+        FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+public func themeMix(a: CoreThemeColor, b: CoreThemeColor, t: Double) -> CoreThemeColor  {
+    return try!  FfiConverterTypeCoreThemeColor_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_mix(
+        FfiConverterTypeCoreThemeColor_lower(a),
+        FfiConverterTypeCoreThemeColor_lower(b),
+        FfiConverterDouble.lower(t),uniffiCallStatus
+    )
+})
+}
+public func themeProportionedScale(body: Double) -> CoreThemeTypeScale  {
+    return try!  FfiConverterTypeCoreThemeTypeScale_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_proportioned_scale(
+        FfiConverterDouble.lower(body),uniffiCallStatus
+    )
+})
+}
+public func themeRelativeLuminance(color: CoreThemeColor) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_relative_luminance(
+        FfiConverterTypeCoreThemeColor_lower(color),uniffiCallStatus
+    )
+})
+}
+public func themeResolve(file: CoreThemeFile, source: String, base: CoreThemeSpecification?, platform: CoreThemePlatform) -> CoreThemeFileOutcome  {
+    return try!  FfiConverterTypeCoreThemeFileOutcome_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_resolve(
+        FfiConverterTypeCoreThemeFile_lower(file),
+        FfiConverterString.lower(source),
+        FfiConverterOptionTypeCoreThemeSpecification.lower(base),
+        FfiConverterTypeCoreThemePlatform_lower(platform),uniffiCallStatus
+    )
+})
+}
+public func themeResolved(specification: CoreThemeSpecification, requested: CoreThemeAppearance) -> CoreThemeResolved  {
+    return try!  FfiConverterTypeCoreThemeResolved_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_resolved(
+        FfiConverterTypeCoreThemeSpecification_lower(specification),
+        FfiConverterTypeCoreThemeAppearance_lower(requested),uniffiCallStatus
+    )
+})
+}
+/**
+ * The roles `seeds` paint in `appearance`, or `None` without both a
+ * background and a foreground.
+ */
+public func themeSeedRoles(seeds: CoreThemeSeeds, appearance: CoreThemeAppearance) -> [String: CoreThemeColor]?  {
+    return try!  FfiConverterOptionDictionaryStringTypeCoreThemeColor.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_seed_roles(
+        FfiConverterTypeCoreThemeSeeds_lower(seeds),
+        FfiConverterTypeCoreThemeAppearance_lower(appearance),uniffiCallStatus
+    )
+})
+}
+public func themeSharedFile(identifier: String) -> CoreThemeFile?  {
+    return try!  FfiConverterOptionTypeCoreThemeFile.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_shared_file(
+        FfiConverterString.lower(identifier),uniffiCallStatus
+    )
+})
+}
+/**
+ * The built-ins as the complete files `shared/themes/` holds.
+ */
+public func themeSharedFiles() -> [CoreThemeNamedText]  {
+    return try!  FfiConverterSequenceTypeCoreThemeNamedText.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_shared_files(uniffiCallStatus
+    )
+})
+}
+public func themeStructureDifference(base: CoreThemeStructure, target: CoreThemeStructure) -> CoreThemeFileStructure?  {
+    return try!  FfiConverterOptionTypeCoreThemeFileStructure.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_structure_difference(
+        FfiConverterTypeCoreThemeStructure_lower(base),
+        FfiConverterTypeCoreThemeStructure_lower(target),uniffiCallStatus
+    )
+})
+}
+public func themeStructureFindings(structure: CoreThemeStructure) -> [CoreThemeIssue]  {
+    return try!  FfiConverterSequenceTypeCoreThemeIssue.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_structure_findings(
+        FfiConverterTypeCoreThemeStructure_lower(structure),uniffiCallStatus
+    )
+})
+}
+public func themeStructureStated(structure: CoreThemeStructure) -> CoreThemeFileStructure  {
+    return try!  FfiConverterTypeCoreThemeFileStructure_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_structure_stated(
+        FfiConverterTypeCoreThemeStructure_lower(structure),uniffiCallStatus
+    )
+})
+}
+public func themeValidate(specification: CoreThemeSpecification) -> [CoreThemeIssue]  {
+    return try!  FfiConverterSequenceTypeCoreThemeIssue.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_theme_validate(
+        FfiConverterTypeCoreThemeSpecification_lower(specification),uniffiCallStatus
+    )
+})
+}
+/**
  * Why a candidate is not available in `context` at `now`; empty when it is.
  */
 public func availabilityReasons(candidate: Candidate, context: FocusContext, nowMs: Int64) -> [Unavailable]  {
@@ -12669,6 +16465,81 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_hlc_tick() != 54173) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_builtin_platform_structures() != 43492) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_builtins() != 9982) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_conformance_case() != 22428) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_contrast_findings() != 38745) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_contrast_ratio() != 45146) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_decode() != 31625) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_file_encode() != 50413) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_file_from_specification() != 59581) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_identifier() != 10670) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_issue_message() != 56147) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_issue_severity() != 13787) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_load() != 55635) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_merge_structure() != 42698) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_mix() != 5192) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_proportioned_scale() != 29611) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_relative_luminance() != 22004) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_resolve() != 28904) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_resolved() != 50866) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_seed_roles() != 61344) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_shared_file() != 44208) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_shared_files() != 13538) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_structure_difference() != 4637) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_structure_findings() != 22216) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_structure_stated() != 27329) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_theme_validate() != 53916) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_availability_reasons() != 63153) {

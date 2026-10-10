@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// A whole theme: who it is, what it is made of, and what it claims to be good
 /// for. Pure data — the plugin that vends one is a wrapper, and the SwiftUI
@@ -44,17 +45,9 @@ public struct ThemeSpecification: Equatable, Sendable {
   }
 
   /// Everything wrong with this theme, worst first. Empty means it is fit to
-  /// ship.
+  /// ship. The audit is the Rust core's (`core/src/theme/audit.rs`).
   public func validate() -> [ThemeIssue] {
-    var issues: [ThemeIssue] = []
-    for appearance in ThemeAppearance.allCases {
-      issues += palette.missingRoles(in: appearance).map {
-        .missingRole(role: $0, appearance: appearance)
-      }
-    }
-    issues += ThemeContrastAudit.findings(for: self)
-    issues += ThemeStructureAudit.findings(for: structure)
-    return issues.sorted { $0.severity.rank > $1.severity.rank }
+    themeValidate(specification: core).map(ThemeIssue.init)
   }
 }
 
@@ -100,53 +93,11 @@ public enum ThemeIssue: Equatable, Sendable {
   /// as the least a finger can reliably hit. Zero (a pointer platform) is fine.
   case touchTargetTooSmall(value: Double)
 
-  public var severity: ThemeIssueSeverity {
-    switch self {
-    case .missingRole, .radiusScaleOutOfOrder:
-      return .error
-    case .bodyTextBelowAA, .accentBelowUIMinimum, .raisedIndistinctFromPaper,
-      .shadowsUsed, .gradientsOnChrome, .shellRadiusOffScale, .hairlineTooHeavy, .touchTargetTooSmall:
-      return .warning
-    case .largeTextOnly:
-      return .note
-    }
-  }
+  public var severity: ThemeIssueSeverity { ThemeIssueSeverity(themeIssueSeverity(issue: core)) }
 
-  public var message: String {
-    switch self {
-    case .missingRole(let role, let appearance):
-      return "\(role.rawValue) has no \(appearance.rawValue) value"
-    case .bodyTextBelowAA(let role, let appearance, let ratio):
-      return
-        "\(role.rawValue) is \(Self.format(ratio)):1 on \(appearance.rawValue) paper — below AA for body text"
-    case .largeTextOnly(let role, let appearance, let ratio):
-      return
-        "\(role.rawValue) is \(Self.format(ratio)):1 on \(appearance.rawValue) paper — not for body copy"
-    case .accentBelowUIMinimum(let role, let appearance, let ratio):
-      return
-        "\(role.rawValue) is \(Self.format(ratio)):1 on \(appearance.rawValue) paper — too low even for a UI component"
-    case .raisedIndistinctFromPaper(let appearance, let ratio):
-      return
-        "raised is \(Self.format(ratio)):1 against paper in \(appearance.rawValue) — the card needs its hairline to exist"
-    case .shadowsUsed:
-      return "the theme declares shadows; separation is supposed to come from 1px borders"
-    case .gradientsOnChrome:
-      return "the theme declares gradients on chrome"
-    case .radiusScaleOutOfOrder:
-      return "the radius scale is not panel ≥ control (or a square panel), or the pill is not a pill"
-    case .shellRadiusOffScale(let value):
-      return "shell radius \(Self.format(value)) is outside the 18–22 reserved for the app shell"
-    case .hairlineTooHeavy(let value):
-      return "a \(Self.format(value))pt hairline is a border, not a hairline"
-    case .touchTargetTooSmall(let value):
-      return
-        "a \(Self.format(value))pt touch target is under the \(Self.format(ThemeStructureAudit.smallestTouchTarget))pt a finger needs"
-    }
-  }
-
-  private static func format(_ value: Double) -> String {
-    String(format: "%.2f", value)
-  }
+  /// The finding in a sentence, worded by the core so a file's audit reads
+  /// the same on every platform.
+  public var message: String { themeIssueMessage(issue: core) }
 }
 
 /// Reads a palette the way a reader does: every role against the surface it is
@@ -183,35 +134,7 @@ public enum ThemeContrastAudit {
   }
 
   public static func findings(for specification: ThemeSpecification) -> [ThemeIssue] {
-    var issues: [ThemeIssue] = []
-    let palette = specification.palette
-
-    for appearance in ThemeAppearance.allCases {
-      for role in ThemeColorRole.bodyTextRoles {
-        let value = ratio(role, on: .paper, in: appearance, of: palette)
-        if value < bodyTextMinimum {
-          issues.append(.bodyTextBelowAA(role: role, appearance: appearance, ratio: value))
-        }
-      }
-
-      // Every accent under 4.5:1 is recorded as a note, which is how the
-      // "never a paragraph of body copy" list gets generated rather than
-      // remembered. Only `primary` is additionally held to 3:1.
-      for role in accentRoles {
-        let value = ratio(role, on: .paper, in: appearance, of: palette)
-        if role == chromeCarryingRole, value < uiMinimum {
-          issues.append(.accentBelowUIMinimum(role: role, appearance: appearance, ratio: value))
-        } else if value < bodyTextMinimum {
-          issues.append(.largeTextOnly(role: role, appearance: appearance, ratio: value))
-        }
-      }
-
-      let raised = ratio(.raised, on: .paper, in: appearance, of: palette)
-      if raised < raisedMinimum {
-        issues.append(.raisedIndistinctFromPaper(appearance: appearance, ratio: raised))
-      }
-    }
-    return issues
+    themeContrastFindings(specification: specification.core).map(ThemeIssue.init)
   }
 }
 
@@ -223,26 +146,6 @@ public enum ThemeStructureAudit {
   public static let smallestTouchTarget = 44.0
 
   public static func findings(for structure: ThemeStructure) -> [ThemeIssue] {
-    var issues: [ThemeIssue] = []
-    let radius = structure.radius
-    // A square panel is the one exception to "panel ≥ control": a button in a
-    // square pane may keep a small corner, but a panel rounder than zero and
-    // tighter than its own buttons is a scale out of order.
-    let panelOutOfOrder = radius.panel != 0 && radius.panel < radius.control
-    if panelOutOfOrder || radius.pill < 999 {
-      issues.append(.radiusScaleOutOfOrder)
-    }
-    if radius.shell != 0, !shellRadiusRange.contains(radius.shell) {
-      issues.append(.shellRadiusOffScale(value: radius.shell))
-    }
-    if structure.border.hairline > heaviestHairline {
-      issues.append(.hairlineTooHeavy(value: structure.border.hairline))
-    }
-    if structure.touchTarget != 0, structure.touchTarget < smallestTouchTarget {
-      issues.append(.touchTargetTooSmall(value: structure.touchTarget))
-    }
-    if structure.usesShadows { issues.append(.shadowsUsed) }
-    if structure.usesGradientsOnChrome { issues.append(.gradientsOnChrome) }
-    return issues
+    themeStructureFindings(structure: structure.core).map(ThemeIssue.init)
   }
 }

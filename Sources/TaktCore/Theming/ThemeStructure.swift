@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// The one radius scale, as a closed set of five.
 ///
@@ -168,12 +169,7 @@ public struct ThemeTypeScale: Equatable, Sendable {
 
   /// A scale proportioned from a body size, for themes that name only that.
   public static func proportioned(fromBody body: Double) -> ThemeTypeScale {
-    ThemeTypeScale(
-      caption: (body * 0.85).rounded(),
-      body: body,
-      title: (body * 1.25).rounded(),
-      display: (body * 2.2).rounded(),
-      hero: (body * 5).rounded())
+    ThemeTypeScale(themeProportionedScale(body: body))
   }
 }
 
