@@ -296,9 +296,40 @@ covered the old copies pass against it.
    tool table, so a command there would have been an MCP tool too, and the
    iPhone has no export.
 
-Pure-logic engines in `TaktCore` (the command parser, recurrence, visibility,
-theming) stay in Swift until steps 1 to 8 are done. They are not duplicated
-on Android in the same way, so moving them buys less.
+   **The day log.** `daylog.jsonl` was read twice, by Swift's `DayLogFileStore`
+   and by the CLI's `local.rs` for `daily_log_fetch` and the dailies tools.
+   Both readings, the appends, `DayBoundary`'s logical days and weeks,
+   `DayLogAggregator`'s netting, buckets, summary and streak, and the text of
+   `DailyNoteMarkdown.section` are now `core/src/day_log.rs`. Whole files cross,
+   not events: `CoreDayLog` reads the file itself, holds the parsed log in Rust
+   and answers each projection in one call, and recording an event is one call
+   that appends under the same `flock` on `<file>.lock`. The Mac's Daily plugin
+   holds one through `DayLogHistory`, so it no longer keeps an event array in
+   Swift at all; the plugin contract lost `events` and gained
+   `priorCompletionStreak(now:)`, which the streak milestone used to compute
+   from that array. `DayBoundary`, `DayLogAggregator`, `DayLogFileStore`,
+   `DayLogFormatting.focusDuration` and `DailyNoteMarkdown.section` keep their
+   public signatures and wrap the core, and their Swift tests run unchanged as
+   the oracle; the array-taking aggregator functions pass the whole array per
+   call, which only the tests and one-off renders do. `DayBoundary` moved too:
+   its zone and first weekday come from its `Calendar` (the core counts in the
+   Gregorian calendar), and nothing calls it per event any more. The CLI calls
+   the core as a Rust crate, and `daily_log_fetch` and `dailies_list` print the
+   same bytes as before on a mixed fixture. Where the two readings disagreed,
+   the core follows Swift: a line with an unknown kind, a missing or mistyped
+   field, or a timestamp `JSONDecoder`'s `.iso8601` refuses (fractional seconds
+   included) is dropped whole, where the CLI kept it with nulls; and a
+   completion's `at` is echoed in the file's own `Z` form rather than as
+   whatever text the line held, which differs only for a hand-written offset.
+   What stays native is `ManagedMarkdownBlock`'s splice, shared with the AFFiNE
+   export, and Android's own `DayBoundary`, which serves only its stale-focus
+   policy and never reads the log.
+
+   What stays in Swift and Kotlin after step 9 is presentation (views,
+   locale formatting, colour conversion), platform transport (HTTP, auth,
+   OAuth, the long poll), per-point geometry and fold state that lives only
+   in UI memory, and the Mac's Checkvist-era engines, which work on tasks
+   the core never holds. Each paragraph above says why for its own cluster.
 
 ## Risks
 

@@ -469,11 +469,7 @@ protocol DailyLogDataSource: AnyObject {
   func priorCompletionStreak(now: Date = Date()) -> Int {
     let key = "\(revision)|\(plugin.boundary.dayKey(for: now))"
     if let cachedStreak, cachedStreak.key == key { return cachedStreak.value }
-    let value = DayLogAggregator.priorCompletionStreak(
-      events: plugin.events,
-      boundary: plugin.boundary,
-      now: now
-    )
+    let value = plugin.priorCompletionStreak(now: now)
     cachedStreak = (key, value)
     return value
   }

@@ -29,14 +29,15 @@ final class DailyLogService {
   private let logger = Logger(
     subsystem: "uk.co.maybeitssoftware.takt", category: "dailylog")
   private let defaults: UserDefaults
-  private let store: DayLogFileStore
+  private let store: DayLogHistory
   private let dailiesStore: DailyDefinitionsStore
 
-  /// The whole log, held in memory. A year of heavy use is a few thousand
-  /// events, and every projection needs the full history anyway (a reopen can
-  /// cancel a completion from any earlier day), so paging would buy nothing but
-  /// a re-read on each popover open.
-  private var cachedEvents: [DayLogEvent]
+  // The whole log is held in memory, in the Rust core, behind `store`. A
+  // year of heavy use is a few thousand events, and every projection needs
+  // the full history anyway (a reopen can cancel a completion from any
+  // earlier day), so paging would buy nothing but a re-read on each popover
+  // open. Holding it in the core is what keeps each projection one call
+  // across the boundary rather than the whole history every time.
 
   /// The set of dailies, held in memory and written through on every edit. Tiny
   /// by nature — a list you tick off every morning does not grow unbounded.
@@ -76,9 +77,8 @@ final class DailyLogService {
     self.defaults = defaults
     let directoryURL = storeDirectoryURL ?? Self.defaultStoreDirectoryURL()
     self.storeDirectory = directoryURL
-    self.store = DayLogFileStore(directoryURL: directoryURL)
+    self.store = DayLogHistory(directoryURL: directoryURL)
     self.dailiesStore = DailyDefinitionsStore(directoryURL: directoryURL)
-    self.cachedEvents = store.loadAll()
     self.cachedDailies = DailyCollection()
     self.folderBookmark = defaults.data(forKey: Self.bookmarkDefaultsKey)
     loadDailiesReportingFailure()
@@ -256,11 +256,10 @@ final class DailyLogService {
     lastLogStamp = logStamp
     lastDailiesStamp = dailiesStamp
 
-    let events = store.loadAll()
+    let logChanged = store.reload()
     let previousDailies = cachedDailies
     loadDailiesReportingFailure()
-    guard events != cachedEvents || cachedDailies != previousDailies else { return }
-    cachedEvents = events
+    guard logChanged || cachedDailies != previousDailies else { return }
     onExternalChange?()
   }
 
@@ -353,12 +352,10 @@ final class DailyLogService {
 
   // MARK: - Recording
 
-  var events: [DayLogEvent] { cachedEvents }
-
   func record(_ event: DayLogEvent) {
-    cachedEvents.append(event)
     do {
-      try store.append(event)
+      // Held even when the append fails.
+      try store.record(event)
     } catch {
       // The in-memory copy still has it, so the current session stays correct;
       // only durability is lost. Failing the user's completion because a log
@@ -383,17 +380,16 @@ final class DailyLogService {
       // time of the first call, and an empty plan is worth nothing, so there is
       // no intent to preserve by keeping it. `DayLogAggregator.summary` reads
       // the last snapshot of the day, so the upgrade simply wins.
-      guard !plannedTaskIds.isEmpty, recordedPlanIsEmpty(forDayKey: key) else { return }
+      guard !plannedTaskIds.isEmpty, recordedPlanIsEmpty(on: now) else { return }
     }
     record(.planSnapshot(taskIds: plannedTaskIds, at: now))
     defaults.set(key, forKey: Self.lastSnapshotDayKeyDefaultsKey)
   }
 
-  private func recordedPlanIsEmpty(forDayKey key: String) -> Bool {
-    let latest = cachedEvents.last {
-      $0.kind == .planSnapshot && boundary.dayKey(for: $0.at) == key
-    }
-    return latest?.plannedTaskIds?.isEmpty ?? true
+  /// Whether the day's latest snapshot, the one the summary reads, planned
+  /// nothing (or there is none).
+  private func recordedPlanIsEmpty(on now: Date) -> Bool {
+    summary(on: now).plannedTaskIds.isEmpty
   }
 
   // MARK: - Dailies
@@ -405,7 +401,7 @@ final class DailyLogService {
   }
 
   func completedDailyIds(on date: Date) -> Set<String> {
-    DayLogAggregator.completedDailyIds(events: cachedEvents, boundary: boundary, on: date)
+    store.completedDailyIds(boundary: boundary, on: date)
   }
 
   @discardableResult
@@ -490,25 +486,27 @@ final class DailyLogService {
   // MARK: - Projections
 
   func summary(on date: Date) -> DayLogAggregator.DaySummary {
-    DayLogAggregator.summary(events: cachedEvents, boundary: boundary, on: date)
+    store.summary(boundary: boundary, on: date)
   }
 
   func dailyBuckets(endingOn now: Date, days: Int) -> [DayLogAggregator.Bucket] {
-    DayLogAggregator.dailyBuckets(
-      events: cachedEvents, boundary: boundary, endingOn: now, days: days)
+    store.dailyBuckets(boundary: boundary, endingOn: now, days: days)
   }
 
   func weeklyBuckets(endingOn now: Date, weeks: Int) -> [DayLogAggregator.Bucket] {
-    DayLogAggregator.weeklyBuckets(
-      events: cachedEvents, boundary: boundary, endingOn: now, weeks: weeks)
+    store.weeklyBuckets(boundary: boundary, endingOn: now, weeks: weeks)
   }
 
   var recordedDayCount: Int {
-    DayLogAggregator.recordedDayCount(events: cachedEvents, boundary: boundary)
+    store.recordedDayCount(boundary: boundary)
   }
 
   var firstRecordedDay: Date? {
-    DayLogAggregator.firstRecordedDay(events: cachedEvents, boundary: boundary)
+    store.firstRecordedDay(boundary: boundary)
+  }
+
+  func priorCompletionStreak(now: Date) -> Int {
+    store.priorCompletionStreak(boundary: boundary, now: now)
   }
 
   // MARK: - Notes

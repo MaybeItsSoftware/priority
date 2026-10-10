@@ -37,7 +37,6 @@ protocol DailyLogPlugin: Plugin, AnyObject {
 
   // MARK: Log
 
-  var events: [DayLogEvent] { get }
   func record(_ event: DayLogEvent)
 
   /// Fired after a change made *outside this process* — an MCP `daily_add` or
@@ -106,6 +105,9 @@ protocol DailyLogPlugin: Plugin, AnyObject {
   /// whether there is enough history to draw a chart.
   var recordedDayCount: Int { get }
   var firstRecordedDay: Date? { get }
+  /// Consecutive days before `now`'s on which something was completed; see
+  /// `DayLogAggregator.priorCompletionStreak`.
+  func priorCompletionStreak(now: Date) -> Int
 
   // MARK: Notes
 

@@ -52,8 +52,6 @@ final class NativeDailyLogPlugin: DailyLogPlugin {
 
   // MARK: - Log
 
-  var events: [DayLogEvent] { service.events }
-
   var onExternalChange: (() -> Void)? {
     get { service.onExternalChange }
     set { service.onExternalChange = newValue }
@@ -132,6 +130,10 @@ final class NativeDailyLogPlugin: DailyLogPlugin {
   var recordedDayCount: Int { service.recordedDayCount }
 
   var firstRecordedDay: Date? { service.firstRecordedDay }
+
+  func priorCompletionStreak(now: Date) -> Int {
+    service.priorCompletionStreak(now: now)
+  }
 
   // MARK: - Notes
 
