@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// The credentials the `takt` CLI keeps in its own store.
 ///
@@ -37,6 +38,7 @@ public enum TaktCLIConfigError: LocalizedError, Equatable {
   case missingCredentials
   case unreadableConfig(path: String)
   case encodingFailed
+  case readFailed(path: String)
   case writeFailed(path: String)
 
   public var errorDescription: String? {
@@ -49,17 +51,30 @@ public enum TaktCLIConfigError: LocalizedError, Equatable {
         "The takt CLI's config isn't valid JSON, so it wasn't touched. Fix or move \(path) and try again."
     case .encodingFailed:
       return "Could not encode the takt CLI's configuration."
+    case .readFailed(let path):
+      return "Could not read \(path)."
     case .writeFailed(let path):
       return "Could not write \(path)."
+    }
+  }
+
+  /// The core's refusal, in this type's terms.
+  init(core error: Error) {
+    switch error.clientConfigFailure {
+    case .missingCredentials: self = .missingCredentials
+    case .unreadableConfig(let path): self = .unreadableConfig(path: path)
+    case .readFailed(let path, _): self = .readFailed(path: path)
+    case .writeFailed(let path, _): self = .writeFailed(path: path)
+    case .serversKeyNotAnObject, nil: self = .encodingFailed
     }
   }
 }
 
 /// Seeds the `takt` CLI's credential file from the app's own login.
 ///
-/// Pure on purpose: the merge is the part worth testing, and the app layer owns
-/// the filesystem (it is the only side that knows the real home directory and
-/// can set the file mode).
+/// The format, the merge and the private write are the Rust core's
+/// (`core/src/client_config.rs`), which `cli/src/config.rs` reads and saves
+/// the same file through; this keeps the Swift face.
 public enum TaktCLIConfigWriter {
   public static let usernameKey = "username"
   public static let remoteKeyKey = "remote_key"
@@ -71,104 +86,67 @@ public enum TaktCLIConfigWriter {
   /// those live in the *client's* environment when it launches the server, not
   /// in the app's, so guessing from here would be worse than using the default.
   public static func defaultConfigPath(inHomeDirectory home: String) -> String {
-    (home as NSString).appendingPathComponent(".config/takt/config.json")
+    cliConfigDefaultPath(home: home)
   }
 
   /// Where the CLI kept its config when it was called `priority`. The CLI
   /// still reads it while the new one is missing, so the first seeding starts
   /// from it — keeping a hand-set `base_url` — rather than from nothing.
   public static func legacyConfigPaths(inHomeDirectory home: String) -> [String] {
-    [(home as NSString).appendingPathComponent(".config/priority/config.json")]
+    cliConfigLegacyPaths(home: home)
   }
 
   /// Merges `credentials` into the CLI's existing config.
   ///
-  /// Every other key survives — `base_url` in particular, which a user on a
-  /// self-hosted Checkvist will have set by hand and which the app knows
-  /// nothing about.
-  ///
-  /// The app is authoritative for the username and remote key: this only runs
-  /// when the user explicitly sets up an MCP client, and a stale key here is
-  /// the exact failure the change is meant to end (rotate in the app, every
-  /// client follows). `list_id` is different — it is the CLI's *default* list
-  /// for terminal use, and the generated MCP entry already overrides it per
-  /// client, so it is only filled when absent rather than overwritten.
-  ///
-  /// Returns `.unchanged` when the file already says this, so a repeat setup
-  /// doesn't rewrite it (and doesn't claim it did something).
+  /// Every other key survives — `base_url` in particular. The app is
+  /// authoritative for the username and remote key; `list_id` is only filled
+  /// when absent. Returns `.unchanged` when the file already says this.
   public static func seeded(
     credentials: TaktCLICredentials,
     into existingContents: String?,
     configPath: String
   ) throws -> (contents: String, outcome: MCPConfigWriteOutcome) {
-    let username = credentials.normalizedUsername
-    let remoteKey = credentials.normalizedRemoteKey
-    guard !username.isEmpty, !remoteKey.isEmpty else {
-      throw TaktCLIConfigError.missingCredentials
+    do {
+      let write = try cliConfigSeeded(
+        credentials: credentials.core, existing: existingContents, configPath: configPath)
+      return (write.contents, MCPConfigWriteOutcome(core: write.outcome))
+    } catch {
+      throw TaktCLIConfigError(core: error)
     }
-
-    var values: [String: Any] = [:]
-    let trimmed = existingContents?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    if !trimmed.isEmpty {
-      guard let data = trimmed.data(using: .utf8),
-        let parsed = try? JSONSerialization.jsonObject(with: data),
-        let object = parsed as? [String: Any]
-      else {
-        throw TaktCLIConfigError.unreadableConfig(path: configPath)
-      }
-      values = object
-    }
-
-    let hadCredentials =
-      nonEmptyString(values[usernameKey]) != nil || nonEmptyString(values[remoteKeyKey]) != nil
-    var changed = false
-
-    if nonEmptyString(values[usernameKey]) != username {
-      values[usernameKey] = username
-      changed = true
-    }
-    if nonEmptyString(values[remoteKeyKey]) != remoteKey {
-      values[remoteKeyKey] = remoteKey
-      changed = true
-    }
-
-    let listId = credentials.normalizedListId
-    if !listId.isEmpty, nonEmptyString(values[listIdKey]) == nil {
-      values[listIdKey] = listId
-      changed = true
-    }
-
-    let outcome: MCPConfigWriteOutcome
-    if !changed {
-      outcome = .unchanged
-    } else if hadCredentials {
-      outcome = .updated
-    } else {
-      outcome = .added
-    }
-
-    return (try prettyPrinted(values) + "\n", outcome)
   }
 
-  /// Only a non-empty string counts as present: the CLI itself trims and
-  /// discards blanks (`Config::string`), so `"username": " "` is the same as no
-  /// username at all and should be replaced rather than left alone.
-  private static func nonEmptyString(_ value: Any?) -> String? {
-    guard let text = value as? String else { return nil }
-    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    return trimmed.isEmpty ? nil : trimmed
+  /// Seeds the file under `home` itself: reads the current config, or the
+  /// legacy one (read, never written), and writes the current path through a
+  /// 0600 temporary renamed into place, creating missing folders at 0700.
+  /// Nothing is written when nothing would change.
+  @discardableResult
+  public static func seed(
+    credentials: TaktCLICredentials,
+    inHomeDirectory home: String
+  ) throws -> MCPConfigWriteOutcome {
+    do {
+      return MCPConfigWriteOutcome(
+        core: try seedCliConfig(home: home, credentials: credentials.core))
+    } catch {
+      throw TaktCLIConfigError(core: error)
+    }
   }
 
-  private static func prettyPrinted(_ object: [String: Any]) throws -> String {
-    guard JSONSerialization.isValidJSONObject(object),
-      let data = try? JSONSerialization.data(
-        withJSONObject: object,
-        options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-      ),
-      let text = String(data: data, encoding: .utf8)
-    else {
-      throw TaktCLIConfigError.encodingFailed
+  /// Blanks the seeded username and remote key in the current config under
+  /// `home`, leaving every other key alone; the legacy file is never written.
+  /// True when the file was rewritten.
+  @discardableResult
+  public static func clearSeededCredentials(inHomeDirectory home: String) throws -> Bool {
+    do {
+      return try clearCliConfigCredentials(home: home)
+    } catch {
+      throw TaktCLIConfigError(core: error)
     }
-    return text
+  }
+}
+
+extension TaktCLICredentials {
+  var core: CliCredentials {
+    CliCredentials(username: username, remoteKey: remoteKey, listId: listId)
   }
 }

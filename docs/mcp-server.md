@@ -273,7 +273,11 @@ than no route:
 
 Direct writes **merge**: your other MCP servers and every unrelated key survive.
 If the existing file isn't valid JSON, Takt refuses rather than replacing
-it. Keys come back sorted, so expect the file to be reformatted once.
+it. Keys come back sorted, so expect the file to be reformatted once. The
+format — the entry's shape, the merge, the rule that replaces an entry the app
+wrote as Priority, the `claude mcp add-json` command, the Zed snippet and the
+catalogue of clients — is `core/src/client_config.rs`; the app only reads and
+writes the client's file.
 
 Config writes go straight to the client's file — release builds are not
 sandboxed (see `Priority.release.entitlements` for why), so no folder-access
@@ -288,7 +292,11 @@ rather than replaces, so a `base_url` you set by hand for a self-hosted
 Checkvist survives, and it only fills `list_id` when that key is absent — the
 generated MCP entry already names the default list per client, so the CLI's own
 default for terminal use is left alone. Nothing happens to the file when it
-already says this.
+already says this. The file is written whole: a temporary created at 0600 is
+renamed over it, so neither the CLI nor a client ever reads a truncated copy.
+That read, merge and write are `core/src/client_config.rs`, the same code
+`takt auth login` saves the file through, so the app and the CLI cannot
+disagree about the file's format.
 
 If nothing is detected, use **Copy Client Config** and paste it in by hand — the
 rest of this guide covers that.
@@ -306,8 +314,9 @@ environment means the file is not consulted for that value at all**
 Keep them in `~/.config/takt/config.json` and leave the client config
 credential-free. Two ways to put them there, and they write the same file:
 
-- **From Takt.** Setting up a client, or pressing **Copy Client Config**,
-  seeds the file first and then hands the client an entry with no secret in it.
+- **From Takt.** Setting up a client seeds the file first and then hands the
+  client an entry with no secret in it. (**Copy Client Config** only copies;
+  it does not touch the file.)
 - **From the terminal.** `takt auth login` prompts for both, checks them
   against the API before writing, and creates the file at mode 0600. See
   `docs/cli.md` for that command and its `auth status` / `auth set-list`

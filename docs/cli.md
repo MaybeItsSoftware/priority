@@ -100,7 +100,8 @@ takt auth login
 It prompts for your Checkvist email and your remote key (from
 [checkvist.com/auth/profile](https://checkvist.com/auth/profile), read without
 echo), checks them against the API, and only then writes them to
-`~/.config/takt/config.json` with mode 0600. A mistyped key fails at this
+`~/.config/takt/config.json` with mode 0600 (through a 0600 temporary renamed
+into place, so the file is never half-written). A mistyped key fails at this
 point rather than as a puzzling 401 on some later command. Until that file
 exists, the CLI reads the old `~/.config/priority/config.json` from before the
 rename to Takt.
@@ -131,7 +132,10 @@ carries no secret at all. Nothing about that makes the CLI depend on the app —
 the file it reads is the same one `auth login` writes, whoever put it there. If
 you signed in here as a different account, setting up an MCP client from the
 app will overwrite `username` and `remote_key`; that only happens on an
-explicit action in the app's settings. See `docs/mcp-server.md`.
+explicit action in the app's settings. See `docs/mcp-server.md`. Both sides
+read and write the file through the same code, `core/src/client_config.rs`:
+one reading (a JSON object; blank values are absent; an empty file is an empty
+config), one encoding, one private write.
 
 The trade is that the key sits in a plain file rather than the keychain, as CLI
 credential files conventionally do. It is created mode 0600 from the moment it
@@ -365,7 +369,8 @@ cli/
     cli.rs        subcommands, the auth commands, and the renderings
     tools.rs      the tools, implemented once
     checkvist.rs  the API client
-    config.rs     ~/.config/takt/config.json, and the environment-first rule
+    config.rs     ~/.config/takt/config.json (its format and write are the core's
+                  client_config.rs), and the environment-first rule
     local.rs      dailies, day log, and preferences, off disk
     lock.rs       flock(2), on the same lock files the app takes
     workspace.rs  the app's database, read-only: the focus timer and its history

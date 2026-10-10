@@ -421,6 +421,50 @@ covered the old copies pass against it.
    stores, the legacy-address move, and the presentation: device names,
    status text and each platform's error wording.
 
+   **Client configuration (2026-10-10).** `core/src/client_config.rs` is
+   the format of the two kinds of config file Takt writes for other
+   programs. The CLI's credential store, `~/.config/takt/config.json`, was
+   read and saved by `cli/src/config.rs` and seeded and cleared by the Mac
+   (`TaktCLIConfigWriter`, plus about a hundred lines of file handling in
+   `IntegrationCoordinator`); now both go through the core: one reading (a
+   JSON object, blank values absent, an empty file an empty config), one
+   encoding (pretty, sorted keys, unescaped slashes, a trailing newline),
+   the seeding merge (the app's username and remote key win, `list_id` only
+   fills a gap, every other key survives, the legacy
+   `~/.config/priority/config.json` read but never written), the clearing,
+   and one private write, through a sibling temporary created 0600 and
+   renamed over the target, with any folder it makes at 0700.
+   `seed_cli_config` and `clear_cli_config_credentials` do the whole job
+   given a home directory. An MCP client's own config has one format too:
+   the entry's shape, the merge that keeps every other key and server, the
+   rule that replaces an entry the app wrote as Priority (recognised by its
+   command), the `claude mcp add-json` line, the Zed snippet, the pasteable
+   whole config, and the catalogue of clients with their paths and
+   detection markers. `TaktCLIConfigWriter`, `MCPClientConfigWriter` and
+   `MCPClientCatalog` keep their public signatures and wrap it, and
+   `NativeMCPIntegrationPlugin` builds its copied config through it, where
+   it had its own `Encodable` copy of the entry. `TaktCLIConfigTests` and
+   `MCPClientConfigTests` run unchanged as the oracle and are ported to
+   `client_config/tests.rs`, with the file handling's modes, the legacy
+   fallback and a symlinked config added. Where the two had differed: an
+   empty file is an empty config to the CLI too, where it refused to save
+   over one; the CLI's save is atomic now, where it truncated in place; a
+   symlinked config is written through to its target on both sides, where
+   the Mac's rename replaced the link; and the files are encoded by
+   `serde_json` rather than `JSONSerialization`, so a key is followed by
+   `": "` rather than `" : "`, empty containers are `[]` and `{}`, keys sort
+   by code point rather than Foundation's case-insensitive order, a real is
+   written shortest (`0.1`, not `0.10000000000000001`), and an integer past
+   64 bits loses precision. The merge compares entries by value, so none of
+   that makes a repeat setup report a change. What stays native: reading
+   and writing another client's file, which needs the Mac's sandbox
+   bookmark and leaves an existing file's mode alone; detecting a client,
+   which is the Mac's `fileExists` over paths the core lists; the real home
+   directory (`getpwuid`); the pasteboard; and the CLI's environment-first
+   precedence, `$PRIORITY_CONFIG_PATH` and `$XDG_CONFIG_HOME`, which are
+   the CLI's alone. There is no Kotlin caller, and the CLI did not gain an
+   MCP-install command.
+
    What stays in Swift and Kotlin after step 9 is presentation (views,
    locale formatting, colour conversion), platform transport (HTTP, auth,
    OAuth, the long poll, moving bodies the core makes and reads), per-point geometry and fold state that lives only

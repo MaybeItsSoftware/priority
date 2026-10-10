@@ -60,3 +60,28 @@ extension Error {
     }
   }
 }
+
+/// Why the core left a config file alone (`client_config.rs`), as a caller
+/// outside this module can match on it.
+public enum ClientConfigFailure: Equatable, Sendable {
+  case missingCredentials
+  case unreadableConfig(path: String)
+  case serversKeyNotAnObject(key: String)
+  case readFailed(path: String, detail: String)
+  case writeFailed(path: String, detail: String)
+}
+
+extension Error {
+  /// This error as one of the core's config-file failures, or nil if it is
+  /// not one.
+  public var clientConfigFailure: ClientConfigFailure? {
+    guard let error = self as? ClientConfigError else { return nil }
+    switch error {
+    case .MissingCredentials: return .missingCredentials
+    case .UnreadableConfig(let path): return .unreadableConfig(path: path)
+    case .ServersKeyNotAnObject(let key): return .serversKeyNotAnObject(key: key)
+    case .ReadFailed(let path, let detail): return .readFailed(path: path, detail: detail)
+    case .WriteFailed(let path, let detail): return .writeFailed(path: path, detail: detail)
+    }
+  }
+}

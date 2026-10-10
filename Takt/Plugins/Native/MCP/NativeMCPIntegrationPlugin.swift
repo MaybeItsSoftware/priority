@@ -1,18 +1,6 @@
 import Foundation
 import TaktCore
 
-private struct MCPClientServerConfig: Encodable {
-  let command: String
-  let args: [String]
-  /// Omitted entirely when there is nothing to put in it, rather than written
-  /// as `{}` — an empty block invites someone to fill it back in with a key.
-  let env: [String: String]?
-}
-
-private struct MCPClientConfigRoot: Encodable {
-  let mcpServers: [String: MCPClientServerConfig]
-}
-
 @MainActor
 final class NativeMCPIntegrationPlugin: MCPIntegrationPlugin {
   private struct ResolvedMCPCommand {
@@ -67,28 +55,18 @@ final class NativeMCPIntegrationPlugin: MCPIntegrationPlugin {
     return ["CHECKVIST_LIST_ID": trimmedListId]
   }
 
+  /// The whole `mcpServers` config, in the entry shape the Rust core gives
+  /// every client (`MCPClientConfigWriter.document`): no `env` when there is
+  /// no list to override.
   func makeClientConfigurationJSON(listId: String) -> String {
     let command = resolvedMCPCommand()
-    let env = serverEnvironment(listId: listId)
-
-    let config = MCPClientConfigRoot(
-      mcpServers: [
-        MCPClientCatalog.serverName: MCPClientServerConfig(
-          command: command.command,
-          args: command.args,
-          env: env.isEmpty ? nil : env
-        )
-      ]
+    return MCPClientConfigWriter.document(
+      entry: MCPServerEntry(
+        command: command.command,
+        args: command.args,
+        env: serverEnvironment(listId: listId)
+      )
     )
-
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-    guard let data = try? encoder.encode(config),
-      let text = String(data: data, encoding: .utf8)
-    else {
-      return "{}"
-    }
-    return text
   }
 
   private func resolvedMCPCommand() -> ResolvedMCPCommand {

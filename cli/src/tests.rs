@@ -1189,6 +1189,19 @@ fn a_malformed_config_file_is_not_overwritten() {
 }
 
 #[test]
+fn an_empty_config_file_is_an_empty_config_that_can_be_saved() {
+    // The app reads it the same way, and it holds nothing to lose.
+    let mut config = scratch_config(Some("  \n"));
+    assert!(!config.is_malformed());
+    config.set("username", Some("me"));
+    config.save().expect("save");
+    assert_eq!(
+        std::fs::read_to_string(&config.path).unwrap(),
+        "{\n  \"username\": \"me\"\n}\n"
+    );
+}
+
+#[test]
 fn only_a_directory_the_cli_created_is_tightened() {
     use std::os::unix::fs::PermissionsExt;
     let mode =

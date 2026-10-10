@@ -18,16 +18,16 @@
 //! throwaway `HOME` with fake credentials in the environment, and be sure this
 //! file is not quietly answering instead.
 
+//!
+//! The file's format — what counts as a config, how it is encoded, where it
+//! lives under `~/.config` — and the private, atomic write are the core's
+//! (`takt_core::client_config`), which the app uses too when it seeds this
+//! file from its own login. So there is one reading and one writing of it.
+
 use crate::error::{Result, ToolError};
 use serde_json::{Map, Value, json};
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
-
-/// The directory under `~/.config` this CLI keeps its own settings in.
-pub const CONFIG_DIRECTORY: &str = "takt";
-/// What it was called before, newest first. Read when the current one is
-/// missing, never written to unless that is where the file already is.
-pub const LEGACY_CONFIG_DIRECTORIES: &[&str] = &["priority"];
+use takt_core::client_config;
 
 /// The app's directory under `~/Library/Application Support`.
 pub const APP_SUPPORT_DIRECTORY: &str = "Takt";
@@ -98,17 +98,12 @@ impl Config {
             .unwrap_or_else(|| {
                 PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".config")
             });
-        first_existing(
-            std::iter::once(CONFIG_DIRECTORY)
-                .chain(LEGACY_CONFIG_DIRECTORIES.iter().copied())
-                .map(|name| base.join(name).join("config.json"))
-                .collect(),
-        )
+        first_existing(client_config::cli_config_path_candidates(&base))
     }
 
-    /// A missing or unreadable file is an empty config, not an error — that is
-    /// the state before `priority auth login`, and every local command works
-    /// there. A *malformed* file is also tolerated rather than fatal, because
+    /// A missing, unreadable or empty file is an empty config, not an error —
+    /// that is the state before `takt auth login`, and every local command
+    /// works there. A *malformed* file is also tolerated rather than fatal, because
     /// the dailies and day-log commands have no business failing over a
     /// credential file they never consult. It is remembered as malformed,
     /// though, so that saving refuses to overwrite it.
@@ -119,9 +114,9 @@ impl Config {
     pub fn load_from(path: PathBuf) -> Self {
         let (values, malformed) = match std::fs::read_to_string(&path) {
             Err(_) => (Map::new(), false),
-            Ok(text) => match serde_json::from_str::<Value>(&text) {
-                Ok(Value::Object(values)) => (values, false),
-                _ => (Map::new(), true),
+            Ok(text) => match client_config::parse_config_object(Some(&text)) {
+                Some(values) => (values, false),
+                None => (Map::new(), true),
             },
         };
         Config {
@@ -141,12 +136,7 @@ impl Config {
     }
 
     fn string(&self, key: &str) -> Option<String> {
-        self.values
-            .get(key)
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(str::to_string)
+        client_config::non_empty_string(self.values.get(key))
     }
 
     /// The environment first, then the file. Returns where it came from too,
@@ -178,11 +168,12 @@ impl Config {
         }
     }
 
-    /// Writes with mode 0600 from the moment of creation.
-    ///
-    /// Created with the mode rather than chmod-ed afterwards: the gap between
-    /// the two is a window in which the remote key sits world-readable, and it
-    /// only has to be lost once.
+    /// Writes the whole file privately: a sibling temporary created 0600 is
+    /// renamed over it, so there is never a moment when the remote key sits
+    /// in a file wider than owner-only, nor a truncated file for the app or
+    /// another `takt` to read. A directory this makes is 0700; one a person
+    /// chose (`PRIORITY_CONFIG_PATH`, `XDG_CONFIG_HOME`) or that already
+    /// existed keeps its mode. See `client_config::write_private_file`.
     ///
     /// Refuses to overwrite a file that exists but could not be read as a
     /// JSON object: the values in memory are empty plus whatever was just
@@ -195,41 +186,11 @@ impl Config {
                 self.path.display()
             )));
         }
-
-        if let Some(parent) = self.path.parent() {
-            // Tightened only when this CLI made the directory. One a person
-            // chose (PRIORITY_CONFIG_PATH, XDG_CONFIG_HOME) or that already
-            // existed keeps whatever mode they gave it. Best effort: failing
-            // here would be worse than a slightly open directory.
-            let created_here = !parent.exists();
-            std::fs::create_dir_all(parent).map_err(|err| {
-                ToolError::new(format!("Could not create {}: {err}", parent.display()))
-            })?;
-            if created_here {
-                let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
-            }
-        }
-
-        let encoded = serde_json::to_string_pretty(&Value::Object(self.values.clone()))
-            .map_err(|err| ToolError::new(format!("Could not encode the config: {err}")))?;
-
-        // Truncate rather than append, and reset the mode on an existing file
-        // that may predate this.
-        let mut file = std::fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .mode(0o600)
-            .open(&self.path)
-            .map_err(|err| {
-                ToolError::new(format!("Could not write {}: {err}", self.path.display()))
-            })?;
-        let _ = std::fs::set_permissions(&self.path, std::fs::Permissions::from_mode(0o600));
-
-        use std::io::Write;
-        writeln!(file, "{encoded}").map_err(|err| {
-            ToolError::new(format!("Could not write {}: {err}", self.path.display()))
-        })
+        client_config::write_private_file(
+            &self.path,
+            &client_config::encode_config_object(&self.values),
+        )
+        .map_err(|err| ToolError::new(err.to_string()))
     }
 
     pub fn delete(&self) -> Result<()> {

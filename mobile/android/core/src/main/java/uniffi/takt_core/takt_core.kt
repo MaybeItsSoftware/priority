@@ -707,6 +707,42 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_checkvist_due_date(
     ): Int
+    external fun uniffi_takt_core_checksum_func_clear_cli_config_credentials(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_cli_config_cleared(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_cli_config_default_path(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_cli_config_legacy_paths(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_cli_config_seeded(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_client_catalog(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_client_config_directory_path(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_client_config_path(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_client_detection_paths(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_config_document(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_config_merged(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_entry_json(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_is_legacy_command(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_legacy_server_names(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_paste_snippet(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_server_name(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_mcp_terminal_command(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_seed_cli_config(
+    ): Int
     external fun uniffi_takt_core_checksum_func_palette_command_parse(
     ): Int
     external fun uniffi_takt_core_checksum_func_resolve_due_date(
@@ -1635,6 +1671,42 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_checkvist_due_date(`due`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_clear_cli_config_credentials(`home`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_cli_config_cleared(`existing`: RustBuffer.ByValue,`configPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_cli_config_default_path(`home`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_cli_config_legacy_paths(`home`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_cli_config_seeded(`credentials`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,`configPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_client_catalog(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_client_config_directory_path(`client`: RustBuffer.ByValue,`home`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_client_config_path(`client`: RustBuffer.ByValue,`home`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_client_detection_paths(`client`: RustBuffer.ByValue,`home`: RustBuffer.ByValue,`applicationsDirectory`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_config_document(`entry`: RustBuffer.ByValue,`serversKey`: RustBuffer.ByValue,`serverName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_config_merged(`entry`: RustBuffer.ByValue,`serverName`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,`serversKey`: RustBuffer.ByValue,`configPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_entry_json(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_is_legacy_command(`command`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_mcp_legacy_server_names(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_paste_snippet(`entry`: RustBuffer.ByValue,`serversKey`: RustBuffer.ByValue,`serverName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_server_name(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_mcp_terminal_command(`entry`: RustBuffer.ByValue,`serverName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_seed_cli_config(`home`: RustBuffer.ByValue,`credentials`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_palette_command_parse(`input`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_resolve_due_date(`input`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`hours`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1996,6 +2068,60 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_checkvist_due_date() and 0xFFFF) != 16968) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_clear_cli_config_credentials() and 0xFFFF) != 1509) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_cli_config_cleared() and 0xFFFF) != 51108) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_cli_config_default_path() and 0xFFFF) != 12868) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_cli_config_legacy_paths() and 0xFFFF) != 32579) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_cli_config_seeded() and 0xFFFF) != 40042) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_client_catalog() and 0xFFFF) != 42254) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_client_config_directory_path() and 0xFFFF) != 11146) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_client_config_path() and 0xFFFF) != 11618) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_client_detection_paths() and 0xFFFF) != 30007) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_config_document() and 0xFFFF) != 26977) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_config_merged() and 0xFFFF) != 30051) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_entry_json() and 0xFFFF) != 19732) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_is_legacy_command() and 0xFFFF) != 5442) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_legacy_server_names() and 0xFFFF) != 17628) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_paste_snippet() and 0xFFFF) != 14294) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_server_name() and 0xFFFF) != 17134) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_mcp_terminal_command() and 0xFFFF) != 45404) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_seed_cli_config() and 0xFFFF) != 7877) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_palette_command_parse() and 0xFFFF) != 40471) {
@@ -8678,6 +8804,55 @@ public object FfiConverterTypeCaptureParts: FfiConverterRustBuffer<CaptureParts>
 
 
 /**
+ * The login the Mac hands down to the CLI.
+ */
+data class CliCredentials (
+    var `username`: kotlin.String
+    , 
+    var `remoteKey`: kotlin.String
+    , 
+    /**
+     * Optional, and only ever used to fill a gap — see [`cli_config_seeded`].
+     */
+    var `listId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCliCredentials: FfiConverterRustBuffer<CliCredentials> {
+    override fun read(buf: ByteBuffer): CliCredentials {
+        return CliCredentials(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CliCredentials) = (
+            FfiConverterString.allocationSize(value.`username`) +
+            FfiConverterString.allocationSize(value.`remoteKey`) +
+            FfiConverterString.allocationSize(value.`listId`)
+    )
+
+    override fun write(value: CliCredentials, buf: ByteBuffer) {
+            FfiConverterString.write(value.`username`, buf)
+            FfiConverterString.write(value.`remoteKey`, buf)
+            FfiConverterString.write(value.`listId`, buf)
+    }
+}
+
+
+
+/**
  * One day of finished work: indices into the caller's items, newest first.
  */
 data class CompletedDay (
@@ -8832,6 +9007,47 @@ public object FfiConverterTypeConditionRow: FfiConverterRustBuffer<ConditionRow>
             FfiConverterBoolean.write(value.`isArchived`, buf)
             FfiConverterLong.write(value.`createdAtMs`, buf)
             FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * A merged file and what the merge did.
+ */
+data class ConfigWrite (
+    var `contents`: kotlin.String
+    , 
+    var `outcome`: ConfigWriteOutcome
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConfigWrite: FfiConverterRustBuffer<ConfigWrite> {
+    override fun read(buf: ByteBuffer): ConfigWrite {
+        return ConfigWrite(
+            FfiConverterString.read(buf),
+            FfiConverterTypeConfigWriteOutcome.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ConfigWrite) = (
+            FfiConverterString.allocationSize(value.`contents`) +
+            FfiConverterTypeConfigWriteOutcome.allocationSize(value.`outcome`)
+    )
+
+    override fun write(value: ConfigWrite, buf: ByteBuffer) {
+            FfiConverterString.write(value.`contents`, buf)
+            FfiConverterTypeConfigWriteOutcome.write(value.`outcome`, buf)
     }
 }
 
@@ -13050,6 +13266,155 @@ public object FfiConverterTypeLoggedWork: FfiConverterRustBuffer<LoggedWork> {
 
 
 /**
+ * A known MCP client and everything needed to add Takt to it.
+ */
+data class McpClientDescriptor (
+    var `id`: kotlin.String
+    , 
+    var `displayName`: kotlin.String
+    , 
+    /**
+     * The config file, relative to the user's real home directory.
+     */
+    var `configPathComponents`: List<kotlin.String>
+    , 
+    /**
+     * The top-level key holding the server map.
+     */
+    var `serversKey`: kotlin.String
+    , 
+    /**
+     * VS Code requires an explicit `"type": "stdio"` on each entry.
+     */
+    var `requiresTransportType`: kotlin.Boolean
+    , 
+    var `installStyle`: McpClientInstallStyle
+    , 
+    /**
+     * Home-relative paths whose existence means the client is worth offering.
+     */
+    var `homeRelativeMarkers`: List<kotlin.String>
+    , 
+    /**
+     * App bundle names looked for in the applications directory.
+     */
+    var `applicationBundleNames`: List<kotlin.String>
+    , 
+    /**
+     * What the user has to do once the config lands.
+     */
+    var `postInstallNote`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMcpClientDescriptor: FfiConverterRustBuffer<McpClientDescriptor> {
+    override fun read(buf: ByteBuffer): McpClientDescriptor {
+        return McpClientDescriptor(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterTypeMcpClientInstallStyle.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: McpClientDescriptor) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterSequenceString.allocationSize(value.`configPathComponents`) +
+            FfiConverterString.allocationSize(value.`serversKey`) +
+            FfiConverterBoolean.allocationSize(value.`requiresTransportType`) +
+            FfiConverterTypeMcpClientInstallStyle.allocationSize(value.`installStyle`) +
+            FfiConverterSequenceString.allocationSize(value.`homeRelativeMarkers`) +
+            FfiConverterSequenceString.allocationSize(value.`applicationBundleNames`) +
+            FfiConverterString.allocationSize(value.`postInstallNote`)
+    )
+
+    override fun write(value: McpClientDescriptor, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterSequenceString.write(value.`configPathComponents`, buf)
+            FfiConverterString.write(value.`serversKey`, buf)
+            FfiConverterBoolean.write(value.`requiresTransportType`, buf)
+            FfiConverterTypeMcpClientInstallStyle.write(value.`installStyle`, buf)
+            FfiConverterSequenceString.write(value.`homeRelativeMarkers`, buf)
+            FfiConverterSequenceString.write(value.`applicationBundleNames`, buf)
+            FfiConverterString.write(value.`postInstallNote`, buf)
+    }
+}
+
+
+
+/**
+ * One stdio MCP server, in the shape every supported client expects.
+ */
+data class McpServerEntry (
+    var `command`: kotlin.String
+    , 
+    var `args`: List<kotlin.String>
+    , 
+    var `env`: Map<kotlin.String, kotlin.String>
+    , 
+    /**
+     * `"stdio"` for clients that demand an explicit transport (VS Code);
+     * `None` where the presence of `command` is enough.
+     */
+    var `transportType`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMcpServerEntry: FfiConverterRustBuffer<McpServerEntry> {
+    override fun read(buf: ByteBuffer): McpServerEntry {
+        return McpServerEntry(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterMapStringString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: McpServerEntry) = (
+            FfiConverterString.allocationSize(value.`command`) +
+            FfiConverterSequenceString.allocationSize(value.`args`) +
+            FfiConverterMapStringString.allocationSize(value.`env`) +
+            FfiConverterOptionalString.allocationSize(value.`transportType`)
+    )
+
+    override fun write(value: McpServerEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`command`, buf)
+            FfiConverterSequenceString.write(value.`args`, buf)
+            FfiConverterMapStringString.write(value.`env`, buf)
+            FfiConverterOptionalString.write(value.`transportType`, buf)
+    }
+}
+
+
+
+/**
  * A row of `task_metadata`. `TaskMetadata`.
  */
 data class MetadataRow (
@@ -15549,6 +15914,162 @@ public object FfiConverterTypeWorkspaceRow: FfiConverterRustBuffer<WorkspaceRow>
 
 
 
+
+
+/**
+ * Why a config file was left alone.
+ *
+ * Fields are `path`, `key` and `detail` rather than `message`, which
+ * Kotlin's generated exception would clash with.
+ */
+sealed class ClientConfigException: kotlin.Exception() {
+    
+    class MissingCredentials(
+        ) : ClientConfigException() {
+        override val message
+            get() = ""
+    }
+    
+    class UnreadableConfig(
+        
+        val `path`: kotlin.String
+        ) : ClientConfigException() {
+        override val message
+            get() = "path=${ `path` }"
+    }
+    
+    class ServersKeyNotAnObject(
+        
+        val `key`: kotlin.String
+        ) : ClientConfigException() {
+        override val message
+            get() = "key=${ `key` }"
+    }
+    
+    class ReadFailed(
+        
+        val `path`: kotlin.String, 
+        
+        val `detail`: kotlin.String
+        ) : ClientConfigException() {
+        override val message
+            get() = "path=${ `path` }, detail=${ `detail` }"
+    }
+    
+    class WriteFailed(
+        
+        val `path`: kotlin.String, 
+        
+        val `detail`: kotlin.String
+        ) : ClientConfigException() {
+        override val message
+            get() = "path=${ `path` }, detail=${ `detail` }"
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<ClientConfigException> {
+        override fun lift(error_buf: RustBuffer.ByValue): ClientConfigException = FfiConverterTypeClientConfigError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeClientConfigError : FfiConverterRustBuffer<ClientConfigException> {
+    override fun read(buf: ByteBuffer): ClientConfigException {
+        
+
+        return when(buf.getInt()) {
+            1 -> ClientConfigException.MissingCredentials()
+            2 -> ClientConfigException.UnreadableConfig(
+                FfiConverterString.read(buf),
+                )
+            3 -> ClientConfigException.ServersKeyNotAnObject(
+                FfiConverterString.read(buf),
+                )
+            4 -> ClientConfigException.ReadFailed(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            5 -> ClientConfigException.WriteFailed(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ClientConfigException): ULong {
+        return when(value) {
+            is ClientConfigException.MissingCredentials -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ClientConfigException.UnreadableConfig -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`path`)
+            )
+            is ClientConfigException.ServersKeyNotAnObject -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`key`)
+            )
+            is ClientConfigException.ReadFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`path`)
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is ClientConfigException.WriteFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`path`)
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+        }
+    }
+
+    override fun write(value: ClientConfigException, buf: ByteBuffer) {
+        when(value) {
+            is ClientConfigException.MissingCredentials -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ClientConfigException.UnreadableConfig -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`path`, buf)
+                Unit
+            }
+            is ClientConfigException.ServersKeyNotAnObject -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`key`, buf)
+                Unit
+            }
+            is ClientConfigException.ReadFailed -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`path`, buf)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is ClientConfigException.WriteFailed -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`path`, buf)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
 /**
  * How far back a day is from today, as a relation. `CompletedWorkDayKind`.
  */
@@ -15583,6 +16104,47 @@ public object FfiConverterTypeCompletedDayKind: FfiConverterRustBuffer<Completed
     override fun allocationSize(value: CompletedDayKind) = 4UL
 
     override fun write(value: CompletedDayKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * What a merge did, or would do.
+ */
+
+enum class ConfigWriteOutcome {
+    
+    ADDED,
+    UPDATED,
+    /**
+     * The file already says this, so it should not be rewritten.
+     */
+    UNCHANGED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConfigWriteOutcome: FfiConverterRustBuffer<ConfigWriteOutcome> {
+    override fun read(buf: ByteBuffer) = try {
+        ConfigWriteOutcome.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ConfigWriteOutcome) = 4UL
+
+    override fun write(value: ConfigWriteOutcome, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -17121,6 +17683,54 @@ public object FfiConverterTypeGoogleTasksOperation : FfiConverterRustBuffer<Goog
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * How Takt can add itself to a given MCP client.
+ */
+
+enum class McpClientInstallStyle {
+    
+    /**
+     * A plain JSON file that only holds MCP configuration: merge and write.
+     */
+    MERGE_CONFIG_FILE,
+    /**
+     * The client rewrites its own config continuously, so its CLI is the
+     * supported route.
+     */
+    TERMINAL_COMMAND,
+    /**
+     * JSON with comments, which a rewrite would drop: hand over a snippet.
+     */
+    PASTE_SNIPPET;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMcpClientInstallStyle: FfiConverterRustBuffer<McpClientInstallStyle> {
+    override fun read(buf: ByteBuffer) = try {
+        McpClientInstallStyle.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: McpClientInstallStyle) = 4UL
+
+    override fun write(value: McpClientInstallStyle, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
     }
 }
 
@@ -21398,6 +22008,34 @@ public object FfiConverterSequenceTypeLoggedWork: FfiConverterRustBuffer<List<Lo
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeMcpClientDescriptor: FfiConverterRustBuffer<List<McpClientDescriptor>> {
+    override fun read(buf: ByteBuffer): List<McpClientDescriptor> {
+        val len = buf.getInt()
+        return List<McpClientDescriptor>(len) {
+            FfiConverterTypeMcpClientDescriptor.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<McpClientDescriptor>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMcpClientDescriptor.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<McpClientDescriptor>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMcpClientDescriptor.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeMetadataRow: FfiConverterRustBuffer<List<MetadataRow>> {
     override fun read(buf: ByteBuffer): List<MetadataRow> {
         val len = buf.getInt()
@@ -22555,6 +23193,310 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterOptionalString.lower(`due`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Blanks the seeded login in the CLI's current config under `home`, the
+         * counterpart of [`seed_cli_config`]. Only the current path: the legacy file
+         * is never written. True when the file was rewritten.
+         */
+    @Throws(ClientConfigException::class) fun `clearCliConfigCredentials`(`home`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCallWithError(ClientConfigException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_clear_cli_config_credentials(
+    
+        
+        FfiConverterString.lower(`home`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The config with the seeded username and remote key blanked to `""`, every
+         * other key left alone; `None` when neither holds anything, or the file is
+         * not a JSON object, so there is nothing to rewrite.
+         */
+    @Throws(ClientConfigException::class) fun `cliConfigCleared`(`existing`: kotlin.String, `configPath`: kotlin.String): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCallWithError(ClientConfigException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_cli_config_cleared(
+    
+        
+        FfiConverterString.lower(`existing`),
+        FfiConverterString.lower(`configPath`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Where the CLI looks by default, for a user whose home is `home`.
+         *
+         * The CLI also honours `$PRIORITY_CONFIG_PATH` and `$XDG_CONFIG_HOME`, but
+         * those live in the *client's* environment when it launches the server, not
+         * in the app's, so guessing from there would be worse than the default.
+         */ fun `cliConfigDefaultPath`(`home`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_cli_config_default_path(
+    
+        
+        FfiConverterString.lower(`home`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Where the CLI kept its config when it was called `priority`. The CLI
+         * still reads it while the new one is missing, so the first seeding starts
+         * from it — keeping a hand-set `base_url` — rather than from nothing.
+         */ fun `cliConfigLegacyPaths`(`home`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_cli_config_legacy_paths(
+    
+        
+        FfiConverterString.lower(`home`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Merges `credentials` into the CLI's existing config.
+         *
+         * Every other key survives — `base_url` in particular, which a user on a
+         * self-hosted Checkvist will have set by hand. The app is authoritative for
+         * the username and remote key (rotate in the app, every client follows);
+         * `list_id` is the CLI's *default* list for terminal use, which the
+         * generated MCP entry overrides per client, so it is only filled when
+         * absent. `Unchanged` when the file already says this.
+         */
+    @Throws(ClientConfigException::class) fun `cliConfigSeeded`(`credentials`: CliCredentials, `existing`: kotlin.String?, `configPath`: kotlin.String): ConfigWrite {
+            return FfiConverterTypeConfigWrite.lift(
+    uniffiRustCallWithError(ClientConfigException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_cli_config_seeded(
+    
+        
+        FfiConverterTypeCliCredentials.lower(`credentials`),
+        FfiConverterOptionalString.lower(`existing`),
+        FfiConverterString.lower(`configPath`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Every client Takt knows how to add itself to, in the order they are
+         * offered.
+         */ fun `mcpClientCatalog`(): List<McpClientDescriptor> {
+            return FfiConverterSequenceTypeMcpClientDescriptor.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_client_catalog(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * The directory that file lives in.
+         */ fun `mcpClientConfigDirectoryPath`(`client`: McpClientDescriptor, `home`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_client_config_directory_path(
+    
+        
+        FfiConverterTypeMcpClientDescriptor.lower(`client`),
+        FfiConverterString.lower(`home`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The client's config file under `home`.
+         */ fun `mcpClientConfigPath`(`client`: McpClientDescriptor, `home`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_client_config_path(
+    
+        
+        FfiConverterTypeMcpClientDescriptor.lower(`client`),
+        FfiConverterString.lower(`home`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The paths whose existence means `client` is on this machine: its
+         * home-relative markers, then its app bundles. Any one is enough —
+         * offering a client the user doesn't have costs one ignored row; hiding one
+         * they do have sends them back to hand-editing JSON.
+         */ fun `mcpClientDetectionPaths`(`client`: McpClientDescriptor, `home`: kotlin.String, `applicationsDirectory`: kotlin.String): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_client_detection_paths(
+    
+        
+        FfiConverterTypeMcpClientDescriptor.lower(`client`),
+        FfiConverterString.lower(`home`),
+        FfiConverterString.lower(`applicationsDirectory`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `{ servers_key: { server_name: entry } }`, pretty-printed with no trailing
+         * newline: the whole config a user pastes into an empty file.
+         */ fun `mcpConfigDocument`(`entry`: McpServerEntry, `serversKey`: kotlin.String, `serverName`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_config_document(
+    
+        
+        FfiConverterTypeMcpServerEntry.lower(`entry`),
+        FfiConverterString.lower(`serversKey`),
+        FfiConverterString.lower(`serverName`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Merges `entry` under `server_name` into a client's existing config,
+         * keeping every other key and every other server — except an entry this app
+         * wrote under one of its earlier names, which the new one replaces.
+         * `Unchanged` when the entry is already identical, so a repeat install does
+         * not rewrite the file. Keys come back sorted.
+         */
+    @Throws(ClientConfigException::class) fun `mcpConfigMerged`(`entry`: McpServerEntry, `serverName`: kotlin.String, `existing`: kotlin.String?, `serversKey`: kotlin.String, `configPath`: kotlin.String): ConfigWrite {
+            return FfiConverterTypeConfigWrite.lift(
+    uniffiRustCallWithError(ClientConfigException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_config_merged(
+    
+        
+        FfiConverterTypeMcpServerEntry.lower(`entry`),
+        FfiConverterString.lower(`serverName`),
+        FfiConverterOptionalString.lower(`existing`),
+        FfiConverterString.lower(`serversKey`),
+        FfiConverterString.lower(`configPath`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The entry as compact JSON, keys sorted.
+         */ fun `mcpEntryJson`(`entry`: McpServerEntry): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_entry_json(
+    
+        
+        FfiConverterTypeMcpServerEntry.lower(`entry`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether a server entry's command is one this app wrote under an earlier
+         * name — the bundled helper, the app's own `--mcp-server` executable, or an
+         * installed `priority` CLI — as opposed to something the user happens to
+         * have called `priority`.
+         */ fun `mcpIsLegacyCommand`(`command`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_is_legacy_command(
+    
+        
+        FfiConverterString.lower(`command`),_status)
+}
+    )
+    }
+    
+ fun `mcpLegacyServerNames`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_legacy_server_names(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * A fragment to paste inside an existing top-level object, for a config that
+         * carries comments a rewrite would destroy: the document without its outer
+         * braces, dedented once.
+         */ fun `mcpPasteSnippet`(`entry`: McpServerEntry, `serversKey`: kotlin.String, `serverName`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_paste_snippet(
+    
+        
+        FfiConverterTypeMcpServerEntry.lower(`entry`),
+        FfiConverterString.lower(`serversKey`),
+        FfiConverterString.lower(`serverName`),_status)
+}
+    )
+    }
+    
+ fun `mcpServerName`(): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_server_name(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * The `claude mcp add-json` invocation for a client that owns its config and
+         * would race a direct write.
+         *
+         * Led by a quiet `claude mcp remove` of each earlier name, so an entry added
+         * when the app was called Priority is replaced. `;` rather than `&&`: on a
+         * machine that never had one the remove fails, and the add must run anyway.
+         */ fun `mcpTerminalCommand`(`entry`: McpServerEntry, `serverName`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_mcp_terminal_command(
+    
+        
+        FfiConverterTypeMcpServerEntry.lower(`entry`),
+        FfiConverterString.lower(`serverName`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Seeds the CLI's config under `home` from the app's login: reads the
+         * current file, or failing that the legacy one (read, never written), merges
+         * and writes the current path privately. Nothing is written when nothing
+         * would change — the CLI may be mid-read.
+         */
+    @Throws(ClientConfigException::class) fun `seedCliConfig`(`home`: kotlin.String, `credentials`: CliCredentials): ConfigWriteOutcome {
+            return FfiConverterTypeConfigWriteOutcome.lift(
+    uniffiRustCallWithError(ClientConfigException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_seed_cli_config(
+    
+        
+        FfiConverterString.lower(`home`),
+        FfiConverterTypeCliCredentials.lower(`credentials`),_status)
 }
     )
     }

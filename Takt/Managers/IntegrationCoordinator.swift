@@ -476,44 +476,25 @@ protocol IntegrationDataSource: AnyObject {
   /// MCP server and cannot read the app's keychain item — that would depend on
   /// the app's code signature. Nothing in a generated client config carries a
   /// secret any more, so this file is where the server gets its credentials.
+  ///
+  /// The read, merge and private write are the Rust core's, the same code
+  /// `takt auth` saves the file through.
   private func seedPriorityCLICredentials(
     credentials: CheckvistCredentials,
     listId: String
   ) throws {
-    let home = MCPClientInstaller.realHomeDirectory.path
-    let configPath = TaktCLIConfigWriter.defaultConfigPath(inHomeDirectory: home)
-    let configURL = URL(fileURLWithPath: configPath)
-    let directoryURL = configURL.deletingLastPathComponent()
-    let fileManager = FileManager.default
-
-    // The new file, or failing that the one the CLI kept under its old name,
-    // which is read but never written: the old file stays as it was.
-    var existing: String?
-    let readable = ([configPath] + TaktCLIConfigWriter.legacyConfigPaths(inHomeDirectory: home))
-      .first { fileManager.fileExists(atPath: $0) }
-    if let readable {
-      existing = try String(contentsOf: URL(fileURLWithPath: readable), encoding: .utf8)
-    }
-
-    let seeded = try TaktCLIConfigWriter.seeded(
+    let outcome = try TaktCLIConfigWriter.seed(
       credentials: TaktCLICredentials(
         username: credentials.username,
         remoteKey: credentials.remoteKey,
         listId: listId
       ),
-      into: existing,
-      configPath: configPath
+      inHomeDirectory: MCPClientInstaller.realHomeDirectory.path
     )
-
-    // Don't touch the file when nothing would change — the CLI may be mid-read
-    // and there is no reason to bump the modification date to say so.
-    guard seeded.outcome != .unchanged else { return }
-
-    try writeCLIConfig(seeded.contents, to: configURL)
-
-    logger.info(
-      "Seeded the takt CLI's credentials: \(String(describing: seeded.outcome), privacy: .public)"
-    )
+    if outcome != .unchanged {
+      logger.info(
+        "Seeded the takt CLI's credentials: \(String(describing: outcome), privacy: .public)")
+    }
   }
 
   /// Blanks the username and remote key the app seeded into the CLI's config,
@@ -525,68 +506,14 @@ protocol IntegrationDataSource: AnyObject {
   /// Only the current path is touched — the legacy `priority` config is read
   /// by the seeding step but never written, and that stays true here.
   func clearSeededCLICredentials() {
-    let home = MCPClientInstaller.realHomeDirectory.path
-    let configPath = TaktCLIConfigWriter.defaultConfigPath(inHomeDirectory: home)
-    let configURL = URL(fileURLWithPath: configPath)
-    guard FileManager.default.fileExists(atPath: configPath) else { return }
-
     do {
-      let data = try Data(contentsOf: configURL)
-      guard var values = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-        return
+      if try TaktCLIConfigWriter.clearSeededCredentials(
+        inHomeDirectory: MCPClientInstaller.realHomeDirectory.path)
+      {
+        logger.info("Cleared the takt CLI's seeded credentials")
       }
-      let keys = [TaktCLIConfigWriter.usernameKey, TaktCLIConfigWriter.remoteKeyKey]
-      guard keys.contains(where: { (values[$0] as? String)?.isEmpty == false }) else { return }
-      for key in keys where values[key] != nil {
-        values[key] = ""
-      }
-      let json = try JSONSerialization.data(
-        withJSONObject: values,
-        options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-      )
-      try writeCLIConfig(String(decoding: json, as: UTF8.self) + "\n", to: configURL)
-      logger.info("Cleared the takt CLI's seeded credentials")
     } catch {
       logger.error("Clearing the takt CLI's credentials failed: \(error)")
-    }
-  }
-
-  /// Writes the CLI config so that at no instant is there a readable file
-  /// with the remote key in it and a mode wider than 0600, and at no instant
-  /// is there a truncated one.
-  ///
-  /// `createFile` on the existing path truncated it and then wrote, so a
-  /// crash — or the CLI reading at the wrong moment — saw an empty or partial
-  /// file. A plain atomic write lands a fresh inode at whatever the umask
-  /// allows, which can be world-readable. So: a sibling temporary, created
-  /// 0600 and written in full, then renamed over the target. The rename is
-  /// atomic and carries the mode with it. Mirrors `Config::save` in
-  /// `cli/src/config.rs`.
-  private func writeCLIConfig(_ contents: String, to configURL: URL) throws {
-    let fileManager = FileManager.default
-    let directoryURL = configURL.deletingLastPathComponent()
-    try fileManager.createDirectory(
-      at: directoryURL,
-      withIntermediateDirectories: true,
-      attributes: [.posixPermissions: 0o700]
-    )
-
-    let temporaryURL = directoryURL.appendingPathComponent(
-      ".\(configURL.lastPathComponent).\(UUID().uuidString).tmp")
-    guard
-      fileManager.createFile(
-        atPath: temporaryURL.path,
-        contents: Data(contents.utf8),
-        attributes: [.posixPermissions: 0o600]
-      )
-    else {
-      throw TaktCLIConfigError.writeFailed(path: configURL.path)
-    }
-    // `rename(2)` rather than `FileManager.replaceItemAt`, which wants the
-    // target to exist already; this is also the first write on a fresh setup.
-    guard rename(temporaryURL.path, configURL.path) == 0 else {
-      try? fileManager.removeItem(at: temporaryURL)
-      throw TaktCLIConfigError.writeFailed(path: configURL.path)
     }
   }
 

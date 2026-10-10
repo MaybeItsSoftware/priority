@@ -5135,6 +5135,73 @@ public func FfiConverterTypeCaptureParts_lower(_ value: CaptureParts) -> RustBuf
 
 
 /**
+ * The login the Mac hands down to the CLI.
+ */
+public struct CliCredentials: Equatable, Hashable {
+    public var username: String
+    public var remoteKey: String
+    /**
+     * Optional, and only ever used to fill a gap — see [`cli_config_seeded`].
+     */
+    public var listId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(username: String, remoteKey: String, 
+        /**
+         * Optional, and only ever used to fill a gap — see [`cli_config_seeded`].
+         */listId: String) {
+        self.username = username
+        self.remoteKey = remoteKey
+        self.listId = listId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CliCredentials: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCliCredentials: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CliCredentials {
+        return
+            try CliCredentials(
+                username: FfiConverterString.read(from: &buf), 
+                remoteKey: FfiConverterString.read(from: &buf), 
+                listId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CliCredentials, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.username, into: &buf)
+        FfiConverterString.write(value.remoteKey, into: &buf)
+        FfiConverterString.write(value.listId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCliCredentials_lift(_ buf: RustBuffer) throws -> CliCredentials {
+    return try FfiConverterTypeCliCredentials.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCliCredentials_lower(_ value: CliCredentials) -> RustBuffer {
+    return FfiConverterTypeCliCredentials.lower(value)
+}
+
+
+/**
  * One day of finished work: indices into the caller's items, newest first.
  */
 public struct CompletedDay: Equatable, Hashable {
@@ -5339,6 +5406,63 @@ public func FfiConverterTypeConditionRow_lift(_ buf: RustBuffer) throws -> Condi
 #endif
 public func FfiConverterTypeConditionRow_lower(_ value: ConditionRow) -> RustBuffer {
     return FfiConverterTypeConditionRow.lower(value)
+}
+
+
+/**
+ * A merged file and what the merge did.
+ */
+public struct ConfigWrite: Equatable, Hashable {
+    public var contents: String
+    public var outcome: ConfigWriteOutcome
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(contents: String, outcome: ConfigWriteOutcome) {
+        self.contents = contents
+        self.outcome = outcome
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ConfigWrite: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConfigWrite: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConfigWrite {
+        return
+            try ConfigWrite(
+                contents: FfiConverterString.read(from: &buf), 
+                outcome: FfiConverterTypeConfigWriteOutcome.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ConfigWrite, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.contents, into: &buf)
+        FfiConverterTypeConfigWriteOutcome.write(value.outcome, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConfigWrite_lift(_ buf: RustBuffer) throws -> ConfigWrite {
+    return try FfiConverterTypeConfigWrite.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConfigWrite_lower(_ value: ConfigWrite) -> RustBuffer {
+    return FfiConverterTypeConfigWrite.lower(value)
 }
 
 
@@ -10724,6 +10848,200 @@ public func FfiConverterTypeLoggedWork_lower(_ value: LoggedWork) -> RustBuffer 
 
 
 /**
+ * A known MCP client and everything needed to add Takt to it.
+ */
+public struct McpClientDescriptor: Equatable, Hashable {
+    public var id: String
+    public var displayName: String
+    /**
+     * The config file, relative to the user's real home directory.
+     */
+    public var configPathComponents: [String]
+    /**
+     * The top-level key holding the server map.
+     */
+    public var serversKey: String
+    /**
+     * VS Code requires an explicit `"type": "stdio"` on each entry.
+     */
+    public var requiresTransportType: Bool
+    public var installStyle: McpClientInstallStyle
+    /**
+     * Home-relative paths whose existence means the client is worth offering.
+     */
+    public var homeRelativeMarkers: [String]
+    /**
+     * App bundle names looked for in the applications directory.
+     */
+    public var applicationBundleNames: [String]
+    /**
+     * What the user has to do once the config lands.
+     */
+    public var postInstallNote: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, displayName: String, 
+        /**
+         * The config file, relative to the user's real home directory.
+         */configPathComponents: [String], 
+        /**
+         * The top-level key holding the server map.
+         */serversKey: String, 
+        /**
+         * VS Code requires an explicit `"type": "stdio"` on each entry.
+         */requiresTransportType: Bool, installStyle: McpClientInstallStyle, 
+        /**
+         * Home-relative paths whose existence means the client is worth offering.
+         */homeRelativeMarkers: [String], 
+        /**
+         * App bundle names looked for in the applications directory.
+         */applicationBundleNames: [String], 
+        /**
+         * What the user has to do once the config lands.
+         */postInstallNote: String) {
+        self.id = id
+        self.displayName = displayName
+        self.configPathComponents = configPathComponents
+        self.serversKey = serversKey
+        self.requiresTransportType = requiresTransportType
+        self.installStyle = installStyle
+        self.homeRelativeMarkers = homeRelativeMarkers
+        self.applicationBundleNames = applicationBundleNames
+        self.postInstallNote = postInstallNote
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension McpClientDescriptor: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMcpClientDescriptor: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> McpClientDescriptor {
+        return
+            try McpClientDescriptor(
+                id: FfiConverterString.read(from: &buf), 
+                displayName: FfiConverterString.read(from: &buf), 
+                configPathComponents: FfiConverterSequenceString.read(from: &buf), 
+                serversKey: FfiConverterString.read(from: &buf), 
+                requiresTransportType: FfiConverterBool.read(from: &buf), 
+                installStyle: FfiConverterTypeMcpClientInstallStyle.read(from: &buf), 
+                homeRelativeMarkers: FfiConverterSequenceString.read(from: &buf), 
+                applicationBundleNames: FfiConverterSequenceString.read(from: &buf), 
+                postInstallNote: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: McpClientDescriptor, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.displayName, into: &buf)
+        FfiConverterSequenceString.write(value.configPathComponents, into: &buf)
+        FfiConverterString.write(value.serversKey, into: &buf)
+        FfiConverterBool.write(value.requiresTransportType, into: &buf)
+        FfiConverterTypeMcpClientInstallStyle.write(value.installStyle, into: &buf)
+        FfiConverterSequenceString.write(value.homeRelativeMarkers, into: &buf)
+        FfiConverterSequenceString.write(value.applicationBundleNames, into: &buf)
+        FfiConverterString.write(value.postInstallNote, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMcpClientDescriptor_lift(_ buf: RustBuffer) throws -> McpClientDescriptor {
+    return try FfiConverterTypeMcpClientDescriptor.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMcpClientDescriptor_lower(_ value: McpClientDescriptor) -> RustBuffer {
+    return FfiConverterTypeMcpClientDescriptor.lower(value)
+}
+
+
+/**
+ * One stdio MCP server, in the shape every supported client expects.
+ */
+public struct McpServerEntry: Equatable, Hashable {
+    public var command: String
+    public var args: [String]
+    public var env: [String: String]
+    /**
+     * `"stdio"` for clients that demand an explicit transport (VS Code);
+     * `None` where the presence of `command` is enough.
+     */
+    public var transportType: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(command: String, args: [String], env: [String: String], 
+        /**
+         * `"stdio"` for clients that demand an explicit transport (VS Code);
+         * `None` where the presence of `command` is enough.
+         */transportType: String?) {
+        self.command = command
+        self.args = args
+        self.env = env
+        self.transportType = transportType
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension McpServerEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMcpServerEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> McpServerEntry {
+        return
+            try McpServerEntry(
+                command: FfiConverterString.read(from: &buf), 
+                args: FfiConverterSequenceString.read(from: &buf), 
+                env: FfiConverterDictionaryStringString.read(from: &buf), 
+                transportType: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: McpServerEntry, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.command, into: &buf)
+        FfiConverterSequenceString.write(value.args, into: &buf)
+        FfiConverterDictionaryStringString.write(value.env, into: &buf)
+        FfiConverterOptionString.write(value.transportType, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMcpServerEntry_lift(_ buf: RustBuffer) throws -> McpServerEntry {
+    return try FfiConverterTypeMcpServerEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMcpServerEntry_lower(_ value: McpServerEntry) -> RustBuffer {
+    return FfiConverterTypeMcpServerEntry.lower(value)
+}
+
+
+/**
  * A row of `task_metadata`. `TaskMetadata`.
  */
 public struct MetadataRow: Equatable, Hashable {
@@ -13927,6 +14245,127 @@ public func FfiConverterTypeWorkspaceRow_lower(_ value: WorkspaceRow) -> RustBuf
 
 
 /**
+ * Why a config file was left alone.
+ *
+ * Fields are `path`, `key` and `detail` rather than `message`, which
+ * Kotlin's generated exception would clash with.
+ */
+public 
+enum ClientConfigError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    case MissingCredentials
+    case UnreadableConfig(path: String
+    )
+    case ServersKeyNotAnObject(key: String
+    )
+    case ReadFailed(path: String, detail: String
+    )
+    case WriteFailed(path: String, detail: String
+    )
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
+}
+
+#if compiler(>=6)
+extension ClientConfigError: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeClientConfigError: FfiConverterRustBuffer {
+    typealias SwiftType = ClientConfigError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClientConfigError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .MissingCredentials
+        case 2: return .UnreadableConfig(
+            path: try FfiConverterString.read(from: &buf)
+            )
+        case 3: return .ServersKeyNotAnObject(
+            key: try FfiConverterString.read(from: &buf)
+            )
+        case 4: return .ReadFailed(
+            path: try FfiConverterString.read(from: &buf), 
+            detail: try FfiConverterString.read(from: &buf)
+            )
+        case 5: return .WriteFailed(
+            path: try FfiConverterString.read(from: &buf), 
+            detail: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ClientConfigError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .MissingCredentials:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .UnreadableConfig(path):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(path, into: &buf)
+            
+        
+        case let .ServersKeyNotAnObject(key):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(key, into: &buf)
+            
+        
+        case let .ReadFailed(path,detail):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(path, into: &buf)
+            FfiConverterString.write(detail, into: &buf)
+            
+        
+        case let .WriteFailed(path,detail):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(path, into: &buf)
+            FfiConverterString.write(detail, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeClientConfigError_lift(_ buf: RustBuffer) throws -> ClientConfigError {
+    return try FfiConverterTypeClientConfigError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeClientConfigError_lower(_ value: ClientConfigError) -> RustBuffer {
+    return FfiConverterTypeClientConfigError.lower(value)
+}
+
+
+/**
  * How far back a day is from today, as a relation. `CompletedWorkDayKind`.
  */
 
@@ -14008,6 +14447,85 @@ public func FfiConverterTypeCompletedDayKind_lift(_ buf: RustBuffer) throws -> C
 #endif
 public func FfiConverterTypeCompletedDayKind_lower(_ value: CompletedDayKind) -> RustBuffer {
     return FfiConverterTypeCompletedDayKind.lower(value)
+}
+
+
+
+/**
+ * What a merge did, or would do.
+ */
+
+public enum ConfigWriteOutcome: Equatable, Hashable {
+    
+    case added
+    case updated
+    /**
+     * The file already says this, so it should not be rewritten.
+     */
+    case unchanged
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ConfigWriteOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConfigWriteOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = ConfigWriteOutcome
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConfigWriteOutcome {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .added
+        
+        case 2: return .updated
+        
+        case 3: return .unchanged
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ConfigWriteOutcome, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .added:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .updated:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .unchanged:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConfigWriteOutcome_lift(_ buf: RustBuffer) throws -> ConfigWriteOutcome {
+    return try FfiConverterTypeConfigWriteOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConfigWriteOutcome_lower(_ value: ConfigWriteOutcome) -> RustBuffer {
+    return FfiConverterTypeConfigWriteOutcome.lower(value)
 }
 
 
@@ -15265,6 +15783,92 @@ public func FfiConverterTypeGoogleTasksOperation_lift(_ buf: RustBuffer) throws 
 #endif
 public func FfiConverterTypeGoogleTasksOperation_lower(_ value: GoogleTasksOperation) -> RustBuffer {
     return FfiConverterTypeGoogleTasksOperation.lower(value)
+}
+
+
+
+/**
+ * How Takt can add itself to a given MCP client.
+ */
+
+public enum McpClientInstallStyle: Equatable, Hashable {
+    
+    /**
+     * A plain JSON file that only holds MCP configuration: merge and write.
+     */
+    case mergeConfigFile
+    /**
+     * The client rewrites its own config continuously, so its CLI is the
+     * supported route.
+     */
+    case terminalCommand
+    /**
+     * JSON with comments, which a rewrite would drop: hand over a snippet.
+     */
+    case pasteSnippet
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension McpClientInstallStyle: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMcpClientInstallStyle: FfiConverterRustBuffer {
+    typealias SwiftType = McpClientInstallStyle
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> McpClientInstallStyle {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .mergeConfigFile
+        
+        case 2: return .terminalCommand
+        
+        case 3: return .pasteSnippet
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: McpClientInstallStyle, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .mergeConfigFile:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .terminalCommand:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .pasteSnippet:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMcpClientInstallStyle_lift(_ buf: RustBuffer) throws -> McpClientInstallStyle {
+    return try FfiConverterTypeMcpClientInstallStyle.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMcpClientInstallStyle_lower(_ value: McpClientInstallStyle) -> RustBuffer {
+    return FfiConverterTypeMcpClientInstallStyle.lower(value)
 }
 
 
@@ -18551,6 +19155,31 @@ fileprivate struct FfiConverterSequenceTypeLoggedWork: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeMcpClientDescriptor: FfiConverterRustBuffer {
+    typealias SwiftType = [McpClientDescriptor]
+
+    public static func write(_ value: [McpClientDescriptor], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMcpClientDescriptor.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [McpClientDescriptor] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [McpClientDescriptor]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMcpClientDescriptor.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeMetadataRow: FfiConverterRustBuffer {
     typealias SwiftType = [MetadataRow]
 
@@ -19535,6 +20164,251 @@ public func checkvistDueDate(due: String?) -> Int64?  {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_checkvist_due_date(
         FfiConverterOptionString.lower(due),uniffiCallStatus
+    )
+})
+}
+/**
+ * Blanks the seeded login in the CLI's current config under `home`, the
+ * counterpart of [`seed_cli_config`]. Only the current path: the legacy file
+ * is never written. True when the file was rewritten.
+ */
+public func clearCliConfigCredentials(home: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeClientConfigError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_clear_cli_config_credentials(
+        FfiConverterString.lower(home),uniffiCallStatus
+    )
+})
+}
+/**
+ * The config with the seeded username and remote key blanked to `""`, every
+ * other key left alone; `None` when neither holds anything, or the file is
+ * not a JSON object, so there is nothing to rewrite.
+ */
+public func cliConfigCleared(existing: String, configPath: String)throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeClientConfigError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_cli_config_cleared(
+        FfiConverterString.lower(existing),
+        FfiConverterString.lower(configPath),uniffiCallStatus
+    )
+})
+}
+/**
+ * Where the CLI looks by default, for a user whose home is `home`.
+ *
+ * The CLI also honours `$PRIORITY_CONFIG_PATH` and `$XDG_CONFIG_HOME`, but
+ * those live in the *client's* environment when it launches the server, not
+ * in the app's, so guessing from there would be worse than the default.
+ */
+public func cliConfigDefaultPath(home: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_cli_config_default_path(
+        FfiConverterString.lower(home),uniffiCallStatus
+    )
+})
+}
+/**
+ * Where the CLI kept its config when it was called `priority`. The CLI
+ * still reads it while the new one is missing, so the first seeding starts
+ * from it — keeping a hand-set `base_url` — rather than from nothing.
+ */
+public func cliConfigLegacyPaths(home: String) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_cli_config_legacy_paths(
+        FfiConverterString.lower(home),uniffiCallStatus
+    )
+})
+}
+/**
+ * Merges `credentials` into the CLI's existing config.
+ *
+ * Every other key survives — `base_url` in particular, which a user on a
+ * self-hosted Checkvist will have set by hand. The app is authoritative for
+ * the username and remote key (rotate in the app, every client follows);
+ * `list_id` is the CLI's *default* list for terminal use, which the
+ * generated MCP entry overrides per client, so it is only filled when
+ * absent. `Unchanged` when the file already says this.
+ */
+public func cliConfigSeeded(credentials: CliCredentials, existing: String?, configPath: String)throws  -> ConfigWrite  {
+    return try  FfiConverterTypeConfigWrite_lift(try rustCallWithError(FfiConverterTypeClientConfigError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_cli_config_seeded(
+        FfiConverterTypeCliCredentials_lower(credentials),
+        FfiConverterOptionString.lower(existing),
+        FfiConverterString.lower(configPath),uniffiCallStatus
+    )
+})
+}
+/**
+ * Every client Takt knows how to add itself to, in the order they are
+ * offered.
+ */
+public func mcpClientCatalog() -> [McpClientDescriptor]  {
+    return try!  FfiConverterSequenceTypeMcpClientDescriptor.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_client_catalog(uniffiCallStatus
+    )
+})
+}
+/**
+ * The directory that file lives in.
+ */
+public func mcpClientConfigDirectoryPath(client: McpClientDescriptor, home: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_client_config_directory_path(
+        FfiConverterTypeMcpClientDescriptor_lower(client),
+        FfiConverterString.lower(home),uniffiCallStatus
+    )
+})
+}
+/**
+ * The client's config file under `home`.
+ */
+public func mcpClientConfigPath(client: McpClientDescriptor, home: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_client_config_path(
+        FfiConverterTypeMcpClientDescriptor_lower(client),
+        FfiConverterString.lower(home),uniffiCallStatus
+    )
+})
+}
+/**
+ * The paths whose existence means `client` is on this machine: its
+ * home-relative markers, then its app bundles. Any one is enough —
+ * offering a client the user doesn't have costs one ignored row; hiding one
+ * they do have sends them back to hand-editing JSON.
+ */
+public func mcpClientDetectionPaths(client: McpClientDescriptor, home: String, applicationsDirectory: String) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_client_detection_paths(
+        FfiConverterTypeMcpClientDescriptor_lower(client),
+        FfiConverterString.lower(home),
+        FfiConverterString.lower(applicationsDirectory),uniffiCallStatus
+    )
+})
+}
+/**
+ * `{ servers_key: { server_name: entry } }`, pretty-printed with no trailing
+ * newline: the whole config a user pastes into an empty file.
+ */
+public func mcpConfigDocument(entry: McpServerEntry, serversKey: String, serverName: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_config_document(
+        FfiConverterTypeMcpServerEntry_lower(entry),
+        FfiConverterString.lower(serversKey),
+        FfiConverterString.lower(serverName),uniffiCallStatus
+    )
+})
+}
+/**
+ * Merges `entry` under `server_name` into a client's existing config,
+ * keeping every other key and every other server — except an entry this app
+ * wrote under one of its earlier names, which the new one replaces.
+ * `Unchanged` when the entry is already identical, so a repeat install does
+ * not rewrite the file. Keys come back sorted.
+ */
+public func mcpConfigMerged(entry: McpServerEntry, serverName: String, existing: String?, serversKey: String, configPath: String)throws  -> ConfigWrite  {
+    return try  FfiConverterTypeConfigWrite_lift(try rustCallWithError(FfiConverterTypeClientConfigError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_config_merged(
+        FfiConverterTypeMcpServerEntry_lower(entry),
+        FfiConverterString.lower(serverName),
+        FfiConverterOptionString.lower(existing),
+        FfiConverterString.lower(serversKey),
+        FfiConverterString.lower(configPath),uniffiCallStatus
+    )
+})
+}
+/**
+ * The entry as compact JSON, keys sorted.
+ */
+public func mcpEntryJson(entry: McpServerEntry) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_entry_json(
+        FfiConverterTypeMcpServerEntry_lower(entry),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether a server entry's command is one this app wrote under an earlier
+ * name — the bundled helper, the app's own `--mcp-server` executable, or an
+ * installed `priority` CLI — as opposed to something the user happens to
+ * have called `priority`.
+ */
+public func mcpIsLegacyCommand(command: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_is_legacy_command(
+        FfiConverterString.lower(command),uniffiCallStatus
+    )
+})
+}
+public func mcpLegacyServerNames() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_legacy_server_names(uniffiCallStatus
+    )
+})
+}
+/**
+ * A fragment to paste inside an existing top-level object, for a config that
+ * carries comments a rewrite would destroy: the document without its outer
+ * braces, dedented once.
+ */
+public func mcpPasteSnippet(entry: McpServerEntry, serversKey: String, serverName: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_paste_snippet(
+        FfiConverterTypeMcpServerEntry_lower(entry),
+        FfiConverterString.lower(serversKey),
+        FfiConverterString.lower(serverName),uniffiCallStatus
+    )
+})
+}
+public func mcpServerName() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_server_name(uniffiCallStatus
+    )
+})
+}
+/**
+ * The `claude mcp add-json` invocation for a client that owns its config and
+ * would race a direct write.
+ *
+ * Led by a quiet `claude mcp remove` of each earlier name, so an entry added
+ * when the app was called Priority is replaced. `;` rather than `&&`: on a
+ * machine that never had one the remove fails, and the add must run anyway.
+ */
+public func mcpTerminalCommand(entry: McpServerEntry, serverName: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_mcp_terminal_command(
+        FfiConverterTypeMcpServerEntry_lower(entry),
+        FfiConverterString.lower(serverName),uniffiCallStatus
+    )
+})
+}
+/**
+ * Seeds the CLI's config under `home` from the app's login: reads the
+ * current file, or failing that the legacy one (read, never written), merges
+ * and writes the current path privately. Nothing is written when nothing
+ * would change — the CLI may be mid-read.
+ */
+public func seedCliConfig(home: String, credentials: CliCredentials)throws  -> ConfigWriteOutcome  {
+    return try  FfiConverterTypeConfigWriteOutcome_lift(try rustCallWithError(FfiConverterTypeClientConfigError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_seed_cli_config(
+        FfiConverterString.lower(home),
+        FfiConverterTypeCliCredentials_lower(credentials),uniffiCallStatus
     )
 })
 }
@@ -20813,6 +21687,60 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_checkvist_due_date() != 16968) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_clear_cli_config_credentials() != 1509) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_cli_config_cleared() != 51108) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_cli_config_default_path() != 12868) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_cli_config_legacy_paths() != 32579) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_cli_config_seeded() != 40042) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_client_catalog() != 42254) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_client_config_directory_path() != 11146) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_client_config_path() != 11618) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_client_detection_paths() != 30007) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_config_document() != 26977) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_config_merged() != 30051) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_entry_json() != 19732) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_is_legacy_command() != 5442) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_legacy_server_names() != 17628) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_paste_snippet() != 14294) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_server_name() != 17134) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_mcp_terminal_command() != 45404) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_seed_cli_config() != 7877) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_palette_command_parse() != 40471) {
