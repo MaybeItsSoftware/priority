@@ -358,6 +358,28 @@ covered the old copies pass against it.
    `AFFiNEDocumentMarkdown.title(forTaskContent:)` and `taskDocument` have
    no caller outside their tests.
 
+   **Capture syntax and commands (2026-10-10).** `core/src/capture.rs`
+   reads the add field's trailing tokens (`45m #work @fri !1 wait:Sam`),
+   their preview labels, the follow-up field's day and time words, and
+   Checkvist's free-text due dates; `core/src/command.rs` reads the Mac
+   palette's commands and the date words its `due` and `start` take
+   (`tomorrow 9am`, `4pm fri`, `in 90m`, `2026-4-2 8:05pm`). Swift's
+   `TaskCapture`, `TaskCaptureToken`, `DueDateParsing` and `CommandEngine`,
+   and Kotlin's `TaskCapture`, `TaskCaptureToken` and `DueDateParsing`, are
+   wrappers now; the Swift tests are Rust tests too, with edges measured
+   against Foundation before the Swift went. Where the platforms disagreed,
+   the Mac's answer won: Android gained `^fri` and `wait:Sam` (its quick add
+   now files and chips who a task waits on), and a Checkvist date with a time
+   that is not an internet date-time is that day's midnight in UTC
+   everywhere, which is what Foundation's lenient ISO reading answered,
+   where Android had read the time and zone. Each parse is one crossing per
+   keystroke, not per word. What stays native: the palette's suggestion rows
+   and `WorkspaceCommandQuery`, which rank the Mac's own catalogue on each
+   keystroke and fuzzy-match every list in the go-to overlay, so moving them
+   would cross once per row; and the CLI's due bucket in the terminal UI,
+   which reads Checkvist's leading `yyyy-MM-dd` as a local day and belongs
+   with the board's buckets.
+
    What stays in Swift and Kotlin after step 9 is presentation (views,
    locale formatting, colour conversion), platform transport (HTTP, auth,
    OAuth, the long poll), per-point geometry and fold state that lives only
