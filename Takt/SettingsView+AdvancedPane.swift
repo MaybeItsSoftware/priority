@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import TaktCore
+import TaktWorkspace
 import UniformTypeIdentifiers
 
 /// The Advanced page: the workspace written out to a file, diagnostics, and
@@ -14,7 +15,7 @@ extension SettingsView {
         detail: "Every list, archived ones included, with its whole task tree and notes."
       ) {
         HStack(spacing: theme.space.xs) {
-          ForEach(WorkspaceViewModel.ExportFormat.allCases) { format in
+          ForEach(WorkspaceExportFormat.allCases) { format in
             Button("\(format.title)…") { exportWorkspace(format) }
           }
         }
@@ -73,7 +74,7 @@ extension SettingsView {
     #endif
   }
 
-  private func exportWorkspace(_ format: WorkspaceViewModel.ExportFormat) {
+  private func exportWorkspace(_ format: WorkspaceExportFormat) {
     let document: String
     do {
       document = try workspace.exportDocument(format)
