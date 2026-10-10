@@ -305,12 +305,9 @@ fn markdown_link(content: &str) -> Option<(String, String)> {
         match chars.next()? {
             '\\' => {
                 label.push('\\');
-                match chars.next() {
-                    Some(next) => label.push(next),
-                    // A trailing backslash with nothing after it is literal,
-                    // and the label is unclosed.
-                    None => return None,
-                }
+                // A trailing backslash with nothing after it is literal, and
+                // the label is unclosed.
+                label.push(chars.next()?);
             }
             ']' => break,
             other => label.push(other),
