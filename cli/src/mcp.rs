@@ -879,3 +879,31 @@ mod framing_tests {
         assert!(read_framed(&mut cursor).expect("eof").is_none());
     }
 }
+
+#[cfg(test)]
+mod tool_classification_tests {
+    use super::tool_definitions;
+    use std::collections::BTreeSet;
+    use takt_core::agent_tools::{READ_ONLY_TOOLS, WRITE_TOOLS};
+
+    /// The agent panel decides what to pre-allow from the core's two lists,
+    /// so they must be this server's whole table, exactly.
+    #[test]
+    fn every_declared_tool_is_classified_as_a_read_or_a_write() {
+        let declared: BTreeSet<String> = tool_definitions()
+            .iter()
+            .map(|tool| {
+                tool["name"]
+                    .as_str()
+                    .expect("a tool has a name")
+                    .to_string()
+            })
+            .collect();
+        let classified: BTreeSet<String> = READ_ONLY_TOOLS
+            .iter()
+            .chain(WRITE_TOOLS)
+            .map(|name| name.to_string())
+            .collect();
+        assert_eq!(declared, classified);
+    }
+}

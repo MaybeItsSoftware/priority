@@ -18636,6 +18636,26 @@ public func affineTaskIdInPermalink(permalink: String) -> Int64?  {
 })
 }
 /**
+ * [`READ_ONLY_TOOLS`], for the apps.
+ */
+public func agentReadOnlyTools() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_agent_read_only_tools(uniffiCallStatus
+    )
+})
+}
+/**
+ * [`WRITE_TOOLS`], for the apps.
+ */
+public func agentWriteTools() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_agent_write_tools(uniffiCallStatus
+    )
+})
+}
+/**
  * A day and a time of day, as the follow-up field reads them: the add
  * field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`, each with or
  * without the `@`), a time (`9am`, `9:30pm`, `14:00`, `noon`), or both in
@@ -19824,6 +19844,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_affine_task_id_in_permalink() != 7955) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_agent_read_only_tools() != 53195) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_agent_write_tools() != 8928) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_capture_date_time() != 25581) {

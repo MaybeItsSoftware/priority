@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// What the agent panel's assistant may do on its own, and what it has to ask.
 ///
@@ -21,27 +22,15 @@ public enum AgentToolPolicy {
   public static let serverName = "takt"
   public static let toolPrefix = "mcp__\(serverName)__"
 
-  /// The tools that change nothing, from `cli/src/tools.rs`. The Checkvist
-  /// reads, the local day log and dailies, the focus clock (opened
-  /// `SQLITE_OPEN_READ_ONLY` by the CLI), and the workspace tree.
-  public static let readOnlyTools: [String] = [
-    "task_lists", "task_fetch", "task_search", "task_metadata",
-    "daily_log_fetch", "dailies_list",
-    "focus_status", "focus_history",
-    "workspace_tree", "workspace_tasks",
-  ]
+  /// The tools that change nothing. The classification is the Rust core's
+  /// (`core/src/agent_tools.rs`), which the CLI's tests hold to its own tool
+  /// table, so a new tool cannot go unclassified.
+  public static let readOnlyTools: [String] = agentReadOnlyTools()
 
   /// The tools that write, for the docs and the tests: every one of them goes
   /// through the approval card. Not consulted to decide anything — anything
   /// not in `readOnlyTools` asks, listed here or not.
-  public static let writeTools: [String] = [
-    "task_add", "task_update", "task_note_add", "task_move", "task_reparent", "project_move",
-    "task_complete", "task_reopen", "task_invalidate", "task_delete", "list_create",
-    "task_matrix_set", "daily_add", "daily_update", "daily_tick",
-    "workspace_task_add", "workspace_task_update", "workspace_task_move",
-    "workspace_task_to_list", "workspace_task_delete", "workspace_folder_create",
-    "workspace_list_create", "workspace_list_move",
-  ]
+  public static let writeTools: [String] = agentWriteTools()
 
   public static func qualifiedName(_ tool: String) -> String { toolPrefix + tool }
 

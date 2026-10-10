@@ -232,4 +232,6 @@ declaration in `mcp.rs` — because the point of the shared tool table is that a
 terminal can reach anything an assistant can. It also needs
 `EXPECTED_TOOL_COUNT` in `scripts/mcp_smoke_check.py` and the count in
 `docs/mcp-server.md` updating; the smoke check fails on the number, which is
-the intended reminder.
+the intended reminder. And it needs classifying as a read or a write in
+`core/src/agent_tools.rs`, which the agent panel uses to decide what to
+pre-allow; a CLI test fails until it is.

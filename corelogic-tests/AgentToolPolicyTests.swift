@@ -4,13 +4,13 @@ import XCTest
 
 final class AgentToolPolicyTests: XCTestCase {
 
-  /// The two lists together are the CLI's whole tool table (33 tools, per
+  /// The two lists together are the CLI's whole tool table (34 tools, per
   /// `docs/mcp-server.md`), with nothing in both.
   func testReadAndWriteToolsPartitionTheServer() {
     let read = Set(AgentToolPolicy.readOnlyTools)
     let write = Set(AgentToolPolicy.writeTools)
     XCTAssertTrue(read.isDisjoint(with: write))
-    XCTAssertEqual(read.count + write.count, 33)
+    XCTAssertEqual(read.count + write.count, 34)
   }
 
   func testNothingThatWritesIsPreAllowed() {

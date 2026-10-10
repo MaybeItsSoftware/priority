@@ -105,7 +105,8 @@ to the assistant and not shown in the transcript.
 
 ## Tool policy
 
-From `cli/src/tools.rs`, which is the whole tool table (33 tools):
+Classified in `core/src/agent_tools.rs`, which the CLI's tests hold to its
+whole tool table (34 tools):
 
 **Read-only, pre-allowed** — shown as one muted line each (`task_search · milk`):
 
@@ -113,18 +114,20 @@ From `cli/src/tools.rs`, which is the whole tool table (33 tools):
 `dailies_list`, `focus_status`, `focus_history`, `workspace_tree`,
 `workspace_tasks`
 
-**Writes, asked every time** — the other 23:
+**Writes, asked every time** — the other 24:
 
 `task_add`, `task_update`, `task_note_add`, `task_move`, `task_reparent`,
 `project_move`, `task_complete`, `task_reopen`, `task_invalidate`,
 `task_delete`, `list_create`, `task_matrix_set`, `daily_add`, `daily_update`,
 `daily_tick`, `workspace_task_add`, `workspace_task_update`,
 `workspace_task_move`, `workspace_task_to_list`, `workspace_task_delete`,
-`workspace_folder_create`, `workspace_list_create`, `workspace_list_move`
+`workspace_folder_create`, `workspace_list_create`, `workspace_list_move`,
+`workspace_list_delete`
 
-`AgentToolPolicyTests` holds the two lists to the table: disjoint, and 33
-between them. A tool added to the CLI is therefore a write until someone
-classifies it — the safe default — and the count in that test is the reminder.
+The CLI's `every_declared_tool_is_classified_as_a_read_or_a_write` test holds
+the two lists to the table exactly, so a tool added to the CLI fails `cargo
+test` until it is classified there. The panel still treats anything missing
+from the read list as a write, the safe default.
 A permission request for anything that is not a Takt tool is refused
 outright rather than put to the user.
 

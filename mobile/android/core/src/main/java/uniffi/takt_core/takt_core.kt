@@ -691,6 +691,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_affine_task_id_in_permalink(
     ): Int
+    external fun uniffi_takt_core_checksum_func_agent_read_only_tools(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_agent_write_tools(
+    ): Int
     external fun uniffi_takt_core_checksum_func_capture_date_time(
     ): Int
     external fun uniffi_takt_core_checksum_func_capture_detail_labels(
@@ -1561,6 +1565,10 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_affine_task_id_in_permalink(`permalink`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_agent_read_only_tools(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_agent_write_tools(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_capture_date_time(`text`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`defaultHour`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_capture_detail_labels(`capture`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1884,6 +1892,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_affine_task_id_in_permalink() and 0xFFFF) != 7955) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_agent_read_only_tools() and 0xFFFF) != 53195) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_agent_write_tools() and 0xFFFF) != 8928) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_capture_date_time() and 0xFFFF) != 25581) {
@@ -21431,6 +21445,32 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterString.lower(`permalink`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * [`READ_ONLY_TOOLS`], for the apps.
+         */ fun `agentReadOnlyTools`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_agent_read_only_tools(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * [`WRITE_TOOLS`], for the apps.
+         */ fun `agentWriteTools`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_agent_write_tools(
+    
+        _status)
 }
     )
     }
