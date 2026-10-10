@@ -238,13 +238,13 @@ covered the old copies pass against it.
    against. Android's board still shapes the trees its outline read in the
    same scope, as the Mac's single-list board does, because reading them
    again in the core would cross the same rows twice. Kotlin's
-   `KanbanColumn` has no caller outside its tests. The Swift-only engines
+   `KanbanColumn` had no caller outside its tests and is deleted. The Swift-only engines
    work on the Checkvist-era tasks `TaskListViewModel` and `KanbanManager`
    keep in memory, which the core never holds: `KanbanFilter`,
    `KanbanSelection`, `KanbanManualOrder`, `TaskVisibilityEngine`,
    `TaskFilterEngine`, `MatrixClustering` and `MatrixSpread`.
-   `MatrixNavigation` and `MatrixViewport` have no callers outside their
-   tests. `BoardLinks` solves the board's link geometry from measured card
+   `MatrixNavigation` and `MatrixViewport` had no callers outside their
+   tests and are deleted. `BoardLinks` solves the board's link geometry from measured card
    heights a frame at a time. It overlaps `board.rs` only in which card a
    subtask hangs from, which the board read already carries.
 
