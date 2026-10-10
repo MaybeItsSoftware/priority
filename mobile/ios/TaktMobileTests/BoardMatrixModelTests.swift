@@ -53,6 +53,31 @@ final class BoardMatrixModelTests: XCTestCase {
     XCTAssertEqual(card.parentTitle, "Parent")
   }
 
+  func testEverythingsBoardIsWalkedInTheCoreAndHidesFinishedRowsWhenAsked() async throws {
+    let parent = try XCTUnwrap(model.createTask("Parent", listID: list.id))
+    let child = try XCTUnwrap(model.createTask("Child", listID: list.id, parentTaskID: parent.id))
+    let done = try XCTUnwrap(model.createTask("Done", listID: list.id, parentTaskID: parent.id))
+    model.perform { try $0.setKanbanColumn("in-progress", for: child.id) }
+    model.perform { try $0.setStatus(.completed, for: done.id) }
+    model.reloadStructureNow()
+    let structure = model.structure
+
+    let shown = try BoardSnapshot.load(
+      store: model.store, workspaceID: model.workspace.id, scope: .everything, structure: structure,
+      hidesCompleted: false)
+    let card = try XCTUnwrap(shown.allCards.first { $0.id == parent.id })
+    XCTAssertEqual(card.listName, list.name)
+    XCTAssertEqual(card.subtasks.map(\.task.title), ["Child", "Done"])
+    // Everything's cards are every doable task, so the subtask is a card of
+    // its own in the column it is filed in.
+    XCTAssertEqual(shown.column(ofCard: child.id)?.id, "in-progress")
+
+    let hidden = try BoardSnapshot.load(
+      store: model.store, workspaceID: model.workspace.id, scope: .everything, structure: structure,
+      hidesCompleted: true)
+    XCTAssertEqual(hidden.allCards.first { $0.id == parent.id }?.subtasks.map(\.task.title), ["Child"])
+  }
+
   func testAddingRenamingAndRemovingColumns() async throws {
     let task = try XCTUnwrap(model.createTask("Card", listID: list.id))
     var board = await board()

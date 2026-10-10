@@ -46,65 +46,54 @@ struct BoardSnapshot: Equatable, Sendable {
     columns.first { column in cards[column.id]?.contains { $0.id == id } == true }
   }
 
-  /// Reads the board for a scope, the way the Mac's `reloadBoardNow` does:
-  /// a list's visible top level (or a nested list's children) are the cards;
-  /// a combined scope shows its actionable tasks. A subtask nobody filed
-  /// follows its parent's column; one filed elsewhere shows as a card of its
-  /// own there. Safe off the main actor.
+  /// Reads the board for a scope, the way the Mac does: one `scopeRead`
+  /// shaped by `WorkspaceScopeShaping.board`, so a combined scope's cards and
+  /// trees are walked in the Rust core (`board::combined_board`) and only the
+  /// rows the board draws cross. A list's visible top level (or a nested
+  /// list's children) are the cards; a combined scope shows its actionable
+  /// tasks. A subtask nobody filed follows its parent's column; one filed
+  /// elsewhere shows as a card of its own there. Safe off the main actor.
   static func load(
     store: WorkspaceStore, workspaceID: String, scope: ListScope, structure: WorkspaceStructure,
-    hidesCompleted: Bool
+    hidesCompleted: Bool, now: Date = .now
   ) throws -> BoardSnapshot {
-    var tasks: [WorkspaceTask]
+    var options = WorkspaceScopeShapeOptions(
+      scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: hidesCompleted)
+    let open = structure.lists.filter { $0.completedAt == nil }.map(\.id)
+    let read: WorkspaceScopeRead
+    let cutoff = hidesCompleted ? now : nil
     switch scope {
     case .everything:
-      tasks = try store.actionableTasks(in: workspaceID)
+      read = try store.scopeRead(.combined(open), hidingCompletedBefore: cutoff)
     case .folder(let folderID):
-      tasks = try store.actionableTasks(in: workspaceID, limitedTo: structure.listIDs(inFolder: folderID))
+      let openIDs = Set(open)
+      read = try store.scopeRead(
+        .combined(structure.listIDs(inFolder: folderID).filter { openIDs.contains($0) }),
+        hidingCompletedBefore: cutoff)
     case .list(let listID):
-      let tree = try store.listTree(in: listID)
-      tasks = tree.children(of: tree.visibleRootParentTaskID(registeredRootId: structure.list(listID)?.visibleRootTaskId))
+      options.registeredRootTaskID = structure.list(listID)?.visibleRootTaskId
+      read = try store.scopeRead(.list(listID), hidingCompletedBefore: cutoff)
     case .nested(let listID, let taskID):
-      tasks = try store.listTree(in: listID).children(of: taskID)
+      options.scopeTaskID = taskID
+      read = try store.scopeRead(.list(listID), hidingCompletedBefore: cutoff)
     }
-    tasks.removeAll { ($0.isList && $0.archivedAt != nil) || (hidesCompleted && $0.status != .open) }
-
-    let cardIDs = Set(tasks.map(\.id))
-    let listIDs = Array(Set(tasks.map(\.listId)))
-    let trees = try store.listTrees(in: listIDs)
-    let board = WorkspaceBoardTrees(cardIDs: cardIDs, trees: listIDs.compactMap { trees[$0] })
-    var seen = Set<String>()
-    let treeTasks = (tasks + tasks.flatMap { board.descendants[$0.id, default: []].map(\.task) })
-      .filter { seen.insert($0.id).inserted }
-    let metadata = try store.boardMetadata(for: treeTasks.map(\.id))
-    let filed = metadata.columns
-
-    let fallbackID = WorkspaceKanbanColumn.blitzitDefaults[0].id
-    var effective: [String: String] = [:]
-    func effectiveColumn(of task: WorkspaceTask) -> String {
-      if let known = effective[task.id] { return known }
-      let column = filed[task.id] ?? board.parents[task.id].map { effectiveColumn(of: $0) } ?? fallbackID
-      effective[task.id] = column
-      return column
-    }
-    let crossColumn = treeTasks.filter { task in
-      if hidesCompleted && task.status != .open { return false }
-      guard !task.isList, !cardIDs.contains(task.id), let parent = board.parents[task.id],
-        let column = filed[task.id]
-      else { return false }
-      return column != effectiveColumn(of: parent)
-    }
+    // The phone hides a finished task at once rather than letting it linger.
+    let board = WorkspaceScopeShaping.board(read, options: options, now: .distantFuture).board
+    let filed = board.columns
+    let tasksByID = Dictionary(board.treeTasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let cardIDs = Set(board.cards.map(\.id))
 
     var snapshot = BoardSnapshot()
     snapshot.columns = try resolvedColumns(
       store: store, scope: scope, structure: structure, usedColumnIDs: Set(filed.values))
-    snapshot.positions = metadata.positions
+    snapshot.positions = board.positions
+    let fallbackID = WorkspaceKanbanColumn.blitzitDefaults[0].id
     let columnIDs = Set(snapshot.columns.map(\.id))
     let firstColumn = snapshot.columns.first?.id ?? fallbackID
     let listNames = scope.isSingleTree
       ? [:] : Dictionary(structure.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     for column in snapshot.columns { snapshot.cards[column.id] = [] }
-    for task in tasks + crossColumn {
+    for task in board.cards + board.crossColumnTasks {
       let wanted = filed[task.id] ?? fallbackID
       let column = columnIDs.contains(wanted) ? wanted : firstColumn
       let isCross = !cardIDs.contains(task.id)
@@ -112,7 +101,8 @@ struct BoardSnapshot: Equatable, Sendable {
         id: task.id, title: task.title, status: task.status, isList: task.isList,
         isPromoted: task.isPromoted == true, listID: task.listId, parentID: task.parentTaskId, dueAt: task.dueAt,
         estimateSeconds: task.estimateSeconds, isPlanned: filed[task.id] == NextUpSelector.todayColumnID,
-        listName: listNames[task.listId], parentTitle: isCross ? board.parents[task.id]?.title : nil,
+        listName: listNames[task.listId],
+        parentTitle: isCross ? board.parents[task.id].flatMap { tasksByID[$0]?.title } : nil,
         subtasks: board.descendants[task.id] ?? []))
     }
     return snapshot
