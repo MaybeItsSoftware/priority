@@ -14,9 +14,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import uk.co.maybeitsadam.takt.core.SyncChangesResponse
-import uk.co.maybeitsadam.takt.core.SyncPushChange
-import uk.co.maybeitsadam.takt.core.SyncPushResponse
 import uk.co.maybeitsadam.takt.data.db.WorkspaceDatabase
 import uk.co.maybeitsadam.takt.data.workspace.WorkspaceRepository
 
@@ -64,12 +61,12 @@ class SyncSchedulerTest {
             store.beginSync("a", "memory://")
             val calls = AtomicInteger()
             val revoked = object : SyncTransport {
-                override suspend fun push(changes: List<SyncPushChange>): SyncPushResponse {
+                override suspend fun push(body: String) {
                     calls.incrementAndGet()
                     throw SyncException.Unauthorized()
                 }
 
-                override suspend fun changes(since: Long, limit: Int, wait: Int): SyncChangesResponse {
+                override suspend fun changes(since: Long, limit: Int, wait: Int): String {
                     calls.incrementAndGet()
                     throw SyncException.Unauthorized()
                 }

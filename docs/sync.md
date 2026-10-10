@@ -6,11 +6,15 @@ copies row changes between them through one small server (`sync-server/`,
 hosted on Railway). The server stores rows and merges them; it knows nothing
 about tasks.
 
-Three clients implement the client half: Swift (`Sources/TaktWorkspace/
-WorkspaceStore+Sync.swift` with `Sources/TaktSync`, used by macOS and iOS),
-Kotlin (`mobile/android/data`), and, passively, the Rust CLI. The CLI never
-talks to the server, but its writes go through the same triggers, so they sync
-the next time the app does.
+The client half is the Rust core's (`core/src/sync.rs`): the outbox, the
+cycle's push body and the pulled pages (`core/src/sync/wire.rs`, with the
+server's own structs from `takt-sync-rules`), the clock, applying a pull, and
+reading a typed server address (`core/src/sync/endpoints.rs`). The Mac and
+iPhone (`Sources/TaktSync`) and Android (`mobile/android/data`) keep only the
+transport: HTTP, the Supabase token and the long poll, moving bodies the core
+made and handing back pages as the server sent them. The Rust CLI syncs
+passively: it never talks to the server, but its writes go through the same
+triggers, so they sync the next time the app does.
 
 ## What is synced
 
@@ -231,7 +235,9 @@ Returns `200 {"ok":true}`.
      with every column if any entry was an insert, or else the union of the
      changed columns.
    - Read the values from the **live row** at push time.
-   - Stamp each change with an HLC from its newest `changedAtMs`.
+   - Stamp each change with an HLC from its newest `changedAtMs`, in that
+     order, starting from the stored clock; the clock is stored again when
+     the batch is acknowledged.
    - Send them in batches of 500. After each accepted batch, delete the outbox
      entries up to the batch's highest `seq`.
 3. **Pull:**

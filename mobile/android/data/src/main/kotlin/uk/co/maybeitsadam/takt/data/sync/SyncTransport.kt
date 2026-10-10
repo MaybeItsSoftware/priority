@@ -5,8 +5,6 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
@@ -17,17 +15,24 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import uk.co.maybeitsadam.takt.core.SyncAccountInfo
-import uk.co.maybeitsadam.takt.core.SyncChangesResponse
-import uk.co.maybeitsadam.takt.core.SyncErrorBody
-import uk.co.maybeitsadam.takt.core.SyncPushChange
-import uk.co.maybeitsadam.takt.core.SyncPushRequest
-import uk.co.maybeitsadam.takt.core.SyncPushResponse
-import uk.co.maybeitsadam.takt.core.SyncRegisterDevice
+import uk.co.maybeitsadam.takt.core.SyncDeviceInfo
+import uniffi.takt_core.syncDecodeAccount
+import uniffi.takt_core.syncFailureMessage
+import uniffi.takt_core.syncRegisterDeviceBody
+import uniffi.takt_core.syncSentence
+import uniffi.takt_core.syncServerMessage
 
-/** The two calls a sync cycle makes. The engine knows nothing else about the server. */
+/**
+ * The two calls a sync cycle makes, moving bodies the Rust core makes and
+ * reads (`core/src/sync/wire.rs`): a push body out, and each page of the feed
+ * back as the server sent it. The engine knows nothing else about the server.
+ */
 interface SyncTransport {
-    suspend fun push(changes: List<SyncPushChange>): SyncPushResponse
-    suspend fun changes(since: Long, limit: Int, wait: Int): SyncChangesResponse
+    /** Sends a `POST /v1/push` body. */
+    suspend fun push(body: String)
+
+    /** One `GET /v1/changes` page's body. */
+    suspend fun changes(since: Long, limit: Int, wait: Int): String
 }
 
 sealed class SyncException(message: String) : Exception(message) {
@@ -47,24 +52,14 @@ sealed class SyncException(message: String) : Exception(message) {
     class NotPaired : SyncException("This device is not signed in to a sync server.")
 
     companion object {
-        /** The `error` field of a server error body, or null when there isn't one. */
-        fun serverMessage(body: String): String? =
-            runCatching { OkHttpSyncTransport.json.decodeFromString<SyncErrorBody>(body).error }
-                .getOrNull()
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
+        /** The `error` field of a server error body, or null when there isn't one. The Rust core's. */
+        fun serverMessage(body: String): String? = syncServerMessage(body).trim().takeIf { it.isNotEmpty() }
 
         /** `deleting accounts isn't set up` reads as `Deleting accounts isn't set up.` */
-        internal fun describe(status: Int, body: String): String {
-            val message = serverMessage(body) ?: return "The sync server answered $status."
-            return sentence(message)
-        }
+        internal fun describe(status: Int, body: String): String = syncFailureMessage(status, body)
 
-        /** Capitalised, and ending in a full stop unless it already ends a sentence. */
-        fun sentence(message: String): String {
-            val text = message.trim().replaceFirstChar { it.uppercaseChar() }
-            return if (text.isEmpty() || text.last() in ".!?") text else "$text."
-        }
+        /** Capitalised, and ending in a full stop unless it already ends a sentence. The Rust core's. */
+        fun sentence(message: String): String = syncSentence(message)
     }
 }
 
@@ -82,12 +77,11 @@ class OkHttpSyncTransport(
     private val client: OkHttpClient = defaultClient,
 ) : SyncTransport {
 
-    override suspend fun push(changes: List<SyncPushChange>): SyncPushResponse {
-        val body = json.encodeToString(SyncPushRequest(changes))
-        return send(endpoint("v1/push")) { post(body.toRequestBody(JSON)) }
+    override suspend fun push(body: String) {
+        send(endpoint("v1/push")) { post(body.toRequestBody(JSON)) }
     }
 
-    override suspend fun changes(since: Long, limit: Int, wait: Int): SyncChangesResponse {
+    override suspend fun changes(since: Long, limit: Int, wait: Int): String {
         val url = endpoint("v1/changes").newBuilder()
             .addQueryParameter("since", since.toString())
             .addQueryParameter("limit", limit.toString())
@@ -98,26 +92,36 @@ class OkHttpSyncTransport(
 
     /** Records this device on the account (`POST /v1/devices`). Sent after every sign-in. */
     suspend fun registerDevice(name: String, platform: String = PLATFORM) {
-        val body = json.encodeToString(SyncRegisterDevice(deviceId, name, platform))
-        send<JsonObject>(endpoint("v1/devices")) { post(body.toRequestBody(JSON)) }
+        val body = syncRegisterDeviceBody(deviceId, name, platform)
+        send(endpoint("v1/devices")) { post(body.toRequestBody(JSON)) }
     }
 
     /** Who this device is signed in as, and every device on the account (`GET /v1/account`). */
-    suspend fun account(): SyncAccountInfo = send(endpoint("v1/account")) { get() }
+    suspend fun account(): SyncAccountInfo {
+        val account = syncDecodeAccount(send(endpoint("v1/account")) { get() })
+        return SyncAccountInfo(
+            accountId = account.accountId,
+            email = account.email,
+            devices = account.devices.map {
+                SyncDeviceInfo(it.id, it.name, it.platform, it.createdAt, it.lastSeenAt, it.current)
+            },
+        )
+    }
 
     /** Takes this device off the account's list (`POST /v1/sign-out`). The device keeps its workspace. */
     suspend fun signOut() {
-        send<JsonObject>(endpoint("v1/sign-out")) { post(EMPTY_OBJECT.toRequestBody(JSON)) }
+        send(endpoint("v1/sign-out")) { post(EMPTY_OBJECT.toRequestBody(JSON)) }
     }
 
     /** Deletes the account's rows, its devices and the Supabase user (`POST /v1/account/delete`). */
     suspend fun deleteAccount() {
-        send<JsonObject>(endpoint("v1/account/delete")) { post(EMPTY_OBJECT.toRequestBody(JSON)) }
+        send(endpoint("v1/account/delete")) { post(EMPTY_OBJECT.toRequestBody(JSON)) }
     }
 
     private fun endpoint(path: String): HttpUrl = serverURL.trim().toHttpUrl().newBuilder().addPathSegments(path).build()
 
-    private suspend inline fun <reified T> send(url: HttpUrl, crossinline method: Request.Builder.() -> Request.Builder): T {
+    /** The answer's body, after one refresh and retry on a 401. */
+    private suspend inline fun send(url: HttpUrl, crossinline method: Request.Builder.() -> Request.Builder): String {
         val request = { token: String ->
             Request.Builder().url(url)
                 .header("Authorization", "Bearer $token")
@@ -131,7 +135,7 @@ class OkHttpSyncTransport(
         return when {
             answer.status == 401 -> throw SyncException.Unauthorized()
             answer.status !in 200..299 -> throw SyncException.Server(answer.status, answer.body)
-            else -> json.decodeFromString<T>(answer.body)
+            else -> answer.body
         }
     }
 
@@ -146,7 +150,6 @@ class OkHttpSyncTransport(
         const val PLATFORM = "android"
         private val JSON = "application/json".toMediaType()
         private const val EMPTY_OBJECT = "{}"
-        internal val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
 
         /** Long polls wait up to 25 s on the server, so reads get headroom past that. */
         val defaultClient: OkHttpClient = OkHttpClient.Builder()

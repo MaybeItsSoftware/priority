@@ -12,9 +12,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.co.maybeitsadam.takt.core.HybridLogicalClock
-import uk.co.maybeitsadam.takt.core.SyncChangesResponse
-import uk.co.maybeitsadam.takt.core.SyncPushChange
-import uk.co.maybeitsadam.takt.core.SyncPushResponse
 import uk.co.maybeitsadam.takt.core.SyncValue
 import uk.co.maybeitsadam.takt.data.TestClock
 import uk.co.maybeitsadam.takt.data.db.Db
@@ -248,8 +245,9 @@ class SyncEngineTest {
         mac.sync()
         phone.repository.updateTask(task.id, title = "from phone", notes = "", dueAt = null, estimateSeconds = null)
         // Pull only: the phone's own edit is still waiting, so the mac's title must not land.
-        val page = server.changes(phone.sync.syncState()!!.cursor, 1000)
-        phone.sync.applyRemoteRows(page.rows, page.cursor, null, clock.instant())
+        val pull = uniffi.takt_core.SyncPull()
+        pull.addPage(wireJson.encodeToString(server.changes(phone.sync.syncState()!!.cursor, 1000)))
+        phone.sync.applyPull(pull, clock.instant())
         assertEquals("from phone", phone.repository.task(task.id)!!.title)
 
         phone.sync()
@@ -363,8 +361,8 @@ class SyncEngineTest {
     fun aSessionSupabaseWillNotRefreshLeavesTheEngineSignedOut(): Unit = runBlocking {
         val phone = Device("phone")
         val refused = object : SyncTransport {
-            override suspend fun push(changes: List<SyncPushChange>): SyncPushResponse = throw SyncException.Unauthorized()
-            override suspend fun changes(since: Long, limit: Int, wait: Int): SyncChangesResponse = throw SyncException.Unauthorized()
+            override suspend fun push(body: String) = throw SyncException.Unauthorized()
+            override suspend fun changes(since: Long, limit: Int, wait: Int): String = throw SyncException.Unauthorized()
         }
         val engine = SyncEngine(phone.sync, refused, phone.deviceId, clock)
         expect<SyncException.Unauthorized> { runBlocking { engine.sync() } }

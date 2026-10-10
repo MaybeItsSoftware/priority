@@ -7,6 +7,9 @@ import uk.co.maybeitsadam.takt.core.SyncValue
 import uk.co.maybeitsadam.takt.data.db.Db
 import uk.co.maybeitsadam.takt.data.db.WorkspaceDatabase
 import uk.co.maybeitsadam.takt.data.db.WorkspaceSchema
+import uniffi.takt_core.SyncPull
+import uniffi.takt_core.SyncPullOutcome
+import uniffi.takt_core.SyncPushBatch
 
 /** What the device remembers about its sync. */
 data class SyncLocalState(
@@ -117,6 +120,22 @@ class SyncStore(private val database: WorkspaceDatabase) {
     suspend fun recordProgress(cursor: Long? = null, hlc: String?, now: Instant) {
         database.coreWrite(SYNC_TABLES) { it.recordSyncProgress(cursor, hlc, now.toEpochMilli()) }
     }
+
+    // The wire (core/src/sync/wire.rs): the core makes the push body from the
+    // outbox and reads the pulled pages, so no row crosses as a record.
+
+    /** The outbox's next batch as a `POST /v1/push` body, stamped from the stored clock; null when nothing waits. */
+    suspend fun preparePush(limit: Int, now: Instant): SyncPushBatch? =
+        database.coreRead { it.prepareSyncPush(limit.coerceAtLeast(0).toUInt(), now.toEpochMilli()) }
+
+    /** The server has [batch]: its outbox entries go and its clock is kept, in one transaction. */
+    suspend fun finishPush(batch: SyncPushBatch, now: Instant) {
+        database.coreWrite(SYNC_TABLES) { it.finishSyncPush(batch.throughSeq, batch.hlc, now.toEpochMilli()) }
+    }
+
+    /** Writes the pages gathered in [pull] in one transaction, the clock moved past every stamp in them. */
+    suspend fun applyPull(pull: SyncPull, now: Instant): SyncPullOutcome =
+        database.coreWrite(SYNC_TABLES) { it.applySyncPull(pull, now.toEpochMilli(), now.toEpochMilli()) }
 
     private companion object {
         /** Every table a sync write can change: the synced ones and sync's own. */

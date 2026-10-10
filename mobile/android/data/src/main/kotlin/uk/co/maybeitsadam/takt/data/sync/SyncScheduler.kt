@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import uniffi.takt_core.syncBackoffSeconds
 
 /**
  * When to sync (port of `Sources/TaktSync/SyncScheduler.swift`): on
@@ -121,7 +122,7 @@ class SyncScheduler(
         }
         if (error is SyncException.Unauthorized || error is SyncException.NotPaired) stop()
         // 2, 4, 8 … seconds, capped at five minutes, so an outage costs nothing.
-        minOf(300, 1 shl minOf(failures, 8)).seconds
+        syncBackoffSeconds(failures.toUInt()).toInt().seconds
     }
 
     private companion object {

@@ -150,7 +150,8 @@ covered the old copies pass against it.
    builds the server from that directory alone; the server's `Cargo.toml`
    makes it a workspace member, so both share one lockfile. What stays in
    each client is the transport: HTTP, auth and the long poll, which are
-   platform code by nature.
+   platform code by nature. Since step 9 the bodies are the core's too (see
+   "The sync wire" below).
 8. **Remove the copies.** Delete GRDB from the package, the Kotlin
    repository bodies and the CLI's store code. `TaktWorkspace` becomes a thin
    Swift wrapper over the generated bindings.
@@ -380,9 +381,49 @@ covered the old copies pass against it.
    which reads Checkvist's leading `yyyy-MM-dd` as a local day and belongs
    with the board's buckets.
 
+   **The sync wire (2026-10-10).** The bodies a cycle sends and receives
+   are made and read in the core, with the server's own structs:
+   `takt-sync-rules` gained `wire.rs` (`PushRequest`, `WireChange`,
+   `ChangesResponse`, `ChangedRow`, `ErrorBody`), which `sync-server` now
+   decodes a push and encodes a page with, and `core/src/sync/wire.rs`
+   encodes a push and decodes a page with, so the two ends cannot drift.
+   `prepare_sync_push` reads the outbox, stamps each row from the stored
+   clock in edit order and returns one JSON string; `finish_sync_push`
+   acknowledges it and stores the clock in one transaction. A pull gathers
+   its pages in a `SyncPull` object, one string a page, and
+   `apply_sync_pull` receives every stamp into the stored clock and applies
+   them in one transaction. So rows no longer cross UniFFI as records in
+   either direction, and neither platform keeps a clock between the steps:
+   Swift's and Kotlin's `SyncEngine`s shrank to a loop that moves bytes, and
+   `SyncTransport` on both carries bodies (`push(body:)`,
+   `changes(...) -> Data`/`String`). The account body, the device
+   registration body, the server's error text and its sentence, server
+   timestamps, the `/health` and Supabase settings checks' JSON and the
+   failure backoff are core functions too, and `core/src/sync/endpoints.rs`
+   reads typed addresses for `SyncEndpoints.resolve` and
+   `SyncServer.url(from:)` on the Mac and iPhone and `SyncEndpoints.resolve`
+   and `httpURL` on Android. The Swift and Kotlin engine, transport and
+   endpoint suites still run, their in-memory servers reading the core's
+   bodies as JSON; `core/src/sync/wire_tests.rs` ports the cycle against the
+   server's real merge, and the endpoint cases are Rust tests in
+   `endpoints.rs`. Where the platforms disagreed, the Mac's answer won: a
+   whole number in a page (`1.0`, `1e3`) is an integer, as Foundation read
+   it, where Kotlin kept a real; a real with no fraction is pushed as `1`, as
+   Foundation wrote it; and a typed address keeps its path's case and the
+   Mac's trimming of pasted suffixes. Two Mac answers lost, because nothing
+   could open the address they kept: a scheme that only starts with `http`
+   (`httpx://`) and a user and password in the address are refused, as
+   Android refused them; scheme and host are lowercased everywhere. The
+   protocol did not change; the server's push and pull bytes are what they
+   were. What stays native is the transport (`URLSession`, OkHttp, the
+   token refresh, the long poll's timeout and Android's 25-second clamp on
+   `wait`), the scheduler's rhythm, the sign-in flows, the credential
+   stores, the legacy-address move, and the presentation: device names,
+   status text and each platform's error wording.
+
    What stays in Swift and Kotlin after step 9 is presentation (views,
    locale formatting, colour conversion), platform transport (HTTP, auth,
-   OAuth, the long poll), per-point geometry and fold state that lives only
+   OAuth, the long poll, moving bodies the core makes and reads), per-point geometry and fold state that lives only
    in UI memory, and the Mac's Checkvist-era engines, which work on tasks
    the core never holds. Each paragraph above says why for its own cluster.
 

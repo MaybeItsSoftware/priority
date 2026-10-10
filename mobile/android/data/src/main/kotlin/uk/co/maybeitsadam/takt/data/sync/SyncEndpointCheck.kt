@@ -4,13 +4,12 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import uk.co.maybeitsadam.takt.core.SyncEndpoints
+import uniffi.takt_core.syncBodyIsJsonObject
+import uniffi.takt_core.syncHealthIsOk
 
 /**
  * Asks both halves of a self-hosted setup whether they are there before the
@@ -29,10 +28,7 @@ class SyncEndpointCheck(private val client: OkHttpClient = defaultClient) {
         val base = server.toHttpUrlOrNull() ?: throw SyncEndpointProblem("The sync server address isn't a web address.")
         val url = base.newBuilder().addPathSegment("health").build()
         val (status, body) = fetch(Request.Builder().url(url).get().build()) { "Couldn't reach the sync server at ${base.host}: $it" }
-        val ok = runCatching {
-            OkHttpSyncTransport.json.parseToJsonElement(body) as JsonObject
-        }.getOrNull()?.get("ok")?.jsonPrimitive?.booleanOrNull
-        if (status != 200 || ok != true) {
+        if (status != 200 || !syncHealthIsOk(body)) {
             throw SyncEndpointProblem("${base.host} answered $status to /health, not a Takt sync server's {\"ok\":true}. Check the address.")
         }
     }
@@ -43,7 +39,7 @@ class SyncEndpointCheck(private val client: OkHttpClient = defaultClient) {
         val request = Request.Builder().url(url).header("apikey", key).get().build()
         val (status, body) = fetch(request) { "Couldn't reach the Supabase project at ${base.host}: $it" }
         when (status) {
-            200 -> if (runCatching { OkHttpSyncTransport.json.parseToJsonElement(body) as JsonObject }.isFailure) {
+            200 -> if (!syncBodyIsJsonObject(body)) {
                 throw SyncEndpointProblem("${base.host} answered, but not as a Supabase project would. Check the URL.")
             }
             401, 403 -> throw SyncEndpointProblem("Supabase refused that key. Use the project's publishable (or anon) key.")

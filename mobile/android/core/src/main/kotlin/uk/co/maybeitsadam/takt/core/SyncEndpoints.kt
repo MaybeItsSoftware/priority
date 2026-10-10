@@ -1,12 +1,15 @@
 package uk.co.maybeitsadam.takt.core
 
-import java.net.URI
 import kotlinx.serialization.Serializable
+import uniffi.takt_core.SyncEndpointsRecord
+import uniffi.takt_core.syncNormalisedUrl
+import uniffi.takt_core.syncResolveEndpoints
 
 /**
  * Where a device syncs: the sync server, and the Supabase project whose
  * accounts that server trusts. Takt's own unless "Use a different server"
- * names a self-hosted pair (docs/self-hosting.md). Port of `SyncEndpoints.swift`.
+ * names a self-hosted pair (docs/self-hosting.md). Typed endpoints are read
+ * by the Rust core (`core/src/sync/endpoints.rs`), as on the Mac and iPhone.
  *
  * The three travel together because they only work together: the server
  * checks every access token against one Supabase project, so a session from
@@ -30,26 +33,15 @@ data class SyncEndpoints(
          * anything else that can't be used.
          */
         fun resolve(server: String, supabaseURL: String, supabaseKey: String, hosted: SyncEndpoints): SyncEndpoints {
-            val typedServer = server.trim()
-            val project = supabaseURL.trim()
-            val key = supabaseKey.trim()
-
-            var endpoints = hosted
-            if (typedServer.isNotEmpty()) {
-                val url = httpURL(typedServer) ?: throw InvalidSyncEndpoints("The sync server address isn't a web address.")
-                endpoints = endpoints.copy(serverURL = url)
-            }
-            when {
-                project.isEmpty() && key.isEmpty() -> Unit
-                key.isEmpty() -> throw InvalidSyncEndpoints("Enter the Supabase project's publishable key as well as its URL.")
-                project.isEmpty() -> throw InvalidSyncEndpoints("Enter the Supabase project's URL as well as its key.")
-                else -> {
-                    val url = httpURL(project, droppingSuffixes = listOf("/auth/v1", "/rest/v1"))
-                        ?: throw InvalidSyncEndpoints("The Supabase URL isn't a web address.")
-                    endpoints = endpoints.copy(supabaseURL = url, supabaseKey = checkedKey(key))
-                }
-            }
-            return endpoints
+            val resolution = syncResolveEndpoints(
+                server,
+                supabaseURL,
+                supabaseKey,
+                SyncEndpointsRecord(hosted.serverURL, hosted.supabaseURL, hosted.supabaseKey),
+            )
+            val resolved = resolution.endpoints
+                ?: throw InvalidSyncEndpoints(resolution.problem ?: "Those addresses can't be used.")
+            return SyncEndpoints(resolved.serverUrl, resolved.supabaseUrl, resolved.supabaseKey)
         }
 
         /**
@@ -58,38 +50,8 @@ data class SyncEndpoints(
          * [droppingSuffixes] (a Supabase URL copied from an API example often
          * ends `/rest/v1`). Null when it still isn't one with a host.
          */
-        fun httpURL(typed: String, droppingSuffixes: List<String> = emptyList()): String? {
-            val trimmed = typed.trim()
-            if (trimmed.isEmpty()) return null
-            val withScheme = if ("://" in trimmed) trimmed else "https://$trimmed"
-            val uri = runCatching { URI(withScheme) }.getOrNull() ?: return null
-            val scheme = uri.scheme?.lowercase() ?: return null
-            if (scheme != "http" && scheme != "https") return null
-            val host = uri.host?.takeIf { it.isNotEmpty() } ?: return null
-            var path = uri.rawPath.orEmpty()
-            var trimming = true
-            while (trimming) {
-                trimming = false
-                path = path.trimEnd('/')
-                droppingSuffixes.firstOrNull { path.lowercase().endsWith(it) }?.let {
-                    path = path.dropLast(it.length)
-                    trimming = true
-                }
-            }
-            // A user and password in the address is never what was meant.
-            if (uri.rawUserInfo != null) return null
-            val port = if (uri.port >= 0) ":${uri.port}" else ""
-            return "$scheme://$host$port$path"
-        }
-
-        private fun checkedKey(key: String): String {
-            if (key.any(Char::isWhitespace)) throw InvalidSyncEndpoints("The Supabase key has a space in it. Paste it again.")
-            // The secret key bypasses row-level security: it belongs on the server, never in an app.
-            if (key.startsWith("sb_secret_")) {
-                throw InvalidSyncEndpoints("That's the project's secret key. Use the publishable key here; the secret one is for the server.")
-            }
-            return key
-        }
+        fun httpURL(typed: String, droppingSuffixes: List<String> = emptyList()): String? =
+            syncNormalisedUrl(typed, droppingSuffixes)
     }
 }
 

@@ -105,7 +105,7 @@ class OkHttpSyncTransportTest {
             .answer(200, """{"accountId":"acc-1","devices":[]}""")
             .answer(200, """{"ok":true}""")
             .answer(200, """{"ok":true}""")
-        device().push(emptyList())
+        device().push(EMPTY_PUSH)
         device().changes(0, 100, 99)
         device().account()
         device().signOut()
@@ -163,9 +163,8 @@ class OkHttpSyncTransportTest {
     @Test
     fun aRefusedTokenIsRefreshedOnceAndTheRequestRetried(): Unit = runBlocking {
         server.answer(401, unauthorized).answer(200, """{"accepted":2,"cursor":9}""")
-        val response = device().push(emptyList())
+        device().push(EMPTY_PUSH)
 
-        assertEquals(9, response.cursor)
         assertEquals(1, tokens.refreshes)
         assertEquals(listOf("Bearer tok-1", "Bearer tok-2"), server.requests.map { it.authorization })
         assertEquals(listOf("$base/v1/push", "$base/v1/push"), server.requests.map { it.url })
@@ -192,7 +191,7 @@ class OkHttpSyncTransportTest {
     fun aRefreshThatCannotReachSupabaseIsAFailureNotASignOut(): Unit = runBlocking {
         tokens.refusal = IOException("offline")
         server.answer(401, unauthorized)
-        expect<IOException> { runBlocking { device().push(emptyList()) } }
+        expect<IOException> { runBlocking { device().push(EMPTY_PUSH) } }
     }
 
     @Test
@@ -259,3 +258,5 @@ class RefreshingAccessTokensTest {
         expect<IOException> { runBlocking { tokens.refresh("tok-1") } }
     }
 }
+
+private const val EMPTY_PUSH = """{"changes":[]}"""
