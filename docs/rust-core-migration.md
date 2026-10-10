@@ -325,6 +325,39 @@ covered the old copies pass against it.
    export, and Android's own `DayBoundary`, which serves only its stale-focus
    policy and never reads the log.
 
+   **Plugin converters.** The Mac's integration plugins kept two pieces of
+   pure logic in `TaktCore`, and both are the core's now. `core/src/google_tasks.rs`
+   is `GoogleTasksMirror.plan`: given the local lists and tasks, Google's
+   lists and tasks and the ledger of what was last pushed, it returns the
+   operations and the conflicts in one call per pass (lists adopted by exact
+   title before they are created, completion honoured from either side,
+   notes added in Google merged back, everything else Takt's, grandchildren
+   flattened to Google's one level). `core/src/affine.rs` is the AFFiNE
+   documents: a task's document and title, splicing a section under its
+   heading, and the checklist rendered, read back (items and the lines Takt
+   did not write, one pass) and rewritten, or not when nothing changed;
+   `AFFiNEExportService` now makes one call to read a checklist and one to
+   rewrite it, where it made five. Swift keeps the public types, the
+   `Codable` ledger file and every signature, so no caller changed and
+   `GoogleTasksMirrorTests` and both AFFiNE suites run unchanged as the
+   oracle; they are ported to `google_tasks/tests.rs` and `affine/tests.rs`.
+   Both engines compared and split text the way Swift's `String` does,
+   which the new `swift_text.rs` reproduces: canonical equivalence for
+   equality and `hasPrefix` (so a note Google hands back precomposed is not
+   a conflict every pass), grapheme counts, a `\r\n` that does not end a
+   line, and Foundation's whitespace sets. One order changed: the ledger is
+   a dictionary, so Swift planned deletions of vanished lists and tasks in
+   hash order; it now crosses sorted by local id, and they come in that
+   order. HTTP and OAuth stay in Swift, as transport. Also native on
+   purpose: `formatDueDate` and `parseDueDate`, which reduce a date to
+   Google's day string in the user's `Calendar` before it crosses; the sync
+   stamp and `dayDocumentTitle`, which format in that calendar with a
+   user-chosen `DateFormatter` pattern; and `daySection`, which strips
+   `DailyNoteMarkdown`'s markers and moves with that file. `GoogleTasks` and
+   `AFFiNE` exist only on the Mac, so there is no Kotlin port to retire.
+   `AFFiNEDocumentMarkdown.title(forTaskContent:)` and `taskDocument` have
+   no caller outside their tests.
+
    What stays in Swift and Kotlin after step 9 is presentation (views,
    locale formatting, colour conversion), platform transport (HTTP, auth,
    OAuth, the long poll), per-point geometry and fold state that lives only
