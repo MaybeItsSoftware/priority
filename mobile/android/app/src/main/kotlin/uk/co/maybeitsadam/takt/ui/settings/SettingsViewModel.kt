@@ -19,10 +19,9 @@ import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
 import uk.co.maybeitsadam.takt.settings.SyncUiState
 import uk.co.maybeitsadam.takt.app.ThemeLibraryState
-import uk.co.maybeitsadam.takt.core.WorkspaceExport
 import uk.co.maybeitsadam.takt.core.WorkspaceExportFormat
 import uk.co.maybeitsadam.takt.core.theme.ThemeTypographyOverride
-import uk.co.maybeitsadam.takt.data.workspace.exportSnapshot
+import uk.co.maybeitsadam.takt.data.workspace.exportDocument
 import uk.co.maybeitsadam.takt.ui.theme.ThemeMode
 import uniffi.takt_core.coreVersion
 
@@ -120,7 +119,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun export(format: WorkspaceExportFormat, uri: Uri) = viewModelScope.launch {
         _exportStatus.value = runCatching {
             val session = container.awaitSession()
-            val document = WorkspaceExport.document(session.repository.exportSnapshot(session.workspace.id), format)
+            val document = session.repository.exportDocument(session.workspace.id, format)
             val resolver = container.context.contentResolver
             withContext(Dispatchers.IO) {
                 checkNotNull(resolver.openOutputStream(uri, "wt")) { "the file could not be opened" }

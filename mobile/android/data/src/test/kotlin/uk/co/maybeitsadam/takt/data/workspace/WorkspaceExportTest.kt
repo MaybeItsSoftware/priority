@@ -2,12 +2,14 @@ package uk.co.maybeitsadam.takt.data.workspace
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import uk.co.maybeitsadam.takt.core.WorkspaceExportFormat
 
 /** What the export reads: every list, archived included, each with its tree depth first. */
 class WorkspaceExportTest {
     @Test
-    fun theSnapshotHoldsEveryListWithItsTreeDepthFirst() = runBlocking {
+    fun theDocumentHoldsEveryListWithItsTreeDepthFirst() = runBlocking {
         workspace().use { w ->
             val store = w.repository
             val ws = store.bootstrapIfNeeded()
@@ -19,13 +21,16 @@ class WorkspaceExportTest {
             store.createTask(listId = work.id, title = "Draft", parentTaskId = report.id)
             store.createTask(listId = old.id, title = "Gone")
 
-            val snapshot = store.exportSnapshot(ws.id, now = epoch(0))
+            val markdown = store.exportDocument(ws.id, WorkspaceExportFormat.MARKDOWN, now = epoch(0))
 
-            assertEquals(ws.name, snapshot.workspace)
-            assertEquals(store.lists(ws.id, includingArchived = true).map { it.id }, snapshot.lists.map { it.list.id })
-            val byName = snapshot.lists.associate { it.list.name to it.tasks.map { task -> task.title } }
-            assertEquals(listOf("Report", "Draft", "Send"), byName.getValue("Work"))
-            assertEquals(listOf("Gone"), byName.getValue("Old"))
+            val inbox = store.lists(ws.id, includingArchived = true).first { it.id != work.id && it.id != old.id }
+            assertEquals(
+                "# ${ws.name}\n\n## ${inbox.name}\n\n\n## Work\n\n- [ ] Report\n  - [ ] Draft\n- [ ] Send\n\n" +
+                    "## Old (archived)\n\n- [ ] Gone\n",
+                markdown,
+            )
+            val json = store.exportDocument(ws.id, WorkspaceExportFormat.JSON, now = epoch(0))
+            assertTrue(json.startsWith("{\n  \"exportedAt\" : \"1970-01-01T00:00:00Z\",\n  \"lists\" : [\n"))
         }
     }
 }
