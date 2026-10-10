@@ -8,14 +8,18 @@
 //! shared type but by the serialised format, which `docs/mcp-server.md`
 //! describes and `DailyDefinitionsStoreFormatTests` pins on the Swift side.
 //! Change a rule here and that format is the contract to check it against.
+//!
+//! The day log is the exception: its format, its logical days and its
+//! projections are the core's (`takt_core::day_log`), the same code the app
+//! calls, so this file only shapes the core's answers into tool payloads.
 
 use crate::config::Config;
 use crate::error::{Result, ToolError};
 use crate::lock::FileLock;
-use chrono::{DateTime, Duration, Local, NaiveDate, TimeZone, Utc};
+use chrono::{DateTime, Local, Utc};
 use serde_json::{Map, Value, json};
-use std::io::Write;
 use std::path::PathBuf;
+use takt_core::day_log::{self, Boundary, DayLogBoundary, DayLogRecord, DayLogRecordKind};
 
 pub const BUNDLE_ID: &str = "uk.co.maybeitssoftware.takt";
 /// The bundle ids the app shipped under before, newest first. Its preferences
@@ -204,17 +208,10 @@ impl LocalState {
         }))
     }
 
-    /// A damaged line costs that event, not the whole history — the same
-    /// tolerance as `DayLogFileStore.loadAll`.
-    ///
-    /// Read as bytes and split on `\n` rather than with `lines()`: a line
-    /// that is not valid UTF-8 would end a `lines()` iteration there, losing
-    /// every event after it rather than just its own.
-    fn events(&self) -> Vec<Value> {
-        let Ok(bytes) = std::fs::read(self.daylog_path()) else {
-            return Vec::new();
-        };
-        parse_event_lines(&bytes)
+    /// The day log as the core reads it: a damaged line costs that event,
+    /// not the whole history.
+    fn events(&self) -> Vec<DayLogRecord> {
+        day_log::load(&self.daylog_path())
     }
 
     fn dailies(&self) -> Vec<Value> {
@@ -242,203 +239,64 @@ impl LocalState {
             .map_or(DEFAULT_ROLLOVER_HOUR, |raw| raw.clamp(0, 23) as u32)
     }
 
-    /// The instant the logical day containing `moment` began.
-    ///
-    /// Mirrors `DayBoundary.logicalDay`: shift back by the rollover hours, take
-    /// the local calendar day that lands in, then re-anchor at the rollover
-    /// hour. Anchoring by setting the hour rather than adding an offset is what
-    /// keeps a DST transition from landing the anchor on the wrong day, and it
-    /// is what makes this idempotent — these values are passed back in as day
-    /// identifiers.
+    /// The app's `DayBoundary` in this machine's zone: the core's, so the two
+    /// cannot disagree about which day an event belongs to.
+    fn boundary(&self) -> Boundary {
+        Boundary::new(&DayLogBoundary {
+            rollover_hour: self.rollover_hour() as i32,
+            zone: iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".into()),
+            // Only the weekly chart reads it, which the CLI does not draw.
+            first_weekday: 1,
+        })
+    }
+
+    /// The instant the logical day containing `moment` began. Idempotent:
+    /// these values are passed back in as day identifiers.
     pub fn logical_day(&self, moment: DateTime<Local>) -> DateTime<Local> {
-        let hour = self.rollover_hour();
-        let shifted = moment - Duration::hours(i64::from(hour));
-        local_at(shifted.date_naive(), hour)
+        self.boundary()
+            .logical_day(moment.with_timezone(&Utc))
+            .with_timezone(&Local)
     }
 
     pub fn day_key(&self, moment: DateTime<Local>) -> String {
-        self.logical_day(moment).format("%Y-%m-%d").to_string()
+        self.boundary().day_key(moment.with_timezone(&Utc))
     }
 
-    /// The `count` logical days ending on (and including) the day containing
-    /// `moment`, oldest first.
-    fn days_ending_on(&self, moment: DateTime<Local>, count: i64) -> Vec<DateTime<Local>> {
-        let anchor = self.logical_day(moment);
-        let hour = self.rollover_hour();
-        (0..count)
-            .rev()
-            // Calendar-day arithmetic, not 24-hour arithmetic, matching
-            // `Calendar.date(byAdding: .day)`: across a DST change the two
-            // differ by an hour, which is enough to key an event to the
-            // neighbouring day.
-            .filter_map(|offset| {
-                anchor
-                    .date_naive()
-                    .checked_sub_days(chrono::Days::new(offset as u64))
-            })
-            .map(|date| local_at(date, hour))
-            .collect()
+    fn completed_daily_ids(&self, events: &[DayLogRecord], on: DateTime<Local>) -> Vec<String> {
+        day_log::completed_daily_ids(events, &self.boundary(), on.with_timezone(&Utc))
     }
 
-    // -- aggregation ---------------------------------------------------------
-
-    /// Completion events that survive their compensating reopens. A reopen
-    /// cancels the most recent surviving completion of the same task, whenever
-    /// that completion happened.
-    fn net_completions(events: &[Value]) -> Vec<&Value> {
-        let mut open_by_task: Vec<(Value, Vec<usize>)> = Vec::new();
-        let mut cancelled: Vec<usize> = Vec::new();
-
-        for (index, event) in events.iter().enumerate() {
-            let task_id = event.get("taskId").cloned().unwrap_or(Value::Null);
-            match kind_of(event) {
-                "completed" => match open_by_task.iter_mut().find(|(id, _)| *id == task_id) {
-                    Some((_, pending)) => pending.push(index),
-                    None => open_by_task.push((task_id, vec![index])),
-                },
-                "reopened" => {
-                    if let Some((_, pending)) =
-                        open_by_task.iter_mut().find(|(id, _)| *id == task_id)
-                        && let Some(latest) = pending.pop()
-                    {
-                        cancelled.push(latest);
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        events
-            .iter()
-            .enumerate()
-            .filter(|(index, event)| kind_of(event) == "completed" && !cancelled.contains(index))
-            .map(|(_, event)| event)
-            .collect()
-    }
-
-    /// Netted *within* the day: a daily is asked afresh each morning, so an
-    /// un-tick can never reach back to a previous day.
-    fn completed_daily_ids(&self, events: &[Value], on: DateTime<Local>) -> Vec<String> {
-        let key = self.day_key(on);
-        let mut completed: Vec<String> = Vec::new();
-
-        for event in events {
-            let Some(at) = parse_at(event.get("at")) else {
-                continue;
-            };
-            if self.day_key(at) != key {
-                continue;
-            }
-            let Some(daily_id) = event.get("dailyId").and_then(Value::as_str) else {
-                continue;
-            };
-            if daily_id.is_empty() {
-                continue;
-            }
-            match kind_of(event) {
-                "dailyCompleted" => {
-                    if !completed.iter().any(|id| id == daily_id) {
-                        completed.push(daily_id.to_string());
-                    }
-                }
-                "dailyUncompleted" => completed.retain(|id| id != daily_id),
-                _ => {}
-            }
-        }
-        completed
-    }
-
-    fn ordered_unique_task_ids<'a>(events: impl Iterator<Item = &'a Value>) -> Vec<Value> {
-        let mut ordered: Vec<Value> = Vec::new();
-        for event in events {
-            let task_id = event.get("taskId").cloned().unwrap_or(Value::Null);
-            if !ordered.contains(&task_id) {
-                ordered.push(task_id);
-            }
-        }
-        ordered
-    }
-
-    fn summary(&self, events: &[Value], on: DateTime<Local>) -> Map<String, Value> {
-        let key = self.day_key(on);
-        let on_this_day: Vec<&Value> = events
-            .iter()
-            .filter(|event| parse_at(event.get("at")).is_some_and(|at| self.day_key(at) == key))
-            .collect();
-
-        // Netting runs over the whole log, not just this day: the reopen that
-        // cancels one of today's completions may itself land tomorrow.
-        let surviving = Self::net_completions(events);
-        let completed: Vec<&&Value> = surviving
-            .iter()
-            .filter(|event| parse_at(event.get("at")).is_some_and(|at| self.day_key(at) == key))
-            .collect();
-
-        let mut planned: Vec<Value> = Vec::new();
-        for event in &on_this_day {
-            if kind_of(event) == "planSnapshot" {
-                planned = event
-                    .get("plannedTaskIds")
-                    .and_then(Value::as_array)
-                    .cloned()
-                    .unwrap_or_default();
-            }
-        }
-
-        let deferred = Self::ordered_unique_task_ids(
-            on_this_day
-                .iter()
-                .copied()
-                .filter(|event| kind_of(event) == "deferred"),
-        );
-        let invalidated = Self::ordered_unique_task_ids(
-            on_this_day
-                .iter()
-                .copied()
-                .filter(|event| kind_of(event) == "invalidated"),
-        );
-
-        // Completions from any day settle a planned task, so something finished
-        // before its snapshot day never shows up as outstanding.
-        let mut closed: Vec<Value> = surviving
-            .iter()
-            .map(|event| event.get("taskId").cloned().unwrap_or(Value::Null))
-            .collect();
-        closed.extend(deferred.iter().cloned());
-        closed.extend(invalidated.iter().cloned());
-        let unfinished: Vec<Value> = planned
-            .iter()
-            .filter(|id| !closed.contains(id))
-            .cloned()
-            .collect();
-
-        let focus_seconds: i64 = on_this_day
-            .iter()
-            .filter(|event| kind_of(event) == "focusSessionEnded")
-            .filter_map(|event| event.get("durationSeconds").and_then(Value::as_i64))
-            .sum();
-
-        let completed_payload: Vec<Value> = completed
+    /// One day's summary as `daily_log_fetch` reports it.
+    fn summary(&self, events: &[DayLogRecord], on: DateTime<Local>) -> Map<String, Value> {
+        let day = day_log::summary(events, &self.boundary(), on.with_timezone(&Utc));
+        let completed: Vec<Value> = day
+            .completed
             .iter()
             .map(|event| {
                 json!({
-                    "task_id": event.get("taskId").cloned().unwrap_or(Value::Null),
-                    "title": event.get("title").and_then(Value::as_str).unwrap_or(""),
-                    "at": event.get("at").cloned().unwrap_or(Value::Null),
+                    "task_id": event.task_id,
+                    "title": event.title,
+                    "at": day_log::format_timestamp(event.at_ms),
                 })
             })
             .collect();
 
         let mut summary = Map::new();
-        summary.insert("day".into(), json!(key));
+        summary.insert("day".into(), json!(day.key));
         summary.insert("completed_count".into(), json!(completed.len()));
-        summary.insert("planned_count".into(), json!(planned.len()));
-        summary.insert("unfinished_count".into(), json!(unfinished.len()));
-        summary.insert("focus_seconds".into(), json!(focus_seconds));
-        summary.insert("completed".into(), json!(completed_payload));
-        summary.insert("unfinished_task_ids".into(), json!(unfinished));
-        summary.insert("deferred_task_ids".into(), json!(deferred));
-        summary.insert("invalidated_task_ids".into(), json!(invalidated));
+        summary.insert("planned_count".into(), json!(day.planned_task_ids.len()));
+        summary.insert(
+            "unfinished_count".into(),
+            json!(day.unfinished_task_ids.len()),
+        );
+        summary.insert("focus_seconds".into(), json!(day.focus_seconds));
+        summary.insert("completed".into(), json!(completed));
+        summary.insert("unfinished_task_ids".into(), json!(day.unfinished_task_ids));
+        summary.insert("deferred_task_ids".into(), json!(day.deferred_task_ids));
+        summary.insert(
+            "invalidated_task_ids".into(),
+            json!(day.invalidated_task_ids),
+        );
         summary
     }
 
@@ -551,7 +409,10 @@ impl LocalState {
 
         let mut summaries = Vec::new();
         // Newest first, as the app reports it.
-        for day in self.days_ending_on(ending_on, count).into_iter().rev() {
+        let days = self
+            .boundary()
+            .days_ending_on(ending_on.with_timezone(&Utc), count);
+        for day in days.into_iter().rev().map(|day| day.with_timezone(&Local)) {
             let mut summary = self.summary(&events, day);
             let ticked = self.completed_daily_ids(&events, day);
             let due = Self::due_on(&dailies, self.logical_day(day));
@@ -867,15 +728,21 @@ impl LocalState {
             }));
         }
 
-        let event = json!({
-            "kind": if done { "dailyCompleted" } else { "dailyUncompleted" },
-            "at": Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
-            "taskId": 0,
-            "title": title,
-            "dailyId": daily_id,
-        });
-
-        append_event(&self.daylog_path(), &event)?;
+        let event = DayLogRecord {
+            kind: if done {
+                DayLogRecordKind::DailyCompleted
+            } else {
+                DayLogRecordKind::DailyUncompleted
+            },
+            at_ms: Utc::now().timestamp_millis(),
+            task_id: 0,
+            title: title.clone(),
+            duration_seconds: None,
+            planned_task_ids: None,
+            daily_id: Some(daily_id.to_string()),
+        };
+        day_log::append(&self.daylog_path(), &event)
+            .map_err(|err| ToolError::new(err.to_string()))?;
 
         Ok(json!({
             "id": daily_id, "title": title, "done": done,
@@ -981,56 +848,6 @@ impl LocalState {
     }
 }
 
-/// Appends one event to the day log as a single `write_all` of the line and
-/// its newline, under the lock the app takes too.
-///
-/// One write rather than `writeln!`'s several, so the line cannot be split
-/// around another writer's. And if the file does not end in a newline — an
-/// earlier writer died mid-line — one is written first, so this event starts
-/// a line of its own rather than being glued onto the damaged one and lost
-/// with it.
-pub fn append_event(path: &std::path::Path, event: &Value) -> Result<()> {
-    use std::io::{Read, Seek, SeekFrom};
-    let line = serde_json::to_string(event)
-        .map_err(|err| ToolError::new(format!("Could not encode the event: {err}")))?
-        + "\n";
-    FileLock::protecting(path).with_exclusive(|| {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(|err| {
-                ToolError::new(format!("Could not create {}: {err}", parent.display()))
-            })?;
-        }
-        let failed =
-            |err: std::io::Error| ToolError::new(format!("Could not append to the day log: {err}"));
-        let mut file = std::fs::OpenOptions::new()
-            .create(true)
-            .read(true)
-            .append(true)
-            .open(path)
-            .map_err(|err| ToolError::new(format!("Could not open {}: {err}", path.display())))?;
-        let length = file.metadata().map_err(failed)?.len();
-        let mut bytes = line.into_bytes();
-        if length > 0 {
-            let mut last = [0_u8; 1];
-            file.seek(SeekFrom::Start(length - 1)).map_err(failed)?;
-            file.read_exact(&mut last).map_err(failed)?;
-            if last[0] != b'\n' {
-                bytes.insert(0, b'\n');
-            }
-        }
-        file.write_all(&bytes).map_err(failed)
-    })
-}
-
-/// One event per `\n`-separated line, each decoded on its own: a damaged
-/// line, invalid UTF-8 included, costs that event and no other.
-pub fn parse_event_lines(bytes: &[u8]) -> Vec<Value> {
-    bytes
-        .split(|byte| *byte == b'\n')
-        .filter_map(|line| serde_json::from_slice::<Value>(line.trim_ascii()).ok())
-        .collect()
-}
-
 /// `RootDueBucket` in the app, by raw value.
 const DUE_BUCKETS: [&str; 7] = [
     "Overdue",
@@ -1128,38 +945,6 @@ fn default_kanban_columns() -> Value {
 }
 
 // -- helpers -----------------------------------------------------------------
-
-fn kind_of(event: &Value) -> &str {
-    event.get("kind").and_then(Value::as_str).unwrap_or("")
-}
-
-/// The event's `at` as a local instant, or `None` if it is missing or
-/// unparseable — a bad timestamp costs that event, not the whole read.
-fn parse_at(raw: Option<&Value>) -> Option<DateTime<Local>> {
-    let text = raw?.as_str()?;
-    DateTime::parse_from_rfc3339(text)
-        .ok()
-        .map(|parsed| parsed.with_timezone(&Local))
-}
-
-/// `date` at `hour` local time, resolving the two DST edge cases rather than
-/// failing: a skipped hour steps forward to the first valid instant, an
-/// ambiguous one takes the earlier offset.
-fn local_at(date: NaiveDate, hour: u32) -> DateTime<Local> {
-    for candidate_hour in hour..24 {
-        if let Some(naive) = date.and_hms_opt(candidate_hour, 0, 0)
-            && let Some(resolved) = Local.from_local_datetime(&naive).earliest()
-        {
-            return resolved;
-        }
-    }
-    // Unreachable for a real calendar; falling back to the day's start keeps
-    // this total rather than panicking on a date library surprise.
-    Local
-        .from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap_or_default())
-        .earliest()
-        .unwrap_or_else(Local::now)
-}
 
 fn sort_key(daily: &Value) -> (i64, String) {
     (

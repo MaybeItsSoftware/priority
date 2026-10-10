@@ -618,32 +618,49 @@ fn a_dailies_file_that_does_not_decode_is_not_saved_over() {
 
 #[test]
 fn a_day_log_event_starts_its_own_line_even_after_a_torn_one() {
+    use takt_core::day_log::{DayLogRecord, DayLogRecordKind, append, load};
+    let tick = |id: &str| DayLogRecord {
+        kind: DayLogRecordKind::DailyCompleted,
+        at_ms: 1_786_701_600_000,
+        task_id: 0,
+        title: id.into(),
+        duration_seconds: None,
+        planned_task_ids: None,
+        daily_id: Some(id.into()),
+    };
     let local = scratch();
     let path = local.daylog_path();
     // A writer that died mid-line, and a line that is not even UTF-8.
-    let mut damaged = b"{\"kind\":\"dailyCompleted\",\"dailyId\":\"A\"}\n".to_vec();
+    let mut damaged = b"{\"kind\":\"dailyCompleted\",\"at\":\"2026-08-14T10:00:00Z\",\"taskId\":0,\"title\":\"A\",\"dailyId\":\"A\"}\n".to_vec();
     damaged.extend_from_slice(b"\xff\xfe not utf8\n{\"kind\":\"dailyComp");
     std::fs::write(&path, &damaged).unwrap();
 
-    crate::local::append_event(&path, &json!({"kind": "dailyCompleted", "dailyId": "B"}))
-        .expect("append");
+    append(&path, &tick("B")).expect("append");
 
     let bytes = std::fs::read(&path).unwrap();
     assert!(bytes.ends_with(b"}\n"));
-    let events = crate::local::parse_event_lines(&bytes);
     // The torn line and the invalid one cost themselves only: the events
     // either side of them both survive.
-    let ids: Vec<&str> = events
-        .iter()
-        .filter_map(|event| event["dailyId"].as_str())
+    let ids: Vec<String> = load(&path)
+        .into_iter()
+        .filter_map(|event| event.daily_id)
         .collect();
     assert_eq!(ids, vec!["A", "B"]);
 
-    // Into a file that already ends cleanly, no blank line is added.
+    // Into a file that already ends cleanly, no blank line is added, and the
+    // line is the one the app writes.
     let clean = scratch().daylog_path();
-    crate::local::append_event(&clean, &json!({"n": 1})).unwrap();
-    crate::local::append_event(&clean, &json!({"n": 2})).unwrap();
-    assert_eq!(std::fs::read(&clean).unwrap(), b"{\"n\":1}\n{\"n\":2}\n");
+    append(&clean, &tick("1")).unwrap();
+    append(&clean, &tick("2")).unwrap();
+    let line = |id: &str| {
+        format!(
+            "{{\"at\":\"2026-08-14T10:00:00Z\",\"dailyId\":\"{id}\",\"kind\":\"dailyCompleted\",\"taskId\":0,\"title\":\"{id}\"}}\n"
+        )
+    };
+    assert_eq!(
+        std::fs::read_to_string(&clean).unwrap(),
+        line("1") + &line("2")
+    );
 }
 
 // -- the CLI's own surface ---------------------------------------------------
