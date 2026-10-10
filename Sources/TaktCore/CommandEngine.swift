@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 // MARK: - Date Parsing Config
 
@@ -111,7 +112,6 @@ public enum Command: Equatable, Sendable {
   case unknown(String)
 }
 
-// swiftlint:disable type_body_length
 public enum CommandEngine {
   /// A row's `keybind` is the key that performs *that row*, or nothing.
   ///
@@ -375,491 +375,93 @@ public enum CommandEngine {
     return Array(candidates.prefix(limit))
   }
 
-  // swiftlint:disable:next cyclomatic_complexity
+  /// What a typed palette command means: the Rust core's
+  /// `palette_command_parse` (`core/src/command.rs`), case-insensitive, with
+  /// anything it does not know as `.unknown` carrying the input as typed.
   public static func parse(_ input: String) -> Command {
-    let cmd = input.lowercased().trimmingCharacters(in: .whitespaces)
-    if cmd == "done" { return .done }
-    if cmd == "undone" { return .undone }
-    if cmd == "invalidate" { return .invalidate }
-    if cmd.hasPrefix("due ") {
-      let raw = String(cmd.dropFirst(4)).trimmingCharacters(in: .whitespaces)
-      return .due(raw)
-    }
-    if cmd == "clear due" { return .clearDue }
-    if cmd.hasPrefix("start ") {
-      let raw = String(cmd.dropFirst(6)).trimmingCharacters(in: .whitespaces)
-      return .setStart(raw)
-    }
-    if cmd == "clear start" || cmd == "remove start" || cmd == "unstart" { return .clearStart }
-    if cmd.hasPrefix("repeat ") {
-      let raw = String(cmd.dropFirst(7)).trimmingCharacters(in: .whitespaces)
-      return .setRecurrence(raw)
-    }
-    if cmd == "clear repeat" || cmd == "remove repeat" || cmd == "no repeat" || cmd == "unrepeat" {
-      return .clearRecurrence
-    }
-    if cmd == "edit" { return .edit }
-    if cmd == "search" { return .search }
-    if cmd == "preferences" || cmd == "prefs" || cmd == "settings" {
-      return .openPreferences
-    }
-    if cmd == "window" || cmd == "open window" || cmd == "main window" {
-      return .openMainWindow
-    }
-    if cmd == "diagnostics" || cmd == "support" || cmd == "health" {
-      return .openDiagnostics
-    }
-    if cmd == "reload checkvist lists" || cmd == "reload lists" || cmd == "refresh lists" {
-      return .reloadCheckvistLists
-    }
-    if cmd == "upload offline tasks" || cmd == "upload offline" {
-      return .uploadOfflineTasks
-    }
-    if cmd == "add sibling" { return .addSibling }
-    if cmd == "add child" { return .addChild }
-    if cmd == "open link" { return .openLink }
-    if cmd == "undo" { return .undo }
-    if cmd == "toggle timer" { return .toggleTimer }
-    if cmd == "pause timer" { return .pauseTimer }
-    if cmd == "toggle hide future" { return .toggleHideFuture }
-    if cmd == "delete" { return .delete }
-    if cmd == "move up" { return .moveUp }
-    if cmd == "move down" { return .moveDown }
-    if cmd == "enter children" { return .enterChildren }
-    if cmd == "exit parent" { return .exitParent }
-    if cmd == "expand" { return .expandTask }
-    if cmd == "collapse" { return .collapseTask }
-    if cmd == "expand all" { return .expandAll }
-    if cmd == "collapse all" { return .collapseAll }
-    if cmd.hasPrefix("tag ") {
-      return .tag(String(cmd.dropFirst(4)).trimmingCharacters(in: .whitespaces))
-    }
-    if cmd.hasPrefix("untag ") {
-      return .untag(String(cmd.dropFirst(6)).trimmingCharacters(in: .whitespaces))
-    }
-    if cmd.hasPrefix("list ") {
-      return .list(String(cmd.dropFirst(5)).trimmingCharacters(in: .whitespaces))
-    }
-    if cmd.hasPrefix("priority ") {
-      let raw = String(cmd.dropFirst(9)).trimmingCharacters(in: .whitespaces)
-      if raw == "back" || raw == "end" {
-        return .priorityBack
-      }
-      if raw == "clear" {
-        return .clearPriority
-      }
-      if let rank = Int(raw), rank >= 1 {
-        return .priority(rank)
-      }
-    }
-    if cmd == "clear priority" || cmd == "unpriority" {
-      return .clearPriority
-    }
-    if cmd == "sync obsidian" || cmd == "send to obsidian" || cmd == "obsidian" {
-      return .syncObsidian
-    }
-    if cmd == "open obsidian new window" || cmd == "obsidian new window"
-      || cmd == "open in new window"
-    {
-      return .syncObsidianNewWindow
-    }
-    if cmd == "choose obsidian inbox" || cmd == "choose inbox folder"
-      || cmd == "obsidian inbox"
-    {
-      return .chooseObsidianInbox
-    }
-    if cmd == "clear obsidian inbox" || cmd == "clear inbox folder" {
-      return .clearObsidianInbox
-    }
-    if cmd == "link obsidian folder" || cmd == "link folder" || cmd == "obsidian folder" {
-      return .linkObsidianFolder
-    }
-    if cmd == "create obsidian folder" || cmd == "new obsidian folder"
-      || cmd == "make obsidian folder"
-    {
-      return .createObsidianFolder
-    }
-    if cmd == "clear obsidian folder" || cmd == "unlink obsidian folder"
-      || cmd == "clear folder link"
-    {
-      return .clearObsidianFolderLink
-    }
-    if cmd == "affine daily" || cmd == "sync affine day" || cmd == "affine log" {
-      return .syncAFFiNEDay
-    }
-    if cmd == "sync affine" || cmd == "send to affine" || cmd == "affine" {
-      return .syncAFFiNE
-    }
-    if cmd == "open affine" || cmd == "open affine document" {
-      return .openAFFiNEDocument
-    }
-    if cmd == "sync google calendar" || cmd == "google calendar" || cmd == "gcal"
-      || cmd == "open google calendar" || cmd == "calendar"
-    {
-      return .syncGoogleCalendar
-    }
-    if cmd == "refresh mcp path" || cmd == "mcp refresh path" {
-      return .refreshMCPPath
-    }
-    if cmd == "copy mcp config" || cmd == "mcp config" || cmd == "mcp copy config" {
-      return .copyMCPClientConfig
-    }
-    if cmd == "open mcp guide" || cmd == "mcp guide" {
-      return .openMCPGuide
-    }
-    if cmd == "quick add" { return .quickAdd }
-    if cmd == "toggle context" { return .toggleContext }
-    if cmd == "toggle children" || cmd == "toggle subtree" { return .toggleChildrenInMenus }
-    if cmd == "edit start" { return .editAtStart }
-    if cmd == "command palette" || cmd == "open palette" || cmd == "palette" {
-      return .openCommandPalette
-    }
-    return .unknown(input)
+    Command(paletteCommandParse(input: input))
   }
 
+  /// A `due` or `start` command's words as the string the task stores:
+  /// `yyyy-MM-dd` for a day, `yyyy-MM-dd HH:mm:ss Z` for a moment, in the
+  /// calendar's zone, and the input unchanged for anything else (`asap`).
+  /// The Rust core's `resolve_due_date` (`core/src/command.rs`) reads it.
   public static func resolveDueDate(
     _ input: String,
     now: Date = Date(),
     calendar: Calendar = .current,
     config: TaktDateParsingConfig = .init()
   ) -> String {
-    let rawInput = input.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !rawInput.isEmpty else { return input }
-
-    let cal = calendar
-    let dateOnlyFormatter: DateFormatter = {
-      let formatter = DateFormatter()
-      formatter.calendar = cal
-      formatter.locale = Locale(identifier: "en_US_POSIX")
-      formatter.timeZone = cal.timeZone
-      formatter.dateFormat = "yyyy-MM-dd"
-      return formatter
-    }()
-    let dateTimeFormatter: DateFormatter = {
-      let formatter = DateFormatter()
-      formatter.calendar = cal
-      formatter.locale = Locale(identifier: "en_US_POSIX")
-      formatter.timeZone = cal.timeZone
-      formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-      return formatter
-    }()
-
-    let normalized = rawInput.lowercased()
-
-    // Try "time keyword" order first (e.g. "4pm fri", "9am tomorrow").
-    if let swapped = resolveTimeFirstExpression(normalized, now: now, calendar: cal, config: config) {
-      return dateTimeFormatter.string(from: swapped)
-    }
-
-    if let relative = resolveRelativeDateExpression(normalized, now: now, calendar: cal) {
-      if let timeText = relative.timeText {
-        guard
-          let timeComponents = parseTimeComponents(from: timeText, config: config),
-          let dateTime = combine(date: relative.baseDate, with: timeComponents, calendar: cal)
-        else {
-          return rawInput
-        }
-        return dateTimeFormatter.string(from: dateTime)
-      }
-      return dateOnlyFormatter.string(from: relative.baseDate)
-    }
-
-    if let relativeOffsetDate = resolveRelativeOffsetExpression(normalized, now: now, calendar: cal)
-    {
-      return dateTimeFormatter.string(from: relativeOffsetDate)
-    }
-
-    if let absolute = resolveAbsoluteDateExpression(normalized, calendar: cal) {
-      if let timeText = absolute.timeText {
-        guard
-          let timeComponents = parseTimeComponents(from: timeText, config: config),
-          let dateTime = combine(date: absolute.baseDate, with: timeComponents, calendar: cal)
-        else {
-          return rawInput
-        }
-        return dateTimeFormatter.string(from: dateTime)
-      }
-      return dateOnlyFormatter.string(from: absolute.baseDate)
-    }
-
-    if let timeComponents = parseTimeComponents(from: normalized, config: config),
-      let dateTime = combine(date: now, with: timeComponents, calendar: cal)
-    {
-      return dateTimeFormatter.string(from: dateTime)
-    }
-
-    return rawInput
-  }
-
-  /// Full and abbreviated weekday name → Calendar weekday component (Sun=1 … Sat=7)
-  private static let weekdayNumbers: [String: Int] = [
-    "sunday": 1, "sun": 1,
-    "monday": 2, "mon": 2,
-    "tuesday": 3, "tue": 3, "tues": 3,
-    "wednesday": 4, "wed": 4,
-    "thursday": 5, "thu": 5, "thur": 5, "thurs": 5,
-    "friday": 6, "fri": 6,
-    "saturday": 7, "sat": 7,
-  ]
-
-  private static func resolveRelativeDateExpression(
-    _ normalized: String,
-    now: Date,
-    calendar: Calendar
-  ) -> (baseDate: Date, timeText: String?)? {
-    if let timeText = timeSuffix(for: normalized, keyword: "today") {
-      return (now, timeText.isEmpty ? nil : timeText)
-    }
-    if let timeText = timeSuffix(for: normalized, keyword: "tomorrow"),
-      let date = calendar.date(byAdding: .day, value: 1, to: now)
-    {
-      return (date, timeText.isEmpty ? nil : timeText)
-    }
-    if let timeText = timeSuffix(for: normalized, keyword: "next week"),
-      let date = calendar.date(byAdding: .weekOfYear, value: 1, to: now)
-    {
-      return (date, timeText.isEmpty ? nil : timeText)
-    }
-    if let timeText = timeSuffix(for: normalized, keyword: "next month"),
-      let date = calendar.date(byAdding: .month, value: 1, to: now)
-    {
-      return (date, timeText.isEmpty ? nil : timeText)
-    }
-
-    // "next <weekday>" — always picks the coming occurrence even if today matches
-    for (name, weekdayValue) in weekdayNumbers {
-      guard let timeText = timeSuffix(for: normalized, keyword: "next \(name)") else { continue }
-      let currentWeekday = calendar.component(.weekday, from: now)
-      var diff = weekdayValue - currentWeekday
-      if diff <= 0 { diff += 7 }
-      guard let date = calendar.date(byAdding: .day, value: diff, to: now) else { continue }
-      return (date, timeText.isEmpty ? nil : timeText)
-    }
-
-    // "this <weekday>" — nearest occurrence within the current calendar week
-    for (name, weekdayValue) in weekdayNumbers {
-      guard let timeText = timeSuffix(for: normalized, keyword: "this \(name)") else { continue }
-      let currentWeekday = calendar.component(.weekday, from: now)
-      var diff = weekdayValue - currentWeekday
-      // "this" means within the current week — if the day has passed, keep 0 offset (today)
-      if diff < 0 { diff = 0 }
-      guard let date = calendar.date(byAdding: .day, value: diff, to: now) else { continue }
-      return (date, timeText.isEmpty ? nil : timeText)
-    }
-
-    // Plain weekday name — next occurrence (allows today if diff would be 0, skip to next week)
-    for (name, weekdayValue) in weekdayNumbers {
-      guard let timeText = timeSuffix(for: normalized, keyword: name) else { continue }
-      let currentWeekday = calendar.component(.weekday, from: now)
-      var diff = weekdayValue - currentWeekday
-      if diff <= 0 { diff += 7 }
-      guard let date = calendar.date(byAdding: .day, value: diff, to: now) else { continue }
-      return (date, timeText.isEmpty ? nil : timeText)
-    }
-
-    return nil
-  }
-
-  /// Handles "time keyword" order: "4pm fri", "9am tomorrow", "morning next monday"
-  private static func resolveTimeFirstExpression(
-    _ normalized: String,
-    now: Date,
-    calendar: Calendar,
-    config: TaktDateParsingConfig
-  ) -> Date? {
-    let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
-    guard let match = timeFirstRegex.firstMatch(in: normalized, options: [], range: range),
-      let timePart = Range(match.range(at: 1), in: normalized),
-      let datePart = Range(match.range(at: 2), in: normalized)
-    else { return nil }
-
-    let timeText = String(normalized[timePart])
-    let dateKeyword = String(normalized[datePart])
-
-    guard let relative = resolveRelativeDateExpression(dateKeyword, now: now, calendar: calendar)
-    else { return nil }
-
-    guard relative.timeText == nil else { return nil }
-
-    guard let timeComponents = parseTimeComponents(from: timeText, config: config) else { return nil }
-    return combine(date: relative.baseDate, with: timeComponents, calendar: calendar)
-  }
-
-  private static let relativeOffsetRegex = makeRegex(
-    #"^in\s+(a|an|\d+)\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks)$"#
-  )
-  private static let twelveHourRegex = makeRegex(
-    #"^(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*([ap]m)$"#)
-  private static let twentyFourHourRegex = makeRegex(
-    #"^([01]?\d|2[0-3])(?::([0-5]\d))?$"#)
-  // Matches "4pm fri", "3:30pm next monday", "9am tomorrow" — time BEFORE the date keyword
-  private static let timeFirstRegex = makeRegex(
-    #"^((?:1[0-2]|0?[1-9])(?::[0-5]\d)?\s*[ap]m|(?:[01]?\d|2[0-3]):[0-5]\d|noon|midnight|morning|afternoon|evening|eod)\s+(.+)$"#
-  )
-
-  private static func makeRegex(_ pattern: String) -> NSRegularExpression {
-    guard let regex = try? NSRegularExpression(pattern: pattern) else {
-      fatalError("Invalid regex pattern: \(pattern)")
-    }
-    return regex
-  }
-
-  private static func resolveRelativeOffsetExpression(
-    _ normalized: String,
-    now: Date,
-    calendar: Calendar
-  ) -> Date? {
-    let regex = relativeOffsetRegex
-    let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
-    guard let match = regex.firstMatch(in: normalized, options: [], range: range) else {
-      return nil
-    }
-    guard
-      let amountRange = Range(match.range(at: 1), in: normalized),
-      let unitRange = Range(match.range(at: 2), in: normalized)
-    else { return nil }
-
-    let amountStr = String(normalized[amountRange])
-    let amount: Int
-    if amountStr == "a" || amountStr == "an" {
-      amount = 1
-    } else if let n = Int(amountStr), n > 0 {
-      amount = n
-    } else {
-      return nil
-    }
-
-    let unit = String(normalized[unitRange])
-    let component: Calendar.Component
-    switch unit {
-    case "m", "min", "mins", "minute", "minutes":
-      component = .minute
-    case "h", "hr", "hrs", "hour", "hours":
-      component = .hour
-    case "d", "day", "days":
-      component = .day
-    case "w", "wk", "wks", "week", "weeks":
-      component = .weekOfYear
-    default:
-      return nil
-    }
-
-    return calendar.date(byAdding: component, value: amount, to: now)
-  }
-
-  private static func resolveAbsoluteDateExpression(_ normalized: String, calendar: Calendar)
-    -> (baseDate: Date, timeText: String?)?
-  {
-    let datePart: String
-    let timePart: String?
-    if let separatorIndex = normalized.firstIndex(where: { $0 == " " || $0 == "t" }) {
-      datePart = String(normalized[..<separatorIndex])
-      let remainder = normalized[normalized.index(after: separatorIndex)...]
-      let trimmedRemainder = String(remainder).trimmingCharacters(in: .whitespaces)
-      timePart = trimmedRemainder.isEmpty ? nil : trimmedRemainder
-    } else {
-      datePart = normalized
-      timePart = nil
-    }
-
-    let components = datePart.split(separator: "-", omittingEmptySubsequences: false)
-    guard components.count == 3, components[0].count == 4 else { return nil }
-    guard
-      let year = Int(components[0]),
-      let month = Int(components[1]),
-      let day = Int(components[2])
-    else {
-      return nil
-    }
-
-    var dateComponents = DateComponents()
-    dateComponents.calendar = calendar
-    dateComponents.timeZone = calendar.timeZone
-    dateComponents.year = year
-    dateComponents.month = month
-    dateComponents.day = day
-    guard let date = calendar.date(from: dateComponents) else { return nil }
-    return (date, timePart)
-  }
-
-  private static func timeSuffix(for normalized: String, keyword: String) -> String? {
-    guard normalized == keyword || normalized.hasPrefix(keyword + " ") else { return nil }
-    return String(normalized.dropFirst(keyword.count)).trimmingCharacters(in: .whitespaces)
-  }
-
-  private static func parseTimeComponents(
-    from rawTime: String,
-    config: TaktDateParsingConfig = .init()
-  ) -> DateComponents? {
-    var normalized = rawTime.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    if normalized.hasPrefix("at ") {
-      normalized = String(normalized.dropFirst(3)).trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    guard !normalized.isEmpty else { return nil }
-
-    if normalized == "noon" {
-      return DateComponents(hour: 12, minute: 0, second: 0)
-    }
-    if normalized == "midnight" {
-      return DateComponents(hour: 0, minute: 0, second: 0)
-    }
-    if normalized == "morning" {
-      return DateComponents(hour: config.morningHour, minute: 0, second: 0)
-    }
-    if normalized == "afternoon" {
-      return DateComponents(hour: config.afternoonHour, minute: 0, second: 0)
-    }
-    if normalized == "evening" {
-      return DateComponents(hour: config.eveningHour, minute: 0, second: 0)
-    }
-    if normalized == "eod" || normalized == "end of day" || normalized == "cob" {
-      return DateComponents(hour: config.eodHour, minute: 0, second: 0)
-    }
-
-    if let captures = captureGroups(regex: twelveHourRegex, in: normalized), captures.count >= 3 {
-      guard var hour = Int(captures[0]) else { return nil }
-      let minute = Int(captures[1]) ?? 0
-      let meridiem = captures[2]
-      if meridiem == "pm" && hour != 12 { hour += 12 }
-      if meridiem == "am" && hour == 12 { hour = 0 }
-      return DateComponents(hour: hour, minute: minute, second: 0)
-    }
-
-    if let captures = captureGroups(regex: twentyFourHourRegex, in: normalized),
-      captures.count >= 2
-    {
-      guard let hour = Int(captures[0]) else { return nil }
-      let minute = Int(captures[1]) ?? 0
-      return DateComponents(hour: hour, minute: minute, second: 0)
-    }
-
-    return nil
-  }
-
-  private static func captureGroups(regex: NSRegularExpression, in text: String) -> [String]? {
-    let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
-    guard let match = regex.firstMatch(in: text, options: [], range: fullRange) else { return nil }
-
-    var groups: [String] = []
-    for captureIndex in 1..<match.numberOfRanges {
-      let captureRange = match.range(at: captureIndex)
-      guard captureRange.location != NSNotFound, let range = Range(captureRange, in: text) else {
-        groups.append("")
-        continue
-      }
-      groups.append(String(text[range]))
-    }
-    return groups
-  }
-
-  private static func combine(date: Date, with time: DateComponents, calendar: Calendar) -> Date? {
-    var components = calendar.dateComponents([.year, .month, .day], from: date)
-    components.calendar = calendar
-    components.timeZone = calendar.timeZone
-    components.hour = time.hour
-    components.minute = time.minute
-    components.second = time.second ?? 0
-    return calendar.date(from: components)
+    let hours = NamedHours(
+      morning: Int64(config.morningHour), afternoon: Int64(config.afternoonHour),
+      evening: Int64(config.eveningHour), endOfDay: Int64(config.eodHour))
+    return TaktRustCore.resolveDueDate(
+      input: input, nowMs: now.rankingMilliseconds, zone: calendar.timeZone.identifier, hours: hours)
   }
 }
-// swiftlint:enable type_body_length
+
+extension Command {
+  // swiftlint:disable:next cyclomatic_complexity
+  init(_ core: PaletteCommand) {
+    switch core {
+    case .done: self = .done
+    case .undone: self = .undone
+    case .invalidate: self = .invalidate
+    case .due(let raw): self = .due(raw)
+    case .clearDue: self = .clearDue
+    case .setStart(let raw): self = .setStart(raw)
+    case .clearStart: self = .clearStart
+    case .setRecurrence(let raw): self = .setRecurrence(raw)
+    case .clearRecurrence: self = .clearRecurrence
+    case .edit: self = .edit
+    case .search: self = .search
+    case .openPreferences: self = .openPreferences
+    case .openMainWindow: self = .openMainWindow
+    case .openDiagnostics: self = .openDiagnostics
+    case .reloadCheckvistLists: self = .reloadCheckvistLists
+    case .uploadOfflineTasks: self = .uploadOfflineTasks
+    case .addSibling: self = .addSibling
+    case .addChild: self = .addChild
+    case .openLink: self = .openLink
+    case .undo: self = .undo
+    case .toggleTimer: self = .toggleTimer
+    case .pauseTimer: self = .pauseTimer
+    case .toggleHideFuture: self = .toggleHideFuture
+    case .delete: self = .delete
+    case .moveUp: self = .moveUp
+    case .moveDown: self = .moveDown
+    case .enterChildren: self = .enterChildren
+    case .exitParent: self = .exitParent
+    case .expandTask: self = .expandTask
+    case .collapseTask: self = .collapseTask
+    case .expandAll: self = .expandAll
+    case .collapseAll: self = .collapseAll
+    case .tag(let tag): self = .tag(tag)
+    case .untag(let tag): self = .untag(tag)
+    case .list(let query): self = .list(query)
+    case .priority(let rank): self = .priority(Int(rank))
+    case .priorityBack: self = .priorityBack
+    case .clearPriority: self = .clearPriority
+    case .syncObsidian: self = .syncObsidian
+    case .syncObsidianNewWindow: self = .syncObsidianNewWindow
+    case .chooseObsidianInbox: self = .chooseObsidianInbox
+    case .clearObsidianInbox: self = .clearObsidianInbox
+    case .linkObsidianFolder: self = .linkObsidianFolder
+    case .createObsidianFolder: self = .createObsidianFolder
+    case .clearObsidianFolderLink: self = .clearObsidianFolderLink
+    case .syncAffine: self = .syncAFFiNE
+    case .openAffineDocument: self = .openAFFiNEDocument
+    case .syncAffineDay: self = .syncAFFiNEDay
+    case .syncGoogleCalendar: self = .syncGoogleCalendar
+    case .refreshMcpPath: self = .refreshMCPPath
+    case .copyMcpClientConfig: self = .copyMCPClientConfig
+    case .openMcpGuide: self = .openMCPGuide
+    case .quickAdd: self = .quickAdd
+    case .toggleContext: self = .toggleContext
+    case .toggleChildrenInMenus: self = .toggleChildrenInMenus
+    case .editAtStart: self = .editAtStart
+    case .openCommandPalette: self = .openCommandPalette
+    case .unknown(let input): self = .unknown(input)
+    }
+  }
+}

@@ -10673,6 +10673,72 @@ public func FfiConverterTypeMillisInterval_lower(_ value: MillisInterval) -> Rus
 
 
 /**
+ * The hours the named times of day stand for: Swift's
+ * `TaktDateParsingConfig`.
+ */
+public struct NamedHours: Equatable, Hashable {
+    public var morning: Int64
+    public var afternoon: Int64
+    public var evening: Int64
+    public var endOfDay: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(morning: Int64, afternoon: Int64, evening: Int64, endOfDay: Int64) {
+        self.morning = morning
+        self.afternoon = afternoon
+        self.evening = evening
+        self.endOfDay = endOfDay
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NamedHours: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNamedHours: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NamedHours {
+        return
+            try NamedHours(
+                morning: FfiConverterInt64.read(from: &buf), 
+                afternoon: FfiConverterInt64.read(from: &buf), 
+                evening: FfiConverterInt64.read(from: &buf), 
+                endOfDay: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NamedHours, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.morning, into: &buf)
+        FfiConverterInt64.write(value.afternoon, into: &buf)
+        FfiConverterInt64.write(value.evening, into: &buf)
+        FfiConverterInt64.write(value.endOfDay, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNamedHours_lift(_ buf: RustBuffer) throws -> NamedHours {
+    return try FfiConverterTypeNamedHours.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNamedHours_lower(_ value: NamedHours) -> RustBuffer {
+    return FfiConverterTypeNamedHours.lower(value)
+}
+
+
+/**
  * A task to create: everything any client can set when it adds one.
  */
 public struct NewTask: Equatable, Hashable {
@@ -14593,6 +14659,495 @@ public func FfiConverterTypeMilestoneOccasion_lower(_ value: MilestoneOccasion) 
 
 
 /**
+ * What a palette command asks for. Each case is one of Swift's `Command`
+ * cases, which wraps it.
+ */
+
+public enum PaletteCommand: Equatable, Hashable {
+    
+    case done
+    case undone
+    case invalidate
+    case due(raw: String
+    )
+    case clearDue
+    case setStart(raw: String
+    )
+    case clearStart
+    case setRecurrence(raw: String
+    )
+    case clearRecurrence
+    case edit
+    case search
+    case openPreferences
+    case openMainWindow
+    case openDiagnostics
+    case reloadCheckvistLists
+    case uploadOfflineTasks
+    case addSibling
+    case addChild
+    case openLink
+    case undo
+    case toggleTimer
+    case pauseTimer
+    case toggleHideFuture
+    case delete
+    case moveUp
+    case moveDown
+    case enterChildren
+    case exitParent
+    case expandTask
+    case collapseTask
+    case expandAll
+    case collapseAll
+    case tag(tag: String
+    )
+    case untag(tag: String
+    )
+    case list(query: String
+    )
+    case priority(rank: Int64
+    )
+    case priorityBack
+    case clearPriority
+    case syncObsidian
+    case syncObsidianNewWindow
+    case chooseObsidianInbox
+    case clearObsidianInbox
+    case linkObsidianFolder
+    case createObsidianFolder
+    case clearObsidianFolderLink
+    case syncAffine
+    case openAffineDocument
+    case syncAffineDay
+    case syncGoogleCalendar
+    case refreshMcpPath
+    case copyMcpClientConfig
+    case openMcpGuide
+    case quickAdd
+    case toggleContext
+    case toggleChildrenInMenus
+    case editAtStart
+    case openCommandPalette
+    /**
+     * Nothing the palette knows, carrying the input as typed.
+     */
+    case unknown(input: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PaletteCommand: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePaletteCommand: FfiConverterRustBuffer {
+    typealias SwiftType = PaletteCommand
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PaletteCommand {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .done
+        
+        case 2: return .undone
+        
+        case 3: return .invalidate
+        
+        case 4: return .due(raw: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .clearDue
+        
+        case 6: return .setStart(raw: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .clearStart
+        
+        case 8: return .setRecurrence(raw: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 9: return .clearRecurrence
+        
+        case 10: return .edit
+        
+        case 11: return .search
+        
+        case 12: return .openPreferences
+        
+        case 13: return .openMainWindow
+        
+        case 14: return .openDiagnostics
+        
+        case 15: return .reloadCheckvistLists
+        
+        case 16: return .uploadOfflineTasks
+        
+        case 17: return .addSibling
+        
+        case 18: return .addChild
+        
+        case 19: return .openLink
+        
+        case 20: return .undo
+        
+        case 21: return .toggleTimer
+        
+        case 22: return .pauseTimer
+        
+        case 23: return .toggleHideFuture
+        
+        case 24: return .delete
+        
+        case 25: return .moveUp
+        
+        case 26: return .moveDown
+        
+        case 27: return .enterChildren
+        
+        case 28: return .exitParent
+        
+        case 29: return .expandTask
+        
+        case 30: return .collapseTask
+        
+        case 31: return .expandAll
+        
+        case 32: return .collapseAll
+        
+        case 33: return .tag(tag: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 34: return .untag(tag: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 35: return .list(query: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 36: return .priority(rank: try FfiConverterInt64.read(from: &buf)
+        )
+        
+        case 37: return .priorityBack
+        
+        case 38: return .clearPriority
+        
+        case 39: return .syncObsidian
+        
+        case 40: return .syncObsidianNewWindow
+        
+        case 41: return .chooseObsidianInbox
+        
+        case 42: return .clearObsidianInbox
+        
+        case 43: return .linkObsidianFolder
+        
+        case 44: return .createObsidianFolder
+        
+        case 45: return .clearObsidianFolderLink
+        
+        case 46: return .syncAffine
+        
+        case 47: return .openAffineDocument
+        
+        case 48: return .syncAffineDay
+        
+        case 49: return .syncGoogleCalendar
+        
+        case 50: return .refreshMcpPath
+        
+        case 51: return .copyMcpClientConfig
+        
+        case 52: return .openMcpGuide
+        
+        case 53: return .quickAdd
+        
+        case 54: return .toggleContext
+        
+        case 55: return .toggleChildrenInMenus
+        
+        case 56: return .editAtStart
+        
+        case 57: return .openCommandPalette
+        
+        case 58: return .unknown(input: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PaletteCommand, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .done:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .undone:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .invalidate:
+            writeInt(&buf, Int32(3))
+        
+        
+        case let .due(raw):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(raw, into: &buf)
+            
+        
+        case .clearDue:
+            writeInt(&buf, Int32(5))
+        
+        
+        case let .setStart(raw):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(raw, into: &buf)
+            
+        
+        case .clearStart:
+            writeInt(&buf, Int32(7))
+        
+        
+        case let .setRecurrence(raw):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(raw, into: &buf)
+            
+        
+        case .clearRecurrence:
+            writeInt(&buf, Int32(9))
+        
+        
+        case .edit:
+            writeInt(&buf, Int32(10))
+        
+        
+        case .search:
+            writeInt(&buf, Int32(11))
+        
+        
+        case .openPreferences:
+            writeInt(&buf, Int32(12))
+        
+        
+        case .openMainWindow:
+            writeInt(&buf, Int32(13))
+        
+        
+        case .openDiagnostics:
+            writeInt(&buf, Int32(14))
+        
+        
+        case .reloadCheckvistLists:
+            writeInt(&buf, Int32(15))
+        
+        
+        case .uploadOfflineTasks:
+            writeInt(&buf, Int32(16))
+        
+        
+        case .addSibling:
+            writeInt(&buf, Int32(17))
+        
+        
+        case .addChild:
+            writeInt(&buf, Int32(18))
+        
+        
+        case .openLink:
+            writeInt(&buf, Int32(19))
+        
+        
+        case .undo:
+            writeInt(&buf, Int32(20))
+        
+        
+        case .toggleTimer:
+            writeInt(&buf, Int32(21))
+        
+        
+        case .pauseTimer:
+            writeInt(&buf, Int32(22))
+        
+        
+        case .toggleHideFuture:
+            writeInt(&buf, Int32(23))
+        
+        
+        case .delete:
+            writeInt(&buf, Int32(24))
+        
+        
+        case .moveUp:
+            writeInt(&buf, Int32(25))
+        
+        
+        case .moveDown:
+            writeInt(&buf, Int32(26))
+        
+        
+        case .enterChildren:
+            writeInt(&buf, Int32(27))
+        
+        
+        case .exitParent:
+            writeInt(&buf, Int32(28))
+        
+        
+        case .expandTask:
+            writeInt(&buf, Int32(29))
+        
+        
+        case .collapseTask:
+            writeInt(&buf, Int32(30))
+        
+        
+        case .expandAll:
+            writeInt(&buf, Int32(31))
+        
+        
+        case .collapseAll:
+            writeInt(&buf, Int32(32))
+        
+        
+        case let .tag(tag):
+            writeInt(&buf, Int32(33))
+            FfiConverterString.write(tag, into: &buf)
+            
+        
+        case let .untag(tag):
+            writeInt(&buf, Int32(34))
+            FfiConverterString.write(tag, into: &buf)
+            
+        
+        case let .list(query):
+            writeInt(&buf, Int32(35))
+            FfiConverterString.write(query, into: &buf)
+            
+        
+        case let .priority(rank):
+            writeInt(&buf, Int32(36))
+            FfiConverterInt64.write(rank, into: &buf)
+            
+        
+        case .priorityBack:
+            writeInt(&buf, Int32(37))
+        
+        
+        case .clearPriority:
+            writeInt(&buf, Int32(38))
+        
+        
+        case .syncObsidian:
+            writeInt(&buf, Int32(39))
+        
+        
+        case .syncObsidianNewWindow:
+            writeInt(&buf, Int32(40))
+        
+        
+        case .chooseObsidianInbox:
+            writeInt(&buf, Int32(41))
+        
+        
+        case .clearObsidianInbox:
+            writeInt(&buf, Int32(42))
+        
+        
+        case .linkObsidianFolder:
+            writeInt(&buf, Int32(43))
+        
+        
+        case .createObsidianFolder:
+            writeInt(&buf, Int32(44))
+        
+        
+        case .clearObsidianFolderLink:
+            writeInt(&buf, Int32(45))
+        
+        
+        case .syncAffine:
+            writeInt(&buf, Int32(46))
+        
+        
+        case .openAffineDocument:
+            writeInt(&buf, Int32(47))
+        
+        
+        case .syncAffineDay:
+            writeInt(&buf, Int32(48))
+        
+        
+        case .syncGoogleCalendar:
+            writeInt(&buf, Int32(49))
+        
+        
+        case .refreshMcpPath:
+            writeInt(&buf, Int32(50))
+        
+        
+        case .copyMcpClientConfig:
+            writeInt(&buf, Int32(51))
+        
+        
+        case .openMcpGuide:
+            writeInt(&buf, Int32(52))
+        
+        
+        case .quickAdd:
+            writeInt(&buf, Int32(53))
+        
+        
+        case .toggleContext:
+            writeInt(&buf, Int32(54))
+        
+        
+        case .toggleChildrenInMenus:
+            writeInt(&buf, Int32(55))
+        
+        
+        case .editAtStart:
+            writeInt(&buf, Int32(56))
+        
+        
+        case .openCommandPalette:
+            writeInt(&buf, Int32(57))
+        
+        
+        case let .unknown(input):
+            writeInt(&buf, Int32(58))
+            FfiConverterString.write(input, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePaletteCommand_lift(_ buf: RustBuffer) throws -> PaletteCommand {
+    return try FfiConverterTypePaletteCommand.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePaletteCommand_lower(_ value: PaletteCommand) -> RustBuffer {
+    return FfiConverterTypePaletteCommand.lower(value)
+}
+
+
+
+/**
  * How often a repeating task comes round. `PeriodicSchedule.Cadence`.
  */
 
@@ -18211,6 +18766,40 @@ public func checkvistDueDate(due: String?) -> Int64?  {
 })
 }
 /**
+ * Reads a typed palette command, case-insensitively. Anything it does not
+ * know is [`PaletteCommand::Unknown`] with the input as typed.
+ */
+public func paletteCommandParse(input: String) -> PaletteCommand  {
+    return try!  FfiConverterTypePaletteCommand_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_palette_command_parse(
+        FfiConverterString.lower(input),uniffiCallStatus
+    )
+})
+}
+/**
+ * A `due` or `start` command's words as the string the task stores:
+ * `yyyy-MM-dd` for a day, `yyyy-MM-dd HH:mm:ss +zzzz` for a moment, in
+ * `zone`; and the input unchanged for anything it does not read (`asap`).
+ *
+ * It reads, in this order: a time before a day word (`4pm fri`); `today`,
+ * `tomorrow`, `next week`, `next month`, `next fri`, `this fri` or a bare
+ * weekday (the coming one, never today), each with an optional time after
+ * it; `in 90m`, `in 2 days`, `in a week`; a `yyyy-m-d` date with an optional
+ * time; and a time alone, which is today.
+ */
+public func resolveDueDate(input: String, nowMs: Int64, zone: String, hours: NamedHours) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_resolve_due_date(
+        FfiConverterString.lower(input),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),
+        FfiConverterTypeNamedHours_lower(hours),uniffiCallStatus
+    )
+})
+}
+/**
  * `yyyy-MM-dd` for the logical day containing `at_ms`.
  */
 public func dayBoundaryDayKey(boundary: DayLogBoundary, atMs: Int64) -> String  {
@@ -19286,6 +19875,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_checkvist_due_date() != 16968) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_palette_command_parse() != 40471) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_resolve_due_date() != 36836) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_day_boundary_day_key() != 60525) {

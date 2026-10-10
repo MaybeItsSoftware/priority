@@ -12,6 +12,7 @@ uniffi::setup_scaffolding!();
 pub mod affine;
 pub mod board;
 pub mod capture;
+pub mod command;
 pub mod conditions;
 pub mod conversions;
 pub mod dailies;

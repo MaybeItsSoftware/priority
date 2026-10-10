@@ -707,6 +707,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_checkvist_due_date(
     ): Int
+    external fun uniffi_takt_core_checksum_func_palette_command_parse(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_resolve_due_date(
+    ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_key(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_boundary_day_offset(
@@ -1577,6 +1581,10 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_checkvist_due_date(`due`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_palette_command_parse(`input`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_resolve_due_date(`input`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`hours`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_key(`boundary`: RustBuffer.ByValue,`atMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_boundary_day_offset(`boundary`: RustBuffer.ByValue,`offset`: Long,`fromMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1908,6 +1916,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_checkvist_due_date() and 0xFFFF) != 16968) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_palette_command_parse() and 0xFFFF) != 40471) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_resolve_due_date() and 0xFFFF) != 36836) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_boundary_day_key() and 0xFFFF) != 60525) {
@@ -12672,6 +12686,58 @@ public object FfiConverterTypeMillisInterval: FfiConverterRustBuffer<MillisInter
 
 
 /**
+ * The hours the named times of day stand for: Swift's
+ * `TaktDateParsingConfig`.
+ */
+data class NamedHours (
+    var `morning`: kotlin.Long
+    , 
+    var `afternoon`: kotlin.Long
+    , 
+    var `evening`: kotlin.Long
+    , 
+    var `endOfDay`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeNamedHours: FfiConverterRustBuffer<NamedHours> {
+    override fun read(buf: ByteBuffer): NamedHours {
+        return NamedHours(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: NamedHours) = (
+            FfiConverterLong.allocationSize(value.`morning`) +
+            FfiConverterLong.allocationSize(value.`afternoon`) +
+            FfiConverterLong.allocationSize(value.`evening`) +
+            FfiConverterLong.allocationSize(value.`endOfDay`)
+    )
+
+    override fun write(value: NamedHours, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`morning`, buf)
+            FfiConverterLong.write(value.`afternoon`, buf)
+            FfiConverterLong.write(value.`evening`, buf)
+            FfiConverterLong.write(value.`endOfDay`, buf)
+    }
+}
+
+
+
+/**
  * A task to create: everything any client can set when it adds one.
  */
 data class NewTask (
@@ -16309,6 +16375,940 @@ public object FfiConverterTypeMilestoneOccasion : FfiConverterRustBuffer<Milesto
             is MilestoneOccasion.DailyStreak -> {
                 buf.putInt(5)
                 FfiConverterLong.write(value.`days`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * What a palette command asks for. Each case is one of Swift's `Command`
+ * cases, which wraps it.
+ */
+sealed class PaletteCommand {
+    
+    object Done : PaletteCommand()
+    
+    
+    object Undone : PaletteCommand()
+    
+    
+    object Invalidate : PaletteCommand()
+    
+    
+    data class Due(
+        val `raw`: kotlin.String) : PaletteCommand()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object ClearDue : PaletteCommand()
+    
+    
+    data class SetStart(
+        val `raw`: kotlin.String) : PaletteCommand()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object ClearStart : PaletteCommand()
+    
+    
+    data class SetRecurrence(
+        val `raw`: kotlin.String) : PaletteCommand()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object ClearRecurrence : PaletteCommand()
+    
+    
+    object Edit : PaletteCommand()
+    
+    
+    object Search : PaletteCommand()
+    
+    
+    object OpenPreferences : PaletteCommand()
+    
+    
+    object OpenMainWindow : PaletteCommand()
+    
+    
+    object OpenDiagnostics : PaletteCommand()
+    
+    
+    object ReloadCheckvistLists : PaletteCommand()
+    
+    
+    object UploadOfflineTasks : PaletteCommand()
+    
+    
+    object AddSibling : PaletteCommand()
+    
+    
+    object AddChild : PaletteCommand()
+    
+    
+    object OpenLink : PaletteCommand()
+    
+    
+    object Undo : PaletteCommand()
+    
+    
+    object ToggleTimer : PaletteCommand()
+    
+    
+    object PauseTimer : PaletteCommand()
+    
+    
+    object ToggleHideFuture : PaletteCommand()
+    
+    
+    object Delete : PaletteCommand()
+    
+    
+    object MoveUp : PaletteCommand()
+    
+    
+    object MoveDown : PaletteCommand()
+    
+    
+    object EnterChildren : PaletteCommand()
+    
+    
+    object ExitParent : PaletteCommand()
+    
+    
+    object ExpandTask : PaletteCommand()
+    
+    
+    object CollapseTask : PaletteCommand()
+    
+    
+    object ExpandAll : PaletteCommand()
+    
+    
+    object CollapseAll : PaletteCommand()
+    
+    
+    data class Tag(
+        val `tag`: kotlin.String) : PaletteCommand()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Untag(
+        val `tag`: kotlin.String) : PaletteCommand()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class List(
+        val `query`: kotlin.String) : PaletteCommand()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Priority(
+        val `rank`: kotlin.Long) : PaletteCommand()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object PriorityBack : PaletteCommand()
+    
+    
+    object ClearPriority : PaletteCommand()
+    
+    
+    object SyncObsidian : PaletteCommand()
+    
+    
+    object SyncObsidianNewWindow : PaletteCommand()
+    
+    
+    object ChooseObsidianInbox : PaletteCommand()
+    
+    
+    object ClearObsidianInbox : PaletteCommand()
+    
+    
+    object LinkObsidianFolder : PaletteCommand()
+    
+    
+    object CreateObsidianFolder : PaletteCommand()
+    
+    
+    object ClearObsidianFolderLink : PaletteCommand()
+    
+    
+    object SyncAffine : PaletteCommand()
+    
+    
+    object OpenAffineDocument : PaletteCommand()
+    
+    
+    object SyncAffineDay : PaletteCommand()
+    
+    
+    object SyncGoogleCalendar : PaletteCommand()
+    
+    
+    object RefreshMcpPath : PaletteCommand()
+    
+    
+    object CopyMcpClientConfig : PaletteCommand()
+    
+    
+    object OpenMcpGuide : PaletteCommand()
+    
+    
+    object QuickAdd : PaletteCommand()
+    
+    
+    object ToggleContext : PaletteCommand()
+    
+    
+    object ToggleChildrenInMenus : PaletteCommand()
+    
+    
+    object EditAtStart : PaletteCommand()
+    
+    
+    object OpenCommandPalette : PaletteCommand()
+    
+    
+    /**
+     * Nothing the palette knows, carrying the input as typed.
+     */
+    data class Unknown(
+        val `input`: kotlin.String) : PaletteCommand()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePaletteCommand : FfiConverterRustBuffer<PaletteCommand>{
+    override fun read(buf: ByteBuffer): PaletteCommand {
+        return when(buf.getInt()) {
+            1 -> PaletteCommand.Done
+            2 -> PaletteCommand.Undone
+            3 -> PaletteCommand.Invalidate
+            4 -> PaletteCommand.Due(
+                FfiConverterString.read(buf),
+                )
+            5 -> PaletteCommand.ClearDue
+            6 -> PaletteCommand.SetStart(
+                FfiConverterString.read(buf),
+                )
+            7 -> PaletteCommand.ClearStart
+            8 -> PaletteCommand.SetRecurrence(
+                FfiConverterString.read(buf),
+                )
+            9 -> PaletteCommand.ClearRecurrence
+            10 -> PaletteCommand.Edit
+            11 -> PaletteCommand.Search
+            12 -> PaletteCommand.OpenPreferences
+            13 -> PaletteCommand.OpenMainWindow
+            14 -> PaletteCommand.OpenDiagnostics
+            15 -> PaletteCommand.ReloadCheckvistLists
+            16 -> PaletteCommand.UploadOfflineTasks
+            17 -> PaletteCommand.AddSibling
+            18 -> PaletteCommand.AddChild
+            19 -> PaletteCommand.OpenLink
+            20 -> PaletteCommand.Undo
+            21 -> PaletteCommand.ToggleTimer
+            22 -> PaletteCommand.PauseTimer
+            23 -> PaletteCommand.ToggleHideFuture
+            24 -> PaletteCommand.Delete
+            25 -> PaletteCommand.MoveUp
+            26 -> PaletteCommand.MoveDown
+            27 -> PaletteCommand.EnterChildren
+            28 -> PaletteCommand.ExitParent
+            29 -> PaletteCommand.ExpandTask
+            30 -> PaletteCommand.CollapseTask
+            31 -> PaletteCommand.ExpandAll
+            32 -> PaletteCommand.CollapseAll
+            33 -> PaletteCommand.Tag(
+                FfiConverterString.read(buf),
+                )
+            34 -> PaletteCommand.Untag(
+                FfiConverterString.read(buf),
+                )
+            35 -> PaletteCommand.List(
+                FfiConverterString.read(buf),
+                )
+            36 -> PaletteCommand.Priority(
+                FfiConverterLong.read(buf),
+                )
+            37 -> PaletteCommand.PriorityBack
+            38 -> PaletteCommand.ClearPriority
+            39 -> PaletteCommand.SyncObsidian
+            40 -> PaletteCommand.SyncObsidianNewWindow
+            41 -> PaletteCommand.ChooseObsidianInbox
+            42 -> PaletteCommand.ClearObsidianInbox
+            43 -> PaletteCommand.LinkObsidianFolder
+            44 -> PaletteCommand.CreateObsidianFolder
+            45 -> PaletteCommand.ClearObsidianFolderLink
+            46 -> PaletteCommand.SyncAffine
+            47 -> PaletteCommand.OpenAffineDocument
+            48 -> PaletteCommand.SyncAffineDay
+            49 -> PaletteCommand.SyncGoogleCalendar
+            50 -> PaletteCommand.RefreshMcpPath
+            51 -> PaletteCommand.CopyMcpClientConfig
+            52 -> PaletteCommand.OpenMcpGuide
+            53 -> PaletteCommand.QuickAdd
+            54 -> PaletteCommand.ToggleContext
+            55 -> PaletteCommand.ToggleChildrenInMenus
+            56 -> PaletteCommand.EditAtStart
+            57 -> PaletteCommand.OpenCommandPalette
+            58 -> PaletteCommand.Unknown(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: PaletteCommand): ULong = when(value) {
+        is PaletteCommand.Done -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Undone -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Invalidate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Due -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`raw`)
+            )
+        }
+        is PaletteCommand.ClearDue -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.SetStart -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`raw`)
+            )
+        }
+        is PaletteCommand.ClearStart -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.SetRecurrence -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`raw`)
+            )
+        }
+        is PaletteCommand.ClearRecurrence -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Edit -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Search -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.OpenPreferences -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.OpenMainWindow -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.OpenDiagnostics -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ReloadCheckvistLists -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.UploadOfflineTasks -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.AddSibling -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.AddChild -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.OpenLink -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Undo -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ToggleTimer -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.PauseTimer -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ToggleHideFuture -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Delete -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.MoveUp -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.MoveDown -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.EnterChildren -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ExitParent -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ExpandTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.CollapseTask -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ExpandAll -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.CollapseAll -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Tag -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`tag`)
+            )
+        }
+        is PaletteCommand.Untag -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`tag`)
+            )
+        }
+        is PaletteCommand.List -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`query`)
+            )
+        }
+        is PaletteCommand.Priority -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterLong.allocationSize(value.`rank`)
+            )
+        }
+        is PaletteCommand.PriorityBack -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ClearPriority -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.SyncObsidian -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.SyncObsidianNewWindow -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ChooseObsidianInbox -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ClearObsidianInbox -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.LinkObsidianFolder -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.CreateObsidianFolder -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ClearObsidianFolderLink -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.SyncAffine -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.OpenAffineDocument -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.SyncAffineDay -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.SyncGoogleCalendar -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.RefreshMcpPath -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.CopyMcpClientConfig -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.OpenMcpGuide -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.QuickAdd -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ToggleContext -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.ToggleChildrenInMenus -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.EditAtStart -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.OpenCommandPalette -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PaletteCommand.Unknown -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`input`)
+            )
+        }
+    }
+
+    override fun write(value: PaletteCommand, buf: ByteBuffer) {
+        when(value) {
+            is PaletteCommand.Done -> {
+                buf.putInt(1)
+                Unit
+            }
+            is PaletteCommand.Undone -> {
+                buf.putInt(2)
+                Unit
+            }
+            is PaletteCommand.Invalidate -> {
+                buf.putInt(3)
+                Unit
+            }
+            is PaletteCommand.Due -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`raw`, buf)
+                Unit
+            }
+            is PaletteCommand.ClearDue -> {
+                buf.putInt(5)
+                Unit
+            }
+            is PaletteCommand.SetStart -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`raw`, buf)
+                Unit
+            }
+            is PaletteCommand.ClearStart -> {
+                buf.putInt(7)
+                Unit
+            }
+            is PaletteCommand.SetRecurrence -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`raw`, buf)
+                Unit
+            }
+            is PaletteCommand.ClearRecurrence -> {
+                buf.putInt(9)
+                Unit
+            }
+            is PaletteCommand.Edit -> {
+                buf.putInt(10)
+                Unit
+            }
+            is PaletteCommand.Search -> {
+                buf.putInt(11)
+                Unit
+            }
+            is PaletteCommand.OpenPreferences -> {
+                buf.putInt(12)
+                Unit
+            }
+            is PaletteCommand.OpenMainWindow -> {
+                buf.putInt(13)
+                Unit
+            }
+            is PaletteCommand.OpenDiagnostics -> {
+                buf.putInt(14)
+                Unit
+            }
+            is PaletteCommand.ReloadCheckvistLists -> {
+                buf.putInt(15)
+                Unit
+            }
+            is PaletteCommand.UploadOfflineTasks -> {
+                buf.putInt(16)
+                Unit
+            }
+            is PaletteCommand.AddSibling -> {
+                buf.putInt(17)
+                Unit
+            }
+            is PaletteCommand.AddChild -> {
+                buf.putInt(18)
+                Unit
+            }
+            is PaletteCommand.OpenLink -> {
+                buf.putInt(19)
+                Unit
+            }
+            is PaletteCommand.Undo -> {
+                buf.putInt(20)
+                Unit
+            }
+            is PaletteCommand.ToggleTimer -> {
+                buf.putInt(21)
+                Unit
+            }
+            is PaletteCommand.PauseTimer -> {
+                buf.putInt(22)
+                Unit
+            }
+            is PaletteCommand.ToggleHideFuture -> {
+                buf.putInt(23)
+                Unit
+            }
+            is PaletteCommand.Delete -> {
+                buf.putInt(24)
+                Unit
+            }
+            is PaletteCommand.MoveUp -> {
+                buf.putInt(25)
+                Unit
+            }
+            is PaletteCommand.MoveDown -> {
+                buf.putInt(26)
+                Unit
+            }
+            is PaletteCommand.EnterChildren -> {
+                buf.putInt(27)
+                Unit
+            }
+            is PaletteCommand.ExitParent -> {
+                buf.putInt(28)
+                Unit
+            }
+            is PaletteCommand.ExpandTask -> {
+                buf.putInt(29)
+                Unit
+            }
+            is PaletteCommand.CollapseTask -> {
+                buf.putInt(30)
+                Unit
+            }
+            is PaletteCommand.ExpandAll -> {
+                buf.putInt(31)
+                Unit
+            }
+            is PaletteCommand.CollapseAll -> {
+                buf.putInt(32)
+                Unit
+            }
+            is PaletteCommand.Tag -> {
+                buf.putInt(33)
+                FfiConverterString.write(value.`tag`, buf)
+                Unit
+            }
+            is PaletteCommand.Untag -> {
+                buf.putInt(34)
+                FfiConverterString.write(value.`tag`, buf)
+                Unit
+            }
+            is PaletteCommand.List -> {
+                buf.putInt(35)
+                FfiConverterString.write(value.`query`, buf)
+                Unit
+            }
+            is PaletteCommand.Priority -> {
+                buf.putInt(36)
+                FfiConverterLong.write(value.`rank`, buf)
+                Unit
+            }
+            is PaletteCommand.PriorityBack -> {
+                buf.putInt(37)
+                Unit
+            }
+            is PaletteCommand.ClearPriority -> {
+                buf.putInt(38)
+                Unit
+            }
+            is PaletteCommand.SyncObsidian -> {
+                buf.putInt(39)
+                Unit
+            }
+            is PaletteCommand.SyncObsidianNewWindow -> {
+                buf.putInt(40)
+                Unit
+            }
+            is PaletteCommand.ChooseObsidianInbox -> {
+                buf.putInt(41)
+                Unit
+            }
+            is PaletteCommand.ClearObsidianInbox -> {
+                buf.putInt(42)
+                Unit
+            }
+            is PaletteCommand.LinkObsidianFolder -> {
+                buf.putInt(43)
+                Unit
+            }
+            is PaletteCommand.CreateObsidianFolder -> {
+                buf.putInt(44)
+                Unit
+            }
+            is PaletteCommand.ClearObsidianFolderLink -> {
+                buf.putInt(45)
+                Unit
+            }
+            is PaletteCommand.SyncAffine -> {
+                buf.putInt(46)
+                Unit
+            }
+            is PaletteCommand.OpenAffineDocument -> {
+                buf.putInt(47)
+                Unit
+            }
+            is PaletteCommand.SyncAffineDay -> {
+                buf.putInt(48)
+                Unit
+            }
+            is PaletteCommand.SyncGoogleCalendar -> {
+                buf.putInt(49)
+                Unit
+            }
+            is PaletteCommand.RefreshMcpPath -> {
+                buf.putInt(50)
+                Unit
+            }
+            is PaletteCommand.CopyMcpClientConfig -> {
+                buf.putInt(51)
+                Unit
+            }
+            is PaletteCommand.OpenMcpGuide -> {
+                buf.putInt(52)
+                Unit
+            }
+            is PaletteCommand.QuickAdd -> {
+                buf.putInt(53)
+                Unit
+            }
+            is PaletteCommand.ToggleContext -> {
+                buf.putInt(54)
+                Unit
+            }
+            is PaletteCommand.ToggleChildrenInMenus -> {
+                buf.putInt(55)
+                Unit
+            }
+            is PaletteCommand.EditAtStart -> {
+                buf.putInt(56)
+                Unit
+            }
+            is PaletteCommand.OpenCommandPalette -> {
+                buf.putInt(57)
+                Unit
+            }
+            is PaletteCommand.Unknown -> {
+                buf.putInt(58)
+                FfiConverterString.write(value.`input`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -20599,6 +21599,46 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterOptionalString.lower(`due`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Reads a typed palette command, case-insensitively. Anything it does not
+         * know is [`PaletteCommand::Unknown`] with the input as typed.
+         */ fun `paletteCommandParse`(`input`: kotlin.String): PaletteCommand {
+            return FfiConverterTypePaletteCommand.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_palette_command_parse(
+    
+        
+        FfiConverterString.lower(`input`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A `due` or `start` command's words as the string the task stores:
+         * `yyyy-MM-dd` for a day, `yyyy-MM-dd HH:mm:ss +zzzz` for a moment, in
+         * `zone`; and the input unchanged for anything it does not read (`asap`).
+         *
+         * It reads, in this order: a time before a day word (`4pm fri`); `today`,
+         * `tomorrow`, `next week`, `next month`, `next fri`, `this fri` or a bare
+         * weekday (the coming one, never today), each with an optional time after
+         * it; `in 90m`, `in 2 days`, `in a week`; a `yyyy-m-d` date with an optional
+         * time; and a time alone, which is today.
+         */ fun `resolveDueDate`(`input`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String, `hours`: NamedHours): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_resolve_due_date(
+    
+        
+        FfiConverterString.lower(`input`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),
+        FfiConverterTypeNamedHours.lower(`hours`),_status)
 }
     )
     }
