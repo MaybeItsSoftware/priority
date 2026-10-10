@@ -15,6 +15,7 @@ pub mod conversions;
 pub mod dailies;
 pub mod editor;
 pub mod error;
+pub mod export;
 pub mod focus;
 pub mod habits;
 pub mod imports;

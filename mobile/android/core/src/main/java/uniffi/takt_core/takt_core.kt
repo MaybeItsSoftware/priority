@@ -805,6 +805,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_suggested_block_seconds(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_export_workspace(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_work_progress(
@@ -1127,6 +1129,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_export_workspace(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`format`: RustBuffer.ByValue,`exportedAtMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_resolve_stale_focus_session(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,`rolloverHour`: Byte,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_work_progress(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,`firstWeekday`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -1863,6 +1867,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_suggested_block_seconds() and 0xFFFF) != 3786) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_export_workspace() and 0xFFFF) != 22213) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session() and 0xFFFF) != 39926) {
@@ -2817,6 +2824,12 @@ public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * The workspace `workspace_id` written out as `format`, stamped
+     * `exported_at_ms`; absent when there is no such workspace.
+     */
+    fun `exportWorkspace`(`workspaceId`: kotlin.String, `format`: ExportFormat, `exportedAtMs`: kotlin.Long): kotlin.String?
+    
+    /**
      * Settles the session left paused when the app last went away: closes
      * it, crediting its seconds at the moment it was paused, as one "Log
      * Daily Progress" step, or discards it. `resolveStaleFocusSession`.
@@ -3691,6 +3704,27 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * The workspace `workspace_id` written out as `format`, stamped
+     * `exported_at_ms`; absent when there is no such workspace.
+     */
+    @Throws(CoreException::class)override fun `exportWorkspace`(`workspaceId`: kotlin.String, `format`: ExportFormat, `exportedAtMs`: kotlin.Long): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_export_workspace(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterTypeExportFormat.lower(`format`),
+        FfiConverterLong.lower(`exportedAtMs`),_status)
+}
+    }
+    )
+    }
+    
 
     
     /**
@@ -13867,6 +13901,43 @@ public object FfiConverterTypeCoreThemePlatform: FfiConverterRustBuffer<CoreThem
     override fun allocationSize(value: CoreThemePlatform) = 4UL
 
     override fun write(value: CoreThemePlatform, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * The two formats the workspace is written out in.
+ */
+
+enum class ExportFormat {
+    
+    MARKDOWN,
+    JSON;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeExportFormat: FfiConverterRustBuffer<ExportFormat> {
+    override fun read(buf: ByteBuffer) = try {
+        ExportFormat.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ExportFormat) = 4UL
+
+    override fun write(value: ExportFormat, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }

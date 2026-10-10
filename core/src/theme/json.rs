@@ -12,6 +12,9 @@ pub enum Json {
     Null,
     Bool(bool),
     Number(f64),
+    /// Written as Swift writes an `Int`: every digit, never an exponent. The
+    /// reader never makes one; it is for writers whose fields are integers.
+    Integer(i64),
     String(String),
     Array(Vec<Json>),
     Object(Vec<(String, Json)>),
@@ -290,11 +293,19 @@ impl Parser {
 /// newline. `None` when a number is not finite, which JSON cannot hold.
 pub fn pretty(value: &Json) -> Option<String> {
     let mut out = String::new();
-    write(value, &mut out, 0)?;
+    write(value, &mut out, 0, false)?;
     Some(out)
 }
 
-fn write(value: &Json, out: &mut String, depth: usize) -> Option<()> {
+/// `pretty` without `.withoutEscapingSlashes`: every `/` written `\/`, as
+/// `JSONEncoder` does by default. The workspace export is written this way.
+pub fn pretty_escaping_slashes(value: &Json) -> Option<String> {
+    let mut out = String::new();
+    write(value, &mut out, 0, true)?;
+    Some(out)
+}
+
+fn write(value: &Json, out: &mut String, depth: usize, slashes: bool) -> Option<()> {
     let indent = "  ".repeat(depth + 1);
     let closing = "  ".repeat(depth);
     match value {
@@ -306,7 +317,8 @@ fn write(value: &Json, out: &mut String, depth: usize) -> Option<()> {
             }
             out.push_str(&json_number(*n));
         }
-        Json::String(s) => write_string(s, out),
+        Json::Integer(n) => out.push_str(&n.to_string()),
+        Json::String(s) => write_string(s, out, slashes),
         Json::Array(items) => {
             out.push_str("[\n");
             if items.is_empty() {
@@ -314,7 +326,7 @@ fn write(value: &Json, out: &mut String, depth: usize) -> Option<()> {
             }
             for (index, item) in items.iter().enumerate() {
                 out.push_str(&indent);
-                write(item, out, depth + 1)?;
+                write(item, out, depth + 1, slashes)?;
                 if index + 1 < items.len() {
                     out.push(',');
                 }
@@ -332,9 +344,9 @@ fn write(value: &Json, out: &mut String, depth: usize) -> Option<()> {
             }
             for (index, (key, item)) in sorted.iter().enumerate() {
                 out.push_str(&indent);
-                write_string(key, out);
+                write_string(key, out, slashes);
                 out.push_str(" : ");
-                write(item, out, depth + 1)?;
+                write(item, out, depth + 1, slashes)?;
                 if index + 1 < sorted.len() {
                     out.push(',');
                 }
@@ -347,10 +359,11 @@ fn write(value: &Json, out: &mut String, depth: usize) -> Option<()> {
     Some(())
 }
 
-fn write_string(s: &str, out: &mut String) {
+fn write_string(s: &str, out: &mut String, slashes: bool) {
     out.push('"');
     for c in s.chars() {
         match c {
+            '/' if slashes => out.push_str("\\/"),
             '"' => out.push_str("\\\""),
             '\\' => out.push_str("\\\\"),
             '\n' => out.push_str("\\n"),
@@ -455,6 +468,7 @@ mod tests {
         write_string(
             "a/b\"\\\n\t\u{1}\u{1f}\u{7f}é\u{2028}😀\r\u{8}\u{c}",
             &mut out,
+            false,
         );
         assert_eq!(
             out,

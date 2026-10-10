@@ -1,0 +1,91 @@
+{
+  "exportedAt" : "2025-10-06T12:00:00Z",
+  "lists" : [
+    {
+      "list" : {
+        "colorHex" : "#007fff",
+        "completedAt" : "2025-10-05T21:33:20Z",
+        "createdAt" : "2025-09-27T19:06:40Z",
+        "folderId" : "F1",
+        "id" : "L1",
+        "isArchived" : false,
+        "name" : "Inbox \/ \"main\"",
+        "sortOrder" : 0,
+        "systemRole" : "inbox",
+        "updatedAt" : "2025-09-28T22:53:20Z",
+        "visibleRootTaskId" : "T1",
+        "workspaceId" : "W"
+      },
+      "tasks" : [
+        {
+          "createdAt" : "2025-09-27T19:06:41Z",
+          "id" : "T1",
+          "listId" : "L1",
+          "notes" : "First line\n\nSecond \\ line\ttab",
+          "sortOrder" : 0,
+          "status" : "open",
+          "title" : "Plan the week",
+          "updatedAt" : "2025-09-27T19:06:42Z"
+        },
+        {
+          "archivedAt" : "2025-10-08T05:06:40Z",
+          "completedAt" : "2025-10-07T15:13:20Z",
+          "createdAt" : "2025-09-27T19:06:43Z",
+          "dueAt" : "2025-10-07T01:20:00Z",
+          "estimateSeconds" : 1800,
+          "id" : "T2",
+          "isPromoted" : false,
+          "itemKind" : "list",
+          "listId" : "L1",
+          "notes" : "",
+          "parentTaskId" : "T1",
+          "sortOrder" : 1,
+          "sourceId" : "123",
+          "sourceSystem" : "checkvist",
+          "status" : "completed",
+          "title" : "Draft notes é😀",
+          "updatedAt" : "2025-09-27T19:06:44Z"
+        },
+        {
+          "createdAt" : "2025-09-27T19:06:45Z",
+          "estimateSeconds" : 0,
+          "id" : "T3",
+          "isPromoted" : true,
+          "itemKind" : "task",
+          "listId" : "L1",
+          "notes" : "only",
+          "parentTaskId" : "T2",
+          "sortOrder" : 0,
+          "status" : "cancelled",
+          "title" : "Deep",
+          "updatedAt" : "2025-09-27T19:06:46Z"
+        },
+        {
+          "createdAt" : "2025-09-27T19:06:47Z",
+          "id" : "T4",
+          "listId" : "L1",
+          "notes" : "",
+          "sortOrder" : 1,
+          "status" : "open",
+          "title" : "Second root",
+          "updatedAt" : "2025-09-27T19:06:48Z"
+        }
+      ]
+    },
+    {
+      "list" : {
+        "createdAt" : "1970-01-01T00:00:00Z",
+        "id" : "L2",
+        "isArchived" : true,
+        "name" : "Old",
+        "sortOrder" : 1,
+        "updatedAt" : "1970-01-01T00:00:01Z",
+        "workspaceId" : "W"
+      },
+      "tasks" : [
+
+      ]
+    }
+  ],
+  "workspace" : "Adam's workspace"
+}

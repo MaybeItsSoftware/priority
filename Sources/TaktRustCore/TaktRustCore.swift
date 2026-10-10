@@ -663,6 +663,12 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * The workspace `workspace_id` written out as `format`, stamped
+     * `exported_at_ms`; absent when there is no such workspace.
+     */
+    func exportWorkspace(workspaceId: String, format: ExportFormat, exportedAtMs: Int64) throws  -> String?
+    
+    /**
      * Settles the session left paused when the app last went away: closes
      * it, crediting its seconds at the moment it was paused, as one "Log
      * Daily Progress" step, or discards it. `resolveStaleFocusSession`.
@@ -1500,6 +1506,22 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * The workspace `workspace_id` written out as `format`, stamped
+     * `exported_at_ms`; absent when there is no such workspace.
+     */
+open func exportWorkspace(workspaceId: String, format: ExportFormat, exportedAtMs: Int64)throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_export_workspace(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterTypeExportFormat_lower(format),
+        FfiConverterInt64.lower(exportedAtMs),uniffiCallStatus
+    )
+})
+}
     
     /**
      * Settles the session left paused when the app last went away: closes
@@ -12438,6 +12460,75 @@ public func FfiConverterTypeCoreThemePlatform_lower(_ value: CoreThemePlatform) 
 
 
 /**
+ * The two formats the workspace is written out in.
+ */
+
+public enum ExportFormat: Equatable, Hashable {
+    
+    case markdown
+    case json
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ExportFormat: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeExportFormat: FfiConverterRustBuffer {
+    typealias SwiftType = ExportFormat
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ExportFormat {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .markdown
+        
+        case 2: return .json
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ExportFormat, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .markdown:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .json:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeExportFormat_lift(_ buf: RustBuffer) throws -> ExportFormat {
+    return try FfiConverterTypeExportFormat.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeExportFormat_lower(_ value: ExportFormat) -> RustBuffer {
+    return FfiConverterTypeExportFormat.lower(value)
+}
+
+
+
+/**
  * How hard a completion lands. `CompletionMilestone`.
  */
 
@@ -16558,6 +16649,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_suggested_block_seconds() != 3786) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_export_workspace() != 22213) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session() != 39926) {
