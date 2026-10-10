@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// Which day a finished thing belongs to, as a *relation* rather than a string.
 ///
@@ -38,45 +39,48 @@ public struct CompletedWorkGroup<Item>: Identifiable {
 /// and around a week's edge — can be tested without a window.
 public enum CompletedWorkDigest {
   /// Groups `items` by the calendar day of `completedAt`, days newest first and
-  /// each day's own items newest first.
+  /// each day's own items newest first. The Rust core's
+  /// `progress::group_completed_work`, which hands back indices, so only the
+  /// moments cross.
   public static func group<Item>(
     _ items: [Item],
     completedAt: (Item) -> Date,
     now: Date = .now,
     calendar: Calendar = .current
   ) -> [CompletedWorkGroup<Item>] {
-    let buckets = Dictionary(grouping: items) { calendar.startOfDay(for: completedAt($0)) }
-    return buckets.keys.sorted(by: >).map { dayStart in
+    groupCompletedWork(
+      completedAtMs: items.map { completedAt($0).rankingMilliseconds }, nowMs: now.rankingMilliseconds,
+      zone: calendar.timeZone.identifier
+    ).map { day in
       CompletedWorkGroup(
-        dayStart: dayStart,
-        kind: kind(of: dayStart, now: now, calendar: calendar),
-        items: buckets[dayStart, default: []].sorted { completedAt($0) > completedAt($1) })
+        dayStart: Date(rankingMilliseconds: day.dayStartMs), kind: CompletedWorkDayKind(core: day.kind),
+        items: day.items.map { items[Int($0)] })
     }
   }
 
-  /// How far back `dayStart` is from the day containing `now`.
-  ///
-  /// Counted in days rather than compared against a rolling interval of
-  /// seconds: something closed at eleven last night is yesterday, not "twelve
-  /// hours ago", and a user reading the rail at nine in the morning means the
-  /// same thing by it.
-  /// Both ends are taken to the start of their day first, so a caller may pass
-  /// the moment something was finished rather than having to normalise it — the
-  /// version that trusted its argument read "yesterday at eleven" as today.
+  /// How far back `day` is from the day containing `now`, counted in days
+  /// rather than against a rolling interval of seconds: something closed at
+  /// eleven last night is yesterday. Both ends are taken to the start of
+  /// their day first, so a caller may pass the moment something was finished.
+  /// The Rust core's `progress::completed_day_kind`.
   public static func kind(
     of day: Date,
     now: Date = .now,
     calendar: Calendar = .current
   ) -> CompletedWorkDayKind {
-    let today = calendar.startOfDay(for: now)
-    let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: day), to: today).day ?? 0
-    switch days {
-    case ..<1: return .today
-    case 1: return .yesterday
-    // Six, not seven: at seven days a weekday name names two days and picks the
-    // wrong one.
-    case 2...6: return .thisWeek
-    default: return .earlier
+    CompletedWorkDayKind(
+      core: completedDayKind(
+        dayMs: day.rankingMilliseconds, nowMs: now.rankingMilliseconds, zone: calendar.timeZone.identifier))
+  }
+}
+
+extension CompletedWorkDayKind {
+  init(core kind: CompletedDayKind) {
+    switch kind {
+    case .today: self = .today
+    case .yesterday: self = .yesterday
+    case .thisWeek: self = .thisWeek
+    case .earlier: self = .earlier
     }
   }
 }

@@ -20,7 +20,7 @@ import uk.co.maybeitsadam.takt.core.FocusWorkBlock
 import uk.co.maybeitsadam.takt.core.NextUpCandidate
 import uk.co.maybeitsadam.takt.core.NextUpSelector
 import uk.co.maybeitsadam.takt.core.PeriodicSchedule
-import uk.co.maybeitsadam.takt.core.StaleFocusPolicy
+import uk.co.maybeitsadam.takt.core.resolution
 import uk.co.maybeitsadam.takt.core.StaleFocusResolution
 import uk.co.maybeitsadam.takt.core.TaskAvailabilityPolicy
 import uk.co.maybeitsadam.takt.core.TaskCapture
@@ -912,31 +912,18 @@ class WorkspaceRepository(
         coreWrite { it.rebaseFocusClock(id, elapsedSeconds.toLong(), now.toEpochMilli()) }
     }
 
-    /** Settles a session left paused on an earlier logical day: closes (crediting) or discards it. */
+    /**
+     * Settles a session left paused on an earlier logical day: closes (crediting
+     * at the pause) or discards it. The Rust core's `progress::resolve_stale_session`
+     * reads the session, applies `StaleFocusPolicy` and writes the outcome.
+     */
     suspend fun resolveStaleFocusSession(
         now: Instant = now(),
         boundary: DayBoundary = DayBoundary(zone = zone),
         context: FocusContext = FocusContext(),
-    ): StaleFocusResolution {
-        val session = activeFocusSession() ?: return StaleFocusResolution.KEEP
-        val resolution = StaleFocusPolicy.resolution(
-            pausedAt = session.pausedAt, accumulatedSeconds = maxOf(0, session.accumulatedSeconds ?: 0),
-            hasActiveTask = session.activeTaskId != null, now = now, boundary = boundary,
-        )
-        val endedAt = session.pausedAt ?: now
-        when (resolution) {
-            StaleFocusResolution.KEEP -> Unit
-            StaleFocusResolution.CLOSE -> {
-                completeActiveFocusTask(
-                    sessionId = session.id, elapsedSeconds = maxOf(0, session.accumulatedSeconds ?: 0),
-                    completeTask = false, expectedBlockId = session.activeBlockId, context = context, now = endedAt,
-                )
-                finishFocusSession(session.id, endedAt)
-            }
-            StaleFocusResolution.DISCARD -> finishFocusSession(session.id, endedAt)
-        }
-        return resolution
-    }
+    ): StaleFocusResolution = coreWrite {
+        it.resolveStaleFocusSession(now.coreMillis, boundary.zone.coreName, boundary.rolloverHour.toUByte(), context.toCore())
+    }.resolution
 
     /** Seconds of focused work per task, across renames and deletions. */
     suspend fun loggedWorkTotals(): Map<String, Int> = database.read { loggedWorkTotals(it) }

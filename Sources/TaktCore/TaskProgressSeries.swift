@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// How far back the progress graph looks.
 public enum TaskProgressPeriod: String, CaseIterable, Sendable, Identifiable {
@@ -71,17 +72,18 @@ public struct TaskProgressSeries: Equatable, Sendable {
 
   /// The interval the period covers: from the start of its first day to the
   /// end of today, half open, so it can be handed straight to a query.
+  /// The Rust core's `progress::task_progress_interval`.
   public static func interval(
     for period: TaskProgressPeriod, now: Date = .now, calendar: Calendar = .current
   ) -> DateInterval {
-    let today = calendar.startOfDay(for: now)
-    let start = calendar.date(byAdding: .day, value: -(period.days - 1), to: today) ?? today
-    let end = calendar.date(byAdding: .day, value: 1, to: today) ?? now
-    return DateInterval(start: start, end: end)
+    let span = taskProgressInterval(
+      days: UInt32(period.days), nowMs: now.rankingMilliseconds, zone: calendar.timeZone.identifier)
+    return DateInterval(start: Date(rankingMilliseconds: span.startMs), end: Date(rankingMilliseconds: span.endMs))
   }
 
   /// Buckets completion and creation times into the period's days. Times
   /// outside the period are ignored rather than clamped onto its ends.
+  /// The Rust core's `progress::task_progress_days`.
   public static func build(
     period: TaskProgressPeriod,
     completions: [Date],
@@ -89,24 +91,14 @@ public struct TaskProgressSeries: Equatable, Sendable {
     now: Date = .now,
     calendar: Calendar = .current
   ) -> TaskProgressSeries {
-    let interval = interval(for: period, now: now, calendar: calendar)
-    func counts(_ dates: [Date]) -> [Date: Int] {
-      dates.filter { $0 >= interval.start && $0 < interval.end }
-        .reduce(into: [:]) { $0[calendar.startOfDay(for: $1), default: 0] += 1 }
-    }
-    let done = counts(completions)
-    let added = counts(creations)
-    var running = 0
-    var days: [TaskProgressDay] = []
-    var day = interval.start
-    while day < interval.end {
-      let completed = done[day, default: 0]
-      running += completed
-      days.append(TaskProgressDay(
-        dayStart: day, completed: completed, added: added[day, default: 0], cumulativeCompleted: running))
-      guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
-      day = next
-    }
-    return TaskProgressSeries(days: days)
+    let days = taskProgressDays(
+      days: UInt32(period.days), completionsMs: completions.map(\.rankingMilliseconds),
+      creationsMs: creations.map(\.rankingMilliseconds), nowMs: now.rankingMilliseconds,
+      zone: calendar.timeZone.identifier)
+    return TaskProgressSeries(days: days.map {
+      TaskProgressDay(
+        dayStart: Date(rankingMilliseconds: $0.dayStartMs), completed: Int($0.completed), added: Int($0.added),
+        cumulativeCompleted: Int($0.cumulativeCompleted))
+    })
   }
 }

@@ -17,9 +17,8 @@ import uk.co.maybeitsadam.takt.core.NextUpSelector
 import uk.co.maybeitsadam.takt.core.TaskCondition
 import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.core.TaskPlanning
-import uk.co.maybeitsadam.takt.core.WorkBlockTime
 import uk.co.maybeitsadam.takt.core.WorkProgress
-import uk.co.maybeitsadam.takt.core.WorkProgressSummary
+import uk.co.maybeitsadam.takt.core.of
 import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.core.coreMillis
@@ -111,18 +110,10 @@ internal fun workProgress(
     now: Instant,
     zone: ZoneId,
     firstWeekday: Int = defaultFirstWeekday(),
-): WorkProgress {
-    val start = WorkProgressSummary.startOfWeek(now, zone, firstWeekday)
-    val end = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
-    if (end <= start) return WorkProgress.EMPTY
-    return WorkProgressSummary.summarise(
-        completions = completionsIn(db, start, end),
-        blocks = workBlocksIn(db, start, end).map { WorkBlockTime(it.seconds, it.recordedAt) },
-        now = now,
-        zone = zone,
-        firstWeekday = firstWeekday,
-    )
-}
+): WorkProgress =
+    // The Rust core's `progress::work_progress`: it reads the week's rows and
+    // sums them itself, so none of them cross.
+    WorkProgress.of(db.core.workProgress(now.coreMillis, zone.coreName, firstWeekday.toUByte()))
 
 internal fun pointsSummary(db: Db, now: Instant, zone: ZoneId): FocusPointsSummary {
     val today = now.atZone(zone).toLocalDate()

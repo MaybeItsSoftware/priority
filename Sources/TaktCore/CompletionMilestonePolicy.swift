@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// What was just completed, and which row it belongs to.
 ///
@@ -180,22 +181,18 @@ public enum CompletionMilestonePolicy {
     ordinal: Int,
     streakDays: Int = 0
   ) -> CompletionMilestone {
-    if kind.isTask, remainingVisibleTaskCount <= 1 {
-      return .listCleared
+    // The Rust core's `progress::completion_milestone`, which holds the
+    // precedence; `tallyInterval` and `streakMinimum` are its constants.
+    switch completionMilestone(
+      isDaily: !kind.isTask, remainingVisibleTaskCount: Int64(remainingVisibleTaskCount),
+      ordinal: Int64(ordinal), streakDays: Int64(streakDays))
+    {
+    case .ordinary: return .ordinary
+    case .listCleared: return .listCleared
+    case .dailyTicked: return .dailyTicked
+    case .dailyTally(let count): return .dailyTally(count: Int(count))
+    case .dailyStreak(let days): return .dailyStreak(days: Int(days))
     }
-    // Only on the day's opening completion: a streak is a property of the day,
-    // so marking it once is the whole point. Firing it again at noon would say
-    // nothing new and would cost the flourish its rarity.
-    if ordinal == 1, streakDays >= streakMinimum {
-      return .dailyStreak(days: streakDays)
-    }
-    if kind.isDaily {
-      return .dailyTicked
-    }
-    if ordinal > 0, ordinal % tallyInterval == 0 {
-      return .dailyTally(count: ordinal)
-    }
-    return .ordinary
   }
 
   /// Multiplier applied to every duration in a celebration.

@@ -1,10 +1,7 @@
 package uk.co.maybeitsadam.takt.core
 
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalAdjusters
 
 /** One day's or one week's worth of finished work. */
 data class WorkTotals(
@@ -56,7 +53,11 @@ class WorkProgress(
 /** A focus block as `WorkProgressSummary` needs it: `(seconds, recordedAt)`. */
 data class WorkBlockTime(val seconds: Int, val recordedAt: Instant)
 
-/** Builds `WorkProgress` from raw timestamps. Port of `WorkProgressSummary.swift`. */
+/**
+ * Builds `WorkProgress` from raw timestamps: the Rust core's
+ * `progress::summarise_work_progress`. The repository asks the core's
+ * `workProgress` instead, which reads the rows without them crossing.
+ */
 object WorkProgressSummary {
     fun summarise(
         completions: List<Instant>,
@@ -64,24 +65,24 @@ object WorkProgressSummary {
         now: Instant,
         zone: ZoneId = ZoneId.systemDefault(),
         firstWeekday: Int = defaultFirstWeekday(),
-    ): WorkProgress {
-        val today = now.atZone(zone).toLocalDate()
-        val startOfToday = today.atStartOfDay(zone).toInstant()
-        val endOfToday = today.plusDays(1).atStartOfDay(zone).toInstant()
-        val weekStart = startOfWeek(now, zone, firstWeekday)
-
-        fun totals(start: Instant, end: Instant) = WorkTotals(
-            completed = completions.count { it >= start && it < end },
-            seconds = blocks.sumOf { if (it.recordedAt >= start && it.recordedAt < end) maxOf(0, it.seconds) else 0 },
-        )
-
-        val elapsed = ChronoUnit.DAYS.between(weekStart.atZone(zone).toLocalDate(), today).toInt() + 1
-        return WorkProgress(totals(startOfToday, endOfToday), totals(weekStart, endOfToday), elapsed)
-    }
+    ): WorkProgress = WorkProgress.of(
+        uniffi.takt_core.summariseWorkProgress(
+            completions.map { it.coreMillis },
+            blocks.map { uniffi.takt_core.WorkBlockSeconds(it.seconds.toLong(), it.recordedAt.coreMillis) },
+            now.coreMillis,
+            zone.coreName,
+            firstWeekday.toUByte(),
+        ),
+    )
 
     /** The user's own week: `firstWeekday` is Calendar numbering (1 = Sunday, 2 = Monday). */
-    fun startOfWeek(date: Instant, zone: ZoneId = ZoneId.systemDefault(), firstWeekday: Int = defaultFirstWeekday()): Instant {
-        val first = DayOfWeek.of(if (firstWeekday == 1) 7 else firstWeekday - 1)
-        return date.atZone(zone).toLocalDate().with(TemporalAdjusters.previousOrSame(first)).atStartOfDay(zone).toInstant()
-    }
+    fun startOfWeek(date: Instant, zone: ZoneId = ZoneId.systemDefault(), firstWeekday: Int = defaultFirstWeekday()): Instant =
+        Instant.ofEpochMilli(uniffi.takt_core.startOfWeekMs(date.coreMillis, zone.coreName, firstWeekday.toUByte()))
 }
+
+/** The core's totals as `WorkProgress`. */
+fun WorkProgress.Companion.of(totals: uniffi.takt_core.WorkProgressTotals): WorkProgress = WorkProgress(
+    WorkTotals(totals.todayCompleted.toInt(), totals.todaySeconds.toInt()),
+    WorkTotals(totals.weekCompleted.toInt(), totals.weekSeconds.toInt()),
+    totals.elapsedDays.toInt(),
+)

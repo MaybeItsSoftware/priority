@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// Placing a day's focus blocks on a clock.
 ///
@@ -9,10 +10,11 @@ import Foundation
 /// lunch reads as one long bar. The screen says so; this type just does the
 /// arithmetic.
 ///
-/// Pure on purpose. The view supplies hours and points, this supplies minutes
-/// and lanes, and the awkward parts — a block that began before midnight, two
-/// blocks that overlap because one was logged late — are testable without a
-/// window.
+/// The arithmetic is the Rust core's `progress::focus_day_layout` and
+/// `focus_day_summaries`, which hand back indices into the blocks given, so
+/// a title never crosses back. The view supplies hours and points; the core
+/// supplies minutes and lanes, and the awkward parts (a block that began
+/// before midnight, two blocks that overlap because one was logged late).
 public enum FocusDayTimeline {
   /// One block of work, as the timeline needs it. Deliberately not the stored
   /// record: `TaktCore` cannot see the database's types, and the live
@@ -94,13 +96,13 @@ public enum FocusDayTimeline {
   /// A task's title is its latest block's, since a rename happens between
   /// blocks rather than during one.
   public static func summaries(of blocks: [Block], taskKeys: [String: String]) -> [TaskSummary] {
-    Dictionary(grouping: blocks) { taskKeys[$0.id] ?? $0.title }
-      .map { key, values in
-        TaskSummary(
-          id: key, title: values.last?.title ?? "Deleted task",
-          seconds: values.reduce(0) { $0 + $1.seconds }, blocks: values.count)
-      }
-      .sorted { $0.seconds == $1.seconds ? $0.id < $1.id : $0.seconds > $1.seconds }
+    focusDaySummaries(
+      entries: blocks.map { FocusTimelineEntry(key: taskKeys[$0.id] ?? $0.title, seconds: Int64($0.seconds)) }
+    ).map { summary in
+      TaskSummary(
+        id: summary.key, title: blocks[Int(summary.latest)].title, seconds: Int(summary.seconds),
+        blocks: Int(summary.blocks))
+    }
   }
 
   /// The narrowest the ruler gets. An afternoon with one 20-minute block in it
@@ -119,74 +121,18 @@ public enum FocusDayTimeline {
     day: Date,
     calendar: Calendar = .current
   ) -> Layout {
-    let dayStart = calendar.startOfDay(for: day)
-    let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
-
-    // Spans first, in clock order. A zero-length block has no position worth
-    // arguing about and is dropped rather than drawn as a hairline.
-    var spans: [(block: Block, start: Date, end: Date)] = []
-    for block in blocks where block.seconds > 0 {
-      let end = min(max(block.endedAt, dayStart), dayEnd)
-      let start = max(end.addingTimeInterval(-Double(block.seconds)), dayStart)
-      guard end > start else { continue }
-      spans.append((block, start, end))
-    }
-    spans.sort { $0.start == $1.start ? $0.block.id < $1.block.id : $0.start < $1.start }
-
-    let window = self.window(for: spans.map { ($0.start, $0.end) }, dayStart: dayStart, dayEnd: dayEnd, calendar: calendar)
-
-    // Greedy lanes: a block takes the leftmost column free at the moment it
-    // starts. Overlaps are the exception — they happen when a block is logged
-    // late — so the common day comes out one lane wide.
-    var laneEnds: [Date] = []
-    var placements: [Placement] = []
-    for span in spans {
-      let lane = laneEnds.firstIndex { $0 <= span.start } ?? laneEnds.count
-      if lane == laneEnds.count { laneEnds.append(span.end) } else { laneEnds[lane] = span.end }
-      placements.append(
+    let layout = focusDayLayout(
+      blocks: blocks.map {
+        TimelineBlock(id: $0.id, seconds: Int64($0.seconds), endedAtMs: $0.endedAt.rankingMilliseconds)
+      },
+      dayMs: day.rankingMilliseconds, zone: calendar.timeZone.identifier)
+    return Layout(
+      start: Date(rankingMilliseconds: layout.startMs),
+      end: Date(rankingMilliseconds: layout.endMs),
+      placements: layout.placements.map {
         Placement(
-          block: span.block,
-          offsetMinutes: span.start.timeIntervalSince(window.start) / 60,
-          minutes: span.end.timeIntervalSince(span.start) / 60,
-          lane: lane))
-    }
-
-    return Layout(start: window.start, end: window.end, placements: placements, laneCount: max(1, laneEnds.count))
-  }
-
-  /// The hour-aligned window that holds every span, widened to `minimumHours`
-  /// and then pushed back inside the day rather than allowed to overhang it.
-  private static func window(
-    for spans: [(start: Date, end: Date)],
-    dayStart: Date,
-    dayEnd: Date,
-    calendar: Calendar
-  ) -> (start: Date, end: Date) {
-    guard let earliest = spans.map(\.start).min(), let latest = spans.map(\.end).max() else {
-      let start = calendar.date(byAdding: .hour, value: defaultWindow.startHour, to: dayStart) ?? dayStart
-      let end = calendar.date(byAdding: .hour, value: defaultWindow.endHour, to: dayStart) ?? dayEnd
-      return (start, end)
-    }
-    var start = floorToHour(earliest, dayStart: dayStart)
-    var end = ceilToHour(latest, dayStart: dayStart)
-    let minimum = TimeInterval(minimumHours) * 3600
-    if end.timeIntervalSince(start) < minimum {
-      end = start.addingTimeInterval(minimum)
-      if end > dayEnd {
-        end = dayEnd
-        start = max(dayStart, end.addingTimeInterval(-minimum))
-      }
-    }
-    return (start, end)
-  }
-
-  private static func floorToHour(_ date: Date, dayStart: Date) -> Date {
-    let hours = (date.timeIntervalSince(dayStart) / 3600).rounded(.down)
-    return dayStart.addingTimeInterval(max(0, hours) * 3600)
-  }
-
-  private static func ceilToHour(_ date: Date, dayStart: Date) -> Date {
-    let hours = (date.timeIntervalSince(dayStart) / 3600).rounded(.up)
-    return dayStart.addingTimeInterval(max(1, hours) * 3600)
+          block: blocks[Int($0.block)], offsetMinutes: $0.offsetMinutes, minutes: $0.minutes, lane: Int($0.lane))
+      },
+      laneCount: Int(layout.laneCount))
   }
 }

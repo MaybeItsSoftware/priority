@@ -49,16 +49,15 @@ extension WorkspaceStore {
     }.map(WorkspaceTask.init)
   }
 
-  /// Today measured against the week it is part of.
+  /// Today measured against the week it is part of: the Rust core's
+  /// `progress::work_progress`, which reads and sums the rows itself.
   public func workProgress(now: Date = .now, calendar: Calendar = .current) throws -> WorkProgress {
-    let start = WorkProgressSummary.startOfWeek(containing: now, calendar: calendar)
-    let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
-    guard end > start else { return .empty }
-    let interval = DateInterval(start: start, end: end)
-    return WorkProgressSummary.summarise(
-      completions: try taskCompletions(in: interval),
-      blocks: try focusWorkBlocks(in: interval).map { (seconds: $0.seconds, recordedAt: $0.recordedAt) },
-      now: now, calendar: calendar)
+    WorkProgress(
+      core: try Self.mappingCoreErrors {
+        try core.workProgress(
+          nowMs: now.coreMilliseconds, zone: calendar.timeZone.identifier,
+          firstWeekday: UInt8(clamping: calendar.firstWeekday))
+      })
   }
 
   public func pauseFocusSession(id: String, now: Date = .now) throws {
@@ -102,39 +101,23 @@ extension WorkspaceStore {
   /// Settles whatever was left paused when the app last went away.
   ///
   /// Quitting pauses the running block, so a paused session is the normal
-  /// state of a closed app rather than a sign of anything. What was missing was
-  /// the other half: on the way back in, a block from a day that is over gets
-  /// closed rather than restored. Left un-settled it reappeared as the running
-  /// session — on the focus screen, and in the menu bar, as the thing you were
-  /// supposedly in the middle of.
+  /// state of a closed app rather than a sign of anything. On the way back
+  /// in, a block from a day that is over is closed rather than restored; left
+  /// un-settled it reappeared as the running session, on the focus screen and
+  /// in the menu bar.
   ///
   /// Crediting is dated at the pause, not at now, so the sitting lands in the
-  /// day it happened; the timeline for that day is where it shows up.
-  /// `StaleFocusPolicy` holds the decision and is tested on its own.
+  /// day it happened. The Rust core's `progress::resolve_stale_session` reads
+  /// the session, applies `StaleFocusPolicy` and writes the outcome.
   @discardableResult
   public func resolveStaleFocusSession(
     now: Date = .now, boundary: DayBoundary = DayBoundary(), context: FocusContext = FocusContext()
   ) throws -> StaleFocusResolution {
-    guard let session = try activeFocusSession() else { return .keep }
-    let resolution = StaleFocusPolicy.resolution(
-      pausedAt: session.pausedAt,
-      accumulatedSeconds: max(0, session.accumulatedSeconds ?? 0),
-      hasActiveTask: session.activeTaskId != nil,
-      now: now, boundary: boundary)
-    let endedAt = session.pausedAt ?? now
-    switch resolution {
-    case .keep:
-      break
-    case .close:
-      // `completeTask: false` — the block ran out of day, which says nothing
-      // about whether the task is done.
-      try completeActiveFocusTask(
-        sessionId: session.id, elapsedSeconds: max(0, session.accumulatedSeconds ?? 0),
-        completeTask: false, expectedBlockId: session.activeBlockId, context: context, now: endedAt)
-      try finishFocusSession(id: session.id, now: endedAt)
-    case .discard:
-      try finishFocusSession(id: session.id, now: endedAt)
+    let outcome = try coreWrite {
+      try core.resolveStaleFocusSession(
+        nowMs: now.coreMilliseconds, zone: boundary.calendar.timeZone.identifier,
+        rolloverHour: UInt8(clamping: boundary.rolloverHour), context: context.core)
     }
-    return resolution
+    return StaleFocusResolution(core: outcome)
   }
 }

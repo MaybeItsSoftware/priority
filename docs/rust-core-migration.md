@@ -187,6 +187,32 @@ covered the old copies pass against it.
    belongs with the capture syntax; and `DailyCollection`'s ordering and
    editing, which is plain list bookkeeping.
 
+   **Focus and progress (2026-10-10).** `core/src/progress.rs` holds the
+   focus timeline's layout and per-task summaries (`FocusDayTimeline`), today
+   against the week (`WorkProgressSummary`), the progress graph's days
+   (`TaskProgressSeries`), finished work by day (`CompletedWorkDigest`), the
+   stale-session rule (`StaleFocusPolicy`), block scoring (`FocusPoints`
+   minutes, clamp and score, which `focus::finish_block` now uses too, so the
+   prompt's preview and the stored award are one sum) and the completion
+   milestone's precedence (`CompletionMilestonePolicy.milestone`). Swift and
+   Kotlin keep their types and signatures and wrap it; Kotlin's
+   `DayPlanSelector` now calls `plan_day` as Swift's already did. Each call
+   passes its inputs once and gets back numbers or indices into what it
+   passed, so titles and items never cross back. Two read straight from the
+   rows: `CoreWorkspace.work_progress` (the Mac's and Android's weekly totals,
+   which used to fetch the week's blocks and completions across) and
+   `resolve_stale_focus_session`, which reads the session, applies the rule
+   and closes or discards it in the core. Time zone maths is chrono-tz with
+   the caller's zone name, as in `periodic.rs`. One platform difference:
+   Kotlin kept a paused session with no task until the day was over, Swift
+   discarded it at once; Swift's rule won. What stays native: the number
+   format (`FocusPoints.formatted`), the quality presets, the celebration
+   durations and `CelebrationRowTreatment`, which are presentation, and
+   `DayLogAggregator`, which works over the Mac's own JSON event log rather
+   than the database, exists on one platform, and would cross every event of
+   that log on every completion. The CLI's `focus_history` is a plain sum of
+   rows and stayed as it was.
+
 Pure-logic engines in `TaktCore` (the command parser, recurrence, visibility,
 theming) stay in Swift until steps 1 to 8 are done. They are not duplicated
 on Android in the same way, so moving them buys less.

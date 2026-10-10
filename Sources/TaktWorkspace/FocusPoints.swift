@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// Scoring a block of focused work.
 ///
@@ -13,19 +14,23 @@ public enum FocusPoints {
   /// outweigh a month of work.
   public static let multiplierRange: ClosedRange<Double> = 0...5
 
+  /// The Rust core's `progress::focus_minutes`, which the core's own
+  /// `finish_block` scores with, so the prompt's preview and the stored award
+  /// cannot disagree.
   public static func minutes(seconds: Int) -> Double {
-    oneDecimalPlace(Double(max(0, seconds)) / 60)
+    focusMinutes(seconds: Int64(seconds))
   }
 
   /// Clamps a multiplier into range, and treats a nonsense one as ordinary
   /// work rather than rejecting the block and losing the time with it.
+  /// The Rust core's `progress::clamped_focus_multiplier`.
   public static func clamped(multiplier: Double) -> Double {
-    guard multiplier.isFinite else { return FocusQuality.solid.multiplier }
-    return min(max(multiplier, multiplierRange.lowerBound), multiplierRange.upperBound)
+    clampedFocusMultiplier(multiplier: multiplier)
   }
 
+  /// The Rust core's `progress::focus_score`.
   public static func score(seconds: Int, multiplier: Double) -> Double {
-    oneDecimalPlace(minutes(seconds: seconds) * clamped(multiplier: multiplier))
+    focusScore(seconds: Int64(seconds), multiplier: multiplier)
   }
 
   /// The house format for a score: one decimal place, and no trailing `.0` on

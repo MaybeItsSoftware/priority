@@ -6,21 +6,20 @@ import java.util.UUID
 
 /**
  * Scoring a block of focused work: the minutes it took times how well it went,
- * both to one decimal place. Port of `FocusPoints.swift`.
+ * both to one decimal place. The arithmetic is the Rust core's; the format stays here.
  */
 object FocusPoints {
     /** The widest multiplier the app will store. */
     val multiplierRange: ClosedFloatingPointRange<Double> = 0.0..5.0
 
-    fun minutes(seconds: Int): Double = oneDecimalPlace(maxOf(0, seconds) / 60.0)
+    /** The Rust core's `progress::focus_minutes`, which the core scores stored awards with. */
+    fun minutes(seconds: Int): Double = uniffi.takt_core.focusMinutes(seconds.toLong())
 
-    /** Clamps into range; a non-finite multiplier is ordinary (solid) work. */
-    fun clamped(multiplier: Double): Double {
-        if (!multiplier.isFinite()) return FocusQuality.SOLID.multiplier
-        return minOf(maxOf(multiplier, multiplierRange.start), multiplierRange.endInclusive)
-    }
+    /** Clamps into range; a non-finite multiplier is ordinary (solid) work. `progress::clamped_focus_multiplier`. */
+    fun clamped(multiplier: Double): Double = uniffi.takt_core.clampedFocusMultiplier(multiplier)
 
-    fun score(seconds: Int, multiplier: Double): Double = oneDecimalPlace(minutes(seconds) * clamped(multiplier))
+    /** `progress::focus_score`. */
+    fun score(seconds: Int, multiplier: Double): Double = uniffi.takt_core.focusScore(seconds.toLong(), multiplier)
 
     /** One decimal place, and no trailing `.0` on a whole number. */
     fun formatted(points: Double): String {

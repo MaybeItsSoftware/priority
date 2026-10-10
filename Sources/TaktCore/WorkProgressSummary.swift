@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// One day's or one week's worth of finished work.
 public struct WorkTotals: Sendable, Equatable {
@@ -59,8 +60,10 @@ public struct WorkProgress: Sendable, Equatable {
 
 /// Builds `WorkProgress` from raw completion and work-block timestamps.
 ///
-/// Takes flat arrays rather than the store's record types so it can stay in
-/// `TaktCore` and be tested without a database.
+/// The Rust core's `progress::summarise_work_progress`. The store asks the
+/// core's `work_progress` instead, which reads the rows without them
+/// crossing; this stays for callers holding the times already, and so it can
+/// be tested without a database.
 public enum WorkProgressSummary {
   public static func summarise(
     completions: [Date],
@@ -68,31 +71,32 @@ public enum WorkProgressSummary {
     now: Date,
     calendar: Calendar = .current
   ) -> WorkProgress {
-    let startOfToday = calendar.startOfDay(for: now)
-    let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? now
-    let weekStart = startOfWeek(containing: now, calendar: calendar)
-
-    // Half-open on both ends, so a stroke of midnight belongs to exactly one
-    // day and one week.
-    func totals(from start: Date, to end: Date) -> WorkTotals {
-      WorkTotals(
-        completed: completions.filter { $0 >= start && $0 < end }.count,
-        seconds: blocks.reduce(0) { sum, block in
-          block.recordedAt >= start && block.recordedAt < end
-            ? sum + max(0, block.seconds) : sum
-        })
-    }
-
-    let elapsed = (calendar.dateComponents([.day], from: weekStart, to: startOfToday).day ?? 0) + 1
-    return WorkProgress(
-      today: totals(from: startOfToday, to: endOfToday),
-      week: totals(from: weekStart, to: endOfToday),
-      elapsedDays: elapsed)
+    WorkProgress(
+      core: summariseWorkProgress(
+        completionsMs: completions.map(\.rankingMilliseconds),
+        blocks: blocks.map {
+          WorkBlockSeconds(seconds: Int64($0.seconds), recordedAtMs: $0.recordedAt.rankingMilliseconds)
+        },
+        nowMs: now.rankingMilliseconds, zone: calendar.timeZone.identifier,
+        firstWeekday: UInt8(clamping: calendar.firstWeekday)))
   }
 
   /// The user's own week, not a fixed Monday: `calendar.firstWeekday` is what
   /// every other date in the app is already read against.
   public static func startOfWeek(containing date: Date, calendar: Calendar = .current) -> Date {
-    calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? calendar.startOfDay(for: date)
+    Date(
+      rankingMilliseconds: startOfWeekMs(
+        dateMs: date.rankingMilliseconds, zone: calendar.timeZone.identifier,
+        firstWeekday: UInt8(clamping: calendar.firstWeekday)))
+  }
+}
+
+extension WorkProgress {
+  /// The core's totals, as `progress::work_progress` reads them.
+  public init(core totals: WorkProgressTotals) {
+    self.init(
+      today: WorkTotals(completed: Int(totals.todayCompleted), seconds: Int(totals.todaySeconds)),
+      week: WorkTotals(completed: Int(totals.weekCompleted), seconds: Int(totals.weekSeconds)),
+      elapsedDays: Int(totals.elapsedDays))
   }
 }

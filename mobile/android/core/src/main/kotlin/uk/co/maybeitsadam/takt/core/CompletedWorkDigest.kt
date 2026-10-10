@@ -2,7 +2,6 @@ package uk.co.maybeitsadam.takt.core
 
 import java.time.Instant
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 /** Which day a finished thing belongs to, as a relation rather than a string. */
 enum class CompletedWorkDayKind {
@@ -19,7 +18,11 @@ data class CompletedWorkGroup<Item>(val dayStart: Instant, val kind: CompletedWo
     val id: Instant get() = dayStart
 }
 
-/** Buckets finished work into days, newest first. Port of `CompletedWorkDigest.swift`. */
+/**
+ * Buckets finished work into days, newest first. The Rust core's
+ * `progress::group_completed_work`, which hands back indices so only the
+ * moments cross.
+ */
 object CompletedWorkDigest {
     /** Groups by the calendar day of `completedAt`, days newest first, each day's items newest first. */
     fun <Item> group(
@@ -27,25 +30,25 @@ object CompletedWorkDigest {
         completedAt: (Item) -> Instant,
         now: Instant = Instant.now(),
         zone: ZoneId = ZoneId.systemDefault(),
-    ): List<CompletedWorkGroup<Item>> {
-        val buckets = items.groupBy { completedAt(it).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant() }
-        return buckets.keys.sortedDescending().map { dayStart ->
-            CompletedWorkGroup(
-                dayStart,
-                kind(dayStart, now, zone),
-                buckets.getValue(dayStart).sortedByDescending(completedAt),
-            )
-        }
-    }
+    ): List<CompletedWorkGroup<Item>> =
+        uniffi.takt_core.groupCompletedWork(items.map { completedAt(it).coreMillis }, now.coreMillis, zone.coreName)
+            .map { day ->
+                CompletedWorkGroup(
+                    Instant.ofEpochMilli(day.dayStartMs),
+                    day.kind.digestKind,
+                    day.items.map { items[it.toInt()] },
+                )
+            }
 
     /** How far back `day` is from the day containing `now`, counted in calendar days. */
-    fun kind(day: Instant, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): CompletedWorkDayKind {
-        val days = ChronoUnit.DAYS.between(day.atZone(zone).toLocalDate(), now.atZone(zone).toLocalDate())
-        return when {
-            days < 1 -> CompletedWorkDayKind.TODAY
-            days == 1L -> CompletedWorkDayKind.YESTERDAY
-            days in 2..6 -> CompletedWorkDayKind.THIS_WEEK
-            else -> CompletedWorkDayKind.EARLIER
-        }
-    }
+    fun kind(day: Instant, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): CompletedWorkDayKind =
+        uniffi.takt_core.completedDayKind(day.coreMillis, now.coreMillis, zone.coreName).digestKind
 }
+
+private val uniffi.takt_core.CompletedDayKind.digestKind: CompletedWorkDayKind
+    get() = when (this) {
+        uniffi.takt_core.CompletedDayKind.TODAY -> CompletedWorkDayKind.TODAY
+        uniffi.takt_core.CompletedDayKind.YESTERDAY -> CompletedWorkDayKind.YESTERDAY
+        uniffi.takt_core.CompletedDayKind.THIS_WEEK -> CompletedWorkDayKind.THIS_WEEK
+        uniffi.takt_core.CompletedDayKind.EARLIER -> CompletedWorkDayKind.EARLIER
+    }

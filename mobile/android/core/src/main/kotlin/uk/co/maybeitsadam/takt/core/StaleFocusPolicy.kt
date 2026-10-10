@@ -18,8 +18,8 @@ enum class StaleFocusResolution(val raw: String) {
 
 /**
  * Whether a paused focus session is still live when the app comes back. A block
- * paused on an earlier logical day is finished rather than resumed. Port of
- * `StaleFocusPolicy.swift`.
+ * paused on an earlier logical day is finished rather than resumed; one with no
+ * task on it is discarded at once. The Rust core's `progress::stale_focus_outcome`.
  */
 object StaleFocusPolicy {
     /** Under a minute is not a sitting. */
@@ -31,10 +31,16 @@ object StaleFocusPolicy {
         hasActiveTask: Boolean = true,
         now: Instant,
         boundary: DayBoundary = DayBoundary(),
-    ): StaleFocusResolution {
-        if (pausedAt == null) return StaleFocusResolution.KEEP
-        if (boundary.logicalDay(pausedAt) >= boundary.logicalDay(now)) return StaleFocusResolution.KEEP
-        if (!hasActiveTask) return StaleFocusResolution.DISCARD
-        return if (accumulatedSeconds >= MINIMUM_CREDITED_SECONDS) StaleFocusResolution.CLOSE else StaleFocusResolution.DISCARD
-    }
+    ): StaleFocusResolution = uniffi.takt_core.staleFocusOutcome(
+        pausedAt?.coreMillis, accumulatedSeconds.toLong(), hasActiveTask, now.coreMillis,
+        boundary.rolloverHour.toUByte(), boundary.zone.coreName,
+    ).resolution
 }
+
+/** The core's outcome as the policy names it; the data layer maps the store's with it. */
+val uniffi.takt_core.StaleFocusOutcome.resolution: StaleFocusResolution
+    get() = when (this) {
+        uniffi.takt_core.StaleFocusOutcome.KEEP -> StaleFocusResolution.KEEP
+        uniffi.takt_core.StaleFocusOutcome.CLOSE -> StaleFocusResolution.CLOSE
+        uniffi.takt_core.StaleFocusOutcome.DISCARD -> StaleFocusResolution.DISCARD
+    }

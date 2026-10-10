@@ -32,7 +32,7 @@ data class DateInterval(val start: Instant, val end: Instant)
 
 /**
  * Task progress over a period, a day at a time. Every day is present, empty ones
- * included. Port of `TaskProgressSeries.swift`.
+ * included. The bucketing is the Rust core's `progress::task_progress_days`.
  */
 data class TaskProgressSeries(val days: List<TaskProgressDay>) {
     val totalCompleted: Int get() = days.sumOf { it.completed }
@@ -50,11 +50,8 @@ data class TaskProgressSeries(val days: List<TaskProgressDay>) {
     companion object {
         /** From the start of the period's first day to the end of today, half open. */
         fun interval(period: TaskProgressPeriod, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): DateInterval {
-            val today = now.atZone(zone).toLocalDate()
-            return DateInterval(
-                today.minusDays((period.days - 1).toLong()).atStartOfDay(zone).toInstant(),
-                today.plusDays(1).atStartOfDay(zone).toInstant(),
-            )
+            val span = uniffi.takt_core.taskProgressInterval(period.days.toUInt(), now.coreMillis, zone.coreName)
+            return DateInterval(Instant.ofEpochMilli(span.startMs), Instant.ofEpochMilli(span.endMs))
         }
 
         /** Buckets completion and creation times into the period's days; outside times are ignored. */
@@ -64,25 +61,21 @@ data class TaskProgressSeries(val days: List<TaskProgressDay>) {
             creations: List<Instant>,
             now: Instant = Instant.now(),
             zone: ZoneId = ZoneId.systemDefault(),
-        ): TaskProgressSeries {
-            val interval = interval(period, now, zone)
-            fun counts(dates: List<Instant>): Map<Instant, Int> = dates
-                .filter { it >= interval.start && it < interval.end }
-                .groupingBy { it.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant() }
-                .eachCount()
-            val done = counts(completions)
-            val added = counts(creations)
-            var running = 0
-            val days = mutableListOf<TaskProgressDay>()
-            var day = interval.start.atZone(zone).toLocalDate()
-            while (day.atStartOfDay(zone).toInstant() < interval.end) {
-                val start = day.atStartOfDay(zone).toInstant()
-                val completed = done[start] ?: 0
-                running += completed
-                days += TaskProgressDay(start, completed, added[start] ?: 0, running)
-                day = day.plusDays(1)
-            }
-            return TaskProgressSeries(days)
-        }
+        ): TaskProgressSeries = TaskProgressSeries(
+            uniffi.takt_core.taskProgressDays(
+                period.days.toUInt(),
+                completions.map { it.coreMillis },
+                creations.map { it.coreMillis },
+                now.coreMillis,
+                zone.coreName,
+            ).map {
+                TaskProgressDay(
+                    Instant.ofEpochMilli(it.dayStartMs),
+                    it.completed.toInt(),
+                    it.added.toInt(),
+                    it.cumulativeCompleted.toInt(),
+                )
+            },
+        )
     }
 }
