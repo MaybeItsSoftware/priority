@@ -25,7 +25,6 @@ import Observation
   static let defaultBreakDurationMinutes = 5
 
   @ObservationIgnored private let preferencesStore: PreferencesStore
-  @ObservationIgnored private let cacheInvalidationBus: CacheInvalidationBus
   @ObservationIgnored private var breakTickerTask: Task<Void, Never>?
 
   /// Task ID for which the focus-start prompt is showing.
@@ -84,11 +83,9 @@ import Observation
   @ObservationIgnored var onFocusSessionCompleted: ((Int, Int) -> Void)?
 
   init(
-    preferencesStore: PreferencesStore,
-    cacheInvalidationBus: CacheInvalidationBus = CacheInvalidationBus()
+    preferencesStore: PreferencesStore
   ) {
     self.preferencesStore = preferencesStore
-    self.cacheInvalidationBus = cacheInvalidationBus
     let storedDuration = preferencesStore.int(
       .focusDurationMinutes, default: Self.defaultDurationMinutes
     )
@@ -110,12 +107,10 @@ import Observation
     session = nil
     phase = nil
     promptTaskId = taskId
-    cacheInvalidationBus.invalidate()
   }
 
   func dismissPrompt() {
     promptTaskId = nil
-    cacheInvalidationBus.invalidate()
   }
 
   // MARK: - Session lifecycle
@@ -131,7 +126,6 @@ import Observation
     phase = .running
     lastFocusedTaskId = taskId
     promptTaskId = nil
-    cacheInvalidationBus.invalidate()
   }
 
   /// Begin another focus session on the last focused task (if it still exists).
@@ -147,7 +141,6 @@ import Observation
     )
     phase = .running
     promptTaskId = nil
-    cacheInvalidationBus.invalidate()
   }
 
   func cancelSession() {
@@ -156,7 +149,6 @@ import Observation
     phase = nil
     promptTaskId = nil
     lastFocusedTaskId = nil
-    cacheInvalidationBus.invalidate()
   }
 
   /// Called by `TimerManager.onTick` while the focus phase is active. Crosses
@@ -176,7 +168,6 @@ import Observation
     }
     onFocusBlockEnded?()
     onAlert?()
-    cacheInvalidationBus.invalidate()
   }
 
   // MARK: - Break lifecycle
@@ -187,14 +178,12 @@ import Observation
     phase = .breakRunning(endsAt: endsAt)
     session = nil
     startBreakTicker(endsAt: endsAt)
-    cacheInvalidationBus.invalidate()
   }
 
   /// Cancel an active break and return to "ready for another session" state.
   func skipBreak() {
     cancelBreakTicker()
     phase = .breakCompleted
-    cacheInvalidationBus.invalidate()
   }
 
   /// Remaining seconds in the current break phase, or 0 if not on a break.
@@ -231,7 +220,6 @@ import Observation
     guard case .breakRunning = phase else { return }
     phase = .breakCompleted
     onAlert?()
-    cacheInvalidationBus.invalidate()
   }
 
   // MARK: - Misc

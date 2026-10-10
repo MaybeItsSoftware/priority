@@ -43,7 +43,6 @@ struct PendingTaskUpdate: Sendable, Codable {
   @ObservationIgnored let legacyPriorityQueueStore: ListScopedTaskIDStore
   @ObservationIgnored let eisenhowerStore: ListScopedEisenhowerStore
   @ObservationIgnored let expandedTaskIdStore: ListScopedTaskIDStore
-  @ObservationIgnored let cacheInvalidationBus: CacheInvalidationBus
 
   // MARK: - Callbacks
 
@@ -63,12 +62,8 @@ struct PendingTaskUpdate: Sendable, Codable {
 
   // MARK: - Task Data
 
-  var tasks: [CheckvistTask] = [] {
-    didSet { cacheInvalidationBus.invalidate() }
-  }
-  var availableLists: [CheckvistList] = [] {
-    didSet { cacheInvalidationBus.invalidate() }
-  }
+  var tasks: [CheckvistTask] = []
+  var availableLists: [CheckvistList] = []
 
   // MARK: - Auth / Connection
 
@@ -112,7 +107,6 @@ struct PendingTaskUpdate: Sendable, Codable {
     didSet {
       guard checkvistIntegrationEnabled != oldValue else { return }
       preferencesStore.set(checkvistIntegrationEnabled, for: .checkvistIntegrationEnabled)
-      cacheInvalidationBus.invalidate()
       onCheckvistIntegrationEnabledChanged?()
     }
   }
@@ -133,9 +127,7 @@ struct PendingTaskUpdate: Sendable, Codable {
     }
   }
   @ObservationIgnored var onErrorMessageSet: ((String) -> Void)?
-  var isNetworkReachable: Bool = true {
-    didSet { cacheInvalidationBus.invalidate() }
-  }
+  var isNetworkReachable: Bool = true
   /// When a fetch last replaced `tasks` without erroring.
   ///
   /// Deliberately in memory only. The question it answers — "is what I am
@@ -152,21 +144,15 @@ struct PendingTaskUpdate: Sendable, Codable {
   // MARK: - Priority
 
   /// Per-parent priority queues. Key = parent task id (0 = root). No cap per scope.
-  var priorityTaskIdsByParentId: [Int: [Int]] {
-    didSet { cacheInvalidationBus.invalidate() }
-  }
+  var priorityTaskIdsByParentId: [Int: [Int]]
 
   /// Convenience: flattened set of all prioritized task ids across every scope.
   var prioritizedTaskIds: Set<Int> {
     Set(priorityTaskIdsByParentId.values.flatMap { $0 })
   }
   /// Global absolute-priority queue across all tasks in the list.
-  var absolutePriorityTaskIds: [Int] {
-    didSet { cacheInvalidationBus.invalidate() }
-  }
-  var taskEisenhowerLevels: [Int: EisenhowerLevel] = [:] {
-    didSet { cacheInvalidationBus.invalidate() }
-  }
+  var absolutePriorityTaskIds: [Int]
+  var taskEisenhowerLevels: [Int: EisenhowerLevel] = [:]
 
   // MARK: - Outline
 
@@ -179,7 +165,6 @@ struct PendingTaskUpdate: Sendable, Codable {
   var expandedTaskIds: Set<Int> = [] {
     didSet {
       guard expandedTaskIds != oldValue else { return }
-      cacheInvalidationBus.invalidate()
       expandedTaskIdStore.save(expandedTaskIds.sorted(), for: listId)
     }
   }
@@ -458,7 +443,6 @@ struct PendingTaskUpdate: Sendable, Codable {
     // that thought they were isolated.
     pendingOfflineWorkStore: PendingOfflineWorkStore? = nil,
     initialRemoteKey: String,
-    cacheInvalidationBus: CacheInvalidationBus = CacheInvalidationBus(),
     defaults: UserDefaults = .standard
   ) {
     self.preferencesStore = preferencesStore
@@ -467,7 +451,6 @@ struct PendingTaskUpdate: Sendable, Codable {
     let resolvedPendingOfflineWorkStore =
       pendingOfflineWorkStore ?? PendingOfflineWorkStore(defaults: defaults)
     self.pendingOfflineWorkStore = resolvedPendingOfflineWorkStore
-    self.cacheInvalidationBus = cacheInvalidationBus
     self.offlineSyncPlugin = OfflineTaskSyncPlugin(localStore: localTaskStore)
     self.priorityQueueStore = ListScopedPriorityStore(
       defaultsKey: Self.scopedPriorityQueuesDefaultsKey,

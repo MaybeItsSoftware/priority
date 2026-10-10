@@ -182,10 +182,12 @@ Worth an eye from someone who owns the palette:
 ### Known-good backlog, not yet claimed
 
 - SwiftLint's standing warnings. After the 2026-10-07 cleanup the count over
-  `Takt/` and `Sources/` is **5 warnings, 0 errors**: three
-  `type_body_length` (`TaskMutationService`, `DayView`, `WorkspaceStore`), one
-  `function_body_length` (`AppCoordinator`'s init) and one
-  `cyclomatic_complexity` (`TaskVisibilityEngine`). **This is the single place that number
+  `Takt/` and `Sources/` is **3 warnings, 0 errors** (2026-10-10): one
+  `type_body_length` (`TaskMutationService`), one `function_body_length`
+  (`AppCoordinator`'s init) and one `vertical_whitespace` in
+  `WorkspaceDesktopBoard.swift`. `DayView` and `WorkspaceStore` no longer
+  trip `type_body_length`, and the `TaskVisibilityEngine` complexity warning
+  went with the engine in roadmap Phase 6. **This is the single place that number
   lives** — `ci.yml` and `ARCHITECTURE_IMPROVEMENT_PLAN.md` point here rather
   than carrying their own copy. Do not add to it;
   `ARCHITECTURE_IMPROVEMENT_PLAN.md` tracks the decomposition that would clear

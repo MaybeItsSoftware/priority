@@ -10,55 +10,37 @@
 
 ## The data-flow spine (read this first)
 
-```
- raw truth                         fan-out            derived view              UI
-┌────────────────────┐         ┌──────────────┐   ┌──────────────────┐   ┌───────────┐
-│ TaskRepository      │ didSet  │ Cache        │   │ TaskListViewModel │   │ SwiftUI   │
-│ NavigationState     │────────▶│ Invalidation │──▶│ .cache (CacheState)│─▶│ views     │
-│ + feature managers  │ .invalidate()  Bus     │   │ rebuilt lazily    │   │ (@Observable)
-└────────────────────┘         └──────────────┘   └──────────────────┘   └───────────┘
-```
+There are two stacks, and only one of them draws anything.
 
-1. A cache-relevant `var` changes on a producer → its `didSet` calls `cacheInvalidationBus.invalidate()`.
-2. The bus (`CacheInvalidationBus.swift`) fans out to its one subscriber: `AppCoordinator`
-   (registered in `LifecycleController`), which calls `TaskListViewModel.invalidateCaches()`.
-3. `invalidateCaches()` only sets the dirty flag. The rebuild happens **lazily**, on the next
-   read of `TaskListViewModel.cache` (or of any accessor that calls
-   `ensureVisibleTasksCacheValid()`).
-4. That rebuild reconstructs the *entire* derived cache (visible tasks, tag index, due buckets,
-   priority ranks) from the raw state, delegating math to the pure engines
-   (`TaskVisibilityEngine`, `TaskFilterEngine`).
-5. Readers — no longer views: the services, the Google Calendar settings page and the daily
-   log's plan — see the new state on their next read.
-
-Invalidation is coarse: any producer change marks the whole cache dirty and the next read
-triggers a full rebuild. Fine for menu-bar-sized lists; not granular.
-
-Rebuilding lazily rather than eagerly matters because writes arrive in bursts — deleting a task
-touches `tasks`, both priority queues and the eisenhower levels, which is four invalidations for
-one user action. Reading `cache` always validates first, so an external reader cannot observe
-a stale snapshot.
-Inside `TaskListViewModel`, use the private `cacheStorage` to avoid re-entering the validity
-check on hot paths.
+- **The desktop workspace** — `WorkspaceViewModel` over `WorkspaceStore` and
+  the Rust core — is the whole UI. It refreshes itself; see the last section.
+- **The Checkvist stack** — `TaskRepository`, `NavigationState`,
+  `SyncService`, `TaskMutationService` and the feature managers below — is
+  what Checkvist sync and import still run on. Nothing on screen shows its
+  tasks any more, so nothing derives a view of them: the lazily rebuilt cache
+  (`TaskListViewModel`, `CacheState`) and the `CacheInvalidationBus` that
+  marked it dirty were deleted in Phase 6 of the desktop roadmap, with the
+  visibility engines it ran. Readers of the Checkvist state read the owner
+  directly.
 
 ## Owners
 
-### `TaskRepository` — the source of truth for tasks, auth, lists
-Raw state (each cache-relevant `var` fires the bus from `didSet`):
+### `TaskRepository` — the source of truth for the Checkvist tasks, auth, lists
+Raw state:
 
-| State | Fires bus | Notes |
-|---|---|---|
-| `tasks: [CheckvistTask]` | ✓ | the list itself |
-| `availableLists: [CheckvistList]` | ✓ | |
-| `priorityTaskIdsByParentId: [Int:[Int]]` | ✓ | per-parent priority queues (0 = root) |
-| `absolutePriorityTaskIds: [Int]` | ✓ | global absolute-priority queue |
-| `taskEisenhowerLevels: [Int:EisenhowerLevel]` | ✓ | |
-| `checkvistIntegrationEnabled: Bool` | ✓ | also persists + fires `onCheckvistIntegrationEnabledChanged` |
-| `isNetworkReachable: Bool` | ✓ | offline↔online transitions |
-| `username` / `remoteKey` / `listId` | — | persist to prefs + fire `onUsernameChanged`/`onRemoteKeyChanged`/`onListIdChanged`; `listId` also reloads priority/eisenhower queues |
-| `isLoading` / `errorMessage` | — | UI status, not cache-relevant |
-| `pendingTaskMutations/Creates/Actions/Deletes` | — | `@ObservationIgnored` offline replay queues; write-through to `PendingOfflineWorkStore` via the `enqueuePending*` helpers |
-| `fetchGeneration` / `completionSuppressionByTaskId` | — | `@ObservationIgnored`; the in-flight fetch coordination described below |
+| State | Notes |
+|---|---|
+| `tasks: [CheckvistTask]` | the list itself |
+| `availableLists: [CheckvistList]` | |
+| `priorityTaskIdsByParentId: [Int:[Int]]` | per-parent priority queues (0 = root) |
+| `absolutePriorityTaskIds: [Int]` | global absolute-priority queue |
+| `taskEisenhowerLevels: [Int:EisenhowerLevel]` | |
+| `checkvistIntegrationEnabled: Bool` | persists + fires `onCheckvistIntegrationEnabledChanged` |
+| `isNetworkReachable: Bool` | offline↔online transitions |
+| `username` / `remoteKey` / `listId` | persist to prefs + fire `onUsernameChanged`/`onRemoteKeyChanged`/`onListIdChanged`; `listId` also reloads priority/eisenhower queues |
+| `isLoading` / `errorMessage` | status |
+| `pendingTaskMutations/Creates/Actions/Deletes` | `@ObservationIgnored` offline replay queues; write-through to `PendingOfflineWorkStore` via the `enqueuePending*` helpers |
+| `fetchGeneration` / `completionSuppressionByTaskId` | `@ObservationIgnored`; the in-flight fetch coordination described below |
 
 Derived (don't re-derive these elsewhere — Finding 3/4 in the plan):
 `hasCredentials`, `canAttemptLogin`, `hasListSelection`, **`canSyncRemotely`** (the single
@@ -67,11 +49,10 @@ source of truth for online vs. offline routing), `activeCredentials`, **`activeS
 themselves), `prioritizedTaskIds`, `absolutePrioritizedTaskIds`, `hasPendingOfflineWork`,
 `offlineOpenTaskCount`.
 
-Also owns **`expandedTaskIds: Set<Int>`** — which tasks show their children inline. It lives
-here rather than on `NavigationState` because it is list-scoped and persisted
-(`ListScopedTaskIDStore`, key `expandedTaskIdsByListId`), so switching lists has to swap it
-the way it swaps the priority queues. `reconcilePriorityQueueWithOpenTasks()` prunes ids whose
-tasks are gone.
+Also owns **`expandedTaskIds: Set<Int>`** — which tasks showed their children inline in the
+popover. Nothing reads it since the legacy list went, but it is list-scoped and persisted
+(`ListScopedTaskIDStore`, key `expandedTaskIdsByListId`), so it is still swapped on a list
+switch and pruned by `reconcilePriorityQueueWithOpenTasks()` rather than deleted.
 
 **In-flight fetch coordination.** Fetches are issued from several places at once — the
 become-active auto-refresh, the refresh button, every mutation's own refetch, the reorder
@@ -87,43 +68,39 @@ a rolled-back close, or a reopen. The offline `pendingTaskActions`/`pendingTaskD
 feed the same filter without a generation, because a close that hasn't gone out stays true for
 as long as it is queued — including across a relaunch.
 
-### `NavigationState` — where the user is in the tree
-| State | Fires bus |
+### `NavigationState` — the Checkvist cursor
+| State | Notes |
 |---|---|
-| `currentParentId: Int` | ✓ |
-| `currentSiblingIndex: Int` | — |
-| `rootScopeFocusLevel: Int` | — |
-| `isPopoverVisible: Bool` | — | *(the popover is gone; the flag is not yet)*
+| `currentParentId: Int` | the cursor's level; `SyncService` resets it to 0 on a list switch |
+| `currentSiblingIndex: Int` | the cursor's index within that level |
+| `rootScopeFocusLevel: Int` | |
+| `isPopoverVisible: Bool` | *(the popover is gone; the flag is not yet)* |
 
-### `TaskListViewModel` — the derived view + the view-shaping toggles
-Owns the toggles that shape what's visible, *and* the rebuilt `cache`. These `didSet`s call
-`invalidateCaches()` **directly** (not via the bus — the VM is the bus's consumer):
-`hideFuture`, `rootTaskView`, `selectedRootDueBucketRawValue`, `selectedRootTag`,
-`showChildrenInMenus`. The cache lives in the private, `@ObservationIgnored` `cacheStorage` and
-is exposed as `var cache: CacheState`, whose getter rebuilds via
-`ensureVisibleTasksCacheValid()` when dirty.
+No surface shows or moves the cursor. The sync and mutation services still
+select into it after a fetch, an insert or a removal, so `AppCoordinator`
+answers it for them (`AppCoordinator+ServiceHosts.swift`): `visibleTasks` is
+the tasks at `currentParentId` in list order (`TaskFilterEngine.cursorLevel`),
+`currentTask` the one at the clamped `currentSiblingIndex`, and
+`subtreeBlockRange` / `isDescendant` are `TaskFilterEngine`'s over
+`repository.tasks`. `taskMoveMode` still reads the root view the popover last
+persisted (`PreferencesStore` key `rootTaskView`). `IntegrationDataSource`'s
+`currentTask` is the same cursor task.
 
-No view draws it any more. What is left is what something reachable reads:
-`visibleTasks`, `currentTask`, `currentLevelTasks`, `isDescendant` and
-`subtreeBlockRange` for `TaskMutationService` and `SyncService` (through the host
-conformance), `currentTask` for the Google Calendar settings page's "Create event from
-selected task", and `rootDueBucket(for:)` for the daily log's plan. `visibleTasks` is the
-flattened outline: `TaskVisibilityEngine` picks the rows the persisted tab wants, then
-`TaskOutlineBuilder` inserts the children of expanded rows after them. The badge,
-section-header, breadcrumb and roll-up helpers the popover's rows drew were deleted in
-Phase 6 step 4 of the roadmap.
-
+The day log's plan (`DailyLogDataSourceAdapter.plannedTaskIdsForToday`) is
+`DayLogPlan` over `repository.tasks` and `StartDateManager`'s start dates. It
+stays a plan of Checkvist tasks because the log keys every event by Checkvist
+id and only the Checkvist path records completions in it.
 
 ### Feature managers (each owns its slice + persists to `PreferencesStore`)
-| Manager | Owns | Cache-relevant |
+| Manager | Owns | Notes |
 |---|---|---|
-| `TimerManager` | `timedTaskId`, `timerByTaskId`, `timerRunning`; `timerMode`/`timerBarLeading` (prefs-backed) | `timerByTaskId` feeds rolled-up elapsed in the cache |
-| `QuickEntryManager` | `searchText` (fires bus), `quickEntryText`, `quickEntryMode`, `isQuickEntryFocused`, `editCursorAtEnd`, `pendingDeleteConfirmation`, `completingTaskId`, `commandSuggestionIndex`, `keyBuffer` | `searchText`/mode drive `isSearchFilterActive` → visibility |
+| `TimerManager` | `timedTaskId`, `timerByTaskId`, `timerRunning`; `timerMode`/`timerBarLeading` (prefs-backed) | `timerByTaskId` is carried across a refetch by `reconcileTimersAfterFetch` |
+| `QuickEntryManager` | `searchText`, `quickEntryText`, `quickEntryMode`, `isQuickEntryFocused`, `editCursorAtEnd`, `pendingDeleteConfirmation`, `completingTaskId`, `commandSuggestionIndex`, `keyBuffer` | the Quick Add host members set it |
 | `FocusSessionManager` | `promptTaskId`, `session`, `phase`, `durationMinutes`, `breakDurationMinutes`, `lastFocusedTaskId` | drives focus alerts; pauses timer via `onFocusBlockEnded` |
-| `StartDateManager` | `taskStartDatesByTaskId` | yes (affects `hideFuture` visibility) |
-| `RecurrenceManager` | `recurrenceRulesByTaskId` | no (consulted on completion) |
-| `PreferencesManager` | prefs-backed settings: appearance mode, hotkeys, the Quick Add list, focus behaviour, `confirmBeforeDelete`, `launchAtLogin`, etc. The theme pick and font choices are `ThemeManager`'s | no |
-| `IntegrationCoordinator` | `obsidian/googleCalendar/mcpIntegrationEnabled`, `obsidianInboxPath`, `mcpServerCommandPath`, `pendingObsidianSyncTaskIds`, `googleCalendarEventLinksByTaskKey` | reads tasks/listId/currentTask/credentials via `dataSource` |
+| `StartDateManager` | `taskStartDatesByTaskId` | feeds the day log's plan |
+| `RecurrenceManager` | `recurrenceRulesByTaskId` | consulted on completion |
+| `PreferencesManager` | prefs-backed settings: appearance mode, hotkeys, the Quick Add list, focus behaviour, `confirmBeforeDelete`, `launchAtLogin`, etc. The theme pick and font choices are `ThemeManager`'s | |
+| `IntegrationCoordinator` | `obsidian/googleCalendar/mcpIntegrationEnabled`, `obsidianInboxPath`, `mcpServerCommandPath`, `pendingObsidianSyncTaskIds`, `googleCalendarEventLinksByTaskKey` | reads tasks/listId/currentTask/credentials via `dataSource`; the Google Calendar page's "Create event from selected task" goes to the workspace's selection through `addSelectedWorkspaceTaskToGoogleCalendar` |
 
 ### `AppCoordinator` — genuinely owns (everything else is forwarding)
 `statusMessage` (auto-clears after 3s), `showsDiagnostics` (the main window's diagnostics
@@ -131,12 +108,11 @@ sheet), `isApplyingLaunchAtLoginChange`, and the extracted **services**:
 `taskMutationService`, `syncService`, `undoService`, `lifecycle`, plus `reachabilityMonitor`.
 
 The Phase-3 forwarder cull is finished: `AppCoordinator` no longer re-exposes
-`tasks` / `currentParentId` / `hideFuture` / `username` / `listId` / `availableLists` /
-`cache` / `activeCredentials` / `errorMessage` / `isLoading` / `remoteKey` /
+`tasks` / `currentParentId` / `username` / `listId` / `availableLists` /
+`activeCredentials` / `errorMessage` / `isLoading` / `remoteKey` /
 `taskEisenhowerLevels` etc. Read those directly from their owner: views via
-`@Environment(TaskRepository.self)` / `@Environment(NavigationState.self)` /
-`@Environment(TaskListViewModel.self)`; non-view callers via `manager.repository.X` /
-`manager.navigationState.X` / `manager.taskListViewModel.X`. The Phase-3 services
+`@Environment(TaskRepository.self)` / `@Environment(NavigationState.self)`;
+non-view callers via `manager.repository.X` / `manager.navigationState.X`. The Phase-3 services
 (`SyncService`, `TaskMutationService`) both take a strong
 `TaskRepository` reference in their initializers and read auth/list state from there
 directly — no coordinator forwarder hop.
@@ -150,24 +126,12 @@ reach-through, which is what lets both services live in `TaktAppLogic` and be te
 against `StubTaskServiceHost`. When you give one of them a new dependency, add it to the host
 protocol.
 
-## Cache-invalidation producer list (who fires the bus)
+## How a mutation flows (worked example: closing a task)
 
-`TaskRepository` (`tasks`, `availableLists`, `priorityTaskIdsByParentId`,
-`absolutePriorityTaskIds`, `taskEisenhowerLevels`, `expandedTaskIds`,
-`checkvistIntegrationEnabled`, `isNetworkReachable`), `NavigationState` (`currentParentId`), `QuickEntryManager`
-(`searchText`), `TimerManager` (`timerByTaskId`), `StartDateManager` (`taskStartDatesByTaskId`),
-`FocusSessionManager`. The lone **subscriber** is `AppCoordinator` →
-`TaskListViewModel.invalidateCaches()`.
-
-`TaskListViewModel`'s own view-shaping toggles bypass the bus and call `invalidateCaches()`
-directly, because the VM *is* the thing the bus ultimately notifies.
-
-## How a mutation flows (worked example: mark current task done)
-
-1. View / keybind → `AppCoordinator.markCurrentTaskDone()` (forwarder) → `TaskMutationService`.
-   The service claims the task id for the duration, animation included, so a second press
-   inside the ~200ms completion feedback can't close the same task twice.
-2. Service mutates `repository.tasks` optimistically → `didSet` fires the bus → cache rebuilds → UI updates immediately.
+1. `TaskMutationService.taskAction` — reached today when a box is ticked in AFFiNE
+   (`IntegrationCoordinator.onCloseTasks`); the current-task entry points that the popover's
+   keys drove (`markCurrentTaskDone` and friends) no longer have a caller.
+2. Service mutates `repository.tasks` optimistically.
    It also registers the removed ids with the repository's completion suppression, so a fetch
    that was already in flight can't answer the task back into existence.
 3. Service calls `repository.activeSyncPlugin.performTaskAction(...)` async.
@@ -179,35 +143,20 @@ directly, because the VM *is* the thing the bus ultimately notifies.
 
 This optimistic-then-sync-then-rollback-or-enqueue shape recurs across mutations; see
 `AppCoordinator.applyOptimisticMoveAndSync` and the `TaskMutationService` mutation methods.
-</content>
-</invoke>
 
 ## One shell, one set of state
 
 There used to be two: the menu bar panel and the main window hosted the *same*
 `PopoverView` over the *same* `AppCoordinator`, differing only in a `\.shellMode`
 that decided chrome. The panel and that view are gone, and with them the shell
-mode. `MainWindowController` is the only host of the legacy managers described
-above, and the workspace window is the only surface.
+mode and the legacy task list view model both mirrored. `MainWindowController`
+is the only host of the legacy managers described above, and the workspace
+window is the only surface.
 
-**They are mirrors, not independent views, and that is a property of the state
-model rather than a decision that can be revisited cheaply.**
-`TaskListViewModel.cache` is derived from `rootTaskView`, `hideFuture`,
-`searchText` and the `NavigationState` cursor. One view model therefore cannot
-serve two surfaces showing different tabs — switching tab in the window
-switches it in the panel, by construction.
-
-Making them independent means extracting a per-window context holding
-`NavigationState`, `TaskListViewModel`, `QuickEntryManager`, the daily
-selection, `statusMessage`, and the celebration / shortcut-overlay flags,
-while `TaskRepository`, `PreferencesManager`, `TimerManager` and the
-integrations stay global. It also means multicasting `CacheInvalidationBus`,
-which today has exactly one subscriber. The host protocols in
-`TaskServiceHosts.swift` are the seam that already exists for it.
-
-Two windows on *different lists* is further still: `TaskRepository.listId` is a
-single global whose `didSet` swaps all four `ListScoped*` stores, and the
-fetch-generation arbitration assumes one list in flight.
+Two windows on *different Checkvist lists* would still be far off:
+`TaskRepository.listId` is a single global whose `didSet` swaps all four
+`ListScoped*` stores, and the fetch-generation arbitration assumes one list in
+flight.
 
 ### Failure state
 
@@ -223,7 +172,7 @@ so anything else that wants to observe them has to chain too, not replace.
 ## The desktop workspace: one refresh per action
 
 Everything above is the legacy Checkvist stack. The desktop window reads
-`WorkspaceViewModel`, which does not use the bus; it refreshes through
+`WorkspaceViewModel`, which refreshes through
 `WorkspaceViewModel+Refresh.swift`.
 
 - A reload called inside `perform { }` (a write) or `batchingRefreshes { }`

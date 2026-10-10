@@ -246,10 +246,14 @@ covered the old copies pass against it.
    `KanbanManager` drew nothing once the popover went, and `KanbanFilter`,
    `KanbanSelection`, `KanbanManualOrder`, `MatrixClustering` and
    `MatrixSpread` (with the Mac's own `KanbanColumn`, `KanbanSwimlanes` and
-   `EisenhowerInheritance`) were deleted with it. `TaskVisibilityEngine` and
-   `TaskFilterEngine` stay native, for the same reason as before: they shape
-   the Checkvist cursor `TaskListViewModel` still keeps for the sync and
-   mutation services, which the core does not hold.
+   `EisenhowerInheritance`) were deleted with it. The rest followed once the
+   Google Calendar settings page acted on the workspace's selection and the
+   daily log's plan stopped reading the view model's cache: `TaskListViewModel`,
+   `TaskVisibilityEngine` and `TaskScopeResolver` are deleted too. What is left
+   of `TaskFilterEngine` stays native for the same reason as before: it buckets
+   the Checkvist tasks by due date for the daily log's plan (`DayLogPlan`) and
+   answers the Checkvist cursor and subtree spans for the sync and mutation
+   services, all over tasks the core does not hold.
    `MatrixNavigation` and `MatrixViewport` had no callers outside their
    tests and are deleted. `BoardLinks` solves the board's link geometry from measured card
    heights a frame at a time. It overlaps `board.rs` only in which card a

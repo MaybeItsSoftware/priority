@@ -47,8 +47,6 @@ let pluginTargetExcludes = [
   // App-level source files at Takt/ root
   "Takt/AppCoordinator.swift",
   "Takt/AppDelegate.swift",
-  "Takt/CacheInvalidationBus.swift",
-  "Takt/CacheState.swift",
   "Takt/DailyLogDataSourceAdapter.swift",
   "Takt/IntegrationDataSourceAdapter.swift",
   "Takt/LifecycleController.swift",
@@ -90,7 +88,6 @@ let pluginTargetExcludes = [
   // a `TaktAppLogic` source, and a file can only belong to one SPM target.
   "Takt/CheckvistTask+VisibilityTask.swift",
   "Takt/TaskServiceHosts.swift",
-  "Takt/TaskOutlineBuilder.swift",
   "Takt/TaskTreeFormatter.swift",
   "Takt/UndoService.swift",
 
@@ -184,9 +181,8 @@ let appLogicTargetExcludes = [
   "Takt/WorkspaceDesktopView.swift",
   "Takt/WorkspaceViewModel.swift",
 
-  // Takt/Managers — AppLogic only wants TaskRepository.swift and
-  // TaskListViewModel.swift from here; the rest of the directory stays
-  // app-only and is excluded file-by-file.
+  // Takt/Managers — AppLogic only wants TaskRepository.swift from here; the
+  // rest of the directory stays app-only and is excluded file-by-file.
   "Takt/Managers/CompletionCelebrationManager.swift",
   "Takt/Managers/DailyLogManager.swift",
   "Takt/Managers/FocusSessionManager.swift",
@@ -399,16 +395,10 @@ let package = Package(
       exclude: appLogicTargetExcludes,
       sources: [
         "Takt/Managers/TaskRepository.swift",
-        // Reachable at last: it needs `TaktCore`'s visibility engines, and
-        // this target could not import them until the app started linking the
-        // package rather than compiling its sources.
-        "Takt/Managers/TaskListViewModel.swift",
-        "Takt/CacheState.swift",
         // Conforms the Checkvist model to `TaktCore`'s `VisibilityTask`.
         // Compiled into both this target and the app, so each side's
         // declaration of `CheckvistTask` picks up the conformance.
         "Takt/CheckvistTask+VisibilityTask.swift",
-        "Takt/CacheInvalidationBus.swift",
         "Takt/UndoService.swift",
         "Takt/Plugins/Native/Offline/LocalTaskStore.swift",
         "Takt/OptimisticTaskID.swift",
@@ -417,9 +407,6 @@ let package = Package(
         "Takt/TaskMutationService.swift",
         "Takt/TaskMutationService+Board.swift",
         "Takt/TaskServiceHosts.swift",
-        // The outline flattening `TaskListViewModel` builds its rows with.
-        // Pure, and covered by `TaskOutlineBuilderTests`.
-        "Takt/TaskOutlineBuilder.swift",
         "Takt/ListScopedPriorityStore.swift",
         "Takt/ListScopedTaskIDStore.swift",
         "Takt/ListScopedEisenhowerStore.swift",

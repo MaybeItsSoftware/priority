@@ -8,11 +8,10 @@ import TaktCore
 @Observable class TimerManager {
   @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "timer")
   @ObservationIgnored private let preferencesStore: PreferencesStore
-  @ObservationIgnored private let cacheInvalidationBus: CacheInvalidationBus
   @ObservationIgnored private var sleepObserver: NSObjectProtocol?
   
   var timedTaskId: Int?
-  /// Persisted, and the task cache invalidated, when the set of timed tasks
+  /// Persisted when the set of timed tasks
   /// changes — not on every tick. A running timer used to write this
   /// dictionary to disk and rebuild the whole task cache once a second; the
   /// elapsed figure is saved by `pauseTimer()`, which every stop goes through.
@@ -20,7 +19,6 @@ import TaktCore
     didSet {
       guard Set(timerByTaskId.keys) != Set(oldValue.keys) else { return }
       persistTimers()
-      cacheInvalidationBus.invalidate()
     }
   }
 
@@ -37,11 +35,9 @@ import TaktCore
   @ObservationIgnored var onTick: ((Int, TimeInterval) -> Void)?
 
   init(
-    preferencesStore: PreferencesStore,
-    cacheInvalidationBus: CacheInvalidationBus = CacheInvalidationBus()
+    preferencesStore: PreferencesStore
   ) {
     self.preferencesStore = preferencesStore
-    self.cacheInvalidationBus = cacheInvalidationBus
     self.timerByTaskId = Self.timerDictionaryFromDefaults(preferencesStore: preferencesStore)
     
     self.sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(

@@ -33,7 +33,6 @@ import SwiftUI
     isEnabled: { [weak self] in self?.integrations.googleTasksIntegrationEnabled ?? false })
 
   let repository: TaskRepository
-  @ObservationIgnored let cacheInvalidationBus: CacheInvalidationBus
 
   let navigationState: NavigationState
 
@@ -78,7 +77,6 @@ import SwiftUI
   let recurrence: RecurrenceManager
 
   let timer: TimerManager
-  let taskListViewModel: TaskListViewModel
 
   var integrations: IntegrationCoordinator
 
@@ -197,10 +195,7 @@ import SwiftUI
     let initialRemoteKey = resolvedCheckvistSyncPlugin.startupRemoteKey(
       useKeychainStorageAtInit: useKeychainStorageAtInit)
 
-    let cacheInvalidationBus = CacheInvalidationBus()
-    self.cacheInvalidationBus = cacheInvalidationBus
-
-    let navigationState = NavigationState(cacheInvalidationBus: cacheInvalidationBus)
+    let navigationState = NavigationState()
     self.navigationState = navigationState
 
     // Create task repository with all task-related state
@@ -208,8 +203,7 @@ import SwiftUI
       preferencesStore: preferencesStore,
       checkvistSyncPlugin: resolvedCheckvistSyncPlugin,
       localTaskStore: resolvedLocalTaskStore,
-      initialRemoteKey: initialRemoteKey,
-      cacheInvalidationBus: cacheInvalidationBus
+      initialRemoteKey: initialRemoteKey
     )
     self.repository = repository
 
@@ -219,10 +213,7 @@ import SwiftUI
     let storedPluginSelectionOnboardingCompletedFlag = preferencesStore.optionalBool(
       .pluginSelectionOnboardingCompleted)
 
-    self.focusSessionManager = FocusSessionManager(
-      preferencesStore: preferencesStore,
-      cacheInvalidationBus: cacheInvalidationBus
-    )
+    self.focusSessionManager = FocusSessionManager(preferencesStore: preferencesStore)
     self.dailyLog = DailyLogManager(
       preferencesStore: preferencesStore,
       plugin: resolvedDailyLogPlugin
@@ -246,17 +237,11 @@ import SwiftUI
         preferencesStore.set(true, for: .pluginSelectionOnboardingCompleted)
       }
     }
-    let timer = TimerManager(
-      preferencesStore: preferencesStore,
-      cacheInvalidationBus: cacheInvalidationBus
-    )
+    let timer = TimerManager(preferencesStore: preferencesStore)
     self.timer = timer
-    self.startDates = StartDateManager(
-      preferencesStore: preferencesStore,
-      cacheInvalidationBus: cacheInvalidationBus
-    )
+    self.startDates = StartDateManager(preferencesStore: preferencesStore)
     self.recurrence = RecurrenceManager(preferencesStore: preferencesStore)
-    let quickEntry = QuickEntryManager(cacheInvalidationBus: cacheInvalidationBus)
+    let quickEntry = QuickEntryManager()
     self.quickEntry = quickEntry
     // Retains the registry, unlike the other capabilities: the celebration
     // preset is switchable from Settings, so resolving it once here would pin
@@ -290,13 +275,6 @@ import SwiftUI
       integrations: integrations
     )
 
-    self.taskListViewModel = TaskListViewModel(
-      repository: repository,
-      preferencesStore: preferences.preferencesStore
-    )
-
-    // Attached after `self` is fully initialised, like the other hosts.
-    self.taskListViewModel.host = self
     self.taskMutationService = TaskMutationService(host: self, repository: repository)
     self.undoService = UndoService(performer: self.taskMutationService)
     self.syncService = SyncService(host: self, repository: repository)

@@ -11,11 +11,22 @@ import SwiftUI
 // of genuinely UI-bound behaviour (haptics, the completion animation, the
 // recurrence rule store) that has no business in
 // `TaktAppLogic`. The services themselves are now testable without it.
+//
+// The Checkvist cursor is answered here too. It used to be the legacy task
+// list view model's: the row at `currentSiblingIndex` of whatever tab the
+// popover was showing. The popover, its tabs and that view model are gone,
+// and nothing on screen shows the cursor any more, but the sync and mutation
+// services still select into it after a fetch, an insert or a removal. So it
+// is now the open tasks at `currentParentId`, in list order (see
+// `TaskFilterEngine.cursorLevel`) — stable and in range, which is all those
+// paths need of it.
 
 // MARK: - Shared
 
 extension AppCoordinator: TaskServiceHost {
-  var visibleTasks: [CheckvistTask] { taskListViewModel.visibleTasks }
+  var visibleTasks: [CheckvistTask] {
+    TaskFilterEngine.cursorLevel(repository.tasks, parentId: navigationState.currentParentId)
+  }
 
   var currentSiblingIndex: Int {
     get { navigationState.currentSiblingIndex }
@@ -23,7 +34,7 @@ extension AppCoordinator: TaskServiceHost {
   }
 
   func subtreeBlockRange(for taskId: Int, in tasks: [CheckvistTask]) -> Range<Int>? {
-    taskListViewModel.subtreeBlockRange(for: taskId, in: tasks)
+    TaskFilterEngine.subtreeBlockRange(for: taskId, in: tasks)
   }
 
   func reconcilePendingObsidianSyncQueue(openTaskIds: Set<Int>, listId: String) {
@@ -35,15 +46,19 @@ extension AppCoordinator: TaskServiceHost {
 // MARK: - TaskMutationHost
 
 extension AppCoordinator: TaskMutationHost {
-  var currentTask: CheckvistTask? { taskListViewModel.currentTask }
+  var currentTask: CheckvistTask? {
+    TaskFilterEngine.cursorTask(in: visibleTasks, index: navigationState.currentSiblingIndex)
+  }
 
   func isDescendant(_ task: CheckvistTask, of ancestorId: Int) -> Bool {
-    taskListViewModel.isDescendant(task, of: ancestorId)
+    let taskById = Dictionary(
+      repository.tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    return TaskFilterEngine.isDescendant(task, of: ancestorId, taskById: taskById)
   }
 
   func clampSelectionToVisibleRange() {
     focusSessionManager.clampForTasks(repository.tasks)
-    let maxIndex = max(taskListViewModel.visibleTasks.count - 1, 0)
+    let maxIndex = max(visibleTasks.count - 1, 0)
     if navigationState.currentSiblingIndex > maxIndex {
       navigationState.currentSiblingIndex = maxIndex
     }
@@ -185,7 +200,7 @@ extension AppCoordinator: TaskMutationHost {
       kind: kind,
       milestone: CompletionMilestonePolicy.milestone(
         for: kind,
-        remainingVisibleTaskCount: taskListViewModel.visibleTasks.count,
+        remainingVisibleTaskCount: visibleTasks.count,
         ordinal: ordinal,
         streakDays: streakDays
       ),
@@ -197,8 +212,13 @@ extension AppCoordinator: TaskMutationHost {
 // MARK: - SyncHost
 
 extension AppCoordinator: SyncHost {
+  /// Read from the root view the popover last persisted, as it always was:
+  /// the tabs are gone but the preference is not, and a Checkvist move should
+  /// not change strategy because the surface that set it was removed.
   var taskMoveMode: TaskMoveMode {
-    switch taskListViewModel.rootTaskView {
+    let stored = RootTaskView(
+      rawValue: preferences.preferencesStore.int(.rootTaskView, default: RootTaskView.due.rawValue))
+    switch stored ?? .due {
     case .priority: return .priorityQueue
     case .due: return .dueDate
     case .all, .tags, .kanban, .eisenhower, .daily: return .siblingPosition
@@ -234,18 +254,4 @@ extension AppCoordinator: SyncHost {
   func applyOptimisticUpdate(task: CheckvistTask, content: String?, due: String?) {
     taskMutationService.applyOptimisticUpdate(task: task, content: content, due: due)
   }
-}
-
-// MARK: - TaskListViewModelHost
-
-/// Read-only from the view model's side. Each forwards to the real
-/// `@Observable` object rather than caching a copy, so SwiftUI's dependency
-/// tracking still registers on the underlying property. `currentParentId` and
-/// `currentSiblingIndex` are already provided above for the mutation and sync
-/// hosts — the same facts, wanted by three different collaborators, which is
-/// the point of stating them once on the coordinator.
-extension AppCoordinator: TaskListViewModelHost {
-  var isSearchFilterActive: Bool { quickEntry.isSearchFilterActive }
-  var searchText: String { quickEntry.searchText }
-  var matrixSelectedTaskId: Int? { navigationState.matrixSelectedTaskId }
 }

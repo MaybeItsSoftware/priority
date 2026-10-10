@@ -4,13 +4,9 @@ import TaktCore
 
 @MainActor
 @Observable class QuickEntryManager {
-  var searchText: String = "" {
-    didSet { cacheInvalidationBus.invalidate() }
-  }
+  var searchText: String = ""
   var quickEntryText: String = ""
-  var quickEntryMode: QuickEntryMode = .search {
-    didSet { cacheInvalidationBus.invalidate() }
-  }
+  var quickEntryMode: QuickEntryMode = .search
   var isQuickEntryFocused: Bool = false
   var editCursorAtEnd: Bool = true  // true = append (a), false = insert (i)
   var pendingDeleteConfirmation: Bool = false
@@ -28,13 +24,10 @@ import TaktCore
   /// the eventual confirmation.
   var dueDatePickerTaskId: Int?
 
-  @ObservationIgnored private let cacheInvalidationBus: CacheInvalidationBus
   @ObservationIgnored var integrationFlagsProvider:
     (() -> (obsidian: Bool, affine: Bool, googleCalendar: Bool, mcp: Bool))?
 
-  init(cacheInvalidationBus: CacheInvalidationBus = CacheInvalidationBus()) {
-    self.cacheInvalidationBus = cacheInvalidationBus
-  }
+  init() {}
 
   // MARK: - Due-date calendar
 
@@ -215,8 +208,4 @@ import TaktCore
       mcpEnabled: flags.mcp
     )
   }
-
-  // MARK: - Search state
-
-  var isSearchFilterActive: Bool { !searchText.isEmpty && quickEntryMode == .search }
 }

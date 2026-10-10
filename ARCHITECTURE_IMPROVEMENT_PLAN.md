@@ -487,6 +487,24 @@ follow. Recorded here rather than silently left stale:
   page's "Create event from selected task", the daily log's plan), and the
   services' current-task mutations, whose only caller was the executor but
   which their tests still pin.
+- 2026-10-10, later: the legacy task list view model went too, once its last
+  readers were moved. The Google Calendar settings page's "Create event from
+  selected task" adds the desktop window's selected task through
+  `WorkspaceViewModel.addSelectedTaskToGoogleCalendar` (the dates an event
+  takes are `TaskEditorSnapshot.calendarEventTiming`, tested); the daily
+  log's plan is `TaktCore.DayLogPlan` over the Checkvist tasks, tested with a
+  fixed clock; and the Checkvist cursor is answered in
+  `AppCoordinator+ServiceHosts.swift` from `NavigationState` and
+  `repository.tasks` (`TaskFilterEngine.cursorLevel` / `cursorTask` /
+  `subtreeBlockRange`). Deleted: `TaskListViewModel` and its host protocol,
+  `CacheState`, `CacheInvalidationBus` with every producer's `invalidate()`,
+  `TaskOutlineBuilder`, `TaskVisibilityEngine`, `TaskScopeResolver`, the sort
+  and tag halves of `TaskFilterEngine`, `NavigationState.matrixSelectedTaskId`
+  and `QuickEntryManager.isSearchFilterActive`, with their tests. Finding 3's
+  observation fix (`cacheVersion`) went with the cache it protected. The
+  `TaskVisibilityEngine` complexity warning went with it; the live count is in
+  `TODO.md`. The services' current-task mutations and `SyncService.moveTask`
+  are still there, still uncalled, still pinned by their tests.
 
 ## Out of Scope
 

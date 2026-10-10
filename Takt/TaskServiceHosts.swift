@@ -35,9 +35,9 @@ enum TaskMoveMode: Equatable, Sendable {
 /// service-specific protocols so a test double can conform once.
 @MainActor
 protocol TaskServiceHost: AnyObject {
-  /// The task list as currently filtered and ordered for display.
+  /// The tasks at the Checkvist cursor's level, which the cursor indexes.
   var visibleTasks: [CheckvistTask] { get }
-  /// Index of the selected task within `visibleTasks`.
+  /// The cursor: an index into `visibleTasks`.
   var currentSiblingIndex: Int { get set }
   /// The contiguous span of `tasks` covering `taskId` and all its descendants,
   /// or `nil` when the task isn't present.
@@ -133,38 +133,4 @@ protocol SyncHost: TaskServiceHost {
   /// than a dependency — so, like `fetchTopTask` in the other direction, it is
   /// reached through the host.
   func applyOptimisticUpdate(task: CheckvistTask, content: String?, due: String?)
-}
-
-// MARK: - TaskListViewModel
-
-/// The app-only managers `TaskListViewModel` reads, as a single read-only
-/// surface.
-///
-/// The view model is the most load-bearing untested type in the app: it owns
-/// `cacheVersion`, whose entire job is to be correct about SwiftUI observation,
-/// and the visibility pipeline every list view renders from. It could not be
-/// reached from a test because it named `NavigationState`, `TimerManager`,
-/// `QuickEntryManager` and `PreferencesManager` concretely,
-/// and those pull in the whole app.
-///
-/// Everything it actually needs from them is read-only and scalar — which is
-/// why this is worth doing at all. `AppCoordinator` provides the production
-/// conformance in `AppCoordinator+ServiceHosts.swift`.
-///
-/// Reads go through here rather than being copied in, so SwiftUI's observation
-/// still registers on the underlying `@Observable` managers: the access happens
-/// inside their real getters either way.
-@MainActor
-protocol TaskListViewModelHost: AnyObject {
-  /// The task whose children are being shown; 0 at the root.
-  var currentParentId: Int { get }
-  /// Selected index within the current level.
-  var currentSiblingIndex: Int { get }
-  /// Whether a search is narrowing the list.
-  var isSearchFilterActive: Bool { get }
-  var searchText: String { get }
-  /// The matrix's own selection, which replaces the list's when the matrix is
-  /// the active view — an id here rather than a task, because the view model
-  /// can resolve it from a cache it already keeps.
-  var matrixSelectedTaskId: Int? { get }
 }

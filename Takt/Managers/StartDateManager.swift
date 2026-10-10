@@ -6,25 +6,21 @@ import OSLog
 @Observable class StartDateManager {
   @ObservationIgnored private let logger = Logger(subsystem: "uk.co.maybeitssoftware.takt", category: "startdate")
   @ObservationIgnored private let preferencesStore: PreferencesStore
-  @ObservationIgnored private let cacheInvalidationBus: CacheInvalidationBus
 
   /// Maps task ID → start date string (same format as `due`).
   var taskStartDatesByTaskId: [Int: String] = [:] {
     didSet {
       let encoded = Dictionary(uniqueKeysWithValues: taskStartDatesByTaskId.map { (String($0.key), $0.value) })
       preferencesStore.set(encoded, for: .taskStartDatesByTaskId)
-      cacheInvalidationBus.invalidate()
     }
   }
 
   @ObservationIgnored var dateResolver: ((String) -> String)?
 
   init(
-    preferencesStore: PreferencesStore,
-    cacheInvalidationBus: CacheInvalidationBus = CacheInvalidationBus()
+    preferencesStore: PreferencesStore
   ) {
     self.preferencesStore = preferencesStore
-    self.cacheInvalidationBus = cacheInvalidationBus
     let storedStartDates = preferencesStore.stringDictionary(.taskStartDatesByTaskId)
     // `uniquingKeysWith:` rather than `uniqueKeysWithValues:`: the stored keys
     // are strings, and "7" and "07" both parse to 7. A hand-edited plist or a

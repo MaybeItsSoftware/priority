@@ -14,9 +14,8 @@ struct FixtureTask: VisibilityTask {
   var parentId: Int?
 }
 
-/// `TaskFilterEngine` classifies, sorts and relates tasks; it is the layer
-/// under every list the user sees. It had no coverage at all until it moved
-/// into `TaktCore`.
+/// `TaskFilterEngine` buckets Checkvist tasks by due date and relates them in
+/// the outline, for the daily log's plan and the Checkvist sync path.
 final class TaskFilterEngineTests: XCTestCase {
   private let calendar = Calendar.current
 
@@ -82,40 +81,6 @@ final class TaskFilterEngineTests: XCTestCase {
     XCTAssertEqual(bucket(daysOut: 8), .future)
   }
 
-  func testComputeRootDueBucketsKeysByTaskId() {
-    let tasks = [
-      FixtureTask(id: 1, due: "asap"),
-      FixtureTask(id: 2),
-    ]
-    XCTAssertEqual(
-      TaskFilterEngine.computeRootDueBuckets(tasks: tasks),
-      [1: .asap, 2: .noDueDate])
-  }
-
-  // MARK: - Tag extraction
-
-  func testTagsAreExtractedLowercasedAndTasksWithoutTagsAreOmitted() {
-    let tasks = [
-      FixtureTask(id: 1, content: "Email @Work about #Budget"),
-      FixtureTask(id: 2, content: "no tags here"),
-      FixtureTask(id: 3, content: "hyphens and_underscores @two-part_tag"),
-    ]
-
-    let result = TaskFilterEngine.extractTagsByTaskId(tasks: tasks)
-
-    XCTAssertEqual(result[1], ["@work", "#budget"])
-    XCTAssertNil(result[2], "a task with no tags is absent, not present-and-empty")
-    XCTAssertEqual(result[3], ["@two-part_tag"])
-  }
-
-  func testAnEmailAddressIsTreatedAsATagBecauseTheRegexIsDeliberatelySimple() {
-    // Documents current behaviour rather than endorsing it: "@example" is
-    // indexed as a tag. Worth knowing before anyone changes the pattern.
-    let result = TaskFilterEngine.extractTagsByTaskId(
-      tasks: [FixtureTask(id: 1, content: "mail someone@example.com")])
-    XCTAssertEqual(result[1], ["@example"])
-  }
-
   // MARK: - Ancestry
 
   func testDescendantWalksTheParentChain() {
@@ -138,10 +103,9 @@ final class TaskFilterEngineTests: XCTestCase {
       TaskFilterEngine.isDescendant(FixtureTask(id: 9, parentId: 4), of: 0, taskById: [:]))
   }
 
-  /// A parent cycle should never reach the client, but a corrupt cache or a
+  /// A parent cycle should never reach the client, but a corrupt list or a
   /// half-applied reparent can produce one — and this walk runs on the main
-  /// actor during every cache rebuild, so looping here freezes the app rather
-  /// than showing wrong rows.
+  /// actor, so looping here freezes the app rather than answering wrongly.
   func testACycleInTheParentChainTerminates() {
     let tasks = [
       FixtureTask(id: 1, parentId: 2),
@@ -152,72 +116,57 @@ final class TaskFilterEngineTests: XCTestCase {
     XCTAssertFalse(TaskFilterEngine.isDescendant(tasks[0], of: 99, taskById: byId))
   }
 
-  // MARK: - Comparators
+  // MARK: - Subtree spans
 
-  func testPositionOrdersBeforeContent() {
-    let first = FixtureTask(id: 1, content: "zebra", position: 1)
-    let second = FixtureTask(id: 2, content: "apple", position: 2)
-    XCTAssertTrue(TaskFilterEngine.compareByPositionThenContent(first, second))
+  /// What the sync path removes and restores as one block: a task and the
+  /// run of its descendants straight after it.
+  func testASubtreeBlockCoversTheTaskAndTheRunOfItsDescendants() {
+    let tasks = [
+      FixtureTask(id: 1),
+      FixtureTask(id: 2, parentId: 1),
+      FixtureTask(id: 3, parentId: 2),
+      FixtureTask(id: 4),
+      FixtureTask(id: 5, parentId: 4),
+    ]
+    XCTAssertEqual(TaskFilterEngine.subtreeBlockRange(for: 1, in: tasks), 0..<3)
+    XCTAssertEqual(TaskFilterEngine.subtreeBlockRange(for: 2, in: tasks), 1..<3)
+    XCTAssertEqual(TaskFilterEngine.subtreeBlockRange(for: 3, in: tasks), 2..<3)
+    XCTAssertEqual(TaskFilterEngine.subtreeBlockRange(for: 4, in: tasks), 3..<5)
   }
 
-  func testEqualPositionsFallBackToCaseInsensitiveContent() {
-    let apple = FixtureTask(id: 1, content: "apple", position: 1)
-    let banana = FixtureTask(id: 2, content: "Banana", position: 1)
-    XCTAssertTrue(TaskFilterEngine.compareByPositionThenContent(apple, banana))
-    XCTAssertFalse(TaskFilterEngine.compareByPositionThenContent(banana, apple))
+  func testASubtreeBlockForATaskThatIsNotThereIsNil() {
+    XCTAssertNil(TaskFilterEngine.subtreeBlockRange(for: 9, in: [FixtureTask(id: 1)]))
   }
 
-  func testAbsolutePriorityOutranksScopedPriority() {
-    let absolute = FixtureTask(id: 1, position: 99)
-    let scoped = FixtureTask(id: 2, position: 1)
+  // MARK: - The Checkvist cursor
 
-    XCTAssertTrue(
-      TaskFilterEngine.compareByPriorityThenPosition(
-        absolute, scoped, priorityRankById: [2: 1], absolutePriorityRankById: [1: 1]))
+  func testTheCursorLevelAtTheRootIsTheTopLevelTasksInListOrder() {
+    let tasks = [
+      FixtureTask(id: 3),
+      FixtureTask(id: 1, parentId: 3),
+      FixtureTask(id: 2),
+    ]
+    XCTAssertEqual(TaskFilterEngine.cursorLevel(tasks, parentId: 0).map(\.id), [3, 2])
   }
 
-  func testARankedTaskOutranksAnUnrankedOneRegardlessOfPosition() {
-    let ranked = FixtureTask(id: 1, position: 99)
-    let unranked = FixtureTask(id: 2, position: 1)
-
-    XCTAssertTrue(
-      TaskFilterEngine.compareByPriorityThenPosition(
-        ranked, unranked, priorityRankById: [1: 3], absolutePriorityRankById: [:]))
-    XCTAssertFalse(
-      TaskFilterEngine.compareByPriorityThenPosition(
-        unranked, ranked, priorityRankById: [1: 3], absolutePriorityRankById: [:]))
+  func testTheCursorLevelUnderATaskIsItsChildren() {
+    let tasks = [
+      FixtureTask(id: 1),
+      FixtureTask(id: 2, parentId: 1),
+      FixtureTask(id: 3, parentId: 2),
+      FixtureTask(id: 4, parentId: 1),
+    ]
+    XCTAssertEqual(TaskFilterEngine.cursorLevel(tasks, parentId: 1).map(\.id), [2, 4])
   }
 
-  func testTwoUnrankedTasksFallBackToPosition() {
-    let first = FixtureTask(id: 1, position: 1)
-    let second = FixtureTask(id: 2, position: 2)
-    XCTAssertTrue(
-      TaskFilterEngine.compareByPriorityThenPosition(
-        first, second, priorityRankById: [:], absolutePriorityRankById: [:]))
+  func testTheCursorTaskFollowsTheIndexAndClampsIntoRange() {
+    let level = [FixtureTask(id: 1), FixtureTask(id: 2), FixtureTask(id: 3)]
+    XCTAssertEqual(TaskFilterEngine.cursorTask(in: level, index: 1)?.id, 2)
+    XCTAssertEqual(TaskFilterEngine.cursorTask(in: level, index: 7)?.id, 3)
+    XCTAssertEqual(TaskFilterEngine.cursorTask(in: level, index: -2)?.id, 1)
   }
 
-  func testDueBucketOrderBeatsDateWhichBeatsPosition() {
-    let overdue = FixtureTask(id: 1, due: "x", dueDate: day(offset: -1), position: 99)
-    let today = FixtureTask(id: 2, due: "x", dueDate: day(offset: 0), position: 1)
-    let buckets: [Int: RootDueBucket] = [1: .overdue, 2: .today]
-
-    XCTAssertTrue(
-      TaskFilterEngine.compareByRootDueBucket(overdue, today, rootDueBucketById: buckets))
-
-    let earlier = FixtureTask(id: 3, due: "x", dueDate: day(offset: 2), position: 99)
-    let later = FixtureTask(id: 4, due: "x", dueDate: day(offset: 4), position: 1)
-    XCTAssertTrue(
-      TaskFilterEngine.compareByRootDueBucket(
-        earlier, later, rootDueBucketById: [3: .nextSevenDays, 4: .nextSevenDays]),
-      "same bucket falls through to the actual date")
-  }
-
-  func testAnUncachedBucketIsClassifiedOnDemand() {
-    let asap = FixtureTask(id: 1, due: "asap", position: 99)
-    let none = FixtureTask(id: 2, position: 1)
-
-    XCTAssertTrue(
-      TaskFilterEngine.compareByRootDueBucket(asap, none, rootDueBucketById: [:]),
-      "an empty cache must not flatten the ordering")
+  func testAnEmptyLevelHasNoCursorTask() {
+    XCTAssertNil(TaskFilterEngine.cursorTask(in: [FixtureTask](), index: 0))
   }
 }

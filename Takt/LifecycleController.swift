@@ -3,8 +3,7 @@ import TaktCore
 import ServiceManagement
 
 /// Owns the wiring that has to happen exactly once during `AppCoordinator`
-/// construction: cache-invalidation bus subscription, the
-/// repository/manager-callback fan-out, and the network-reachability monitor's
+/// construction: the repository/manager-callback fan-out, and the network-reachability monitor's
 /// lifecycle. Splitting this out shrinks `AppCoordinator` itself and keeps
 /// "what fires when" readable in one place.
 ///
@@ -33,13 +32,6 @@ final class LifecycleController {
 
   private func setupChildCallbacks() {
     guard let coordinator else { return }
-
-    // All cache invalidation flows through `cacheInvalidationBus`: producers'
-    // `didSet`s call `bus.invalidate()`, and the single subscription below
-    // routes that into `TaskListViewModel.invalidateCaches()`.
-    coordinator.cacheInvalidationBus.subscribe { [weak coordinator] in
-      coordinator?.taskListViewModel.invalidateCaches()
-    }
 
     let repository = coordinator.repository
 
