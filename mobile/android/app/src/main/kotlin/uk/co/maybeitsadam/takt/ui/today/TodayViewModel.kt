@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.collections.immutable.toImmutableList
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.core.FocusContext
+import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.core.FocusSessionPhase
 import uk.co.maybeitsadam.takt.core.TaskAvailabilityPolicy
 import uk.co.maybeitsadam.takt.ui.focus.FocusActions
@@ -58,7 +59,12 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         val repo = session.repository
         val active = repo.observeActiveFocusSession()
         val snapshot = active.map { it?.activeTaskId }.distinctUntilChanged().flatMapLatest { runningId ->
-            minuteTicks().flatMapLatest { repo.observeNextUpSnapshot(session.workspace.id, FocusContext(), runningId) }
+            // The day needs only the ladder's head, as the iPhone's Today asks.
+            minuteTicks().flatMapLatest {
+                repo.observeNextUpSnapshot(
+                    session.workspace.id, FocusContext(), runningId, ladderLimit = WorkspaceNextUpSnapshot.fallbackDayLength,
+                )
+            }
         }
         val dailies = dayTicks().flatMapLatest { repo.observeDailies(Instant.now()) }
         combine(snapshot, active, dailies, repo.observeLists(session.workspace.id)) { next, focusSession, daily, lists ->

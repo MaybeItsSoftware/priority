@@ -136,8 +136,9 @@ internal fun nextUpSnapshot(
     runningId: String?,
     now: Instant,
     zone: ZoneId,
+    ladderLimit: Int? = null,
 ): WorkspaceNextUpSnapshot {
-    val (plan, ranking) = NextUpSelector.read(core, now, zone, context, runningId)
+    val (plan, ranking) = NextUpSelector.read(core, now, zone, context, runningId, ladderLimit)
     return WorkspaceNextUpSnapshot(
         loggedSeconds = loggedWorkTotals(db),
         planning = taskPlanningValues(db),

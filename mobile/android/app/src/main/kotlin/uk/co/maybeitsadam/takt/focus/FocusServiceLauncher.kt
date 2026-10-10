@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.core.FocusContext
+import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.widget.NextUpSummary
 import uk.co.maybeitsadam.takt.widget.NextUpWidget
 
@@ -45,7 +46,7 @@ object FocusServiceLauncher {
                     .map { it?.activeTaskId }
                     .distinctUntilChanged()
                     .flatMapLatest { runningId ->
-                        session.repository.observeNextUpSnapshot(session.workspace.id, FocusContext(), runningId)
+                        session.repository.observeNextUpSnapshot(session.workspace.id, FocusContext(), runningId, ladderLimit = WorkspaceNextUpSnapshot.fallbackDayLength)
                             .map { NextUpSummary.of(it, runningId) }
                     }
             }

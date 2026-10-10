@@ -31,6 +31,7 @@ import androidx.glance.text.TextStyle
 import uk.co.maybeitsadam.takt.MainActivity
 import uk.co.maybeitsadam.takt.appContainer
 import uk.co.maybeitsadam.takt.core.FocusContext
+import uk.co.maybeitsadam.takt.core.WorkspaceNextUpSnapshot
 import uk.co.maybeitsadam.takt.ui.ShellIntents
 import uk.co.maybeitsadam.takt.app.ThemeLibraryState
 import uk.co.maybeitsadam.takt.ui.theme.ResolvedTheme
@@ -46,7 +47,7 @@ class NextUpWidget : GlanceAppWidget() {
         val summary = runCatching {
             val session = context.appContainer.awaitSession()
             val running = session.repository.activeFocusSession()?.activeTaskId
-            NextUpSummary.of(session.repository.nextUpSnapshot(session.workspace.id, FocusContext(), running), running)
+            NextUpSummary.of(session.repository.nextUpSnapshot(session.workspace.id, FocusContext(), running, ladderLimit = WorkspaceNextUpSnapshot.fallbackDayLength), running)
         }.getOrDefault(NextUpSummary.EMPTY)
         val theme = WidgetTheme.of(context.appContainer.theme.value)
         provideContent { NextUpContent(context, summary, theme) }

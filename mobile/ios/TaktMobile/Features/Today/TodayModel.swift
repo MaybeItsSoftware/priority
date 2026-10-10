@@ -102,9 +102,8 @@ struct DaySnapshot: Equatable, Sendable {
       workspaceId: workspaceID, context: FocusContext(), runningID: session?.activeTaskId, now: now,
       ladderLimit: WorkspaceNextUpSnapshot.fallbackDayLength)
     day.workProgress = snapshot.workProgress
-    if let today = Calendar.current.dateInterval(of: .day, for: now) {
-      day.loggedToday = try store.focusWorkBlocks(in: today).reduce(0) { $0 + $1.seconds }
-    }
+    // Summed in the core with the week, rather than reading today's blocks.
+    day.loggedToday = snapshot.workProgress.today.seconds
     let dailies = try store.dailies(on: now)
     let dailyByTask = Dictionary(dailies.map { ($0.task.id, $0) }, uniquingKeysWith: { first, _ in first })
     day.dailies = dailies.map {

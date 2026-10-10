@@ -1005,14 +1005,21 @@ class WorkspaceRepository(
 
     // region The day and the ladder (WorkspaceNextUpSnapshot.swift)
 
-    /** Everything the day and the focus ladder are drawn from, in one read. */
+    /**
+     * Everything the day and the focus ladder are drawn from, in one read.
+     * With a [ladderLimit] the ladder holds only its first so many entries
+     * plus every task in the day further down, as the iPhone's Today and
+     * widget ask; the focus screen asks for all of it.
+     */
     suspend fun nextUpSnapshot(
         workspaceId: String?,
         context: FocusContext,
         runningId: String?,
         now: Instant = now(),
         zone: ZoneId = this.zone,
-    ): WorkspaceNextUpSnapshot = database.read { nextUpSnapshot(it, database.core, workspaceId, context, runningId, now, zone) }
+        ladderLimit: Int? = null,
+    ): WorkspaceNextUpSnapshot =
+        database.read { nextUpSnapshot(it, database.core, workspaceId, context, runningId, now, zone, ladderLimit) }
 
     /** The snapshot, rebuilt whenever any of the tables behind it change. */
     fun observeNextUpSnapshot(
@@ -1020,12 +1027,13 @@ class WorkspaceRepository(
         context: FocusContext,
         runningId: String?,
         zone: ZoneId = this.zone,
+        ladderLimit: Int? = null,
     ): Flow<WorkspaceNextUpSnapshot> = database.observe(
         setOf(
             "tasks", "task_lists", "task_metadata", "dailies", "daily_contributions", "focus_work_blocks",
             "task_conditions",
         ),
-    ) { nextUpSnapshot(it, database.core, workspaceId, context, runningId, now(), zone) }
+    ) { nextUpSnapshot(it, database.core, workspaceId, context, runningId, now(), zone, ladderLimit) }
 
     // endregion
 
