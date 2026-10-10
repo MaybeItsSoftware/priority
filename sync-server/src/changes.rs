@@ -6,11 +6,12 @@ use crate::error::Result;
 use crate::merge::row_hlc;
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{Map, Value};
 use sqlx::types::Json as Jsonb;
 use std::collections::BTreeMap;
 use std::time::Duration;
+use takt_sync_rules::wire::{ChangedRow, ChangesResponse};
 use tokio::time::Instant;
 
 const DEFAULT_LIMIT: i64 = 500;
@@ -24,23 +25,6 @@ pub struct ChangesQuery {
     pub since: Option<i64>,
     pub limit: Option<i64>,
     pub wait: Option<u64>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChangesResponse {
-    pub rows: Vec<ChangedRow>,
-    pub cursor: i64,
-    pub has_more: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ChangedRow {
-    pub table: String,
-    pub id: String,
-    pub deleted: bool,
-    pub values: Map<String, Value>,
-    pub hlc: Option<String>,
 }
 
 pub async fn changes(

@@ -7,11 +7,11 @@ use crate::merge::{self, Change, Op, Outcome, StoredRow};
 use crate::notify::CHANNEL;
 use axum::extract::State;
 use axum::{Extension, Json};
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sqlx::types::Json as Jsonb;
 use sqlx::{Postgres, Transaction};
 use std::collections::BTreeMap;
+use takt_sync_rules::wire::{PushRequest, PushResponse, WireChange, WireOp};
 use uuid::Uuid;
 
 /// Serialises every push against every other.
@@ -34,34 +34,6 @@ const PUSH_LOCK_SQL: &str =
 /// Longest table name or row id accepted. Generous for uuids and SQLite table
 /// names; only there to stop a broken client storing megabyte keys.
 const MAX_KEY_LEN: usize = 256;
-
-#[derive(Debug, Deserialize)]
-pub struct PushRequest {
-    pub changes: Vec<WireChange>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct WireChange {
-    pub table: String,
-    pub id: String,
-    pub op: WireOp,
-    pub hlc: String,
-    #[serde(default)]
-    pub values: Option<Map<String, Value>>,
-}
-
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum WireOp {
-    Upsert,
-    Delete,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PushResponse {
-    pub accepted: usize,
-    pub cursor: i64,
-}
 
 /// Checks a change before anything is written, so a batch is applied whole
 /// or refused whole: the client keeps its outbox and the bug shows.
