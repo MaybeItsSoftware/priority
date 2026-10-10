@@ -213,6 +213,41 @@ covered the old copies pass against it.
    that log on every completion. The CLI's `focus_history` is a plain sum of
    rows and stayed as it was.
 
+   **Boards, outlines and the matrix (2026-10-10).** The sidebar's order is
+   `sidebar/outline.rs`: `WorkspaceSidebarOutline.rows` and `listIDs` in
+   Swift and Kotlin wrap it, and each row crosses back as a kind and an
+   index into what was passed, so no string is copied back. The Mac keeps
+   its Today row and its wrapping cursor; the phone asks without Today and
+   keeps its clamped cursor, the one place the two copies had disagreed.
+   A 137-row sidebar costs the same as before, 0.4 ms a build in a debug
+   test. Android's sidebar read every active list's tasks one list at a
+   time and walked them in Kotlin for its nested lists and badges;
+   `sidebar_index_with_open_counts` walks them in the core, so only the
+   nested lists and the numbers cross: 26 ms to 11 ms on a 5,000-task list
+   on the JVM. The Mac draws totals, not open counts, so its
+   `sidebar_index` skips the status read that cost it a tenth (5.4 ms
+   against 5.0 ms on the 7,000-task benchmark) and stays at 5.0 ms. The rest
+   of the cluster stays native, measured on the same benchmark.
+   `TaskOutlineFolding` (both platforms) folds an outline the screen holds
+   against fold state that lives only in memory, 0.04 ms for a list's
+   outline, against 6 to 10 µs a row to cross. `MatrixGeometry`,
+   `MatrixQuadrant` and `RootDueBucket` are per-point maths and display
+   names. `WorkspaceListTree` is the small tree over the core's rows step 6
+   kept; its `WorkspaceSidebarIndex` and `WorkspaceBoardTrees` builders
+   stay as the oracles the core's `sidebar.rs` and `board.rs` are tested
+   against. Android's board still shapes the trees its outline read in the
+   same scope, as the Mac's single-list board does, because reading them
+   again in the core would cross the same rows twice. Kotlin's
+   `KanbanColumn` has no caller outside its tests. The Swift-only engines
+   work on the Checkvist-era tasks `TaskListViewModel` and `KanbanManager`
+   keep in memory, which the core never holds: `KanbanFilter`,
+   `KanbanSelection`, `KanbanManualOrder`, `TaskVisibilityEngine`,
+   `TaskFilterEngine`, `MatrixClustering` and `MatrixSpread`.
+   `MatrixNavigation` and `MatrixViewport` have no callers outside their
+   tests. `BoardLinks` solves the board's link geometry from measured card
+   heights a frame at a time. It overlaps `board.rs` only in which card a
+   subtask hangs from, which the board read already carries.
+
 Pure-logic engines in `TaktCore` (the command parser, recurrence, visibility,
 theming) stay in Swift until steps 1 to 8 are done. They are not duplicated
 on Android in the same way, so moving them buys less.
