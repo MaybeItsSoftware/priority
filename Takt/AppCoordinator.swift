@@ -59,30 +59,6 @@ import SwiftUI
 
   @ObservationIgnored private var statusMessageGeneration = 0
 
-  var orderedRootTaskViews: [RootTaskView] { Self.storedRootTaskViewOrder }
-
-  /// The legacy tab order, read from `UserDefaults` once.
-  ///
-  /// Nothing writes the key any more: the settings pane that reordered these
-  /// tabs went with the tabs themselves, and the `View` menu lists
-  /// `WorkspaceViewMode` instead. The read stays so an order saved by an
-  /// earlier build still drives what is left of root-tab cycling — and since
-  /// nothing changes it while the app runs, it is decoded once rather than on
-  /// every keystroke that cycles a tab.
-  static let storedRootTaskViewOrder: [RootTaskView] = {
-    if let data = UserDefaults.standard.data(forKey: "rootTaskViewOrder"),
-      let rawValues = try? JSONDecoder().decode([Int].self, from: data)
-    {
-      let views = rawValues.compactMap { RootTaskView(rawValue: $0) }
-      // Ensure all cases are present
-      let allCases = RootTaskView.allCases
-      if Set(views) == Set(allCases) && views.count == allCases.count {
-        return views
-      }
-    }
-    return RootTaskView.allCases
-  }()
-
   enum CarbonKey {
     static let space = 49
     static let b = 11
@@ -135,10 +111,8 @@ import SwiftUI
   @ObservationIgnored var isLoadingStoredRemoteKey = false
   @ObservationIgnored let preferencesStore = PreferencesStore()
   let userPluginManager: UserPluginManager
-  @ObservationIgnored lazy var commandExecutor = CommandExecutor(manager: self)
   @ObservationIgnored private(set) var lifecycle: LifecycleController!
   private(set) var undoService: UndoService!
-  @ObservationIgnored private(set) var taskNavigationService: TaskNavigationService!
   @ObservationIgnored private(set) var taskMutationService: TaskMutationService!
   @ObservationIgnored private(set) var syncService: SyncService!
   /// Strong-held because `KanbanManager.dataSource` is `weak`. Bridges the
@@ -329,11 +303,6 @@ import SwiftUI
       preferencesStore: preferences.preferencesStore
     )
 
-    self.taskNavigationService = TaskNavigationService(
-      coordinator: self,
-      repository: repository,
-      navigationState: navigationState
-    )
     // Attached after `self` is fully initialised, like the other hosts.
     self.taskListViewModel.host = self
     self.taskMutationService = TaskMutationService(host: self, repository: repository)
@@ -415,28 +384,6 @@ import SwiftUI
 
 extension TaskMutationService: UndoActionPerforming {}
 
-extension AppCoordinator {
-  // MARK: - Recurrence convenience
-
-  /// `setRecurrenceRule` is kept here (rather than on `RecurrenceManager`)
-  /// because parse failure surfaces through `errorMessage`, which is a
-  /// coordinator-level concern. The other two are pass-throughs that exist
-  /// only to spare callers a `.recurrence.` hop and could be inlined later.
-  func recurrenceRule(for task: CheckvistTask) -> RecurrenceRule? {
-    recurrence.recurrenceRule(for: task)
-  }
-
-  @MainActor func setRecurrenceRule(_ raw: String, for task: CheckvistTask) {
-    if let error = recurrence.setRecurrenceRule(raw, for: task) {
-      repository.errorMessage = error
-    }
-  }
-
-  @MainActor func clearRecurrenceRule(for task: CheckvistTask) {
-    recurrence.clearRecurrenceRule(for: task)
-  }
-}
-
 /// What is left here is the kanban adapter layer: `KanbanManager` decides
 /// *what* a column move means in terms of content and due date — which needs
 /// the app-only `KanbanColumn` type — and `TaskMutationService` performs it.
@@ -497,7 +444,7 @@ extension AppCoordinator {
     taskMutationService.addRootTask(content: content, due: due)
   }
 
-  // MARK: - Keychain / Debug / Command execution
+  // MARK: - Keychain / Debug
 
   func handleCredentialStorageModeChanged() {
     let current = repository.remoteKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -538,16 +485,6 @@ extension AppCoordinator {
     repository.hasAttemptedRemoteKeyBootstrap = nextState.hasAttemptedBootstrap
   }
 
-  @MainActor func toggleDebugKeychainStorageMode() {
-    #if DEBUG
-      preferences.ignoreKeychainInDebug.toggle()
-      repository.errorMessage =
-        preferences.ignoreKeychainInDebug
-        ? "Dev mode: keychain disabled (no password prompts)."
-        : "Dev mode: keychain enabled."
-    #endif
-  }
-
   @MainActor func resetOnboardingForDebug() {
     #if DEBUG
       repository.checkvistSyncPlugin.clearAuthentication()
@@ -579,42 +516,6 @@ extension AppCoordinator {
       preferencesStore.remove(.pluginSelectionOnboardingCompleted)
       preferencesStore.remove(.dismissedOnboardingDialogs)
     #endif
-  }
-
-  @MainActor func executeCommandInput(_ input: String) async {
-    let parsed = CommandEngine.parse(input)
-    logger.log("Executing command: \(input, privacy: .public)")
-    await commandExecutor.execute(parsed: parsed)
-    if case .unknown(let raw) = parsed {
-      logger.error("Unknown command: \(raw, privacy: .public)")
-    }
-  }
-
-  /// Opens the calendar used by Checkvist's `dd`-style due-date interaction.
-  /// An existing due date is highlighted, so changing one starts from the date
-  /// the task already has instead of jumping back to today.
-  func openDueDatePicker() {
-    guard let task = taskListViewModel.currentTask else {
-      repository.errorMessage = "No task selected."
-      return
-    }
-    repository.errorMessage = nil
-    quickEntry.beginDueDatePicker(forTaskId: task.id, initialDate: task.dueDate)
-  }
-
-  /// Applies (or clears) the calendar's choice to the task that opened it, then
-  /// closes the picker immediately while sync runs.
-  func submitDueDatePicker(clearDueDate: Bool = false) {
-    guard let taskId = quickEntry.dueDatePickerTaskId,
-      let task = repository.tasks.first(where: { $0.id == taskId })
-    else {
-      quickEntry.dismissDueDatePicker()
-      repository.errorMessage = "No task selected."
-      return
-    }
-    let due = clearDueDate ? "" : quickEntry.dueDatePickerDueString()
-    quickEntry.dismissDueDatePicker()
-    Task { await taskMutationService.updateTask(task: task, due: due) }
   }
 
   var activePluginSettingsPages: [any PluginSettingsPageProviding] {

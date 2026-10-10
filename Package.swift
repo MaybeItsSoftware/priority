@@ -49,7 +49,6 @@ let pluginTargetExcludes = [
   "Takt/AppDelegate.swift",
   "Takt/CacheInvalidationBus.swift",
   "Takt/CacheState.swift",
-  "Takt/CommandExecutor.swift",
   "Takt/DailyLogDataSourceAdapter.swift",
   "Takt/IntegrationDataSourceAdapter.swift",
   "Takt/KanbanTaskDataSourceAdapter.swift",
@@ -92,10 +91,8 @@ let pluginTargetExcludes = [
   // a `TaktAppLogic` source, and a file can only belong to one SPM target.
   "Takt/CheckvistTask+VisibilityTask.swift",
   "Takt/TaskServiceHosts.swift",
-  "Takt/TaskNavigationCoordinator.swift",
   "Takt/TaskOutlineBuilder.swift",
   "Takt/TaskTreeFormatter.swift",
-  "Takt/TaskNavigationService.swift",
   "Takt/UndoService.swift",
 
   // Plugin subtrees / files that are app-only or conflict with PluginModelStubs
@@ -220,7 +217,6 @@ let appLogicTargetExcludes = [
   "Takt/AppCoordinator.swift",
   "Takt/AppCoordinator+ServiceHosts.swift",
   "Takt/AppDelegate.swift",
-  "Takt/CommandExecutor.swift",
   "Takt/DailyLogDataSourceAdapter.swift",
   "Takt/IntegrationDataSourceAdapter.swift",
   "Takt/KanbanTaskDataSourceAdapter.swift",
@@ -247,7 +243,6 @@ let appLogicTargetExcludes = [
   "Takt/SettingsView+AppearancePane.swift",
   "Takt/SettingsView+GeneralPane.swift",
   "Takt/SettingsView+KeyboardPane.swift",
-  "Takt/TaskNavigationService.swift",
   "Takt/TaskTreeFormatter.swift",
   "Takt/Theme.swift",
 
@@ -426,8 +421,7 @@ let package = Package(
         "Takt/TaskMutationService.swift",
         "Takt/TaskMutationService+Board.swift",
         "Takt/TaskServiceHosts.swift",
-        "Takt/TaskNavigationCoordinator.swift",
-        // The outline flattening `TaskNavigationCoordinator` decides against.
+        // The outline flattening `TaskListViewModel` builds its rows with.
         // Pure, and covered by `TaskOutlineBuilderTests`.
         "Takt/TaskOutlineBuilder.swift",
         "Takt/ListScopedPriorityStore.swift",

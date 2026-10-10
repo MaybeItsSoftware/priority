@@ -42,7 +42,15 @@ extension AppCoordinator: TaskMutationHost {
   }
 
   func clampSelectionToVisibleRange() {
-    taskNavigationService.clampSelectionToVisibleRange()
+    focusSessionManager.clampForTasks(repository.tasks)
+    if taskListViewModel.rootTaskView == .kanban {
+      kanban.clampKanbanSelection()
+      return
+    }
+    let maxIndex = max(taskListViewModel.visibleTasks.count - 1, 0)
+    if navigationState.currentSiblingIndex > maxIndex {
+      navigationState.currentSiblingIndex = maxIndex
+    }
   }
 
   var lastUndoableAction: UndoableAction? {
