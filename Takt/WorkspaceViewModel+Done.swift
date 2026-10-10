@@ -46,16 +46,26 @@ extension WorkspaceViewModel {
   /// gets slow.
   func reloadCompleted() {
     guard isDoneRailVisible, let store else {
-      if !isDoneRailVisible { completedTasks = [] }
+      if !isDoneRailVisible {
+        completedTasks = []
+        completedTasksKey = nil
+      }
       return
     }
     let since = Calendar.current.date(
       byAdding: .day, value: -Self.doneRailWindowDays, to: Date.now) ?? .distantPast
     do {
+      // Read again only when something was written, or the day turned: a
+      // switch between lists changes nothing the rail shows, and the read
+      // covers every list.
+      let stamp = try store.changeStamp()
+      let day = Calendar.current.startOfDay(for: .now)
+      if let key = completedTasksKey, key.stamp == stamp, key.day == day { return }
       // Only when it moved: every mutation reloads this, and an assignment
       // regroups the rail and redraws it whether or not anything changed.
       let fetched = try store.completedTasks(since: since)
       if completedTasks != fetched { completedTasks = fetched }
+      completedTasksKey = (stamp: stamp, day: day)
     } catch {
       errorMessage = error.localizedDescription
     }

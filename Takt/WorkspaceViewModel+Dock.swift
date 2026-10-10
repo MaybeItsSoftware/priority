@@ -88,6 +88,7 @@ extension WorkspaceViewModel {
   func hideRightDock() {
     isRightDockVisible = false
     completedTasks = []
+    completedTasksKey = nil
     if keyboardFocusArea == .inspector || keyboardFocusArea == .done || keyboardFocusArea == .timeline {
       requestKeyboardFocus(.tasks)
     }

@@ -134,6 +134,8 @@ extension WorkspaceViewModel {
   /// rather than walking each card's subtasks. Run whenever the board is read
   /// and whenever a fold changes, the only two things the rows turn on.
   func rebuildBoardRowIndex() {
+    // A fold changes the rows outside any kept index.
+    appliedBoardIndexKey = nil
     var index: [String: BoardColumnRows] = [:]
     var columns: [[(id: String, rowIDs: [String])]] = []
     for column in boardColumns {
@@ -299,7 +301,27 @@ extension WorkspaceViewModel {
 
   /// Assigns only what changed: every card and column reads these, and an
   /// assignment is a redraw whether or not the value moved.
+  ///
+  /// Kept per board shape (`boardShapeGeneration`), columns and folds, so
+  /// going back to a scope whose board is resident takes its index as it
+  /// was rather than sorting thousands of cards into columns again.
   func rebuildBoardIndex() {
+    let key = boardShapeGeneration.map {
+      BoardIndexMemo.Key(generation: $0, columns: boardColumns, folded: foldedTaskIDs)
+    }
+    if let key, let memo = boardIndexMemos.last(where: { $0.key == key }) {
+      // Already on screen: nothing moved.
+      guard appliedBoardIndexKey != key else { return }
+      boardColumnsByID = memo.columnsByID
+      boardVisibleTaskIDs = memo.visible
+      boardTasksByColumn = memo.byColumn
+      matrixQuadrants = memo.quadrants
+      boardRowsByColumn = memo.rowsByColumn
+      if boardLinks != memo.links { boardLinks = memo.links }
+      settleBoardLinks()
+      appliedBoardIndexKey = key
+      return
+    }
     let byID = Dictionary(boardColumns.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     if boardColumnsByID != byID { boardColumnsByID = byID }
     let tasks = boardTasks + boardCrossColumnTasks
@@ -315,6 +337,13 @@ extension WorkspaceViewModel {
     }
     if matrixQuadrants != quadrants { matrixQuadrants = quadrants }
     rebuildBoardRowIndex()
+    appliedBoardIndexKey = key
+    guard let key else { return }
+    boardIndexMemos.removeAll { $0.key.generation == key.generation }
+    boardIndexMemos.append(BoardIndexMemo(
+      key: key, columnsByID: byID, visible: visible, byColumn: grouped, quadrants: quadrants,
+      rowsByColumn: boardRowsByColumn, links: boardLinks))
+    if boardIndexMemos.count > scopeCache.capacity { boardIndexMemos.removeFirst() }
   }
 
   /// The column a visible card sits in, by id alone — so the board can ask

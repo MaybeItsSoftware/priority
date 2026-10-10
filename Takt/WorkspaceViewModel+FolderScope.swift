@@ -67,8 +67,10 @@ extension WorkspaceViewModel {
     desktopShortcutSequence.reset()
     selectedTaskID = nil
     newTaskListID = folderScopeDestinationID
-    if viewMode == .today { viewMode = .board }
-    reloadOutline(refreshSidebar: false)
+    switchScope("Select folder") {
+      if viewMode == .today { viewMode = .board }
+      reloadOutline(refreshSidebar: false)
+    }
   }
 }
 

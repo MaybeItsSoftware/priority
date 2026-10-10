@@ -29,21 +29,16 @@ extension WorkspaceViewModel {
     nextCompletionExpiry = nil
     defer { scheduleCompletionExpiry() }
     do {
-      var items: [TaskOutlineItem]
-      if isEverythingSelected || folderScopeListIDs != nil {
-        items = viewMode == .outline
-          ? try combinedScopeBoard(store: store, now: Date()).cards.map { TaskOutlineItem(task: $0, depth: 0) } : []
-      } else if let selectedListID {
-        let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
-        let parentID = scopeTaskID ?? selectedList.flatMap {
-          tree?.visibleRootParentTaskID(registeredRootId: $0.visibleRootTaskId)
+      var items: [TaskOutlineItem] = []
+      // A combined scope's outline is only gathered while the outline is
+      // showing; a single list's always is.
+      if let scope = currentScope, !isMultiListScope || viewMode == .outline {
+        try ensureScopeRead(scope, store: store)
+        if let shaped = scopeCache.outline(for: scope, options: scopeShapeOptions, now: Date()) {
+          items = shaped.items
+          noteCompletionExpiry(shaped.expiry)
         }
-        items = tree?.visibleOutline(under: parentID) ?? []
-      } else {
-        items = []
       }
-      let now = Date()
-      items.removeAll { hidesCompletion(of: $0.task, now: now) }
       if outline != items { outline = items }
       // The `defer` above schedules the expiry once for both.
       reloadBoardNow(schedulesCompletionExpiry: false)
@@ -54,25 +49,6 @@ extension WorkspaceViewModel {
     } catch {
       errorMessage = error.localizedDescription
     }
-  }
-
-  /// A combined scope's board, read and walked in the core so that only the
-  /// rows it draws cross: its cards are every open, doable task in the
-  /// scope, in sidebar order, the same answer as
-  /// `WorkspaceStore.actionableTasks`. Finished tasks this pane would hide
-  /// outright are left in the core; ones still lingering come over, for
-  /// `hidesCompletion` to decide and schedule.
-  private func combinedScopeBoard(store: WorkspaceStore, now: Date) throws -> WorkspaceBoardRead {
-    let open = lists.filter { $0.completedAt == nil }
-    let scoped: [TaskList]
-    if let ids = folderScopeListIDs {
-      let byID = Dictionary(open.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-      scoped = ids.compactMap { byID[$0] }
-    } else {
-      scoped = open
-    }
-    let cutoff = hidesCompletedTasks ? now.addingTimeInterval(-Self.completedLingerInterval) : nil
-    return try store.combinedBoard(listIds: scoped.map(\.id), hidingCompletedBefore: cutoff)
   }
 
   var boardConfigurationKey: String {
@@ -101,9 +77,6 @@ extension WorkspaceViewModel {
   func loadBoardIfStale() {
     guard boardIsStale else { return }
     reloadBoardNow(force: true)
-    // Read outside a refresh, so nothing else would empty the trees it
-    // shared, and the next refresh would take them as current.
-    listTreeCache = [:]
   }
 
   /// - Parameters:
@@ -140,95 +113,41 @@ extension WorkspaceViewModel {
     }
     boardIsStale = false
     do {
-      let now = Date()
-      var tasks: [WorkspaceTask]
-      let parentTaskID: String?
-      // A combined scope's board comes walked from the core, trees, parents
-      // and placements with it; a single list's is shaped from the tree the
-      // outline has already read this refresh.
-      var combined: WorkspaceBoardRead?
-      if isEverythingSelected || folderScopeListIDs != nil {
-        parentTaskID = nil
-        let read = try combinedScopeBoard(store: store, now: now)
-        combined = read
-        tasks = read.cards
-      } else if let selectedListID {
-        let tree = try listTrees(for: [selectedListID], store: store)[selectedListID]
-        parentTaskID = scopeTaskID ?? selectedList.flatMap {
-          tree?.visibleRootParentTaskID(registeredRootId: $0.visibleRootTaskId)
+      var shape = WorkspaceBoardShape.empty
+      var generation: Int?
+      if let scope = currentScope {
+        try ensureScopeRead(scope, store: store)
+        if let shaped = scopeCache.board(for: scope, options: scopeShapeOptions, now: Date()) {
+          shape = shaped.board
+          generation = shaped.generation
+          noteCompletionExpiry(shaped.expiry)
         }
-        tasks = tree?.children(of: parentTaskID) ?? []
+      }
+      let used: Set<String>
+      if let generation, let memo = usedColumnIDsMemo, memo.generation == generation {
+        used = memo.ids
       } else {
-        parentTaskID = nil
-        tasks = []
+        used = Set(shape.columns.values)
+        usedColumnIDsMemo = generation.map { (generation: $0, ids: used) }
       }
-      if boardParentTaskID != parentTaskID { boardParentTaskID = parentTaskID }
-      tasks.removeAll { ($0.isList && $0.archivedAt != nil) || hidesCompletion(of: $0, now: now) }
-      let boardIDs = Set(tasks.map(\.id))
-      let allDescendants: [String: [TaskOutlineItem]]
-      let parents: [String: String]
-      if let combined {
-        allDescendants = combined.descendants
-        parents = combined.parentIDs
-      } else {
-        let listIDs = Array(Set(tasks.map(\.listId)))
-        let trees = try listTrees(for: listIDs, store: store)
-        // Every level beneath every card, the nested cards' own trees
-        // included, in one walk of rows already read — never a query per card.
-        let board = WorkspaceBoardTrees(cardIDs: boardIDs, trees: listIDs.compactMap { trees[$0] })
-        allDescendants = board.descendants
-        parents = board.parents.mapValues(\.id)
+      let columns = try resolvedBoardColumns(usedColumnIDs: used, store: store)
+      // The shape on screen already, kept: nothing to compare, nothing to
+      // assign. Otherwise assigned only where it differs, so a refresh that
+      // changed nothing on the board does not redraw every card.
+      if generation == nil || generation != boardShapeGeneration {
+        if boardParentTaskID != shape.parentTaskID { boardParentTaskID = shape.parentTaskID }
+        boardTreeTasks = shape.treeTasks
+        if boardTasks != shape.cards { boardTasks = shape.cards }
+        if boardDescendants != shape.descendants { boardDescendants = shape.descendants }
+        if boardTaskParents != shape.parents { boardTaskParents = shape.parents }
+        if boardTaskColumns != shape.columns { boardTaskColumns = shape.columns }
+        if boardCrossColumnTasks != shape.crossColumnTasks { boardCrossColumnTasks = shape.crossColumnTasks }
+        if matrixPositions != shape.positions { matrixPositions = shape.positions }
       }
-      // A card's tree loses its finished rows as the outline does, once their
-      // few seconds are up. Row by row, as there: an open task under a closed
-      // one stays on show.
-      let descendants = allDescendants.mapValues { rows in
-        rows.filter { !hidesCompletion(of: $0.task, now: now) }
-      }
-      var treeIDs = Set<String>()
-      let treeTasks = (tasks + tasks.flatMap { root in
-        descendants[root.id, default: []].map(\.task)
-      }).filter { treeIDs.insert($0.id).inserted }
-      // The combined read carries every row's placement; only the board's
-      // own rows keep theirs, as a read of just those would have answered.
-      let metadata = try combined.map { read in
-        (columns: read.columns.filter { treeIDs.contains($0.key) },
-         positions: read.positions.filter { treeIDs.contains($0.key) })
-      } ?? store.boardMetadata(for: treeTasks.map(\.id))
-      let columnsByTask = metadata.columns
-      // A subtask nobody filed is in whatever column its parent is in. It
-      // used to count as being in the first column, so moving a card out of
-      // Backlog left every one of its subtasks behind there as a card of its
-      // own — as though each had been filed in Backlog on purpose.
-      var effectiveColumns: [String: String] = [:]
-      func effectiveColumn(ofID id: String) -> String {
-        if let known = effectiveColumns[id] { return known }
-        let column = columnsByTask[id]
-          ?? parents[id].map { effectiveColumn(ofID: $0) }
-          ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
-        effectiveColumns[id] = column
-        return column
-      }
-      let crossColumn = treeTasks.filter { task in
-        if hidesCompletion(of: task, now: now) { return false }
-        guard !task.isList else { return false }
-        guard !boardIDs.contains(task.id), let parent = parents[task.id],
-          let filed = columnsByTask[task.id]
-        else { return false }
-        return filed != effectiveColumn(ofID: parent)
-      }
-      let columns = try resolvedBoardColumns(usedColumnIDs: Set(columnsByTask.values), store: store)
-      // Assigned only when they differ, so a refresh that changed nothing on
-      // the board does not redraw every card.
-      boardTreeTasks = treeTasks
-      if boardTasks != tasks { boardTasks = tasks }
-      if boardDescendants != descendants { boardDescendants = descendants }
-      if boardTaskParents != parents { boardTaskParents = parents }
-      if boardTaskColumns != columnsByTask { boardTaskColumns = columnsByTask }
-      if boardCrossColumnTasks != crossColumn { boardCrossColumnTasks = crossColumn }
       if boardColumns != columns { boardColumns = columns }
-      if matrixPositions != metadata.positions { matrixPositions = metadata.positions }
+      boardShapeGeneration = generation
     } catch {
+      boardShapeGeneration = nil
       errorMessage = error.localizedDescription
     }
   }
@@ -236,6 +155,7 @@ extension WorkspaceViewModel {
   /// Empties the cards and what was read about them, assigning only what
   /// is not already empty.
   private func clearBoard() {
+    boardShapeGeneration = nil
     boardTreeTasks = []
     if !boardTasks.isEmpty { boardTasks = [] }
     if !boardCrossColumnTasks.isEmpty { boardCrossColumnTasks = [] }
@@ -247,19 +167,12 @@ extension WorkspaceViewModel {
 
   /// How long a task you have just ticked off stays put before it goes, so
   /// the tick is seen and a mis-tick can be taken back where it happened.
-  static let completedLingerInterval: TimeInterval = 3
+  static let completedLingerInterval = WorkspaceScopeShaping.completedLingerInterval
 
-  /// Whether a finished task is kept off the pane. One finished within the
-  /// last few seconds still shows, and the soonest of those to expire is
-  /// noted so a reload can be scheduled for it.
-  func hidesCompletion(of task: WorkspaceTask, now: Date) -> Bool {
-    guard hidesCompletedTasks, task.status != .open else { return false }
-    // Completions from before `completedAt` was recorded are long past.
-    guard let completedAt = task.completedAt else { return true }
-    let expiry = completedAt.addingTimeInterval(Self.completedLingerInterval)
-    guard expiry > now else { return true }
+  /// Keeps the soonest lingering completion the pane has to reload for.
+  func noteCompletionExpiry(_ expiry: Date?) {
+    guard let expiry else { return }
     nextCompletionExpiry = min(nextCompletionExpiry ?? expiry, expiry)
-    return false
   }
 
   /// One pending reload for the soonest lingering completion. Keeping the

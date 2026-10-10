@@ -95,6 +95,8 @@ extension WorkspaceViewModel {
     guard !pendingRefresh.isEmpty || wrote else { return }
     // Any in-flight ranking was read before whatever just happened.
     writeEpoch += 1
+    // What was just written has to be on screen: no kept scope stands in.
+    if wrote { scopeReadMayBeStale = false }
     var reloadedTasks = false
     // What an open draft row is drawn among, so it can follow the rows it
     // sat beside rather than leave with them.
@@ -131,19 +133,8 @@ extension WorkspaceViewModel {
     // vanished from the screen it was typed on until something else asked for
     // a ranking. Off the main thread, and coalesced with any other request.
     if wrote { scheduleNextUp() }
-    listTreeCache = [:]
-  }
-
-  // MARK: - Shared reads
-
-  /// The lists this refresh has already read, so a list is read once however
-  /// many surfaces shape it. Emptied at the end of every refresh.
-  func listTrees(for listIDs: [String], store: WorkspaceStore) throws -> [String: WorkspaceListTree] {
-    let missing = listIDs.filter { listTreeCache[$0] == nil }
-    if !missing.isEmpty {
-      for (id, tree) in try store.listTrees(in: missing) { listTreeCache[id] = tree }
-    }
-    return listTreeCache
+    // The outermost refresh: a switch's leave to draw kept state ends here.
+    if refreshDepth == 1 { scopeReadMayBeStale = false }
   }
 
   /// The history menu's labels, read after a write rather than on every

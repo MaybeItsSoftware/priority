@@ -243,7 +243,25 @@ enum WorkspaceSidebarItem: Identifiable {
   @ObservationIgnored var nextUpRequested = false
   @ObservationIgnored var nextUpLaunchQueued = false
   @ObservationIgnored var nextUpGeneration = 0
-  @ObservationIgnored var listTreeCache: [String: WorkspaceListTree] = [:]
+  /// The scopes shown lately, resident between switches. See
+  /// `WorkspaceViewModel+ScopeCache.swift`.
+  @ObservationIgnored let scopeCache = WorkspaceScopeCache(capacity: 8)
+  /// Set for the refresh a switch makes, which wrote nothing, so a kept
+  /// combined scope may be drawn while it is read again.
+  @ObservationIgnored var scopeReadMayBeStale = false
+  /// Scopes being read off the main thread, so one is not read twice at once.
+  @ObservationIgnored var revalidatingScopes: Set<WorkspaceScope> = []
+  @ObservationIgnored var scopePrefetchQueued = false
+  /// The board shape on screen, as `WorkspaceScopeCache` numbers it; nil
+  /// for a board that was emptied or not read through the cache.
+  @ObservationIgnored var boardShapeGeneration: Int?
+  @ObservationIgnored var usedColumnIDsMemo: (generation: Int, ids: Set<String>)?
+  /// The board indexes built for the shapes shown lately, and the one
+  /// applied now. See `rebuildBoardIndex()`.
+  @ObservationIgnored var boardIndexMemos: [BoardIndexMemo] = []
+  @ObservationIgnored var appliedBoardIndexKey: BoardIndexMemo.Key?
+  /// What the done rail's rows were read at; see `reloadCompleted()`.
+  @ObservationIgnored var completedTasksKey: (stamp: WorkspaceChangeStamp, day: Date)?
   /// Whether `waitingDetails` may be behind the database. It is read from
   /// every task's metadata, so it is read again after a write rather than on
   /// every refresh — moving between lists changes none of it.

@@ -28,7 +28,7 @@ extension WorkspaceViewModel {
     // The inbox is a queue to empty, not a board to plan, so it opens as a
     // flat outline whatever the last list was shown as.
     viewMode = lists.first(where: { $0.id == id })?.systemRole == .inbox ? .outline : .board
-    reloadOutline(refreshSidebar: false)
+    switchScope("Select list") { reloadOutline(refreshSidebar: false) }
   }
 
   func selectEverything() {
@@ -47,8 +47,10 @@ extension WorkspaceViewModel {
     taskInsertionReference = nil
     desktopShortcutSequence.reset()
     selectedTaskID = nil
-    viewMode = .board
-    reloadOutline(refreshSidebar: false)
+    switchScope("Select Everything") {
+      viewMode = .board
+      reloadOutline(refreshSidebar: false)
+    }
   }
 
   /// The sidebar's Today: the day across every list, so Everything behind it.
@@ -88,8 +90,10 @@ extension WorkspaceViewModel {
     selectedFolderID = nil
     scopeTaskID = task.id
     focusedBoardColumnID = nil
-    viewMode = .board
-    reloadOutline(refreshSidebar: false)
+    switchScope("Enter task") {
+      viewMode = .board
+      reloadOutline(refreshSidebar: false)
+    }
   }
 
   func selectTask(_ task: WorkspaceTask) {
@@ -104,20 +108,24 @@ extension WorkspaceViewModel {
     let changed = viewMode != mode
     // One refresh for both: the board a mode needs (see `viewModeDidChange`)
     // and the outline below.
-    batchingRefreshes {
-      viewMode = mode
-      // A combined scope's outline is only gathered while the outline is
-      // showing, so a change of mode may need it. Asking for the mode already
-      // on screen — as launch does — cannot, and re-reading every list for
-      // it was waste.
-      if isMultiListScope && changed { reloadOutline(refreshSidebar: false) }
+    switchScope("Select view mode") {
+      batchingRefreshes { applyViewMode(mode, changed: changed) }
     }
+  }
+
+  private func applyViewMode(_ mode: WorkspaceViewMode, changed: Bool) {
+    viewMode = mode
+    // A combined scope's outline is only gathered while the outline is
+    // showing, so a change of mode may need it. Asking for the mode already
+    // on screen — as launch does — cannot, and re-reading every list for it
+    // was waste.
+    if isMultiListScope && changed { reloadOutline(refreshSidebar: false) }
   }
 
   func leaveTaskScope() {
     guard let task = scopeTask else { return }
     scopeTaskID = task.parentTaskId
     selectedTaskID = task.id
-    reloadOutline(refreshSidebar: false)
+    switchScope("Leave task") { reloadOutline(refreshSidebar: false) }
   }
 }
