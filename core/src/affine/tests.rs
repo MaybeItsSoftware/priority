@@ -33,45 +33,6 @@ fn merge_log(section: &str, existing: &str) -> String {
     merged(section, DAY_HEADING, existing)
 }
 
-// -- Task documents -------------------------------------------------------------
-
-#[test]
-fn titles_are_single_line() {
-    assert_eq!(
-        affine_task_title("Ship the\nrelease notes".into()),
-        "Ship the release notes"
-    );
-    assert_eq!(affine_task_title("a\r\nb\rc".into()), "a b c");
-    assert_eq!(affine_task_title("   ".into()), "Untitled task");
-}
-
-#[test]
-fn a_task_document_links_back_to_checkvist_and_carries_its_notes() {
-    let markdown = affine_task_document(
-        Some("https://checkvist.com/checklists/12#t34".into()),
-        34,
-        vec![
-            "Mention the CLI.".into(),
-            "   ".into(),
-            "And the shortcuts.".into(),
-        ],
-        "2025-08-18 06:53".into(),
-    );
-    assert_eq!(
-        markdown,
-        "[Open in Checkvist](https://checkvist.com/checklists/12#t34)\n\n\
-         _Synced from Takt · 2025-08-18 06:53_\n\n## Notes\n\n\
-         Mention the CLI.\n\nAnd the shortcuts."
-    );
-}
-
-#[test]
-fn a_task_with_no_list_falls_back_to_its_id() {
-    let markdown = affine_task_document(Some("  ".into()), -7, vec![], "stamp".into());
-    assert!(markdown.starts_with("Task ID: -7\n"));
-    assert!(markdown.ends_with("## Notes\n\n_No notes_"));
-}
-
 // -- Merging --------------------------------------------------------------------
 
 #[test]

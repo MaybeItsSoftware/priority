@@ -689,11 +689,7 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_affine_merged(
     ): Int
-    external fun uniffi_takt_core_checksum_func_affine_task_document(
-    ): Int
     external fun uniffi_takt_core_checksum_func_affine_task_id_in_permalink(
-    ): Int
-    external fun uniffi_takt_core_checksum_func_affine_task_title(
     ): Int
     external fun uniffi_takt_core_checksum_func_capture_date_time(
     ): Int
@@ -1563,11 +1559,7 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_affine_merged(`section`: RustBuffer.ByValue,`heading`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_affine_task_document(`permalink`: RustBuffer.ByValue,`taskId`: Long,`notes`: RustBuffer.ByValue,`syncedAt`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_affine_task_id_in_permalink(`permalink`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_func_affine_task_title(`content`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_capture_date_time(`text`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`defaultHour`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1891,13 +1883,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_affine_merged() and 0xFFFF) != 34494) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_affine_task_document() and 0xFFFF) != 62655) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
     if ((lib.uniffi_takt_core_checksum_func_affine_task_id_in_permalink() and 0xFFFF) != 7955) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_func_affine_task_title() and 0xFFFF) != 5213) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_capture_date_time() and 0xFFFF) != 25581) {
@@ -21436,24 +21422,6 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
 
         /**
-         * The body of a task's document, without the title AFFiNE carries
-         * separately. `synced_at` is the caller's formatted stamp.
-         */ fun `affineTaskDocument`(`permalink`: kotlin.String?, `taskId`: kotlin.Long, `notes`: List<kotlin.String>, `syncedAt`: kotlin.String): kotlin.String {
-            return FfiConverterString.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_task_document(
-    
-        
-        FfiConverterOptionalString.lower(`permalink`),
-        FfiConverterLong.lower(`taskId`),
-        FfiConverterSequenceString.lower(`notes`),
-        FfiConverterString.lower(`syncedAt`),_status)
-}
-    )
-    }
-    
-
-        /**
          * The task id a Checkvist permalink ends with (`#t<id>`). Matching on that
          * rather than the host keeps a self-hosted or rewritten link working.
          */ fun `affineTaskIdInPermalink`(`permalink`: kotlin.String): kotlin.Long? {
@@ -21463,21 +21431,6 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
         
         FfiConverterString.lower(`permalink`),_status)
-}
-    )
-    }
-    
-
-        /**
-         * A document title for a task, on one line: a newline would arrive in
-         * AFFiNE as a title plus a stray paragraph.
-         */ fun `affineTaskTitle`(`content`: kotlin.String): kotlin.String {
-            return FfiConverterString.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.uniffi_takt_core_fn_func_affine_task_title(
-    
-        
-        FfiConverterString.lower(`content`),_status)
 }
     )
     }

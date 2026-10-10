@@ -13,55 +13,6 @@ final class AFFiNEDocumentMarkdownTests: XCTestCase {
     return calendar
   }
 
-  // MARK: - Titles
-
-  /// A title with a newline in it arrives in AFFiNE as a title plus a stray
-  /// paragraph, which is not what anyone typed.
-  func testTitlesAreSingleLine() {
-    XCTAssertEqual(
-      AFFiNEDocumentMarkdown.title(forTaskContent: "Ship the\nrelease notes"),
-      "Ship the release notes"
-    )
-    XCTAssertEqual(AFFiNEDocumentMarkdown.title(forTaskContent: "   "), "Untitled task")
-  }
-
-  // MARK: - Task documents
-
-  func testATaskDocumentLinksBackToCheckvistAndCarriesItsNotes() {
-    let markdown = AFFiNEDocumentMarkdown.taskDocument(
-      taskContent: "Write the release notes",
-      permalink: "https://checkvist.com/checklists/12#t34",
-      taskId: 34,
-      notes: ["Mention the CLI.", "   ", "And the shortcuts."],
-      syncDate: syncDate,
-      calendar: utc
-    )
-
-    XCTAssertTrue(markdown.contains("[Open in Checkvist](https://checkvist.com/checklists/12#t34)"))
-    XCTAssertTrue(markdown.contains("## Notes"))
-    XCTAssertTrue(markdown.contains("Mention the CLI."))
-    XCTAssertTrue(markdown.contains("And the shortcuts."))
-    // The title is carried by AFFiNE separately; repeating it as an H1 would
-    // show it twice.
-    XCTAssertFalse(markdown.contains("# Write the release notes"))
-  }
-
-  /// An offline task has no list, so there is no permalink to offer — but the
-  /// id still has to survive, or the document is unattributable.
-  func testATaskWithNoListFallsBackToItsId() {
-    let markdown = AFFiNEDocumentMarkdown.taskDocument(
-      taskContent: "Offline task",
-      permalink: nil,
-      taskId: -7,
-      notes: [],
-      syncDate: syncDate,
-      calendar: utc
-    )
-
-    XCTAssertTrue(markdown.contains("Task ID: -7"))
-    XCTAssertTrue(markdown.contains("_No notes_"))
-  }
-
   // MARK: - Day documents
 
   func testADayIsTitledTheWayTheVaultNamesIt() {

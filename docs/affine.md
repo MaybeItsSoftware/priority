@@ -51,7 +51,7 @@ Then in **Settings → AFFiNE**:
    cheapest call that proves the helper starts, signs in and answers. Pick the
    workspace to write into, or leave it unset to use whatever `affine-mcp` is
    configured for.
-4. Optionally set a **parent document** id. New task documents are linked under
+4. Optionally set a **parent document** id. New documents (checklists, days) are linked under
    it, so they appear in the sidebar instead of only in search.
 
 Under nvm the helper is a `#!/usr/bin/env node` script in a directory a menu bar

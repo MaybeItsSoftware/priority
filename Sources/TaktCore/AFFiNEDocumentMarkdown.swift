@@ -22,29 +22,6 @@ public enum AFFiNEDocumentMarkdown {
   /// The heading Priority owns in a day's document.
   public static let dayHeading = "## Log"
 
-  // MARK: - Task documents
-
-  /// A document title for a task. Single-line, because a title that contains a
-  /// newline arrives in AFFiNE as a title plus a stray paragraph.
-  public static func title(forTaskContent content: String) -> String {
-    affineTaskTitle(content: content)
-  }
-
-  /// The body of a task's document — everything but the title, which AFFiNE
-  /// carries separately and would otherwise be repeated as an H1.
-  public static func taskDocument(
-    taskContent: String,
-    permalink: String?,
-    taskId: Int,
-    notes: [String],
-    syncDate: Date,
-    calendar: Calendar = .current
-  ) -> String {
-    affineTaskDocument(
-      permalink: permalink, taskId: Int64(taskId), notes: notes,
-      syncedAt: timestamp(syncDate, calendar: calendar))
-  }
-
   // MARK: - Day documents
 
   /// The title of the document a day is written into. Matches the daily-note
@@ -99,12 +76,4 @@ public enum AFFiNEDocumentMarkdown {
     affineBodyUnder(heading: heading, markdown: markdown)
   }
 
-  private static func timestamp(_ date: Date, calendar: Calendar) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.calendar = calendar
-    formatter.timeZone = calendar.timeZone
-    formatter.dateFormat = "yyyy-MM-dd HH:mm"
-    return formatter.string(from: date)
-  }
 }

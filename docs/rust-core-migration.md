@@ -355,8 +355,8 @@ covered the old copies pass against it.
    user-chosen `DateFormatter` pattern; and `daySection`, which strips
    `DailyNoteMarkdown`'s markers and moves with that file. `GoogleTasks` and
    `AFFiNE` exist only on the Mac, so there is no Kotlin port to retire.
-   `AFFiNEDocumentMarkdown.title(forTaskContent:)` and `taskDocument` have
-   no caller outside their tests.
+   The per-task document (`title(forTaskContent:)`, `taskDocument`) had no
+   caller outside its tests, so it was deleted rather than ported.
 
    **Capture syntax and commands (2026-10-10).** `core/src/capture.rs`
    reads the add field's trailing tokens (`45m #work @fri !1 wait:Sam`),

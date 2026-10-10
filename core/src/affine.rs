@@ -56,57 +56,6 @@ pub struct AffineChecklistRead {
     pub unowned_lines: Vec<String>,
 }
 
-// -- Task documents -------------------------------------------------------------
-
-/// A document title for a task, on one line: a newline would arrive in
-/// AFFiNE as a title plus a stray paragraph.
-#[uniffi::export]
-pub fn affine_task_title(content: String) -> String {
-    let collapsed = collapse_lines(&content);
-    if collapsed.is_empty() {
-        "Untitled task".to_string()
-    } else {
-        collapsed
-    }
-}
-
-/// The body of a task's document, without the title AFFiNE carries
-/// separately. `synced_at` is the caller's formatted stamp.
-#[uniffi::export]
-pub fn affine_task_document(
-    permalink: Option<String>,
-    task_id: i64,
-    notes: Vec<String>,
-    synced_at: String,
-) -> String {
-    let mut out: Vec<String> = Vec::new();
-    match permalink.as_deref() {
-        Some(link) if !trim(link).is_empty() => out.push(format!("[Open in Checkvist]({link})")),
-        _ => out.push(format!("Task ID: {task_id}")),
-    }
-    out.push(String::new());
-    out.push(format!("_Synced from Takt · {synced_at}_"));
-    out.push(String::new());
-    out.push("## Notes".to_string());
-    out.push(String::new());
-
-    let contents: Vec<&str> = notes
-        .iter()
-        .map(|note| trim(note))
-        .filter(|note| !note.is_empty())
-        .collect();
-    if contents.is_empty() {
-        out.push("_No notes_".to_string());
-    } else {
-        for content in contents {
-            out.push(content.to_string());
-            out.push(String::new());
-        }
-        out.pop();
-    }
-    out.join("\n")
-}
-
 // -- Merging a section into a document ------------------------------------------
 
 /// Splices `section` into `existing`, replacing the block `heading` already

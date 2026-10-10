@@ -18624,21 +18624,6 @@ public func affineMerged(section: String, heading: String, existing: String) -> 
 })
 }
 /**
- * The body of a task's document, without the title AFFiNE carries
- * separately. `synced_at` is the caller's formatted stamp.
- */
-public func affineTaskDocument(permalink: String?, taskId: Int64, notes: [String], syncedAt: String) -> String  {
-    return try!  FfiConverterString.lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_task_document(
-        FfiConverterOptionString.lower(permalink),
-        FfiConverterInt64.lower(taskId),
-        FfiConverterSequenceString.lower(notes),
-        FfiConverterString.lower(syncedAt),uniffiCallStatus
-    )
-})
-}
-/**
  * The task id a Checkvist permalink ends with (`#t<id>`). Matching on that
  * rather than the host keeps a self-hosted or rewritten link working.
  */
@@ -18647,18 +18632,6 @@ public func affineTaskIdInPermalink(permalink: String) -> Int64?  {
         uniffiCallStatus in
     uniffi_takt_core_fn_func_affine_task_id_in_permalink(
         FfiConverterString.lower(permalink),uniffiCallStatus
-    )
-})
-}
-/**
- * A document title for a task, on one line: a newline would arrive in
- * AFFiNE as a title plus a stray paragraph.
- */
-public func affineTaskTitle(content: String) -> String  {
-    return try!  FfiConverterString.lift(try! rustCall() {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_func_affine_task_title(
-        FfiConverterString.lower(content),uniffiCallStatus
     )
 })
 }
@@ -19850,13 +19823,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_affine_merged() != 34494) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_affine_task_document() != 62655) {
-        return InitializationResult.apiChecksumMismatch
-    }
     if (uniffi_takt_core_checksum_func_affine_task_id_in_permalink() != 7955) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_func_affine_task_title() != 5213) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_capture_date_time() != 25581) {
