@@ -14,16 +14,23 @@ struct WorkspaceDesktopView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      workspace
-      // Across the whole window, under every column: the one strip that says
-      // where the keyboard is and what is running.
-      WorkspaceStatusBar()
-    }
-      // Over the whole window content, so it sits above every pane. A click
-      // outside the panel is caught by the window's mouse monitor.
+      // The window's title bar, drawn here rather than by a toolbar: the
+      // window's content runs under its hidden title bar to the top edge.
+      MainWindowTitleStrip()
+      VStack(spacing: 0) {
+        workspace
+        // Across the whole window, under every column: the one strip that says
+        // where the keyboard is and what is running.
+        WorkspaceStatusBar()
+      }
+      // Over every pane but under the title strip, which stays a title bar
+      // while an overlay is up. A click outside the panel is caught by the
+      // window's mouse monitor.
       .overlay(alignment: .top) { WorkspaceOverlayHost() }
       // The focus clock's housekeeping is not here: the model runs it from
       // `startFocusMonitor()`, because starting a block closes this window.
+    }
+    .ignoresSafeArea(.container, edges: .top)
   }
 
   private var workspaceLayout: some View {

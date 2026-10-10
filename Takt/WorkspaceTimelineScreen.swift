@@ -83,7 +83,7 @@ struct WorkspaceTimelineScreen: View {
 
   private var header: some View {
     // The day this is, in the place every other surface puts what you are
-    // looking at. The micro-label said "Timeline", which the toolbar toggle and
+    // looking at. The micro-label said "Timeline", which the title strip toggle and
     // the sidebar row were already saying, and left the date buried in a date
     // picker in the middle of the row.
     WorkspacePaneHeader(title: model.timelineShowsToday ? "Today" : dayTitle) {

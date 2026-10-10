@@ -15,7 +15,7 @@ import SwiftUI
 ///
 /// One band, one gutter, one type size. What the band says is **where you are**
 /// — the scope, and the way back out of it — because which *mode* you are in is
-/// the toolbar strip's job and does not need saying twice.
+/// the title strip's job and does not need saying twice.
 struct WorkspacePaneHeader<Subtitle: View, Trailing: View>: View {
   @Environment(\.theme) private var theme
 

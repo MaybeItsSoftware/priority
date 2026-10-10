@@ -48,7 +48,7 @@ extension WorkspaceViewModel {
   /// Focus has one surface, the floating panel: the day to pick from while
   /// nothing runs, the block's strip once something does. It used to have a
   /// pane in the window as well, which took the keyboard over without saying
-  /// so; now ⌘8, the toolbar and Today's button all just raise the panel.
+  /// so; now ⌘8, the title strip and Today's button all just raise the panel.
   func openFocusPanel() {
     focusFloatRequest += 1
   }

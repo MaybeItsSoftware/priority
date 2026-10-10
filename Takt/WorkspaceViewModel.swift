@@ -557,6 +557,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The window's mouse monitor reads it to tell a click on the card from a
   /// click beside it; see `MainWindowController`.
   @ObservationIgnored var overlayPanelFrame: CGRect?
+  /// The main window's title strip, in the same space, so a click in it
+  /// while an overlay is up still reaches the mode strip or moves the window.
+  @ObservationIgnored var titleStripFrame: CGRect?
   var searchQuery = "" { didSet { refreshSearchResults() } }
   var searchIncludesCompleted = false { didSet { refreshSearchResults() } }
   /// Written only by `refreshSearchResults()`; internal rather than

@@ -64,7 +64,7 @@ struct MainApp: App {
       // the same name — the system's holding Enter Full Screen, and ours
       // holding everything you would go to that menu for.
       CommandGroup(after: .toolbar) {
-        // The places you can actually be, in the order the toolbar strip shows
+        // The places you can actually be, in the order the title strip shows
         // them. This menu used to list the old Checkvist root views, a Refresh
         // and a Diagnostics button — the previous app's furniture, still
         // standing in the one that replaced it.

@@ -63,7 +63,7 @@ let pluginTargetExcludes = [
   "Takt/DiagnosticsLog.swift",
   "Takt/DiagnosticsView.swift",
   "Takt/MainWindowController.swift",
-  "Takt/MainWindowToolbar.swift",
+  "Takt/MainWindowTitleStrip.swift",
   "Takt/WindowContentSizing.swift",
   // The SwiftUI projection of a `TaktCore` theme. SwiftUI, so app-only.
   "Takt/Theme.swift",
@@ -231,7 +231,7 @@ let appLogicTargetExcludes = [
   "Takt/DiagnosticsLog.swift",
   "Takt/DiagnosticsView.swift",
   "Takt/MainWindowController.swift",
-  "Takt/MainWindowToolbar.swift",
+  "Takt/MainWindowTitleStrip.swift",
   "Takt/WindowContentSizing.swift",
   // App-only: reads UserDefaults and Application Support directly at startup.
   "Takt/LegacyNameMigration.swift",

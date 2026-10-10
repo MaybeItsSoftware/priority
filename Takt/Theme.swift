@@ -89,6 +89,11 @@ struct Theme: Equatable {
   /// the band with everything else.
   var paneHeaderHeight: CGFloat { CGFloat(space.xl + space.sm) }
 
+  /// The main window's title strip, hairline included. The pane header
+  /// band's height — 38pt on the default scale, which is Zed's title bar — so
+  /// the bar the traffic lights sit in and the bands under it are one rhythm.
+  var titleStripHeight: CGFloat { paneHeaderHeight }
+
   /// The square a header's or the status bar's icon button occupies: room for
   /// a caption-sized glyph and a hover fill round it, and no more.
   var paneIconButtonSize: CGFloat { CGFloat(space.lg + space.xs) }

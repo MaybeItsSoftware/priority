@@ -68,7 +68,7 @@ extension WorkspaceViewModel {
   var isInspectorVisible: Bool { isRightDockVisible && rightDockTab == .inspector }
   var isDoneRailVisible: Bool { isRightDockVisible && rightDockTab == .done }
   /// The timeline is the dock's third tab. Kept under its old name because
-  /// the toolbar, the menu and the keys all ask it.
+  /// the title strip, the menu and the keys all ask it.
   var showsTimelineScreen: Bool { isRightDockVisible && rightDockTab == .timeline }
 
   /// Shows the dock on `tab`, loading what the tab needs. Does not move the

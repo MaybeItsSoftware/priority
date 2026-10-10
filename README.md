@@ -289,7 +289,7 @@ moved to `Ctrl`.
 
 Focus is the floating panel described [below](#the-focus-panel): the day to
 pick from while nothing runs, and the running block's strip once something
-does. There is no focus pane in the main window. `Cmd+8`, the toolbar's
+does. There is no focus pane in the main window. `Cmd+8`, the title bar's
 **Focus** button and Today's **Focus** button all raise the panel, and
 `⌃⌥⇧⌘F` summons it from any app.
 

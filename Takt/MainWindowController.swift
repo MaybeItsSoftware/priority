@@ -20,7 +20,6 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   private var workspaceKeyMonitor: Any?
   private var overlayMouseMonitor: Any?
   private var shortcutShiftTap = DoubleTapModifier()
-  private var toolbarController: MainWindowToolbarController?
 
   /// Told when the window opens and closes, so the activation policy — a
   /// process-wide setting, not a per-window one — is decided in one place.
@@ -83,13 +82,18 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       .themed(manager.theme)
     let hostingController = NSHostingController(rootView: rootView)
 
+    // No toolbar, and a title bar that is there only for the traffic lights:
+    // the content runs to the top edge and `MainWindowTitleStrip` draws the
+    // bar in the theme's own paper and type, the way an editor's is.
     let window = NSWindow(
       contentRect: NSRect(x: 0, y: 0, width: 900, height: 700),
-      styleMask: [.titled, .closable, .miniaturizable, .resizable],
+      styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
     window.title = "Takt"
+    window.titleVisibility = .hidden
+    window.titlebarAppearsTransparent = true
     window.contentViewController = hostingController
     // Deliberately *not* `backgroundColor = .clear` the way the panel is: that
     // is what lets the panel's SwiftUI-drawn rounded background be the only
@@ -102,16 +106,6 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     window.tabbingMode = .disallowed
     window.delegate = self
     window.center()
-
-    // The strip that names which mode you are in. Without it the four of them
-    // were reachable only by a command-digit, and nothing on screen said which
-    // one you were looking at.
-    let toolbarController = MainWindowToolbarController(workspace: workspace, theme: manager.theme)
-    self.toolbarController = toolbarController
-    window.toolbar = toolbarController.makeToolbar()
-    // Compact: the bar holds one strip, and a full-height unified bar spent
-    // twenty points on nothing above every pane.
-    window.toolbarStyle = .unifiedCompact
 
     window.setFrameAutosaveName("PriorityMainWindowV1")
     WindowContentSizing.enforce(
@@ -241,9 +235,9 @@ final class MainWindowController: NSObject, NSWindowDelegate {
   /// it. The monitor sees the event before any view does.
   ///
   /// A click over the content is consumed, so dismissing the palette does not
-  /// also select whatever row was underneath. A click in the title bar or the
-  /// toolbar closes the overlay and still goes through, so the traffic lights,
-  /// the mode strip and dragging the window all work first time.
+  /// also select whatever row was underneath. A click in the title strip
+  /// closes the overlay and still goes through, so the traffic lights, the
+  /// mode strip and dragging the window all work first time.
   private func installOverlayMouseMonitorIfNeeded() {
     guard overlayMouseMonitor == nil else { return }
     overlayMouseMonitor = NSEvent.addLocalMonitorForEvents(
@@ -261,6 +255,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         return event
       }
       self.workspace.dismissOverlay()
+      if let strip = self.workspace.titleStripFrame, strip.contains(point) { return event }
       return content.bounds.contains(content.convert(event.locationInWindow, from: nil))
         ? nil : event
     }
