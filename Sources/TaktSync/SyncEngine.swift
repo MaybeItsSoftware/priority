@@ -24,6 +24,8 @@ public actor SyncEngine {
 
   let store: WorkspaceStore
   let transport: any SyncTransport
+  /// This device. The clock the core stamps with is the stored one, made on
+  /// the device id the store was paired with, which is this one.
   let deviceId: String
   let wallClock: @Sendable () -> Date
   public private(set) var status: Status = .idle(lastSyncedAt: nil)
@@ -59,17 +61,15 @@ public actor SyncEngine {
     guard let state = try store.syncState() else { throw SyncError.notPaired }
     status = .syncing
     do {
-      var clock = state.hlc.flatMap(HybridLogicalClock.init) ?? HybridLogicalClock(
-        milliseconds: 0, counter: 0, deviceId: deviceId)
       var outcome = Outcome(pushed: 0, pulled: 0, changedWorkspace: false)
       if state.needsSnapshot {
         try store.enqueueSyncSnapshot(now: wallClock())
-        try await pull(from: state.cursor, clock: &clock, wait: 0, outcome: &outcome)
-        try await push(clock: &clock, outcome: &outcome)
+        try await pull(from: state.cursor, wait: 0, outcome: &outcome)
+        try await push(outcome: &outcome)
       } else {
-        try await push(clock: &clock, outcome: &outcome)
+        try await push(outcome: &outcome)
         let cursor = try store.syncState()?.cursor ?? state.cursor
-        try await pull(from: cursor, clock: &clock, wait: wait, outcome: &outcome)
+        try await pull(from: cursor, wait: wait, outcome: &outcome)
       }
       status = .idle(lastSyncedAt: wallClock())
       return outcome
@@ -79,49 +79,39 @@ public actor SyncEngine {
     }
   }
 
-  private func push(clock: inout HybridLogicalClock, outcome: inout Outcome) async throws {
-    while true {
-      let (changes, throughSeq) = try store.pendingSyncChanges(limit: Self.pushBatch)
-      guard let throughSeq, !changes.isEmpty else { break }
-      var wire: [SyncPushChange] = []
-      // Stamped in the order the edits were made, so a later edit to a column
-      // always carries the later clock.
-      for change in changes.sorted(by: { $0.changedAtMs < $1.changedAtMs }) {
-        clock = clock.tick(wallMilliseconds: max(change.changedAtMs, Self.ms(wallClock())))
-        wire.append(SyncPushChange(
-          table: change.table, id: change.rowId, op: change.operation.rawValue, hlc: clock.description,
-          values: change.operation == .delete ? nil : change.values))
-      }
-      _ = try await transport.push(wire)
-      try store.acknowledgeSyncChanges(throughSeq: throughSeq)
-      try store.recordSyncProgress(hlc: clock.description, now: wallClock())
-      outcome.pushed += wire.count
+  /// Sends the outbox in batches. The core makes each body from the outbox,
+  /// stamped from the stored clock in the order the edits were made, and
+  /// keeps the clock when the batch is acknowledged.
+  private func push(outcome: inout Outcome) async throws {
+    while let batch = try store.prepareSyncPush(limit: Self.pushBatch, now: wallClock()) {
+      try await transport.push(body: batch.body)
+      try store.finishSyncPush(batch, now: wallClock())
+      outcome.pushed += batch.count
     }
   }
 
-  private func pull(
-    from cursor: Int64, clock: inout HybridLogicalClock, wait: Int, outcome: inout Outcome
-  ) async throws {
-    var rows: [SyncIncomingRow] = []
+  /// Gathers every page of the feed in the core, then applies them in one
+  /// transaction: a task can arrive a page before its list, and only the end
+  /// of the whole pull is a consistent state.
+  private func pull(from cursor: Int64, wait: Int, outcome: inout Outcome) async throws {
+    let pages = SyncPullPages()
     var next = cursor
     var firstPage = true
     while true {
-      let page = try await transport.changes(since: next, limit: Self.pullPage, wait: firstPage ? wait : 0)
+      let body = try await transport.changes(since: next, limit: Self.pullPage, wait: firstPage ? wait : 0)
       firstPage = false
-      rows.append(contentsOf: page.rows)
+      let page: (cursor: Int64, hasMore: Bool)
+      do {
+        page = try pages.add(body)
+      } catch {
+        throw SyncError.invalid("The sync server's answer couldn't be read.")
+      }
       next = page.cursor
       if !page.hasMore { break }
     }
-    for row in rows {
-      if let stamp = row.hlc.flatMap(HybridLogicalClock.init) {
-        clock = clock.receiving(stamp, wallMilliseconds: Self.ms(wallClock()))
-      }
-    }
-    // Every page lands in one transaction: a task can arrive a page before its
-    // list, and only the end of the whole pull is a consistent state.
-    let changed = try store.applyRemoteRows(rows, cursor: next, hlc: clock.description, now: wallClock())
-    outcome.pulled += rows.count
-    outcome.changedWorkspace = outcome.changedWorkspace || changed
+    let applied = try store.applySyncPull(pages, now: wallClock())
+    outcome.pulled += applied.pulled
+    outcome.changedWorkspace = outcome.changedWorkspace || applied.changed
   }
 
   static func ms(_ date: Date) -> Int64 { Int64(date.timeIntervalSince1970 * 1000) }

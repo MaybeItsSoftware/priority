@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// Where a device syncs: the sync server, and the Supabase project whose
 /// accounts that server trusts. Takt's own (`hosted`) unless "Use a different
@@ -35,70 +36,24 @@ public struct SyncEndpoints: Codable, Equatable, Sendable {
   /// The endpoints as typed under "Use a different server". A blank server
   /// is Takt's; a blank Supabase URL *and* key are Takt's project. Throws
   /// `SyncError.invalid` with something to show for anything else that
-  /// can't be used.
+  /// can't be used. The Rust core's `sync_resolve_endpoints`, which Android
+  /// calls too, so a typed address means the same on every device.
   public static func resolve(server: String, supabaseURL: String, supabaseKey: String) throws -> SyncEndpoints {
-    let server = server.trimmingCharacters(in: .whitespacesAndNewlines)
-    let project = supabaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-    let key = supabaseKey.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    var endpoints = hosted
-    if !server.isEmpty {
-      guard let url = SyncServer.url(from: server) else {
-        throw SyncError.invalid("The sync server address isn't a web address.")
-      }
-      endpoints.serverURL = normalised(url)
+    let resolution = syncResolveEndpoints(
+      server: server, supabaseUrl: supabaseURL, supabaseKey: supabaseKey,
+      hosted: SyncEndpointsRecord(
+        serverUrl: hosted.serverURL.absoluteString, supabaseUrl: hosted.supabaseURL.absoluteString,
+        supabaseKey: hosted.supabaseKey))
+    guard let resolved = resolution.endpoints else {
+      throw SyncError.invalid(resolution.problem ?? "Those addresses can't be used.")
     }
-    switch (project.isEmpty, key.isEmpty) {
-    case (true, true):
-      break
-    case (false, true):
-      throw SyncError.invalid("Enter the Supabase project's publishable key as well as its URL.")
-    case (true, false):
-      throw SyncError.invalid("Enter the Supabase project's URL as well as its key.")
-    case (false, false):
-      guard let url = SyncServer.url(from: project) else {
-        throw SyncError.invalid("The Supabase URL isn't a web address.")
-      }
-      endpoints.supabaseURL = normalised(url, droppingSuffixes: ["/auth/v1", "/rest/v1"])
-      endpoints.supabaseKey = try checkedKey(key)
+    guard let server = URL(string: resolved.serverUrl) else {
+      throw SyncError.invalid("The sync server address isn't a web address.")
     }
-    return endpoints
-  }
-
-  /// `url` without a query, fragment or trailing slash, and without any of
-  /// `suffixes` pasted on the end (a Supabase URL copied from an API
-  /// example often carries `/rest/v1`).
-  static func normalised(_ url: URL, droppingSuffixes suffixes: [String] = []) -> URL {
-    guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
-    components.query = nil
-    components.fragment = nil
-    var path = components.path
-    var trimming = true
-    while trimming {
-      trimming = false
-      while path.hasSuffix("/") {
-        path.removeLast()
-      }
-      for suffix in suffixes where path.lowercased().hasSuffix(suffix) {
-        path.removeLast(suffix.count)
-        trimming = true
-      }
+    guard let project = URL(string: resolved.supabaseUrl) else {
+      throw SyncError.invalid("The Supabase URL isn't a web address.")
     }
-    components.path = path
-    return components.url ?? url
-  }
-
-  private static func checkedKey(_ key: String) throws -> String {
-    if key.contains(where: \.isWhitespace) {
-      throw SyncError.invalid("The Supabase key has a space in it. Paste it again.")
-    }
-    // The secret key bypasses row-level security. It belongs on the server
-    // (SUPABASE_SECRET_KEY), never in an app.
-    if key.hasPrefix("sb_secret_") {
-      throw SyncError.invalid(
-        "That's the project's secret key. Use the publishable key here; the secret one is for the server.")
-    }
-    return key
+    return SyncEndpoints(serverURL: server, supabaseURL: project, supabaseKey: resolved.supabaseKey)
   }
 
   private enum CodingKeys: String, CodingKey {
@@ -130,8 +85,7 @@ public enum SyncEndpointCheck {
     let (data, status) = try await fetch(request, session: session) { reason in
       "Couldn't reach the sync server at \(host): \(reason)"
     }
-    let health = try? JSONDecoder().decode(Health.self, from: data)
-    guard status == 200, health?.ok == true else {
+    guard status == 200, syncHealthIsOk(body: String(decoding: data, as: UTF8.self)) else {
       throw SyncError.invalid(
         "\(host) answered \(status) to /health, not a Takt sync server's {\"ok\":true}. Check the address.")
     }
@@ -147,7 +101,7 @@ public enum SyncEndpointCheck {
     }
     switch status {
     case 200:
-      guard (try? JSONSerialization.jsonObject(with: data)) is [String: Any] else {
+      guard syncBodyIsJsonObject(body: String(decoding: data, as: UTF8.self)) else {
         throw SyncError.invalid("\(host) answered, but not as a Supabase project would. Check the URL.")
       }
     case 401, 403:
@@ -167,9 +121,5 @@ public enum SyncEndpointCheck {
     } catch {
       throw SyncError.invalid(unreachable(error.localizedDescription))
     }
-  }
-
-  private struct Health: Decodable {
-    var ok: Bool
   }
 }

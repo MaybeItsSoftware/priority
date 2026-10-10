@@ -266,15 +266,17 @@ final class InMemorySyncServer: @unchecked Sendable {
   struct Transport: SyncTransport {
     let server: InMemorySyncServer
     let device: String
-    func push(_ changes: [SyncPushChange]) async throws -> SyncPushResponse {
-      server.push(changes, device: device)
+    // The bodies are the core's; the server reads and writes them as JSON, as
+    // the real one does, so the test holds the core to the wire format.
+    func push(body: Data) async throws {
+      _ = server.push(try JSONDecoder().decode(WirePush.self, from: body).changes, device: device)
     }
-    func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> SyncChangesResponse {
-      server.changes(since: cursor, limit: limit, device: device)
+    func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> Data {
+      try JSONEncoder().encode(server.changes(since: cursor, limit: limit, device: device))
     }
   }
 
-  func push(_ changes: [SyncPushChange], device: String) -> SyncPushResponse {
+  func push(_ changes: [WireChange], device: String) -> WirePushResponse {
     lock.withLock {
       for change in changes {
         let key = change.table + "/" + change.id
@@ -307,22 +309,78 @@ final class InMemorySyncServer: @unchecked Sendable {
         }
         rows[key] = row
       }
-      return SyncPushResponse(accepted: changes.count, cursor: seq)
+      return WirePushResponse(accepted: changes.count, cursor: seq)
     }
   }
 
-  func changes(since cursor: Int64, limit: Int, device: String) -> SyncChangesResponse {
+  func changes(since cursor: Int64, limit: Int, device: String) -> WirePage {
     lock.withLock {
       let newer = rows.filter { $0.value.seq > cursor }.sorted { $0.value.seq < $1.value.seq }
       let page = newer.prefix(limit)
       let rows = page.map { key, row in
         let parts = key.split(separator: "/", maxSplits: 1).map(String.init)
-        return SyncIncomingRow(
+        return WireRow(
           table: parts[0], id: parts[1], deleted: row.deleted, values: row.data,
           hlc: ([row.deletedClock].compactMap { $0 } + row.columnClocks.values).max())
       }
-      return SyncChangesResponse(
+      return WirePage(
         rows: rows, cursor: page.last?.value.seq ?? cursor, hasMore: newer.count > limit)
+    }
+  }
+}
+
+// The wire shapes from `docs/sync.md`, for the test server only: the apps
+// leave the bodies to the core.
+struct WirePush: Codable { var changes: [WireChange] }
+
+struct WireChange: Codable {
+  var table: String
+  var id: String
+  var op: String
+  var hlc: String
+  var values: [String: SyncValue]?
+}
+
+struct WirePushResponse: Codable {
+  var accepted: Int
+  var cursor: Int64
+}
+
+struct WireRow: Codable {
+  var table: String
+  var id: String
+  var deleted: Bool
+  var values: [String: SyncValue]
+  var hlc: String?
+}
+
+struct WirePage: Codable {
+  var rows: [WireRow]
+  var cursor: Int64
+  var hasMore: Bool
+}
+
+extension SyncValue: Codable {
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+    if container.decodeNil() {
+      self = .null
+    } else if let int = try? container.decode(Int64.self) {
+      self = .integer(int)
+    } else if let double = try? container.decode(Double.self) {
+      self = .real(double)
+    } else {
+      self = .text(try container.decode(String.self))
+    }
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    switch self {
+    case .null: try container.encodeNil()
+    case .integer(let value): try container.encode(value)
+    case .real(let value): try container.encode(value)
+    case .text(let value): try container.encode(value)
     }
   }
 }

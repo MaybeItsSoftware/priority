@@ -96,3 +96,61 @@ extension WorkspaceStore {
     try coreWrite { try core.recordSyncProgress(cursor: cursor, hlc: hlc, nowMs: now.coreMilliseconds) }
   }
 }
+
+// MARK: - The wire
+
+/// A push body the core made from the outbox, stamped from the stored clock,
+/// and what to acknowledge once the server has it (`core/src/sync/wire.rs`).
+public struct SyncPushBody: Equatable, Sendable {
+  /// `POST /v1/push`'s JSON body.
+  public var body: Data
+  public var throughSeq: Int64
+  /// How many rows it carries.
+  public var count: Int
+  /// The clock after stamping them.
+  public var hlc: String
+}
+
+/// The pages of one pull, gathered in the core so every page lands in one
+/// transaction and no row crosses back into Swift.
+public final class SyncPullPages: @unchecked Sendable {
+  let core = TaktRustCore.SyncPull()
+
+  public init() {}
+
+  /// Takes in one `GET /v1/changes` body as the server sent it, and says
+  /// where the next page starts and whether there is one.
+  public func add(_ body: Data) throws -> (cursor: Int64, hasMore: Bool) {
+    let page = try core.addPage(body: String(decoding: body, as: UTF8.self))
+    return (page.cursor, page.hasMore)
+  }
+
+  /// The rows gathered so far.
+  public var rowCount: Int { Int(core.rowCount()) }
+}
+
+extension WorkspaceStore {
+  /// The outbox's next batch as a push body, or nil when nothing is waiting.
+  public func prepareSyncPush(limit: Int = 500, now: Date = .now) throws -> SyncPushBody? {
+    try Self.mappingCoreErrors {
+      try core.prepareSyncPush(limit: UInt32(clamping: max(0, limit)), wallMs: now.coreMilliseconds)
+    }.map { SyncPushBody(body: Data($0.body.utf8), throughSeq: $0.throughSeq, count: Int($0.count), hlc: $0.hlc) }
+  }
+
+  /// The server has `push`: forgets its outbox entries and keeps its clock,
+  /// in one transaction.
+  public func finishSyncPush(_ push: SyncPushBody, now: Date = .now) throws {
+    try coreWrite {
+      try core.finishSyncPush(throughSeq: push.throughSeq, hlc: push.hlc, nowMs: now.coreMilliseconds)
+    }
+  }
+
+  /// Writes a gathered pull into the workspace, the clock moved past every
+  /// stamp in it, then adopts any second workspace and clears orphans.
+  public func applySyncPull(_ pages: SyncPullPages, now: Date = .now) throws -> (pulled: Int, changed: Bool) {
+    let outcome = try coreWrite {
+      try core.applySyncPull(pull: pages.core, wallMs: now.coreMilliseconds, nowMs: now.coreMilliseconds)
+    }
+    return (Int(outcome.pulled), outcome.changed)
+  }
+}

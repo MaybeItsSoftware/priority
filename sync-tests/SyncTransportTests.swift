@@ -39,9 +39,11 @@ final class SyncTransportTests: XCTestCase {
 
   // MARK: - Transport
 
+  private static let emptyPush = Data(#"{"changes":[]}"#.utf8)
+
   func testEveryRequestCarriesTheAccessTokenAndTheDevice() async throws {
     let auth = FakeAuth(token: "jwt-1")
-    _ = try await transport(auth).push([])
+    _ = try await transport(auth).push(body: Self.emptyPush)
     _ = try await transport(auth).changes(since: 0, limit: 10, wait: 0)
     try await transport(auth).registerDevice(name: "Mac", platform: "macos")
 
@@ -59,8 +61,7 @@ final class SyncTransportTests: XCTestCase {
     StubURLProtocol.respondOnce(to: "/v1/push", status: 401, body: #"{"error":"unauthorized"}"#)
     let auth = FakeAuth(token: "stale", refreshed: "fresh")
 
-    let response = try await transport(auth).push([])
-    XCTAssertEqual(response.accepted, 0)
+    try await transport(auth).push(body: Self.emptyPush)
     XCTAssertEqual(auth.refreshes, 1)
     XCTAssertEqual(StubURLProtocol.requests.map(\.authorization), ["Bearer stale", "Bearer fresh"])
     XCTAssertEqual(StubURLProtocol.requests.map(\.device), [deviceID, deviceID])
@@ -70,7 +71,7 @@ final class SyncTransportTests: XCTestCase {
     StubURLProtocol.respond(to: "/v1/push", status: 401, body: #"{"error":"unauthorized"}"#)
     let auth = FakeAuth(token: "stale", refreshed: "fresh")
     do {
-      _ = try await transport(auth).push([])
+      _ = try await transport(auth).push(body: Self.emptyPush)
       XCTFail("pushed with a token the server refuses")
     } catch {
       XCTAssertEqual(error as? SyncError, .unauthorized)
@@ -83,7 +84,7 @@ final class SyncTransportTests: XCTestCase {
     StubURLProtocol.respond(to: "/v1/push", status: 401, body: #"{"error":"unauthorized"}"#)
     let auth = FakeAuth(token: "stale", refreshFails: SyncError.unauthorized)
     do {
-      _ = try await transport(auth).push([])
+      _ = try await transport(auth).push(body: Self.emptyPush)
       XCTFail("pushed after the refresh was refused")
     } catch {
       XCTAssertEqual(error as? SyncError, .unauthorized)
@@ -521,12 +522,12 @@ private final class RefusingTransport: SyncTransport, @unchecked Sendable {
   private var count = 0
   var calls: Int { lock.withLock { count } }
 
-  func push(_ changes: [SyncPushChange]) async throws -> SyncPushResponse {
+  func push(body: Data) async throws {
     lock.withLock { count += 1 }
     throw SyncError.unauthorized
   }
 
-  func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> SyncChangesResponse {
+  func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> Data {
     lock.withLock { count += 1 }
     throw SyncError.unauthorized
   }

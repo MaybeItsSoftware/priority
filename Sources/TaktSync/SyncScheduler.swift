@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 import TaktWorkspace
 
 /// Decides when to sync, so the Mac and iOS apps run the same rhythm: on
@@ -96,7 +97,7 @@ public actor SyncScheduler {
       failures += 1
       await listener(.failed(error.localizedDescription), nil)
       // 2, 4, 8 … seconds, capped at five minutes, so an outage costs nothing.
-      return .seconds(min(300, 1 << min(failures, 8)))
+      return .seconds(Int(syncBackoffSeconds(failures: UInt32(clamping: failures))))
     }
   }
 }

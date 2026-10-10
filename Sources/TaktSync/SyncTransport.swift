@@ -1,43 +1,11 @@
 import Foundation
+import TaktRustCore
 import TaktWorkspace
 
-// The wire shapes from `docs/sync.md`, and the one thing that sends them.
-
-public struct SyncPushChange: Codable, Equatable, Sendable {
-  public var table: String
-  public var id: String
-  public var op: String
-  public var hlc: String
-  public var values: [String: SyncValue]?
-
-  public init(table: String, id: String, op: String, hlc: String, values: [String: SyncValue]?) {
-    self.table = table
-    self.id = id
-    self.op = op
-    self.hlc = hlc
-    self.values = values
-  }
-}
-
-public struct SyncPushResponse: Codable, Equatable, Sendable {
-  public var accepted: Int
-  public var cursor: Int64
-  public init(accepted: Int, cursor: Int64) {
-    self.accepted = accepted
-    self.cursor = cursor
-  }
-}
-
-public struct SyncChangesResponse: Codable, Equatable, Sendable {
-  public var rows: [SyncIncomingRow]
-  public var cursor: Int64
-  public var hasMore: Bool
-  public init(rows: [SyncIncomingRow], cursor: Int64, hasMore: Bool) {
-    self.rows = rows
-    self.cursor = cursor
-    self.hasMore = hasMore
-  }
-}
+// The transport from `docs/sync.md`: HTTP, the token and the device header.
+// The bodies themselves are the Rust core's (`core/src/sync/wire.rs`, with
+// the server's own structs from `takt-sync-rules`): a push body arrives here
+// made, and a pulled page leaves as the server sent it.
 
 /// Where both apps sync unless told otherwise: the hosted server on Railway,
 /// and the Supabase project whose accounts it trusts. A self-hosted server
@@ -75,20 +43,16 @@ public enum SyncServer {
   }
 
   /// A server address as typed: trimmed, and given `https://` when it has no
-  /// scheme. Nil when it still isn't an http(s) URL with a host.
+  /// scheme. Nil when it still isn't an http(s) URL with a host. The Rust
+  /// core's `sync_http_url`, which Android reads addresses with too.
   public static func url(from typed: String) -> URL? {
-    let trimmed = typed.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return nil }
-    let withScheme = trimmed.contains("://") ? trimmed : "https://" + trimmed
-    guard let url = URL(string: withScheme), url.scheme?.hasPrefix("http") == true, url.host() != nil
-    else { return nil }
-    return url
+    syncHttpUrl(typed: typed).flatMap(URL.init(string:))
   }
 }
 
 /// `GET /v1/account`: who this device is signed in as, and every device on
 /// the account.
-public struct SyncAccount: Codable, Equatable, Sendable {
+public struct SyncAccount: Equatable, Sendable {
   public var accountId: String
   public var email: String?
   public var devices: [SyncDevice]
@@ -99,7 +63,7 @@ public struct SyncAccount: Codable, Equatable, Sendable {
   }
 }
 
-public struct SyncDevice: Codable, Equatable, Sendable, Identifiable {
+public struct SyncDevice: Equatable, Sendable, Identifiable {
   public var id: String
   public var name: String?
   public var platform: String?
@@ -141,19 +105,24 @@ public struct SyncDevice: Codable, Equatable, Sendable, Identifiable {
 }
 
 /// The server's timestamps are RFC 3339 with up to nine fractional digits
-/// (chrono's default), which `ISO8601DateFormatter` refuses past three, so
-/// the fraction is cut to milliseconds before parsing.
+/// (chrono's default), read by the Rust core to the millisecond.
 public enum SyncDate {
   public static func parse(_ string: String) -> Date? {
-    if let date = ISO8601DateFormatter().date(from: string) { return date }
-    guard let dot = string.firstIndex(of: ".") else { return nil }
-    let afterDot = string[string.index(after: dot)...]
-    let digits = afterDot.prefix(while: \.isNumber)
-    let zone = afterDot[digits.endIndex...]
-    let millis = String(digits.prefix(3)).padding(toLength: 3, withPad: "0", startingAt: 0)
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return formatter.date(from: string[..<dot] + "." + millis + zone)
+    syncTimestampMs(text: string).map { Date(timeIntervalSince1970: Double($0) / 1000) }
+  }
+}
+
+extension SyncAccount {
+  /// `GET /v1/account`'s body, read by the core.
+  init(body: Data) throws {
+    let account = try syncDecodeAccount(body: String(decoding: body, as: UTF8.self))
+    self.init(
+      accountId: account.accountId, email: account.email,
+      devices: account.devices.map {
+        SyncDevice(
+          id: $0.id, name: $0.name, platform: $0.platform, createdAt: $0.createdAt, lastSeenAt: $0.lastSeenAt,
+          current: $0.current)
+      })
   }
 }
 
@@ -209,9 +178,13 @@ public struct SyncCredentials: Codable, Equatable, Sendable {
   }
 }
 
+/// Moves a sync cycle's bodies, which the core makes and reads: a push body
+/// out, and each page of the feed back as the server sent it.
 public protocol SyncTransport: Sendable {
-  func push(_ changes: [SyncPushChange]) async throws -> SyncPushResponse
-  func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> SyncChangesResponse
+  /// Sends a `POST /v1/push` body.
+  func push(body: Data) async throws
+  /// One `GET /v1/changes` page's body.
+  func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> Data
 }
 
 /// Where the transport gets the access token every request carries: the
@@ -240,20 +213,12 @@ public enum SyncError: LocalizedError, Equatable {
   public var errorDescription: String? {
     switch self {
     case .server(let status, let message):
-      return message.isEmpty ? "The sync server answered \(status)." : Self.sentence(message)
+      return syncRefusalText(status: Int32(clamping: status), message: message)
     case .unauthorized: return "Signed out. Sign in again to keep syncing."
     case .notPaired: return "This device isn't signed in to sync."
     case .invalid(let message): return message
     case .cancelled: return "Sign-in was cancelled."
     }
-  }
-
-  /// The server writes lowercase fragments; the apps show sentences.
-  static func sentence(_ message: String) -> String {
-    let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let first = trimmed.first else { return trimmed }
-    let capitalised = first.uppercased() + trimmed.dropFirst()
-    return [".", "!", "?"].contains(capitalised.last) ? capitalised : capitalised + "."
   }
 }
 
@@ -282,11 +247,11 @@ public struct HTTPSyncTransport: SyncTransport {
     self.session = session
   }
 
-  public func push(_ changes: [SyncPushChange]) async throws -> SyncPushResponse {
-    try await send(post("v1/push", body: ["changes": changes]))
+  public func push(body: Data) async throws {
+    _ = try await send(post("v1/push", body: body))
   }
 
-  public func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> SyncChangesResponse {
+  public func changes(since cursor: Int64, limit: Int, wait: Int) async throws -> Data {
     var components = URLComponents(url: serverURL.appending(path: "v1/changes"), resolvingAgainstBaseURL: false)!
     components.queryItems = [
       URLQueryItem(name: "since", value: String(cursor)),
@@ -301,48 +266,49 @@ public struct HTTPSyncTransport: SyncTransport {
 
   /// Records this device on the account. Sent after every sign-in.
   public func registerDevice(name: String, platform: String) async throws {
-    let body = ["id": deviceId, "name": name, "platform": platform]
-    let _: SyncOK = try await send(post("v1/devices", body: body))
+    let body = syncRegisterDeviceBody(id: deviceId, name: name, platform: platform)
+    _ = try await send(post("v1/devices", body: Data(body.utf8)))
   }
 
   /// Takes this device off the account's list.
   public func signOut() async throws {
-    let _: SyncOK = try await send(post("v1/sign-out", body: [String: String]()))
+    _ = try await send(post("v1/sign-out", body: Self.emptyObject))
   }
 
   /// Who this device is signed in as, and the account's devices.
   public func account() async throws -> SyncAccount {
-    try await send(URLRequest(url: serverURL.appending(path: "v1/account")))
+    try SyncAccount(body: await send(URLRequest(url: serverURL.appending(path: "v1/account"))))
   }
 
   /// Deletes the account: its rows, its devices and the Supabase user. The
   /// apps ask the person to confirm first.
   public func deleteAccount() async throws {
-    let _: SyncOK = try await send(post("v1/account/delete", body: [String: String]()))
+    _ = try await send(post("v1/account/delete", body: Self.emptyObject))
   }
 
-  private func post(_ path: String, body: some Encodable) throws -> URLRequest {
+  private static let emptyObject = Data("{}".utf8)
+
+  private func post(_ path: String, body: Data) -> URLRequest {
     var request = URLRequest(url: serverURL.appending(path: path))
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.httpBody = try JSONEncoder().encode(body)
+    request.httpBody = body
     return request
   }
 
   /// Sends `request` with a token, and once more with a refreshed one if the
-  /// server refuses the first. A refusal carries the server's own
-  /// `{"error": "..."}` message.
-  private func send<T: Decodable>(_ request: URLRequest) async throws -> T {
+  /// server refuses the first, and returns the answer's body. A refusal
+  /// carries the server's own `{"error": "..."}` message.
+  private func send(_ request: URLRequest) async throws -> Data {
     var (data, status) = try await send(request, token: tokens.accessToken())
     if status == 401 {
       (data, status) = try await send(request, token: tokens.refreshedAccessToken())
       if status == 401 { throw SyncError.unauthorized }
     }
     guard (200..<300).contains(status) else {
-      let message = (try? JSONDecoder().decode(SyncErrorBody.self, from: data))?.error ?? ""
-      throw SyncError.server(status: status, message: message)
+      throw SyncError.server(status: status, message: syncServerMessage(body: String(decoding: data, as: UTF8.self)))
     }
-    return try JSONDecoder().decode(T.self, from: data)
+    return data
   }
 
   private func send(_ request: URLRequest, token: String) async throws -> (Data, Int) {
@@ -353,10 +319,3 @@ public struct HTTPSyncTransport: SyncTransport {
     return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
   }
 }
-
-private struct SyncErrorBody: Decodable {
-  var error: String
-}
-
-/// `{"ok": true}`, or anything else: only the status matters.
-private struct SyncOK: Decodable {}

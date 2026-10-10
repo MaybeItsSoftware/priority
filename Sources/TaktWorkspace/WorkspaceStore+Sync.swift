@@ -37,37 +37,14 @@ extension WorkspaceStore {
 
 // MARK: - Values
 
-/// One SQLite value as it travels over the wire: `null`, a number or text,
-/// exactly as the column stores it.
-public enum SyncValue: Codable, Equatable, Sendable {
+/// One SQLite value as it travels: `null`, a number or text, exactly as the
+/// column stores it. The core reads and writes it as JSON
+/// (`core/src/sync/wire.rs`); Swift only builds rows for tests.
+public enum SyncValue: Equatable, Sendable {
   case null
   case integer(Int64)
   case real(Double)
   case text(String)
-
-  public init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    if container.decodeNil() {
-      self = .null
-    } else if let int = try? container.decode(Int64.self) {
-      self = .integer(int)
-    } else if let double = try? container.decode(Double.self) {
-      self = .real(double)
-    } else {
-      self = .text(try container.decode(String.self))
-    }
-  }
-
-  public func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    switch self {
-    case .null: try container.encodeNil()
-    case .integer(let value): try container.encode(value)
-    case .real(let value): try container.encode(value)
-    case .text(let value): try container.encode(value)
-    }
-  }
-
 }
 
 /// A row's local change, coalesced from its outbox entries and read from the
@@ -84,7 +61,7 @@ public struct SyncOutgoingChange: Equatable, Sendable {
 }
 
 /// A row as the server holds it.
-public struct SyncIncomingRow: Codable, Equatable, Sendable {
+public struct SyncIncomingRow: Equatable, Sendable {
   public var table: String
   public var id: String
   public var deleted: Bool
