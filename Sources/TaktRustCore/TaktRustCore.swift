@@ -1320,6 +1320,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func sidebarIndex(listIds: [String]) throws  -> SidebarIndex
     
     /**
+     * `sidebar_index` with each list's and nested list's open count, for
+     * Android's badges.
+     */
+    func sidebarIndexWithOpenCounts(listIds: [String]) throws  -> SidebarIndex
+    
+    /**
      * Starts a focus session on a task, or returns the one running.
      */
     func startFocusSession(taskId: String, plannedSeconds: Int64?, workSeconds: Int64, breakSeconds: Int64, context: FocusContext?, overrideAvailability: Bool, nowMs: Int64, zone: String) throws  -> String
@@ -3269,6 +3275,20 @@ open func sidebarIndex(listIds: [String])throws  -> SidebarIndex  {
     return try  FfiConverterTypeSidebarIndex_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
         uniffiCallStatus in
     uniffi_takt_core_fn_method_coreworkspace_sidebar_index(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(listIds),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * `sidebar_index` with each list's and nested list's open count, for
+     * Android's badges.
+     */
+open func sidebarIndexWithOpenCounts(listIds: [String])throws  -> SidebarIndex  {
+    return try  FfiConverterTypeSidebarIndex_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_sidebar_index_with_open_counts(
             self.uniffiCloneHandle(),
         FfiConverterSequenceString.lower(listIds),uniffiCallStatus
     )
@@ -7891,6 +7911,63 @@ public func FfiConverterTypeSessionRow_lower(_ value: SessionRow) -> RustBuffer 
 
 
 /**
+ * A folder, and the folder it sits in.
+ */
+public struct SidebarFolder: Equatable, Hashable {
+    public var id: String
+    public var parentFolderId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, parentFolderId: String?) {
+        self.id = id
+        self.parentFolderId = parentFolderId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SidebarFolder: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSidebarFolder: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SidebarFolder {
+        return
+            try SidebarFolder(
+                id: FfiConverterString.read(from: &buf), 
+                parentFolderId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SidebarFolder, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterOptionString.write(value.parentFolderId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarFolder_lift(_ buf: RustBuffer) throws -> SidebarFolder {
+    return try FfiConverterTypeSidebarFolder.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarFolder_lower(_ value: SidebarFolder) -> RustBuffer {
+    return FfiConverterTypeSidebarFolder.lower(value)
+}
+
+
+/**
  * `WorkspaceSidebarIndex`: the nested lists to draw, with their depth among
  * lists; the archived ones the restore menu offers; each list's task count.
  */
@@ -7898,13 +7975,33 @@ public struct SidebarIndex: Equatable, Hashable {
     public var nestedLists: [OutlineItem]
     public var archivedNestedLists: [TaskRow]
     public var taskCounts: [ListTaskCount]
+    /**
+     * Android's badges (`ListsTreeShaping.openCounts`): the open, doable
+     * tasks in each list, and beneath each nested list. Not lists
+     * themselves, not the list's visible root, nothing beneath a nested
+     * list that is archived or not open. A list always has an entry; a
+     * nested list only once something counts beneath it. Empty unless asked
+     * for (`sidebar_index_with_open_counts`): the Mac draws totals, and
+     * reading the status of every task cost its sidebar a tenth more.
+     */
+    public var openCounts: [ListTaskCount]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(nestedLists: [OutlineItem], archivedNestedLists: [TaskRow], taskCounts: [ListTaskCount]) {
+    public init(nestedLists: [OutlineItem], archivedNestedLists: [TaskRow], taskCounts: [ListTaskCount], 
+        /**
+         * Android's badges (`ListsTreeShaping.openCounts`): the open, doable
+         * tasks in each list, and beneath each nested list. Not lists
+         * themselves, not the list's visible root, nothing beneath a nested
+         * list that is archived or not open. A list always has an entry; a
+         * nested list only once something counts beneath it. Empty unless asked
+         * for (`sidebar_index_with_open_counts`): the Mac draws totals, and
+         * reading the status of every task cost its sidebar a tenth more.
+         */openCounts: [ListTaskCount]) {
         self.nestedLists = nestedLists
         self.archivedNestedLists = archivedNestedLists
         self.taskCounts = taskCounts
+        self.openCounts = openCounts
     }
 
     
@@ -7925,7 +8022,8 @@ public struct FfiConverterTypeSidebarIndex: FfiConverterRustBuffer {
             try SidebarIndex(
                 nestedLists: FfiConverterSequenceTypeOutlineItem.read(from: &buf), 
                 archivedNestedLists: FfiConverterSequenceTypeTaskRow.read(from: &buf), 
-                taskCounts: FfiConverterSequenceTypeListTaskCount.read(from: &buf)
+                taskCounts: FfiConverterSequenceTypeListTaskCount.read(from: &buf), 
+                openCounts: FfiConverterSequenceTypeListTaskCount.read(from: &buf)
         )
     }
 
@@ -7933,6 +8031,7 @@ public struct FfiConverterTypeSidebarIndex: FfiConverterRustBuffer {
         FfiConverterSequenceTypeOutlineItem.write(value.nestedLists, into: &buf)
         FfiConverterSequenceTypeTaskRow.write(value.archivedNestedLists, into: &buf)
         FfiConverterSequenceTypeListTaskCount.write(value.taskCounts, into: &buf)
+        FfiConverterSequenceTypeListTaskCount.write(value.openCounts, into: &buf)
     }
 }
 
@@ -7949,6 +8048,207 @@ public func FfiConverterTypeSidebarIndex_lift(_ buf: RustBuffer) throws -> Sideb
 #endif
 public func FfiConverterTypeSidebarIndex_lower(_ value: SidebarIndex) -> RustBuffer {
     return FfiConverterTypeSidebarIndex.lower(value)
+}
+
+
+/**
+ * A list in the sidebar, and the folder it is filed in.
+ */
+public struct SidebarList: Equatable, Hashable {
+    public var id: String
+    public var folderId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, folderId: String?) {
+        self.id = id
+        self.folderId = folderId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SidebarList: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSidebarList: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SidebarList {
+        return
+            try SidebarList(
+                id: FfiConverterString.read(from: &buf), 
+                folderId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SidebarList, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterOptionString.write(value.folderId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarList_lift(_ buf: RustBuffer) throws -> SidebarList {
+    return try FfiConverterTypeSidebarList.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarList_lower(_ value: SidebarList) -> RustBuffer {
+    return FfiConverterTypeSidebarList.lower(value)
+}
+
+
+/**
+ * A list nested inside a task, addressed by the task's id.
+ */
+public struct SidebarNestedList: Equatable, Hashable {
+    public var id: String
+    public var listId: String
+    /**
+     * Its depth among the lists above it.
+     */
+    public var depth: UInt32
+    public var isPromoted: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, listId: String, 
+        /**
+         * Its depth among the lists above it.
+         */depth: UInt32, isPromoted: Bool) {
+        self.id = id
+        self.listId = listId
+        self.depth = depth
+        self.isPromoted = isPromoted
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SidebarNestedList: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSidebarNestedList: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SidebarNestedList {
+        return
+            try SidebarNestedList(
+                id: FfiConverterString.read(from: &buf), 
+                listId: FfiConverterString.read(from: &buf), 
+                depth: FfiConverterUInt32.read(from: &buf), 
+                isPromoted: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SidebarNestedList, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.listId, into: &buf)
+        FfiConverterUInt32.write(value.depth, into: &buf)
+        FfiConverterBool.write(value.isPromoted, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarNestedList_lift(_ buf: RustBuffer) throws -> SidebarNestedList {
+    return try FfiConverterTypeSidebarNestedList.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarNestedList_lower(_ value: SidebarNestedList) -> RustBuffer {
+    return FfiConverterTypeSidebarNestedList.lower(value)
+}
+
+
+/**
+ * One sidebar row.
+ */
+public struct SidebarOutlineRow: Equatable, Hashable {
+    public var kind: SidebarRowKind
+    /**
+     * An index into the input `kind` names; 0 where it names none.
+     */
+    public var subject: UInt32
+    /**
+     * Indentation: zero for the top-level rows.
+     */
+    public var depth: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(kind: SidebarRowKind, 
+        /**
+         * An index into the input `kind` names; 0 where it names none.
+         */subject: UInt32, 
+        /**
+         * Indentation: zero for the top-level rows.
+         */depth: UInt32) {
+        self.kind = kind
+        self.subject = subject
+        self.depth = depth
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SidebarOutlineRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSidebarOutlineRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SidebarOutlineRow {
+        return
+            try SidebarOutlineRow(
+                kind: FfiConverterTypeSidebarRowKind.read(from: &buf), 
+                subject: FfiConverterUInt32.read(from: &buf), 
+                depth: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SidebarOutlineRow, into buf: inout [UInt8]) {
+        FfiConverterTypeSidebarRowKind.write(value.kind, into: &buf)
+        FfiConverterUInt32.write(value.subject, into: &buf)
+        FfiConverterUInt32.write(value.depth, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarOutlineRow_lift(_ buf: RustBuffer) throws -> SidebarOutlineRow {
+    return try FfiConverterTypeSidebarOutlineRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarOutlineRow_lower(_ value: SidebarOutlineRow) -> RustBuffer {
+    return FfiConverterTypeSidebarOutlineRow.lower(value)
 }
 
 
@@ -9511,6 +9811,131 @@ public func FfiConverterTypePeriodicCadence_lift(_ buf: RustBuffer) throws -> Pe
 #endif
 public func FfiConverterTypePeriodicCadence_lower(_ value: PeriodicCadence) -> RustBuffer {
     return FfiConverterTypePeriodicCadence.lower(value)
+}
+
+
+
+/**
+ * What a row is, and which input its `subject` indexes.
+ */
+
+public enum SidebarRowKind: Equatable, Hashable {
+    
+    /**
+     * The day, from every list. No subject.
+     */
+    case today
+    /**
+     * No subject.
+     */
+    case everything
+    /**
+     * The inbox. No subject.
+     */
+    case inbox
+    /**
+     * `lists[subject]`.
+     */
+    case list
+    /**
+     * `nested_lists[subject]`, in place under its list.
+     */
+    case nestedList
+    /**
+     * `nested_lists[subject]` again, as a shortcut at the top.
+     */
+    case pinnedNestedList
+    /**
+     * `folders[subject]`.
+     */
+    case folder
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension SidebarRowKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSidebarRowKind: FfiConverterRustBuffer {
+    typealias SwiftType = SidebarRowKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SidebarRowKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .today
+        
+        case 2: return .everything
+        
+        case 3: return .inbox
+        
+        case 4: return .list
+        
+        case 5: return .nestedList
+        
+        case 6: return .pinnedNestedList
+        
+        case 7: return .folder
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SidebarRowKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .today:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .everything:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .inbox:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .list:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .nestedList:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .pinnedNestedList:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .folder:
+            writeInt(&buf, Int32(7))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarRowKind_lift(_ buf: RustBuffer) throws -> SidebarRowKind {
+    return try FfiConverterTypeSidebarRowKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSidebarRowKind_lower(_ value: SidebarRowKind) -> RustBuffer {
+    return FfiConverterTypeSidebarRowKind.lower(value)
 }
 
 
@@ -11136,6 +11561,106 @@ fileprivate struct FfiConverterSequenceTypeSearchHit: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeSidebarFolder: FfiConverterRustBuffer {
+    typealias SwiftType = [SidebarFolder]
+
+    public static func write(_ value: [SidebarFolder], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSidebarFolder.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SidebarFolder] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SidebarFolder]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSidebarFolder.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeSidebarList: FfiConverterRustBuffer {
+    typealias SwiftType = [SidebarList]
+
+    public static func write(_ value: [SidebarList], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSidebarList.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SidebarList] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SidebarList]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSidebarList.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeSidebarNestedList: FfiConverterRustBuffer {
+    typealias SwiftType = [SidebarNestedList]
+
+    public static func write(_ value: [SidebarNestedList], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSidebarNestedList.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SidebarNestedList] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SidebarNestedList]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSidebarNestedList.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeSidebarOutlineRow: FfiConverterRustBuffer {
+    typealias SwiftType = [SidebarOutlineRow]
+
+    public static func write(_ value: [SidebarOutlineRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSidebarOutlineRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SidebarOutlineRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SidebarOutlineRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSidebarOutlineRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeTaskProgressCount: FfiConverterRustBuffer {
     typealias SwiftType = [TaskProgressCount]
 
@@ -11881,6 +12406,41 @@ public func workspaceMigrations() -> [String]  {
 })
 }
 /**
+ * Every list inside a folder, its sub-folders' included, in sidebar order:
+ * the folder's own lists first, then each sub-folder's. A cycle in the
+ * parent chain ends rather than hangs.
+ */
+public func sidebarListIdsInFolder(folderId: String, folders: [SidebarFolder], lists: [SidebarList]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sidebar_list_ids_in_folder(
+        FfiConverterString.lower(folderId),
+        FfiConverterSequenceTypeSidebarFolder.lower(folders),
+        FfiConverterSequenceTypeSidebarList.lower(lists),uniffiCallStatus
+    )
+})
+}
+/**
+ * The rows, top to bottom: Today (when `include_today`) and Everything, the
+ * inbox (when `inbox_id` is given) with its nested lists, the pinned nested
+ * lists, the folders from the top (each one's lists and their nested lists,
+ * then its sub-folders, only while it is in `expanded_folder_ids`), then the
+ * lists in no folder. A folder reached twice, through a cycle, is drawn once.
+ */
+public func sidebarOutlineRows(inboxId: String?, lists: [SidebarList], folders: [SidebarFolder], nestedLists: [SidebarNestedList], expandedFolderIds: [String], includeToday: Bool) -> [SidebarOutlineRow]  {
+    return try!  FfiConverterSequenceTypeSidebarOutlineRow.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sidebar_outline_rows(
+        FfiConverterOptionString.lower(inboxId),
+        FfiConverterSequenceTypeSidebarList.lower(lists),
+        FfiConverterSequenceTypeSidebarFolder.lower(folders),
+        FfiConverterSequenceTypeSidebarNestedList.lower(nestedLists),
+        FfiConverterSequenceString.lower(expandedFolderIds),
+        FfiConverterBool.lower(includeToday),uniffiCallStatus
+    )
+})
+}
+/**
  * `clock` moved past `remote`, a stamp another device made, at `wall_ms`.
  * Absent when either is not a stamp. `HybridLogicalClock.receiving`.
  */
@@ -12097,6 +12657,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder() != 59863) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sidebar_outline_rows() != 1333) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_hlc_receive() != 32125) {
@@ -12502,6 +13068,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_sidebar_index() != 50190) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_sidebar_index_with_open_counts() != 6639) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() != 4001) {

@@ -71,8 +71,11 @@ class WorkspaceListsReadTest {
             val sidebar = store.sidebar(ws.id)
             assertEquals(listOf("Projects"), sidebar.folders.map { it.name })
             assertTrue(archived.id in sidebar.lists.map { it.id })
-            assertFalse(archived.id in sidebar.trees.keys)
-            assertEquals(1, sidebar.trees.getValue(list.id).tasks.size)
+            // The core walks only the active lists, and hands back their counts
+            // rather than their trees.
+            val counts = sidebar.summary!!.openCounts
+            assertFalse(archived.id in counts.keys)
+            assertEquals(1, counts.getValue(list.id))
         }
     }
 

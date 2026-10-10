@@ -1092,6 +1092,15 @@ impl CoreWorkspace {
         sidebar::sidebar_index(&self.lock(), &list_ids)
     }
 
+    /// `sidebar_index` with each list's and nested list's open count, for
+    /// Android's badges.
+    pub fn sidebar_index_with_open_counts(
+        &self,
+        list_ids: Vec<String>,
+    ) -> Result<SidebarIndex, CoreError> {
+        sidebar::sidebar_index_with_open_counts(&self.lock(), &list_ids)
+    }
+
     /// A combined scope's board — Everything's or a folder's — selected and
     /// walked here, so only the rows it draws cross. See `board.rs`.
     pub fn combined_board(

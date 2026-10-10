@@ -14,6 +14,7 @@ import uk.co.maybeitsadam.takt.core.WorkspaceSidebarIndex
 import uk.co.maybeitsadam.takt.core.WorkspaceSidebarOutline
 import uk.co.maybeitsadam.takt.core.WorkspaceSidebarRowKind
 import uk.co.maybeitsadam.takt.data.workspace.SidebarData
+import uk.co.maybeitsadam.takt.data.workspace.SidebarSummary
 
 /** One row of the Lists tree, drawn top to bottom in a single lazy column. */
 @Immutable
@@ -136,8 +137,12 @@ object ListsTreeShaping {
         val archived = data.lists.filter { it.isArchived }
         val inbox = active.firstOrNull { it.systemRole == TaskListRole.INBOX }
         val others = active.filter { it.systemRole != TaskListRole.INBOX }
-        val counts = openCounts(active, data.trees)
-        val index = WorkspaceSidebarIndex.build(active, data.trees)
+        // The core's walk, as the repository reads it; trees built by hand
+        // are walked here by the same rule.
+        val summary = data.summary
+            ?: SidebarSummary(WorkspaceSidebarIndex.build(active, data.trees).nestedLists, openCounts(active, data.trees))
+        val counts = summary.openCounts
+        val index = summary
         val expanded = data.folders.map { it.id }.toSet() - collapsedFolderIds
         val outline = WorkspaceSidebarOutline.rows(
             inbox = inbox?.let { SidebarListDescriptor(it.id, it.folderId) },

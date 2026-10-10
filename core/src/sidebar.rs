@@ -17,6 +17,8 @@ use crate::CoreError;
 use crate::records::{self, OutlineItem, TaskRow};
 use crate::time::parse_stored;
 
+pub mod outline;
+
 /// One list's task count. `WorkspaceSidebarIndex.taskCounts`.
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct ListTaskCount {
@@ -31,6 +33,14 @@ pub struct SidebarIndex {
     pub nested_lists: Vec<OutlineItem>,
     pub archived_nested_lists: Vec<TaskRow>,
     pub task_counts: Vec<ListTaskCount>,
+    /// Android's badges (`ListsTreeShaping.openCounts`): the open, doable
+    /// tasks in each list, and beneath each nested list. Not lists
+    /// themselves, not the list's visible root, nothing beneath a nested
+    /// list that is archived or not open. A list always has an entry; a
+    /// nested list only once something counts beneath it. Empty unless asked
+    /// for (`sidebar_index_with_open_counts`): the Mac draws totals, and
+    /// reading the status of every task cost its sidebar a tenth more.
+    pub open_counts: Vec<ListTaskCount>,
 }
 
 /// The little of a task the walk needs.
@@ -40,6 +50,7 @@ struct Node {
     parent_id: Option<String>,
     is_list: bool,
     archived: bool,
+    open: bool,
 }
 
 /// Walks each list in the order given, each depth first in sibling order. A
@@ -50,6 +61,28 @@ pub fn sidebar_index(
     connection: &Connection,
     list_ids: &[String],
 ) -> Result<SidebarIndex, CoreError> {
+    walk(connection, list_ids, false)
+}
+
+/// `sidebar_index` with `open_counts` filled in, for Android's badges.
+pub fn sidebar_index_with_open_counts(
+    connection: &Connection,
+    list_ids: &[String],
+) -> Result<SidebarIndex, CoreError> {
+    walk(connection, list_ids, true)
+}
+
+fn walk(
+    connection: &Connection,
+    list_ids: &[String],
+    with_open_counts: bool,
+) -> Result<SidebarIndex, CoreError> {
+    // Without open counts every task reads as open, and nothing is counted.
+    let status = if with_open_counts {
+        "status NOT IN ('completed', 'cancelled')"
+    } else {
+        "1"
+    };
     let mut visible_roots: HashMap<String, Option<String>> = HashMap::new();
     let mut nodes: Vec<Node> = Vec::new();
     let mut unique: Vec<&String> = list_ids.iter().collect();
@@ -66,7 +99,8 @@ pub fn sidebar_index(
         }
         let mut statement = connection.prepare_cached(&format!(
             "SELECT id, listId, parentTaskId, itemKind = 'list', \
-               CASE WHEN itemKind = 'list' THEN archivedAt END \
+               CASE WHEN itemKind = 'list' THEN archivedAt END, \
+               {status} \
              FROM tasks WHERE listId IN ({marks}) ORDER BY listId, sortOrder, createdAt"
         ))?;
         let mut rows = statement.query(rusqlite::params_from_iter(chunk))?;
@@ -79,6 +113,7 @@ pub fn sidebar_index(
                 is_list: row.get::<_, Option<bool>>(3)?.unwrap_or(false),
                 // As the client reads it: a date it can parse.
                 archived: archived_at.as_deref().and_then(parse_stored).is_some(),
+                open: row.get(5)?,
             });
         }
     }
@@ -96,6 +131,9 @@ pub fn sidebar_index(
     let mut nested: Vec<(String, i64)> = Vec::new();
     let mut archived: Vec<String> = Vec::new();
     let mut counts = Vec::with_capacity(list_ids.len());
+    let mut open_counts: Vec<ListTaskCount> = Vec::with_capacity(list_ids.len());
+    let mut nested_open: HashMap<&str, i64> = HashMap::new();
+    let mut nested_order: Vec<&str> = Vec::new();
     for list_id in list_ids {
         let visible_root = visible_roots.get(list_id).cloned().flatten();
         let mut count = 0i64;
@@ -111,6 +149,10 @@ pub fn sidebar_index(
             .collect();
         // The path from the root to the item being visited.
         let mut ancestors: Vec<(&Node, usize)> = Vec::new();
+        // Whether each ancestor is, or sits beneath, a nested list that is
+        // archived or not open: `inactiveContainerItems`.
+        let mut inactive: Vec<bool> = Vec::new();
+        let mut open_count = 0i64;
         while let Some((node, depth)) = stack.pop() {
             if !visited.insert(node.id.as_str()) {
                 continue;
@@ -118,7 +160,10 @@ pub fn sidebar_index(
             count += 1;
             while ancestors.last().is_some_and(|(_, d)| *d >= depth) {
                 ancestors.pop();
+                inactive.pop();
             }
+            let is_inactive = inactive.last().copied().unwrap_or(false)
+                || (node.is_list && (node.archived || !node.open));
             let is_visible_root = visible_root.as_deref() == Some(node.id.as_str());
             if node.is_list && !is_visible_root {
                 if node.archived {
@@ -133,7 +178,18 @@ pub fn sidebar_index(
                     nested.push((node.id.clone(), list_depth as i64));
                 }
             }
+            if with_open_counts && !node.is_list && !is_visible_root && node.open && !is_inactive {
+                open_count += 1;
+                for (ancestor, _) in ancestors.iter().filter(|(a, _)| a.is_list) {
+                    let slot = nested_open.entry(ancestor.id.as_str()).or_insert_with(|| {
+                        nested_order.push(ancestor.id.as_str());
+                        0
+                    });
+                    *slot += 1;
+                }
+            }
             ancestors.push((node, depth));
+            inactive.push(is_inactive);
             if let Some(kids) = children.get(&(list_id.as_str(), node.id.as_str())) {
                 stack.extend(kids.iter().rev().map(|kid| (*kid, depth + 1)));
             }
@@ -142,7 +198,17 @@ pub fn sidebar_index(
             list_id: list_id.clone(),
             count,
         });
+        if with_open_counts {
+            open_counts.push(ListTaskCount {
+                list_id: list_id.clone(),
+                count: open_count,
+            });
+        }
     }
+    open_counts.extend(nested_order.into_iter().map(|id| ListTaskCount {
+        list_id: id.to_string(),
+        count: nested_open[id],
+    }));
 
     // Only the lists cross as whole rows.
     let wanted: Vec<String> = nested
@@ -170,6 +236,7 @@ pub fn sidebar_index(
         nested_lists,
         archived_nested_lists,
         task_counts: counts,
+        open_counts,
     })
 }
 

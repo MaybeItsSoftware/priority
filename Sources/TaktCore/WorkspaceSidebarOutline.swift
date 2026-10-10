@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// What a sidebar row is.
 ///
@@ -95,53 +96,42 @@ public enum WorkspaceSidebarOutline {
     nestedLists: [SidebarNestedListDescriptor],
     expandedFolderIDs: Set<String>
   ) -> [WorkspaceSidebarRow] {
-    var result: [WorkspaceSidebarRow] = [
-      // Today first: it is the screen the day starts on, and Everything is
-      // a view you go looking for.
-      WorkspaceSidebarRow(id: "row:today", kind: .today, depth: 0),
-      WorkspaceSidebarRow(id: "row:everything", kind: .everything, depth: 0),
-    ]
-    var visitedFolders = Set<String>()
-
-    func appendList(_ list: SidebarListDescriptor, depth: Int) {
-      result.append(
-        WorkspaceSidebarRow(id: "list:\(list.id)", kind: .list(list.id), depth: depth))
-      for nested in nestedLists where nested.listID == list.id {
-        result.append(
-          WorkspaceSidebarRow(
-            id: "nested:\(list.id):\(nested.id)",
-            kind: .nestedList(nested.id),
-            depth: depth + 1 + nested.depth))
+    // The order is the Rust core's (`sidebar::outline`), which Android calls
+    // too: Today first, as the screen the day starts on, then Everything, the
+    // inbox, the pinned shortcuts, the folders and the loose lists. A row
+    // crosses back as its kind and an index into what was passed, three
+    // integers, and its id is spelled here from strings already held.
+    let rows = sidebarOutlineRows(
+      inboxId: inbox?.id, lists: lists.map(\.core), folders: folders.map(\.core),
+      nestedLists: nestedLists.map(\.core), expandedFolderIds: Array(expandedFolderIDs), includeToday: true)
+    return rows.compactMap { row -> WorkspaceSidebarRow? in
+      let index = Int(row.subject)
+      let depth = Int(row.depth)
+      switch row.kind {
+      case .today:
+        return WorkspaceSidebarRow(id: "row:today", kind: .today, depth: depth)
+      case .everything:
+        return WorkspaceSidebarRow(id: "row:everything", kind: .everything, depth: depth)
+      case .inbox:
+        guard let inbox else { return nil }
+        return WorkspaceSidebarRow(id: "list:\(inbox.id)", kind: .list(inbox.id), depth: depth)
+      case .list:
+        let id = lists[index].id
+        return WorkspaceSidebarRow(id: "list:\(id)", kind: .list(id), depth: depth)
+      case .nestedList:
+        let nested = nestedLists[index]
+        return WorkspaceSidebarRow(
+          id: "nested:\(nested.listID):\(nested.id)", kind: .nestedList(nested.id), depth: depth)
+      case .pinnedNestedList:
+        // The same task again, drawn at the top because that is what pinning
+        // it was for.
+        let id = nestedLists[index].id
+        return WorkspaceSidebarRow(id: "pinned:\(id)", kind: .nestedList(id), depth: depth)
+      case .folder:
+        let id = folders[index].id
+        return WorkspaceSidebarRow(id: "folder:\(id)", kind: .folder(id), depth: depth)
       }
     }
-
-    func appendFolder(_ folder: SidebarFolderDescriptor, depth: Int) {
-      guard visitedFolders.insert(folder.id).inserted else { return }
-      result.append(
-        WorkspaceSidebarRow(id: "folder:\(folder.id)", kind: .folder(folder.id), depth: depth))
-      guard expandedFolderIDs.contains(folder.id) else { return }
-      for list in lists where list.folderID == folder.id {
-        appendList(list, depth: depth + 1)
-      }
-      for child in folders where child.parentFolderID == folder.id {
-        appendFolder(child, depth: depth + 1)
-      }
-    }
-
-    if let inbox { appendList(inbox, depth: 0) }
-    // The pinned shortcuts, which are the same tasks again — drawn at the top
-    // because that is what pinning them was for.
-    for nested in nestedLists where nested.isPromoted {
-      result.append(
-        WorkspaceSidebarRow(id: "pinned:\(nested.id)", kind: .nestedList(nested.id), depth: 0))
-    }
-    for folder in folders where folder.parentFolderID == nil {
-      appendFolder(folder, depth: 0)
-    }
-    for list in lists where list.folderID == nil {
-      appendList(list, depth: 0)
-    }
-    return result
   }
 
   /// The row after `id`, `offset` steps away. A single step wraps from one end
@@ -180,22 +170,27 @@ extension WorkspaceSidebarOutline {
   ///
   /// Order follows the sidebar: this folder's own lists first, then each
   /// sub-folder's, so the combined view reads in the order the tree does.
-  /// `visited` makes a malformed parent chain terminate rather than hang.
+  /// A malformed parent chain terminates rather than hangs. The Rust core's
+  /// `sidebar_list_ids_in_folder`.
   public static func listIDs(
     inFolder folderID: String,
     folders: [SidebarFolderDescriptor],
     lists: [SidebarListDescriptor]
   ) -> [String] {
-    var visited: Set<String> = []
-    var result: [String] = []
+    sidebarListIdsInFolder(folderId: folderID, folders: folders.map(\.core), lists: lists.map(\.core))
+  }
+}
 
-    func descend(_ id: String) {
-      guard visited.insert(id).inserted else { return }
-      result.append(contentsOf: lists.filter { $0.folderID == id }.map(\.id))
-      for child in folders where child.parentFolderID == id { descend(child.id) }
-    }
+extension SidebarListDescriptor {
+  var core: SidebarList { SidebarList(id: id, folderId: folderID) }
+}
 
-    descend(folderID)
-    return result
+extension SidebarFolderDescriptor {
+  var core: SidebarFolder { SidebarFolder(id: id, parentFolderId: parentFolderID) }
+}
+
+extension SidebarNestedListDescriptor {
+  var core: SidebarNestedList {
+    SidebarNestedList(id: id, listId: listID, depth: UInt32(max(depth, 0)), isPromoted: isPromoted)
   }
 }

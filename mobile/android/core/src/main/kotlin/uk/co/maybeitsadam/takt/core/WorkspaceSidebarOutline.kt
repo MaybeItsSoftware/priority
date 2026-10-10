@@ -47,35 +47,37 @@ object WorkspaceSidebarOutline {
         nestedLists: List<SidebarNestedListDescriptor>,
         expandedFolderIDs: Set<String>,
     ): List<WorkspaceSidebarRow> {
-        val result = mutableListOf(WorkspaceSidebarRow("row:everything", WorkspaceSidebarRowKind.Everything, 0))
-        val visitedFolders = mutableSetOf<String>()
-
-        fun appendList(list: SidebarListDescriptor, depth: Int) {
-            result += WorkspaceSidebarRow("list:${list.id}", WorkspaceSidebarRowKind.List(list.id), depth)
-            for (nested in nestedLists) if (nested.listID == list.id) {
-                result += WorkspaceSidebarRow(
-                    "nested:${list.id}:${nested.id}",
-                    WorkspaceSidebarRowKind.NestedList(nested.id),
-                    depth + 1 + nested.depth,
-                )
+        // The Rust core's order (`sidebar::outline`), as the Mac's. The phone
+        // has no Today place in its tree (Today is a tab), so it asks without
+        // one. Rows cross back as a kind and an index into what was passed.
+        val rows = uniffi.takt_core.sidebarOutlineRows(
+            inbox?.id, lists.map { it.core }, folders.map { it.core }, nestedLists.map { it.core },
+            expandedFolderIDs.toList(), false,
+        )
+        return rows.mapNotNull { row ->
+            val index = row.subject.toInt()
+            val depth = row.depth.toInt()
+            when (row.kind) {
+                uniffi.takt_core.SidebarRowKind.TODAY -> null
+                uniffi.takt_core.SidebarRowKind.EVERYTHING ->
+                    WorkspaceSidebarRow("row:everything", WorkspaceSidebarRowKind.Everything, depth)
+                uniffi.takt_core.SidebarRowKind.INBOX -> inbox?.let {
+                    WorkspaceSidebarRow("list:${it.id}", WorkspaceSidebarRowKind.List(it.id), depth)
+                }
+                uniffi.takt_core.SidebarRowKind.LIST -> lists[index].id.let {
+                    WorkspaceSidebarRow("list:$it", WorkspaceSidebarRowKind.List(it), depth)
+                }
+                uniffi.takt_core.SidebarRowKind.NESTED_LIST -> nestedLists[index].let {
+                    WorkspaceSidebarRow("nested:${it.listID}:${it.id}", WorkspaceSidebarRowKind.NestedList(it.id), depth)
+                }
+                uniffi.takt_core.SidebarRowKind.PINNED_NESTED_LIST -> nestedLists[index].id.let {
+                    WorkspaceSidebarRow("pinned:$it", WorkspaceSidebarRowKind.NestedList(it), depth)
+                }
+                uniffi.takt_core.SidebarRowKind.FOLDER -> folders[index].id.let {
+                    WorkspaceSidebarRow("folder:$it", WorkspaceSidebarRowKind.Folder(it), depth)
+                }
             }
         }
-
-        fun appendFolder(folder: SidebarFolderDescriptor, depth: Int) {
-            if (!visitedFolders.add(folder.id)) return
-            result += WorkspaceSidebarRow("folder:${folder.id}", WorkspaceSidebarRowKind.Folder(folder.id), depth)
-            if (folder.id !in expandedFolderIDs) return
-            for (list in lists) if (list.folderID == folder.id) appendList(list, depth + 1)
-            for (child in folders) if (child.parentFolderID == folder.id) appendFolder(child, depth + 1)
-        }
-
-        inbox?.let { appendList(it, 0) }
-        for (nested in nestedLists) if (nested.isPromoted) {
-            result += WorkspaceSidebarRow("pinned:${nested.id}", WorkspaceSidebarRowKind.NestedList(nested.id), 0)
-        }
-        for (folder in folders) if (folder.parentFolderID == null) appendFolder(folder, 0)
-        for (list in lists) if (list.folderID == null) appendList(list, 0)
-        return result
     }
 
     /** The row `offset` steps from `id`, stopping at either end rather than wrapping. */
@@ -98,15 +100,10 @@ object WorkspaceSidebarOutline {
         inFolder: String,
         folders: List<SidebarFolderDescriptor>,
         lists: List<SidebarListDescriptor>,
-    ): List<String> {
-        val visited = mutableSetOf<String>()
-        val result = mutableListOf<String>()
-        fun descend(id: String) {
-            if (!visited.add(id)) return
-            result += lists.filter { it.folderID == id }.map { it.id }
-            for (child in folders) if (child.parentFolderID == id) descend(child.id)
-        }
-        descend(inFolder)
-        return result
-    }
+    ): List<String> = uniffi.takt_core.sidebarListIdsInFolder(inFolder, folders.map { it.core }, lists.map { it.core })
 }
+
+private val SidebarListDescriptor.core get() = uniffi.takt_core.SidebarList(id, folderID)
+private val SidebarFolderDescriptor.core get() = uniffi.takt_core.SidebarFolder(id, parentFolderID)
+private val SidebarNestedListDescriptor.core
+    get() = uniffi.takt_core.SidebarNestedList(id, listID, depth.coerceAtLeast(0).toUInt(), isPromoted)

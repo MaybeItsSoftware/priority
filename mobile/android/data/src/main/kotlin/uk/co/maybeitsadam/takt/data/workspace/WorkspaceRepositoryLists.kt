@@ -3,6 +3,7 @@ package uk.co.maybeitsadam.takt.data.workspace
 import kotlinx.coroutines.flow.Flow
 import uk.co.maybeitsadam.takt.core.ListFolder
 import uk.co.maybeitsadam.takt.core.TaskList
+import uk.co.maybeitsadam.takt.core.TaskOutlineItem
 import uk.co.maybeitsadam.takt.core.WorkspaceListTree
 import uk.co.maybeitsadam.takt.data.db.Db
 
@@ -36,11 +37,27 @@ data class ListScopeData(
     val allLists: List<TaskList>,
 )
 
-/** The sidebar's raw material: folders, every list (archived too), and the active lists' trees. */
+/**
+ * The sidebar's raw material: folders, every list (archived too), and what
+ * the sidebar draws beneath the active lists.
+ *
+ * The repository reads [summary] from the Rust core (`sidebar::sidebar_index`),
+ * which walks every list there so only the nested lists and the counts cross.
+ * It used to read every task of every active list, one list at a time, and
+ * walk them here. [trees] is for building one by hand: given trees and no
+ * summary, the shaping walks them itself, the same rule the core holds to.
+ */
 data class SidebarData(
     val folders: List<ListFolder>,
     val lists: List<TaskList>,
-    val trees: Map<String, WorkspaceListTree>,
+    val trees: Map<String, WorkspaceListTree> = emptyMap(),
+    val summary: SidebarSummary? = null,
+)
+
+/** The nested lists the sidebar draws, with their depth among lists, and each list's and nested list's open count. */
+data class SidebarSummary(
+    val nestedLists: List<TaskOutlineItem>,
+    val openCounts: Map<String, Int>,
 )
 
 private fun Db.decorations(listIds: Collection<String>): Map<String, TaskDecoration> {
@@ -99,8 +116,17 @@ suspend fun WorkspaceRepository.listScope(workspaceId: String, listId: String?):
 
 internal fun readSidebar(db: Db, workspaceId: String): SidebarData {
     val lists = listsIn(db, workspaceId, true)
-    val trees = lists.filter { !it.isArchived }.associate { it.id to listTree(db, it.id) }
-    return SidebarData(foldersIn(db, workspaceId), lists, trees)
+    val active = lists.filter { !it.isArchived }.map { it.id }
+    val summary = if (active.isEmpty()) {
+        SidebarSummary(emptyList(), emptyMap())
+    } else {
+        val index = db.core.sidebarIndexWithOpenCounts(active)
+        SidebarSummary(
+            nestedLists = index.nestedLists.map { TaskOutlineItem(it.task.toTask(), it.depth.toInt()) },
+            openCounts = index.openCounts.associate { it.listId to it.count.toInt() },
+        )
+    }
+    return SidebarData(foldersIn(db, workspaceId), lists, summary = summary)
 }
 
 /** The folders and lists tree, re-read when folders, lists or tasks change. */

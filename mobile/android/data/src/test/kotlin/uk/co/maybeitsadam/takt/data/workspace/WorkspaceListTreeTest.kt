@@ -100,6 +100,20 @@ class WorkspaceListTreeTest {
     }
 
     @Test
+    fun theSidebarReadIsTheCoresWalkOfTheSameTrees() = fixture {
+        seed()
+        val lists = store.lists(workspaceId)
+        val walked = WorkspaceSidebarIndex.build(lists, store.listTrees(lists.map { it.id }))
+        val summary = store.sidebar(workspaceId).summary!!
+        assertEquals(walked.nestedLists, summary.nestedLists)
+        // Open, doable tasks: not finished, not lists, nothing under an
+        // archived or finished nested list; a nested list counts what is open beneath it.
+        assertEquals(3, summary.openCounts[list.id])
+        assertEquals(1, summary.openCounts[other.id])
+        assertEquals(listOf(1, 1), walked.nestedLists.take(2).map { summary.openCounts[it.id] })
+    }
+
+    @Test
     fun boardTreesReachEveryLevelBeneathEveryCardAndInsideIt() = fixture {
         val project = store.createTask(listId = list.id, title = "Project")
         val step = store.createTask(listId = list.id, title = "Step", parentTaskId = project.id)

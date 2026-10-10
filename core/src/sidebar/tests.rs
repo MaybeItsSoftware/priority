@@ -75,3 +75,48 @@ fn counts_match_the_outline() {
         records::outline(&connection, "l", None).unwrap().len() as i64
     );
 }
+
+#[test]
+fn open_counts_take_only_open_doable_tasks_and_credit_every_nested_list_above() {
+    let connection = workspace();
+    connection
+        .execute_batch(&format!(
+            "INSERT INTO tasks (id, listId, parentTaskId, title, status, sortOrder, itemKind, archivedAt, createdAt, updatedAt) VALUES
+               ('shut', 'l', 'closed', 'Under a finished list', 'open', 0, 'task', NULL, '{T}', '{T}'),
+               ('stale', 'l', 'older', 'Under an archived list', 'open', 0, 'task', NULL, '{T}', '{T}'),
+               ('loose', 'o', 'inner', 'Beneath the wrapper', 'open', 0, 'task', NULL, '{T}', '{T}');"
+        ))
+        .unwrap();
+    let ids = ["l", "o", "empty"].map(str::to_string);
+    assert!(
+        sidebar_index(&connection, &ids)
+            .unwrap()
+            .open_counts
+            .is_empty()
+    );
+    let index = sidebar_index_with_open_counts(&connection, &ids).unwrap();
+    assert_eq!(
+        index.nested_lists,
+        sidebar_index(&connection, &ids).unwrap().nested_lists
+    );
+    let counts: Vec<(&str, i64)> = index
+        .open_counts
+        .iter()
+        .map(|count| (count.list_id.as_str(), count.count))
+        .collect();
+    // `project` and `paper` in Work; `step` is finished, and the tasks under
+    // the finished and the archived list are out. The wrapper is a list, so
+    // it is credited with what lies beneath it, as Android counted.
+    assert_eq!(
+        counts,
+        [
+            ("l", 2),
+            ("o", 1),
+            ("empty", 0),
+            ("reading", 1),
+            ("papers", 1),
+            ("root", 1),
+            ("inner", 1),
+        ]
+    );
+}

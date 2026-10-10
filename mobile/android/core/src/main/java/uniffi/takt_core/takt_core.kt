@@ -735,6 +735,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sidebar_outline_rows(
+    ): Int
     external fun uniffi_takt_core_checksum_func_hlc_receive(
     ): Int
     external fun uniffi_takt_core_checksum_func_hlc_tick(
@@ -1004,6 +1008,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_waiting(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_sidebar_index(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_sidebar_index_with_open_counts(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_start_focus_session(
     ): Int
@@ -1325,6 +1331,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_sidebar_index(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_sidebar_index_with_open_counts(`ptr`: Long,`listIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_start_focus_session(`ptr`: Long,`taskId`: RustBuffer.ByValue,`plannedSeconds`: RustBuffer.ByValue,`workSeconds`: Long,`breakSeconds`: Long,`context`: RustBuffer.ByValue,`overrideAvailability`: Byte,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_sync_state(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1422,6 +1430,10 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_migrations(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sidebar_list_ids_in_folder(`folderId`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sidebar_outline_rows(`inboxId`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`nestedLists`: RustBuffer.ByValue,`expandedFolderIds`: RustBuffer.ByValue,`includeToday`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_hlc_receive(`clock`: RustBuffer.ByValue,`remote`: RustBuffer.ByValue,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1646,6 +1658,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder() and 0xFFFF) != 59863) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sidebar_outline_rows() and 0xFFFF) != 1333) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_hlc_receive() and 0xFFFF) != 32125) {
@@ -2051,6 +2069,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_sidebar_index() and 0xFFFF) != 50190) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_sidebar_index_with_open_counts() and 0xFFFF) != 6639) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_start_focus_session() and 0xFFFF) != 4001) {
@@ -3276,6 +3297,12 @@ public interface CoreWorkspaceInterface {
      * the nested lists and the counts cross.
      */
     fun `sidebarIndex`(`listIds`: List<kotlin.String>): SidebarIndex
+    
+    /**
+     * `sidebar_index` with each list's and nested list's open count, for
+     * Android's badges.
+     */
+    fun `sidebarIndexWithOpenCounts`(`listIds`: List<kotlin.String>): SidebarIndex
     
     /**
      * Starts a focus session on a task, or returns the one running.
@@ -5896,6 +5923,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
     callWithHandle {
     uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_takt_core_fn_method_coreworkspace_sidebar_index(
+        it,
+        
+        FfiConverterSequenceString.lower(`listIds`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * `sidebar_index` with each list's and nested list's open count, for
+     * Android's badges.
+     */
+    @Throws(CoreException::class)override fun `sidebarIndexWithOpenCounts`(`listIds`: List<kotlin.String>): SidebarIndex {
+            return FfiConverterTypeSidebarIndex.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_sidebar_index_with_open_counts(
         it,
         
         FfiConverterSequenceString.lower(`listIds`),_status)
@@ -9753,6 +9799,47 @@ public object FfiConverterTypeSessionRow: FfiConverterRustBuffer<SessionRow> {
 
 
 /**
+ * A folder, and the folder it sits in.
+ */
+data class SidebarFolder (
+    var `id`: kotlin.String
+    , 
+    var `parentFolderId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSidebarFolder: FfiConverterRustBuffer<SidebarFolder> {
+    override fun read(buf: ByteBuffer): SidebarFolder {
+        return SidebarFolder(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SidebarFolder) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterOptionalString.allocationSize(value.`parentFolderId`)
+    )
+
+    override fun write(value: SidebarFolder, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterOptionalString.write(value.`parentFolderId`, buf)
+    }
+}
+
+
+
+/**
  * `WorkspaceSidebarIndex`: the nested lists to draw, with their depth among
  * lists; the archived ones the restore menu offers; each list's task count.
  */
@@ -9762,6 +9849,17 @@ data class SidebarIndex (
     var `archivedNestedLists`: List<TaskRow>
     , 
     var `taskCounts`: List<ListTaskCount>
+    , 
+    /**
+     * Android's badges (`ListsTreeShaping.openCounts`): the open, doable
+     * tasks in each list, and beneath each nested list. Not lists
+     * themselves, not the list's visible root, nothing beneath a nested
+     * list that is archived or not open. A list always has an entry; a
+     * nested list only once something counts beneath it. Empty unless asked
+     * for (`sidebar_index_with_open_counts`): the Mac draws totals, and
+     * reading the status of every task cost its sidebar a tenth more.
+     */
+    var `openCounts`: List<ListTaskCount>
     
 ){
     
@@ -9781,19 +9879,169 @@ public object FfiConverterTypeSidebarIndex: FfiConverterRustBuffer<SidebarIndex>
             FfiConverterSequenceTypeOutlineItem.read(buf),
             FfiConverterSequenceTypeTaskRow.read(buf),
             FfiConverterSequenceTypeListTaskCount.read(buf),
+            FfiConverterSequenceTypeListTaskCount.read(buf),
         )
     }
 
     override fun allocationSize(value: SidebarIndex) = (
             FfiConverterSequenceTypeOutlineItem.allocationSize(value.`nestedLists`) +
             FfiConverterSequenceTypeTaskRow.allocationSize(value.`archivedNestedLists`) +
-            FfiConverterSequenceTypeListTaskCount.allocationSize(value.`taskCounts`)
+            FfiConverterSequenceTypeListTaskCount.allocationSize(value.`taskCounts`) +
+            FfiConverterSequenceTypeListTaskCount.allocationSize(value.`openCounts`)
     )
 
     override fun write(value: SidebarIndex, buf: ByteBuffer) {
             FfiConverterSequenceTypeOutlineItem.write(value.`nestedLists`, buf)
             FfiConverterSequenceTypeTaskRow.write(value.`archivedNestedLists`, buf)
             FfiConverterSequenceTypeListTaskCount.write(value.`taskCounts`, buf)
+            FfiConverterSequenceTypeListTaskCount.write(value.`openCounts`, buf)
+    }
+}
+
+
+
+/**
+ * A list in the sidebar, and the folder it is filed in.
+ */
+data class SidebarList (
+    var `id`: kotlin.String
+    , 
+    var `folderId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSidebarList: FfiConverterRustBuffer<SidebarList> {
+    override fun read(buf: ByteBuffer): SidebarList {
+        return SidebarList(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SidebarList) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterOptionalString.allocationSize(value.`folderId`)
+    )
+
+    override fun write(value: SidebarList, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterOptionalString.write(value.`folderId`, buf)
+    }
+}
+
+
+
+/**
+ * A list nested inside a task, addressed by the task's id.
+ */
+data class SidebarNestedList (
+    var `id`: kotlin.String
+    , 
+    var `listId`: kotlin.String
+    , 
+    /**
+     * Its depth among the lists above it.
+     */
+    var `depth`: kotlin.UInt
+    , 
+    var `isPromoted`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSidebarNestedList: FfiConverterRustBuffer<SidebarNestedList> {
+    override fun read(buf: ByteBuffer): SidebarNestedList {
+        return SidebarNestedList(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SidebarNestedList) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`listId`) +
+            FfiConverterUInt.allocationSize(value.`depth`) +
+            FfiConverterBoolean.allocationSize(value.`isPromoted`)
+    )
+
+    override fun write(value: SidebarNestedList, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`listId`, buf)
+            FfiConverterUInt.write(value.`depth`, buf)
+            FfiConverterBoolean.write(value.`isPromoted`, buf)
+    }
+}
+
+
+
+/**
+ * One sidebar row.
+ */
+data class SidebarOutlineRow (
+    var `kind`: SidebarRowKind
+    , 
+    /**
+     * An index into the input `kind` names; 0 where it names none.
+     */
+    var `subject`: kotlin.UInt
+    , 
+    /**
+     * Indentation: zero for the top-level rows.
+     */
+    var `depth`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSidebarOutlineRow: FfiConverterRustBuffer<SidebarOutlineRow> {
+    override fun read(buf: ByteBuffer): SidebarOutlineRow {
+        return SidebarOutlineRow(
+            FfiConverterTypeSidebarRowKind.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SidebarOutlineRow) = (
+            FfiConverterTypeSidebarRowKind.allocationSize(value.`kind`) +
+            FfiConverterUInt.allocationSize(value.`subject`) +
+            FfiConverterUInt.allocationSize(value.`depth`)
+    )
+
+    override fun write(value: SidebarOutlineRow, buf: ByteBuffer) {
+            FfiConverterTypeSidebarRowKind.write(value.`kind`, buf)
+            FfiConverterUInt.write(value.`subject`, buf)
+            FfiConverterUInt.write(value.`depth`, buf)
     }
 }
 
@@ -11346,6 +11594,69 @@ public object FfiConverterTypePeriodicCadence : FfiConverterRustBuffer<PeriodicC
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * What a row is, and which input its `subject` indexes.
+ */
+
+enum class SidebarRowKind {
+    
+    /**
+     * The day, from every list. No subject.
+     */
+    TODAY,
+    /**
+     * No subject.
+     */
+    EVERYTHING,
+    /**
+     * The inbox. No subject.
+     */
+    INBOX,
+    /**
+     * `lists[subject]`.
+     */
+    LIST,
+    /**
+     * `nested_lists[subject]`, in place under its list.
+     */
+    NESTED_LIST,
+    /**
+     * `nested_lists[subject]` again, as a shortcut at the top.
+     */
+    PINNED_NESTED_LIST,
+    /**
+     * `folders[subject]`.
+     */
+    FOLDER;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSidebarRowKind: FfiConverterRustBuffer<SidebarRowKind> {
+    override fun read(buf: ByteBuffer) = try {
+        SidebarRowKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: SidebarRowKind) = 4UL
+
+    override fun write(value: SidebarRowKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
     }
 }
 
@@ -13300,6 +13611,118 @@ public object FfiConverterSequenceTypeSearchHit: FfiConverterRustBuffer<List<Sea
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeSidebarFolder: FfiConverterRustBuffer<List<SidebarFolder>> {
+    override fun read(buf: ByteBuffer): List<SidebarFolder> {
+        val len = buf.getInt()
+        return List<SidebarFolder>(len) {
+            FfiConverterTypeSidebarFolder.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SidebarFolder>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSidebarFolder.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SidebarFolder>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSidebarFolder.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeSidebarList: FfiConverterRustBuffer<List<SidebarList>> {
+    override fun read(buf: ByteBuffer): List<SidebarList> {
+        val len = buf.getInt()
+        return List<SidebarList>(len) {
+            FfiConverterTypeSidebarList.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SidebarList>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSidebarList.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SidebarList>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSidebarList.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeSidebarNestedList: FfiConverterRustBuffer<List<SidebarNestedList>> {
+    override fun read(buf: ByteBuffer): List<SidebarNestedList> {
+        val len = buf.getInt()
+        return List<SidebarNestedList>(len) {
+            FfiConverterTypeSidebarNestedList.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SidebarNestedList>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSidebarNestedList.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SidebarNestedList>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSidebarNestedList.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeSidebarOutlineRow: FfiConverterRustBuffer<List<SidebarOutlineRow>> {
+    override fun read(buf: ByteBuffer): List<SidebarOutlineRow> {
+        val len = buf.getInt()
+        return List<SidebarOutlineRow>(len) {
+            FfiConverterTypeSidebarOutlineRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SidebarOutlineRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSidebarOutlineRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SidebarOutlineRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSidebarOutlineRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeTaskProgressCount: FfiConverterRustBuffer<List<TaskProgressCount>> {
     override fun read(buf: ByteBuffer): List<TaskProgressCount> {
         val len = buf.getInt()
@@ -14176,6 +14599,47 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_workspace_migrations(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * Every list inside a folder, its sub-folders' included, in sidebar order:
+         * the folder's own lists first, then each sub-folder's. A cycle in the
+         * parent chain ends rather than hangs.
+         */ fun `sidebarListIdsInFolder`(`folderId`: kotlin.String, `folders`: List<SidebarFolder>, `lists`: List<SidebarList>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sidebar_list_ids_in_folder(
+    
+        
+        FfiConverterString.lower(`folderId`),
+        FfiConverterSequenceTypeSidebarFolder.lower(`folders`),
+        FfiConverterSequenceTypeSidebarList.lower(`lists`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The rows, top to bottom: Today (when `include_today`) and Everything, the
+         * inbox (when `inbox_id` is given) with its nested lists, the pinned nested
+         * lists, the folders from the top (each one's lists and their nested lists,
+         * then its sub-folders, only while it is in `expanded_folder_ids`), then the
+         * lists in no folder. A folder reached twice, through a cycle, is drawn once.
+         */ fun `sidebarOutlineRows`(`inboxId`: kotlin.String?, `lists`: List<SidebarList>, `folders`: List<SidebarFolder>, `nestedLists`: List<SidebarNestedList>, `expandedFolderIds`: List<kotlin.String>, `includeToday`: kotlin.Boolean): List<SidebarOutlineRow> {
+            return FfiConverterSequenceTypeSidebarOutlineRow.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sidebar_outline_rows(
+    
+        
+        FfiConverterOptionalString.lower(`inboxId`),
+        FfiConverterSequenceTypeSidebarList.lower(`lists`),
+        FfiConverterSequenceTypeSidebarFolder.lower(`folders`),
+        FfiConverterSequenceTypeSidebarNestedList.lower(`nestedLists`),
+        FfiConverterSequenceString.lower(`expandedFolderIds`),
+        FfiConverterBoolean.lower(`includeToday`),_status)
 }
     )
     }
