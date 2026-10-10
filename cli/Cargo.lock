@@ -2117,6 +2117,7 @@ dependencies = [
  "takt-sync-rules",
  "thiserror 2.0.20",
  "unicode-normalization",
+ "unicode-segmentation",
  "uniffi",
  "uuid",
 ]

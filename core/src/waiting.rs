@@ -5,6 +5,7 @@
 
 use rusqlite::{OptionalExtension, Transaction, params};
 use sha2::{Digest, Sha256};
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::CoreError;
 use crate::time::{parse_stored, stored};
@@ -16,9 +17,56 @@ pub const FOLLOW_UP_COLUMN: &str = "today";
 const MAXIMUM_TAG: usize = 40;
 
 /// Who a task waits on, trimmed and clipped to 40 characters, or nothing.
+/// Characters as Swift counts them, grapheme clusters, so a flag or a family
+/// emoji is kept whole or dropped whole rather than split.
 pub fn normalized_tag(text: Option<&str>) -> Option<String> {
     let trimmed = text?.trim();
-    (!trimmed.is_empty()).then(|| trimmed.chars().take(MAXIMUM_TAG).collect())
+    (!trimmed.is_empty()).then(|| trimmed.graphemes(true).take(MAXIMUM_TAG).collect())
+}
+
+/// A task as the follow-up rule reads it. `WaitingTaskState`.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct WaitingState {
+    pub task_id: String,
+    pub title: String,
+    pub is_open: bool,
+    /// The board column it is filed in. Only `waiting-on` is waiting.
+    pub column: Option<String>,
+    pub waiting_on: Option<String>,
+    pub follow_up_at_ms: Option<i64>,
+    /// The follow-up already made for it, if any.
+    pub made_follow_up_task_id: Option<String>,
+}
+
+/// The follow-up to make: "Follow up with Sam: Contract signed", due at the
+/// follow-up time. `WaitingFollowUpPlan`.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FollowUpPlan {
+    pub task_id: String,
+    pub source_task_id: String,
+    pub title: String,
+    pub due_at_ms: i64,
+}
+
+/// The follow-up to make for `task` at `now_ms`, if one is due: the task is
+/// open, still in `waiting-on`, its follow-up time has come, and the
+/// follow-up for that time has not been made. Setting a new time makes a new
+/// one, since the id follows the time. `WaitingFollowUp.dueFollowUp`.
+pub fn due_follow_up(task: &WaitingState, now_ms: i64) -> Option<FollowUpPlan> {
+    if !task.is_open || task.column.as_deref() != Some(WAITING_COLUMN) {
+        return None;
+    }
+    let at_ms = task.follow_up_at_ms.filter(|at| *at <= now_ms)?;
+    let id = follow_up_task_id(&task.task_id, at_ms);
+    if task.made_follow_up_task_id.as_deref() == Some(id.as_str()) {
+        return None;
+    }
+    Some(FollowUpPlan {
+        title: follow_up_title(&task.title, task.waiting_on.as_deref()),
+        task_id: id,
+        source_task_id: task.task_id.clone(),
+        due_at_ms: at_ms,
+    })
 }
 
 /// "Follow up with Sam: Contract signed", or "Follow up: ..." when nobody is
@@ -139,13 +187,17 @@ fn due_follow_ups(
         let Some(follow_up_at) = row.follow_up_at.as_deref().and_then(parse_stored) else {
             continue;
         };
-        let at_ms = follow_up_at.timestamp_millis();
-        if at_ms > now_ms {
-            continue;
-        }
-        let id = follow_up_task_id(&row.id, at_ms);
-        if row.made.as_deref() != Some(id.as_str()) {
-            due.push((row, id, at_ms));
+        let state = WaitingState {
+            task_id: row.id.clone(),
+            title: String::new(),
+            is_open: true,
+            column: Some(WAITING_COLUMN.to_string()),
+            waiting_on: None,
+            follow_up_at_ms: Some(follow_up_at.timestamp_millis()),
+            made_follow_up_task_id: row.made.clone(),
+        };
+        if let Some(plan) = due_follow_up(&state, now_ms) {
+            due.push((row, plan.task_id, plan.due_at_ms));
         }
     }
     Ok(due)

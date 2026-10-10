@@ -1,15 +1,12 @@
 package uk.co.maybeitsadam.takt.core
 
-import java.security.MessageDigest
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
-// Port of `HabitPolicy.swift`: whether a habit appears on a day, whether it
-// has expired, and which board column it lands in. Pure; the data layer's
-// `WorkspaceRepositoryHabits.kt` applies it, row for row as the Mac's
-// `WorkspaceStore+Habits.swift` does.
+// `HabitPolicy.swift`'s types: whether a habit appears on a day, whether it
+// has expired, and which board column it lands in. The rules are the Rust
+// core's (`core/src/habits.rs`), which reconciles the habits' columns for
+// every client; these wrap them.
 
 /**
  * The board column a habit's appearance lands in. The raw values are the ids
@@ -140,25 +137,14 @@ data class HabitAppearance(
 /** What the engine should do with a habit's card: write [column] (null takes it out). */
 data class HabitColumnChange(val column: String?)
 
-/** Should a habit appear on a day, has it expired, and where does it land. */
+/** Should a habit appear on a day, has it expired, and where does it land. Days are [zone]'s. */
 object HabitPolicy {
     /** How far back a carried appearance is looked for. */
     const val CARRY_LOOKBACK_DAYS = 366
 
-    private fun day(instant: Instant, zone: ZoneId): LocalDate = instant.atZone(zone).toLocalDate()
-
-    private fun start(date: LocalDate, zone: ZoneId): Instant = date.atStartOfDay(zone).toInstant()
-
-    private fun isScheduled(rule: HabitRule, target: LocalDate, anchor: LocalDate): Boolean {
-        if (target < anchor) return false
-        val interval = rule.intervalDays
-        if (interval != null && interval > 1) return ChronoUnit.DAYS.between(anchor, target) % interval == 0L
-        return calendarWeekday(target) in rule.weekdays.ifEmpty { HabitFrequency.ALL_DAYS }
-    }
-
     /** Whether [day] is one of the habit's scheduled days. Never before the anchor. */
     fun isScheduled(rule: HabitRule, day: Instant, zone: ZoneId = ZoneId.systemDefault()): Boolean =
-        isScheduled(rule, day(day, zone), day(rule.anchor, zone))
+        uniffi.takt_core.habitIsScheduled(rule.core, day.coreMillis, zone.coreName)
 
     /**
      * Whether the habit has stopped for good by [day]. [sourceCompleted] is
@@ -166,23 +152,11 @@ object HabitPolicy {
      * [HabitExpiry.WhenSourceCompleted] consults it.
      */
     fun isExpired(rule: HabitRule, day: Instant, sourceCompleted: Boolean, zone: ZoneId = ZoneId.systemDefault()): Boolean =
-        when (val expiry = rule.expiry) {
-            HabitExpiry.Never -> false
-            HabitExpiry.WhenSourceCompleted -> sourceCompleted
-            is HabitExpiry.On -> day(day, zone) >= day(expiry.date, zone)
-        }
+        uniffi.takt_core.habitIsExpired(rule.core, day.coreMillis, sourceCompleted, zone.coreName)
 
     /** The start of the most recent scheduled day on or before [day], if any since the anchor. */
-    fun lastScheduledDay(rule: HabitRule, onOrBefore: Instant, zone: ZoneId = ZoneId.systemDefault()): Instant? {
-        val anchor = day(rule.anchor, zone)
-        var cursor = day(onOrBefore, zone)
-        repeat(CARRY_LOOKBACK_DAYS + 1) {
-            if (cursor < anchor) return null
-            if (isScheduled(rule, cursor, anchor)) return start(cursor, zone)
-            cursor = cursor.minusDays(1)
-        }
-        return null
-    }
+    fun lastScheduledDay(rule: HabitRule, onOrBefore: Instant, zone: ZoneId = ZoneId.systemDefault()): Instant? =
+        uniffi.takt_core.habitLastScheduledDay(rule.core, onOrBefore.coreMillis, zone.coreName)?.let(Instant::ofEpochMilli)
 
     /**
      * Where the habit stands on [day]: null when it should not be showing.
@@ -194,19 +168,9 @@ object HabitPolicy {
         lastDoneDay: Instant?,
         sourceCompleted: Boolean,
         zone: ZoneId = ZoneId.systemDefault(),
-    ): HabitAppearance? {
-        if (isExpired(rule, day, sourceCompleted, zone)) return null
-        val today = day(day, zone)
-        val lastDone = lastDoneDay?.let { day(it, zone) }
-        if (lastDone == today) return null
-        if (isScheduled(rule, today, day(rule.anchor, zone))) {
-            return HabitAppearance(rule.placement.raw, start(today, zone), isCarriedOver = false)
-        }
-        if (rule.dropsAtDayEnd) return null
-        val owed = lastScheduledDay(rule, day, zone) ?: return null
-        if (lastDone != null && start(lastDone, zone) >= owed) return null
-        return HabitAppearance(rule.placement.raw, owed, isCarriedOver = true)
-    }
+    ): HabitAppearance? =
+        uniffi.takt_core.habitAppearance(rule.core, day.coreMillis, lastDoneDay?.coreMillis, sourceCompleted, zone.coreName)
+            ?.let { HabitAppearance(it.column, Instant.ofEpochMilli(it.dueDayMs), it.isCarriedOver) }
 
     /**
      * The column a habit's task should be in now, given where it is: a
@@ -214,10 +178,8 @@ object HabitPolicy {
      * somewhere else by hand is theirs; only the habit's own column, or no
      * column at all, is managed.
      */
-    fun reconciledColumn(current: String?, appearance: HabitAppearance?, placement: HabitPlacement): HabitColumnChange? {
-        if (appearance != null) return if (current == null) HabitColumnChange(appearance.column) else null
-        return if (current == placement.raw) HabitColumnChange(null) else null
-    }
+    fun reconciledColumn(current: String?, appearance: HabitAppearance?, placement: HabitPlacement): HabitColumnChange? =
+        uniffi.takt_core.habitReconciledColumn(current, appearance?.column, placement.raw)?.let { HabitColumnChange(it.column) }
 
     /** `30m`, `1h`, `1h30`, `90` (minutes): the capture bar's estimate syntax plus a bare number, as seconds. */
     fun estimateSeconds(text: String): Int? {
@@ -238,19 +200,23 @@ object HabitPolicy {
 
     /**
      * The Habits list's id in [workspaceId]: a UUID-shaped SHA-256 of
-     * `takt.habits-list:<workspace id>`, as `WaitingFollowUp.followUpTaskId`
-     * makes one. The Mac derives the same, so two devices that each make the
-     * list before syncing make one row, which sync merges.
+     * `takt.habits-list:<workspace id>`, made by the Rust core, so two devices
+     * that each make the list before syncing make one row, which sync merges.
      */
-    fun habitsListId(workspaceId: String): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest("takt.habits-list:$workspaceId".toByteArray(Charsets.UTF_8))
-        val bytes = digest.copyOf(16)
-        bytes[6] = ((bytes[6].toInt() and 0x0F) or 0x50).toByte()
-        bytes[8] = ((bytes[8].toInt() and 0x3F) or 0x80).toByte()
-        val hex = bytes.joinToString("") { "%02X".format(it.toInt() and 0xFF) }
-        return listOf(0..7, 8..11, 12..15, 16..19, 20..31).joinToString("-") { hex.substring(it) }
-    }
+    fun habitsListId(workspaceId: String): String = uniffi.takt_core.habitListId(workspaceId)
 
     /** The list a new habit goes in. */
     const val HABITS_LIST_NAME = "Habits"
 }
+
+/** The rule as the core reads it. */
+private val HabitRule.core: uniffi.takt_core.HabitRuleSpec
+    get() = uniffi.takt_core.HabitRuleSpec(
+        weekdays = weekdays.sorted().filter { it >= 0 }.map { it.toUInt() },
+        intervalDays = intervalDays?.toLong(),
+        anchorMs = anchor.coreMillis,
+        dropsAtDayEnd = dropsAtDayEnd,
+        expiryRule = expiry.rule,
+        expiresAtMs = expiry.date?.coreMillis,
+        placement = placement.raw,
+    )

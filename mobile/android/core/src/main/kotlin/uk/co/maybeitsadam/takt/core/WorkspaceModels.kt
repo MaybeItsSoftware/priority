@@ -4,7 +4,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 
 // Port of Sources/TaktWorkspace/WorkspaceModels.swift (and the record types in
 // TaskPlanning.swift). `Date` becomes `Instant`; a Swift `Calendar` becomes the
@@ -258,18 +257,16 @@ data class WorkspaceDaily(
             dropsAtDayEnd = dropsAtDayEnd, expiry = expiry, placement = placement ?: HabitPlacement.TODAY,
         )
 
-    /** Whether this daily is expected on `day`. */
+    /** Whether this daily is expected on `day`: the Rust core's rule, the one its next-up read applies. */
     fun isDue(day: Instant, zone: ZoneId = ZoneId.systemDefault()): Boolean {
         if (isArchived) return false
-        val interval = intervalDays
-        if (interval != null && interval > 0) {
-            val anchor = (intervalAnchor ?: createdAt).atZone(zone).toLocalDate()
-            val target = day.atZone(zone).toLocalDate()
-            if (target < anchor) return false
-            val elapsed = ChronoUnit.DAYS.between(anchor, target)
-            return elapsed % interval == 0L
-        }
-        return activeWeekdaysMask and (1 shl (calendarWeekday(day.atZone(zone).toLocalDate()) - 1)) != 0
+        return uniffi.takt_core.workspaceDailyIsDue(
+            weekdaysMask = activeWeekdaysMask.toLong(),
+            intervalDays = intervalDays?.toLong(),
+            anchorMs = (intervalAnchor ?: createdAt).coreMillis,
+            dayMs = day.coreMillis,
+            zone = zone.coreName,
+        )
     }
 
     companion object {

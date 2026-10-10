@@ -5277,6 +5277,125 @@ public func FfiConverterTypeFolderRow_lower(_ value: FolderRow) -> RustBuffer {
 
 
 /**
+ * The follow-up to make: "Follow up with Sam: Contract signed", due at the
+ * follow-up time. `WaitingFollowUpPlan`.
+ */
+public struct FollowUpPlan: Equatable, Hashable {
+    public var taskId: String
+    public var sourceTaskId: String
+    public var title: String
+    public var dueAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, sourceTaskId: String, title: String, dueAtMs: Int64) {
+        self.taskId = taskId
+        self.sourceTaskId = sourceTaskId
+        self.title = title
+        self.dueAtMs = dueAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FollowUpPlan: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FollowUpPlan {
+        return
+            try FollowUpPlan(
+                taskId: FfiConverterString.read(from: &buf), 
+                sourceTaskId: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                dueAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FollowUpPlan, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.sourceTaskId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterInt64.write(value.dueAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFollowUpPlan_lift(_ buf: RustBuffer) throws -> FollowUpPlan {
+    return try FfiConverterTypeFollowUpPlan.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFollowUpPlan_lower(_ value: FollowUpPlan) -> RustBuffer {
+    return FfiConverterTypeFollowUpPlan.lower(value)
+}
+
+
+/**
+ * A column to write: `column` `None` takes the card out of the habit's.
+ */
+public struct HabitColumnChange: Equatable, Hashable {
+    public var column: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(column: String?) {
+        self.column = column
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension HabitColumnChange: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeHabitColumnChange: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HabitColumnChange {
+        return
+            try HabitColumnChange(
+                column: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: HabitColumnChange, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.column, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHabitColumnChange_lift(_ buf: RustBuffer) throws -> HabitColumnChange {
+    return try FfiConverterTypeHabitColumnChange.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHabitColumnChange_lower(_ value: HabitColumnChange) -> RustBuffer {
+    return FfiConverterTypeHabitColumnChange.lower(value)
+}
+
+
+/**
  * What the habit form saves. The schedule arrives as the daily stores it
  * (a weekday mask's days and an interval), which each client derives from
  * its own frequency type.
@@ -5372,6 +5491,176 @@ public func FfiConverterTypeHabitDraft_lift(_ buf: RustBuffer) throws -> HabitDr
 #endif
 public func FfiConverterTypeHabitDraft_lower(_ value: HabitDraft) -> RustBuffer {
     return FfiConverterTypeHabitDraft.lower(value)
+}
+
+
+/**
+ * Everything that decides whether a habit shows on a day. `HabitRule`.
+ */
+public struct HabitRuleSpec: Equatable, Hashable {
+    /**
+     * 1 = Sunday. Empty is every day.
+     */
+    public var weekdays: [UInt32]
+    public var intervalDays: Int64?
+    /**
+     * A moment on the habit's first day, which its interval counts from.
+     */
+    public var anchorMs: Int64
+    public var dropsAtDayEnd: Bool
+    /**
+     * "source", "date" or "never"; anything else, or "date" without a date,
+     * is never.
+     */
+    public var expiryRule: String
+    public var expiresAtMs: Int64?
+    /**
+     * The column its appearance lands in.
+     */
+    public var placement: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * 1 = Sunday. Empty is every day.
+         */weekdays: [UInt32], intervalDays: Int64?, 
+        /**
+         * A moment on the habit's first day, which its interval counts from.
+         */anchorMs: Int64, dropsAtDayEnd: Bool, 
+        /**
+         * "source", "date" or "never"; anything else, or "date" without a date,
+         * is never.
+         */expiryRule: String, expiresAtMs: Int64?, 
+        /**
+         * The column its appearance lands in.
+         */placement: String) {
+        self.weekdays = weekdays
+        self.intervalDays = intervalDays
+        self.anchorMs = anchorMs
+        self.dropsAtDayEnd = dropsAtDayEnd
+        self.expiryRule = expiryRule
+        self.expiresAtMs = expiresAtMs
+        self.placement = placement
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension HabitRuleSpec: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeHabitRuleSpec: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HabitRuleSpec {
+        return
+            try HabitRuleSpec(
+                weekdays: FfiConverterSequenceUInt32.read(from: &buf), 
+                intervalDays: FfiConverterOptionInt64.read(from: &buf), 
+                anchorMs: FfiConverterInt64.read(from: &buf), 
+                dropsAtDayEnd: FfiConverterBool.read(from: &buf), 
+                expiryRule: FfiConverterString.read(from: &buf), 
+                expiresAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                placement: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: HabitRuleSpec, into buf: inout [UInt8]) {
+        FfiConverterSequenceUInt32.write(value.weekdays, into: &buf)
+        FfiConverterOptionInt64.write(value.intervalDays, into: &buf)
+        FfiConverterInt64.write(value.anchorMs, into: &buf)
+        FfiConverterBool.write(value.dropsAtDayEnd, into: &buf)
+        FfiConverterString.write(value.expiryRule, into: &buf)
+        FfiConverterOptionInt64.write(value.expiresAtMs, into: &buf)
+        FfiConverterString.write(value.placement, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHabitRuleSpec_lift(_ buf: RustBuffer) throws -> HabitRuleSpec {
+    return try FfiConverterTypeHabitRuleSpec.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHabitRuleSpec_lower(_ value: HabitRuleSpec) -> RustBuffer {
+    return FfiConverterTypeHabitRuleSpec.lower(value)
+}
+
+
+/**
+ * One day's appearance of a habit. `HabitAppearance`.
+ */
+public struct HabitShowing: Equatable, Hashable {
+    public var column: String
+    /**
+     * The first moment of the scheduled day it belongs to.
+     */
+    public var dueDayMs: Int64
+    public var isCarriedOver: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(column: String, 
+        /**
+         * The first moment of the scheduled day it belongs to.
+         */dueDayMs: Int64, isCarriedOver: Bool) {
+        self.column = column
+        self.dueDayMs = dueDayMs
+        self.isCarriedOver = isCarriedOver
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension HabitShowing: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeHabitShowing: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HabitShowing {
+        return
+            try HabitShowing(
+                column: FfiConverterString.read(from: &buf), 
+                dueDayMs: FfiConverterInt64.read(from: &buf), 
+                isCarriedOver: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: HabitShowing, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.column, into: &buf)
+        FfiConverterInt64.write(value.dueDayMs, into: &buf)
+        FfiConverterBool.write(value.isCarriedOver, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHabitShowing_lift(_ buf: RustBuffer) throws -> HabitShowing {
+    return try FfiConverterTypeHabitShowing.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeHabitShowing_lower(_ value: HabitShowing) -> RustBuffer {
+    return FfiConverterTypeHabitShowing.lower(value)
 }
 
 
@@ -7780,6 +8069,95 @@ public func FfiConverterTypeUndoStep_lower(_ value: UndoStep) -> RustBuffer {
 
 
 /**
+ * A task as the follow-up rule reads it. `WaitingTaskState`.
+ */
+public struct WaitingState: Equatable, Hashable {
+    public var taskId: String
+    public var title: String
+    public var isOpen: Bool
+    /**
+     * The board column it is filed in. Only `waiting-on` is waiting.
+     */
+    public var column: String?
+    public var waitingOn: String?
+    public var followUpAtMs: Int64?
+    /**
+     * The follow-up already made for it, if any.
+     */
+    public var madeFollowUpTaskId: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, title: String, isOpen: Bool, 
+        /**
+         * The board column it is filed in. Only `waiting-on` is waiting.
+         */column: String?, waitingOn: String?, followUpAtMs: Int64?, 
+        /**
+         * The follow-up already made for it, if any.
+         */madeFollowUpTaskId: String?) {
+        self.taskId = taskId
+        self.title = title
+        self.isOpen = isOpen
+        self.column = column
+        self.waitingOn = waitingOn
+        self.followUpAtMs = followUpAtMs
+        self.madeFollowUpTaskId = madeFollowUpTaskId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension WaitingState: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeWaitingState: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WaitingState {
+        return
+            try WaitingState(
+                taskId: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                isOpen: FfiConverterBool.read(from: &buf), 
+                column: FfiConverterOptionString.read(from: &buf), 
+                waitingOn: FfiConverterOptionString.read(from: &buf), 
+                followUpAtMs: FfiConverterOptionInt64.read(from: &buf), 
+                madeFollowUpTaskId: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: WaitingState, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterBool.write(value.isOpen, into: &buf)
+        FfiConverterOptionString.write(value.column, into: &buf)
+        FfiConverterOptionString.write(value.waitingOn, into: &buf)
+        FfiConverterOptionInt64.write(value.followUpAtMs, into: &buf)
+        FfiConverterOptionString.write(value.madeFollowUpTaskId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWaitingState_lift(_ buf: RustBuffer) throws -> WaitingState {
+    return try FfiConverterTypeWaitingState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWaitingState_lower(_ value: WaitingState) -> RustBuffer {
+    return FfiConverterTypeWaitingState.lower(value)
+}
+
+
+/**
  * A row of `focus_work_blocks`. `FocusWorkBlock`.
  */
 public struct WorkBlockRow: Equatable, Hashable {
@@ -8152,6 +8530,104 @@ public func FfiConverterTypeCoreError_lift(_ buf: RustBuffer) throws -> CoreErro
 public func FfiConverterTypeCoreError_lower(_ value: CoreError) -> RustBuffer {
     return FfiConverterTypeCoreError.lower(value)
 }
+
+
+/**
+ * How often a repeating task comes round. `PeriodicSchedule.Cadence`.
+ */
+
+public enum PeriodicCadence: Equatable, Hashable {
+    
+    case days(count: UInt32
+    )
+    case weeks(count: UInt32
+    )
+    /**
+     * Monday to Friday, skipping the weekend.
+     */
+    case weekdays
+    /**
+     * 1 = Sunday through 7 = Saturday, as Foundation counts them.
+     */
+    case weekday(weekday: UInt32
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PeriodicCadence: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePeriodicCadence: FfiConverterRustBuffer {
+    typealias SwiftType = PeriodicCadence
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PeriodicCadence {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .days(count: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        case 2: return .weeks(count: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        case 3: return .weekdays
+        
+        case 4: return .weekday(weekday: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PeriodicCadence, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .days(count):
+            writeInt(&buf, Int32(1))
+            FfiConverterUInt32.write(count, into: &buf)
+            
+        
+        case let .weeks(count):
+            writeInt(&buf, Int32(2))
+            FfiConverterUInt32.write(count, into: &buf)
+            
+        
+        case .weekdays:
+            writeInt(&buf, Int32(3))
+        
+        
+        case let .weekday(weekday):
+            writeInt(&buf, Int32(4))
+            FfiConverterUInt32.write(weekday, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePeriodicCadence_lift(_ buf: RustBuffer) throws -> PeriodicCadence {
+    return try FfiConverterTypePeriodicCadence.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePeriodicCadence_lower(_ value: PeriodicCadence) -> RustBuffer {
+    return FfiConverterTypePeriodicCadence.lower(value)
+}
+
 
 
 /**
@@ -8602,6 +9078,78 @@ fileprivate struct FfiConverterOptionTypeFocusContext: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeFollowUpPlan: FfiConverterRustBuffer {
+    typealias SwiftType = FollowUpPlan?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFollowUpPlan.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFollowUpPlan.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeHabitColumnChange: FfiConverterRustBuffer {
+    typealias SwiftType = HabitColumnChange?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeHabitColumnChange.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeHabitColumnChange.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeHabitShowing: FfiConverterRustBuffer {
+    typealias SwiftType = HabitShowing?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeHabitShowing.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeHabitShowing.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeImportOutcome: FfiConverterRustBuffer {
     typealias SwiftType = ImportOutcome?
 
@@ -8762,6 +9310,30 @@ fileprivate struct FfiConverterOptionTypeTaskRow: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeTaskRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypePeriodicCadence: FfiConverterRustBuffer {
+    typealias SwiftType = PeriodicCadence?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypePeriodicCadence.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypePeriodicCadence.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -9755,6 +10327,203 @@ public func coreVersion() -> String  {
 })
 }
 /**
+ * Where the habit stands on the day `day_ms` falls on; `None` when it should
+ * not be showing. `HabitPolicy.appearance`.
+ */
+public func habitAppearance(rule: HabitRuleSpec, dayMs: Int64, lastDoneMs: Int64?, sourceCompleted: Bool, zone: String) -> HabitShowing?  {
+    return try!  FfiConverterOptionTypeHabitShowing.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_habit_appearance(
+        FfiConverterTypeHabitRuleSpec_lower(rule),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterOptionInt64.lower(lastDoneMs),
+        FfiConverterBool.lower(sourceCompleted),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether the habit has stopped for good by the day `day_ms` falls on.
+ * `HabitPolicy.isExpired`.
+ */
+public func habitIsExpired(rule: HabitRuleSpec, dayMs: Int64, sourceCompleted: Bool, zone: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_habit_is_expired(
+        FfiConverterTypeHabitRuleSpec_lower(rule),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterBool.lower(sourceCompleted),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether the local day `day_ms` falls on is one of the habit's days; never
+ * before its anchor. `HabitPolicy.isScheduled`.
+ */
+public func habitIsScheduled(rule: HabitRuleSpec, dayMs: Int64, zone: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_habit_is_scheduled(
+        FfiConverterTypeHabitRuleSpec_lower(rule),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * The first moment of the most recent scheduled day on or before the one
+ * `day_ms` falls on, since the anchor. `HabitPolicy.lastScheduledDay`.
+ */
+public func habitLastScheduledDay(rule: HabitRuleSpec, dayMs: Int64, zone: String) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_habit_last_scheduled_day(
+        FfiConverterTypeHabitRuleSpec_lower(rule),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * The Habits list's id in a workspace, the same on every device.
+ * `HabitPolicy.habitsListId`.
+ */
+public func habitListId(workspaceId: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_habit_list_id(
+        FfiConverterString.lower(workspaceId),uniffiCallStatus
+    )
+})
+}
+/**
+ * The column a habit's card should be in, given where it is and the column
+ * its appearance (if any) lands in; `None` leaves it alone. A card moved
+ * elsewhere by hand is the user's. `HabitPolicy.reconciledColumn`.
+ */
+public func habitReconciledColumn(current: String?, appearanceColumn: String?, placement: String) -> HabitColumnChange?  {
+    return try!  FfiConverterOptionTypeHabitColumnChange.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_habit_reconciled_column(
+        FfiConverterOptionString.lower(current),
+        FfiConverterOptionString.lower(appearanceColumn),
+        FfiConverterString.lower(placement),uniffiCallStatus
+    )
+})
+}
+/**
+ * Parses a stored recurrence rule ("daily", "every 3 days", "every monday");
+ * `None` for one this app did not write.
+ */
+public func periodicCadence(raw: String) -> PeriodicCadence?  {
+    return try!  FfiConverterOptionTypePeriodicCadence.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_periodic_cadence(
+        FfiConverterString.lower(raw),uniffiCallStatus
+    )
+})
+}
+/**
+ * The first occurrence strictly after `after_ms`, and strictly after
+ * `not_before_ms` when given, stepping on the wall clock in `zone`. `None`
+ * for a cadence that cannot land. `PeriodicSchedule.nextOccurrence`.
+ */
+public func periodicNextOccurrence(cadence: PeriodicCadence, afterMs: Int64, notBeforeMs: Int64?, zone: String) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_periodic_next_occurrence(
+        FfiConverterTypePeriodicCadence_lower(cadence),
+        FfiConverterInt64.lower(afterMs),
+        FfiConverterOptionInt64.lower(notBeforeMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether a plugin-era daily is expected on the day `day_ms` falls on.
+ * `Daily.isDue(on:)`.
+ */
+public func pluginDailyIsDue(archived: Bool, weekdays: [UInt32], intervalDays: Int64?, anchorMs: Int64, dayMs: Int64, zone: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_plugin_daily_is_due(
+        FfiConverterBool.lower(archived),
+        FfiConverterSequenceUInt32.lower(weekdays),
+        FfiConverterOptionInt64.lower(intervalDays),
+        FfiConverterInt64.lower(anchorMs),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * The follow-up to make for `task` at `now_ms`, if one is due.
+ * `WaitingFollowUp.dueFollowUp`.
+ */
+public func waitingDueFollowUp(task: WaitingState, nowMs: Int64) -> FollowUpPlan?  {
+    return try!  FfiConverterOptionTypeFollowUpPlan.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_waiting_due_follow_up(
+        FfiConverterTypeWaitingState_lower(task),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * The follow-up's id, the same on every device: it follows the source and
+ * the whole second of the follow-up time. `WaitingFollowUp.followUpTaskId`.
+ */
+public func waitingFollowUpTaskId(sourceTaskId: String, followUpAtMs: Int64) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_waiting_follow_up_task_id(
+        FfiConverterString.lower(sourceTaskId),
+        FfiConverterInt64.lower(followUpAtMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * "Follow up with Sam: Contract signed". `WaitingFollowUp.title`.
+ */
+public func waitingFollowUpTitle(title: String, waitingOn: String?) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_waiting_follow_up_title(
+        FfiConverterString.lower(title),
+        FfiConverterOptionString.lower(waitingOn),uniffiCallStatus
+    )
+})
+}
+/**
+ * Who a task waits on, trimmed and clipped, or nothing.
+ * `WaitingFollowUp.normalizedTag`.
+ */
+public func waitingNormalizedTag(text: String?) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_waiting_normalized_tag(
+        FfiConverterOptionString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether a workspace daily is expected on the day `day_ms` falls on.
+ * `WorkspaceDaily.isDue(on:)`; the caller rules out an archived one.
+ */
+public func workspaceDailyIsDue(weekdaysMask: Int64, intervalDays: Int64?, anchorMs: Int64, dayMs: Int64, zone: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_workspace_daily_is_due(
+        FfiConverterInt64.lower(weekdaysMask),
+        FfiConverterOptionInt64.lower(intervalDays),
+        FfiConverterInt64.lower(anchorMs),
+        FfiConverterInt64.lower(dayMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
  * Brings the database at `path` up to date, creating it if it does not
  * exist, and returns the identifier of the newest migration it now has.
  *
@@ -9910,6 +10679,48 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.contractVersionMismatch
     }
     if (uniffi_takt_core_checksum_func_core_version() != 3784) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_habit_appearance() != 19473) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_habit_is_expired() != 5550) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_habit_is_scheduled() != 50493) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_habit_last_scheduled_day() != 46653) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_habit_list_id() != 4183) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_habit_reconciled_column() != 35205) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_periodic_cadence() != 26059) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_periodic_next_occurrence() != 44981) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_plugin_daily_is_due() != 41192) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_waiting_due_follow_up() != 49290) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_waiting_follow_up_task_id() != 47083) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_waiting_follow_up_title() != 64566) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_waiting_normalized_tag() != 48749) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_workspace_daily_is_due() != 26735) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_migrate_workspace() != 222) {

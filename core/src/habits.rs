@@ -609,7 +609,7 @@ pub(crate) fn local_day(ms: i64, zone: Tz) -> NaiveDate {
 }
 
 /// The first moment of a local day in `zone`, as milliseconds.
-fn start_of_day_ms(day: NaiveDate, zone: Tz) -> i64 {
+pub(crate) fn start_of_day_ms(day: NaiveDate, zone: Tz) -> i64 {
     periodic::resolve(zone, day.and_hms_opt(0, 0, 0).expect("midnight exists")).timestamp_millis()
 }
 

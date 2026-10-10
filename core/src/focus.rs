@@ -379,22 +379,18 @@ struct Row {
 /// `WorkspaceDaily.isDue(on:)`: on its interval from its anchor, or on one of
 /// its weekdays.
 fn daily_is_due(row: &Row, now_ms: i64, zone: chrono_tz::Tz) -> bool {
-    let today = habits::local_day(now_ms, zone);
-    if let Some(interval) = row.daily_interval.filter(|interval| *interval > 0) {
-        let anchor_ms = row
-            .daily_anchor
-            .as_deref()
-            .or(row.daily_created.as_deref())
-            .and_then(parse_stored)
-            .map_or(0, |at| at.timestamp_millis());
-        let anchor = habits::local_day(anchor_ms, zone);
-        if today < anchor {
-            return false;
-        }
-        return (today - anchor).num_days() % interval == 0;
-    }
-    let weekday = chrono::Datelike::weekday(&today).number_from_sunday();
-    row.daily_mask.unwrap_or(127) & (1 << (weekday - 1)) != 0
+    let anchor_ms = row
+        .daily_anchor
+        .as_deref()
+        .or(row.daily_created.as_deref())
+        .and_then(parse_stored)
+        .map_or(0, |at| at.timestamp_millis());
+    crate::dailies::workspace_daily_is_due(
+        row.daily_mask,
+        row.daily_interval,
+        habits::local_day(anchor_ms, zone),
+        habits::local_day(now_ms, zone),
+    )
 }
 
 /// Every task inside a list item that is archived or closed, and those items

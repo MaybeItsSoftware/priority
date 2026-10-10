@@ -1,5 +1,5 @@
-import CryptoKit
 import Foundation
+import TaktRustCore
 
 /// The board column a habit's appearance lands in.
 ///
@@ -146,6 +146,10 @@ public struct HabitAppearance: Equatable, Sendable {
 }
 
 /// Should a habit appear on a day, has it expired, and where does it land.
+///
+/// The rules are the Rust core's (`core/src/habits.rs`), which reconciles the
+/// habits' columns on every client; these wrap them in TaktCore's vocabulary.
+/// Days are the calendar's, in its time zone.
 public enum HabitPolicy {
   /// How far back a carried appearance is looked for. A habit nobody has done
   /// for longer than this is not owed any more; it is simply due again.
@@ -154,14 +158,7 @@ public enum HabitPolicy {
   /// Whether `day` is one of the habit's scheduled days. Never before the
   /// anchor: a habit made today owes nothing for last week.
   public static func isScheduled(_ rule: HabitRule, on day: Date, calendar: Calendar = .current) -> Bool {
-    let anchor = calendar.startOfDay(for: rule.anchor)
-    let target = calendar.startOfDay(for: day)
-    guard target >= anchor else { return false }
-    if let interval = rule.intervalDays, interval > 1 {
-      let elapsed = calendar.dateComponents([.day], from: anchor, to: target).day ?? 0
-      return elapsed % interval == 0
-    }
-    return rule.weekdays.contains(calendar.component(.weekday, from: target))
+    habitIsScheduled(rule: rule.core, dayMs: day.rankingMilliseconds, zone: calendar.timeZone.identifier)
   }
 
   /// Whether the habit has stopped for good by `day`.
@@ -171,26 +168,17 @@ public enum HabitPolicy {
   public static func isExpired(
     _ rule: HabitRule, on day: Date, sourceCompleted: Bool, calendar: Calendar = .current
   ) -> Bool {
-    switch rule.expiry {
-    case .never: return false
-    case .whenSourceCompleted: return sourceCompleted
-    case .on(let date): return calendar.startOfDay(for: day) >= calendar.startOfDay(for: date)
-    }
+    habitIsExpired(
+      rule: rule.core, dayMs: day.rankingMilliseconds, sourceCompleted: sourceCompleted,
+      zone: calendar.timeZone.identifier)
   }
 
   /// The most recent scheduled day on or before `day`, if any since the anchor.
   public static func lastScheduledDay(
     _ rule: HabitRule, onOrBefore day: Date, calendar: Calendar = .current
   ) -> Date? {
-    var cursor = calendar.startOfDay(for: day)
-    let anchor = calendar.startOfDay(for: rule.anchor)
-    for _ in 0...carryLookbackDays {
-      guard cursor >= anchor else { return nil }
-      if isScheduled(rule, on: cursor, calendar: calendar) { return cursor }
-      guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { return nil }
-      cursor = previous
-    }
-    return nil
+    habitLastScheduledDay(rule: rule.core, dayMs: day.rankingMilliseconds, zone: calendar.timeZone.identifier)
+      .map(Date.init(rankingMilliseconds:))
   }
 
   /// Where the habit stands on `day`: nil when it should not be showing.
@@ -202,18 +190,13 @@ public enum HabitPolicy {
     _ rule: HabitRule, on day: Date, lastDoneDay: Date?, sourceCompleted: Bool,
     calendar: Calendar = .current
   ) -> HabitAppearance? {
-    guard !isExpired(rule, on: day, sourceCompleted: sourceCompleted, calendar: calendar) else { return nil }
-    let today = calendar.startOfDay(for: day)
-    let lastDone = lastDoneDay.map { calendar.startOfDay(for: $0) }
-    if lastDone == today { return nil }
-    if isScheduled(rule, on: today, calendar: calendar) {
-      return HabitAppearance(column: rule.placement.rawValue, dueDay: today, isCarriedOver: false)
+    habitAppearance(
+      rule: rule.core, dayMs: day.rankingMilliseconds, lastDoneMs: lastDoneDay?.rankingMilliseconds,
+      sourceCompleted: sourceCompleted, zone: calendar.timeZone.identifier
+    ).map {
+      HabitAppearance(
+        column: $0.column, dueDay: Date(rankingMilliseconds: $0.dueDayMs), isCarriedOver: $0.isCarriedOver)
     }
-    guard !rule.dropsAtDayEnd,
-      let owed = lastScheduledDay(rule, onOrBefore: today, calendar: calendar),
-      lastDone.map({ $0 < owed }) ?? true
-    else { return nil }
-    return HabitAppearance(column: rule.placement.rawValue, dueDay: owed, isCarriedOver: true)
   }
 
   /// The column a habit's task should be in now, given where it is.
@@ -225,10 +208,8 @@ public enum HabitPolicy {
   public static func reconciledColumn(
     current: String?, appearance: HabitAppearance?, placement: HabitPlacement
   ) -> String?? {
-    if let appearance {
-      return current == nil ? .some(appearance.column) : nil
-    }
-    return current == placement.rawValue ? .some(nil) : nil
+    habitReconciledColumn(current: current, appearanceColumn: appearance?.column, placement: placement.rawValue)
+      .map(\.column)
   }
 
   /// `30m`, `1h`, `1h30`, `90` (minutes) — the capture bar's estimate syntax,
@@ -245,19 +226,10 @@ public enum HabitPolicy {
 
   /// The Habits list's id in `workspaceId`: a UUID-shaped SHA-256 of
   /// `takt.habits-list:<workspace id>`, made as
-  /// `WaitingFollowUp.followUpTaskId` makes one. Android derives the same, so
-  /// two devices that each make the list before they sync make one row.
+  /// `WaitingFollowUp.followUpTaskId` makes one, by the Rust core, so two
+  /// devices that each make the list before they sync make one row.
   public static func habitsListId(workspaceId: String) -> String {
-    let digest = SHA256.hash(data: Data("takt.habits-list:\(workspaceId)".utf8))
-    var bytes = Array(digest.prefix(16))
-    bytes[6] = (bytes[6] & 0x0F) | 0x50
-    bytes[8] = (bytes[8] & 0x3F) | 0x80
-    let hex = bytes.map { String(format: "%02X", $0) }.joined()
-    let parts = [0..<8, 8..<12, 12..<16, 16..<20, 20..<32].map { range in
-      String(hex[hex.index(hex.startIndex, offsetBy: range.lowerBound)..<hex.index(
-        hex.startIndex, offsetBy: range.upperBound)])
-    }
-    return parts.joined(separator: "-")
+    habitListId(workspaceId: workspaceId)
   }
 
   /// `2026-12-31`, `3w`, `friday`, `tomorrow` — the capture bar's date words.
@@ -265,5 +237,15 @@ public enum HabitPolicy {
     let word = text.trimmingCharacters(in: .whitespaces).lowercased()
     guard !word.isEmpty else { return nil }
     return TaskCaptureToken.due(word, now: now, calendar: calendar)
+  }
+}
+
+extension HabitRule {
+  /// The rule as the core reads it.
+  var core: HabitRuleSpec {
+    HabitRuleSpec(
+      weekdays: weekdays.sorted().map { UInt32(clamping: $0) }, intervalDays: intervalDays.map(Int64.init),
+      anchorMs: anchor.rankingMilliseconds, dropsAtDayEnd: dropsAtDayEnd, expiryRule: expiry.rule,
+      expiresAtMs: expiry.date?.rankingMilliseconds, placement: placement.rawValue)
   }
 }

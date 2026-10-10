@@ -1,5 +1,6 @@
 import Foundation
 import TaktCore
+import TaktRustCore
 
 public struct Workspace: Codable, Identifiable, Sendable, Equatable {
   public let id: String
@@ -401,17 +402,14 @@ public struct WorkspaceDaily: Codable, Identifiable, Sendable, Equatable {
     Set((1...7).filter { activeWeekdaysMask & (1 << ($0 - 1)) != 0 })
   }
 
-  /// Whether this daily is expected on `day`.
+  /// Whether this daily is expected on `day`: the Rust core's rule
+  /// (`dailies::workspace_daily_is_due`), the one its next-up read applies.
   public func isDue(on day: Date, calendar: Calendar = .current) -> Bool {
     guard !isArchived else { return false }
-    if let interval = intervalDays, interval > 0 {
-      let anchor = calendar.startOfDay(for: intervalAnchor ?? createdAt)
-      let target = calendar.startOfDay(for: day)
-      guard target >= anchor else { return false }
-      let elapsed = calendar.dateComponents([.day], from: anchor, to: target).day ?? 0
-      return elapsed % interval == 0
-    }
-    return activeWeekdaysMask & (1 << (calendar.component(.weekday, from: day) - 1)) != 0
+    return workspaceDailyIsDue(
+      weekdaysMask: Int64(activeWeekdaysMask), intervalDays: intervalDays.map(Int64.init),
+      anchorMs: (intervalAnchor ?? createdAt).coreMilliseconds, dayMs: day.coreMilliseconds,
+      zone: calendar.timeZone.identifier)
   }
 }
 

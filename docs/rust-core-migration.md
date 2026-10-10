@@ -159,6 +159,33 @@ covered the old copies pass against it.
    external-change token is the core connection's `data_version`, on the Mac
    and on Android, so neither keeps count of its own commits any more. Tests
    that play another process open the file through `test-support/sqlite`.
+9. **Pure logic.** The engines still implemented twice, in Swift's
+   `TaktCore` and Kotlin's `:core`, move into the core; each platform keeps
+   its types and signatures and wraps the core's function, so callers did
+   not change, and the old Swift and Kotlin suites still run as the oracle.
+
+   **Recurrence, habits and dailies.** `core/src/recurrence.rs` exports the
+   rules the writes already used: `PeriodicSchedule`'s parsing and next
+   occurrence (`periodic.rs`), `HabitPolicy`'s scheduled day, expiry, carried
+   appearance, reconciled column and Habits list id (`habits.rs`),
+   `WaitingFollowUp`'s due follow-up, title, tag and id (`waiting.rs`), and
+   whether a daily is due, both the workspace's (`WorkspaceDaily.isDue`) and
+   the plugin era's (`Daily.isDue`, whose cycle runs backwards from its
+   anchor too), in `dailies.rs`; the CLI's dailies file reader calls the
+   latter as well, so that rule has one copy instead of three. The Swift and
+   Kotlin suites are ported as Rust tests in `core/src/recurrence/tests.rs`.
+   Two drifts were settled for Swift: the core clipped a waiting tag to 40
+   Unicode scalars where both apps clip to 40 grapheme clusters (it now uses
+   `unicode-segmentation`), and a cadence that cannot land (an overflowing
+   interval) returns none instead of panicking. Left native on purpose:
+   `DayBoundary`, which `DayLogAggregator` calls once per log event, where a
+   crossing would cost several times the Calendar arithmetic it replaces;
+   the display strings (`displayLabel`, `scheduleLabel`, `HabitFrequency`'s
+   labels, and `WaitingFollowUp.label`, `dateTimeText` and `editableText`,
+   which are locale formatting asked for by every waiting card); the
+   capture-word parsing `HabitPolicy` borrows from `TaskCaptureToken`, which
+   belongs with the capture syntax; and `DailyCollection`'s ordering and
+   editing, which is plain list bookkeeping.
 
 Pure-logic engines in `TaktCore` (the command parser, recurrence, visibility,
 theming) stay in Swift until steps 1 to 8 are done. They are not duplicated

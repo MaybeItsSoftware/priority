@@ -33,6 +33,7 @@ serde_json = "1"
 sha2 = "0.10"
 thiserror = "2"
 unicode-normalization = "0.1"
+unicode-segmentation = "1"
 uuid = { version = "1", features = ["v4"] }
 
 # The core never brings a second SQLite into an app: two copies in one

@@ -2,9 +2,8 @@
 //!
 //! The vocabulary is the one stored in `task_metadata.recurrenceRule`: plain
 //! phrases a person would type ("daily", "weekdays", "every 3 days", "every
-//! monday"), not an RFC 5545 subset. Replaces `PeriodicSchedule` in Swift's
-//! TaktCore and its Kotlin port, which stay only for display until the reads
-//! move.
+//! monday"), not an RFC 5545 subset. Swift's `PeriodicSchedule` and its
+//! Kotlin namesake parse and step through this, by way of `recurrence.rs`.
 //!
 //! Stepping happens on the wall clock in the user's time zone, as
 //! Foundation's `Calendar` and Java's `ZonedDateTime` do: a task due at 9:00
@@ -65,7 +64,7 @@ impl Cadence {
         let threshold = not_before.map_or(reference, |floor| floor.max(reference));
         let mut candidate = reference.with_timezone(&zone).naive_local();
         for _ in 0..400 {
-            candidate = self.step(candidate);
+            candidate = self.step(candidate)?;
             let instant = resolve(zone, candidate);
             if instant > threshold {
                 return Some(instant);
@@ -74,26 +73,29 @@ impl Cadence {
         None
     }
 
-    fn step(&self, from: NaiveDateTime) -> NaiveDateTime {
+    /// One step on; `None` past the end of the calendar, where Foundation's
+    /// `date(byAdding:)` gives up too, rather than overflowing.
+    fn step(&self, from: NaiveDateTime) -> Option<NaiveDateTime> {
+        let day = Duration::days(1);
         match *self {
-            Cadence::Days(count) => from + Duration::days(i64::from(count)),
-            Cadence::Weeks(count) => from + Duration::weeks(i64::from(count)),
+            Cadence::Days(count) => from.checked_add_signed(Duration::days(i64::from(count))),
+            Cadence::Weeks(count) => from.checked_add_signed(Duration::weeks(i64::from(count))),
             Cadence::Weekdays => {
-                let mut next = from + Duration::days(1);
+                let mut next = from.checked_add_signed(day)?;
                 while matches!(next.weekday(), Weekday::Sat | Weekday::Sun) {
-                    next += Duration::days(1);
+                    next = next.checked_add_signed(day)?;
                 }
-                next
+                Some(next)
             }
             Cadence::Weekday(target) => {
-                let mut next = from + Duration::days(1);
+                let mut next = from.checked_add_signed(day)?;
                 for _ in 0..7 {
                     if next.weekday() == target {
                         break;
                     }
-                    next += Duration::days(1);
+                    next = next.checked_add_signed(day)?;
                 }
-                next
+                Some(next)
             }
         }
     }

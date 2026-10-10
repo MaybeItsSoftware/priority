@@ -12,7 +12,7 @@
 use crate::config::Config;
 use crate::error::{Result, ToolError};
 use crate::lock::FileLock;
-use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, TimeZone, Utc};
+use chrono::{DateTime, Duration, Local, NaiveDate, TimeZone, Utc};
 use serde_json::{Map, Value, json};
 use std::io::Write;
 use std::path::PathBuf;
@@ -483,34 +483,29 @@ impl LocalState {
             .map(|parsed| parsed.with_timezone(&Local))
     }
 
-    /// Whether `daily` is expected on the logical day beginning at `day`.
-    ///
-    /// A cycle and a weekday set are alternatives, not filters that compose:
-    /// "every three days" walks through the week, so weekday membership says
-    /// nothing about it. Matches `Daily.isDue`.
+    /// Whether `daily` is expected on the logical day beginning at `day`:
+    /// the core's `plugin_daily_is_due`, which the apps' `Daily.isDue` calls
+    /// too. A cycle with no anchor at all, which only a hand-edited file can
+    /// have, is due every day rather than never.
     fn is_due(daily: &Value, day: DateTime<Local>) -> bool {
-        if Self::is_archived(daily) {
-            return false;
-        }
-        if let Some(interval) = Self::interval_days_of(daily) {
-            if interval == 1 {
-                return true;
-            }
-            let Some(anchor) = Self::parse_timestamp(daily, "intervalAnchor")
-                .or_else(|| Self::parse_timestamp(daily, "createdAt"))
-            else {
-                return true;
-            };
-            let delta = (day.date_naive() - anchor.date_naive()).num_days();
-            // Euclidean, so the cycle extends backwards from the anchor as well
-            // as forwards — the history behind a newly-anchored daily is not a
-            // run of days it was never due on.
-            return delta.rem_euclid(interval) == 0;
-        }
-        // `Calendar` weekday numbering, 1 = Sunday, matching
-        // `Daily.activeWeekdays`.
-        let weekday = i64::from(day.weekday().num_days_from_sunday()) + 1;
-        Self::active_weekdays_of(daily).contains(&weekday)
+        let interval = Self::interval_days_of(daily);
+        let anchor = Self::parse_timestamp(daily, "intervalAnchor")
+            .or_else(|| Self::parse_timestamp(daily, "createdAt"));
+        let anchor = match (interval, anchor) {
+            (Some(interval), None) if interval > 1 => return !Self::is_archived(daily),
+            (_, anchor) => anchor.map_or(day.date_naive(), |at| at.date_naive()),
+        };
+        let weekdays: Vec<u32> = Self::active_weekdays_of(daily)
+            .into_iter()
+            .filter_map(|weekday| u32::try_from(weekday).ok())
+            .collect();
+        takt_core::dailies::plugin_daily_is_due(
+            Self::is_archived(daily),
+            &weekdays,
+            interval,
+            anchor,
+            day.date_naive(),
+        )
     }
 
     fn due_on(dailies: &[Value], day: DateTime<Local>) -> Vec<Value> {

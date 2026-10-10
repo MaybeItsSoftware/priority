@@ -4,10 +4,12 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * How often a task comes round. Port of `PeriodicSchedule.swift`.
+ * How often a task comes round, as `PeriodicSchedule.swift` has it.
  *
  * The vocabulary is the one stored in `task_metadata.recurrenceRule`: `daily`,
- * `weekdays`, `weekly`, `every 3 days`, `every 2 weeks`, `every monday`.
+ * `weekdays`, `weekly`, `every 3 days`, `every 2 weeks`, `every monday`. The
+ * parsing and the stepping are the Rust core's (`core/src/periodic.rs`); this
+ * keeps the type and the words a screen shows.
  */
 data class PeriodicSchedule(
     /** The phrase as it was stored, normalised to lowercase. */
@@ -34,82 +36,26 @@ data class PeriodicSchedule(
     /**
      * The first occurrence strictly after `reference`, and also strictly after
      * `notBefore` when one is given; the cadence is stepped (keeping its rhythm)
-     * until it lands past the threshold. Null only past 400 steps.
+     * on the wall clock in [zone] until it lands past the threshold. Null only
+     * for a cadence that cannot land.
      */
     fun nextOccurrence(
         after: Instant,
         notBefore: Instant? = null,
         zone: ZoneId = ZoneId.systemDefault(),
-    ): Instant? {
-        val threshold = maxOf(after, notBefore ?: after)
-        var candidate = after
-        repeat(400) {
-            candidate = step(candidate, zone)
-            if (candidate > threshold) return candidate
-        }
-        return null
-    }
-
-    private fun step(date: Instant, zone: ZoneId): Instant {
-        val zoned = date.atZone(zone)
-        return when (val c = cadence) {
-            is Cadence.Days -> zoned.plusDays(c.count.toLong()).toInstant()
-            is Cadence.Weeks -> zoned.plusWeeks(c.count.toLong()).toInstant()
-            Cadence.Weekdays -> {
-                var next = zoned.plusDays(1)
-                while (calendarWeekday(next.toLocalDate()) == 1 || calendarWeekday(next.toLocalDate()) == 7) {
-                    next = next.plusDays(1)
-                }
-                next.toInstant()
-            }
-            is Cadence.Weekday -> {
-                var next = zoned.plusDays(1)
-                for (i in 0 until 7) {
-                    if (calendarWeekday(next.toLocalDate()) == c.weekday) return next.toInstant()
-                    next = next.plusDays(1)
-                }
-                next.toInstant()
-            }
-        }
-    }
+    ): Instant? = uniffi.takt_core.periodicNextOccurrence(cadence.core, after.coreMillis, notBefore?.coreMillis, zone.coreName)
+        ?.let(Instant::ofEpochMilli)
 
     companion object {
-        private val everyN = Regex("""^every\s+(\d+)\s+(day|days|week|weeks|wk|wks)$""")
-
         /** Swift's failable `init?(_ raw:)`. */
         fun parse(raw: String): PeriodicSchedule? {
-            val normalized = raw.trim().lowercase()
-            val cadence = parseCadence(normalized) ?: return null
-            return PeriodicSchedule(normalized, cadence)
+            val cadence = uniffi.takt_core.periodicCadence(raw) ?: return null
+            return PeriodicSchedule(raw.trim().lowercase(), cadence.cadence)
         }
 
-        private fun parseCadence(text: String): Cadence? {
-            when (text) {
-                "" -> return null
-                "daily", "every day" -> return Cadence.Days(1)
-                "weekly", "every week" -> return Cadence.Weeks(1)
-                "weekdays", "every weekday" -> return Cadence.Weekdays
-            }
-            everyN.find(text)?.let { match ->
-                val count = match.groupValues[1].toIntOrNull() ?: return null
-                if (count <= 0) return null
-                val unit = match.groupValues[2]
-                return if (unit.startsWith("week") || unit.startsWith("wk")) Cadence.Weeks(count) else Cadence.Days(count)
-            }
-            val name = if (text.startsWith("every ")) text.removePrefix("every ") else text
-            return weekdayNumber(name)?.let { Cadence.Weekday(it) }
-        }
-
-        fun weekdayNumber(name: String): Int? = when (name) {
-            "sunday", "sun" -> 1
-            "monday", "mon" -> 2
-            "tuesday", "tue", "tues" -> 3
-            "wednesday", "wed" -> 4
-            "thursday", "thu", "thur", "thurs" -> 5
-            "friday", "fri" -> 6
-            "saturday", "sat" -> 7
-            else -> null
-        }
+        /** A weekday's name or abbreviation (`monday`, `thu`) as a calendar weekday number, 1 = Sunday. */
+        fun weekdayNumber(name: String): Int? =
+            (uniffi.takt_core.periodicCadence("every $name")?.cadence as? Cadence.Weekday)?.weekday
 
         fun weekdayName(weekday: Int): String {
             val names = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
@@ -117,3 +63,21 @@ data class PeriodicSchedule(
         }
     }
 }
+
+private val uniffi.takt_core.PeriodicCadence.cadence: PeriodicSchedule.Cadence
+    get() = when (this) {
+        is uniffi.takt_core.PeriodicCadence.Days -> PeriodicSchedule.Cadence.Days(count.toInt())
+        is uniffi.takt_core.PeriodicCadence.Weeks -> PeriodicSchedule.Cadence.Weeks(count.toInt())
+        is uniffi.takt_core.PeriodicCadence.Weekdays -> PeriodicSchedule.Cadence.Weekdays
+        is uniffi.takt_core.PeriodicCadence.Weekday -> PeriodicSchedule.Cadence.Weekday(weekday.toInt())
+    }
+
+private fun Int.unsigned(): UInt = coerceAtLeast(0).toUInt()
+
+private val PeriodicSchedule.Cadence.core: uniffi.takt_core.PeriodicCadence
+    get() = when (this) {
+        is PeriodicSchedule.Cadence.Days -> uniffi.takt_core.PeriodicCadence.Days(count.unsigned())
+        is PeriodicSchedule.Cadence.Weeks -> uniffi.takt_core.PeriodicCadence.Weeks(count.unsigned())
+        PeriodicSchedule.Cadence.Weekdays -> uniffi.takt_core.PeriodicCadence.Weekdays
+        is PeriodicSchedule.Cadence.Weekday -> uniffi.takt_core.PeriodicCadence.Weekday(weekday.unsigned())
+    }

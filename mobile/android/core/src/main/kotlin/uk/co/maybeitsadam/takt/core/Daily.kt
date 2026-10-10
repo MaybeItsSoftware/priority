@@ -2,7 +2,6 @@ package uk.co.maybeitsadam.takt.core
 
 import java.time.Instant
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -29,19 +28,21 @@ class Daily(
     val isEveryDay: Boolean
         get() = intervalDays?.let { it <= 1 } ?: (activeWeekdays == ALL_WEEKDAYS)
 
-    /** Whether this is expected on the logical day beginning at `day`. */
+    /**
+     * Whether this is expected on the logical day beginning at `day`: the Rust
+     * core's rule (`dailies::plugin_daily_is_due`), where a cycle also extends
+     * backwards from its anchor.
+     */
     fun isDue(day: Instant, zone: ZoneId = ZoneId.systemDefault()): Boolean {
         if (isArchived) return false
-        val interval = intervalDays
-        if (interval != null) {
-            if (interval <= 1) return true
-            val anchor = (intervalAnchor ?: createdAt).atZone(zone).toLocalDate()
-            val target = day.atZone(zone).toLocalDate()
-            val delta = ChronoUnit.DAYS.between(anchor, target)
-            // Non-negative modulo, so the cycle also extends backwards from the anchor.
-            return ((delta % interval) + interval) % interval == 0L
-        }
-        return calendarWeekday(day.atZone(zone).toLocalDate()) in activeWeekdays
+        return uniffi.takt_core.pluginDailyIsDue(
+            archived = false,
+            weekdays = activeWeekdays.sorted().filter { it >= 0 }.map { it.toUInt() },
+            intervalDays = intervalDays?.toLong(),
+            anchorMs = (intervalAnchor ?: createdAt).coreMillis,
+            dayMs = day.coreMillis,
+            zone = zone.coreName,
+        )
     }
 
     val scheduleLabel: String get() = scheduleLabel(schedule)

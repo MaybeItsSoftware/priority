@@ -1,7 +1,5 @@
 package uk.co.maybeitsadam.takt.core
 
-import java.security.MessageDigest
-import java.text.BreakIterator
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -42,7 +40,9 @@ data class WaitingFollowUpPlan(
 /**
  * Waiting on: a task filed in the `waiting-on` column can name who or what it
  * waits on and when to chase it. At that time, if it is still open and still
- * waiting, a follow-up task lands in Today. Port of `WaitingFollowUp.swift`.
+ * waiting, a follow-up task lands in Today, as in `WaitingFollowUp.swift`.
+ * The rule, the title and the id are the Rust core's (`core/src/waiting.rs`);
+ * the date words a card shows stay here, since every waiting row asks for them.
  *
  * The follow-up's id is derived from the source's id and the follow-up time,
  * so the Mac and this device, both noticing the same follow-up, make the same
@@ -66,50 +66,38 @@ object WaitingFollowUp {
      * made. A task that left waiting before its time never gets one.
      */
     fun dueFollowUp(task: WaitingTaskState, now: Instant): WaitingFollowUpPlan? {
-        if (!task.isOpen || task.column != WAITING_COLUMN_ID) return null
         val followUpAt = task.followUpAt ?: return null
-        if (followUpAt.isAfter(now)) return null
-        val id = followUpTaskId(task.taskId, followUpAt)
-        if (task.madeFollowUpTaskId == id) return null
-        return WaitingFollowUpPlan(id, task.taskId, title(task.title, task.waitingOn), followUpAt)
+        val state = uniffi.takt_core.WaitingState(
+            taskId = task.taskId,
+            title = task.title,
+            isOpen = task.isOpen,
+            column = task.column,
+            waitingOn = task.waitingOn,
+            followUpAtMs = followUpAt.toEpochMilli(),
+            madeFollowUpTaskId = task.madeFollowUpTaskId,
+        )
+        val plan = uniffi.takt_core.waitingDueFollowUp(state, now.toEpochMilli()) ?: return null
+        return WaitingFollowUpPlan(plan.taskId, plan.sourceTaskId, plan.title, followUpAt)
     }
 
     /** "Follow up with Sam: Contract signed", or "Follow up: Contract signed" when nothing is named. */
-    fun title(title: String, waitingOn: String?): String {
-        val source = title.trim()
-        val tag = normalizedTag(waitingOn) ?: return "Follow up: $source"
-        return "Follow up with $tag: $source"
-    }
+    fun title(title: String, waitingOn: String?): String = uniffi.takt_core.waitingFollowUpTitle(title, waitingOn)
 
-    /** A tag trimmed and clipped to [MAXIMUM_TAG_LENGTH] characters, or null when there is nothing left. */
-    fun normalizedTag(text: String?): String? {
-        val trimmed = text?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        // Characters as Swift counts them (grapheme clusters), so an emoji is not split.
-        val breaks = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(trimmed) }
-        var end = 0
-        repeat(MAXIMUM_TAG_LENGTH) {
-            val next = breaks.next()
-            if (next == BreakIterator.DONE) return trimmed
-            end = next
-        }
-        return trimmed.substring(0, end)
-    }
+    /**
+     * A tag trimmed and clipped to [MAXIMUM_TAG_LENGTH] characters, as Swift
+     * counts them (grapheme clusters, so an emoji is not split), or null when
+     * there is nothing left.
+     */
+    fun normalizedTag(text: String?): String? = uniffi.takt_core.waitingNormalizedTag(text)
 
     /**
      * A UUID-shaped id from SHA-256 of `takt.follow-up:<source>:<epoch seconds>`,
      * uppercased as Swift's `UUID().uuidString` writes them, with the version 5
-     * and RFC 4122 variant bits set. The Mac computes the same string.
+     * and RFC 4122 variant bits set, made by the Rust core for every client.
      */
-    fun followUpTaskId(sourceTaskId: String, followUpAt: Instant): String {
-        // `epochSecond` is the floor, as Swift's `.rounded(.down)` is.
-        val seconds = followUpAt.epochSecond
-        val digest = MessageDigest.getInstance("SHA-256").digest("takt.follow-up:$sourceTaskId:$seconds".toByteArray(Charsets.UTF_8))
-        val bytes = digest.copyOf(16)
-        bytes[6] = ((bytes[6].toInt() and 0x0F) or 0x50).toByte()
-        bytes[8] = ((bytes[8].toInt() and 0x3F) or 0x80).toByte()
-        val hex = bytes.joinToString("") { "%02X".format(it.toInt() and 0xFF) }
-        return listOf(0..7, 8..11, 12..15, 16..19, 20..31).joinToString("-") { hex.substring(it) }
-    }
+    fun followUpTaskId(sourceTaskId: String, followUpAt: Instant): String =
+        // `toEpochMilli` is the floor, so the whole second is the one Swift's `.rounded(.down)` reads.
+        uniffi.takt_core.waitingFollowUpTaskId(sourceTaskId, followUpAt.toEpochMilli())
 
     /** `↻ Thu 14:00` — the follow-up time as a card shows it. */
     fun label(date: Instant, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): String =

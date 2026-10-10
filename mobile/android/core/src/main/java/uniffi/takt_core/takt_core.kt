@@ -677,6 +677,34 @@ internal object IntegrityCheckingUniffiLib {
     internal fun ensureInitialized() = Unit
     external fun uniffi_takt_core_checksum_func_core_version(
     ): Int
+    external fun uniffi_takt_core_checksum_func_habit_appearance(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_habit_is_expired(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_habit_is_scheduled(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_habit_last_scheduled_day(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_habit_list_id(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_habit_reconciled_column(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_periodic_cadence(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_periodic_next_occurrence(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_plugin_daily_is_due(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_waiting_due_follow_up(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_waiting_follow_up_task_id(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_waiting_follow_up_title(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_waiting_normalized_tag(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_workspace_daily_is_due(
+    ): Int
     external fun uniffi_takt_core_checksum_func_migrate_workspace(
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
@@ -1303,6 +1331,34 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_habit_appearance(`rule`: RustBuffer.ByValue,`dayMs`: Long,`lastDoneMs`: RustBuffer.ByValue,`sourceCompleted`: Byte,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_habit_is_expired(`rule`: RustBuffer.ByValue,`dayMs`: Long,`sourceCompleted`: Byte,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_habit_is_scheduled(`rule`: RustBuffer.ByValue,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_habit_last_scheduled_day(`rule`: RustBuffer.ByValue,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_habit_list_id(`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_habit_reconciled_column(`current`: RustBuffer.ByValue,`appearanceColumn`: RustBuffer.ByValue,`placement`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_periodic_cadence(`raw`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_periodic_next_occurrence(`cadence`: RustBuffer.ByValue,`afterMs`: Long,`notBeforeMs`: RustBuffer.ByValue,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_plugin_daily_is_due(`archived`: Byte,`weekdays`: RustBuffer.ByValue,`intervalDays`: RustBuffer.ByValue,`anchorMs`: Long,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_waiting_due_follow_up(`task`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_waiting_follow_up_task_id(`sourceTaskId`: RustBuffer.ByValue,`followUpAtMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_waiting_follow_up_title(`title`: RustBuffer.ByValue,`waitingOn`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_waiting_normalized_tag(`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_workspace_daily_is_due(`weekdaysMask`: Long,`intervalDays`: RustBuffer.ByValue,`anchorMs`: Long,`dayMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_takt_core_fn_func_migrate_workspace(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_migrations(uniffi_out_err: UniffiRustCallStatus, 
@@ -1443,6 +1499,48 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_core_version() and 0xFFFF) != 3784) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_habit_appearance() and 0xFFFF) != 19473) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_habit_is_expired() and 0xFFFF) != 5550) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_habit_is_scheduled() and 0xFFFF) != 50493) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_habit_last_scheduled_day() and 0xFFFF) != 46653) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_habit_list_id() and 0xFFFF) != 4183) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_habit_reconciled_column() and 0xFFFF) != 35205) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_periodic_cadence() and 0xFFFF) != 26059) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_periodic_next_occurrence() and 0xFFFF) != 44981) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_plugin_daily_is_due() and 0xFFFF) != 41192) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_waiting_due_follow_up() and 0xFFFF) != 49290) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_waiting_follow_up_task_id() and 0xFFFF) != 47083) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_waiting_follow_up_title() and 0xFFFF) != 64566) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_waiting_normalized_tag() and 0xFFFF) != 48749) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_workspace_daily_is_due() and 0xFFFF) != 26735) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_migrate_workspace() and 0xFFFF) != 222) {
@@ -7433,6 +7531,94 @@ public object FfiConverterTypeFolderRow: FfiConverterRustBuffer<FolderRow> {
 
 
 /**
+ * The follow-up to make: "Follow up with Sam: Contract signed", due at the
+ * follow-up time. `WaitingFollowUpPlan`.
+ */
+data class FollowUpPlan (
+    var `taskId`: kotlin.String
+    , 
+    var `sourceTaskId`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `dueAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFollowUpPlan: FfiConverterRustBuffer<FollowUpPlan> {
+    override fun read(buf: ByteBuffer): FollowUpPlan {
+        return FollowUpPlan(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FollowUpPlan) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`sourceTaskId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterLong.allocationSize(value.`dueAtMs`)
+    )
+
+    override fun write(value: FollowUpPlan, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`sourceTaskId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterLong.write(value.`dueAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * A column to write: `column` `None` takes the card out of the habit's.
+ */
+data class HabitColumnChange (
+    var `column`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeHabitColumnChange: FfiConverterRustBuffer<HabitColumnChange> {
+    override fun read(buf: ByteBuffer): HabitColumnChange {
+        return HabitColumnChange(
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: HabitColumnChange) = (
+            FfiConverterOptionalString.allocationSize(value.`column`)
+    )
+
+    override fun write(value: HabitColumnChange, buf: ByteBuffer) {
+            FfiConverterOptionalString.write(value.`column`, buf)
+    }
+}
+
+
+
+/**
  * What the habit form saves. The schedule arrives as the daily stores it
  * (a weekday mask's days and an interval), which each client derives from
  * its own frequency type.
@@ -7511,6 +7697,134 @@ public object FfiConverterTypeHabitDraft: FfiConverterRustBuffer<HabitDraft> {
             FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
             FfiConverterString.write(value.`placement`, buf)
             FfiConverterOptionalString.write(value.`sourceTaskId`, buf)
+    }
+}
+
+
+
+/**
+ * Everything that decides whether a habit shows on a day. `HabitRule`.
+ */
+data class HabitRuleSpec (
+    /**
+     * 1 = Sunday. Empty is every day.
+     */
+    var `weekdays`: List<kotlin.UInt>
+    , 
+    var `intervalDays`: kotlin.Long?
+    , 
+    /**
+     * A moment on the habit's first day, which its interval counts from.
+     */
+    var `anchorMs`: kotlin.Long
+    , 
+    var `dropsAtDayEnd`: kotlin.Boolean
+    , 
+    /**
+     * "source", "date" or "never"; anything else, or "date" without a date,
+     * is never.
+     */
+    var `expiryRule`: kotlin.String
+    , 
+    var `expiresAtMs`: kotlin.Long?
+    , 
+    /**
+     * The column its appearance lands in.
+     */
+    var `placement`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeHabitRuleSpec: FfiConverterRustBuffer<HabitRuleSpec> {
+    override fun read(buf: ByteBuffer): HabitRuleSpec {
+        return HabitRuleSpec(
+            FfiConverterSequenceUInt.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: HabitRuleSpec) = (
+            FfiConverterSequenceUInt.allocationSize(value.`weekdays`) +
+            FfiConverterOptionalLong.allocationSize(value.`intervalDays`) +
+            FfiConverterLong.allocationSize(value.`anchorMs`) +
+            FfiConverterBoolean.allocationSize(value.`dropsAtDayEnd`) +
+            FfiConverterString.allocationSize(value.`expiryRule`) +
+            FfiConverterOptionalLong.allocationSize(value.`expiresAtMs`) +
+            FfiConverterString.allocationSize(value.`placement`)
+    )
+
+    override fun write(value: HabitRuleSpec, buf: ByteBuffer) {
+            FfiConverterSequenceUInt.write(value.`weekdays`, buf)
+            FfiConverterOptionalLong.write(value.`intervalDays`, buf)
+            FfiConverterLong.write(value.`anchorMs`, buf)
+            FfiConverterBoolean.write(value.`dropsAtDayEnd`, buf)
+            FfiConverterString.write(value.`expiryRule`, buf)
+            FfiConverterOptionalLong.write(value.`expiresAtMs`, buf)
+            FfiConverterString.write(value.`placement`, buf)
+    }
+}
+
+
+
+/**
+ * One day's appearance of a habit. `HabitAppearance`.
+ */
+data class HabitShowing (
+    var `column`: kotlin.String
+    , 
+    /**
+     * The first moment of the scheduled day it belongs to.
+     */
+    var `dueDayMs`: kotlin.Long
+    , 
+    var `isCarriedOver`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeHabitShowing: FfiConverterRustBuffer<HabitShowing> {
+    override fun read(buf: ByteBuffer): HabitShowing {
+        return HabitShowing(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: HabitShowing) = (
+            FfiConverterString.allocationSize(value.`column`) +
+            FfiConverterLong.allocationSize(value.`dueDayMs`) +
+            FfiConverterBoolean.allocationSize(value.`isCarriedOver`)
+    )
+
+    override fun write(value: HabitShowing, buf: ByteBuffer) {
+            FfiConverterString.write(value.`column`, buf)
+            FfiConverterLong.write(value.`dueDayMs`, buf)
+            FfiConverterBoolean.write(value.`isCarriedOver`, buf)
     }
 }
 
@@ -9454,6 +9768,78 @@ public object FfiConverterTypeUndoStep: FfiConverterRustBuffer<UndoStep> {
 
 
 /**
+ * A task as the follow-up rule reads it. `WaitingTaskState`.
+ */
+data class WaitingState (
+    var `taskId`: kotlin.String
+    , 
+    var `title`: kotlin.String
+    , 
+    var `isOpen`: kotlin.Boolean
+    , 
+    /**
+     * The board column it is filed in. Only `waiting-on` is waiting.
+     */
+    var `column`: kotlin.String?
+    , 
+    var `waitingOn`: kotlin.String?
+    , 
+    var `followUpAtMs`: kotlin.Long?
+    , 
+    /**
+     * The follow-up already made for it, if any.
+     */
+    var `madeFollowUpTaskId`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeWaitingState: FfiConverterRustBuffer<WaitingState> {
+    override fun read(buf: ByteBuffer): WaitingState {
+        return WaitingState(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: WaitingState) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterBoolean.allocationSize(value.`isOpen`) +
+            FfiConverterOptionalString.allocationSize(value.`column`) +
+            FfiConverterOptionalString.allocationSize(value.`waitingOn`) +
+            FfiConverterOptionalLong.allocationSize(value.`followUpAtMs`) +
+            FfiConverterOptionalString.allocationSize(value.`madeFollowUpTaskId`)
+    )
+
+    override fun write(value: WaitingState, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterBoolean.write(value.`isOpen`, buf)
+            FfiConverterOptionalString.write(value.`column`, buf)
+            FfiConverterOptionalString.write(value.`waitingOn`, buf)
+            FfiConverterOptionalLong.write(value.`followUpAtMs`, buf)
+            FfiConverterOptionalString.write(value.`madeFollowUpTaskId`, buf)
+    }
+}
+
+
+
+/**
  * A row of `focus_work_blocks`. `FocusWorkBlock`.
  */
 data class WorkBlockRow (
@@ -9991,6 +10377,136 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
     }
 
 }
+
+
+
+/**
+ * How often a repeating task comes round. `PeriodicSchedule.Cadence`.
+ */
+sealed class PeriodicCadence {
+    
+    data class Days(
+        val `count`: kotlin.UInt) : PeriodicCadence()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Weeks(
+        val `count`: kotlin.UInt) : PeriodicCadence()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Monday to Friday, skipping the weekend.
+     */
+    object Weekdays : PeriodicCadence()
+    
+    
+    /**
+     * 1 = Sunday through 7 = Saturday, as Foundation counts them.
+     */
+    data class Weekday(
+        val `weekday`: kotlin.UInt) : PeriodicCadence()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePeriodicCadence : FfiConverterRustBuffer<PeriodicCadence>{
+    override fun read(buf: ByteBuffer): PeriodicCadence {
+        return when(buf.getInt()) {
+            1 -> PeriodicCadence.Days(
+                FfiConverterUInt.read(buf),
+                )
+            2 -> PeriodicCadence.Weeks(
+                FfiConverterUInt.read(buf),
+                )
+            3 -> PeriodicCadence.Weekdays
+            4 -> PeriodicCadence.Weekday(
+                FfiConverterUInt.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: PeriodicCadence): ULong = when(value) {
+        is PeriodicCadence.Days -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterUInt.allocationSize(value.`count`)
+            )
+        }
+        is PeriodicCadence.Weeks -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterUInt.allocationSize(value.`count`)
+            )
+        }
+        is PeriodicCadence.Weekdays -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is PeriodicCadence.Weekday -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterUInt.allocationSize(value.`weekday`)
+            )
+        }
+    }
+
+    override fun write(value: PeriodicCadence, buf: ByteBuffer) {
+        when(value) {
+            is PeriodicCadence.Days -> {
+                buf.putInt(1)
+                FfiConverterUInt.write(value.`count`, buf)
+                Unit
+            }
+            is PeriodicCadence.Weeks -> {
+                buf.putInt(2)
+                FfiConverterUInt.write(value.`count`, buf)
+                Unit
+            }
+            is PeriodicCadence.Weekdays -> {
+                buf.putInt(3)
+                Unit
+            }
+            is PeriodicCadence.Weekday -> {
+                buf.putInt(4)
+                FfiConverterUInt.write(value.`weekday`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
 
 
 
@@ -10609,6 +11125,102 @@ public object FfiConverterOptionalTypeFocusContext: FfiConverterRustBuffer<Focus
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeFollowUpPlan: FfiConverterRustBuffer<FollowUpPlan?> {
+    override fun read(buf: ByteBuffer): FollowUpPlan? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFollowUpPlan.read(buf)
+    }
+
+    override fun allocationSize(value: FollowUpPlan?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFollowUpPlan.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FollowUpPlan?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFollowUpPlan.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeHabitColumnChange: FfiConverterRustBuffer<HabitColumnChange?> {
+    override fun read(buf: ByteBuffer): HabitColumnChange? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeHabitColumnChange.read(buf)
+    }
+
+    override fun allocationSize(value: HabitColumnChange?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeHabitColumnChange.allocationSize(value)
+        }
+    }
+
+    override fun write(value: HabitColumnChange?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeHabitColumnChange.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeHabitShowing: FfiConverterRustBuffer<HabitShowing?> {
+    override fun read(buf: ByteBuffer): HabitShowing? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeHabitShowing.read(buf)
+    }
+
+    override fun allocationSize(value: HabitShowing?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeHabitShowing.allocationSize(value)
+        }
+    }
+
+    override fun write(value: HabitShowing?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeHabitShowing.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeImportOutcome: FfiConverterRustBuffer<ImportOutcome?> {
     override fun read(buf: ByteBuffer): ImportOutcome? {
         if (buf.get().toInt() == 0) {
@@ -10823,6 +11435,38 @@ public object FfiConverterOptionalTypeTaskRow: FfiConverterRustBuffer<TaskRow?> 
         } else {
             buf.put(1)
             FfiConverterTypeTaskRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypePeriodicCadence: FfiConverterRustBuffer<PeriodicCadence?> {
+    override fun read(buf: ByteBuffer): PeriodicCadence? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypePeriodicCadence.read(buf)
+    }
+
+    override fun allocationSize(value: PeriodicCadence?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypePeriodicCadence.allocationSize(value)
+        }
+    }
+
+    override fun write(value: PeriodicCadence?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypePeriodicCadence.write(value, buf)
         }
     }
 }
@@ -11949,6 +12593,245 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_core_version(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * Where the habit stands on the day `day_ms` falls on; `None` when it should
+         * not be showing. `HabitPolicy.appearance`.
+         */ fun `habitAppearance`(`rule`: HabitRuleSpec, `dayMs`: kotlin.Long, `lastDoneMs`: kotlin.Long?, `sourceCompleted`: kotlin.Boolean, `zone`: kotlin.String): HabitShowing? {
+            return FfiConverterOptionalTypeHabitShowing.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_habit_appearance(
+    
+        
+        FfiConverterTypeHabitRuleSpec.lower(`rule`),
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterOptionalLong.lower(`lastDoneMs`),
+        FfiConverterBoolean.lower(`sourceCompleted`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether the habit has stopped for good by the day `day_ms` falls on.
+         * `HabitPolicy.isExpired`.
+         */ fun `habitIsExpired`(`rule`: HabitRuleSpec, `dayMs`: kotlin.Long, `sourceCompleted`: kotlin.Boolean, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_habit_is_expired(
+    
+        
+        FfiConverterTypeHabitRuleSpec.lower(`rule`),
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterBoolean.lower(`sourceCompleted`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether the local day `day_ms` falls on is one of the habit's days; never
+         * before its anchor. `HabitPolicy.isScheduled`.
+         */ fun `habitIsScheduled`(`rule`: HabitRuleSpec, `dayMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_habit_is_scheduled(
+    
+        
+        FfiConverterTypeHabitRuleSpec.lower(`rule`),
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The first moment of the most recent scheduled day on or before the one
+         * `day_ms` falls on, since the anchor. `HabitPolicy.lastScheduledDay`.
+         */ fun `habitLastScheduledDay`(`rule`: HabitRuleSpec, `dayMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_habit_last_scheduled_day(
+    
+        
+        FfiConverterTypeHabitRuleSpec.lower(`rule`),
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The Habits list's id in a workspace, the same on every device.
+         * `HabitPolicy.habitsListId`.
+         */ fun `habitListId`(`workspaceId`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_habit_list_id(
+    
+        
+        FfiConverterString.lower(`workspaceId`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The column a habit's card should be in, given where it is and the column
+         * its appearance (if any) lands in; `None` leaves it alone. A card moved
+         * elsewhere by hand is the user's. `HabitPolicy.reconciledColumn`.
+         */ fun `habitReconciledColumn`(`current`: kotlin.String?, `appearanceColumn`: kotlin.String?, `placement`: kotlin.String): HabitColumnChange? {
+            return FfiConverterOptionalTypeHabitColumnChange.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_habit_reconciled_column(
+    
+        
+        FfiConverterOptionalString.lower(`current`),
+        FfiConverterOptionalString.lower(`appearanceColumn`),
+        FfiConverterString.lower(`placement`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Parses a stored recurrence rule ("daily", "every 3 days", "every monday");
+         * `None` for one this app did not write.
+         */ fun `periodicCadence`(`raw`: kotlin.String): PeriodicCadence? {
+            return FfiConverterOptionalTypePeriodicCadence.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_periodic_cadence(
+    
+        
+        FfiConverterString.lower(`raw`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The first occurrence strictly after `after_ms`, and strictly after
+         * `not_before_ms` when given, stepping on the wall clock in `zone`. `None`
+         * for a cadence that cannot land. `PeriodicSchedule.nextOccurrence`.
+         */ fun `periodicNextOccurrence`(`cadence`: PeriodicCadence, `afterMs`: kotlin.Long, `notBeforeMs`: kotlin.Long?, `zone`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_periodic_next_occurrence(
+    
+        
+        FfiConverterTypePeriodicCadence.lower(`cadence`),
+        FfiConverterLong.lower(`afterMs`),
+        FfiConverterOptionalLong.lower(`notBeforeMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether a plugin-era daily is expected on the day `day_ms` falls on.
+         * `Daily.isDue(on:)`.
+         */ fun `pluginDailyIsDue`(`archived`: kotlin.Boolean, `weekdays`: List<kotlin.UInt>, `intervalDays`: kotlin.Long?, `anchorMs`: kotlin.Long, `dayMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_plugin_daily_is_due(
+    
+        
+        FfiConverterBoolean.lower(`archived`),
+        FfiConverterSequenceUInt.lower(`weekdays`),
+        FfiConverterOptionalLong.lower(`intervalDays`),
+        FfiConverterLong.lower(`anchorMs`),
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The follow-up to make for `task` at `now_ms`, if one is due.
+         * `WaitingFollowUp.dueFollowUp`.
+         */ fun `waitingDueFollowUp`(`task`: WaitingState, `nowMs`: kotlin.Long): FollowUpPlan? {
+            return FfiConverterOptionalTypeFollowUpPlan.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_waiting_due_follow_up(
+    
+        
+        FfiConverterTypeWaitingState.lower(`task`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The follow-up's id, the same on every device: it follows the source and
+         * the whole second of the follow-up time. `WaitingFollowUp.followUpTaskId`.
+         */ fun `waitingFollowUpTaskId`(`sourceTaskId`: kotlin.String, `followUpAtMs`: kotlin.Long): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_waiting_follow_up_task_id(
+    
+        
+        FfiConverterString.lower(`sourceTaskId`),
+        FfiConverterLong.lower(`followUpAtMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * "Follow up with Sam: Contract signed". `WaitingFollowUp.title`.
+         */ fun `waitingFollowUpTitle`(`title`: kotlin.String, `waitingOn`: kotlin.String?): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_waiting_follow_up_title(
+    
+        
+        FfiConverterString.lower(`title`),
+        FfiConverterOptionalString.lower(`waitingOn`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Who a task waits on, trimmed and clipped, or nothing.
+         * `WaitingFollowUp.normalizedTag`.
+         */ fun `waitingNormalizedTag`(`text`: kotlin.String?): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_waiting_normalized_tag(
+    
+        
+        FfiConverterOptionalString.lower(`text`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether a workspace daily is expected on the day `day_ms` falls on.
+         * `WorkspaceDaily.isDue(on:)`; the caller rules out an archived one.
+         */ fun `workspaceDailyIsDue`(`weekdaysMask`: kotlin.Long, `intervalDays`: kotlin.Long?, `anchorMs`: kotlin.Long, `dayMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_workspace_daily_is_due(
+    
+        
+        FfiConverterLong.lower(`weekdaysMask`),
+        FfiConverterOptionalLong.lower(`intervalDays`),
+        FfiConverterLong.lower(`anchorMs`),
+        FfiConverterLong.lower(`dayMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     )
     }

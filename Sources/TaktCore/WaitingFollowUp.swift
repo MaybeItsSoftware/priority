@@ -1,5 +1,5 @@
-import CryptoKit
 import Foundation
+import TaktRustCore
 
 /// A task in the Waiting on column, as the follow-up engine reads it.
 public struct WaitingTaskState: Equatable, Sendable {
@@ -55,6 +55,10 @@ public struct WaitingFollowUpPlan: Equatable, Sendable {
 /// The follow-up's id is derived from the source's id and the follow-up time,
 /// so two devices that both notice the same follow-up make the same row, and
 /// sync merges the two into one rather than leaving a pair.
+///
+/// The rule, the title and the id are the Rust core's (`core/src/waiting.rs`),
+/// which makes the follow-ups on every client; the date words a card shows
+/// stay here, beside the formatter, since every waiting card asks for them.
 public enum WaitingFollowUp {
   /// The board column a waiting task is filed in.
   public static let waitingColumnID = "waiting-on"
@@ -69,47 +73,35 @@ public enum WaitingFollowUp {
   /// at or before `now`, and has not already had the follow-up for that time
   /// made. A task that left waiting before its time never gets one.
   public static func dueFollowUp(for task: WaitingTaskState, now: Date) -> WaitingFollowUpPlan? {
-    guard task.isOpen, task.column == waitingColumnID, let followUpAt = task.followUpAt,
-      followUpAt <= now
+    guard let followUpAt = task.followUpAt,
+      let plan = waitingDueFollowUp(
+        task: WaitingState(
+          taskId: task.taskId, title: task.title, isOpen: task.isOpen, column: task.column,
+          waitingOn: task.waitingOn, followUpAtMs: followUpAt.flooredMilliseconds,
+          madeFollowUpTaskId: task.madeFollowUpTaskId),
+        nowMs: now.flooredMilliseconds)
     else { return nil }
-    let id = followUpTaskId(sourceTaskId: task.taskId, followUpAt: followUpAt)
-    guard task.madeFollowUpTaskId != id else { return nil }
     return WaitingFollowUpPlan(
-      taskId: id, sourceTaskId: task.taskId, title: title(for: task.title, waitingOn: task.waitingOn),
-      dueAt: followUpAt)
+      taskId: plan.taskId, sourceTaskId: plan.sourceTaskId, title: plan.title, dueAt: followUpAt)
   }
 
   /// "Follow up with Sam: Contract signed", or "Follow up: Contract signed"
   /// when nothing is named.
   public static func title(for title: String, waitingOn: String?) -> String {
-    let source = title.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let tag = normalizedTag(waitingOn) else { return "Follow up: \(source)" }
-    return "Follow up with \(tag): \(source)"
+    waitingFollowUpTitle(title: title, waitingOn: waitingOn)
   }
 
-  /// A tag trimmed and clipped, or nil when there is nothing left.
+  /// A tag trimmed and clipped to `maximumTagLength` characters, or nil when
+  /// there is nothing left.
   public static func normalizedTag(_ text: String?) -> String? {
-    guard let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
-      return nil
-    }
-    return String(trimmed.prefix(maximumTagLength))
+    waitingNormalizedTag(text: text)
   }
 
   /// A UUID-shaped id from SHA-256 of `takt.follow-up:<source>:<epoch seconds>`,
   /// uppercased as `UUID().uuidString` writes them, with the version 5 and
-  /// RFC 4122 variant bits set. The Android port computes the same string.
+  /// RFC 4122 variant bits set. Every client computes it through the core.
   public static func followUpTaskId(sourceTaskId: String, followUpAt: Date) -> String {
-    let seconds = Int64(followUpAt.timeIntervalSince1970.rounded(.down))
-    let digest = SHA256.hash(data: Data("takt.follow-up:\(sourceTaskId):\(seconds)".utf8))
-    var bytes = Array(digest.prefix(16))
-    bytes[6] = (bytes[6] & 0x0F) | 0x50
-    bytes[8] = (bytes[8] & 0x3F) | 0x80
-    let hex = bytes.map { String(format: "%02X", $0) }.joined()
-    let parts = [0..<8, 8..<12, 12..<16, 16..<20, 20..<32].map { range in
-      String(hex[hex.index(hex.startIndex, offsetBy: range.lowerBound)..<hex.index(
-        hex.startIndex, offsetBy: range.upperBound)])
-    }
-    return parts.joined(separator: "-")
+    waitingFollowUpTaskId(sourceTaskId: sourceTaskId, followUpAtMs: followUpAt.flooredMilliseconds)
   }
 
   /// `↻ Thu 14:00` — the follow-up time as a card shows it. Today and
@@ -148,4 +140,10 @@ public enum WaitingFollowUp {
       format: "%04d-%02d-%02d %02d:%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0,
       parts.hour ?? 0, parts.minute ?? 0)
   }
+}
+
+extension Date {
+  /// Whole milliseconds since 1970, rounded down, so the whole second a
+  /// follow-up's id is made from is the one this date reads.
+  fileprivate var flooredMilliseconds: Int64 { Int64((timeIntervalSince1970 * 1000).rounded(.down)) }
 }

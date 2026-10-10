@@ -1,7 +1,7 @@
 //! Writes to dailies: the tasks a user commits to on certain days, and the
 //! contributions logged against each day.
 
-use chrono::DateTime;
+use chrono::{DateTime, Datelike, NaiveDate};
 use rusqlite::{OptionalExtension, Transaction, params};
 
 use crate::CoreError;
@@ -26,6 +26,55 @@ pub fn day_key(now_ms: i64, zone: &str) -> String {
         .with_timezone(&crate::periodic::zone(zone))
         .format("%Y-%m-%d")
         .to_string()
+}
+
+/// Whether a workspace daily (a task committed to on certain days) is
+/// expected on the local day `day`: every `interval_days` from its anchor's
+/// day and never before it, or else on the weekdays its mask holds (a missing
+/// mask is every day). Archived dailies are the caller's to rule out.
+/// `WorkspaceDaily.isDue(on:)`, and what the next-up read asks of each daily.
+pub fn workspace_daily_is_due(
+    weekdays_mask: Option<i64>,
+    interval_days: Option<i64>,
+    anchor: NaiveDate,
+    day: NaiveDate,
+) -> bool {
+    if let Some(interval) = interval_days.filter(|interval| *interval > 0) {
+        if day < anchor {
+            return false;
+        }
+        return (day - anchor).num_days() % interval == 0;
+    }
+    let weekday = day.weekday().number_from_sunday();
+    weekdays_mask.unwrap_or(127) & (1 << (weekday - 1)) != 0
+}
+
+/// Whether a plugin-era daily (the dailies file the day log reads) is
+/// expected on the local day `day`.
+///
+/// Unlike a workspace daily, its cycle extends backwards from the anchor as
+/// well as forwards, so the history behind a newly anchored daily is not a
+/// run of days it was never due on; and an interval of one (or less) is every
+/// day. A cycle and a weekday set are alternatives rather than filters that
+/// compose. `weekdays` counts 1 = Sunday; empty is no day at all, as an empty
+/// set read back from the file is. `Daily.isDue(on:)`, and the CLI's.
+pub fn plugin_daily_is_due(
+    archived: bool,
+    weekdays: &[u32],
+    interval_days: Option<i64>,
+    anchor: NaiveDate,
+    day: NaiveDate,
+) -> bool {
+    if archived {
+        return false;
+    }
+    if let Some(interval) = interval_days {
+        if interval <= 1 {
+            return true;
+        }
+        return (day - anchor).num_days().rem_euclid(interval) == 0;
+    }
+    weekdays.contains(&day.weekday().number_from_sunday())
 }
 
 /// Makes a task a daily and returns the daily's id. A task that already has

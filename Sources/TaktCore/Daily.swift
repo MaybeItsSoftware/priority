@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// A recurring thing you intend to do on a schedule — a habit, not a task.
 ///
@@ -115,22 +116,17 @@ public struct Daily: Codable, Equatable, Identifiable, Sendable {
   /// Takes the *logical* day start, so a daily ticked at 01:00 under a 4am
   /// rollover is still measured against the weekday it belongs to rather than
   /// the one the wall clock has moved on to.
+  ///
+  /// The rule is the Rust core's (`dailies::plugin_daily_is_due`), which the
+  /// CLI's `dailies_list` shares. A cycle extends *backwards* from its anchor
+  /// too, so a daily anchored today does not read as "not due" for every day
+  /// already in the log.
   public func isDue(on day: Date, calendar: Calendar = .current) -> Bool {
     guard !isArchived else { return false }
-    if let intervalDays {
-      guard intervalDays > 1 else { return true }
-      let anchor = calendar.startOfDay(for: intervalAnchor ?? createdAt)
-      let target = calendar.startOfDay(for: day)
-      guard let delta = calendar.dateComponents([.day], from: anchor, to: target).day else {
-        return true
-      }
-      // Modulo that stays non-negative, so the cycle also extends *backwards*
-      // from the anchor. Otherwise a daily anchored today would read as "not
-      // due" for every day already in the log, and the history behind it would
-      // be full of gaps it was never expected on.
-      return ((delta % intervalDays) + intervalDays) % intervalDays == 0
-    }
-    return activeWeekdays.contains(calendar.component(.weekday, from: day))
+    return pluginDailyIsDue(
+      archived: false, weekdays: activeWeekdays.sorted().map { UInt32(clamping: $0) },
+      intervalDays: intervalDays.map(Int64.init), anchorMs: (intervalAnchor ?? createdAt).rankingMilliseconds,
+      dayMs: day.rankingMilliseconds, zone: calendar.timeZone.identifier)
   }
 
   /// "Every day", "Every 3 days", "Weekdays", or an abbreviated list. Shown next
