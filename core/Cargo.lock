@@ -812,6 +812,7 @@ dependencies = [
  "chrono-tz",
  "regex-lite",
  "rusqlite",
+ "serde",
  "serde_json",
  "sha2",
  "takt-sync-rules",

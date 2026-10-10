@@ -1148,6 +1148,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func applyRemoteRows(rows: [IncomingRow], cursor: Int64, hlc: String?, nowMs: Int64) throws  -> Bool
     
     /**
+     * Writes a gathered pull into the workspace in one transaction.
+     */
+    func applySyncPull(pull: SyncPull, wallMs: Int64, nowMs: Int64) throws  -> SyncPullOutcome
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
     func archiveDaily(taskId: String, nowMs: Int64) throws 
@@ -1272,6 +1277,11 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Ends a focus session.
      */
     func finishFocusSession(id: String, nowMs: Int64) throws 
+    
+    /**
+     * The server has a push: forgets its outbox entries and keeps its clock.
+     */
+    func finishSyncPush(throughSeq: Int64, hlc: String, nowMs: Int64) throws 
     
     /**
      * A workspace's folders in sidebar order.
@@ -1444,6 +1454,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
      * Drops a list before another, in a folder, as one "Reorder List" step.
      */
     func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int64) throws 
+    
+    /**
+     * The outbox's next batch as a `POST /v1/push` body, stamped from the
+     * stored clock; nothing when the outbox is empty.
+     */
+    func prepareSyncPush(limit: UInt32, wallMs: Int64) throws  -> SyncPushBatch?
     
     /**
      * Resets a running block's clock after the system clock jumped.
@@ -2325,6 +2341,21 @@ open func applyRemoteRows(rows: [IncomingRow], cursor: Int64, hlc: String?, nowM
 }
     
     /**
+     * Writes a gathered pull into the workspace in one transaction.
+     */
+open func applySyncPull(pull: SyncPull, wallMs: Int64, nowMs: Int64)throws  -> SyncPullOutcome  {
+    return try  FfiConverterTypeSyncPullOutcome_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_apply_sync_pull(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeSyncPull_lower(pull),
+        FfiConverterInt64.lower(wallMs),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
 open func archiveDaily(taskId: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -2652,6 +2683,20 @@ open func finishFocusSession(id: String, nowMs: Int64)throws   {try rustCallWith
     uniffi_takt_core_fn_method_coreworkspace_finish_focus_session(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(id),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * The server has a push: forgets its outbox entries and keeps its clock.
+     */
+open func finishSyncPush(throughSeq: Int64, hlc: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_finish_sync_push(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(throughSeq),
+        FfiConverterString.lower(hlc),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
@@ -3133,6 +3178,21 @@ open func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 }
+}
+    
+    /**
+     * The outbox's next batch as a `POST /v1/push` body, stamped from the
+     * stored clock; nothing when the outbox is empty.
+     */
+open func prepareSyncPush(limit: UInt32, wallMs: Int64)throws  -> SyncPushBatch?  {
+    return try  FfiConverterOptionTypeSyncPushBatch.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_prepare_sync_push(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt32.lower(limit),
+        FfiConverterInt64.lower(wallMs),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -3905,6 +3965,167 @@ public func FfiConverterTypeCoreWorkspace_lift(_ handle: UInt64) throws -> CoreW
 #endif
 public func FfiConverterTypeCoreWorkspace_lower(_ value: CoreWorkspace) -> UInt64 {
     return FfiConverterTypeCoreWorkspace.lower(value)
+}
+
+
+
+
+
+
+/**
+ * A pull being gathered: every page of a cycle lands in one transaction,
+ * because a task can arrive a page before its list and only the end of the
+ * whole pull is a consistent state. The rows wait here, in the core, rather
+ * than crossing back to the client between pages.
+ */
+public protocol SyncPullProtocol: AnyObject, Sendable {
+    
+    /**
+     * Takes in one `GET /v1/changes` body.
+     */
+    func addPage(body: String) throws  -> SyncPullPage
+    
+    /**
+     * The rows gathered so far.
+     */
+    func rowCount()  -> UInt32
+    
+}
+/**
+ * A pull being gathered: every page of a cycle lands in one transaction,
+ * because a task can arrive a page before its list and only the end of the
+ * whole pull is a consistent state. The rows wait here, in the core, rather
+ * than crossing back to the client between pages.
+ */
+open class SyncPull: SyncPullProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_takt_core_fn_clone_syncpull(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_constructor_syncpull_new(uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_takt_core_fn_free_syncpull(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Takes in one `GET /v1/changes` body.
+     */
+open func addPage(body: String)throws  -> SyncPullPage  {
+    return try  FfiConverterTypeSyncPullPage_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_syncpull_add_page(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The rows gathered so far.
+     */
+open func rowCount() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_syncpull_row_count(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncPull: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = SyncPull
+
+    public static func lift(_ handle: UInt64) throws -> SyncPull {
+        return SyncPull(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: SyncPull) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncPull {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: SyncPull, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncPull_lift(_ handle: UInt64) throws -> SyncPull {
+    return try FfiConverterTypeSyncPull.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncPull_lower(_ value: SyncPull) -> UInt64 {
+    return FfiConverterTypeSyncPull.lower(value)
 }
 
 
@@ -12170,6 +12391,492 @@ public func FfiConverterTypeSidebarOutlineRow_lower(_ value: SidebarOutlineRow) 
 
 
 /**
+ * `GET /v1/account`: who this device is signed in as, and every device on
+ * the account.
+ */
+public struct SyncAccountBody: Equatable, Hashable {
+    public var accountId: String
+    public var email: String?
+    public var devices: [SyncAccountDevice]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(accountId: String, email: String?, devices: [SyncAccountDevice]) {
+        self.accountId = accountId
+        self.email = email
+        self.devices = devices
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SyncAccountBody: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncAccountBody: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncAccountBody {
+        return
+            try SyncAccountBody(
+                accountId: FfiConverterString.read(from: &buf), 
+                email: FfiConverterOptionString.read(from: &buf), 
+                devices: FfiConverterSequenceTypeSyncAccountDevice.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SyncAccountBody, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.accountId, into: &buf)
+        FfiConverterOptionString.write(value.email, into: &buf)
+        FfiConverterSequenceTypeSyncAccountDevice.write(value.devices, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncAccountBody_lift(_ buf: RustBuffer) throws -> SyncAccountBody {
+    return try FfiConverterTypeSyncAccountBody.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncAccountBody_lower(_ value: SyncAccountBody) -> RustBuffer {
+    return FfiConverterTypeSyncAccountBody.lower(value)
+}
+
+
+/**
+ * A device on the account, from `GET /v1/account`.
+ */
+public struct SyncAccountDevice: Equatable, Hashable {
+    public var id: String
+    public var name: String?
+    public var platform: String?
+    public var createdAt: String
+    public var lastSeenAt: String?
+    /**
+     * The device asking.
+     */
+    public var current: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String?, platform: String?, createdAt: String, lastSeenAt: String?, 
+        /**
+         * The device asking.
+         */current: Bool) {
+        self.id = id
+        self.name = name
+        self.platform = platform
+        self.createdAt = createdAt
+        self.lastSeenAt = lastSeenAt
+        self.current = current
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SyncAccountDevice: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncAccountDevice: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncAccountDevice {
+        return
+            try SyncAccountDevice(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterOptionString.read(from: &buf), 
+                platform: FfiConverterOptionString.read(from: &buf), 
+                createdAt: FfiConverterString.read(from: &buf), 
+                lastSeenAt: FfiConverterOptionString.read(from: &buf), 
+                current: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SyncAccountDevice, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterOptionString.write(value.name, into: &buf)
+        FfiConverterOptionString.write(value.platform, into: &buf)
+        FfiConverterString.write(value.createdAt, into: &buf)
+        FfiConverterOptionString.write(value.lastSeenAt, into: &buf)
+        FfiConverterBool.write(value.current, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncAccountDevice_lift(_ buf: RustBuffer) throws -> SyncAccountDevice {
+    return try FfiConverterTypeSyncAccountDevice.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncAccountDevice_lower(_ value: SyncAccountDevice) -> RustBuffer {
+    return FfiConverterTypeSyncAccountDevice.lower(value)
+}
+
+
+/**
+ * A sync server, a Supabase project and that project's publishable key.
+ */
+public struct SyncEndpointsRecord: Equatable, Hashable {
+    public var serverUrl: String
+    public var supabaseUrl: String
+    public var supabaseKey: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverUrl: String, supabaseUrl: String, supabaseKey: String) {
+        self.serverUrl = serverUrl
+        self.supabaseUrl = supabaseUrl
+        self.supabaseKey = supabaseKey
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SyncEndpointsRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncEndpointsRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncEndpointsRecord {
+        return
+            try SyncEndpointsRecord(
+                serverUrl: FfiConverterString.read(from: &buf), 
+                supabaseUrl: FfiConverterString.read(from: &buf), 
+                supabaseKey: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SyncEndpointsRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverUrl, into: &buf)
+        FfiConverterString.write(value.supabaseUrl, into: &buf)
+        FfiConverterString.write(value.supabaseKey, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncEndpointsRecord_lift(_ buf: RustBuffer) throws -> SyncEndpointsRecord {
+    return try FfiConverterTypeSyncEndpointsRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncEndpointsRecord_lower(_ value: SyncEndpointsRecord) -> RustBuffer {
+    return FfiConverterTypeSyncEndpointsRecord.lower(value)
+}
+
+
+/**
+ * What typed endpoints came to: the endpoints, or why they can't be used.
+ */
+public struct SyncEndpointsResolution: Equatable, Hashable {
+    public var endpoints: SyncEndpointsRecord?
+    /**
+     * A sentence to show.
+     */
+    public var problem: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(endpoints: SyncEndpointsRecord?, 
+        /**
+         * A sentence to show.
+         */problem: String?) {
+        self.endpoints = endpoints
+        self.problem = problem
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SyncEndpointsResolution: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncEndpointsResolution: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncEndpointsResolution {
+        return
+            try SyncEndpointsResolution(
+                endpoints: FfiConverterOptionTypeSyncEndpointsRecord.read(from: &buf), 
+                problem: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SyncEndpointsResolution, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeSyncEndpointsRecord.write(value.endpoints, into: &buf)
+        FfiConverterOptionString.write(value.problem, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncEndpointsResolution_lift(_ buf: RustBuffer) throws -> SyncEndpointsResolution {
+    return try FfiConverterTypeSyncEndpointsResolution.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncEndpointsResolution_lower(_ value: SyncEndpointsResolution) -> RustBuffer {
+    return FfiConverterTypeSyncEndpointsResolution.lower(value)
+}
+
+
+/**
+ * What applying a pull came to.
+ */
+public struct SyncPullOutcome: Equatable, Hashable {
+    public var pulled: UInt32
+    /**
+     * Whether the workspace changed, so the UI knows to reload.
+     */
+    public var changed: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(pulled: UInt32, 
+        /**
+         * Whether the workspace changed, so the UI knows to reload.
+         */changed: Bool) {
+        self.pulled = pulled
+        self.changed = changed
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SyncPullOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncPullOutcome: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncPullOutcome {
+        return
+            try SyncPullOutcome(
+                pulled: FfiConverterUInt32.read(from: &buf), 
+                changed: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SyncPullOutcome, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.pulled, into: &buf)
+        FfiConverterBool.write(value.changed, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncPullOutcome_lift(_ buf: RustBuffer) throws -> SyncPullOutcome {
+    return try FfiConverterTypeSyncPullOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncPullOutcome_lower(_ value: SyncPullOutcome) -> RustBuffer {
+    return FfiConverterTypeSyncPullOutcome.lower(value)
+}
+
+
+/**
+ * What a pulled page said about the feed.
+ */
+public struct SyncPullPage: Equatable, Hashable {
+    /**
+     * Where the next page starts.
+     */
+    public var cursor: Int64
+    /**
+     * Whether to ask for another page straight away.
+     */
+    public var hasMore: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Where the next page starts.
+         */cursor: Int64, 
+        /**
+         * Whether to ask for another page straight away.
+         */hasMore: Bool) {
+        self.cursor = cursor
+        self.hasMore = hasMore
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SyncPullPage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncPullPage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncPullPage {
+        return
+            try SyncPullPage(
+                cursor: FfiConverterInt64.read(from: &buf), 
+                hasMore: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SyncPullPage, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.cursor, into: &buf)
+        FfiConverterBool.write(value.hasMore, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncPullPage_lift(_ buf: RustBuffer) throws -> SyncPullPage {
+    return try FfiConverterTypeSyncPullPage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncPullPage_lower(_ value: SyncPullPage) -> RustBuffer {
+    return FfiConverterTypeSyncPullPage.lower(value)
+}
+
+
+/**
+ * A push body ready to send, and what to acknowledge once the server has it.
+ */
+public struct SyncPushBatch: Equatable, Hashable {
+    /**
+     * `POST /v1/push`'s JSON body.
+     */
+    public var body: String
+    /**
+     * The newest outbox entry folded in.
+     */
+    public var throughSeq: Int64
+    /**
+     * How many rows the body carries.
+     */
+    public var count: UInt32
+    /**
+     * The clock after stamping them, stored by `finish_push`.
+     */
+    public var hlc: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `POST /v1/push`'s JSON body.
+         */body: String, 
+        /**
+         * The newest outbox entry folded in.
+         */throughSeq: Int64, 
+        /**
+         * How many rows the body carries.
+         */count: UInt32, 
+        /**
+         * The clock after stamping them, stored by `finish_push`.
+         */hlc: String) {
+        self.body = body
+        self.throughSeq = throughSeq
+        self.count = count
+        self.hlc = hlc
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SyncPushBatch: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSyncPushBatch: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncPushBatch {
+        return
+            try SyncPushBatch(
+                body: FfiConverterString.read(from: &buf), 
+                throughSeq: FfiConverterInt64.read(from: &buf), 
+                count: FfiConverterUInt32.read(from: &buf), 
+                hlc: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SyncPushBatch, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.body, into: &buf)
+        FfiConverterInt64.write(value.throughSeq, into: &buf)
+        FfiConverterUInt32.write(value.count, into: &buf)
+        FfiConverterString.write(value.hlc, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncPushBatch_lift(_ buf: RustBuffer) throws -> SyncPushBatch {
+    return try FfiConverterTypeSyncPushBatch.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSyncPushBatch_lower(_ value: SyncPushBatch) -> RustBuffer {
+    return FfiConverterTypeSyncPushBatch.lower(value)
+}
+
+
+/**
  * Open and closed task counts, for overview screens.
  */
 public struct TaskCounts: Equatable, Hashable {
@@ -16456,6 +17163,54 @@ fileprivate struct FfiConverterOptionTypeSessionRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeSyncEndpointsRecord: FfiConverterRustBuffer {
+    typealias SwiftType = SyncEndpointsRecord?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeSyncEndpointsRecord.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeSyncEndpointsRecord.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeSyncPushBatch: FfiConverterRustBuffer {
+    typealias SwiftType = SyncPushBatch?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeSyncPushBatch.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeSyncPushBatch.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeTaskRow: FfiConverterRustBuffer {
     typealias SwiftType = TaskRow?
 
@@ -18071,6 +18826,31 @@ fileprivate struct FfiConverterSequenceTypeSidebarOutlineRow: FfiConverterRustBu
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeSyncAccountDevice: FfiConverterRustBuffer {
+    typealias SwiftType = [SyncAccountDevice]
+
+    public static func write(_ value: [SyncAccountDevice], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSyncAccountDevice.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SyncAccountDevice] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SyncAccountDevice]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSyncAccountDevice.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeTaskProgressCount: FfiConverterRustBuffer {
     typealias SwiftType = [TaskProgressCount]
 
@@ -19477,6 +20257,171 @@ public func hlcTick(clock: String?, deviceId: String, wallMs: Int64) -> String? 
 })
 }
 /**
+ * A server address as typed: trimmed, and given `https://` when it has no
+ * scheme. Nothing when it still isn't an http(s) address with a host.
+ * `SyncServer.url(from:)`.
+ */
+public func syncHttpUrl(typed: String) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_http_url(
+        FfiConverterString.lower(typed),uniffiCallStatus
+    )
+})
+}
+/**
+ * `typed` as an http(s) address without a query, fragment or trailing slash,
+ * and without any of `dropping_suffixes` pasted on the end (a Supabase URL
+ * copied from an API example often ends `/rest/v1`). Nothing when it isn't
+ * an address with a host.
+ */
+public func syncNormalisedUrl(typed: String, droppingSuffixes: [String]) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_normalised_url(
+        FfiConverterString.lower(typed),
+        FfiConverterSequenceString.lower(droppingSuffixes),uniffiCallStatus
+    )
+})
+}
+/**
+ * The endpoints as typed under "Use a different server". A blank server is
+ * `hosted`'s; a blank Supabase URL *and* key are `hosted`'s project.
+ * Anything else that can't be used comes back as a problem to show.
+ */
+public func syncResolveEndpoints(server: String, supabaseUrl: String, supabaseKey: String, hosted: SyncEndpointsRecord) -> SyncEndpointsResolution  {
+    return try!  FfiConverterTypeSyncEndpointsResolution_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_resolve_endpoints(
+        FfiConverterString.lower(server),
+        FfiConverterString.lower(supabaseUrl),
+        FfiConverterString.lower(supabaseKey),
+        FfiConverterTypeSyncEndpointsRecord_lower(hosted),uniffiCallStatus
+    )
+})
+}
+/**
+ * How long to wait before the next long-poll after `failures` failed cycles
+ * in a row: 2, 4, 8 … seconds, capped at five minutes, so an outage costs
+ * nothing.
+ */
+public func syncBackoffSeconds(failures: UInt32) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_backoff_seconds(
+        FfiConverterUInt32.lower(failures),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether a body is a JSON object, as Supabase's `/auth/v1/settings` is.
+ */
+public func syncBodyIsJsonObject(body: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_body_is_json_object(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * Reads `GET /v1/account`'s body. Fields the apps do not know are ignored.
+ */
+public func syncDecodeAccount(body: String)throws  -> SyncAccountBody  {
+    return try  FfiConverterTypeSyncAccountBody_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_decode_account(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * What to show for a refusal whose body was `body`.
+ */
+public func syncFailureMessage(status: Int32, body: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_failure_message(
+        FfiConverterInt32.lower(status),
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * Whether a `/health` body is a Takt sync server's `{"ok": true}`.
+ */
+public func syncHealthIsOk(body: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_health_is_ok(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * What to show for a refusal with `message`, the server's own words: those
+ * as a sentence, or its status when it gave none.
+ */
+public func syncRefusalText(status: Int32, message: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_refusal_text(
+        FfiConverterInt32.lower(status),
+        FfiConverterString.lower(message),uniffiCallStatus
+    )
+})
+}
+/**
+ * `POST /v1/devices`'s body: this device on the account.
+ */
+public func syncRegisterDeviceBody(id: String, name: String, platform: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_register_device_body(
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(name),
+        FfiConverterString.lower(platform),uniffiCallStatus
+    )
+})
+}
+/**
+ * The server and Supabase write lowercase fragments; the apps show
+ * sentences: trimmed, capitalised, and closed with a full stop unless they
+ * already end in one.
+ */
+public func syncSentence(message: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_sentence(
+        FfiConverterString.lower(message),uniffiCallStatus
+    )
+})
+}
+/**
+ * The `{"error": "..."}` a refusal carries, or nothing (empty) when its
+ * body is not one.
+ */
+public func syncServerMessage(body: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_server_message(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * A server timestamp (RFC 3339, with up to nine fractional digits, as
+ * chrono writes them) in milliseconds since 1970, cut to the millisecond.
+ */
+public func syncTimestampMs(text: String) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sync_timestamp_ms(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
  * What the built-in `identifier` lays over its own structure on each phone.
  */
 public func themeBuiltinPlatformStructures(identifier: String) -> [CoreThemePlatformStructure]  {
@@ -20032,6 +20977,45 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_hlc_tick() != 54173) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_sync_http_url() != 40341) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_normalised_url() != 49512) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_resolve_endpoints() != 47020) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_backoff_seconds() != 25052) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_body_is_json_object() != 6490) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_decode_account() != 18757) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_failure_message() != 5843) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_health_is_ok() != 59684) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_refusal_text() != 62301) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_register_device_body() != 30666) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_sentence() != 55857) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_server_message() != 6717) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sync_timestamp_ms() != 29596) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_theme_builtin_platform_structures() != 43492) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -20158,6 +21142,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coredaylog_weekly_buckets() != 65133) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_syncpull_add_page() != 29746) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_syncpull_row_count() != 50030) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_export_workspace() != 22213) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -20278,6 +21268,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_coreworkspace_apply_remote_rows() != 63863) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_apply_sync_pull() != 7815) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_archive_daily() != 52136) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -20348,6 +21341,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session() != 58295) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_finish_sync_push() != 51588) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_folders() != 64875) {
@@ -20447,6 +21443,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_place_list() != 14409) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_prepare_sync_push() != 32415) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_rebase_focus_clock() != 28872) {
@@ -20603,6 +21602,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_constructor_coredaylog_open() != 4515) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_constructor_syncpull_new() != 22680) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_constructor_coreworkspace_open() != 50515) {

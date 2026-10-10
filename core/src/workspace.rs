@@ -1015,6 +1015,36 @@ impl CoreWorkspace {
         self.unjournalled(|tx| sync::apply_remote_rows(tx, &rows, cursor, hlc.as_deref(), now_ms))
     }
 
+    /// The outbox's next batch as a `POST /v1/push` body, stamped from the
+    /// stored clock; nothing when the outbox is empty.
+    pub fn prepare_sync_push(
+        &self,
+        limit: u32,
+        wall_ms: i64,
+    ) -> Result<Option<sync::wire::SyncPushBatch>, CoreError> {
+        sync::wire::prepare_push(&self.lock(), limit, wall_ms)
+    }
+
+    /// The server has a push: forgets its outbox entries and keeps its clock.
+    pub fn finish_sync_push(
+        &self,
+        through_seq: i64,
+        hlc: String,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        self.unjournalled(|tx| sync::wire::finish_push(tx, through_seq, &hlc, now_ms))
+    }
+
+    /// Writes a gathered pull into the workspace in one transaction.
+    pub fn apply_sync_pull(
+        &self,
+        pull: Arc<sync::wire::SyncPull>,
+        wall_ms: i64,
+        now_ms: i64,
+    ) -> Result<sync::wire::SyncPullOutcome, CoreError> {
+        self.unjournalled(|tx| sync::wire::apply_pull(tx, &pull, wall_ms, now_ms))
+    }
+
     /// Advances the stored cursor and clock without applying rows.
     pub fn record_sync_progress(
         &self,

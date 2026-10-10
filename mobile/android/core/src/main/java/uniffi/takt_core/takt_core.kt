@@ -815,6 +815,32 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_hlc_tick(
     ): Int
+    external fun uniffi_takt_core_checksum_func_sync_http_url(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_normalised_url(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_resolve_endpoints(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_backoff_seconds(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_body_is_json_object(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_decode_account(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_failure_message(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_health_is_ok(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_refusal_text(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_register_device_body(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_sentence(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_server_message(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sync_timestamp_ms(
+    ): Int
     external fun uniffi_takt_core_checksum_func_theme_builtin_platform_structures(
     ): Int
     external fun uniffi_takt_core_checksum_func_theme_builtins(
@@ -899,6 +925,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coredaylog_weekly_buckets(
     ): Int
+    external fun uniffi_takt_core_checksum_method_syncpull_add_page(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_syncpull_row_count(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_export_workspace(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session(
@@ -979,6 +1009,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_apply_remote_rows(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_apply_sync_pull(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_archive_daily(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_arrange_day(
@@ -1026,6 +1058,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_finish_focus_block(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_finish_sync_push(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_folders(
     ): Int
@@ -1092,6 +1126,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_folder(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_prepare_sync_push(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_rebase_focus_clock(
     ): Int
@@ -1197,6 +1233,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_constructor_coredaylog_open(
     ): Int
+    external fun uniffi_takt_core_checksum_constructor_syncpull_new(
+    ): Int
     external fun uniffi_takt_core_checksum_constructor_coreworkspace_open(
     ): Int
     external fun ffi_takt_core_uniffi_contract_version(
@@ -1247,6 +1285,16 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coredaylog_weekly_buckets(`ptr`: Long,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_clone_syncpull(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_free_syncpull(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_constructor_syncpull_new(uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_takt_core_fn_method_syncpull_add_page(`ptr`: Long,`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_syncpull_row_count(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     external fun uniffi_takt_core_fn_clone_coreworkspace(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_takt_core_fn_free_coreworkspace(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1333,6 +1381,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_apply_remote_rows(`ptr`: Long,`rows`: RustBuffer.ByValue,`cursor`: Long,`hlc`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_takt_core_fn_method_coreworkspace_apply_sync_pull(`ptr`: Long,`pull`: Long,`wallMs`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_archive_daily(`ptr`: Long,`taskId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_arrange_day(`ptr`: Long,`orderedTaskIds`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1380,6 +1430,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_finish_focus_block(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`elapsedSeconds`: Long,`qualityMultiplier`: RustBuffer.ByValue,`completeTask`: Byte,`expectedBlockId`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_finish_focus_session(`ptr`: Long,`id`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_finish_sync_push(`ptr`: Long,`throughSeq`: Long,`hlc`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_folders(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1447,6 +1499,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_list(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_prepare_sync_push(`ptr`: Long,`limit`: Int,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_rebase_focus_clock(`ptr`: Long,`id`: RustBuffer.ByValue,`elapsedSeconds`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_reconcile_habits(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1688,6 +1742,32 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_hlc_receive(`clock`: RustBuffer.ByValue,`remote`: RustBuffer.ByValue,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_hlc_tick(`clock`: RustBuffer.ByValue,`deviceId`: RustBuffer.ByValue,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_http_url(`typed`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_normalised_url(`typed`: RustBuffer.ByValue,`droppingSuffixes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_resolve_endpoints(`server`: RustBuffer.ByValue,`supabaseUrl`: RustBuffer.ByValue,`supabaseKey`: RustBuffer.ByValue,`hosted`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_backoff_seconds(`failures`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    external fun uniffi_takt_core_fn_func_sync_body_is_json_object(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_sync_decode_account(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_failure_message(`status`: Int,`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_health_is_ok(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_takt_core_fn_func_sync_refusal_text(`status`: Int,`message`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_register_device_body(`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`platform`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_sentence(`message`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_server_message(`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sync_timestamp_ms(`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_theme_builtin_platform_structures(`identifier`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2080,6 +2160,45 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_hlc_tick() and 0xFFFF) != 54173) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_sync_http_url() and 0xFFFF) != 40341) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_normalised_url() and 0xFFFF) != 49512) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_resolve_endpoints() and 0xFFFF) != 47020) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_backoff_seconds() and 0xFFFF) != 25052) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_body_is_json_object() and 0xFFFF) != 6490) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_decode_account() and 0xFFFF) != 18757) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_failure_message() and 0xFFFF) != 5843) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_health_is_ok() and 0xFFFF) != 59684) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_refusal_text() and 0xFFFF) != 62301) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_register_device_body() and 0xFFFF) != 30666) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_sentence() and 0xFFFF) != 55857) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_server_message() and 0xFFFF) != 6717) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sync_timestamp_ms() and 0xFFFF) != 29596) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_theme_builtin_platform_structures() and 0xFFFF) != 43492) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2206,6 +2325,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coredaylog_weekly_buckets() and 0xFFFF) != 65133) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_syncpull_add_page() and 0xFFFF) != 29746) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_syncpull_row_count() and 0xFFFF) != 50030) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_export_workspace() and 0xFFFF) != 22213) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2326,6 +2451,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_apply_remote_rows() and 0xFFFF) != 63863) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_apply_sync_pull() and 0xFFFF) != 7815) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_archive_daily() and 0xFFFF) != 52136) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2396,6 +2524,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_finish_focus_session() and 0xFFFF) != 58295) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_finish_sync_push() and 0xFFFF) != 51588) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_folders() and 0xFFFF) != 64875) {
@@ -2495,6 +2626,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_list() and 0xFFFF) != 14409) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_prepare_sync_push() and 0xFFFF) != 32415) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rebase_focus_clock() and 0xFFFF) != 28872) {
@@ -2651,6 +2785,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_constructor_coredaylog_open() and 0xFFFF) != 4515) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_constructor_syncpull_new() and 0xFFFF) != 22680) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_constructor_coreworkspace_open() and 0xFFFF) != 50515) {
@@ -3829,6 +3966,11 @@ public interface CoreWorkspaceInterface {
     fun `applyRemoteRows`(`rows`: List<IncomingRow>, `cursor`: kotlin.Long, `hlc`: kotlin.String?, `nowMs`: kotlin.Long): kotlin.Boolean
     
     /**
+     * Writes a gathered pull into the workspace in one transaction.
+     */
+    fun `applySyncPull`(`pull`: SyncPull, `wallMs`: kotlin.Long, `nowMs`: kotlin.Long): SyncPullOutcome
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
     fun `archiveDaily`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
@@ -3953,6 +4095,11 @@ public interface CoreWorkspaceInterface {
      * Ends a focus session.
      */
     fun `finishFocusSession`(`id`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * The server has a push: forgets its outbox entries and keeps its clock.
+     */
+    fun `finishSyncPush`(`throughSeq`: kotlin.Long, `hlc`: kotlin.String, `nowMs`: kotlin.Long)
     
     /**
      * A workspace's folders in sidebar order.
@@ -4125,6 +4272,12 @@ public interface CoreWorkspaceInterface {
      * Drops a list before another, in a folder, as one "Reorder List" step.
      */
     fun `placeList`(`id`: kotlin.String, `beforeId`: kotlin.String?, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * The outbox's next batch as a `POST /v1/push` body, stamped from the
+     * stored clock; nothing when the outbox is empty.
+     */
+    fun `prepareSyncPush`(`limit`: kotlin.UInt, `wallMs`: kotlin.Long): SyncPushBatch?
     
     /**
      * Resets a running block's clock after the system clock jumped.
@@ -5244,6 +5397,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Writes a gathered pull into the workspace in one transaction.
+     */
+    @Throws(CoreException::class)override fun `applySyncPull`(`pull`: SyncPull, `wallMs`: kotlin.Long, `nowMs`: kotlin.Long): SyncPullOutcome {
+            return FfiConverterTypeSyncPullOutcome.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_apply_sync_pull(
+        it,
+        
+        FfiConverterTypeSyncPull.lower(`pull`),
+        FfiConverterLong.lower(`wallMs`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Archives a task's daily as one "Archive Daily" step.
      */
     @Throws(CoreException::class)override fun `archiveDaily`(`taskId`: kotlin.String, `nowMs`: kotlin.Long)
@@ -5689,6 +5862,25 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         it,
         
         FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * The server has a push: forgets its outbox entries and keeps its clock.
+     */
+    @Throws(CoreException::class)override fun `finishSyncPush`(`throughSeq`: kotlin.Long, `hlc`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_finish_sync_push(
+        it,
+        
+        FfiConverterLong.lower(`throughSeq`),
+        FfiConverterString.lower(`hlc`),
         FfiConverterLong.lower(`nowMs`),_status)
 }
     }
@@ -6336,6 +6528,26 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 }
     }
     
+    
+
+    
+    /**
+     * The outbox's next batch as a `POST /v1/push` body, stamped from the
+     * stored clock; nothing when the outbox is empty.
+     */
+    @Throws(CoreException::class)override fun `prepareSyncPush`(`limit`: kotlin.UInt, `wallMs`: kotlin.Long): SyncPushBatch? {
+            return FfiConverterOptionalTypeSyncPushBatch.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_prepare_sync_push(
+        it,
+        
+        FfiConverterUInt.lower(`limit`),
+        FfiConverterLong.lower(`wallMs`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -7369,6 +7581,310 @@ public object FfiConverterTypeCoreWorkspace: FfiConverter<CoreWorkspace, Long> {
     override fun allocationSize(value: CoreWorkspace) = 8UL
 
     override fun write(value: CoreWorkspace, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * A pull being gathered: every page of a cycle lands in one transaction,
+ * because a task can arrive a page before its list and only the end of the
+ * whole pull is a consistent state. The rows wait here, in the core, rather
+ * than crossing back to the client between pages.
+ */
+public interface SyncPullInterface {
+    
+    /**
+     * Takes in one `GET /v1/changes` body.
+     */
+    fun `addPage`(`body`: kotlin.String): SyncPullPage
+    
+    /**
+     * The rows gathered so far.
+     */
+    fun `rowCount`(): kotlin.UInt
+    
+    companion object
+}
+
+/**
+ * A pull being gathered: every page of a cycle lands in one transaction,
+ * because a task can arrive a page before its list and only the end of the
+ * whole pull is a consistent state. The rows wait here, in the core, rather
+ * than crossing back to the client between pages.
+ */
+open class SyncPull: Disposable, AutoCloseable, SyncPullInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    constructor() :
+        this(UniffiWithHandle, 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_constructor_syncpull_new(
+    
+        _status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_takt_core_fn_free_syncpull(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_takt_core_fn_clone_syncpull(handle, status)
+        }
+    }
+
+    
+    /**
+     * Takes in one `GET /v1/changes` body.
+     */
+    @Throws(CoreException::class)override fun `addPage`(`body`: kotlin.String): SyncPullPage {
+            return FfiConverterTypeSyncPullPage.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_syncpull_add_page(
+        it,
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The rows gathered so far.
+     */override fun `rowCount`(): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_syncpull_row_count(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncPull: FfiConverter<SyncPull, Long> {
+    override fun lower(value: SyncPull): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): SyncPull {
+        return SyncPull(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): SyncPull {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: SyncPull) = 8UL
+
+    override fun write(value: SyncPull, buf: ByteBuffer) {
         buf.putLong(lower(value))
     }
 }
@@ -13849,6 +14365,361 @@ public object FfiConverterTypeSidebarOutlineRow: FfiConverterRustBuffer<SidebarO
 
 
 /**
+ * `GET /v1/account`: who this device is signed in as, and every device on
+ * the account.
+ */
+data class SyncAccountBody (
+    var `accountId`: kotlin.String
+    , 
+    var `email`: kotlin.String?
+    , 
+    var `devices`: List<SyncAccountDevice>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncAccountBody: FfiConverterRustBuffer<SyncAccountBody> {
+    override fun read(buf: ByteBuffer): SyncAccountBody {
+        return SyncAccountBody(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceTypeSyncAccountDevice.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SyncAccountBody) = (
+            FfiConverterString.allocationSize(value.`accountId`) +
+            FfiConverterOptionalString.allocationSize(value.`email`) +
+            FfiConverterSequenceTypeSyncAccountDevice.allocationSize(value.`devices`)
+    )
+
+    override fun write(value: SyncAccountBody, buf: ByteBuffer) {
+            FfiConverterString.write(value.`accountId`, buf)
+            FfiConverterOptionalString.write(value.`email`, buf)
+            FfiConverterSequenceTypeSyncAccountDevice.write(value.`devices`, buf)
+    }
+}
+
+
+
+/**
+ * A device on the account, from `GET /v1/account`.
+ */
+data class SyncAccountDevice (
+    var `id`: kotlin.String
+    , 
+    var `name`: kotlin.String?
+    , 
+    var `platform`: kotlin.String?
+    , 
+    var `createdAt`: kotlin.String
+    , 
+    var `lastSeenAt`: kotlin.String?
+    , 
+    /**
+     * The device asking.
+     */
+    var `current`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncAccountDevice: FfiConverterRustBuffer<SyncAccountDevice> {
+    override fun read(buf: ByteBuffer): SyncAccountDevice {
+        return SyncAccountDevice(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SyncAccountDevice) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterOptionalString.allocationSize(value.`name`) +
+            FfiConverterOptionalString.allocationSize(value.`platform`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterOptionalString.allocationSize(value.`lastSeenAt`) +
+            FfiConverterBoolean.allocationSize(value.`current`)
+    )
+
+    override fun write(value: SyncAccountDevice, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterOptionalString.write(value.`name`, buf)
+            FfiConverterOptionalString.write(value.`platform`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterOptionalString.write(value.`lastSeenAt`, buf)
+            FfiConverterBoolean.write(value.`current`, buf)
+    }
+}
+
+
+
+/**
+ * A sync server, a Supabase project and that project's publishable key.
+ */
+data class SyncEndpointsRecord (
+    var `serverUrl`: kotlin.String
+    , 
+    var `supabaseUrl`: kotlin.String
+    , 
+    var `supabaseKey`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncEndpointsRecord: FfiConverterRustBuffer<SyncEndpointsRecord> {
+    override fun read(buf: ByteBuffer): SyncEndpointsRecord {
+        return SyncEndpointsRecord(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SyncEndpointsRecord) = (
+            FfiConverterString.allocationSize(value.`serverUrl`) +
+            FfiConverterString.allocationSize(value.`supabaseUrl`) +
+            FfiConverterString.allocationSize(value.`supabaseKey`)
+    )
+
+    override fun write(value: SyncEndpointsRecord, buf: ByteBuffer) {
+            FfiConverterString.write(value.`serverUrl`, buf)
+            FfiConverterString.write(value.`supabaseUrl`, buf)
+            FfiConverterString.write(value.`supabaseKey`, buf)
+    }
+}
+
+
+
+/**
+ * What typed endpoints came to: the endpoints, or why they can't be used.
+ */
+data class SyncEndpointsResolution (
+    var `endpoints`: SyncEndpointsRecord?
+    , 
+    /**
+     * A sentence to show.
+     */
+    var `problem`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncEndpointsResolution: FfiConverterRustBuffer<SyncEndpointsResolution> {
+    override fun read(buf: ByteBuffer): SyncEndpointsResolution {
+        return SyncEndpointsResolution(
+            FfiConverterOptionalTypeSyncEndpointsRecord.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SyncEndpointsResolution) = (
+            FfiConverterOptionalTypeSyncEndpointsRecord.allocationSize(value.`endpoints`) +
+            FfiConverterOptionalString.allocationSize(value.`problem`)
+    )
+
+    override fun write(value: SyncEndpointsResolution, buf: ByteBuffer) {
+            FfiConverterOptionalTypeSyncEndpointsRecord.write(value.`endpoints`, buf)
+            FfiConverterOptionalString.write(value.`problem`, buf)
+    }
+}
+
+
+
+/**
+ * What applying a pull came to.
+ */
+data class SyncPullOutcome (
+    var `pulled`: kotlin.UInt
+    , 
+    /**
+     * Whether the workspace changed, so the UI knows to reload.
+     */
+    var `changed`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncPullOutcome: FfiConverterRustBuffer<SyncPullOutcome> {
+    override fun read(buf: ByteBuffer): SyncPullOutcome {
+        return SyncPullOutcome(
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SyncPullOutcome) = (
+            FfiConverterUInt.allocationSize(value.`pulled`) +
+            FfiConverterBoolean.allocationSize(value.`changed`)
+    )
+
+    override fun write(value: SyncPullOutcome, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`pulled`, buf)
+            FfiConverterBoolean.write(value.`changed`, buf)
+    }
+}
+
+
+
+/**
+ * What a pulled page said about the feed.
+ */
+data class SyncPullPage (
+    /**
+     * Where the next page starts.
+     */
+    var `cursor`: kotlin.Long
+    , 
+    /**
+     * Whether to ask for another page straight away.
+     */
+    var `hasMore`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncPullPage: FfiConverterRustBuffer<SyncPullPage> {
+    override fun read(buf: ByteBuffer): SyncPullPage {
+        return SyncPullPage(
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SyncPullPage) = (
+            FfiConverterLong.allocationSize(value.`cursor`) +
+            FfiConverterBoolean.allocationSize(value.`hasMore`)
+    )
+
+    override fun write(value: SyncPullPage, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`cursor`, buf)
+            FfiConverterBoolean.write(value.`hasMore`, buf)
+    }
+}
+
+
+
+/**
+ * A push body ready to send, and what to acknowledge once the server has it.
+ */
+data class SyncPushBatch (
+    /**
+     * `POST /v1/push`'s JSON body.
+     */
+    var `body`: kotlin.String
+    , 
+    /**
+     * The newest outbox entry folded in.
+     */
+    var `throughSeq`: kotlin.Long
+    , 
+    /**
+     * How many rows the body carries.
+     */
+    var `count`: kotlin.UInt
+    , 
+    /**
+     * The clock after stamping them, stored by `finish_push`.
+     */
+    var `hlc`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSyncPushBatch: FfiConverterRustBuffer<SyncPushBatch> {
+    override fun read(buf: ByteBuffer): SyncPushBatch {
+        return SyncPushBatch(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SyncPushBatch) = (
+            FfiConverterString.allocationSize(value.`body`) +
+            FfiConverterLong.allocationSize(value.`throughSeq`) +
+            FfiConverterUInt.allocationSize(value.`count`) +
+            FfiConverterString.allocationSize(value.`hlc`)
+    )
+
+    override fun write(value: SyncPushBatch, buf: ByteBuffer) {
+            FfiConverterString.write(value.`body`, buf)
+            FfiConverterLong.write(value.`throughSeq`, buf)
+            FfiConverterUInt.write(value.`count`, buf)
+            FfiConverterString.write(value.`hlc`, buf)
+    }
+}
+
+
+
+/**
  * Open and closed task counts, for overview screens.
  */
 data class TaskCounts (
@@ -18911,6 +19782,70 @@ public object FfiConverterOptionalTypeSessionRow: FfiConverterRustBuffer<Session
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeSyncEndpointsRecord: FfiConverterRustBuffer<SyncEndpointsRecord?> {
+    override fun read(buf: ByteBuffer): SyncEndpointsRecord? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeSyncEndpointsRecord.read(buf)
+    }
+
+    override fun allocationSize(value: SyncEndpointsRecord?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeSyncEndpointsRecord.allocationSize(value)
+        }
+    }
+
+    override fun write(value: SyncEndpointsRecord?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeSyncEndpointsRecord.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeSyncPushBatch: FfiConverterRustBuffer<SyncPushBatch?> {
+    override fun read(buf: ByteBuffer): SyncPushBatch? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeSyncPushBatch.read(buf)
+    }
+
+    override fun allocationSize(value: SyncPushBatch?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeSyncPushBatch.allocationSize(value)
+        }
+    }
+
+    override fun write(value: SyncPushBatch?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeSyncPushBatch.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeTaskRow: FfiConverterRustBuffer<TaskRow?> {
     override fun read(buf: ByteBuffer): TaskRow? {
         if (buf.get().toInt() == 0) {
@@ -20771,6 +21706,34 @@ public object FfiConverterSequenceTypeSidebarOutlineRow: FfiConverterRustBuffer<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeSyncAccountDevice: FfiConverterRustBuffer<List<SyncAccountDevice>> {
+    override fun read(buf: ByteBuffer): List<SyncAccountDevice> {
+        val len = buf.getInt()
+        return List<SyncAccountDevice>(len) {
+            FfiConverterTypeSyncAccountDevice.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SyncAccountDevice>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSyncAccountDevice.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SyncAccountDevice>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSyncAccountDevice.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeTaskProgressCount: FfiConverterRustBuffer<List<TaskProgressCount>> {
     override fun read(buf: ByteBuffer): List<TaskProgressCount> {
         val len = buf.getInt()
@@ -22474,6 +23437,211 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterOptionalString.lower(`clock`),
         FfiConverterString.lower(`deviceId`),
         FfiConverterLong.lower(`wallMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A server address as typed: trimmed, and given `https://` when it has no
+         * scheme. Nothing when it still isn't an http(s) address with a host.
+         * `SyncServer.url(from:)`.
+         */ fun `syncHttpUrl`(`typed`: kotlin.String): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_http_url(
+    
+        
+        FfiConverterString.lower(`typed`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `typed` as an http(s) address without a query, fragment or trailing slash,
+         * and without any of `dropping_suffixes` pasted on the end (a Supabase URL
+         * copied from an API example often ends `/rest/v1`). Nothing when it isn't
+         * an address with a host.
+         */ fun `syncNormalisedUrl`(`typed`: kotlin.String, `droppingSuffixes`: List<kotlin.String>): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_normalised_url(
+    
+        
+        FfiConverterString.lower(`typed`),
+        FfiConverterSequenceString.lower(`droppingSuffixes`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The endpoints as typed under "Use a different server". A blank server is
+         * `hosted`'s; a blank Supabase URL *and* key are `hosted`'s project.
+         * Anything else that can't be used comes back as a problem to show.
+         */ fun `syncResolveEndpoints`(`server`: kotlin.String, `supabaseUrl`: kotlin.String, `supabaseKey`: kotlin.String, `hosted`: SyncEndpointsRecord): SyncEndpointsResolution {
+            return FfiConverterTypeSyncEndpointsResolution.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_resolve_endpoints(
+    
+        
+        FfiConverterString.lower(`server`),
+        FfiConverterString.lower(`supabaseUrl`),
+        FfiConverterString.lower(`supabaseKey`),
+        FfiConverterTypeSyncEndpointsRecord.lower(`hosted`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * How long to wait before the next long-poll after `failures` failed cycles
+         * in a row: 2, 4, 8 … seconds, capped at five minutes, so an outage costs
+         * nothing.
+         */ fun `syncBackoffSeconds`(`failures`: kotlin.UInt): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_backoff_seconds(
+    
+        
+        FfiConverterUInt.lower(`failures`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether a body is a JSON object, as Supabase's `/auth/v1/settings` is.
+         */ fun `syncBodyIsJsonObject`(`body`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_body_is_json_object(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Reads `GET /v1/account`'s body. Fields the apps do not know are ignored.
+         */
+    @Throws(CoreException::class) fun `syncDecodeAccount`(`body`: kotlin.String): SyncAccountBody {
+            return FfiConverterTypeSyncAccountBody.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_decode_account(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * What to show for a refusal whose body was `body`.
+         */ fun `syncFailureMessage`(`status`: kotlin.Int, `body`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_failure_message(
+    
+        
+        FfiConverterInt.lower(`status`),
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Whether a `/health` body is a Takt sync server's `{"ok": true}`.
+         */ fun `syncHealthIsOk`(`body`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_health_is_ok(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * What to show for a refusal with `message`, the server's own words: those
+         * as a sentence, or its status when it gave none.
+         */ fun `syncRefusalText`(`status`: kotlin.Int, `message`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_refusal_text(
+    
+        
+        FfiConverterInt.lower(`status`),
+        FfiConverterString.lower(`message`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `POST /v1/devices`'s body: this device on the account.
+         */ fun `syncRegisterDeviceBody`(`id`: kotlin.String, `name`: kotlin.String, `platform`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_register_device_body(
+    
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`name`),
+        FfiConverterString.lower(`platform`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The server and Supabase write lowercase fragments; the apps show
+         * sentences: trimmed, capitalised, and closed with a full stop unless they
+         * already end in one.
+         */ fun `syncSentence`(`message`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_sentence(
+    
+        
+        FfiConverterString.lower(`message`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The `{"error": "..."}` a refusal carries, or nothing (empty) when its
+         * body is not one.
+         */ fun `syncServerMessage`(`body`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_server_message(
+    
+        
+        FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A server timestamp (RFC 3339, with up to nine fractional digits, as
+         * chrono writes them) in milliseconds since 1970, cut to the millisecond.
+         */ fun `syncTimestampMs`(`text`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sync_timestamp_ms(
+    
+        
+        FfiConverterString.lower(`text`),_status)
 }
     )
     }

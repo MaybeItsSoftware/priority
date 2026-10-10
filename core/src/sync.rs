@@ -1,8 +1,10 @@
 //! The sync engine's side of the workspace database: what the device
 //! remembers about its pairing, the outbox of local changes coalesced for a
-//! push, and applying a pull. The transport (HTTP, auth, the HLC stamping of a
-//! push) stays with each client; this is everything that reads or writes the
-//! file. Replaces `WorkspaceStore+Sync.swift` and Kotlin's `SyncStore`.
+//! push, and applying a pull. `wire` makes the push body and reads the pulled
+//! pages, stamping and receiving the clock on the way, and `endpoints` reads
+//! typed server addresses. The transport (HTTP, auth, the long poll) stays
+//! with each client. Replaces `WorkspaceStore+Sync.swift` and Kotlin's
+//! `SyncStore`.
 //!
 //! Writes made while applying a pull run with `sync_control.applying` on, so
 //! the outbox triggers do not echo them back to the server.
@@ -757,8 +759,12 @@ fn base64(bytes: &[u8]) -> String {
     out
 }
 
+pub mod endpoints;
 #[cfg(test)]
 mod tests;
+pub mod wire;
+#[cfg(test)]
+mod wire_tests;
 
 /// The stamp for a local edit at `wall_ms`, after `clock` (absent before the
 /// first push, when the clock starts at zero on `device_id`). Absent when
