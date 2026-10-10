@@ -64,16 +64,23 @@ private struct FocusPanelStrip: View {
 
   var body: some View {
     HStack(spacing: theme.space.md) {
+      // The buttons lie over the title's tail rather than joining the row, so
+      // hovering moves nothing: the title keeps its width and the clock its
+      // place, instead of both being squeezed while the buttons fade in.
       Text(task.title)
         .font(theme.bodyFont())
         .foregroundStyle(theme.ink)
         .lineLimit(1)
         .truncationMode(.tail)
-      Spacer(minLength: theme.space.sm)
-      if isHovered {
-        actions
-          .transition(.opacity)
-      }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .trailing) {
+          if isHovered {
+            actions
+              .padding(.leading, theme.space.sm)
+              .background(theme.paper)
+              .transition(.opacity)
+          }
+        }
       TimelineView(.periodic(from: .now, by: 1)) { context in
         let reading = FocusTimerDisplay.reading(
           elapsed: TimeInterval(session.elapsedSeconds(now: context.date)),
@@ -84,7 +91,10 @@ private struct FocusPanelStrip: View {
           .monospacedDigit()
           .foregroundStyle(isPaused ? theme.muted : (reading.isOverrun ? theme.warning : theme.primary))
           .contentTransition(.numericText())
+          .lineLimit(1)
+          .fixedSize()
       }
+      .layoutPriority(1)
     }
     .padding(.horizontal, theme.space.lg)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
