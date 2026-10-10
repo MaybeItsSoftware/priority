@@ -319,7 +319,6 @@ import SwiftUI
     integrations.dataSource = integrationDataSourceAdapter
     let dailyLogDataSourceAdapter = DailyLogDataSourceAdapter(
       repository: repository,
-      taskListViewModel: taskListViewModel,
       startDates: startDates
     )
     self.dailyLogDataSourceAdapter = dailyLogDataSourceAdapter

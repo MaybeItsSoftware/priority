@@ -10,7 +10,9 @@ public struct TaskFilterEngine {
 
   // MARK: - Due bucket classification
 
-  public static func classifyDueBucket<Task: VisibilityTask>(task: Task) -> RootDueBucket {
+  public static func classifyDueBucket<Task: VisibilityTask>(
+    task: Task, now: Date = Date(), calendar: Calendar = .current
+  ) -> RootDueBucket {
     let dueText = task.due?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
     guard !dueText.isEmpty else { return .noDueDate }
     if dueText == "asap" { return .asap }
@@ -19,12 +21,14 @@ public struct TaskFilterEngine {
     if dueText == "next week" || dueText == "next 7 days" { return .nextSevenDays }
     guard let dueDate = task.dueDate else { return .future }
 
-    let calendar = Calendar.current
-    let now = Date()
     let todayStart = calendar.startOfDay(for: now)
     if dueDate < todayStart { return .overdue }
-    if calendar.isDateInToday(dueDate) { return .today }
-    if calendar.isDateInTomorrow(dueDate) { return .tomorrow }
+    if calendar.isDate(dueDate, inSameDayAs: now) { return .today }
+    if let tomorrow = calendar.date(byAdding: .day, value: 1, to: todayStart),
+      calendar.isDate(dueDate, inSameDayAs: tomorrow)
+    {
+      return .tomorrow
+    }
     guard let sevenDaysOut = calendar.date(byAdding: .day, value: 8, to: todayStart) else {
       return .future
     }

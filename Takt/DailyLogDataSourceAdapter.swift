@@ -1,46 +1,29 @@
 import Foundation
 import TaktCore
 
-/// Bridges `DailyLogManager`'s data needs to the repository and view model, so
+/// Bridges `DailyLogManager`'s data needs to the repository, so
 /// `AppCoordinator` doesn't have to conform to yet another protocol. Same role
 /// as `IntegrationDataSourceAdapter`.
 @MainActor
 final class DailyLogDataSourceAdapter: DailyLogDataSource {
   private let repository: TaskRepository
-  private let taskListViewModel: TaskListViewModel
   private let startDates: StartDateManager
 
   init(
     repository: TaskRepository,
-    taskListViewModel: TaskListViewModel,
     startDates: StartDateManager
   ) {
     self.repository = repository
-    self.taskListViewModel = taskListViewModel
     self.startDates = startDates
   }
 
-  /// The day's plan: open tasks due today or already overdue, plus anything
-  /// whose start date has arrived.
-  ///
-  /// Overdue tasks are included deliberately. They are on today's plate whether
-  /// or not today is when they were meant to be done, and a "planned" figure
-  /// that ignored them would flatter the day.
+  /// The day's plan over the Checkvist tasks: see `DayLogPlan` for what it
+  /// counts, and for why it is not the workspace's Today.
   var plannedTaskIdsForToday: [Int] {
-    repository.tasks
-      .filter { task in
-        guard task.status == 0 else { return false }
-        switch taskListViewModel.rootDueBucket(for: task) {
-        case .overdue, .asap, .today:
-          return true
-        case .tomorrow, .nextSevenDays, .future, .noDueDate:
-          return startDates.startDate(for: task).map { startDate in
-            Calendar.current.isDateInToday(startDate)
-              || startDate < Calendar.current.startOfDay(for: Date())
-          } ?? false
-        }
-      }
-      .map(\.id)
+    DayLogPlan.plannedTaskIds(
+      openTasks: repository.tasks.filter { $0.status == 0 },
+      startDate: { [startDates] task in startDates.startDate(for: task) }
+    )
   }
 
   var taskTitlesById: [Int: String] {
