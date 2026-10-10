@@ -23,6 +23,7 @@ pub mod lists;
 pub mod next_up;
 pub mod packed_rows;
 pub mod periodic;
+pub mod progress;
 pub mod ranking;
 pub mod reads;
 pub mod records;

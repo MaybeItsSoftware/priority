@@ -711,13 +711,9 @@ pub fn finish_block(
     if let Some(multiplier) = quality_multiplier
         && elapsed > 0
     {
-        let multiplier = if multiplier.is_finite() {
-            multiplier.clamp(0.0, 5.0)
-        } else {
-            1.0
-        };
-        let minutes = ((elapsed as f64 / 60.0) * 10.0).round() / 10.0;
-        let points = (minutes * multiplier * 10.0).round() / 10.0;
+        let minutes = crate::progress::focus_minutes(elapsed);
+        let points = crate::progress::focus_score(elapsed, multiplier);
+        let multiplier = crate::progress::clamped_focus_multiplier(multiplier);
         transaction.execute(
             "INSERT INTO focus_awards (id, sessionId, taskId, taskTitle, seconds, minutes, multiplier, points, awardedAt)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
