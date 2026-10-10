@@ -10,7 +10,7 @@ import TaktCore
 /// Owns the raw network/auth state directly via a strong `TaskRepository`
 /// reference — `listId`, `errorMessage`, `activeCredentials`, and the active
 /// sync plugin all come from there. The sibling managers it orchestrates
-/// (kanban, timer, focus session, integrations, the root-view mode, the
+/// (timer, focus session, integrations, the root-view mode, the
 /// navigation cursor) are reached through the `SyncHost` seam so this file
 /// stays free of app-only types and can be exercised by
 /// `TaktAppLogicTests` against a stub host. `AppCoordinator` is the
@@ -74,22 +74,11 @@ final class SyncService {
           openTaskIds: Set(repository.tasks.map(\.id)),
           listId: repository.listId
         )
-        if host.taskMoveMode == .kanbanColumn {
-          host.clampKanbanSelection()
-        } else if host.currentSiblingIndex >= fetchedTasks.count {
+        if host.currentSiblingIndex >= fetchedTasks.count {
           host.currentSiblingIndex = 0
         }
         host.clampFocusSessionForTasks(fetchedTasks)
         host.reconcileTimersAfterFetch(previousTasks: previousTasks, openTasks: fetchedTasks)
-        let latestOpenTaskIDs = Set(fetchedTasks.map(\.id))
-        if let filterParentId = host.kanbanFilterParentId,
-          !latestOpenTaskIDs.contains(filterParentId)
-        {
-          host.kanbanFilterParentId = nil
-          if host.taskMoveMode == .kanbanColumn {
-            host.currentParentId = 0
-          }
-        }
         if !repository.listId.isEmpty && repository.canAttemptLogin {
           host.markOnboardingCompleted()
         }
@@ -121,8 +110,6 @@ final class SyncService {
     host.currentParentId = 0
     host.currentSiblingIndex = 0
     repository.clearPendingOfflineWork()
-    host.kanbanFilterParentId = nil
-    host.clearKanbanSelection()
     repository.errorMessage = nil
     await fetchTopTask()
   }
@@ -462,8 +449,6 @@ final class SyncService {
     switch host.taskMoveMode {
     case .priorityQueue:
       movePriorityTask(task, direction: direction)
-    case .kanbanColumn:
-      host.moveTaskWithinKanbanColumn(taskId: task.id, direction: direction)
     case .dueDate:
       moveDueTaskByCopyingDate(task: task, direction: direction)
     case .siblingPosition:

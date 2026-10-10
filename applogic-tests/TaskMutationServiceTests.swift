@@ -495,54 +495,6 @@ final class TaskMutationServiceTests: XCTestCase {
     XCTAssertTrue(repository.pendingTaskMutations.isEmpty)
   }
 
-  func testAddingARootTaskClaimsTheKanbanSelectionThenHandsItToTheRealId() async {
-    plugin.nextCreatedTaskId = 500
-
-    let work = service.addRootTask(content: "new card", due: "today")
-    XCTAssertEqual(repository.tasks.count, 1)
-    let optimisticId = try? XCTUnwrap(repository.tasks.first?.id)
-    XCTAssertEqual(host.kanbanSelectedTaskId, optimisticId)
-    XCTAssertLessThan(optimisticId ?? 0, 0, "placeholder ids are negative")
-
-    await work?.value
-
-    XCTAssertEqual(repository.tasks.map(\.id), [500])
-    XCTAssertEqual(host.kanbanSelectedTaskId, 500)
-    XCTAssertEqual(repository.tasks.first?.due, "today")
-    guard case .add(let undoId) = host.lastUndoableAction else {
-      return XCTFail("expected the add to be undoable")
-    }
-    XCTAssertEqual(undoId, 500)
-  }
-
-  /// The coordinator's copy had no offline branch at all — a card added while
-  /// disconnected was removed again the moment the request failed.
-  func testARootTaskAddedOfflineIsQueuedRatherThanDiscarded() async {
-    repository.isNetworkReachable = false
-    plugin.createTaskError = CheckvistSessionError.requestFailed
-
-    await service.addRootTask(content: "new card", due: "today")?.value
-
-    XCTAssertEqual(repository.tasks.count, 1, "the card stays on the board")
-    let tempId = try? XCTUnwrap(repository.tasks.first?.id)
-    XCTAssertEqual(repository.pendingTaskCreates.map(\.content), ["new card"])
-    XCTAssertEqual(
-      repository.pendingTaskMutations[tempId ?? 0]?.due, "today",
-      "the due date is queued separately — create does not carry one")
-
-    let persisted = repository.pendingOfflineWorkStore.load()
-    XCTAssertEqual(persisted.creates.map(\.content), ["new card"])
-  }
-
-  func testAddingARootTaskWithoutAListFailsLoudlyAndAddsNothing() {
-    repository.listId = ""
-
-    service.addRootTask(content: "new card", due: nil)
-
-    XCTAssertTrue(repository.tasks.isEmpty)
-    XCTAssertNotNil(repository.errorMessage)
-  }
-
   // MARK: - Helpers
 
   /// Lets the unstructured `Task` that `deleteTask` spawns run to completion.

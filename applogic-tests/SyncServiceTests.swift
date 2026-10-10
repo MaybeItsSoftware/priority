@@ -218,29 +218,6 @@ final class SyncServiceTests: XCTestCase {
     XCTAssertEqual(host.onboardingCompletedCallCount, 1)
   }
 
-  func testFetchInKanbanModeClampsTheKanbanSelectionInsteadOfTheListCursor() async {
-    plugin.openTasksByListId["42"] = [makeTask(id: 1, content: "alpha")]
-    host.taskMoveMode = .kanbanColumn
-    host.currentSiblingIndex = 9
-
-    await service.fetchTopTask()
-
-    XCTAssertEqual(host.clampKanbanSelectionCallCount, 1)
-    XCTAssertEqual(host.currentSiblingIndex, 9, "the list cursor is not the kanban cursor")
-  }
-
-  func testFetchClearsAKanbanFilterWhoseParentTaskIsGone() async {
-    plugin.openTasksByListId["42"] = [makeTask(id: 1, content: "alpha")]
-    host.taskMoveMode = .kanbanColumn
-    host.kanbanFilterParentId = 77
-    host.currentParentId = 77
-
-    await service.fetchTopTask()
-
-    XCTAssertNil(host.kanbanFilterParentId)
-    XCTAssertEqual(host.currentParentId, 0, "scope falls back to the root")
-  }
-
   // MARK: - Fetch races
 
   /// Nothing serialises the fetch callers — the become-active auto-refresh, the
@@ -328,15 +305,12 @@ final class SyncServiceTests: XCTestCase {
     repository.enqueuePendingDelete(5)
     host.currentParentId = 12
     host.currentSiblingIndex = 3
-    host.kanbanFilterParentId = 12
 
     await service.switchCheckvistList(to: " 77 ")
 
     XCTAssertEqual(repository.listId, "77")
     XCTAssertEqual(host.currentParentId, 0)
     XCTAssertEqual(host.currentSiblingIndex, 0)
-    XCTAssertNil(host.kanbanFilterParentId)
-    XCTAssertEqual(host.clearKanbanSelectionCallCount, 1)
     XCTAssertFalse(
       repository.hasPendingOfflineWork, "queued work belongs to the list it was queued against")
   }
@@ -345,22 +319,9 @@ final class SyncServiceTests: XCTestCase {
     await service.switchCheckvistList(to: "42")
 
     XCTAssertTrue(plugin.fetchOpenTasksCalls.isEmpty)
-    XCTAssertEqual(host.clearKanbanSelectionCallCount, 0)
   }
 
   // MARK: - Reorder routing
-
-  func testMoveInKanbanModeIsHandedToTheHostRatherThanTouchingPositions() async {
-    repository.tasks = [makeTask(id: 1, position: 1), makeTask(id: 2, position: 2)]
-    host.taskMoveMode = .kanbanColumn
-
-    await service.moveTask(repository.tasks[0], direction: 1)
-
-    XCTAssertEqual(host.kanbanNudges.map(\.taskId), [1])
-    XCTAssertEqual(host.kanbanNudges.map(\.direction), [1])
-    XCTAssertEqual(repository.tasks.map(\.position), [1, 2], "positions are untouched")
-    XCTAssertTrue(plugin.moveTaskCalls.isEmpty)
-  }
 
   func testSiblingMoveSwapsPositionsAndQueuesTheServerReorder() async {
     repository.tasks = [makeTask(id: 1, position: 1), makeTask(id: 2, position: 2)]

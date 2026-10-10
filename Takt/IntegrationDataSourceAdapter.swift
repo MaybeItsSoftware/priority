@@ -3,13 +3,10 @@ import Foundation
 /// Satisfies `IntegrationCoordinator`'s `IntegrationDataSource` requirement from
 /// the concrete state owners instead of routing through `AppCoordinator`'s
 /// forwarders: `tasks` / `listId` / `activeCredentials` come from
-/// `TaskRepository`. `currentTask` is genuinely coordinator-derived (it
-/// dispatches on `rootTaskView` and the kanban selection), so the adapter still
-/// reaches it through a `weak` `AppCoordinator` — that coupling drops away once
-/// `currentTask` moves down onto `TaskListViewModel`/a navigation service.
+/// `TaskRepository`. `currentTask` is the view model's, which the coordinator
+/// owns, so the adapter reaches it through a `weak` `AppCoordinator`.
 ///
-/// Mirrors `KanbanTaskDataSourceAdapter`; it's what lets the `tasks` forwarder
-/// be deleted from `AppCoordinator`.
+/// It's what let the `tasks` forwarder be deleted from `AppCoordinator`.
 @MainActor
 final class IntegrationDataSourceAdapter: IntegrationDataSource {
   private let repository: TaskRepository

@@ -5,14 +5,13 @@ import TaktCore
 // need, expressed without AppKit, SwiftUI, or any app-only model type.
 //
 // Both services used to hold a `weak var coordinator: AppCoordinator?` and
-// reach through it into `taskListViewModel`, `quickEntry`, `kanban`, `timer`,
+// reach through it into `taskListViewModel`, `quickEntry`, `timer`,
 // `integrations`, and friends. That made them impossible to compile — let
 // alone test — outside the Xcode app target, so the two files carrying the
 // optimistic-mutation and offline-replay logic had no unit coverage at all.
 //
 // These protocols are the seam. Everything that genuinely needs the UI layer
-// (haptics, the completion animation, kanban column maths, the recurrence
-// rule store) is expressed as a *behaviour* the host performs rather than as a
+// (haptics, the completion animation, the recurrence rule store) is expressed as a *behaviour* the host performs rather than as a
 // manager object the service pokes at, so the services can move into
 // `TaktAppLogic` and run against a test double. `AppCoordinator` provides
 // the production conformance in `AppCoordinator+ServiceHosts.swift`.
@@ -24,11 +23,10 @@ import TaktCore
 
 /// How `SyncService.moveTask` should reorder, derived from the active root
 /// view. Mirrors the app-only `RootTaskView` cases that behave differently:
-/// `.all`, `.tags`, `.eisenhower`, and `.daily` all collapse to
+/// `.all`, `.tags`, `.kanban`, `.eisenhower`, and `.daily` all collapse to
 /// `.siblingPosition`.
 enum TaskMoveMode: Equatable, Sendable {
   case priorityQueue
-  case kanbanColumn
   case dueDate
   case siblingPosition
 }
@@ -60,12 +58,6 @@ protocol TaskMutationHost: TaskServiceHost {
 
   /// The single-step undo slot. Mutations claim it as they go.
   var lastUndoableAction: UndoableAction? { get set }
-
-  /// The kanban board's selected card, as a bare id so the service needn't
-  /// know `KanbanManager`. An optimistic insert claims it immediately and then
-  /// hands it over to the real id, or the new card loses selection the moment
-  /// the server answers.
-  var kanbanSelectedTaskId: Int? { get set }
 
   /// Re-reads the list from the active sync plugin. Lives on the host because
   /// it belongs to `SyncService`, which is a sibling rather than a dependency.
@@ -121,16 +113,8 @@ protocol TaskMutationHost: TaskServiceHost {
 protocol SyncHost: TaskServiceHost {
   /// Which reorder strategy the active root view implies.
   var taskMoveMode: TaskMoveMode { get }
-  /// Root scope cursor. `SyncService` resets it when the list changes or the
-  /// kanban filter parent disappears.
+  /// Root scope cursor. `SyncService` resets it when the list changes.
   var currentParentId: Int { get set }
-
-  // Kanban. Column membership and ordering are app-only concerns, so the host
-  // takes the whole operation rather than exposing `KanbanColumn`.
-  var kanbanFilterParentId: Int? { get set }
-  func moveTaskWithinKanbanColumn(taskId: Int, direction: Int)
-  func clampKanbanSelection()
-  func clearKanbanSelection()
 
   func clampFocusSessionForTasks(_ tasks: [CheckvistTask])
 
@@ -153,14 +137,14 @@ protocol SyncHost: TaskServiceHost {
 
 // MARK: - TaskListViewModel
 
-/// The five app-only managers `TaskListViewModel` reads, as a single read-only
+/// The app-only managers `TaskListViewModel` reads, as a single read-only
 /// surface.
 ///
 /// The view model is the most load-bearing untested type in the app: it owns
 /// `cacheVersion`, whose entire job is to be correct about SwiftUI observation,
 /// and the visibility pipeline every list view renders from. It could not be
 /// reached from a test because it named `NavigationState`, `TimerManager`,
-/// `QuickEntryManager`, `PreferencesManager` and `KanbanManager` concretely,
+/// `QuickEntryManager` and `PreferencesManager` concretely,
 /// and those pull in the whole app.
 ///
 /// Everything it actually needs from them is read-only and scalar — which is
@@ -183,10 +167,8 @@ protocol TaskListViewModelHost: AnyObject {
   var timerElapsedByTaskId: [Int: TimeInterval] { get }
   /// Whether rows show their ancestor path.
   var showsTaskBreadcrumbContext: Bool { get }
-  /// The kanban board's own selection, which replaces the list's when the
-  /// board is the active view.
-  var kanbanCurrentTask: CheckvistTask? { get }
-  /// The matrix's own selection, for the same reason — an id here rather than a
-  /// task, because the view model can resolve it from a cache it already keeps.
+  /// The matrix's own selection, which replaces the list's when the matrix is
+  /// the active view — an id here rather than a task, because the view model
+  /// can resolve it from a cache it already keeps.
   var matrixSelectedTaskId: Int? { get }
 }

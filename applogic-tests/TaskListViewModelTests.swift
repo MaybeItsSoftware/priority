@@ -22,7 +22,6 @@ final class TaskListViewModelTests: XCTestCase {
     var searchText = ""
     var timerElapsedByTaskId: [Int: TimeInterval] = [:]
     var showsTaskBreadcrumbContext = false
-    var kanbanCurrentTask: CheckvistTask?
     var matrixSelectedTaskId: Int?
   }
 
@@ -170,18 +169,17 @@ final class TaskListViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.currentTask?.id, 2)
   }
 
-  /// In kanban the board owns the selection, because `visibleTasks` is
-  /// deliberately empty there — the board renders per-column lists instead.
-  func testTheKanbanBoardOwnsTheSelectionInKanbanView() {
-    let (viewModel, host, _) = makeViewModel(tasks: [task(1, "a"), task(2, "b")])
-    host.kanbanCurrentTask = task(2, "b")
+  /// The board and its selection are gone, and `visibleTasks` is deliberately
+  /// empty in that view, so a persisted kanban tab selects nothing.
+  func testAPersistedKanbanViewSelectsNothing() {
+    let (viewModel, _, _) = makeViewModel(tasks: [task(1, "a"), task(2, "b")])
     viewModel.rootTaskView = .kanban
 
-    XCTAssertEqual(viewModel.currentTask?.id, 2)
+    XCTAssertNil(viewModel.currentTask)
   }
 
   /// The matrix is not the task list either — `visibleTasks` is empty there by
-  /// design — so it needs its own selection for the same reason the board does.
+  /// design — so it needs its own selection.
   /// Without one the plot had none at all: no dot drew selected, `md` answered
   /// "No task selected", and the arrow keys moved something nothing read.
   func testTheMatrixOwnsTheSelectionInMatrixView() {
@@ -213,19 +211,6 @@ final class TaskListViewModelTests: XCTestCase {
     viewModel.invalidateCaches()
 
     XCTAssertNil(viewModel.currentTask)
-  }
-
-  /// The board's selection and the plot's are separate stores, so one must not
-  /// answer for the other when the view flips.
-  func testTheBoardAndThePlotDoNotShareASelection() {
-    let (viewModel, host, _) = makeViewModel(tasks: [task(1, "a"), task(2, "b")])
-    host.kanbanCurrentTask = task(1, "a")
-    host.matrixSelectedTaskId = 2
-
-    viewModel.rootTaskView = .kanban
-    XCTAssertEqual(viewModel.currentTask?.id, 1)
-    viewModel.rootTaskView = .eisenhower
-    XCTAssertEqual(viewModel.currentTask?.id, 2)
   }
 
   // MARK: - Ancestor walks

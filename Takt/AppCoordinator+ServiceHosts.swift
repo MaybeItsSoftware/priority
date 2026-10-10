@@ -9,7 +9,7 @@ import SwiftUI
 // This is deliberately the *only* app-only half of the split: everything here
 // is either a forward into a manager the coordinator already owns, or a piece
 // of genuinely UI-bound behaviour (haptics, the completion animation, the
-// kanban column maths, the recurrence rule store) that has no business in
+// recurrence rule store) that has no business in
 // `TaktAppLogic`. The services themselves are now testable without it.
 
 // MARK: - Shared
@@ -43,10 +43,6 @@ extension AppCoordinator: TaskMutationHost {
 
   func clampSelectionToVisibleRange() {
     focusSessionManager.clampForTasks(repository.tasks)
-    if taskListViewModel.rootTaskView == .kanban {
-      kanban.clampKanbanSelection()
-      return
-    }
     let maxIndex = max(taskListViewModel.visibleTasks.count - 1, 0)
     if navigationState.currentSiblingIndex > maxIndex {
       navigationState.currentSiblingIndex = maxIndex
@@ -56,11 +52,6 @@ extension AppCoordinator: TaskMutationHost {
   var lastUndoableAction: UndoableAction? {
     get { undoService.lastAction }
     set { undoService.lastAction = newValue }
-  }
-
-  var kanbanSelectedTaskId: Int? {
-    get { kanban.kanbanSelectedTaskId }
-    set { kanban.kanbanSelectedTaskId = newValue }
   }
 
   func fetchTopTask() async {
@@ -209,41 +200,14 @@ extension AppCoordinator: SyncHost {
   var taskMoveMode: TaskMoveMode {
     switch taskListViewModel.rootTaskView {
     case .priority: return .priorityQueue
-    case .kanban: return .kanbanColumn
     case .due: return .dueDate
-    case .all, .tags, .eisenhower, .daily: return .siblingPosition
+    case .all, .tags, .kanban, .eisenhower, .daily: return .siblingPosition
     }
   }
 
   var currentParentId: Int {
     get { navigationState.currentParentId }
     set { navigationState.currentParentId = newValue }
-  }
-
-  var kanbanFilterParentId: Int? {
-    get { kanban.kanbanFilterParentId }
-    set { kanban.kanbanFilterParentId = newValue }
-  }
-
-  /// Purely visual reorder: writes only to the per-column manual-order overlay
-  /// for whichever column currently hosts the task, never to its date,
-  /// priority, or position.
-  func moveTaskWithinKanbanColumn(taskId: Int, direction: Int) {
-    let columns = kanban.kanbanColumns
-    let hostingColumn = columns.first { column in
-      kanban.tasksForKanbanColumn(column, allColumns: columns)
-        .contains { $0.id == taskId }
-    }
-    guard let column = hostingColumn else { return }
-    kanban.nudgeTaskInColumn(taskId: taskId, in: column, direction: direction)
-  }
-
-  func clampKanbanSelection() {
-    kanban.clampKanbanSelection()
-  }
-
-  func clearKanbanSelection() {
-    kanban.kanbanSelectedTaskId = nil
   }
 
   func clampFocusSessionForTasks(_ tasks: [CheckvistTask]) {
@@ -274,7 +238,7 @@ extension AppCoordinator: SyncHost {
 
 // MARK: - TaskListViewModelHost
 
-/// Five managers, all read-only from the view model's side. Each forwards to
+/// Four managers, all read-only from the view model's side. Each forwards to
 /// the real `@Observable` object rather than caching a copy, so SwiftUI's
 /// dependency tracking still registers on the underlying property.
 /// `currentParentId`, `currentSiblingIndex` and `timerElapsedByTaskId` are
@@ -285,6 +249,5 @@ extension AppCoordinator: TaskListViewModelHost {
   var isSearchFilterActive: Bool { quickEntry.isSearchFilterActive }
   var searchText: String { quickEntry.searchText }
   var showsTaskBreadcrumbContext: Bool { preferences.showTaskBreadcrumbContext }
-  var kanbanCurrentTask: CheckvistTask? { kanban.currentKanbanTask }
   var matrixSelectedTaskId: Int? { navigationState.matrixSelectedTaskId }
 }

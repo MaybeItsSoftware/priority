@@ -35,19 +35,6 @@ struct CacheState {
   var tagsByTaskId: [Int: [String]] = [:]
   /// Pre-computed due bucket per task ID, avoiding repeated date math in filters/sorts.
   var rootDueBucket: [Int: RootDueBucket] = [:]
-  /// Where every open task sits on the matrix, coordinates inherited from an
-  /// ancestor included. Resolving this walks an ancestor chain per task, so it
-  /// belongs to a rebuild rather than to a render: `EisenhowerMatrixView` used
-  /// to compute it inside `body`, which meant every pointer move over the plot
-  /// re-walked two hundred chains.
-  var effectiveEisenhowerLevels: [Int: EffectiveEisenhowerLevel] = [:]
-  /// The matrix's plot: the current scope's placed tasks, grouped by the exact
-  /// coordinate they resolve to. One entry per point rather than per task,
-  /// because inheritance shares a coordinate exactly — see `MatrixClustering`.
-  var matrixClusters: [MatrixCluster<CheckvistTask>] = []
-  /// The matrix's rail: the current scope's open tasks with no coordinate at
-  /// all, inherited or otherwise.
-  var matrixUnplacedTasks: [CheckvistTask] = []
 
   mutating func invalidate() {
     dirty = true

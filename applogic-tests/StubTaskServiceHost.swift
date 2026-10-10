@@ -23,9 +23,6 @@ final class StubTaskServiceHost: TaskMutationHost, SyncHost {
   private(set) var beginQuickAddCallCount = 0
   private(set) var finishQuickAddCallCount = 0
   private(set) var obsidianReconcileCalls: [(openTaskIds: Set<Int>, listId: String)] = []
-  private(set) var kanbanNudges: [(taskId: Int, direction: Int)] = []
-  private(set) var clampKanbanSelectionCallCount = 0
-  private(set) var clearKanbanSelectionCallCount = 0
   private(set) var focusClampCallCount = 0
   private(set) var timerReconcileCallCount = 0
   private(set) var onboardingCompletedCallCount = 0
@@ -99,7 +96,6 @@ final class StubTaskServiceHost: TaskMutationHost, SyncHost {
   }
 
   var lastUndoableAction: UndoableAction?
-  var kanbanSelectedTaskId: Int?
 
   func fetchTopTask() async {
     fetchTopTaskCallCount += 1
@@ -169,20 +165,6 @@ final class StubTaskServiceHost: TaskMutationHost, SyncHost {
   // MARK: SyncHost
 
   var taskMoveMode: TaskMoveMode = .siblingPosition
-
-  var kanbanFilterParentId: Int?
-
-  func moveTaskWithinKanbanColumn(taskId: Int, direction: Int) {
-    kanbanNudges.append((taskId, direction))
-  }
-
-  func clampKanbanSelection() {
-    clampKanbanSelectionCallCount += 1
-  }
-
-  func clearKanbanSelection() {
-    clearKanbanSelectionCallCount += 1
-  }
 
   func clampFocusSessionForTasks(_ tasks: [CheckvistTask]) {
     focusClampCallCount += 1

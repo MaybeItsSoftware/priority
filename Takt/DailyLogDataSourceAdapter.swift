@@ -3,7 +3,7 @@ import TaktCore
 
 /// Bridges `DailyLogManager`'s data needs to the repository and view model, so
 /// `AppCoordinator` doesn't have to conform to yet another protocol. Same role
-/// as `IntegrationDataSourceAdapter` and `KanbanTaskDataSourceAdapter`.
+/// as `IntegrationDataSourceAdapter`.
 @MainActor
 final class DailyLogDataSourceAdapter: DailyLogDataSource {
   private let repository: TaskRepository

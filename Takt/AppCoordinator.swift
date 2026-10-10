@@ -84,8 +84,6 @@ import SwiftUI
 
   var quickEntry: QuickEntryManager
 
-  let kanban: KanbanManager
-
   let focusSessionManager: FocusSessionManager
 
   let dailyLog: DailyLogManager
@@ -115,15 +113,11 @@ import SwiftUI
   private(set) var undoService: UndoService!
   @ObservationIgnored private(set) var taskMutationService: TaskMutationService!
   @ObservationIgnored private(set) var syncService: SyncService!
-  /// Strong-held because `KanbanManager.dataSource` is `weak`. Bridges the
-  /// kanban data-source protocol to repository/navigationState/taskListViewModel
-  /// so AppCoordinator no longer has to conform to `KanbanTaskDataSource`.
-  @ObservationIgnored private var kanbanDataSourceAdapter: KanbanTaskDataSourceAdapter!
-  /// Strong-held because `IntegrationCoordinator.dataSource` is `weak`. Same
-  /// role as `kanbanDataSourceAdapter` — bridges the protocol to
-  /// repository/coordinator so AppCoordinator needn't conform.
+  /// Strong-held because `IntegrationCoordinator.dataSource` is `weak`.
+  /// Bridges the protocol to repository/coordinator so AppCoordinator needn't
+  /// conform.
   @ObservationIgnored private var integrationDataSourceAdapter: IntegrationDataSourceAdapter!
-  /// Strong-held for the same reason as the two adapters above:
+  /// Strong-held for the same reason as the adapter above:
   /// `DailyLogManager.dataSource` is `weak`.
   @ObservationIgnored private var dailyLogDataSourceAdapter: DailyLogDataSourceAdapter!
   /// Owned here (rather than on `LifecycleController`) so `deinit`, which is
@@ -222,10 +216,6 @@ import SwiftUI
     let storedPluginSelectionOnboardingCompletedFlag = preferencesStore.optionalBool(
       .pluginSelectionOnboardingCompleted)
 
-    self.kanban = KanbanManager(
-      preferencesStore: preferencesStore,
-      cacheInvalidationBus: cacheInvalidationBus
-    )
     self.focusSessionManager = FocusSessionManager(
       preferencesStore: preferencesStore,
       cacheInvalidationBus: cacheInvalidationBus
@@ -319,13 +309,6 @@ import SwiftUI
     focusSessionManager.onFocusBlockEnded = { [weak timer] in
       timer?.pauseTimer()
     }
-    let kanbanDataSourceAdapter = KanbanTaskDataSourceAdapter(
-      repository: repository,
-      navigationState: navigationState,
-      taskListViewModel: taskListViewModel
-    )
-    self.kanbanDataSourceAdapter = kanbanDataSourceAdapter
-    kanban.dataSource = kanbanDataSourceAdapter
     let integrationDataSourceAdapter = IntegrationDataSourceAdapter(
       repository: repository,
       coordinator: self
@@ -384,66 +367,7 @@ import SwiftUI
 
 extension TaskMutationService: UndoActionPerforming {}
 
-/// What is left here is the kanban adapter layer: `KanbanManager` decides
-/// *what* a column move means in terms of content and due date — which needs
-/// the app-only `KanbanColumn` type — and `TaskMutationService` performs it.
-/// The performing half used to live here too, hand-rolling its own optimistic
-/// and offline handling; it now goes through the same service as every other
-/// mutation.
 extension AppCoordinator {
-  @MainActor func moveCurrentTaskToKanbanColumn(direction: Int) {
-    guard let outcome = kanban.computeMoveCurrentTask(direction: direction) else { return }
-    apply(outcome)
-  }
-
-  /// A drop on the board. `insertBefore` is the slot within the target column
-  /// the card was released over, or nil for a move with no position — the
-  /// keyboard's column change, which leaves ordering to the column's sort.
-  ///
-  /// The overlay is written *before* the condition change, because
-  /// `moveTaskInColumn` reads the column's current contents to anchor the new
-  /// order and the condition change is precisely what alters them. Writing it
-  /// second would anchor to a column the card had already moved into.
-  @MainActor func moveTask(
-    id taskId: Int, toColumn targetColumn: KanbanColumn, insertBefore visibleIndex: Int? = nil
-  ) {
-    if let visibleIndex {
-      kanban.moveTaskInColumn(
-        taskId: taskId, in: targetColumn, toPositionBefore: visibleIndex)
-    }
-    // Nil means the card already satisfies the column — a reorder within it.
-    // The overlay write above was the whole point of the drop, so that is not
-    // a failure and nothing more is needed.
-    guard let outcome = kanban.computeMoveTask(id: taskId, toColumn: targetColumn) else { return }
-    apply(outcome)
-  }
-
-  @MainActor private func apply(_ outcome: KanbanMoveOutcome) {
-    switch outcome {
-    case .error(let msg):
-      repository.errorMessage = msg
-    case .update(let task, let newContent, let newDue):
-      taskMutationService.applyOptimisticUpdate(
-        task: task, content: newContent, due: newDue)
-    case .place(let task, let urgency, let importance):
-      repository.setUrgency(taskId: task.id, level: urgency)
-      repository.setImportance(taskId: task.id, level: importance)
-      statusMessage =
-        "\(task.content.strippingTags) → "
-        + MatrixGeometry.quadrant(urgency: urgency, importance: importance).title
-    }
-  }
-
-  /// Creates a new root-level task pre-configured for the given kanban column.
-  /// The column-to-content/due translation is kanban's; the insert is the
-  /// mutation service's.
-  @MainActor func addTaskInKanbanColumn(rawContent: String, column: KanbanColumn) {
-    let trimmed = rawContent.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return }
-    let (content, due) = kanban.contentAndDueForNewTask(rawContent: trimmed, in: column)
-    taskMutationService.addRootTask(content: content, due: due)
-  }
-
   // MARK: - Keychain / Debug
 
   func handleCredentialStorageModeChanged() {

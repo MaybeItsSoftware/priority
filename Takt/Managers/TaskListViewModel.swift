@@ -71,8 +71,8 @@ import TaktCore
   /// no dependency at all — `ensureVisibleTasksCacheValid()` returns at its
   /// guard without touching anything observable — and so never updated again.
   /// Whether that happened depended on call ordering: any non-view reader
-  /// (`KanbanManager`, `KanbanTaskDataSourceAdapter`) that got there first
-  /// cleared the dirty flag and took the view's tracking with it.
+  /// that got there first cleared the dirty flag and took the view's tracking
+  /// with it.
   ///
   /// It replaces a hand-maintained list of `_ = repository.x` touches in
   /// `visibleTasks`, which had the same intent but covered only one of the
@@ -83,8 +83,7 @@ import TaktCore
   /// Up-to-date view of the derived caches.
   ///
   /// Reading this rebuilds lazily if anything has invalidated since the last
-  /// read, so external callers (`KanbanManager`,
-  /// `KanbanTaskDataSourceAdapter`) can't observe a stale snapshot. Previously
+  /// read, so external callers can't observe a stale snapshot. Previously
   /// `invalidateCaches()` rebuilt eagerly, which kept those readers correct
   /// only by accident and made every single mutation of `tasks` — plus each
   /// priority/eisenhower/timer write that follows it — pay for a full
@@ -177,7 +176,6 @@ import TaktCore
       rankByTaskId: rankByTaskId,
       taskById: cacheStorage.taskById
     )
-    rebuildEisenhowerCaches(tasks: tasks)
     cacheStorage.dirty = false
     let visibility = computeVisibility()
     // Children revealed by expansion are ordered the same way the view orders
@@ -205,67 +203,6 @@ import TaktCore
     cacheStorage.rolledUpElapsed = TimerStore.rolledUpElapsedByTaskId(
       nodes: nodes, ownElapsed: hostTimerElapsedByTaskId)
     cacheStorage.rootLevelTagNames = computeRootLevelTagNames(limit: 30)
-  }
-
-  /// Where every task sits on the matrix, and the two halves of the matrix
-  /// view, resolved with the rest of the derived state.
-  ///
-  /// This lives here rather than in `EisenhowerMatrixView` because its inputs
-  /// are the ones this cache already watches — the task list, the stored
-  /// coordinates, the scope — while its *readers* recompute far more often
-  /// than those change. Computing it in the matrix's `body` tied an ancestor
-  /// walk per task to the pointer; `KanbanManager.membershipInputs()` rebuilt
-  /// it once per task per column.
-  ///
-  /// Resolved for *every* task rather than the open ones, so a caller that
-  /// asks about a completed task gets an answer rather than a silent `nil`.
-  private func rebuildEisenhowerCaches(tasks: [CheckvistTask]) {
-    let stored = repository.taskEisenhowerLevels
-    let levels = EisenhowerInheritance.effectiveLevels(
-      for: tasks,
-      taskById: cacheStorage.taskById,
-      ownLevel: { taskId in
-        guard let level = stored[taskId] else { return nil }
-        return (urgency: level.urgency, importance: level.importance)
-      }
-    )
-    // An inherited coordinate is a starting point, not the answer: the task's
-    // own due date and priority rank move it inside its goal's point, so a pile
-    // of forty is forty dots rather than one. A task placed by hand keeps
-    // exactly where it was put — that is a decision, and nothing derived is
-    // allowed to nudge it.
-    let now = Date()
-    let ranks = cacheStorage.priorityRank
-    let spread = levels.reduce(into: [Int: EffectiveEisenhowerLevel]()) { result, entry in
-      let (taskId, level) = entry
-      guard level.isInherited, let task = cacheStorage.taskById[taskId] else {
-        result[taskId] = level
-        return
-      }
-      let point = MatrixSpread.spread(
-        base: (urgency: level.urgency, importance: level.importance),
-        drift: MatrixSpread.drift(
-          dueDate: task.dueDate, priorityRank: ranks[taskId], taskId: taskId, now: now)
-      )
-      result[taskId] = EffectiveEisenhowerLevel(
-        urgency: point.urgency, importance: point.importance,
-        isInherited: true, sourceTaskId: level.sourceTaskId)
-    }
-
-    let open = tasks.filter { $0.status == 0 }
-    let parentId = hostCurrentParentId
-    let scoped = TaskScopeResolver.scoped(
-      open,
-      currentLevelTasks: open.filter { ($0.parentId ?? 0) == parentId },
-      parentId: parentId,
-      mode: TaskScopeResolver.mode(showChildrenInMenus: showChildrenInMenus),
-      isDescendant: { task, rootId in
-        TaskFilterEngine.isDescendant(task, of: rootId, taskById: self.cacheStorage.taskById)
-      }
-    )
-    cacheStorage.effectiveEisenhowerLevels = spread
-    cacheStorage.matrixClusters = MatrixClustering.clusters(for: scoped, levels: spread)
-    cacheStorage.matrixUnplacedTasks = scoped.filter { spread[$0.id] == nil }
   }
 
   private func computeVisibility() -> TaskVisibilityEngine.Result<CheckvistTask> {
@@ -562,8 +499,10 @@ import TaktCore
   }
 
   var currentTask: CheckvistTask? {
+    // The board and its selection went with the legacy surface, and
+    // `visibleTasks` is empty here by design, so there is nothing to select.
     if rootTaskView == .kanban {
-      return host?.kanbanCurrentTask
+      return nil
     }
     // The matrix, likewise, is not the task list: `visibleTasks` is empty here
     // by design, so the index below would have nothing to index into. A
