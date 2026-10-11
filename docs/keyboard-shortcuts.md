@@ -185,6 +185,20 @@ hands the keyboard back to the work and leaves the dock open — in the
 inspector that includes `Esc` from inside one of its fields — and `r` puts the
 dock away.
 
+## Vim's find
+
+`f` then a letter moves to the next task whose title starts with that letter
+(case, accents and leading punctuation ignored), `Shift+F` then a letter to
+the previous one, and `;` repeats the last find. It wraps round the ends. On
+the board it walks the column you are in; in the sidebar it finds a list or
+folder, which makes `f` and a letter the quickest way to a list you can see.
+`f` owns the next key outright, so a letter typed after it never runs a
+command of its own; `Esc` lets it go.
+
+With it come vim's `gg` / `Shift+G` for the first and last task, `Ctrl+D` /
+`Ctrl+U` to move eight down or up, and `gx` to open the task's first link.
+Starting a focus block, which `f` used to be, is `gf`.
+
 ## Return and Shift-Return
 
 They mean the same thing on every task surface:
@@ -197,8 +211,8 @@ They mean the same thing on every task surface:
   selected it still adds, so it is never dead.
 - **Space and `x` tick the task off** (or reopen it); `Shift+Space` cancels it
   instead — it stopped mattering, rather than got done. On Today, starting a
-  card — a task on the day *is* a block to run — is `f`, and `f` again on the
-  running card finishes it.
+  card — a task on the day *is* a block to run — is `gf`, and `gf` again on
+  the running card finishes it.
 - **`→`, `l` and `]` open the task** — its subtasks as a board of their own
   on the board and the matrix; in the outline `→` folds and unfolds instead
   (below). `←`, `h` and `[` leave again.

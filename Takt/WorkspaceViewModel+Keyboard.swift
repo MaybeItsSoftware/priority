@@ -42,6 +42,15 @@ extension WorkspaceViewModel {
       if key == "enter" { confirmPendingTaskDeletion() } else { cancelPendingTaskDeletion() }
       return true
     }
+    // `f` and `F` own the next key, as in vim: it is the letter to find, not
+    // a command. Esc, or anything that is not a letter or digit, lets go.
+    if let forward = pendingFindForward {
+      pendingFindForward = nil
+      if key != "escape", let character = event.characters?.first {
+        find(character, forward: forward)
+      }
+      return true
+    }
     // Sequences are bare letters. Anything chorded — Shift included, so `⇧X`
     // is the way to run `x` without waiting — releases a held key first, so
     // the two run in the order they were pressed.
@@ -274,6 +283,51 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// `f` / `F`: the next key is the letter to find.
+  func beginFind(forward: Bool) {
+    desktopShortcutSequence.reset()
+    pendingFindForward = forward
+  }
+
+  /// `;`: the last find again, the same way.
+  func repeatFind() {
+    guard let last = lastFind else { return }
+    find(last.character, forward: last.forward)
+  }
+
+  /// Moves the cursor to the next row beginning with `character` — a task on
+  /// the task surfaces, a row in the sidebar.
+  func find(_ character: Character, forward: Bool) {
+    lastFind = (character, forward)
+    let found: Bool
+    if keyboardFocusArea == .sidebar {
+      let rows = sidebarRows
+      let current = sidebarCursorRow.flatMap { row in rows.firstIndex { $0.id == row.id } }
+      let index = VimFind.index(
+        in: rows.map(sidebarRowTitle), from: current, character: character, forward: forward)
+      if let index { applySidebarCursor(rows[index]) }
+      found = index != nil
+    } else {
+      let rows = navigationRowIDs()
+      let index = VimFind.index(
+        in: rows.map { task(withID: $0)?.title ?? "" }, from: selectedTaskID.flatMap(rows.firstIndex(of:)),
+        character: character, forward: forward)
+      if let index { selectedTaskID = rows[index] }
+      found = index != nil
+    }
+    if !found { onStatusMessage?("Nothing starts with \(character)") }
+  }
+
+  private func sidebarRowTitle(_ row: WorkspaceSidebarRow) -> String {
+    switch row.kind {
+    case .everything: "Everything"
+    case .today: "Today"
+    case .list(let id): lists.first { $0.id == id }?.name ?? ""
+    case .nestedList(let id): nestedLists.first { $0.task.id == id }?.task.title ?? ""
+    case .folder(let id): folders.first { $0.id == id }?.name ?? ""
+    }
+  }
+
   func selectTaskAtEnd(first: Bool) {
     let rows = navigationRowIDs()
     selectedTaskID = first ? rows.first : rows.last
@@ -290,8 +344,8 @@ private enum CursorStep {
     switch key {
     case "down", "j": self = .by(1)
     case "up", "k": self = .by(-1)
-    case "pagedown": self = .by(8)
-    case "pageup": self = .by(-8)
+    case "pagedown", "ctrl+d": self = .by(8)
+    case "pageup", "ctrl+u": self = .by(-8)
     case "home", "cmd+up", "gg": self = .first
     case "end", "cmd+down", "shift+g": self = .last
     default: return nil

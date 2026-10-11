@@ -181,7 +181,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   /// does not have the keyboard.
   func testRegionsDoNotTakeBareTaskKeys() {
     for surface: WorkspaceCommandSurface in [.sidebar, .done, .inspector] {
-      for key in ["x", "1", "0", "tab", "f", "shift+enter", "option+enter"] {
+      for key in ["x", "1", "0", "tab", "shift+enter", "option+enter"] {
         XCTAssertNil(
           WorkspaceCommandCatalog.command(forKey: key, on: surface),
           "\(key) acts on the selected task from \(surface)")
@@ -190,7 +190,10 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
     }
     for surface: WorkspaceCommandSurface in [.done, .inspector] {
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "cmd+n", on: surface)?.id, .taskNew)
+      XCTAssertNil(WorkspaceCommandCatalog.command(forKey: "f", on: surface))
     }
+    // The sidebar's f finds a list, as the task panes' finds a task.
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "f", on: .sidebar)?.id, .motionFindForward)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "escape", on: .sidebar)?.id, .motionDismiss)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "escape", on: .inspector)?.id, .motionDismiss)
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "escape", on: .done)?.id, .doneClose)
@@ -237,7 +240,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
       WorkspaceCommandCatalog.sequences(on: .outline),
       [
         "ee", "ea", "ei", "dd", "nn", "tt", "mm", "gl", "uu", "td", "tm", "cd", "cn", "ct",
-        "dr", "tc", "gb", "ww", "gh", "sd", "oo", "pc", "xx", "gg", "za",
+        "dr", "tc", "gb", "ww", "gh", "sd", "oo", "pc", "xx", "gg", "za", "gf", "gx",
       ])
     let written = Set(
       WorkspaceCommandCatalog.all.flatMap(\.allKeys).filter(WorkspaceCommandCatalog.isSequence))

@@ -648,6 +648,10 @@ enum WorkspaceSidebarItem: Identifiable {
   /// title. `i` does — it means "edit this" — but `r` leaves the keyboard on
   /// the pane, or the `r` that should put the dock away would be typed.
   var inspectorFocusesTitle = true
+  /// Set by `f` (true) or `F` (false) until the letter to find is typed.
+  @ObservationIgnored var pendingFindForward: Bool?
+  /// What `;` repeats.
+  @ObservationIgnored var lastFind: (character: Character, forward: Bool)?
   /// Bumped to move the inspector's keyboard `inspectorStepOffset` stops on;
   /// the inspector owns which stop that lands on.
   var inspectorStepRequest = 0

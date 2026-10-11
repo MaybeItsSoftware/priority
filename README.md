@@ -91,7 +91,10 @@ something you already have to know.
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
 | `Shift+Space` | Cancel the task, or reinstate it — it stopped mattering, rather than got done |
 | `tc` | Hide or show completed tasks — a completed task stays put for three seconds and then leaves the list; `tc` shows them all again |
-| `f` | Start a focus block on the task — on Today, queue it behind a running block |
+| `gf` | Start a focus block on the task — on Today, queue it behind a running block |
+| `f` / `Shift+F` then a letter, `;` | Vim's find: the next / previous task (in the sidebar, list) whose title starts with that letter; `;` repeats it |
+| `gg` / `Shift+G`, `Ctrl+D` / `Ctrl+U` | First / last task, eight down / up (vim) |
+| `gx` / `Cmd+O` | Open the task's first link (vim's open-the-URL-under-the-cursor) |
 | `l` / `]` | Open the task's subtasks |
 | `→` / `←` | In the outline, show a task's subtasks and step into them / hide them and step out — without opening the task. Elsewhere, open and leave it. At the top level of a list, `←` goes back to the list in the sidebar |
 | `za` / `Cmd+←` / `Cmd+→` | Fold or unfold the task you are on (outline or board) / fold / unfold the whole outline |
@@ -224,7 +227,7 @@ the hotkey summons over other apps. One component, two mounts — a day that rea
 differently depending on where you opened it would be two days.
 
 Each card carries what the task is, what it should cost, and what it has cost so
-far. `f` (or `Tab` in the panel) on a card starts it; the card you are on grows a live clock and a
+far. `gf` (or `Tab` in the panel) on a card starts it; the card you are on grows a live clock and a
 strip of pause, skip, log and done, so a whole block runs without the list ever
 going away.
 
@@ -273,7 +276,7 @@ dock beside them — so none of it is reachable only by a key you have to alread
 | `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | Focus the sidebar, the task surface, the inspector |
 | `Cmd+B` | Show or hide the sidebar (Zed's left dock) |
 | `Up` / `Down` | Move between cards |
-| `f` (window) / `Tab` (panel) | Start the card you are on, or queue it behind the one running |
+| `gf` (window) / `Tab` (panel) | Start the card you are on, or queue it behind the one running |
 | `Space` / `x` | Tick the card off without running a block — on the running card, finish it |
 | `Return` | Add a task (in the panel, from what you typed) |
 | `Ctrl+T` | Plan the card for today, or take it off — an overdue or dated card becomes one you placed |

@@ -157,7 +157,7 @@ public enum WorkspaceCommandCatalog {
       keys: ["ctrl+t"],
       note: "Puts it in the day you arrange by hand. On Today, plans an overdue or dated row"),
     .init(
-      id: .taskStartFocus, title: "Start focus on the task", group: "Task", keys: ["f"],
+      id: .taskStartFocus, title: "Start focus on the task", group: "Task", keys: ["gf"],
       note: "Or add it to the queue behind a running block"),
     .init(
       id: .taskMove, title: "Move the task or list", group: "Task", keys: ["mm", "cmd+shift+m"],
@@ -169,7 +169,7 @@ public enum WorkspaceCommandCatalog {
       id: .taskPromoteList, title: "Promote or unpin a nested list", group: "Task",
       keys: ["cmd+option+p"]),
     .init(id: .taskExtractBranch, title: "Extract the branch as a list", group: "Task", keys: ["xx"]),
-    .init(id: .taskOpenLink, title: "Open the task's first link", group: "Task", keys: ["gg", "cmd+o"]),
+    .init(id: .taskOpenLink, title: "Open the task's first link", group: "Task", keys: ["gx", "cmd+o"]),
     .init(id: .taskShowProgress, title: "Show the task's progress", group: "Task", keys: ["pc"]),
     .init(
       id: .taskToggleInspector, title: "Open or close the inspector", group: "Task",
@@ -428,15 +428,30 @@ public enum WorkspaceCommandCatalog {
       keys: ["up", "k"], kind: .motion),
     .init(
       id: .motionSelectEnds, title: "Jump to the first or last task", group: "Moving around",
-      keys: ["home", "end", "cmd+up", "cmd+down"], kind: .motion),
+      keys: ["home", "end", "cmd+up", "cmd+down", "gg", "shift+g"], kind: .motion),
     .init(
       id: .motionSelectPage, title: "Move eight tasks at a time", group: "Moving around",
-      keys: ["pageup", "pagedown"], kind: .motion),
+      keys: ["pageup", "pagedown", "ctrl+u", "ctrl+d"], kind: .motion,
+      note: "⌃U and ⌃D are vim's half-page up and down"),
+    // Vim's f, F and ;, over rows: the letter typed after f is the first
+    // letter of the row to land on. In the sidebar they find a list.
+    .init(
+      id: .motionFindForward, title: "Find the next task starting with a letter", group: "Moving around",
+      keys: ["f"], surfaceKeys: [.sidebar: ["f"]], kind: .motion,
+      note: "Vim's f: press f, then the letter. In the sidebar it finds a list"),
+    .init(
+      id: .motionFindBackward, title: "Find the previous task starting with a letter",
+      group: "Moving around", keys: ["shift+f"], surfaceKeys: [.sidebar: ["shift+f"]], kind: .motion,
+      note: "Vim's F"),
+    .init(
+      id: .motionFindRepeat, title: "Repeat the last find", group: "Moving around",
+      keys: [";"], surfaceKeys: [.sidebar: [";"]], kind: .motion,
+      note: "Vim's ;, the same letter in the same direction"),
     .init(
       id: .motionSidebarSelect, title: "Move through the sidebar", group: "Moving around",
       keys: [
         "down", "up", "j", "k", "home", "end", "cmd+up", "cmd+down", "gg", "shift+g", "pageup",
-        "pagedown",
+        "pagedown", "ctrl+u", "ctrl+d",
       ],
       surface: .sidebar,
       kind: .motion,
@@ -488,7 +503,7 @@ public enum WorkspaceCommandCatalog {
     // sidebar.
     .init(
       id: .todayStart, title: "Start the task, or finish the running one", group: "Today",
-      keys: ["f"], surface: .today,
+      keys: ["gf"], surface: .today,
       note: "Or add it to the queue behind a running block"),
     .init(
       id: .motionTodayLeave, title: "Back to the sidebar", group: "Moving around",

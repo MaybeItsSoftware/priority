@@ -89,7 +89,8 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
   func testNamedKeysRenderAsSymbols() {
     XCTAssertEqual(WorkspaceCommandCatalog[.goToday].displayKeys, ["⌘1", "⌘T"])
     XCTAssertEqual(WorkspaceCommandCatalog[.taskRename].displayKeys, ["E E", "F2", "⌘⌃E"])
-    XCTAssertEqual(WorkspaceCommandCatalog[.motionSelectEnds].displayKeys, ["Home", "End", "⌘↑", "⌘↓"])
+    XCTAssertEqual(
+      WorkspaceCommandCatalog[.motionSelectEnds].displayKeys, ["Home", "End", "⌘↑", "⌘↓", "G G", "⇧G"])
     XCTAssertEqual(WorkspaceCommandCatalog[.taskDelete].displayKeys, ["⌫", "⌘⌫", "⌘⇧K"])
   }
 }
@@ -350,13 +351,13 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // and next tab; on a task pane they change list and leave or open a task.
       "inspector:cmd+shift+{", "inspector:cmd+shift+}", "inspector:[", "inspector:]",
       // The inspector's task keys step through its fields, not the tasks.
-      "inspector:down", "inspector:up", "inspector:j", "inspector:k",
+      "inspector:down", "sidebar:shift+g", "sidebar:ctrl+u", "sidebar:ctrl+d", "inspector:up", "inspector:j", "inspector:k",
       "done:cmd+shift+{", "done:cmd+shift+}", "done:[", "done:]",
       "timeline:cmd+shift+{", "timeline:cmd+shift+}", "timeline:[", "timeline:]",
       // Today is walked with the ordinary keys, but f queues behind a running
       // block rather than replacing it, and ← has no task to leave so goes to
       // the sidebar.
-      "today:left", "today:f",
+      "today:left", "today:gf",
     ]
     XCTAssertEqual(
       overrides, expected,

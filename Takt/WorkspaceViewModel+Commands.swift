@@ -235,8 +235,12 @@ extension WorkspaceViewModel {
       if let key { cycleNewTaskDestination(by: key.hasSuffix("[") ? -1 : 1) }
     case .motionSelectNext: if key != nil { moveTaskSelection(by: 1) }
     case .motionSelectPrevious: if key != nil { moveTaskSelection(by: -1) }
-    case .motionSelectEnds: if let key { selectTaskAtEnd(first: key == "home" || key == "cmd+up") }
-    case .motionSelectPage: if let key { moveTaskSelection(by: key == "pageup" ? -8 : 8) }
+    case .motionSelectEnds:
+      if let key { selectTaskAtEnd(first: key == "home" || key == "cmd+up" || key == "gg") }
+    case .motionSelectPage: if let key { moveTaskSelection(by: key == "pageup" || key == "ctrl+u" ? -8 : 8) }
+    case .motionFindForward: beginFind(forward: true)
+    case .motionFindBackward: beginFind(forward: false)
+    case .motionFindRepeat: repeatFind()
     case .motionSidebarSelect: if let key { moveSidebarCursor(key) }
     case .motionSidebarExpand:
       if let key { activateSidebarCursor(expandOnly: key == "right" || key == "l", enters: key == "enter") }
