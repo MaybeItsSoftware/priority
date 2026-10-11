@@ -302,6 +302,12 @@ pub fn place_task_at(
 
 /// Moves a task `offset` places among its siblings, stopping at either end.
 /// Replaces `WorkspaceStore.moveTaskWithinSiblings` and its Kotlin copy.
+///
+/// It counts only the siblings drawn in the same group as the task: an open
+/// task steps past open ones, a blocked task past blocked ones. Blocked tasks
+/// always sort last, so stepping an open task "down" past one of them moved
+/// it nowhere you could see, and each such press then had to be undone with
+/// another on the way back up.
 pub fn move_task_within_siblings(
     transaction: &Transaction,
     id: &str,
@@ -310,16 +316,44 @@ pub fn move_task_within_siblings(
 ) -> Result<(), CoreError> {
     let (list_id, parent) = task_place(transaction, id)?;
     let mut siblings = task_siblings(transaction, &list_id, parent.as_deref())?;
-    let Some(index) = siblings.iter().position(|s| s == id) else {
-        return Ok(());
-    };
-    let last = siblings.len() as i64 - 1;
-    let target = (index as i64 + i64::from(offset)).clamp(0, last) as usize;
-    if target == index {
+    if !siblings.iter().any(|s| s == id) {
         return Ok(());
     }
+    let blocked: std::collections::HashSet<String> =
+        crate::dependencies::blocked_task_ids(transaction)?
+            .into_iter()
+            .collect();
+    let in_group = blocked.contains(id);
+    let peers: Vec<&String> = siblings
+        .iter()
+        .filter(|s| blocked.contains(s.as_str()) == in_group)
+        .collect();
+    let Some(position) = peers.iter().position(|s| *s == id) else {
+        return Ok(());
+    };
+    let last = peers.len() as i64 - 1;
+    let target = (position as i64 + i64::from(offset)).clamp(0, last) as usize;
+    if target == position {
+        return Ok(());
+    }
+    let target_id = peers[target].clone();
+    let index = siblings
+        .iter()
+        .position(|s| s == id)
+        .expect("checked above");
     let moved = siblings.remove(index);
-    siblings.insert(target, moved);
+    let target_index = siblings
+        .iter()
+        .position(|s| *s == target_id)
+        .expect("a peer is a sibling");
+    siblings.insert(
+        if offset < 0 {
+            target_index
+        } else {
+            target_index + 1
+        },
+        moved,
+    );
     persist_task_order(transaction, &siblings, now_ms)
 }
 

@@ -301,3 +301,36 @@ fn a_database_without_the_table_reads_as_having_no_dependencies() {
     assert_eq!(blocked_last(&connection).unwrap(), NOT_BLOCKED);
     assert!(children(&connection, "l", None).unwrap().is_empty());
 }
+
+fn step(connection: &mut Connection, id: &str, offset: i32) {
+    journalled(connection, "Move", |tx| {
+        crate::tasks::move_task_within_siblings(tx, id, offset, 1_000)
+    })
+    .unwrap();
+}
+
+#[test]
+fn a_step_counts_only_the_siblings_drawn_in_the_same_group() {
+    let mut connection = workspace();
+    // b and d wait on x: drawn a, c, then b, d.
+    add(&mut connection, "b", "x").unwrap();
+    add(&mut connection, "d", "x").unwrap();
+    assert_eq!(roots(&connection), ["a", "c", "b", "d"]);
+
+    // c is the last open task: down does nothing rather than slipping it
+    // invisibly past the blocked ones.
+    step(&mut connection, "c", 1);
+    assert_eq!(roots(&connection), ["a", "c", "b", "d"]);
+    // One press up is one place up among the open tasks.
+    step(&mut connection, "c", -1);
+    assert_eq!(roots(&connection), ["c", "a", "b", "d"]);
+    // Blocked tasks step among themselves.
+    step(&mut connection, "d", -1);
+    assert_eq!(roots(&connection), ["c", "a", "d", "b"]);
+    step(&mut connection, "d", -1);
+    assert_eq!(roots(&connection), ["c", "a", "d", "b"]);
+
+    // Unblocked, they take the places they were moved to.
+    complete(&connection, "x");
+    assert_eq!(roots(&connection), ["c", "a", "d", "b"]);
+}
