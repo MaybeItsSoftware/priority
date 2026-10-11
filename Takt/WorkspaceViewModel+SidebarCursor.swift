@@ -103,17 +103,10 @@ extension WorkspaceViewModel {
     sidebarCursorRow?.id == rowID
   }
 
-  /// The `.id` the cursor's row is drawn under, so the list can scroll to it.
-  ///
+  /// The `.id` the cursor's row is drawn under, so the list can scroll to it:
+  /// the row's own outline id, which is what the sidebar keys every row by.
   var sidebarCursorScrollID: String? {
-    guard let row = sidebarCursorRow else { return nil }
-    switch row.kind {
-    case .everything: return "priority:everything"
-    case .today: return "priority:today"
-    case .list(let id), .folder(let id): return id
-    case .filterList(let id): return Self.filterListSidebarID(id)
-    case .nestedList(let id): return row.id.hasPrefix("pinned:") ? "promoted:\(id)" : id
-    }
+    sidebarCursorRow?.id
   }
 
   func moveSidebarSelection(by offset: Int) {

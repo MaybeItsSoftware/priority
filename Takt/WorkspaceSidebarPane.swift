@@ -41,71 +41,22 @@ struct WorkspaceSidebarPane: View {
       // tall and as wide as its padding says, which is also what lets the
       // indent guides of one row meet the next.
       ScrollView {
+        // Drawn from `model.sidebarRows` — the outline the arrow keys walk —
+        // as one flat run of rows, each keyed by its outline id.
+        //
+        // It used to be a tree of views: the folders' lists in a `ForEach`
+        // inside each folder, the loose lists in another, every row tagged
+        // `.id(list.id)`. A lazy stack keys its cells by those explicit ids,
+        // so a list moved into a folder kept the cell it had at the top level
+        // — same id — and was drawn with the old cell's indent: in its new
+        // place, one level out, with the next list looking nested under it.
+        // A flat run has one place for a row to be, and drawing the outline
+        // itself means the order on screen is the order the keys walk.
         LazyVStack(alignment: .leading, spacing: 0) {
-          Button {
-            model.selectToday()
-            model.reportKeyboardFocus(.sidebar)
-          } label: {
-            HStack(spacing: theme.space.sm) {
-              Image(systemName: "sun.max")
-                .foregroundStyle(theme.muted)
-                .frame(width: WorkspaceSidebarMetrics.iconWidth)
-              Text("Today")
-            }
-            .sidebarRowPadding(theme)
-          }
-          .buttonStyle(.plain)
-          .id(todaySidebarID)
-          .background(
-            WorkspaceSidebarSelectionBackground(
-              isCurrent: model.isCurrentSidebarRow(todaySidebarID),
-              rowID: "row:today"))
-          .accessibilityLabel("Today, across all lists")
-          .commandHelp(.goToday, note: "Today, across all lists")
-          Button {
-            model.selectEverything()
-            model.reportKeyboardFocus(.sidebar)
-          } label: {
-            HStack(spacing: theme.space.sm) {
-              Image(systemName: "square.stack.3d.up")
-                .foregroundStyle(theme.muted)
-                .frame(width: WorkspaceSidebarMetrics.iconWidth)
-              Text("Everything")
-            }
-            .sidebarRowPadding(theme)
-          }
-          .buttonStyle(.plain)
-          .id(everythingSidebarID)
-          .background(
-            WorkspaceSidebarSelectionBackground(
-              isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
-              rowID: "row:everything"))
-          .accessibilityLabel("Everything, all lists")
-          .commandHelp(.goEverything, note: "Everything, all lists")
-          .contextMenu {
-            Button("New Filter List…") { model.requestNewFilterList() }
-          }
-          if let inbox = model.inboxList {
-            sidebarListRow(inbox)
-            WorkspaceNestedListRows(list: inbox, depth: 1)
-          }
-          // Yours, under the stock three: each a question asked of every
-          // task, drawn as Everything narrowed to the answer.
-          ForEach(model.filterLists) { filter in
-            WorkspaceFilterListRow(filter: filter)
-          }
-          listsHeader
-          ForEach(model.promotedLists) { task in
-            WorkspaceNestedListRow(task: task, depth: 0, promotedShortcut: true)
-          }
-          let rootFolders = model.folders.filter { $0.parentFolderId == nil }
-          ForEach(rootFolders) { folder in
-            WorkspaceFolderTree(folder: folder, depth: 0, isLastInGroup: folder.id == rootFolders.last?.id)
-          }
-          let rootLists = model.lists.filter { $0.folderId == nil && $0.systemRole != .inbox }
-          ForEach(rootLists) { list in
-            sidebarListRow(list, isLastInGroup: list.id == rootLists.last?.id)
-            WorkspaceNestedListRows(list: list, depth: 1)
+          let lookup = WorkspaceSidebarLookup(model: model)
+          ForEach(sidebarLines(lookup: lookup)) { line in
+            sidebarLine(line, lookup: lookup)
+              .id(line.id)
           }
           topLevelDropZone
         }
@@ -193,52 +144,139 @@ struct WorkspaceSidebarPane: View {
     }
   }
 
-  private func sidebarListRow(_ list: TaskList, isLastInGroup: Bool = false) -> some View {
-    WorkspaceSelectableListRow(list: list, depth: 0)
-      .id(list.id)
-      .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
-      .background(
-        WorkspaceSidebarSelectionBackground(
-          isCurrent: model.isCurrentSidebarRow(list.id),
-          rowID: "list:\(list.id)"))
-      .workspaceSidebarDrop(isLastInGroup: isLastInGroup) { payload, placement in
-        switch placement {
-        case .into: model.moveDroppedItem(payload, toListID: list.id)
-        case .before: model.placeDroppedItem(payload, before: list.id, inFolderID: list.folderId)
-        case .after: model.placeDroppedItem(payload, before: nil, inFolderID: list.folderId)
+  /// The outline's rows, with the gap that separates the stock rows from
+  /// yours, in drawing order.
+  private func sidebarLines(lookup: WorkspaceSidebarLookup) -> [WorkspaceSidebarLine] {
+    let rows = model.sidebarRows
+    let inboxID = lookup.inboxID
+    // Today, Everything, the inbox with its nested lists and the filter
+    // lists are the stock rows; the gap goes after the last of them.
+    let isStock: (WorkspaceSidebarRow) -> Bool = { row in
+      switch row.kind {
+      case .today, .everything, .filterList: return true
+      case .list(let id): return id == inboxID
+      case .nestedList: return inboxID.map { row.id.hasPrefix("nested:\($0):") } ?? false
+      case .folder: return false
+      }
+    }
+    let split = rows.lastIndex(where: isStock).map { $0 + 1 } ?? 0
+    var lines = rows.map(WorkspaceSidebarLine.row)
+    lines.insert(.gap, at: split)
+    return lines
+  }
+
+  @ViewBuilder
+  private func sidebarLine(_ line: WorkspaceSidebarLine, lookup: WorkspaceSidebarLookup) -> some View {
+    switch line {
+    case .gap:
+      listsHeader
+    case .row(let row):
+      switch row.kind {
+      case .today: todayRow
+      case .everything: everythingRow
+      case .filterList(let id):
+        if let filter = lookup.filterLists[id] { WorkspaceFilterListRow(filter: filter) }
+      case .list(let id):
+        if let list = lookup.lists[id] {
+          WorkspaceSidebarListRow(list: list, depth: row.depth, isLastInGroup: lookup.lastInGroup.contains(id))
+        }
+      case .folder(let id):
+        if let folder = lookup.folders[id] {
+          WorkspaceFolderRow(folder: folder, depth: row.depth, isLastInGroup: lookup.lastInGroup.contains(id))
+        }
+      case .nestedList(let id):
+        if let task = lookup.nestedLists[id] {
+          let pinned = row.id.hasPrefix("pinned:")
+          WorkspaceNestedListRow(task: task, depth: pinned ? 0 : row.depth, rowID: row.id, promotedShortcut: pinned)
         }
       }
-      .contextMenu {
-        Menu("Choose icon") {
-          ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
-            Button { model.setIcon(icon.symbol, for: list) } label: {
-              Label(icon.label, systemImage: icon.symbol)
-            }
-          }
-        }
-        Button("Rename") { model.beginRenaming(.list(list)) }
-          .commandShortcut(.listRename)
-        Button("List settings…") { model.showSettings(for: list) }
-          .commandShortcut(.listSettings)
-        Button("New nested list…") {
-          model.selectList(list.id)
-          model.requestNestedListCreation()
-        }
-        // The Inbox can be renamed and refiled, but not taken away: quick
-        // capture has to have somewhere to land.
-        if !list.isSystemList {
-          Divider()
-          Button("Convert to task in Inbox") { model.convertListToTask(list) }
-            .commandShortcut(.taskConvertToList)
-          Button(list.completedAt == nil ? "Complete list" : "Reopen list") { model.toggleListCompletion(list) }
-            .commandShortcut(.listComplete)
-          Button("Archive") { model.archiveList(list) }
-            .commandShortcut(.listArchive)
-          Divider()
-          Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
-            .commandShortcut(.listDelete)
-        }
+    }
+  }
+
+  private var todayRow: some View {
+    Button {
+      model.selectToday()
+      model.reportKeyboardFocus(.sidebar)
+    } label: {
+      HStack(spacing: theme.space.sm) {
+        Image(systemName: "sun.max")
+          .foregroundStyle(theme.muted)
+          .frame(width: WorkspaceSidebarMetrics.iconWidth)
+        Text("Today")
       }
+      .sidebarRowPadding(theme)
+    }
+    .buttonStyle(.plain)
+    .background(
+      WorkspaceSidebarSelectionBackground(
+        isCurrent: model.isCurrentSidebarRow(todaySidebarID),
+        rowID: "row:today"))
+    .accessibilityLabel("Today, across all lists")
+    .commandHelp(.goToday, note: "Today, across all lists")
+  }
+
+  private var everythingRow: some View {
+    Button {
+      model.selectEverything()
+      model.reportKeyboardFocus(.sidebar)
+    } label: {
+      HStack(spacing: theme.space.sm) {
+        Image(systemName: "square.stack.3d.up")
+          .foregroundStyle(theme.muted)
+          .frame(width: WorkspaceSidebarMetrics.iconWidth)
+        Text("Everything")
+      }
+      .sidebarRowPadding(theme)
+    }
+    .buttonStyle(.plain)
+    .background(
+      WorkspaceSidebarSelectionBackground(
+        isCurrent: model.isCurrentSidebarRow(everythingSidebarID),
+        rowID: "row:everything"))
+    .accessibilityLabel("Everything, all lists")
+    .commandHelp(.goEverything, note: "Everything, all lists")
+    .contextMenu {
+      Button("New Filter List…") { model.requestNewFilterList() }
+    }
+  }
+}
+
+/// One line of the sidebar: an outline row, or the gap under the stock rows.
+enum WorkspaceSidebarLine: Identifiable {
+  case row(WorkspaceSidebarRow)
+  case gap
+
+  var id: String {
+    switch self {
+    case .row(let row): row.id
+    case .gap: "line:gap"
+    }
+  }
+}
+
+/// What the rows name, by id, worked out once per drawing rather than a
+/// linear search per row.
+@MainActor
+struct WorkspaceSidebarLookup {
+  let inboxID: String?
+  let lists: [String: TaskList]
+  let folders: [String: ListFolder]
+  let nestedLists: [String: WorkspaceTask]
+  let filterLists: [String: WorkspaceFilterList]
+  /// The lists and folders that are the last of their siblings, whose bottom
+  /// edge is "at the end of the group" for a drop.
+  let lastInGroup: Set<String>
+
+  init(model: WorkspaceViewModel) {
+    inboxID = model.inboxList?.id
+    lists = Dictionary(model.lists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    folders = Dictionary(model.folders.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    nestedLists = Dictionary(model.nestedLists.map { ($0.task.id, $0.task) }, uniquingKeysWith: { first, _ in first })
+    filterLists = Dictionary(model.filterLists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    var last: [String: String] = [:]
+    for list in model.lists where list.systemRole != .inbox { last["list:\(list.folderId ?? "")"] = list.id }
+    for folder in model.folders { last["folder:\(folder.parentFolderId ?? "")"] = folder.id }
+    lastInGroup = Set(last.values)
   }
 }
 
@@ -323,214 +361,6 @@ extension View {
   }
 }
 
-private struct WorkspaceNestedListRows: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  let list: TaskList
-  /// The depth of the list's own children: one below the list row.
-  let depth: Int
-
-  var body: some View {
-    ForEach(model.nestedLists.filter { $0.task.listId == list.id }) { item in
-      WorkspaceNestedListRow(task: item.task, depth: depth + item.depth)
-    }
-  }
-}
-
-private struct WorkspaceNestedListRow: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
-  let task: WorkspaceTask
-  let depth: Int
-  var promotedShortcut = false
-  @State private var isDropTargeted = false
-
-  var body: some View {
-    HStack(spacing: theme.space.sm) {
-      Image(systemName: model.itemSymbol(for: task))
-        .foregroundStyle(theme.muted)
-        .frame(width: WorkspaceSidebarMetrics.iconWidth)
-      Text(task.title)
-        .lineLimit(1)
-        .truncationMode(.middle)
-        .strikethrough(task.status != .open)
-      Spacer(minLength: 0)
-      if promotedShortcut {
-        Image(systemName: "pin.fill").font(theme.microLabelFont).foregroundStyle(theme.dim)
-      }
-    }
-    .sidebarRowPadding(theme, depth: depth)
-    .onTapGesture { model.selectNestedList(task) }
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(task.title)
-    .accessibilityAddTraits(.isButton)
-    .accessibilityAction { model.selectNestedList(task) }
-    .focusable().focusEffectDisabled()
-    .id(promotedShortcut ? "promoted:\(task.id)" : task.id)
-    .background(WorkspaceSidebarSelectionBackground(
-      isCurrent: model.isCurrentSidebarRow(task.id),
-      rowID: promotedShortcut ? "pinned:\(task.id)" : "nested:\(task.listId):\(task.id)"))
-    .contextMenu { WorkspaceItemActions(task: task) }
-    .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
-    .background(
-      isDropTargeted ? theme.selectionFill : .clear,
-      in: RoundedRectangle(cornerRadius: theme.rowRadius))
-    .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
-      WorkspaceTaskDrag.readItemID(from: providers) { payload in
-        model.moveDroppedItem(payload, toListID: task.listId, parentTaskID: task.id)
-      }
-    }
-  }
-}
-
-private struct WorkspaceFolderTree: View {
-  @Environment(WorkspaceViewModel.self) private var model
-  @Environment(\.theme) private var theme
-  let folder: ListFolder
-  /// Whether this is the last folder among its siblings, and so the one whose
-  /// bottom edge means "at the end of the folders".
-  var isLastInGroup = false
-
-  /// The folder header's own depth; its lists and subfolders sit one below.
-  /// Passed down rather than applied as padding round the children, because
-  /// padding outside a row would indent its selection with it.
-  let depth: Int
-
-  init(folder: ListFolder, depth: Int, isLastInGroup: Bool = false) {
-    self.folder = folder
-    self.depth = depth
-    self.isLastInGroup = isLastInGroup
-  }
-
-  var body: some View {
-    Group {
-      folderHeader
-      if model.isFolderExpanded(folder) {
-      let folderLists = model.lists.filter { $0.folderId == folder.id && $0.systemRole != .inbox }
-      ForEach(folderLists) { list in
-        WorkspaceSelectableListRow(list: list, depth: depth + 1)
-          .id(list.id)
-          .onDrag { WorkspaceTaskDrag.provider(forList: list.id) }
-          .background(
-            WorkspaceSidebarSelectionBackground(
-              isCurrent: model.isCurrentSidebarRow(list.id),
-              rowID: "list:\(list.id)"))
-          .workspaceSidebarDrop(isLastInGroup: list.id == folderLists.last?.id) { payload, placement in
-            switch placement {
-            case .into: model.moveDroppedItem(payload, toListID: list.id)
-            case .before: model.placeDroppedItem(payload, before: list.id, inFolderID: folder.id)
-            case .after: model.placeDroppedItem(payload, before: nil, inFolderID: folder.id)
-            }
-          }
-          .contextMenu {
-            Button("Rename") { model.beginRenaming(.list(list)) }
-              .commandShortcut(.listRename)
-            Button("List settings…") { model.showSettings(for: list) }
-              .commandShortcut(.listSettings)
-            Button("New nested list…") {
-              model.selectList(list.id)
-              model.requestNestedListCreation()
-            }
-            if !list.isSystemList {
-              Divider()
-              Button("Convert to task in Inbox") { model.convertListToTask(list) }
-                .commandShortcut(.taskConvertToList)
-              Button(list.completedAt == nil ? "Complete list" : "Reopen list") { model.toggleListCompletion(list) }
-                .commandShortcut(.listComplete)
-              Button("Archive") { model.archiveList(list) }
-                .commandShortcut(.listArchive)
-              Divider()
-              Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
-                .commandShortcut(.listDelete)
-            }
-          }
-        WorkspaceNestedListRows(list: list, depth: depth + 2)
-      }
-      let childFolders = model.folders.filter { $0.parentFolderId == folder.id }
-      ForEach(childFolders) { child in
-        WorkspaceFolderTree(folder: child, depth: depth + 1, isLastInGroup: child.id == childFolders.last?.id)
-      }
-      }
-    }
-  }
-
-  private var isCurrent: Bool { model.selectedFolderID == folder.id }
-
-  private var folderHeader: some View {
-      // The disclosure chevron takes the icon column, and the folder's own
-      // glyph and name follow it at the list rows' spacing, so a folder's name
-      // starts one indent in from a list's — which is where its lists start.
-      HStack(spacing: theme.space.sm) {
-        Button {
-          withAnimation(.easeInOut(duration: 0.18)) {
-            model.setFolderExpanded(folder, expanded: !model.isFolderExpanded(folder))
-          }
-        } label: {
-          Image(systemName: model.isFolderExpanded(folder) ? "chevron.down" : "chevron.right")
-            .font(theme.captionFont)
-            .frame(width: WorkspaceSidebarMetrics.iconWidth)
-            .contentShape(Rectangle())
-        }
-        .accessibilityLabel(model.isFolderExpanded(folder) ? "Collapse folder" : "Expand folder")
-        .help(
-          model.isFolderExpanded(folder)
-            ? WorkspaceCommandHelpText.text(for: .motionSidebarCollapse, note: "Collapse folder")
-            : WorkspaceCommandHelpText.text(for: .motionSidebarExpand, note: "Expand folder"))
-        Image(systemName: "folder")
-          .frame(width: WorkspaceSidebarMetrics.iconWidth)
-        if model.isRenaming(.folder(folder)) {
-          WorkspaceRenameField(
-            initialName: folder.name,
-            onCommit: { model.renameFolder(folder, to: $0) },
-            onCancel: { model.cancelRenaming(itemID: folder.id) })
-        } else {
-          Text(folder.name)
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .help(folder.name)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture { model.selectFolder(folder) }
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { model.selectFolder(folder) }
-        }
-      }
-        .buttonStyle(.plain)
-        .focusable()
-        .focusEffectDisabled()
-        .foregroundStyle(theme.muted)
-        .sidebarRowPadding(theme, depth: depth)
-        // The same component as every other sidebar row, rather than the same
-        // two opacities written out again: a folder that disagreed with a list
-        // about what "you are here" looks like is the bug this replaces.
-        .background(
-          WorkspaceSidebarSelectionBackground(
-            isCurrent: isCurrent, rowID: "folder:\(folder.id)"))
-        .contentShape(Rectangle())
-        .id(folder.id)
-        .onDrag { WorkspaceTaskDrag.provider(forFolder: folder.id) }
-        .workspaceSidebarDrop(isLastInGroup: isLastInGroup && !model.isFolderExpanded(folder)) { payload, placement in
-          switch placement {
-          case .into: model.moveDroppedItem(payload, toFolderID: folder.id)
-          case .before: model.placeDroppedItem(payload, before: folder.id, inFolderID: folder.parentFolderId)
-          case .after: model.placeDroppedItem(payload, before: nil, inFolderID: folder.parentFolderId)
-          }
-        }
-        .contextMenu {
-          Button("Rename") { model.beginRenaming(.folder(folder)) }
-            .commandShortcut(.listRename)
-          Button("Folder settings…") { model.showSettings(for: folder) }
-            .commandShortcut(.listSettings)
-          Button("New list in folder") { model.requestCreation(.list, in: folder.id) }
-            .commandShortcut(.listNew)
-          Button("New subfolder") { model.requestCreation(.folder, in: folder.id) }
-            .commandShortcut(.folderNew)
-          Divider()
-          Button("Delete folder", role: .destructive) { model.requestDeletion(of: .folder(folder)) }
-            .commandShortcut(.listDelete)
-        }
-  }
-}
-
 /// A filter list in the sidebar: its icon and name, selected like a list,
 /// with its sheet, icon, order and deletion on the context menu.
 struct WorkspaceFilterListRow: View {
@@ -555,7 +385,6 @@ struct WorkspaceFilterListRow: View {
       .sidebarRowPadding(theme)
     }
     .buttonStyle(.plain)
-    .id(sidebarID)
     .background(
       WorkspaceSidebarSelectionBackground(
         isCurrent: model.isCurrentSidebarRow(sidebarID),

@@ -96,6 +96,36 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
     XCTAssertEqual(visited, rows.map(\.id))
   }
 
+  /// The sidebar draws this outline as one flat run keyed by row id, so the
+  /// ids have to be unique, and a list's depth has to come from where it is
+  /// now. The bug behind the flat drawing: Habits, moved into "Life admin"
+  /// from the top level, drew at the top level's indent in the folder,
+  /// with the list after it looking nested in it.
+  func testEveryListInAFolderIsOneLevelInWhateverItHolds() {
+    let rows = outline(
+      lists: [
+        SidebarListDescriptor(id: "errands", folderID: "life"),
+        SidebarListDescriptor(id: "coding", folderID: "life"),
+        SidebarListDescriptor(id: "habits", folderID: "life"),
+        SidebarListDescriptor(id: "aspirations", folderID: "life"),
+        SidebarListDescriptor(id: "loose", folderID: nil),
+      ],
+      folders: [SidebarFolderDescriptor(id: "life", parentFolderID: nil)],
+      nested: [SidebarNestedListDescriptor(id: "sub", listID: "habits", depth: 0, isPromoted: false)],
+      expanded: ["life"])
+    XCTAssertEqual(Set(rows.map(\.id)).count, rows.count, "row ids are unique")
+    let depths = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0.depth) })
+    XCTAssertEqual(depths["folder:life"], 0)
+    for id in ["errands", "coding", "habits", "aspirations"] {
+      XCTAssertEqual(depths["list:\(id)"], 1, id)
+    }
+    XCTAssertEqual(depths["nested:habits:sub"], 2)
+    XCTAssertEqual(depths["list:loose"], 0)
+    XCTAssertEqual(
+      rows.map(\.id).drop { $0 != "folder:life" }.prefix(6),
+      ["folder:life", "list:errands", "list:coding", "list:habits", "nested:habits:sub", "list:aspirations"])
+  }
+
   func testACollapsedFolderHidesItsContents() {
     let lists = [SidebarListDescriptor(id: "filed", folderID: "work")]
     let folders = [SidebarFolderDescriptor(id: "work", parentFolderID: nil)]
