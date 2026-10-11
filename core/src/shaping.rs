@@ -231,5 +231,74 @@ pub fn focus_deferral_date(deferral: FocusDeferral, now_ms: i64, zone: String) -
     }
 }
 
+/// Where an arrow key leaves a cursor at `current` in `count` rows. A single
+/// step wraps, so the far end of a long list is one key away; a bigger jump
+/// (a page) stops at the end, because overshooting and landing near the top
+/// again would lose your place.
+#[uniffi::export]
+pub fn cursor_step(current: i64, offset: i64, count: i64) -> i64 {
+    if count <= 0 {
+        return 0;
+    }
+    if offset.abs() == 1 {
+        return (current + offset).rem_euclid(count);
+    }
+    current.saturating_add(offset).clamp(0, count - 1)
+}
+
+/// The text a character or title is found by: case and accents folded, as
+/// Foundation's case- and diacritic-insensitive folding does.
+fn find_key(character: char) -> Option<String> {
+    use unicode_normalization::UnicodeNormalization;
+    if !character.is_alphanumeric() {
+        return None;
+    }
+    Some(
+        character
+            .to_string()
+            .nfd()
+            .filter(|c| !unicode_normalization::char::is_combining_mark(*c))
+            .flat_map(char::to_lowercase)
+            .collect(),
+    )
+}
+
+/// Vim's `f` and `F` over rows: the index of the next row (or previous, when
+/// `forward` is false) whose title begins with `character`, reading a title
+/// from its first letter or digit and ignoring case and accents. The walk
+/// wraps; with no `current` it starts before the first row (after the last,
+/// backwards), so the first match counts. Nothing when no row matches or
+/// `character` is not a letter or digit.
+#[uniffi::export]
+pub fn vim_find(
+    titles: Vec<String>,
+    current: Option<i64>,
+    character: String,
+    forward: bool,
+) -> Option<i64> {
+    let count = titles.len() as i64;
+    let mut characters = character.chars();
+    let (Some(first), None) = (characters.next(), characters.next()) else {
+        return None;
+    };
+    let target = find_key(first)?;
+    if count == 0 {
+        return None;
+    }
+    let initials: Vec<Option<String>> = titles
+        .iter()
+        .map(|title| {
+            title
+                .chars()
+                .find(|c| c.is_alphanumeric())
+                .and_then(find_key)
+        })
+        .collect();
+    let start = current.unwrap_or(if forward { -1 } else { count });
+    (1..=count)
+        .map(|step| (start + if forward { step } else { -step }).rem_euclid(count))
+        .find(|index| initials[*index as usize].as_deref() == Some(target.as_str()))
+}
+
 #[cfg(test)]
 mod tests;

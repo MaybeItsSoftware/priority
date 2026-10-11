@@ -565,7 +565,7 @@ covered the old copies pass against it.
     | `FocusDeferral` (in an hour, this afternoon, tomorrow, next week) | iOS `FocusModel`, Kotlin `FocusModel.kt` | iOS + Kotlin | move |
     | `FocusContextSelection` (condition toggle, restore) | `TaktCore`, iOS `FocusModel`, Kotlin `FocusViewModel` | all three | move |
     | Task editor: estimate parsing, three-way reconcile, save validation | `TaktWorkspace/TaskEditorDraft`, Kotlin `TaskEditorDraft.kt`, `InspectorLogic.InspectorValidation` | Swift + Kotlin | move |
-    | Outline drop planning (sibling-only reorder, no-op detection) | iOS `OutlineDropPlanner`, Kotlin `OutlineShaping.planDrop` | iOS + Kotlin | move |
+    | Outline drop planning (sibling-only reorder, no-op detection) | iOS `OutlineDropPlanner`, Kotlin `OutlineShaping.planDrop` | iOS + Kotlin | native, a decision owed: the two are different rules, not one written twice. The iPhone reads the drop from the rows directly above and below and reparents into another parent's children; Android looks past deeper rows to the nearest sibling, only reorders, and refuses a drop that changes nothing. One core function would mean choosing one behaviour for both phones |
     | Kotlin outline walk and sidebar index fallbacks (`WorkspaceListTree.outline`, `WorkspaceSidebarIndex.build`, `ListsTreeShaping.openCounts`) | Kotlin, beside the core's `outline`, `sidebar_index_with_open_counts` | Kotlin + core | native as test oracles, as `WorkspaceListTree` is on the Mac (step 9) |
     | `TaskOutlineFolding`, `MatrixGeometry`, `RootDueBucket` | Swift, Kotlin | both | native: per-point maths and fold state held only in UI memory (step 9) |
     | Date and duration text (`Format`, `WaitingFollowUp.label`, `FocusPoints.formatted`, `SyncStatusText`) | iOS, Kotlin, Mac | all three | native: locale presentation |
@@ -580,7 +580,7 @@ covered the old copies pass against it.
 
     | Item | Current home | Plan |
     |---|---|---|
-    | `WorkspaceKeymap` parse and resolve, `WorkspaceKeyBindings` | `TaktCore` | move the file format (parse, issues, normalise, overlay); the key-event lookup stays, it runs per key press over `NSEvent` |
+    | `WorkspaceKeymap` parse and resolve, `WorkspaceKeyBindings` | `TaktCore` | native, judged after looking: the file format is not separable from the Mac's command catalogue (`WorkspaceCommandCatalog+Entries`, its ids, surfaces and default keys), which step 9 kept native; moving the parser alone would cross the whole catalogue on every load for a format no other platform reads. It moves with the catalogue, if Android's hand-copied `KeyCatalog.kt` is ever replaced by it |
     | `VimFind`, `CursorStepping` | `TaktCore` | move: pure list maths, one call per key press |
     | `DesktopShortcutSequence`, `DoubleTapModifier` | `TaktCore` | native: timers over `NSEvent` timing |
     | `WorkspaceCommandQuery` (palette ranking) | `TaktCore` | native: ranks the Mac's own catalogue every keystroke (step 9) |
@@ -663,6 +663,13 @@ covered the old copies pass against it.
     before step 4 (`moveSubtree`, `normalizedVisibleRootName`,
     `persistTaskOrder`, `taskDescendantIDs`, `encodeStringArray`) are
     deleted; `upsertKanbanColumn` waits for the board pass.
+
+    **The Mac's cursor rules (done 2026-10-12).** Arrow-key stepping, which
+    wraps on one step and stops at the ends on a page (`cursor_step`), and
+    Vim's `f`/`F` over row titles (`vim_find`, case and accents folded by
+    canonical decomposition, where Foundation folded them) are in
+    `shaping.rs`; `CursorStepping` and `VimFind` wrap them, one call per
+    key press, and their suites run unchanged.
 
 ## Risks
 

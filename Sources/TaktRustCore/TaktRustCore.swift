@@ -25267,6 +25267,22 @@ public func blockedSectionLabels(groups: [UInt32], blocked: [Bool]) -> [UInt32] 
 })
 }
 /**
+ * Where an arrow key leaves a cursor at `current` in `count` rows. A single
+ * step wraps, so the far end of a long list is one key away; a bigger jump
+ * (a page) stops at the end, because overshooting and landing near the top
+ * again would lose your place.
+ */
+public func cursorStep(current: Int64, offset: Int64, count: Int64) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_cursor_step(
+        FfiConverterInt64.lower(current),
+        FfiConverterInt64.lower(offset),
+        FfiConverterInt64.lower(count),uniffiCallStatus
+    )
+})
+}
+/**
  * The day with its planned slots filled from `order`, in turn, and every
  * other slot as it was; `planned[i]` says whether slot `i` is planned and
  * `ids[i]` is what it holds. Lets the day show a move at once rather than
@@ -25355,6 +25371,25 @@ public func focusDeferralDate(deferral: FocusDeferral, nowMs: Int64, zone: Strin
         FfiConverterTypeFocusDeferral_lower(deferral),
         FfiConverterInt64.lower(nowMs),
         FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
+ * Vim's `f` and `F` over rows: the index of the next row (or previous, when
+ * `forward` is false) whose title begins with `character`, reading a title
+ * from its first letter or digit and ignoring case and accents. The walk
+ * wraps; with no `current` it starts before the first row (after the last,
+ * backwards), so the first match counts. Nothing when no row matches or
+ * `character` is not a letter or digit.
+ */
+public func vimFind(titles: [String], current: Int64?, character: String, forward: Bool) -> Int64?  {
+    return try!  FfiConverterOptionInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_vim_find(
+        FfiConverterSequenceString.lower(titles),
+        FfiConverterOptionInt64.lower(current),
+        FfiConverterString.lower(character),
+        FfiConverterBool.lower(forward),uniffiCallStatus
     )
 })
 }
@@ -26290,6 +26325,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_blocked_section_labels() != 39647) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_cursor_step() != 15724) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_day_arrangement_applying() != 46141) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -26306,6 +26344,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_focus_deferral_date() != 35466) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_vim_find() != 17940) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder() != 59863) {

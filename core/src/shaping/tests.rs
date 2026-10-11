@@ -229,3 +229,53 @@ fn deferrals_land_on_the_wall_clock_in_the_zone() {
         t0 + 23 * hour
     );
 }
+
+#[test]
+fn a_single_step_wraps_and_a_page_stops_at_the_ends() {
+    assert_eq!(cursor_step(0, -1, 5), 4);
+    assert_eq!(cursor_step(4, 1, 5), 0);
+    assert_eq!(cursor_step(2, 1, 5), 3);
+    assert_eq!(cursor_step(2, -8, 5), 0);
+    assert_eq!(cursor_step(2, 8, 5), 4);
+    assert_eq!(cursor_step(0, 1, 1), 0);
+    assert_eq!(cursor_step(0, -1, 1), 0);
+    assert_eq!(cursor_step(3, 1, 0), 0);
+}
+
+fn titles() -> Vec<String> {
+    strings(&[
+        "Call Sam",
+        "buy milk",
+        "— cancel gym",
+        "Écrire",
+        "2026 plan",
+        "check post",
+    ])
+}
+
+#[test]
+fn find_walks_forward_and_back_and_wraps() {
+    assert_eq!(vim_find(titles(), Some(0), "c".into(), true), Some(2));
+    assert_eq!(vim_find(titles(), Some(2), "C".into(), true), Some(5));
+    assert_eq!(vim_find(titles(), Some(5), "c".into(), true), Some(0));
+    assert_eq!(vim_find(titles(), Some(0), "c".into(), false), Some(5));
+    assert_eq!(vim_find(titles(), Some(5), "c".into(), false), Some(2));
+    assert_eq!(vim_find(titles(), None, "c".into(), true), Some(0));
+    assert_eq!(vim_find(titles(), None, "c".into(), false), Some(5));
+}
+
+#[test]
+fn find_ignores_leading_punctuation_case_and_accents() {
+    assert_eq!(vim_find(titles(), Some(0), "e".into(), true), Some(3));
+    assert_eq!(vim_find(titles(), Some(0), "É".into(), true), Some(3));
+    assert_eq!(vim_find(titles(), Some(0), "2".into(), true), Some(4));
+    assert_eq!(vim_find(titles(), Some(1), "b".into(), true), Some(1));
+}
+
+#[test]
+fn find_with_nothing_to_find_is_nothing() {
+    assert_eq!(vim_find(titles(), Some(0), "z".into(), true), None);
+    assert_eq!(vim_find(titles(), Some(0), " ".into(), true), None);
+    assert_eq!(vim_find(Vec::new(), None, "a".into(), true), None);
+    assert_eq!(vim_find(titles(), None, "ab".into(), true), None);
+}

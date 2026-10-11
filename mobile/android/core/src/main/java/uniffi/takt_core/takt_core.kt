@@ -899,6 +899,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_blocked_section_labels(
     ): Int
+    external fun uniffi_takt_core_checksum_func_cursor_step(
+    ): Int
     external fun uniffi_takt_core_checksum_func_day_arrangement_applying(
     ): Int
     external fun uniffi_takt_core_checksum_func_day_arrangement_moving(
@@ -910,6 +912,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_func_focus_context_toggle(
     ): Int
     external fun uniffi_takt_core_checksum_func_focus_deferral_date(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_vim_find(
     ): Int
     external fun uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder(
     ): Int
@@ -2053,6 +2057,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_blocked_section_labels(`groups`: RustBuffer.ByValue,`blocked`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_cursor_step(`current`: Long,`offset`: Long,`count`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     external fun uniffi_takt_core_fn_func_day_arrangement_applying(`order`: RustBuffer.ByValue,`ids`: RustBuffer.ByValue,`planned`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_arrangement_moving(`taskId`: RustBuffer.ByValue,`offset`: Long,`order`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2065,6 +2071,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_focus_deferral_date(`deferral`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_func_vim_find(`titles`: RustBuffer.ByValue,`current`: RustBuffer.ByValue,`character`: RustBuffer.ByValue,`forward`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_sidebar_list_ids_in_folder(`folderId`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_sidebar_outline_rows(`inboxId`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`nestedLists`: RustBuffer.ByValue,`expandedFolderIds`: RustBuffer.ByValue,`includeToday`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -2618,6 +2626,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_blocked_section_labels() and 0xFFFF) != 39647) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_cursor_step() and 0xFFFF) != 15724) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_day_arrangement_applying() and 0xFFFF) != 46141) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2634,6 +2645,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_focus_deferral_date() and 0xFFFF) != 35466) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_vim_find() and 0xFFFF) != 17940) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder() and 0xFFFF) != 59863) {
@@ -28954,6 +28968,25 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
 
         /**
+         * Where an arrow key leaves a cursor at `current` in `count` rows. A single
+         * step wraps, so the far end of a long list is one key away; a bigger jump
+         * (a page) stops at the end, because overshooting and landing near the top
+         * again would lose your place.
+         */ fun `cursorStep`(`current`: kotlin.Long, `offset`: kotlin.Long, `count`: kotlin.Long): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_cursor_step(
+    
+        
+        FfiConverterLong.lower(`current`),
+        FfiConverterLong.lower(`offset`),
+        FfiConverterLong.lower(`count`),_status)
+}
+    )
+    }
+    
+
+        /**
          * The day with its planned slots filled from `order`, in turn, and every
          * other slot as it was; `planned[i]` says whether slot `i` is planned and
          * `ids[i]` is what it holds. Lets the day show a move at once rather than
@@ -29058,6 +29091,28 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterTypeFocusDeferral.lower(`deferral`),
         FfiConverterLong.lower(`nowMs`),
         FfiConverterString.lower(`zone`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Vim's `f` and `F` over rows: the index of the next row (or previous, when
+         * `forward` is false) whose title begins with `character`, reading a title
+         * from its first letter or digit and ignoring case and accents. The walk
+         * wraps; with no `current` it starts before the first row (after the last,
+         * backwards), so the first match counts. Nothing when no row matches or
+         * `character` is not a letter or digit.
+         */ fun `vimFind`(`titles`: List<kotlin.String>, `current`: kotlin.Long?, `character`: kotlin.String, `forward`: kotlin.Boolean): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_vim_find(
+    
+        
+        FfiConverterSequenceString.lower(`titles`),
+        FfiConverterOptionalLong.lower(`current`),
+        FfiConverterString.lower(`character`),
+        FfiConverterBoolean.lower(`forward`),_status)
 }
     )
     }
