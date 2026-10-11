@@ -265,6 +265,7 @@ private fun OutlineRowView(
                     row.title, row.status, celebration,
                     style = if (row.isList) TaktTheme.type.bodyStrong else TaktTheme.type.body,
                     modifier = Modifier.weight(1f, fill = true).padding(vertical = Metrics.xs),
+                    isBlocked = row.isBlocked,
                 )
                 RowMarkers(row, Modifier.padding(start = Metrics.xs).heightIn(min = 24.dp))
                 Box(

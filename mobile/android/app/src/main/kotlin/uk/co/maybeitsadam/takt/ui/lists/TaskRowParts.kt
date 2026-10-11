@@ -109,7 +109,8 @@ internal fun CelebratedCheck(
 
 /**
  * The title. A closed row is muted; with Strike, Spark or Fold it also carries
- * a rule through it, drawn across when the row is newly finished.
+ * a rule through it, drawn across when the row is newly finished. An open row
+ * waiting on an open task ([isBlocked]) is muted too, without the rule.
  */
 @Composable
 internal fun TaskTitle(
@@ -119,6 +120,7 @@ internal fun TaskTitle(
     modifier: Modifier = Modifier,
     style: TextStyle = TaktTheme.type.body,
     maxLines: Int = 2,
+    isBlocked: Boolean = false,
 ) {
     val closed = status != TaskStatus.OPEN
     val struck = closed && celebration != CelebrationStyle.NONE
@@ -139,7 +141,7 @@ internal fun TaskTitle(
     Text(
         title,
         style = style,
-        color = if (closed) TaktTheme.colors.mutedText else TaktTheme.colors.ink,
+        color = if (closed || isBlocked) TaktTheme.colors.mutedText else TaktTheme.colors.ink,
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier.drawWithContent {
@@ -154,11 +156,12 @@ internal fun TaskTitle(
     )
 }
 
-/** Due, estimate, priority, tags, daily and planned, compactly, after the title. */
+/** Blocked, due, estimate, priority, tags, daily and planned, compactly, after the title. */
 @Composable
 internal fun RowMarkers(row: OutlineRow, modifier: Modifier = Modifier, maxTags: Int = 2) {
     Row(modifier.fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs), verticalAlignment = Alignment.CenterVertically) {
         val colors = TaktTheme.colors
+        if (row.isBlocked) Icon(PIcons.Link, "Blocked by another task", tint = colors.dimText, modifier = Modifier.size(14.dp))
         if (row.isPlanned) Icon(PIcons.Today, "Planned for today", tint = colors.primary, modifier = Modifier.size(14.dp))
         if (row.isDaily) Icon(PIcons.Repeat, "Daily", tint = colors.success, modifier = Modifier.size(14.dp))
         row.waitingOn?.let { Tag(it, Modifier.semantics { contentDescription = "Waiting on $it" }) }

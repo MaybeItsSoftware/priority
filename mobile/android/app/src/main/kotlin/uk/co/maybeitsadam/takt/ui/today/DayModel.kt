@@ -31,6 +31,8 @@ data class DayCard(
     val dailyId: String?,
     val isDailyDoneToday: Boolean,
     val isRunning: Boolean,
+    /** Planned, but waiting on an open task: drawn greyed. */
+    val isBlocked: Boolean = false,
 ) {
     val isPlanned: Boolean get() = reason == DayPlanReason.PLANNED
 }
@@ -182,6 +184,7 @@ object DayShaping {
         session: FocusSession?,
         dailies: List<DailyItem>,
         lists: List<TaskList>,
+        blockedIds: Set<String> = emptySet(),
     ): DayState {
         val dailyByTask = HashMap<String, DailyItem>()
         for (item in dailies) dailyByTask.putIfAbsent(item.task.id, item)
@@ -212,6 +215,7 @@ object DayShaping {
                 dailyId = daily?.daily?.id,
                 isDailyDoneToday = daily?.isDoneToday ?: false,
                 isRunning = id == runningId,
+                isBlocked = id in blockedIds,
             )
         }
         return DayState(

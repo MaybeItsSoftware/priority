@@ -30,6 +30,11 @@ import uk.co.maybeitsadam.takt.core.TaskPlanningException
 import uk.co.maybeitsadam.takt.core.WorkspaceKanbanColumn
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.workspace.FieldEdit
+import uk.co.maybeitsadam.takt.data.workspace.TaskDependencies
+import uk.co.maybeitsadam.takt.data.workspace.TaskSearchResult
+import uk.co.maybeitsadam.takt.data.workspace.addBlocker
+import uk.co.maybeitsadam.takt.data.workspace.observeTaskDependencies
+import uk.co.maybeitsadam.takt.data.workspace.removeBlocker
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorDraft
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorError
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorException
@@ -49,6 +54,8 @@ data class InspectorSurroundings(
     val conditions: ImmutableList<TaskCondition> = persistentListOf(),
     val boardColumns: ImmutableList<WorkspaceKanbanColumn> = WorkspaceKanbanColumn.blitzitDefaults.toImmutableList(),
     val facts: TaskInspectorFacts = TaskInspectorFacts(),
+    /** What it waits on and what waits on it. */
+    val dependencies: TaskDependencies = TaskDependencies(),
 ) {
     fun conditionName(id: String): String = conditions.firstOrNull { it.id == id }?.name ?: "Missing condition"
 }
@@ -91,7 +98,8 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
                     repo.observeConditions(session.workspace.id),
                     repo.observeKanbanBoards(),
                     repo.observeTaskInspectorFacts(id),
-                ) { (task, name), conditions, boards, facts ->
+                    repo.observeTaskDependencies(id),
+                ) { (task, name), conditions, boards, facts, dependencies ->
                     val columns = task?.let { boards["${it.listId}/${it.parentTaskId ?: "root"}"] ?: boards["${it.listId}/root"] }
                         ?.takeIf { it.isNotEmpty() } ?: WorkspaceKanbanColumn.blitzitDefaults
                     InspectorSurroundings(
@@ -100,6 +108,7 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
                         conditions = conditions.toImmutableList(),
                         boardColumns = columns.toImmutableList(),
                         facts = facts,
+                        dependencies = dependencies,
                     )
                 }
             }
@@ -248,6 +257,33 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
     fun setWaiting(tag: String?, followUpAt: java.time.Instant?) {
         val id = taskId.value ?: return
         container.undo.perform { it.setWaiting(id, tag, followUpAt) }
+    }
+
+    /** Makes the task wait on [blockerId], as one "Add Blocker" step; a cycle is refused with a message. */
+    fun addBlocker(blockerId: String) {
+        val id = taskId.value ?: return
+        container.undo.perform { it.addBlocker(id, blockerId) }
+    }
+
+    /** Stops the task waiting on [blockerId], as one "Remove Blocker" step. */
+    fun removeBlocker(blockerId: String) {
+        val id = taskId.value ?: return
+        container.undo.perform { it.removeBlocker(id, blockerId) }
+    }
+
+    /** Open tasks matching [query] the task could wait on, for the "Blocked by" picker. */
+    suspend fun blockerCandidates(query: String): List<TaskSearchResult> {
+        val id = taskId.value ?: return emptyList()
+        if (query.isBlank()) return emptyList()
+        val session = container.awaitSession()
+        val results = try {
+            session.repository.searchTasks(session.workspace.id, query.trim())
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            emptyList()
+        }
+        return BlockerPicker.candidates(results, id, surroundings.value.dependencies)
     }
 
     fun setPlannedToday(planned: Boolean) {

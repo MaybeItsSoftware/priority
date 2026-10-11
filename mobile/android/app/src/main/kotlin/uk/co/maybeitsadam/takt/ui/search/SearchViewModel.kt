@@ -19,12 +19,15 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.data.workspace.TaskSearchResult
+import uk.co.maybeitsadam.takt.data.workspace.blockedTaskIds
 
 @Immutable
 data class SearchState(
     /** The query the results answer; null before the first search. */
     val query: String? = null,
     val results: ImmutableList<TaskSearchResult> = persistentListOf(),
+    /** Results waiting on an open task, drawn greyed. */
+    val blockedIds: Set<String> = emptySet(),
 )
 
 /** Search: FTS through the repository, debounced, re-run when tasks change under it. */
@@ -50,12 +53,13 @@ class SearchViewModel(private val container: AppContainer) : ViewModel() {
         container.withSession { session ->
             val repository = session.repository
             repository.database.invalidations
-                .filter { "tasks" in it || "task_lists" in it }
+                .filter { "tasks" in it || "task_lists" in it || "task_dependencies" in it }
                 .map { }
                 .onStart { emit(Unit) }
                 .map {
                     val results = repository.searchTasks(session.workspace.id, query, includingCompleted = include)
-                    SearchState(query, results.toImmutableList())
+                    val blocked = repository.blockedTaskIds()
+                    SearchState(query, results.toImmutableList(), results.mapNotNullTo(HashSet()) { r -> r.task.id.takeIf { it in blocked } })
                 }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState())

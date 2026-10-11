@@ -96,6 +96,20 @@ class ListsShapingTest {
         assertTrue(shape.rows.first { it.id == "a" }.isDaily)
     }
 
+    @Test fun blockedRowsAreMarkedAndKeepTheReadOrder() {
+        val data = scope(listOf(home), tasks).copy(blockedTaskIds = setOf("a1", "b"))
+        val rows = OutlineShaping.shape(data, false, emptySet(), false, emptySet(), zone, today).rows
+        // The core already sank blocked rows; the shaping draws them where they came.
+        assertEquals(listOf("a", "a1", "a2", "a2x", "b"), rows.map { it.id })
+        assertEquals(setOf("a1", "b"), rows.filter { it.isBlocked }.map { it.id }.toSet())
+
+        val board = BoardShaping.shape(data, false, emptyMap(), emptySet(), false, zone, today)
+        val cards = board.columns.flatMap { it.cards }
+        assertTrue(cards.first { it.id == "b" }.row.isBlocked)
+        assertFalse(cards.first { it.id == "a" }.row.isBlocked)
+        assertTrue(cards.first { it.id == "a" }.subtasks.first { it.id == "a1" }.isBlocked)
+    }
+
     @Test fun aWaitingRowShowsItsTagAndFollowUpOnlyWhileInWaitingOn() {
         val at = Instant.parse("2026-10-03T14:00:00Z")
         val decorations = mapOf(

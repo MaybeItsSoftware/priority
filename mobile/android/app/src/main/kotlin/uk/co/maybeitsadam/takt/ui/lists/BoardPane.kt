@@ -216,7 +216,7 @@ private fun BoardCardView(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CelebratedCheck(row.status, row.isList, row.title, celebration) { actions.toggleComplete(row.id) }
-                    TaskTitle(row.title, row.status, celebration, Modifier.weight(1f).padding(vertical = Metrics.sm), maxLines = 3)
+                    TaskTitle(row.title, row.status, celebration, Modifier.weight(1f).padding(vertical = Metrics.sm), maxLines = 3, isBlocked = row.isBlocked)
                     if (row.hasChildren) FoldChevron(row.title, row.isFolded, onToggle = { actions.toggleFold(row.id) })
                 }
                 val detail = card.parentTitle?.let { "Under $it" } ?: card.listName
@@ -266,7 +266,7 @@ private fun SubtaskRow(row: OutlineRow, celebration: CelebrationStyle, actions: 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CelebratedCheck(row.status, row.isList, row.title, celebration) { actions.toggleComplete(row.id) }
-        TaskTitle(row.title, row.status, celebration, Modifier.weight(1f), style = TaktTheme.type.small, maxLines = 2)
+        TaskTitle(row.title, row.status, celebration, Modifier.weight(1f), style = TaktTheme.type.small, maxLines = 2, isBlocked = row.isBlocked)
         if (row.hasChildren) {
             FoldChevron(row.title, row.isFolded, onToggle = { actions.toggleFold(row.id) })
         } else {

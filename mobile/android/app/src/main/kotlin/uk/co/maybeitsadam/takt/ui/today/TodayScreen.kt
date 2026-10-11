@@ -271,7 +271,13 @@ private fun DayCardRow(
                         .combinedClickable(onClick = onOpen, onLongClick = { menuOpen = true }, onLongClickLabel = "Task actions")
                         .padding(vertical = Metrics.sm, horizontal = Metrics.xs),
                 ) {
-                    Text(card.title, style = TaktTheme.type.body, color = TaktTheme.colors.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        card.title,
+                        style = TaktTheme.type.body,
+                        color = if (card.isBlocked) TaktTheme.colors.mutedText else TaktTheme.colors.ink,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     CardDetail(card)
                 }
                 ChalkMenu(menuOpen, onDismiss = { menuOpen = false }) { menu { menuOpen = false } }
@@ -302,8 +308,9 @@ private fun CardDetail(card: DayCard) {
         DayPlanReason.STARTS_TODAY -> TaktTheme.colors.success
         else -> TaktTheme.colors.mutedText
     }
-    if (detail == null && card.listName == null && card.dailyId == null) return
+    if (detail == null && card.listName == null && card.dailyId == null && !card.isBlocked) return
     Row(horizontalArrangement = Arrangement.spacedBy(Metrics.xs + Metrics.xxs), verticalAlignment = Alignment.CenterVertically) {
+        if (card.isBlocked) Text("Blocked", style = TaktTheme.type.small, color = TaktTheme.colors.dimText, maxLines = 1)
         if (detail != null) Text(detail, style = TaktTheme.type.small, color = tint, maxLines = 1)
         if (card.dailyId != null) {
             Icon(PIcons.Repeat, "Daily", tint = TaktTheme.colors.categoricalPurple, modifier = Modifier.size(12.dp))

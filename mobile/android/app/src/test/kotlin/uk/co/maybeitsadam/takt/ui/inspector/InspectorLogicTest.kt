@@ -19,6 +19,12 @@ import uk.co.maybeitsadam.takt.core.TaskEditorMetadata
 import uk.co.maybeitsadam.takt.core.TaskMatrixPosition
 import uk.co.maybeitsadam.takt.core.TaskPlanning
 import uk.co.maybeitsadam.takt.core.TaskPlanningError
+import uk.co.maybeitsadam.takt.core.TaskList
+import uk.co.maybeitsadam.takt.core.TaskStatus
+import uk.co.maybeitsadam.takt.core.WorkspaceItemKind
+import uk.co.maybeitsadam.takt.core.WorkspaceTask
+import uk.co.maybeitsadam.takt.data.workspace.TaskDependencies
+import uk.co.maybeitsadam.takt.data.workspace.TaskSearchResult
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorDraft
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorField
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorSnapshot
@@ -323,3 +329,24 @@ internal fun snapshot(
     workspaceId = "W", taskId = "T", title = "Write report", notes = "", dueAt = null,
     estimateSeconds = estimateSeconds, metadata = TaskEditorMetadata(), dailyProgress = false, planning = planning,
 )
+
+class BlockerPickerTest {
+    private val t0 = Instant.parse("2026-01-01T00:00:00Z")
+    private val list = TaskList("home", "w", null, "Home", null, 0, false, null, null, null, t0, t0)
+
+    private fun task(id: String, kind: WorkspaceItemKind? = null) = WorkspaceTask(
+        id, "home", null, id, "", TaskStatus.OPEN, 0, null, null, null, null, kind, null, null,
+        createdAt = t0, updatedAt = t0,
+    )
+
+    @Test
+    fun offersOtherTasksNotAlreadyLinkedEitherWay() {
+        val results = listOf("me", "blocker", "waiter", "free", "nested").map {
+            TaskSearchResult(task(it, kind = if (it == "nested") WorkspaceItemKind.LIST else null), list, null)
+        }
+        val dependencies = TaskDependencies(blockers = listOf(task("blocker")), blocking = listOf(task("waiter")))
+        assertEquals(listOf("free"), BlockerPicker.candidates(results, "me", dependencies).map { it.task.id })
+        val many = (1..20).map { TaskSearchResult(task("t$it"), list, null) }
+        assertEquals(BlockerPicker.LIMIT, BlockerPicker.candidates(many, "me", TaskDependencies()).size)
+    }
+}

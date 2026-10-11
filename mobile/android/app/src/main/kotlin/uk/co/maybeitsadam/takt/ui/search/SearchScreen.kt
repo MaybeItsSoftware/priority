@@ -154,6 +154,7 @@ fun SearchScreen() {
                         result = result,
                         query = state.query.orEmpty(),
                         isSelected = index == selected,
+                        isBlocked = result.task.id in state.blockedIds,
                         onOpen = { reveal(result) },
                         onInspect = { model.inspect(result.task.id) },
                         onToggle = { model.toggle(result) },
@@ -211,6 +212,7 @@ private fun ResultRow(
     result: TaskSearchResult,
     query: String,
     isSelected: Boolean,
+    isBlocked: Boolean,
     onOpen: () -> Unit,
     onInspect: () -> Unit,
     onToggle: () -> Unit,
@@ -236,7 +238,7 @@ private fun ResultRow(
                 Text(
                     title,
                     style = TaktTheme.type.body,
-                    color = if (open) colors.ink else colors.mutedText,
+                    color = if (open && !isBlocked) colors.ink else colors.mutedText,
                     textDecoration = if (open) null else TextDecoration.LineThrough,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -253,6 +255,10 @@ private fun ResultRow(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.xs)) {
                     Icon(PIcons.ListIcon, null, tint = listColor, modifier = Modifier.size(12.dp))
                     Text(result.list.name, style = TaktTheme.type.small, color = listColor, maxLines = 1)
+                    if (isBlocked) {
+                        Spacer(Modifier.width(Metrics.xs))
+                        Text("Blocked", style = TaktTheme.type.small, color = colors.dimText)
+                    }
                     statusLabel(task.status)?.let { label ->
                         Spacer(Modifier.width(Metrics.xs))
                         Text(label, style = TaktTheme.type.small, color = colors.dimText)

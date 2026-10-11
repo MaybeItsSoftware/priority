@@ -187,10 +187,11 @@ object BoardShaping {
             byColumn.getValue(column) += BoardCard(
                 row = OutlineShaping.rowFor(
                     task, 0, decoration, task.id in data.dailyTaskIds, cardHasChildren, task.id in folded, zone, today,
+                    isBlocked = task.id in data.blockedTaskIds,
                 ),
                 listName = listNames[task.listId],
                 parentTitle = if (isCross) board.parents[task.id]?.title else null,
-                subtasks = drawn.map { OutlineShaping.row(it, data.decorations, data.dailyTaskIds, parents, folded, zone, today) }
+                subtasks = drawn.map { OutlineShaping.row(it, data.decorations, data.dailyTaskIds, parents, folded, zone, today, data.blockedTaskIds) }
                     .toImmutableList(),
                 subtaskCount = subtasks.size,
             )

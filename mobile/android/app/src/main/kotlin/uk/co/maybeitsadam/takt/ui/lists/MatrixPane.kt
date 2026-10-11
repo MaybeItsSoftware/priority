@@ -161,7 +161,7 @@ private fun MatrixRow(
         ) {
             CelebratedCheck(row.status, row.isList, row.title, celebration) { actions.toggleComplete(row.id) }
             Column(Modifier.weight(1f)) {
-                TaskTitle(row.title, row.status, celebration, style = TaktTheme.type.small, maxLines = 2)
+                TaskTitle(row.title, row.status, celebration, style = TaktTheme.type.small, maxLines = 2, isBlocked = row.isBlocked)
                 card.listName?.let { Text(it, style = TaktTheme.type.small, color = TaktTheme.colors.mutedText, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
         }

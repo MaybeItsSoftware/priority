@@ -13,11 +13,13 @@ import uk.co.maybeitsadam.takt.core.PeriodicSchedule
 import uk.co.maybeitsadam.takt.core.TaskCalendarDate
 import uk.co.maybeitsadam.takt.core.TaskMatrixPosition
 import uk.co.maybeitsadam.takt.core.TaskPlanningError
+import uk.co.maybeitsadam.takt.data.workspace.TaskDependencies
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorDraft
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorError
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorException
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorField
 import uk.co.maybeitsadam.takt.data.workspace.TaskEditorValues
+import uk.co.maybeitsadam.takt.data.workspace.TaskSearchResult
 
 // The inspector's pure pieces: date and time field arithmetic, due editing,
 // repeat presets, requirement-group reducers and pre-save validation. Kept
@@ -354,3 +356,27 @@ object DailySchedule {
 
 /** The Monday on or before [date]. */
 fun weekStart(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+
+/** The "Blocked by" picker's choices among search results. */
+object BlockerPicker {
+    const val LIMIT = 8
+
+    /**
+     * Results [taskId] could wait on: tasks (not lists), not itself, not one it
+     * already waits on, and not one waiting on it directly (a cycle the store
+     * would refuse; a longer one it refuses with its own message).
+     */
+    fun candidates(
+        results: List<TaskSearchResult>,
+        taskId: String,
+        dependencies: TaskDependencies,
+        limit: Int = LIMIT,
+    ): List<TaskSearchResult> {
+        val excluded = HashSet<String>().apply {
+            add(taskId)
+            dependencies.blockers.mapTo(this) { it.id }
+            dependencies.blocking.mapTo(this) { it.id }
+        }
+        return results.asSequence().filter { !it.task.isList && it.task.id !in excluded }.take(limit).toList()
+    }
+}

@@ -45,6 +45,8 @@ data class OutlineRow(
     val waitingOn: String? = null,
     /** In Waiting on: `↻ Thu 14:00`, when it will be chased. */
     val followUp: String? = null,
+    /** Open and waiting on an open task: drawn greyed, below its unblocked siblings (the core's order). */
+    val isBlocked: Boolean = false,
 )
 
 /** What the outline's lazy column draws: task rows and, in Everything, a header per list. */
@@ -131,7 +133,11 @@ object OutlineShaping {
         folded: Set<String>,
         zone: ZoneId,
         today: LocalDate,
-    ): OutlineRow = rowFor(item.task, item.depth, decorations[item.id], item.id in dailyIds, item.id in parents, item.id in folded, zone, today)
+        blockedIds: Set<String> = emptySet(),
+    ): OutlineRow = rowFor(
+        item.task, item.depth, decorations[item.id], item.id in dailyIds, item.id in parents, item.id in folded, zone, today,
+        isBlocked = item.id in blockedIds,
+    )
 
     fun rowFor(
         task: WorkspaceTask,
@@ -142,6 +148,7 @@ object OutlineShaping {
         isFolded: Boolean,
         zone: ZoneId,
         today: LocalDate,
+        isBlocked: Boolean = false,
     ): OutlineRow = OutlineRow(
         id = task.id,
         listId = task.listId,
@@ -162,6 +169,7 @@ object OutlineShaping {
         waitingOn = decoration?.takeIf { it.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID }?.waitingOn,
         followUp = decoration?.takeIf { it.kanbanColumn == WaitingFollowUp.WAITING_COLUMN_ID && task.status == TaskStatus.OPEN }
             ?.followUpAt?.let { WaitingFollowUp.label(it, today, zone) },
+        isBlocked = isBlocked && task.status == TaskStatus.OPEN,
     )
 
     /**
@@ -195,7 +203,7 @@ object OutlineShaping {
                 )
             }
             for (item in TaskOutlineFolding.visible(items, folded)) {
-                val row = row(item, data.decorations, data.dailyTaskIds, parents, folded, zone, today)
+                val row = row(item, data.decorations, data.dailyTaskIds, parents, folded, zone, today, data.blockedTaskIds)
                 rows += row
                 entries += OutlineEntry.Task(row)
             }
