@@ -129,7 +129,7 @@ struct WorkspaceDependencyInspectorSection: View {
     InspectorSection("Blocked by") {
       ForEach(blockers) { blocker in
         HStack(spacing: theme.space.xs) {
-          link(to: blocker)
+          link(to: blocker, stop: "blocker.\(blocker.id)")
           Button {
             model.removeBlocker(blocker, from: task)
           } label: {
@@ -138,7 +138,7 @@ struct WorkspaceDependencyInspectorSection: View {
               .foregroundStyle(theme.muted)
           }
           .buttonStyle(.plain)
-          .keyboardFocusable()
+          .inspectorStop("blocker.\(blocker.id).remove")
           .accessibilityLabel("Stop waiting on \(blocker.title)")
           .help("Stop waiting on \(blocker.title)")
         }
@@ -147,14 +147,14 @@ struct WorkspaceDependencyInspectorSection: View {
         Label(blockers.isEmpty ? "Wait on a task…" : "Wait on another…", systemImage: "link")
       }
       .buttonStyle(FocusActionButtonStyle())
-      .keyboardFocusable()
+      .inspectorStop("blocker.add")
       .commandHelp(.taskAddBlocker, note: "Find a task this one waits on until it is done")
       if !blocking.isEmpty {
         Text(blocking.count == 1 ? "Blocks" : "Blocks \(blocking.count)")
           .font(theme.captionFont)
           .foregroundStyle(theme.muted)
           .padding(.top, theme.space.xxs)
-        ForEach(blocking) { waiting in link(to: waiting) }
+        ForEach(blocking) { waiting in link(to: waiting, stop: "blocks.\(waiting.id)") }
       }
     }
     .task(id: ReloadKey(taskID: task.id, revision: model.taskContentRevision)) {
@@ -165,7 +165,7 @@ struct WorkspaceDependencyInspectorSection: View {
 
   /// A task named in the section: its title, done or not, and its list, and
   /// a click goes to it.
-  private func link(to other: WorkspaceTask) -> some View {
+  private func link(to other: WorkspaceTask, stop: String) -> some View {
     let isOpen = other.status == .open
     return Button { model.selectTask(other) } label: {
       HStack(spacing: theme.space.xs) {
@@ -187,7 +187,7 @@ struct WorkspaceDependencyInspectorSection: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .keyboardFocusable()
+    .inspectorStop(stop)
     .help(isOpen ? "\(other.title) — open" : "\(other.title) — done")
   }
 }
