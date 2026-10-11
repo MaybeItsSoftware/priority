@@ -73,7 +73,8 @@ class WorkspaceUndoTest {
     @Test
     fun boardHistoryPersistsAndLegacyPreferencesDoNotOverwriteIt() = fixture {
         val key = "$listId/root"
-        val baseline = WorkspaceKanbanColumn.blitzitDefaults
+        // Not the stock columns, which the baseline clears so the board follows the default.
+        val baseline = listOf(WorkspaceKanbanColumn("todo", "To do"), WorkspaceKanbanColumn("done", "Done"))
         val legacy = mapOf(key to KanbanColumnsCodec.encode(baseline))
         store.kanbanBoardConfigurations(legacy, key)
         val custom = baseline + WorkspaceKanbanColumn("custom", "Custom")
@@ -89,8 +90,8 @@ class WorkspaceUndoTest {
     @Test
     fun columnRemovalAndItsCardsUndoTogether() = fixture {
         val key = "$listId/root"
-        val defaults = WorkspaceKanbanColumn.blitzitDefaults
-        store.kanbanBoardConfigurations(emptyMap(), key)
+        val defaults = WorkspaceKanbanColumn.blitzitDefaults + WorkspaceKanbanColumn("extra", "Extra")
+        store.setKanbanBoardColumns(defaults, key)
         val card = store.createTask(listId = listId, title = "Today", kanbanColumn = "today")
         val remaining = defaults.filter { it.id != "today" }
         store.setKanbanBoardColumns(

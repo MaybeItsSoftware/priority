@@ -306,62 +306,60 @@ pub struct BoardBaseline {
     pub columns_json: String,
 }
 
-/// Seeds `kanban_boards` from the boards the old preferences held, plus the
-/// default columns for `current_key` if it had none, without replacing a
-/// board already there; returns every board. Not an undo step.
+/// Seeds `kanban_boards` from the boards the old preferences held, without
+/// replacing a board already there; returns every board. Not an undo step.
 /// `WorkspaceStore.kanbanBoardConfigurations`.
+///
+/// `current_key` is no longer seeded: a board without a layout of its own
+/// follows the default columns (`board_columns`). Until the workspace has a
+/// default of its own, a layout identical to the stock columns — which is
+/// what earlier builds seeded every board they opened with — is removed, so
+/// those boards follow the default too. With the default still the stock
+/// columns, nothing a board draws changes.
 pub fn kanban_board_baseline(
     transaction: &Transaction,
     legacy: &[BoardBaseline],
     current_key: &str,
 ) -> Result<Vec<BoardBaseline>, CoreError> {
-    let mut boards: Vec<BoardBaseline> = legacy.to_vec();
-    if !boards.iter().any(|board| board.key == current_key) {
-        let defaults: Vec<crate::conversions::BoardColumn> = [
-            ("backlog", "Backlog"),
-            ("in-progress", "In progress"),
-            ("this-week", "This week"),
-            ("waiting-on", "Waiting on"),
-            ("today", "Today"),
-        ]
-        .iter()
-        .map(|(id, title)| crate::conversions::BoardColumn {
-            id: id.to_string(),
-            title: title.to_string(),
-        })
-        .collect();
-        boards.push(BoardBaseline {
-            key: current_key.to_string(),
-            columns_json: crate::conversions::columns_json(&defaults),
-        });
-    }
-    for board in &boards {
+    let _ = current_key;
+    for board in legacy {
         // Only a non-empty array of columns with ids and titles is a board.
-        let valid = serde_json::from_str::<Vec<serde_json::Value>>(&board.columns_json).is_ok_and(
-            |columns| {
-                !columns.is_empty()
-                    && columns
-                        .iter()
-                        .all(|c| c["id"].is_string() && c["title"].is_string())
-            },
-        );
-        if valid {
+        if crate::board_columns::parse_columns(&board.columns_json).is_some() {
             transaction.execute(
                 "INSERT OR IGNORE INTO kanban_boards (id, columnsJSON) VALUES (?1, ?2)",
                 params![board.key, board.columns_json],
             )?;
         }
     }
-    let mut statement = transaction.prepare("SELECT id, columnsJSON FROM kanban_boards")?;
-    let all = statement
-        .query_map([], |row| {
-            Ok(BoardBaseline {
-                key: row.get(0)?,
-                columns_json: row.get(1)?,
-            })
-        })?
-        .collect::<Result<_, _>>()?;
-    Ok(all)
+    let has_default: bool = transaction.query_row(
+        "SELECT EXISTS(SELECT 1 FROM kanban_boards WHERE id = ?1)",
+        [crate::board_columns::DEFAULT_BOARD_KEY],
+        |row| row.get(0),
+    )?;
+    let all: Vec<BoardBaseline> = {
+        let mut statement = transaction.prepare("SELECT id, columnsJSON FROM kanban_boards")?;
+        statement
+            .query_map([], |row| {
+                Ok(BoardBaseline {
+                    key: row.get(0)?,
+                    columns_json: row.get(1)?,
+                })
+            })?
+            .collect::<Result<_, _>>()?
+    };
+    if has_default {
+        return Ok(all);
+    }
+    let stock = crate::board_columns::board_stock_columns();
+    let mut kept = Vec::with_capacity(all.len());
+    for board in all {
+        if crate::board_columns::parse_columns(&board.columns_json).as_ref() == Some(&stock) {
+            transaction.execute("DELETE FROM kanban_boards WHERE id = ?1", [&board.key])?;
+        } else {
+            kept.push(board);
+        }
+    }
+    Ok(kept)
 }
 
 #[cfg(test)]
@@ -484,16 +482,30 @@ mod tests {
                 columns_json: "[]".into(),
             },
         ];
+        let stock =
+            crate::board_columns::columns_json(&crate::board_columns::board_stock_columns());
+        tx.execute(
+            "INSERT INTO kanban_boards (id, columnsJSON) VALUES ('seeded', ?1)",
+            [&stock],
+        )
+        .unwrap();
         let mut boards = kanban_board_baseline(&tx, &legacy_boards, "workspace").unwrap();
         boards.sort_by(|a, b| a.key.cmp(&b.key));
         let keys: Vec<&str> = boards.iter().map(|b| b.key.as_str()).collect();
-        assert_eq!(keys, ["kept", "workspace"]);
+        // The current board is not seeded, and the stock copy an earlier
+        // build seeded goes, so both follow the default.
+        assert_eq!(keys, ["kept"]);
         assert_eq!(boards[0].columns_json, "[{\"id\":\"a\",\"title\":\"A\"}]");
-        assert!(
-            boards[1]
-                .columns_json
-                .starts_with("[{\"id\":\"backlog\",\"title\":\"Backlog\"}")
-        );
+
+        // Once the workspace has a default of its own, a stock layout is a
+        // choice and stays.
+        tx.execute(
+            "INSERT INTO kanban_boards (id, columnsJSON) VALUES ('default', '[{\"id\":\"x\",\"title\":\"X\"}]'), ('chosen', ?1)",
+            [&stock],
+        )
+        .unwrap();
+        let boards = kanban_board_baseline(&tx, &[], "workspace").unwrap();
+        assert_eq!(boards.len(), 3);
     }
 
     #[test]

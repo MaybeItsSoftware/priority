@@ -115,11 +115,126 @@ extension WorkspaceStore {
     movingTaskIDs: [String] = [], toColumn: String? = nil, label: String = "Edit Board"
   ) throws {
     // The Rust core's `conversions::set_board_columns`.
-    let core = columns.map { BoardColumn(id: $0.id, title: $0.title) }
+    let core = columns.map(\.core)
     try coreWrite {
       try self.core.setBoardColumns(
         key: key, columns: core, movingTaskIds: movingTaskIDs, toColumn: toColumn, label: label,
         nowMs: Date.now.coreMilliseconds)
     }
   }
+
+  /// The columns a board draws and where each task stands on it: the Rust
+  /// core's `board_columns::board_columns`. `listIDs` are the lists the
+  /// board shows, for the rule columns and the columns its cards use.
+  public func boardColumns(key: String, listIDs: [String], now: Date = .now) throws -> WorkspaceBoardColumns {
+    let read = try Self.mappingCoreErrors {
+      try core.boardColumns(
+        key: key, listIds: listIDs, nowMs: now.coreMilliseconds, zone: TimeZone.current.identifier)
+    }
+    return WorkspaceBoardColumns(read)
+  }
+
+  /// Deletes a column, moving the tasks filed in it to `toColumn`, as one
+  /// "Delete Column" step. A rule column, Today and Waiting on move nothing.
+  public func deleteBoardColumn(key: String, listIDs: [String], columnID: String, toColumn: String?) throws {
+    try coreWrite {
+      try core.deleteBoardColumn(
+        key: key, listIds: listIDs, columnId: columnID, toColumn: toColumn, nowMs: Date.now.coreMilliseconds)
+    }
+  }
+
+  /// Drops a board's own columns, so it follows its list's or the default.
+  public func resetBoardColumns(key: String) throws {
+    try coreWrite { try core.resetBoardColumns(key: key) }
+  }
+
+  /// Makes a board's columns the default, and has the board follow it.
+  public func makeDefaultBoardColumns(key: String) throws {
+    try coreWrite { try core.makeDefaultBoardColumns(key: key) }
+  }
+
+  /// Puts tasks in a column. Into a rule column the first task is edited to
+  /// match its rules; a move the rules would undo is refused
+  /// (`WorkspaceStoreError.columnRefused`).
+  public func moveToBoardColumn(key: String, taskIDs: [String], columnID: String, now: Date = .now) throws {
+    guard !taskIDs.isEmpty else { return }
+    try coreWrite {
+      try core.moveToBoardColumn(
+        key: key, taskIds: taskIDs, columnId: columnID, nowMs: now.coreMilliseconds,
+        zone: TimeZone.current.identifier)
+    }
+  }
+}
+
+/// A board's columns as the core resolves them. See `board_columns.rs`.
+public struct WorkspaceBoardColumns: Equatable, Sendable {
+  /// Where the layout came from.
+  public enum Source: String, Sendable {
+    /// The board's own.
+    case own
+    /// An entered card's board, following its list's.
+    case list
+    /// The workspace's default columns.
+    case `default`
+    /// The stock five, nobody having set a default.
+    case builtin
+  }
+
+  public static let defaultKey = "default"
+
+  public var key: String
+  /// The layout as an edit saves it, hidden columns included.
+  public var layout: [WorkspaceKanbanColumn]
+  public var source: Source
+  /// What the board draws, left to right.
+  public var columns: [WorkspaceKanbanColumn]
+  /// Columns left of an entered card's own: a child is not at an earlier
+  /// stage than its parent.
+  public var hiddenColumnIDs: Set<String>
+  /// The entered card's column, where children filed further left stand.
+  public var floorColumnID: String?
+  /// Each task drawn somewhere other than where its filed column alone
+  /// would put it: by a rule column, or clamped to the floor.
+  public var placements: [String: String]
+
+  public init(
+    key: String, layout: [WorkspaceKanbanColumn], source: Source = .builtin,
+    columns: [WorkspaceKanbanColumn]? = nil, hiddenColumnIDs: Set<String> = [], floorColumnID: String? = nil,
+    placements: [String: String] = [:]
+  ) {
+    self.key = key
+    self.layout = layout
+    self.source = source
+    self.columns = columns ?? layout
+    self.hiddenColumnIDs = hiddenColumnIDs
+    self.floorColumnID = floorColumnID
+    self.placements = placements
+  }
+
+  init(_ read: BoardColumns) {
+    self.init(
+      key: read.key, layout: read.layout.map(WorkspaceKanbanColumn.init),
+      source: Source(rawValue: read.source) ?? .own,
+      columns: read.columns.map(WorkspaceKanbanColumn.init), hiddenColumnIDs: Set(read.hiddenColumnIds),
+      floorColumnID: read.floorColumnId,
+      placements: Dictionary(
+        read.placements.map { ($0.taskId, $0.columnId) }, uniquingKeysWith: { first, _ in first }))
+  }
+
+  /// The column a task is drawn in: its placement, else its filed column
+  /// when the board draws it, else the first column.
+  public func columnID(forTaskID id: String, filed: String?) -> String? {
+    if let placed = placements[id] { return placed }
+    let wanted = filed ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
+    if columns.contains(where: { $0.id == wanted }) { return wanted }
+    return columns.first?.id
+  }
+}
+
+extension WorkspaceKanbanColumn {
+  init(_ core: BoardColumn) {
+    self.init(id: core.id, title: core.title, rules: core.rules.map(WorkspaceFilterDefinition.init))
+  }
+
+  var core: BoardColumn { BoardColumn(id: id, title: title, rules: rules?.core) }
 }

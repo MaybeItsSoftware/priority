@@ -169,14 +169,30 @@ public struct TaskEditorMetadata: Codable, Sendable, Equatable {
 /// A local board is scoped to a list or to one project's immediate children.
 /// The task's column is deliberately independent of its parent's column: a
 /// project can be in “In progress” while its next section is in “Today”.
-public struct WorkspaceKanbanColumn: Codable, Identifiable, Sendable, Equatable {
+///
+/// A column with `rules` is a rule column: it holds the tasks its rules
+/// match rather than the ones filed in it. See the core's `board_columns`.
+public struct WorkspaceKanbanColumn: Codable, Identifiable, Sendable, Hashable {
+  /// Coded as the id and title alone: the rules are the core's to read and
+  /// write (`WorkspaceStore.boardColumns`), not a decoder's.
+  enum CodingKeys: String, CodingKey { case id, title }
+
   public let id: String
   public var title: String
+  public var rules: WorkspaceFilterDefinition?
 
-  public init(id: String, title: String) {
+  public init(id: String, title: String, rules: WorkspaceFilterDefinition? = nil) {
     self.id = id
     self.title = title
+    self.rules = rules
   }
+
+  /// Whether its tasks are the ones its rules match.
+  public var isRuleColumn: Bool { rules != nil }
+
+  /// Today and Waiting on: ids other features read, so deleting one moves
+  /// nothing — its tasks stay planned or waiting.
+  public var isBuiltIn: Bool { id == "today" || id == "waiting-on" }
 
   public static let blitzitDefaults = [
     WorkspaceKanbanColumn(id: "backlog", title: "Backlog"),
