@@ -63,6 +63,37 @@ struct WorkspaceSidebarListRow: View {
   }
 }
 
+/// The name field of a list or folder that does not exist yet, drawn with the
+/// row geometry it will have. Return makes it; Esc, or clicking away with
+/// nothing typed, takes the row away again.
+struct WorkspaceSidebarDraftRow: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let draft: WorkspaceSidebarDraft
+  let depth: Int
+
+  var body: some View {
+    HStack(spacing: theme.space.sm) {
+      if draft.kind == .folder {
+        // Where a folder's chevron goes, so the name starts where it will.
+        Image(systemName: "chevron.right")
+          .font(theme.captionFont)
+          .frame(width: WorkspaceSidebarMetrics.iconWidth)
+      }
+      Image(systemName: draft.kind == .folder ? "folder" : "list.bullet")
+        .frame(width: WorkspaceSidebarMetrics.iconWidth)
+      WorkspaceRenameField(
+        initialName: "",
+        onCommit: { model.commitSidebarDraft(named: $0) },
+        onCancel: { model.cancelSidebarDraft() })
+    }
+    .foregroundStyle(theme.muted)
+    .sidebarRowPadding(theme, depth: depth)
+    .background(WorkspaceSelectionBackground(isSelected: true, hasKeyboard: true))
+    .accessibilityLabel(draft.kind == .folder ? "New folder name" : "New list name")
+  }
+}
+
 /// A list nested in a task, under its list or — pinned — among the shortcuts.
 struct WorkspaceNestedListRow: View {
   @Environment(WorkspaceViewModel.self) private var model
@@ -187,9 +218,9 @@ struct WorkspaceFolderRow: View {
         .commandShortcut(.listRename)
       Button("Folder settings…") { model.showSettings(for: folder) }
         .commandShortcut(.listSettings)
-      Button("New list in folder") { model.requestCreation(.list, in: folder.id) }
+      Button("New list in folder") { model.beginSidebarDraft(.list, in: folder.id) }
         .commandShortcut(.listNew)
-      Button("New subfolder") { model.requestCreation(.folder, in: folder.id) }
+      Button("New subfolder") { model.beginSidebarDraft(.folder, in: folder.id) }
         .commandShortcut(.folderNew)
       Divider()
       Button("Delete folder", role: .destructive) { model.requestDeletion(of: .folder(folder)) }

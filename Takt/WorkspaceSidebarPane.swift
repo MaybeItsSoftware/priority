@@ -162,6 +162,13 @@ struct WorkspaceSidebarPane: View {
     let split = rows.lastIndex(where: isStock).map { $0 + 1 } ?? 0
     var lines = rows.map(WorkspaceSidebarLine.row)
     lines.insert(.gap, at: split)
+    if let draft = model.sidebarDraft {
+      let point = WorkspaceSidebarOutline.insertionPoint(
+        isFolder: draft.kind == .folder, inFolder: draft.folderID, inboxID: inboxID, in: rows)
+      // One past the gap, if it falls after it — which it always should.
+      let index = point.index >= split ? point.index + 1 : split + 1
+      lines.insert(.draft(draft, depth: point.depth), at: min(index, lines.count))
+    }
     return lines
   }
 
@@ -170,6 +177,8 @@ struct WorkspaceSidebarPane: View {
     switch line {
     case .gap:
       listsHeader
+    case .draft(let draft, let depth):
+      WorkspaceSidebarDraftRow(draft: draft, depth: depth)
     case .row(let row):
       switch row.kind {
       case .today: todayRow
@@ -241,15 +250,19 @@ struct WorkspaceSidebarPane: View {
   }
 }
 
-/// One line of the sidebar: an outline row, or the gap under the stock rows.
+/// One line of the sidebar: an outline row, the gap under the stock rows, or
+/// the name field of a list or folder about to be made.
 enum WorkspaceSidebarLine: Identifiable {
   case row(WorkspaceSidebarRow)
   case gap
+  case draft(WorkspaceSidebarDraft, depth: Int)
 
   var id: String {
     switch self {
     case .row(let row): row.id
     case .gap: "line:gap"
+    // A new field per draft, so a second `d` does not inherit the first's text.
+    case .draft(let draft, _): "line:draft:\(draft.kind.rawValue):\(draft.folderID ?? "")"
     }
   }
 }

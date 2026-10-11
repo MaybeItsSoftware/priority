@@ -46,8 +46,8 @@ directory. Its keys act on the sidebar row, never on a task behind it:
 
 | Zed project panel | Key | In Takt's sidebar |
 | --- | --- | --- |
-| New file | `Cmd+N`, `%` (vim) | New list, beside the row you are on |
-| New directory | `Cmd+Alt+N`, `d` (vim) | New folder, beside the row you are on |
+| New file | `Cmd+N`, `%` (vim) | New list, beside the row you are on, named in its row: `Return` makes it, `Esc` leaves nothing behind |
+| New directory | `Cmd+Alt+N`, `d` (vim) | New folder, beside the row you are on, named in its row the same way |
 | Rename | `F2`, `Shift+R` (vim) | Rename the list or folder |
 | Trash / delete | `Delete`, `Cmd+Delete`, `Shift+D` (vim) | Delete the list or folder (it asks) |
 | Collapse / expand all | `Cmd+←` / `Cmd+→` | Every folder |

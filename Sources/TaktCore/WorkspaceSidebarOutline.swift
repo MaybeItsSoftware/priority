@@ -191,6 +191,48 @@ extension WorkspaceSidebarOutline {
   }
 }
 
+extension WorkspaceSidebarOutline {
+  /// Where a list or folder being named in place is drawn before it exists:
+  /// the index of the row it goes in front of, and its depth.
+  ///
+  /// The store puts a new list or folder at the end of its group, so that is
+  /// where the field goes. A folder's lists come before its sub-folders, so a
+  /// new list in a folder follows its last list (and that list's nested
+  /// lists), and a new sub-folder follows everything the folder holds. At the
+  /// top level folders come before the loose lists, which come last. A
+  /// `folderID` that is not drawn open falls back to the top level.
+  public static func insertionPoint(
+    isFolder: Bool, inFolder folderID: String?, inboxID: String?,
+    in rows: [WorkspaceSidebarRow]
+  ) -> (index: Int, depth: Int) {
+    func end(of index: Int, stoppingAtChildFolder: Bool) -> Int {
+      let depth = rows[index].depth
+      var cursor = index + 1
+      while cursor < rows.count, rows[cursor].depth > depth {
+        if stoppingAtChildFolder, rows[cursor].depth == depth + 1, case .folder = rows[cursor].kind { break }
+        cursor += 1
+      }
+      return cursor
+    }
+    if let folderID, let index = rows.firstIndex(where: { $0.kind == .folder(folderID) }) {
+      return (end(of: index, stoppingAtChildFolder: !isFolder), rows[index].depth + 1)
+    }
+    guard isFolder else { return (rows.count, 0) }
+    let isTopFolder: (WorkspaceSidebarRow) -> Bool = { row in
+      if case .folder = row.kind { return row.depth == 0 }
+      return false
+    }
+    if let last = rows.lastIndex(where: isTopFolder) {
+      return (end(of: last, stoppingAtChildFolder: false), 0)
+    }
+    let firstLooseList = rows.firstIndex { row in
+      guard row.depth == 0, case .list(let id) = row.kind else { return false }
+      return id != inboxID
+    }
+    return (firstLooseList ?? rows.count, 0)
+  }
+}
+
 extension SidebarListDescriptor {
   var core: SidebarList { SidebarList(id: id, folderId: folderID) }
 }

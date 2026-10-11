@@ -115,6 +115,15 @@ enum WorkspaceSidebarEditor: Identifiable {
   }
 }
 
+/// A new list or folder, drawn as a name field where it will appear. Nothing
+/// is written until the name is: Esc, or leaving the field empty, leaves no
+/// "Untitled" behind to delete and nothing on the undo stack.
+struct WorkspaceSidebarDraft: Equatable {
+  let kind: WorkspaceCreationKind
+  /// The folder it goes into; nil for the top level.
+  let folderID: String?
+}
+
 enum WorkspaceSidebarItem: Identifiable {
   case list(TaskList)
   case folder(ListFolder)
@@ -585,6 +594,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The list or folder currently showing a rename field, by its own id.
   /// Lists and folders both carry UUIDs, so one field serves both.
   var renamingSidebarItemID: String?
+  /// A list or folder being named in its row before it exists — `%` and `d`
+  /// in the sidebar, as Zed's project panel does a new file.
+  var sidebarDraft: WorkspaceSidebarDraft?
   /// Lists visited, most recent first, for ⌘P's ordering. Remembered across
   /// launches, since "the list I was in yesterday" is the common case.
   var recentListIDs: [String] = UserDefaults.standard.stringArray(forKey: "workspaceRecentListsV1") ?? []

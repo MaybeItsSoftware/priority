@@ -126,6 +126,41 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
       ["folder:life", "list:errands", "list:coding", "list:habits", "nested:habits:sub", "list:aspirations"])
   }
 
+  /// Where `%` and `d` draw the name field: the end of the group the store
+  /// will put the new list or folder at.
+  func testANewListOrFolderIsNamedWhereItWillAppear() {
+    let rows = outline(
+      lists: [
+        SidebarListDescriptor(id: "a", folderID: "work"),
+        SidebarListDescriptor(id: "b", folderID: "work"),
+        SidebarListDescriptor(id: "c", folderID: "clients"),
+        SidebarListDescriptor(id: "loose", folderID: nil),
+      ],
+      folders: [
+        SidebarFolderDescriptor(id: "work", parentFolderID: nil),
+        SidebarFolderDescriptor(id: "clients", parentFolderID: "work"),
+      ],
+      nested: [SidebarNestedListDescriptor(id: "sub", listID: "b", depth: 0, isPromoted: false)],
+      expanded: ["work", "clients"])
+    func point(_ isFolder: Bool, _ folderID: String?) -> (String?, Int) {
+      let found = WorkspaceSidebarOutline.insertionPoint(
+        isFolder: isFolder, inFolder: folderID, inboxID: "inbox", in: rows)
+      return (found.index < rows.count ? rows[found.index].id : nil, found.depth)
+    }
+    // A list in "work": after b and its nested list, before the sub-folder.
+    XCTAssertEqual(point(false, "work").0, "folder:clients")
+    XCTAssertEqual(point(false, "work").1, 1)
+    // A sub-folder of "work": after everything it holds.
+    XCTAssertEqual(point(true, "work").0, "list:loose")
+    XCTAssertEqual(point(true, "clients").1, 2)
+    // A top-level folder: after the last folder, before the loose lists.
+    XCTAssertEqual(point(true, nil).0, "list:loose")
+    XCTAssertEqual(point(true, nil).1, 0)
+    // A top-level list: at the very end.
+    XCTAssertNil(point(false, nil).0)
+    XCTAssertEqual(point(false, nil).1, 0)
+  }
+
   func testACollapsedFolderHidesItsContents() {
     let lists = [SidebarListDescriptor(id: "filed", folderID: "work")]
     let folders = [SidebarFolderDescriptor(id: "work", parentFolderID: nil)]
