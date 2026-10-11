@@ -35,6 +35,8 @@ data class ListScopeData(
     val dailyTaskIds: Set<String>,
     /** Every unarchived list in the workspace, for pickers. */
     val allLists: List<TaskList>,
+    /** Open tasks waiting on an open task (the Rust core's `dependencies::blocked_task_ids`): drawn greyed. */
+    val blockedTaskIds: Set<String> = emptySet(),
 )
 
 /**
@@ -100,16 +102,17 @@ internal fun readListScope(db: Db, workspaceId: String, listId: String?): ListSc
         decorations = db.decorations(trees.keys),
         dailyTaskIds = db.activeDailyTaskIds(),
         allLists = all,
+        blockedTaskIds = db.core.blockedTaskIds().toSet(),
     )
 }
 
 /**
  * One list (or, with a null [listId], the Everything scope: every open,
  * unarchived list) with its tasks and their decorations, re-read whenever a
- * write touches tasks, their metadata, dailies or lists.
+ * write touches tasks, their dependencies, their metadata, dailies or lists.
  */
 fun WorkspaceRepository.observeListScope(workspaceId: String, listId: String?): Flow<ListScopeData> =
-    database.observe(setOf("tasks", "task_metadata", "dailies", "task_lists")) { readListScope(it, workspaceId, listId) }
+    database.observe(setOf("tasks", "task_dependencies", "task_metadata", "dailies", "task_lists")) { readListScope(it, workspaceId, listId) }
 
 suspend fun WorkspaceRepository.listScope(workspaceId: String, listId: String?): ListScopeData =
     database.read { readListScope(it, workspaceId, listId) }

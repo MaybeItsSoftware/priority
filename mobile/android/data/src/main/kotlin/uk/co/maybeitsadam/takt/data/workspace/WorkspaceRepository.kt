@@ -232,14 +232,14 @@ class WorkspaceRepository(
         listTree(listId).outline(parentTaskId)
 
     fun observeOutline(listId: String, parentTaskId: String? = null): Flow<List<TaskOutlineItem>> =
-        database.observe(setOf("tasks")) { listTree(it, listId).outline(parentTaskId) }
+        database.observe(TASK_ORDER_TABLES) { listTree(it, listId).outline(parentTaskId) }
 
     /** A parent's direct children, as a project's own board shows them. */
     suspend fun tasks(listId: String, parentTaskId: String? = null): List<WorkspaceTask> =
         database.read { db -> db.core.childTasks(listId, parentTaskId).map { it.toTask() } }
 
     fun observeTasks(listId: String, parentTaskId: String? = null): Flow<List<WorkspaceTask>> =
-        database.observe(setOf("tasks")) { db -> db.core.childTasks(listId, parentTaskId).map { it.toTask() } }
+        database.observe(TASK_ORDER_TABLES) { db -> db.core.childTasks(listId, parentTaskId).map { it.toTask() } }
 
     /** The imported wrapper standing in for the list's roots, while it is still the only root. */
     suspend fun visibleRootParentTaskId(list: TaskList): String? =
@@ -479,13 +479,13 @@ class WorkspaceRepository(
         database.read { actionableTasks(it, workspaceId, limitedTo) }
 
     fun observeActionableTasks(workspaceId: String, limitedTo: List<String>? = null): Flow<List<WorkspaceTask>> =
-        database.observe(setOf("tasks", "task_lists")) { actionableTasks(it, workspaceId, limitedTo) }
+        database.observe(TASK_ORDER_TABLES + "task_lists") { actionableTasks(it, workspaceId, limitedTo) }
 
     suspend fun visibleOutline(listId: String, parentTaskId: String? = null): List<TaskOutlineItem> =
         listTree(listId).visibleOutline(parentTaskId)
 
     fun observeVisibleOutline(listId: String, parentTaskId: String? = null): Flow<List<TaskOutlineItem>> =
-        database.observe(setOf("tasks")) { listTree(it, listId).visibleOutline(parentTaskId) }
+        database.observe(TASK_ORDER_TABLES) { listTree(it, listId).visibleOutline(parentTaskId) }
 
     /** The board configurations, seeding [legacy] and the defaults for [currentKey] without an undo step. */
     suspend fun kanbanBoardConfigurations(
@@ -532,7 +532,7 @@ class WorkspaceRepository(
     }
 
     fun observeListTrees(listIds: List<String>): Flow<Map<String, WorkspaceListTree>> =
-        database.observe(setOf("tasks")) { db -> listTrees(db, listIds) }
+        database.observe(TASK_ORDER_TABLES) { db -> listTrees(db, listIds) }
 
     /** Tasks by id, in one read; missing ids are absent. */
     suspend fun tasks(ids: List<String>): Map<String, WorkspaceTask> {
@@ -1032,7 +1032,7 @@ class WorkspaceRepository(
     ): Flow<WorkspaceNextUpSnapshot> = database.observe(
         setOf(
             "tasks", "task_lists", "task_metadata", "dailies", "daily_contributions", "focus_work_blocks",
-            "task_conditions",
+            "task_conditions", "task_dependencies",
         ),
     ) { nextUpSnapshot(it, database.core, workspaceId, context, runningId, now(), zone, ladderLimit) }
 
