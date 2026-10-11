@@ -5642,6 +5642,352 @@ public func FfiConverterTypeCaptureParts_lower(_ value: CaptureParts) -> RustBuf
 }
 
 
+public struct CheckvistHeader: Equatable, Hashable {
+    public var name: String
+    public var value: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(name: String, value: String) {
+        self.name = name
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistHeader: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistHeader: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistHeader {
+        return
+            try CheckvistHeader(
+                name: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistHeader, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistHeader_lift(_ buf: RustBuffer) throws -> CheckvistHeader {
+    return try FfiConverterTypeCheckvistHeader.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistHeader_lower(_ value: CheckvistHeader) -> RustBuffer {
+    return FfiConverterTypeCheckvistHeader.lower(value)
+}
+
+
+/**
+ * One request, ready for a client's HTTP stack.
+ */
+public struct CheckvistHttpRequest: Equatable, Hashable {
+    /**
+     * `GET`, `POST`, `PUT` or `DELETE`.
+     */
+    public var method: String
+    public var url: String
+    public var headers: [CheckvistHeader]
+    /**
+     * JSON, when the call has a body.
+     */
+    public var body: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `GET`, `POST`, `PUT` or `DELETE`.
+         */method: String, url: String, headers: [CheckvistHeader], 
+        /**
+         * JSON, when the call has a body.
+         */body: String?) {
+        self.method = method
+        self.url = url
+        self.headers = headers
+        self.body = body
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistHttpRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistHttpRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistHttpRequest {
+        return
+            try CheckvistHttpRequest(
+                method: FfiConverterString.read(from: &buf), 
+                url: FfiConverterString.read(from: &buf), 
+                headers: FfiConverterSequenceTypeCheckvistHeader.read(from: &buf), 
+                body: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistHttpRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.method, into: &buf)
+        FfiConverterString.write(value.url, into: &buf)
+        FfiConverterSequenceTypeCheckvistHeader.write(value.headers, into: &buf)
+        FfiConverterOptionString.write(value.body, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistHttpRequest_lift(_ buf: RustBuffer) throws -> CheckvistHttpRequest {
+    return try FfiConverterTypeCheckvistHttpRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistHttpRequest_lower(_ value: CheckvistHttpRequest) -> RustBuffer {
+    return FfiConverterTypeCheckvistHttpRequest.lower(value)
+}
+
+
+/**
+ * A checklist as the Mac keeps it.
+ */
+public struct CheckvistListRow: Equatable, Hashable {
+    public var id: Int64
+    public var name: String
+    public var archived: Bool?
+    public var readOnly: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Int64, name: String, archived: Bool?, readOnly: Bool?) {
+        self.id = id
+        self.name = name
+        self.archived = archived
+        self.readOnly = readOnly
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistListRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistListRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistListRow {
+        return
+            try CheckvistListRow(
+                id: FfiConverterInt64.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                archived: FfiConverterOptionBool.read(from: &buf), 
+                readOnly: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistListRow, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionBool.write(value.archived, into: &buf)
+        FfiConverterOptionBool.write(value.readOnly, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistListRow_lift(_ buf: RustBuffer) throws -> CheckvistListRow {
+    return try FfiConverterTypeCheckvistListRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistListRow_lower(_ value: CheckvistListRow) -> RustBuffer {
+    return FfiConverterTypeCheckvistListRow.lower(value)
+}
+
+
+/**
+ * A note on a task.
+ */
+public struct CheckvistNoteRow: Equatable, Hashable {
+    public var id: Int64?
+    public var content: String
+    public var createdAt: String?
+    public var updatedAt: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Int64?, content: String, createdAt: String?, updatedAt: String?) {
+        self.id = id
+        self.content = content
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistNoteRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistNoteRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistNoteRow {
+        return
+            try CheckvistNoteRow(
+                id: FfiConverterOptionInt64.read(from: &buf), 
+                content: FfiConverterString.read(from: &buf), 
+                createdAt: FfiConverterOptionString.read(from: &buf), 
+                updatedAt: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistNoteRow, into buf: inout [UInt8]) {
+        FfiConverterOptionInt64.write(value.id, into: &buf)
+        FfiConverterString.write(value.content, into: &buf)
+        FfiConverterOptionString.write(value.createdAt, into: &buf)
+        FfiConverterOptionString.write(value.updatedAt, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistNoteRow_lift(_ buf: RustBuffer) throws -> CheckvistNoteRow {
+    return try FfiConverterTypeCheckvistNoteRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistNoteRow_lower(_ value: CheckvistNoteRow) -> RustBuffer {
+    return FfiConverterTypeCheckvistNoteRow.lower(value)
+}
+
+
+/**
+ * A task as the Mac keeps it. `status` is 0 open, 1 closed, 2 invalidated.
+ */
+public struct CheckvistTaskRow: Equatable, Hashable {
+    public var id: Int64
+    public var content: String
+    public var status: Int64
+    public var due: String?
+    public var position: Int64?
+    public var parentId: Int64?
+    public var level: Int64?
+    public var notes: [CheckvistNoteRow]?
+    public var updatedAt: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Int64, content: String, status: Int64, due: String?, position: Int64?, parentId: Int64?, level: Int64?, notes: [CheckvistNoteRow]?, updatedAt: String?) {
+        self.id = id
+        self.content = content
+        self.status = status
+        self.due = due
+        self.position = position
+        self.parentId = parentId
+        self.level = level
+        self.notes = notes
+        self.updatedAt = updatedAt
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CheckvistTaskRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistTaskRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistTaskRow {
+        return
+            try CheckvistTaskRow(
+                id: FfiConverterInt64.read(from: &buf), 
+                content: FfiConverterString.read(from: &buf), 
+                status: FfiConverterInt64.read(from: &buf), 
+                due: FfiConverterOptionString.read(from: &buf), 
+                position: FfiConverterOptionInt64.read(from: &buf), 
+                parentId: FfiConverterOptionInt64.read(from: &buf), 
+                level: FfiConverterOptionInt64.read(from: &buf), 
+                notes: FfiConverterOptionSequenceTypeCheckvistNoteRow.read(from: &buf), 
+                updatedAt: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CheckvistTaskRow, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.id, into: &buf)
+        FfiConverterString.write(value.content, into: &buf)
+        FfiConverterInt64.write(value.status, into: &buf)
+        FfiConverterOptionString.write(value.due, into: &buf)
+        FfiConverterOptionInt64.write(value.position, into: &buf)
+        FfiConverterOptionInt64.write(value.parentId, into: &buf)
+        FfiConverterOptionInt64.write(value.level, into: &buf)
+        FfiConverterOptionSequenceTypeCheckvistNoteRow.write(value.notes, into: &buf)
+        FfiConverterOptionString.write(value.updatedAt, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistTaskRow_lift(_ buf: RustBuffer) throws -> CheckvistTaskRow {
+    return try FfiConverterTypeCheckvistTaskRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistTaskRow_lower(_ value: CheckvistTaskRow) -> RustBuffer {
+    return FfiConverterTypeCheckvistTaskRow.lower(value)
+}
+
+
 /**
  * The login the Mac hands down to the CLI.
  */
@@ -15909,6 +16255,222 @@ public func FfiConverterTypeWorkspaceRow_lower(_ value: WorkspaceRow) -> RustBuf
 
 
 /**
+ * Something to ask Checkvist.
+ */
+
+public enum CheckvistCall: Equatable, Hashable {
+    
+    /**
+     * Exchanges a username and remote key for a token. The one call made
+     * without a token.
+     */
+    case login(username: String, remoteKey: String
+    )
+    /**
+     * Every checklist the account can see.
+     */
+    case lists
+    /**
+     * A checklist's tasks, closed ones included; notes when asked for.
+     */
+    case tasks(listId: String, withNotes: Bool
+    )
+    case createList(name: String
+    )
+    /**
+     * `parse` hands the content to Checkvist's smart syntax, which lifts
+     * `#tags` and `^due` out of it. The Mac never asks for it: it keeps tags
+     * and dates itself, and Checkvist's parser would rewrite them. Checkvist
+     * treats the parameter's presence as on, so off means leaving it out.
+     */
+    case createTask(listId: String, content: String, parentId: Int64?, position: Int64?, due: String?, tags: String?, priority: Int64?, parse: Bool
+    )
+    /**
+     * Only the fields given change. Never parsed, for the reason above.
+     */
+    case updateTask(listId: String, taskId: Int64, content: String?, due: String?, tags: String?
+    )
+    /**
+     * Within the current parent. Checkvist's positions start at 1.
+     */
+    case moveTask(listId: String, taskId: Int64, position: Int64
+    )
+    /**
+     * `None` moves the task to the list's root. That is sent as an explicit
+     * null: leaving the key out would mean "leave the parent alone".
+     */
+    case reparentTask(listId: String, taskId: Int64, parentId: Int64?
+    )
+    /**
+     * A note is a Checkvist comment, a resource of its own.
+     */
+    case addNote(listId: String, taskId: Int64, comment: String
+    )
+    /**
+     * `close`, `reopen` or `invalidate`.
+     */
+    case taskAction(listId: String, taskId: Int64, action: String
+    )
+    case deleteTask(listId: String, taskId: Int64
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CheckvistCall: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCheckvistCall: FfiConverterRustBuffer {
+    typealias SwiftType = CheckvistCall
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CheckvistCall {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .login(username: try FfiConverterString.read(from: &buf), remoteKey: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .lists
+        
+        case 3: return .tasks(listId: try FfiConverterString.read(from: &buf), withNotes: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 4: return .createList(name: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .createTask(listId: try FfiConverterString.read(from: &buf), content: try FfiConverterString.read(from: &buf), parentId: try FfiConverterOptionInt64.read(from: &buf), position: try FfiConverterOptionInt64.read(from: &buf), due: try FfiConverterOptionString.read(from: &buf), tags: try FfiConverterOptionString.read(from: &buf), priority: try FfiConverterOptionInt64.read(from: &buf), parse: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 6: return .updateTask(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), content: try FfiConverterOptionString.read(from: &buf), due: try FfiConverterOptionString.read(from: &buf), tags: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        case 7: return .moveTask(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), position: try FfiConverterInt64.read(from: &buf)
+        )
+        
+        case 8: return .reparentTask(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), parentId: try FfiConverterOptionInt64.read(from: &buf)
+        )
+        
+        case 9: return .addNote(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), comment: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .taskAction(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf), action: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 11: return .deleteTask(listId: try FfiConverterString.read(from: &buf), taskId: try FfiConverterInt64.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CheckvistCall, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .login(username,remoteKey):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(username, into: &buf)
+            FfiConverterString.write(remoteKey, into: &buf)
+            
+        
+        case .lists:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .tasks(listId,withNotes):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterBool.write(withNotes, into: &buf)
+            
+        
+        case let .createList(name):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(name, into: &buf)
+            
+        
+        case let .createTask(listId,content,parentId,position,due,tags,priority,parse):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterString.write(content, into: &buf)
+            FfiConverterOptionInt64.write(parentId, into: &buf)
+            FfiConverterOptionInt64.write(position, into: &buf)
+            FfiConverterOptionString.write(due, into: &buf)
+            FfiConverterOptionString.write(tags, into: &buf)
+            FfiConverterOptionInt64.write(priority, into: &buf)
+            FfiConverterBool.write(parse, into: &buf)
+            
+        
+        case let .updateTask(listId,taskId,content,due,tags):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterOptionString.write(content, into: &buf)
+            FfiConverterOptionString.write(due, into: &buf)
+            FfiConverterOptionString.write(tags, into: &buf)
+            
+        
+        case let .moveTask(listId,taskId,position):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterInt64.write(position, into: &buf)
+            
+        
+        case let .reparentTask(listId,taskId,parentId):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterOptionInt64.write(parentId, into: &buf)
+            
+        
+        case let .addNote(listId,taskId,comment):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterString.write(comment, into: &buf)
+            
+        
+        case let .taskAction(listId,taskId,action):
+            writeInt(&buf, Int32(10))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            FfiConverterString.write(action, into: &buf)
+            
+        
+        case let .deleteTask(listId,taskId):
+            writeInt(&buf, Int32(11))
+            FfiConverterString.write(listId, into: &buf)
+            FfiConverterInt64.write(taskId, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistCall_lift(_ buf: RustBuffer) throws -> CheckvistCall {
+    return try FfiConverterTypeCheckvistCall.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCheckvistCall_lower(_ value: CheckvistCall) -> RustBuffer {
+    return FfiConverterTypeCheckvistCall.lower(value)
+}
+
+
+
+/**
  * Why a config file was left alone.
  *
  * Fields are `path`, `key` and `detail` rather than `message`, which
@@ -16243,6 +16805,12 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     )
     case InvalidRecurrence(rule: String
     )
+    /**
+     * A Checkvist request the core refused to make, or an answer it could
+     * not read (`checkvist.rs`).
+     */
+    case Checkvist(detail: String
+    )
 
     
 
@@ -16321,6 +16889,9 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             )
         case 27: return .InvalidRecurrence(
             rule: try FfiConverterString.read(from: &buf)
+            )
+        case 28: return .Checkvist(
+            detail: try FfiConverterString.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -16452,6 +17023,11 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case let .InvalidRecurrence(rule):
             writeInt(&buf, Int32(27))
             FfiConverterString.write(rule, into: &buf)
+            
+        
+        case let .Checkvist(detail):
+            writeInt(&buf, Int32(28))
+            FfiConverterString.write(detail, into: &buf)
             
         }
     }
@@ -18927,6 +19503,54 @@ fileprivate struct FfiConverterOptionTypeAwardRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeCheckvistListRow: FfiConverterRustBuffer {
+    typealias SwiftType = CheckvistListRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCheckvistListRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCheckvistListRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCheckvistTaskRow: FfiConverterRustBuffer {
+    typealias SwiftType = CheckvistTaskRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCheckvistTaskRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCheckvistTaskRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeCommitment: FfiConverterRustBuffer {
     typealias SwiftType = Commitment?
 
@@ -19839,6 +20463,30 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceTypeCheckvistNoteRow: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistNoteRow]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeCheckvistNoteRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeCheckvistNoteRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceTypeCoreThemeSpecification: FfiConverterRustBuffer {
     typealias SwiftType = [CoreThemeSpecification]?
 
@@ -20202,6 +20850,106 @@ fileprivate struct FfiConverterSequenceTypeCandidate: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeCandidate.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCheckvistHeader: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistHeader]
+
+    public static func write(_ value: [CheckvistHeader], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCheckvistHeader.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CheckvistHeader] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CheckvistHeader]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCheckvistHeader.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCheckvistListRow: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistListRow]
+
+    public static func write(_ value: [CheckvistListRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCheckvistListRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CheckvistListRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CheckvistListRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCheckvistListRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCheckvistNoteRow: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistNoteRow]
+
+    public static func write(_ value: [CheckvistNoteRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCheckvistNoteRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CheckvistNoteRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CheckvistNoteRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCheckvistNoteRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeCheckvistTaskRow: FfiConverterRustBuffer {
+    typealias SwiftType = [CheckvistTaskRow]
+
+    public static func write(_ value: [CheckvistTaskRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCheckvistTaskRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CheckvistTaskRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CheckvistTaskRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCheckvistTaskRow.read(from: &buf))
         }
         return seq
     }
@@ -22277,6 +23025,94 @@ public func checkvistDueDate(due: String?) -> Int64?  {
 })
 }
 /**
+ * The checklist a create answered with, bare or wrapped in `checklist`.
+ */
+public func checkvistCreatedList(body: String) -> CheckvistListRow?  {
+    return try!  FfiConverterOptionTypeCheckvistListRow.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_created_list(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The task a create answered with, which Checkvist may send bare, wrapped
+ * in `task`, or as the first of a `tasks` array or a bare array.
+ */
+public func checkvistCreatedTask(body: String) -> CheckvistTaskRow?  {
+    return try!  FfiConverterOptionTypeCheckvistTaskRow.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_created_task(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The workspace import's seeds for Checkvist tasks: one per task id (the
+ * first wins), ordered by parent then position, each source id
+ * `source_prefix` and the task's id, notes joined by blank lines.
+ */
+public func checkvistImportSeeds(sourcePrefix: String, tasks: [CheckvistTaskRow]) -> [ImportedTaskSeed]  {
+    return try!  FfiConverterSequenceTypeImportedTaskSeed.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_import_seeds(
+        FfiConverterString.lower(sourcePrefix),
+        FfiConverterSequenceTypeCheckvistTaskRow.lower(tasks),uniffiCallStatus
+    )
+})
+}
+/**
+ * The checklists in a `GET /checklists.json` answer that are not archived.
+ */
+public func checkvistLists(body: String)throws  -> [CheckvistListRow]  {
+    return try  FfiConverterSequenceTypeCheckvistListRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_lists(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The token in a login answer: `{"token": "…"}`, or the bare string, quoted
+ * or not. Nothing when there is no non-empty token.
+ */
+public func checkvistLoginToken(body: String) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_login_token(
+        FfiConverterString.lower(body),uniffiCallStatus
+    )
+})
+}
+/**
+ * The request for `call`, against `base_url`, carrying `token` when there is
+ * one. Refuses a list id that is not a number, an action Checkvist does not
+ * have, an empty name or task, and an update that changes nothing.
+ */
+public func checkvistRequest(baseUrl: String, call: CheckvistCall, token: String?, userAgent: String)throws  -> CheckvistHttpRequest  {
+    return try  FfiConverterTypeCheckvistHttpRequest_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_request(
+        FfiConverterString.lower(baseUrl),
+        FfiConverterTypeCheckvistCall_lower(call),
+        FfiConverterOptionString.lower(token),
+        FfiConverterString.lower(userAgent),uniffiCallStatus
+    )
+})
+}
+/**
+ * The tasks in a `GET …/tasks.json` answer, parents before children.
+ */
+public func checkvistTasks(body: String, includeClosed: Bool)throws  -> [CheckvistTaskRow]  {
+    return try  FfiConverterSequenceTypeCheckvistTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_checkvist_tasks(
+        FfiConverterString.lower(body),
+        FfiConverterBool.lower(includeClosed),uniffiCallStatus
+    )
+})
+}
+/**
  * Blanks the seeded login in the CLI's current config under `home`, the
  * counterpart of [`seed_cli_config`]. Only the current path: the legacy file
  * is never written. True when the file was rewritten.
@@ -23996,6 +24832,27 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_checkvist_due_date() != 16968) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_created_list() != 5026) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_created_task() != 25640) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_import_seeds() != 39320) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_lists() != 1638) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_login_token() != 8795) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_request() != 54237) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_checkvist_tasks() != 9617) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_clear_cli_config_credentials() != 1509) {

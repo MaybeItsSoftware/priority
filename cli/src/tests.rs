@@ -5,7 +5,7 @@
 //! argument handling too, and the invariants that keep the tool table, the
 //! subcommands and the files the app reads in step.
 
-use crate::checkvist::{CheckvistClient, CheckvistConfig, depth_first_tasks};
+use crate::checkvist::{CheckvistClient, CheckvistConfig};
 use crate::cli::{Cli, parse_weekdays, resolve};
 use crate::config::{Config, Source, choose};
 use crate::local::LocalState;
@@ -1068,44 +1068,6 @@ fn tags_are_matched_however_checkvist_happens_to_return_them() {
             1
         );
     }
-}
-
-// -- task ordering -----------------------------------------------------------
-
-#[test]
-fn tasks_come_back_parents_before_children_and_siblings_in_position_order() {
-    let ordered = depth_first_tasks(vec![
-        json!({"id": 3, "parent_id": 1, "position": 2, "content": "1b"}),
-        json!({"id": 1, "parent_id": 0, "position": 1, "content": "1"}),
-        json!({"id": 2, "parent_id": 1, "position": 1, "content": "1a"}),
-        json!({"id": 4, "parent_id": 0, "position": 2, "content": "2"}),
-    ]);
-    let contents: Vec<&str> = ordered
-        .iter()
-        .map(|task| task["content"].as_str().unwrap())
-        .collect();
-    assert_eq!(contents, vec!["1", "1a", "1b", "2"]);
-}
-
-#[test]
-fn a_parent_cycle_yields_a_partial_answer_rather_than_exhausting_the_stack() {
-    // The API should never return one; a malformed list must not take the
-    // process down with it.
-    let ordered = depth_first_tasks(vec![
-        json!({"id": 1, "parent_id": 2, "position": 1, "content": "a"}),
-        json!({"id": 2, "parent_id": 1, "position": 1, "content": "b"}),
-        json!({"id": 3, "parent_id": 0, "position": 1, "content": "root"}),
-    ]);
-    assert_eq!(
-        ordered.first().and_then(|task| task["content"].as_str()),
-        Some("root")
-    );
-}
-
-#[test]
-fn a_missing_parent_id_is_treated_as_the_root() {
-    let ordered = depth_first_tasks(vec![json!({"id": 1, "position": 1, "content": "orphan"})]);
-    assert_eq!(ordered.len(), 1);
 }
 
 // -- the CLI's own configuration ---------------------------------------------

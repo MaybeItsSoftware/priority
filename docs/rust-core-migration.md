@@ -601,6 +601,27 @@ covered the old copies pass against it.
     | View-model orchestration (`ListViewModel`, `TodayViewModel`, `FocusViewModel`, `FocusActions`, `TaskInspectorViewModel`, `UndoCenter`, `ForegroundEngines`, `SyncController`, `TaskCommands`) | `app/` | native: lifecycle and coroutines over repository calls that are already the core's |
     | Board and matrix shaping, filter lists | `BoardShaping.kt`, `FilterList*` | later pass (excluded above) |
 
+    **The Checkvist client (done 2026-10-12).** `core/src/checkvist.rs` is
+    both halves of the conversation, without the network, as the sync wire
+    is: `checkvist_request` turns a `CheckvistCall` into method, address,
+    headers and a JSON body, and `checkvist_login_token`, `checkvist_lists`,
+    `checkvist_tasks` (parents first, siblings by position, orphans' subtrees
+    after, by missing parent), `checkvist_created_task` and
+    `checkvist_created_list` read the answers into rows with the Mac's lossy
+    rules (a number where text was expected, `text` for `content`, any key
+    naming a due date or deadline). The CLI sends them through `ureq` and the
+    Mac through `URLSession`; the token, the one retry after a 401 and the
+    credentials stay with each, as transport. `checkvist_import_seeds` is the
+    import's seeds, so the three copies in `WorkspaceViewModel+Import` are one
+    call each. The CLI's project move keeps its request sequence and borrows
+    the core's `project_tasks`. Where the two clients differed: every body is
+    JSON (the Mac sent forms); a due date is `due_date`, the documented field,
+    where the CLI sent `due`; the Mac now reads a note's `comment`, which is
+    where Checkvist puts its text, so imported tasks carry their notes where
+    they used to arrive empty; and the CLI keeps an orphan's subtree, where it
+    dropped it. Checkvist's own `parse` stays the CLI's choice for its create
+    and off everywhere else.
+
 ## Risks
 
 - **App size and build time.** An app build already needs cargo for the

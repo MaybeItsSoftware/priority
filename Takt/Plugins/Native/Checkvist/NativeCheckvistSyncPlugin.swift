@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 @MainActor
 final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
@@ -79,15 +80,8 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
   }
 
   func fetchLists(credentials: CheckvistCredentials) async throws -> [CheckvistList] {
-    let url = CheckvistEndpoints.lists
-
     let (data, response) = try await performAuthenticatedRequest(credentials: credentials) { validToken in
-      var request = URLRequest(url: url)
-      request.httpMethod = "GET"
-      request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue("application/json", forHTTPHeaderField: "Accept")
-      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-      return request
+      try CheckvistWire.request(.lists, token: validToken)
     }
 
     // A failed fetch is a failed fetch, not a user with no lists: returning
@@ -99,38 +93,25 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
       throw CheckvistSessionError.invalidResponse(statusCode: response.statusCode)
     }
 
-    let lists = try JSONDecoder().decode([CheckvistList].self, from: data)
-    return lists.filter { !($0.archived ?? false) }
+    do {
+      return try checkvistLists(body: CheckvistWire.text(data)).map(CheckvistList.init(core:))
+    } catch {
+      throw CheckvistSessionError.invalidResponse(statusCode: response.statusCode)
+    }
   }
 
   func createList(name: String, credentials: CheckvistCredentials) async throws -> CheckvistList? {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty else { return nil }
-    let url = CheckvistEndpoints.lists
 
     let (data, response) = try await performAuthenticatedRequest(credentials: credentials) { validToken in
-      var request = URLRequest(url: url)
-      request.httpMethod = "POST"
-      request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue("application/json", forHTTPHeaderField: "Accept")
-      request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-      let encodedName = FormURLEncoding.percentEncodeFormValue(trimmedName)
-      request.httpBody = "checklist[name]=\(encodedName)".data(using: .utf8)
-      return request
+      try CheckvistWire.request(.createList(name: trimmedName), token: validToken)
     }
 
     guard (200...299).contains(response.statusCode) else {
       return nil
     }
-
-    if let decoded = try? JSONDecoder().decode(CheckvistList.self, from: data) {
-      return decoded
-    }
-    if let wrapped = try? JSONDecoder().decode(CheckvistListCreateResponse.self, from: data) {
-      return wrapped.checklist
-    }
-    return nil
+    return checkvistCreatedList(body: CheckvistWire.text(data)).map(CheckvistList.init(core:))
   }
 
   func performTaskAction(
@@ -139,19 +120,8 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
     action: CheckvistTaskAction,
     credentials: CheckvistCredentials
   ) async throws -> Bool {
-    guard let url = CheckvistEndpoints.taskAction(listId: listId, taskId: taskId, action: action.rawValue) else {
-      return false
-    }
-
-    let (_, response) = try await performAuthenticatedRequest(credentials: credentials) { validToken in
-      var request = URLRequest(url: url)
-      request.httpMethod = "POST"
-      request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-      return request
-    }
-
-    return (200...299).contains(response.statusCode)
+    try await succeeds(
+      .taskAction(listId: listId, taskId: Int64(taskId), action: action.rawValue), credentials: credentials)
   }
 
   func updateTask(
@@ -161,25 +131,14 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
     due: String?,
     credentials: CheckvistCredentials
   ) async throws -> Bool {
-    var bodyParts: [String] = []
-    if let content {
-      bodyParts.append("task[content]=\(FormURLEncoding.percentEncodeFormValue(content))")
-    }
-    if let due {
-      bodyParts.append("task[due_date]=\(FormURLEncoding.percentEncodeFormValue(due))")
-    }
-    guard !bodyParts.isEmpty else { return true }
-    // Never send parse=true for updates.  Checkvist's server-side parser
-    // extracts inline #tags and due markers from the content text, which
-    // conflicts with our client-side tag/due management — it strips tags
-    // from the stored content and can overwrite explicitly-set due dates.
-    return try await putTaskFormEncoded(
-      listId: listId,
-      taskId: taskId,
-      bodyParts: bodyParts,
-      includeParseFlag: false,
-      credentials: credentials
-    )
+    guard content != nil || due != nil else { return true }
+    // Never parsed: Checkvist's parser would lift inline #tags and due markers
+    // out of the content, which conflicts with the app's own tag and due
+    // handling — it strips tags from the stored content and can overwrite an
+    // explicitly set due date. The core never asks for it on an update.
+    return try await succeeds(
+      .updateTask(listId: listId, taskId: Int64(taskId), content: content, due: due, tags: nil),
+      credentials: credentials)
   }
 
   func createTask(
@@ -191,65 +150,25 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
   ) async throws -> CheckvistTask? {
     let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedContent.isEmpty else { return nil }
-    guard let url = CheckvistEndpoints.tasks(listId: listId) else {
-      return nil
-    }
-
-    var bodyParts = ["task[content]=\(FormURLEncoding.percentEncodeFormValue(trimmedContent))"]
-    if let parentId {
-      bodyParts.append("task[parent_id]=\(parentId)")
-    }
-    if let position {
-      bodyParts.append("task[position]=\(position)")
-    }
+    let call = CheckvistCall.createTask(
+      listId: listId, content: trimmedContent, parentId: parentId.map(Int64.init),
+      position: position.map(Int64.init), due: nil, tags: nil, priority: nil, parse: false)
+    guard (try? CheckvistWire.request(call, token: nil)) != nil else { return nil }
 
     let (data, response) = try await performAuthenticatedRequest(credentials: credentials) { validToken in
-      var request = URLRequest(url: url)
-      request.httpMethod = "POST"
-      request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-      request.setValue("application/json", forHTTPHeaderField: "Accept")
-      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-      request.httpBody = bodyParts.joined(separator: "&").data(using: .utf8)
-      return request
+      try CheckvistWire.request(call, token: validToken)
     }
 
     guard (200...299).contains(response.statusCode) else {
       return nil
     }
-
-    let decoder = JSONDecoder()
-    if let task = try? decoder.decode(CheckvistTask.self, from: data) {
-      return task
-    }
-    if let wrapped = try? decoder.decode(CheckvistTaskCreateResponse.self, from: data) {
-      return wrapped.task
-    }
-    if let wrappedList = try? decoder.decode(CheckvistTaskListResponse.self, from: data) {
-      return wrappedList.tasks.first
-    }
-    if let taskList = try? decoder.decode([CheckvistTask].self, from: data) {
-      return taskList.first
-    }
-    return nil
+    return checkvistCreatedTask(body: CheckvistWire.text(data)).map(CheckvistTask.init(core:))
   }
 
   func deleteTask(listId: String, taskId: Int, credentials: CheckvistCredentials) async throws
     -> Bool
   {
-    guard let url = CheckvistEndpoints.task(listId: listId, taskId: taskId) else {
-      return false
-    }
-
-    let (_, response) = try await performAuthenticatedRequest(credentials: credentials) { validToken in
-      var request = URLRequest(url: url)
-      request.httpMethod = "DELETE"
-      request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-      return request
-    }
-
-    return (200...299).contains(response.statusCode)
+    try await succeeds(.deleteTask(listId: listId, taskId: Int64(taskId)), credentials: credentials)
   }
 
   func moveTask(
@@ -258,12 +177,8 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
     position: Int,
     credentials: CheckvistCredentials
   ) async throws -> Bool {
-    try await putTask(
-      listId: listId,
-      taskId: taskId,
-      bodyTaskPayload: ["position": position],
-      credentials: credentials
-    )
+    try await succeeds(
+      .moveTask(listId: listId, taskId: Int64(taskId), position: Int64(position)), credentials: credentials)
   }
 
   func reparentTask(
@@ -272,13 +187,9 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
     parentId: Int?,
     credentials: CheckvistCredentials
   ) async throws -> Bool {
-    let payload: [String: Any] = ["parent_id": parentId ?? NSNull()]
-    return try await putTask(
-      listId: listId,
-      taskId: taskId,
-      bodyTaskPayload: payload,
-      credentials: credentials
-    )
+    try await succeeds(
+      .reparentTask(listId: listId, taskId: Int64(taskId), parentId: parentId.map(Int64.init)),
+      credentials: credentials)
   }
 
   func persistTaskCache(listId: String, tasks: [CheckvistTask]) {
@@ -295,74 +206,13 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
     taskRepository.isCacheOutdated(payload)
   }
 
-  private func putTask(
-    listId: String,
-    taskId: Int,
-    bodyTaskPayload: [String: Any],
-    includeParseFlag: Bool = false,
-    credentials: CheckvistCredentials
-  ) async throws -> Bool {
-    guard let baseURL = CheckvistEndpoints.task(listId: listId, taskId: taskId) else {
-      return false
-    }
-    let url: URL
-    if includeParseFlag, var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) {
-      var items = components.queryItems ?? []
-      items.append(URLQueryItem(name: "parse", value: "true"))
-      components.queryItems = items
-      url = components.url ?? baseURL
-    } else {
-      url = baseURL
-    }
-
+  /// Sends `call` and answers whether Checkvist accepted it. A call the
+  /// core refuses to make (a list id that is not a number) is not sent.
+  private func succeeds(_ call: CheckvistCall, credentials: CheckvistCredentials) async throws -> Bool {
+    guard (try? CheckvistWire.request(call, token: nil)) != nil else { return false }
     let (_, response) = try await performAuthenticatedRequest(credentials: credentials) { validToken in
-      var request = URLRequest(url: url)
-      request.httpMethod = "PUT"
-      request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-      var requestPayload: [String: Any] = ["task": bodyTaskPayload]
-      if includeParseFlag {
-        requestPayload["parse"] = true
-      }
-      request.httpBody = try? JSONSerialization.data(withJSONObject: requestPayload)
-      return request
+      try CheckvistWire.request(call, token: validToken)
     }
-
-    return (200...299).contains(response.statusCode)
-  }
-
-  private func putTaskFormEncoded(
-    listId: String,
-    taskId: Int,
-    bodyParts: [String],
-    includeParseFlag: Bool = false,
-    credentials: CheckvistCredentials
-  ) async throws -> Bool {
-    guard let baseURL = CheckvistEndpoints.task(listId: listId, taskId: taskId) else {
-      return false
-    }
-    let url: URL
-    if includeParseFlag, var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) {
-      var items = components.queryItems ?? []
-      items.append(URLQueryItem(name: "parse", value: "true"))
-      components.queryItems = items
-      url = components.url ?? baseURL
-    } else {
-      url = baseURL
-    }
-
-    let (_, response) = try await performAuthenticatedRequest(credentials: credentials) { validToken in
-      var request = URLRequest(url: url)
-      request.httpMethod = "PUT"
-      request.setValue(validToken, forHTTPHeaderField: "X-Client-Token")
-      request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-      request.setValue("application/json", forHTTPHeaderField: "Accept")
-      request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-      request.httpBody = bodyParts.joined(separator: "&").data(using: .utf8)
-      return request
-    }
-
     return (200...299).contains(response.statusCode)
   }
 
@@ -377,16 +227,4 @@ final class NativeCheckvistSyncPlugin: CheckvistSyncPlugin {
     )
   }
 
-}
-
-private struct CheckvistListCreateResponse: Decodable {
-  let checklist: CheckvistList
-}
-
-private struct CheckvistTaskCreateResponse: Decodable {
-  let task: CheckvistTask
-}
-
-private struct CheckvistTaskListResponse: Decodable {
-  let tasks: [CheckvistTask]
 }

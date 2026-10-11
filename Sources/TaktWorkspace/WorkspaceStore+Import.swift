@@ -24,12 +24,26 @@ extension WorkspaceStore {
     seeds: [ImportedTaskSeed],
     now: Date = .now
   ) throws -> TaskImportOutcome? {
-    // The Rust core's `imports::import_tasks`.
     let core = seeds.map { seed in
       TaktRustCore.ImportedTaskSeed(
         sourceId: seed.sourceId, parentSourceId: seed.parentSourceId, title: seed.title, notes: seed.notes,
         status: seed.status.rawValue, sortOrder: Int64(seed.sortOrder))
     }
+    return try importTasks(
+      workspaceId: workspaceId, listName: listName, sourceSystem: sourceSystem, coreSeeds: core, now: now)
+  }
+
+  /// `importTasks` with seeds the core made, as `checkvist_import_seeds`
+  /// does from Checkvist's tasks.
+  @discardableResult
+  public func importTasks(
+    workspaceId: String,
+    listName: String,
+    sourceSystem: String,
+    coreSeeds core: [TaktRustCore.ImportedTaskSeed],
+    now: Date = .now
+  ) throws -> TaskImportOutcome? {
+    // The Rust core's `imports::import_tasks`.
     guard let outcome = try coreWrite({
       try self.core.importTasks(
         workspaceId: workspaceId, listName: listName, sourceSystem: sourceSystem, seeds: core,

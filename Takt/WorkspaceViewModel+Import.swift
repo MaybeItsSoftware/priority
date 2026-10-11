@@ -58,24 +58,14 @@ extension WorkspaceViewModel {
     var migratedListIDs = Set(defaults.stringArray(forKey: Self.checkvistMigrationKeysKey) ?? [])
     guard !migratedListIDs.contains(listID) else { return }
 
-    let uniqueTasks = Dictionary(tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    let sourcePrefix = "checkvist:\(listID):"
-    let seeds = uniqueTasks.values.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map { task in
-      ImportedTaskSeed(
-        sourceId: "\(sourcePrefix)\(task.id)",
-        parentSourceId: task.parentId.map { "\(sourcePrefix)\($0)" },
-        title: task.content,
-        notes: task.notes?.map(\.content).joined(separator: "\n\n") ?? "",
-        status: task.status == 0 ? .open : (task.status == 1 ? .completed : .cancelled),
-        sortOrder: task.position ?? 0)
-    }
+    let seeds = CheckvistWire.importSeeds(prefix: "checkvist:\(listID):", tasks: tasks)
 
     do {
       let outcome = try store.importTasks(
         workspaceId: workspace.id,
         listName: "Imported from Checkvist — \(listID)",
         sourceSystem: Self.checkvistSourceSystem,
-        seeds: seeds)
+        coreSeeds: seeds)
       migratedListIDs.insert(listID)
       defaults.set(Array(migratedListIDs).sorted(), forKey: Self.checkvistMigrationKeysKey)
       try load()
@@ -117,31 +107,14 @@ extension WorkspaceViewModel {
           continue
         }
 
-        let sourcePrefix = "checkvist:\(remoteID):"
-        let uniqueTasks = Dictionary(
-          snapshot.tasks.map { ($0.id, $0) },
-          uniquingKeysWith: { first, _ in first })
-        let seeds = uniqueTasks.values.sorted { lhs, rhs in
-          let lhsParent = lhs.parentId ?? 0
-          let rhsParent = rhs.parentId ?? 0
-          if lhsParent != rhsParent { return lhsParent < rhsParent }
-          return (lhs.position ?? 0) < (rhs.position ?? 0)
-        }.map { task in
-          ImportedTaskSeed(
-            sourceId: "\(sourcePrefix)\(task.id)",
-            parentSourceId: task.parentId.map { "\(sourcePrefix)\($0)" },
-            title: task.content,
-            notes: task.notes?.map(\.content).joined(separator: "\n\n") ?? "",
-            status: task.status == 0 ? .open : (task.status == 1 ? .completed : .cancelled),
-            sortOrder: task.position ?? 0)
-        }
+        let seeds = CheckvistWire.importSeeds(prefix: "checkvist:\(remoteID):", tasks: snapshot.tasks)
 
         let localList: TaskList
         if seeds.isEmpty {
           localList = try store.createList(workspaceId: workspace.id, name: snapshot.list.name)
         } else if let outcome = try store.importTasks(
           workspaceId: workspace.id, listName: snapshot.list.name,
-          sourceSystem: Self.checkvistSourceSystem, seeds: seeds)
+          sourceSystem: Self.checkvistSourceSystem, coreSeeds: seeds)
         {
           localList = outcome.list
         } else {
@@ -171,20 +144,11 @@ extension WorkspaceViewModel {
       return nil
     }
 
-    let uniqueTasks = Dictionary(legacyTasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    let seeds = uniqueTasks.values.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map { task in
-      ImportedTaskSeed(
-        sourceId: String(task.id),
-        parentSourceId: task.parentId.map(String.init),
-        title: task.content,
-        notes: task.notes?.map(\.content).joined(separator: "\n\n") ?? "",
-        status: task.status == 0 ? .open : (task.status == 1 ? .completed : .cancelled),
-        sortOrder: task.position ?? 0)
-    }
+    let seeds = CheckvistWire.importSeeds(prefix: "", tasks: legacyTasks)
     let date = ISO8601DateFormatter().string(from: .now).prefix(10)
     let outcome = try store.importTasks(
       workspaceId: workspace.id, listName: "Imported from old Priority — \(date)",
-      sourceSystem: Self.legacyOfflineSourceSystem, seeds: seeds)
+      sourceSystem: Self.legacyOfflineSourceSystem, coreSeeds: seeds)
     defaults.set(true, forKey: Self.legacyMigrationKey)
     return outcome?.list
   }

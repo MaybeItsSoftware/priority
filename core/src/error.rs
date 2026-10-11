@@ -62,6 +62,10 @@ pub enum CoreError {
         "“{rule}” is not a schedule. Try daily, weekdays, every friday, every 2 weeks or mon, wed, fri."
     )]
     InvalidRecurrence { rule: String },
+    /// A Checkvist request the core refused to make, or an answer it could
+    /// not read (`checkvist.rs`).
+    #[error("{detail}")]
+    Checkvist { detail: String },
 }
 
 impl From<rusqlite::Error> for CoreError {

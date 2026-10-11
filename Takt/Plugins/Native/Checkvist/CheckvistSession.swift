@@ -1,6 +1,7 @@
 import Foundation
 import OSLog
 import TaktCore
+import TaktRustCore
 
 @MainActor
 final class CheckvistSession {
@@ -118,21 +119,10 @@ final class CheckvistSession {
       return .rejected
     }
 
-    let url = CheckvistEndpoints.login
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue(CheckvistEndpoints.userAgent, forHTTPHeaderField: "User-Agent")
-
-    let body: [String: String] = [
-      "username": username,
-      "remote_key": remoteKey,
-    ]
-
     let data: Data
     let httpResponse: HTTPURLResponse
     do {
-      request.httpBody = try JSONSerialization.data(withJSONObject: body)
+      let request = try CheckvistWire.request(.login(username: username, remoteKey: remoteKey), token: nil)
       let (responseData, response) = try await apiClient.data(for: request)
       guard let http = response as? HTTPURLResponse else {
         return .failed(.invalidResponse(statusCode: nil))
@@ -153,29 +143,13 @@ final class CheckvistSession {
       return .failed(.invalidResponse(statusCode: httpResponse.statusCode))
     }
 
-    guard let issued = Self.token(in: data) else {
+    guard let issued = checkvistLoginToken(body: CheckvistWire.text(data)) else {
       logger.warning("Login response could not be parsed as token.")
       return .failed(.invalidResponse(statusCode: httpResponse.statusCode))
     }
     token = issued
     tokenCredentials = (username: username, remoteKey: remoteKey)
     return .authenticated
-  }
-
-  /// The token in a login response body: `{"token": "…"}` or the bare
-  /// (possibly quoted) string. An empty string is not a token.
-  private static func token(in data: Data) -> String? {
-    let candidate: String?
-    if let object = try? JSONSerialization.jsonObject(with: data) {
-      candidate = (object as? [String: Any])?["token"] as? String
-    } else {
-      candidate = String(data: data, encoding: .utf8)?
-        .trimmingCharacters(in: CharacterSet(charactersIn: "\" \n"))
-    }
-    guard let candidate, !candidate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      return nil
-    }
-    return candidate
   }
 }
 

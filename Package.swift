@@ -256,6 +256,7 @@ let appLogicTargetExcludes = [
   "Takt/Plugins/Native/Checkvist/CheckvistCredentialStore.swift",
   "Takt/Plugins/Native/Checkvist/CheckvistEndpoints.swift",
   "Takt/Plugins/Native/Checkvist/CheckvistModels.swift",
+  "Takt/Plugins/Native/Checkvist/CheckvistModels+Core.swift",
   "Takt/Plugins/Native/Checkvist/CheckvistSession.swift",
   "Takt/Plugins/Native/Checkvist/CheckvistSessionError.swift",
   "Takt/Plugins/Native/Checkvist/CheckvistTaskCachePayload.swift",
@@ -344,7 +345,9 @@ let package = Package(
       // Same unlock as `TaktAppLogic`: these sources compile into the Xcode
       // app as well, and the app now links `TaktCore` rather than compiling
       // it, so the module resolves on both sides.
-      dependencies: ["TaktCore"],
+      // The Checkvist plugin calls the core (`core/src/checkvist.rs`) for
+      // every request it makes and every answer it reads.
+      dependencies: ["TaktCore", "TaktRustCore"],
       path: ".",
       exclude: pluginTargetExcludes,
       sources: [
@@ -353,6 +356,7 @@ let package = Package(
         "Takt/Plugins/Native/Checkvist/CheckvistCredentialStore.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistEndpoints.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistModels.swift",
+        "Takt/Plugins/Native/Checkvist/CheckvistModels+Core.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistTaskCachePayload.swift",
         "Takt/Plugins/Native/Checkvist/CheckvistSessionError.swift",
         "Takt/Plugins/Native/AFFiNE/AFFiNEMCPSession.swift",
