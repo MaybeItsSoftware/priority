@@ -253,6 +253,34 @@ fn a_weekday_whose_time_has_passed_is_next_weeks() {
 }
 
 #[test]
+fn shorthands_people_type() {
+    for tomorrow in ["tmrw", "tmw", "2moro", "tomoz", "TMRW", "@tmrw"] {
+        assert_eq!(
+            follow_up(tomorrow),
+            Some(at(2026, 10, 7, 9, 0)),
+            "{tomorrow}"
+        );
+    }
+    assert_eq!(follow_up("tmrw 3pm"), Some(at(2026, 10, 7, 15, 0)));
+    assert_eq!(follow_up("tdy eod"), Some(at(2026, 10, 6, 17, 0)));
+    assert_eq!(follow_up("tomorrow morning"), Some(at(2026, 10, 7, 9, 0)));
+    assert_eq!(follow_up("tonight"), Some(at(2026, 10, 6, 18, 0)));
+    assert_eq!(follow_up("on fri afternoon"), Some(at(2026, 10, 9, 14, 0)));
+    // Tuesday the 6th: next Monday, and the Saturday to come.
+    assert_eq!(follow_up("next week"), Some(at(2026, 10, 12, 9, 0)));
+    assert_eq!(follow_up("weekend"), Some(at(2026, 10, 10, 9, 0)));
+}
+
+#[test]
+fn a_duration_alone_is_that_long_from_now() {
+    assert_eq!(follow_up("in 2h"), Some(at(2026, 10, 6, 12, 0)));
+    assert_eq!(follow_up("30m"), Some(at(2026, 10, 6, 10, 30)));
+    assert_eq!(follow_up("in 1h30m"), Some(at(2026, 10, 6, 11, 30)));
+    // Still a day, not three minutes.
+    assert_eq!(follow_up("3d"), Some(at(2026, 10, 9, 9, 0)));
+}
+
+#[test]
 fn unreadable_text_is_none() {
     for text in [
         "",
@@ -263,6 +291,7 @@ fn unreadable_text_is_none() {
         "tomorrow tomorrow",
         "9am 10am",
         "2026-02-31",
+        "2h tomorrow",
     ] {
         assert_eq!(follow_up(text), None, "{text}");
     }

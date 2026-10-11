@@ -275,6 +275,9 @@ static ISO_DAY: LazyLock<Regex> =
 
 /// `today`, `tomorrow`, a weekday (the next one, today included), `3d` or
 /// `2w` from today, or a `yyyy-mm-dd` date: the start of that day in `zone`.
+/// The days also answer to the way people actually type them in a hurry —
+/// `tmrw`, `tmw`, `2moro`, `tdy` — and `nextweek` is next Monday, `weekend`
+/// the coming Saturday.
 #[uniffi::export]
 pub fn capture_due(word: String, now_ms: i64, zone: String) -> Option<i64> {
     due(&word, now_ms, periodic::zone(&zone))
@@ -288,8 +291,22 @@ fn due_day(word: &str, now_ms: i64, zone: Tz) -> Option<NaiveDate> {
     let today = local(now_ms, zone).date_naive();
     let days = |count: i64| today.checked_add_signed(Duration::days(count));
     match word {
-        "today" | "tod" => return Some(today),
-        "tomorrow" | "tmr" | "tom" => return days(1),
+        "today" | "tod" | "tdy" => return Some(today),
+        "tomorrow" | "tmr" | "tom" | "tmrw" | "tmw" | "tmrow" | "tomo" | "tomoz" | "tomorow"
+        | "tommorow" | "tommorrow" | "2moro" | "2morrow" | "2mrw" => return days(1),
+        // Always the Monday to come, never today: on a Monday "next week" is
+        // a week away, not now.
+        "nextweek" | "nxtwk" | "nwk" => {
+            let ahead = 7 - i64::from(today.weekday().num_days_from_monday());
+            return days(ahead);
+        }
+        "weekend" | "wknd" | "wkend" => {
+            let ahead = (i64::from(Weekday::Sat.num_days_from_sunday())
+                - i64::from(today.weekday().num_days_from_sunday())
+                + 7)
+                % 7;
+            return days(ahead);
+        }
         _ => {}
     }
     if let Some(weekday) = weekday(word) {
@@ -341,11 +358,17 @@ static TWENTY_FOUR_HOUR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([0-9]{1,2})[:.]([0-9]{2})$").expect("24-hour pattern"));
 
 /// `9am`, `9:30pm`, `12am`, `14:00`, `9.30`, `noon`, `midnight`: an hour and
-/// minute on the 24-hour clock.
+/// minute on the 24-hour clock. The parts of the day are times too:
+/// `morning` is 9:00, `lunch` 12:00, `afternoon` 14:00, `eod` 17:00 and
+/// `evening` or `tonight` 18:00.
 pub fn time_of_day(word: &str) -> Option<(u32, u32)> {
     match word {
-        "noon" | "midday" => return Some((12, 0)),
+        "noon" | "midday" | "lunch" | "lunchtime" => return Some((12, 0)),
         "midnight" => return Some((0, 0)),
+        "morning" | "am" => return Some((9, 0)),
+        "afternoon" | "pm" | "arvo" => return Some((14, 0)),
+        "eod" | "cob" => return Some((17, 0)),
+        "evening" | "eve" | "tonight" | "tonite" => return Some((18, 0)),
         _ => {}
     }
     if let Some(captures) = TWELVE_HOUR.captures(word) {
@@ -375,7 +398,8 @@ pub fn time_of_day(word: &str) -> Option<(u32, u32)> {
 /// A day and a time of day, as the follow-up field reads them: the add
 /// field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`, each with or
 /// without the `@`), a time (`9am`, `9:30pm`, `14:00`, `noon`), or both in
-/// either order, with an optional `at` between.
+/// either order, with an optional `at`, `on` or `in` between. `in 2h` or
+/// `30m` alone is that long from now, and `next week` is next Monday.
 ///
 /// A day with no time is at `default_hour`. A time with no day is today, or
 /// tomorrow once that time has passed; a weekday whose time has passed today
@@ -394,12 +418,23 @@ pub fn date_time(text: &str, now_ms: i64, zone: Tz, default_hour: i64) -> Option
     let mut day: Option<NaiveDate> = None;
     let mut time: Option<(u32, u32)> = None;
     let mut named_weekday = false;
-    let lower = text.to_lowercase();
-    for raw in lower
+    let lower = text.to_lowercase().replace("next week", "nextweek");
+    let words: Vec<&str> = lower
         .split([' ', ','])
-        .filter(|w| !w.is_empty() && *w != "at")
+        .filter(|w| !w.is_empty() && !matches!(*w, "at" | "on" | "in"))
+        .map(|w| w.strip_prefix('@').unwrap_or(w))
+        .collect();
+    // A follow-up is as often "in an hour" as it is a day: a duration on its
+    // own is that long from now, to the minute.
+    if let [word] = words.as_slice()
+        && time_of_day(word).is_none()
+        && due_day(word, now_ms, zone).is_none()
+        && let Some(seconds) = estimate(word)
     {
-        let word = raw.strip_prefix('@').unwrap_or(raw);
+        let minute = 60_000;
+        return Some((now_ms + seconds * 1000) / minute * minute);
+    }
+    for word in words {
         if time.is_none()
             && let Some(parsed) = time_of_day(word)
         {

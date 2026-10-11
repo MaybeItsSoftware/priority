@@ -2092,13 +2092,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_agent_write_tools() and 0xFFFF) != 8928) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_capture_date_time() and 0xFFFF) != 25581) {
+    if ((lib.uniffi_takt_core_checksum_func_capture_date_time() and 0xFFFF) != 17198) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_capture_detail_labels() and 0xFFFF) != 1360) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_takt_core_checksum_func_capture_due() and 0xFFFF) != 19525) {
+    if ((lib.uniffi_takt_core_checksum_func_capture_due() and 0xFFFF) != 51257) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_capture_estimate() and 0xFFFF) != 49166) {
@@ -23798,7 +23798,8 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
          * A day and a time of day, as the follow-up field reads them: the add
          * field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`, each with or
          * without the `@`), a time (`9am`, `9:30pm`, `14:00`, `noon`), or both in
-         * either order, with an optional `at` between.
+         * either order, with an optional `at`, `on` or `in` between. `in 2h` or
+         * `30m` alone is that long from now, and `next week` is next Monday.
          *
          * A day with no time is at `default_hour`. A time with no day is today, or
          * tomorrow once that time has passed; a weekday whose time has passed today
@@ -23838,6 +23839,9 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         /**
          * `today`, `tomorrow`, a weekday (the next one, today included), `3d` or
          * `2w` from today, or a `yyyy-mm-dd` date: the start of that day in `zone`.
+         * The days also answer to the way people actually type them in a hurry —
+         * `tmrw`, `tmw`, `2moro`, `tdy` — and `nextweek` is next Monday, `weekend`
+         * the coming Saturday.
          */ fun `captureDue`(`word`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Long? {
             return FfiConverterOptionalLong.lift(
     uniffiRustCall() { _status ->

@@ -20868,7 +20868,8 @@ public func agentWriteTools() -> [String]  {
  * A day and a time of day, as the follow-up field reads them: the add
  * field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`, each with or
  * without the `@`), a time (`9am`, `9:30pm`, `14:00`, `noon`), or both in
- * either order, with an optional `at` between.
+ * either order, with an optional `at`, `on` or `in` between. `in 2h` or
+ * `30m` alone is that long from now, and `next week` is next Monday.
  *
  * A day with no time is at `default_hour`. A time with no day is today, or
  * tomorrow once that time has passed; a weekday whose time has passed today
@@ -20902,6 +20903,9 @@ public func captureDetailLabels(capture: CaptureParts, nowMs: Int64, zone: Strin
 /**
  * `today`, `tomorrow`, a weekday (the next one, today included), `3d` or
  * `2w` from today, or a `yyyy-mm-dd` date: the start of that day in `zone`.
+ * The days also answer to the way people actually type them in a hurry —
+ * `tmrw`, `tmw`, `2moro`, `tdy` — and `nextweek` is next Monday, `weekend`
+ * the coming Saturday.
  */
 public func captureDue(word: String, nowMs: Int64, zone: String) -> Int64?  {
     return try!  FfiConverterOptionInt64.lift(try! rustCall() {
@@ -22550,13 +22554,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_agent_write_tools() != 8928) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_capture_date_time() != 25581) {
+    if (uniffi_takt_core_checksum_func_capture_date_time() != 17198) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_capture_detail_labels() != 1360) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_takt_core_checksum_func_capture_due() != 19525) {
+    if (uniffi_takt_core_checksum_func_capture_due() != 51257) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_capture_estimate() != 49166) {
