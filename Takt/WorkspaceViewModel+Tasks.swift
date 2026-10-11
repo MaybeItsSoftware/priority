@@ -359,12 +359,24 @@ extension WorkspaceViewModel {
     return (boardColumnsByID[columnID] ?? boardColumns.first)?.id
   }
 
+  /// Files a card, or a subtask row, in another column, and with it every
+  /// subtask drawn on it there. Those were filed in the column it is leaving,
+  /// and left behind they stood in the old column as cards of their own,
+  /// linked back across the board to the card that had gone on.
   func moveTask(_ task: WorkspaceTask, toKanbanColumn column: WorkspaceKanbanColumn) {
     guard let store else { return }
+    let moving = tasksMovingWithColumnChange(of: task)
     perform {
-      try store.setKanbanColumn(column.id, for: task.id)
+      try store.setKanbanColumn(column.id, for: moving)
       reloadBoard()
     }
+  }
+
+  /// The task and the subtasks filed in the column it stands in now.
+  private func tasksMovingWithColumnChange(of task: WorkspaceTask) -> [String] {
+    guard let from = boardMoveColumn(for: task) else { return [task.id] }
+    return WorkspaceBoardShape.tasksMovingWithColumnChange(
+      of: task.id, from: from.id, columns: boardTaskColumns, parents: boardTaskParents)
   }
 
   func placeTask(_ task: WorkspaceTask, before target: WorkspaceTask) {
@@ -373,8 +385,15 @@ extension WorkspaceViewModel {
       errorMessage = "To reorder these cards, they must be siblings in the same project. Drag to a column or list to move them."
       return
     }
+    let destination = column(for: target)?.id
+    // Dropped among another column's cards, the card takes the subtasks
+    // drawn on it, as a move to the column does.
+    let carried = destination.flatMap { destination in
+      boardMoveColumn(for: task)?.id == destination ? nil : Array(tasksMovingWithColumnChange(of: task).dropFirst())
+    } ?? []
     perform {
-      try store.moveTaskBefore(id: task.id, targetId: target.id, kanbanColumn: column(for: target)?.id)
+      if !carried.isEmpty { try store.setKanbanColumn(destination, for: carried) }
+      try store.moveTaskBefore(id: task.id, targetId: target.id, kanbanColumn: destination)
       reloadBoard()
     }
   }

@@ -83,6 +83,34 @@ public struct WorkspaceBoardShape: Sendable, Equatable {
   public static let empty = WorkspaceBoardShape(
     parentTaskID: nil, cards: [], descendants: [:], parents: [:], treeTasks: [], columns: [:], positions: [:],
     crossColumnTasks: [])
+
+  /// The tasks to file in the new column when `taskID` moves out of
+  /// `column`: the task, and every subtask under it filed in that same
+  /// column — drawn on its card, so it goes where the card goes. A subtask
+  /// filed in another column was put there on purpose and keeps it, and so
+  /// does everything beneath it. One filed nowhere is not listed: it is in
+  /// whatever column its parent is, so it follows without being written.
+  ///
+  /// - Parameters:
+  ///   - columns: each task's filed column, as the board read them.
+  ///   - parents: each task beneath a card, to its parent.
+  public static func tasksMovingWithColumnChange(
+    of taskID: String, from column: String, columns: [String: String], parents: [String: String]
+  ) -> [String] {
+    var children: [String: [String]] = [:]
+    for (child, parent) in parents { children[parent, default: []].append(child) }
+    var moving = [taskID]
+    var queue = children[taskID, default: []].sorted()
+    while !queue.isEmpty {
+      let id = queue.removeFirst()
+      if let filed = columns[id] {
+        guard filed == column else { continue }
+        moving.append(id)
+      }
+      queue += children[id, default: []].sorted()
+    }
+    return moving
+  }
 }
 
 /// Turns a read into what the pane draws. Pure, so it runs on any thread and

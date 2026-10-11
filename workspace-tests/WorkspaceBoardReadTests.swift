@@ -152,4 +152,35 @@ final class WorkspaceBoardReadTests: XCTestCase {
       try boardFromCore(lists: scoped, cutoff: base), try boardFromTrees(lists: scoped, cutoff: base))
     XCTAssertEqual(try store.combinedBoard(listIds: [], hidingCompletedBefore: nil), .empty)
   }
+
+  /// ⌘→ on a card left the subtask drawn on it behind, standing in the old
+  /// column as a card of its own. What was filed with the card goes with
+  /// it; what was filed further on stays where it was put.
+  func testAColumnMoveCarriesTheSubtasksFiledWithTheCard() throws {
+    let list = try store.createList(workspaceId: workspaceID, name: "Shakespeare")
+    let card = try store.createTask(listId: list.id, title: "Reimburse for posters")
+    let withCard = try store.createTask(listId: list.id, title: "Reimburse for chocolate", parentTaskId: card.id)
+    let unfiled = try store.createTask(listId: list.id, title: "Find receipts", parentTaskId: card.id)
+    let further = try store.createTask(listId: list.id, title: "Chase treasurer", parentTaskId: card.id)
+    let underFurther = try store.createTask(listId: list.id, title: "Email", parentTaskId: further.id)
+    let underWithCard = try store.createTask(listId: list.id, title: "Count", parentTaskId: withCard.id)
+    try store.setKanbanColumn("this-week", for: [card.id, withCard.id, underWithCard.id, underFurther.id])
+    try store.setKanbanColumn("waiting", for: further.id)
+
+    let options = WorkspaceScopeShapeOptions(scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: false)
+    let read = try store.scopeRead(.list(list.id), hidingCompletedBefore: nil)
+    let board = WorkspaceScopeShaping.board(read, options: options, now: base).board
+    let moving = WorkspaceBoardShape.tasksMovingWithColumnChange(
+      of: card.id, from: "this-week", columns: board.columns, parents: board.parents)
+    XCTAssertEqual(Set(moving), [card.id, withCard.id, underWithCard.id])
+    XCTAssertEqual(moving.first, card.id)
+
+    try store.setKanbanColumn("in-progress", for: moving)
+    let reread = WorkspaceScopeShaping.board(
+      try store.scopeRead(.list(list.id), hidingCompletedBefore: nil), options: options, now: base).board
+    XCTAssertEqual(Set(reread.crossColumnTasks.map(\.id)), [further.id, underFurther.id])
+    XCTAssertNil(try store.kanbanColumn(for: unfiled.id))
+    XCTAssertEqual(try store.kanbanColumn(for: further.id), "waiting")
+    XCTAssertEqual(try store.kanbanColumn(for: underFurther.id), "this-week")
+  }
 }

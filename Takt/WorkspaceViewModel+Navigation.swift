@@ -68,7 +68,7 @@ extension WorkspaceViewModel {
   /// The column a move starts from: a card's own, or for a subtask row its
   /// filed column, else that of the card it is drawn on — an unfiled
   /// subtask is in whatever column its parent is in.
-  private func boardMoveColumn(for task: WorkspaceTask) -> WorkspaceKanbanColumn? {
+  func boardMoveColumn(for task: WorkspaceTask) -> WorkspaceKanbanColumn? {
     if isTaskVisibleOnBoard(task) { return column(for: task) }
     if let filed = boardTaskColumns[task.id], let column = boardColumnsByID[filed] { return column }
     guard let cardID = boardCardID(owning: task.id), let card = self.task(withID: cardID) else { return nil }
