@@ -52,23 +52,60 @@ extension WorkspaceViewModel {
     selectedSearchResultID = searchResults[next].id
   }
 
-  /// Goes to a result: its list, in a view that can actually show it.
-  ///
-  /// The outline rather than the board, because a board shows one level of one
-  /// parent and a hit can be at any depth — landing on a view where the task
-  /// is not visible would be a worse answer than not searching at all.
+  /// Goes to a result, in the mode you searched from.
   func reveal(_ result: TaskSearchResult) {
     dismissOverlay(restoringFocus: false)
-    batchingRefreshes {
-      if result.list.id != selectedListID || isEverythingSelected {
-        selectList(result.list.id)
+    showInPlace(result.task)
+  }
+
+  /// Selects a task without changing the kind of view you are in, so a search
+  /// from the board lands on the board.
+  ///
+  /// It used to switch to the outline every time, on the grounds that a board
+  /// shows one level and a hit can be at any depth. But a board draws a card's
+  /// subtasks on the card, and a jump that throws away the mode you chose is a
+  /// jump you have to undo. So, in order: where you already are, if the task
+  /// is on screen; its list, in the same mode; the level it sits at, on a
+  /// board or matrix that only draws the top; and only then the outline, which
+  /// can show anything — Today, say, for a task not planned for the day.
+  func showInPlace(_ task: WorkspaceTask) {
+    // Something ticked off is invisible in a view that hides completions.
+    if task.status != .open { hidesCompletedTasks = false }
+    unfoldAncestors(of: task)
+    if !isShowing(task.id) {
+      let mode = viewMode
+      batchingRefreshes {
+        if task.listId != selectedListID || isEverythingSelected { selectList(task.listId) }
+        scopeTaskID = nil
+        // Today has nothing to go back to in another list; the list's own
+        // mode, as choosing it in the sidebar would give, is the answer there.
+        if mode != .today { viewMode = mode }
+        reloadOutline(refreshSidebar: false)
       }
-      scopeTaskID = nil
-      viewMode = .outline
-      reloadOutline(refreshSidebar: false)
+      unfoldAncestors(of: task)
     }
-    unfoldAncestors(of: result.task)
-    selectedTaskID = result.task.id
+    if !isShowing(task.id), viewMode != .outline, let parent = task.parentTaskId {
+      batchingRefreshes {
+        scopeTaskID = parent
+        reloadOutline(refreshSidebar: false)
+      }
+    }
+    if !isShowing(task.id) {
+      batchingRefreshes {
+        scopeTaskID = nil
+        viewMode = .outline
+        reloadOutline(refreshSidebar: false)
+      }
+      unfoldAncestors(of: task)
+    }
+    selectedTaskID = task.id
     requestKeyboardFocus(.tasks)
+  }
+
+  /// Whether the task is drawn in the pane as it is now: a row the keys walk,
+  /// or on the board a subtask row on one of its cards.
+  func isShowing(_ id: String) -> Bool {
+    if visibleNavigationTasks.contains(where: { $0.id == id }) { return true }
+    return viewMode == .board && boardCardID(owning: id) != nil
   }
 }

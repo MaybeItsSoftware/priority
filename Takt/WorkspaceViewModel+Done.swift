@@ -91,21 +91,10 @@ extension WorkspaceViewModel {
     revealTask(task)
   }
 
-  /// A task from a dock tab — the done rail, the timeline — shown in its own
-  /// list's outline, selected, with the keyboard on it.
+  /// A task from a dock tab — the done rail, the timeline — selected, with
+  /// the keyboard on it, in the mode you are in (see `showInPlace`).
   func revealTask(_ task: WorkspaceTask) {
-    batchingRefreshes {
-      if task.listId != selectedListID || isEverythingSelected { selectList(task.listId) }
-      scopeTaskID = nil
-      viewMode = .outline
-      // Something ticked off is invisible in an outline that hides completions,
-      // so revealing one has to stop hiding them or the reveal shows nothing.
-      if task.status != .open { hidesCompletedTasks = false }
-      reloadOutline(refreshSidebar: false)
-    }
-    unfoldAncestors(of: task)
-    selectedTaskID = task.id
-    requestKeyboardFocus(.tasks)
+    showInPlace(task)
   }
 
   /// Puts a finished task back on the list, cancelled ones included — `r` means
