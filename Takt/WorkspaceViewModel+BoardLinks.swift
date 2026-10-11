@@ -71,23 +71,17 @@ extension WorkspaceViewModel {
     Task { @MainActor [weak self] in
       guard let self else { return }
       boardLinkSolveQueued = false
-      // A measurement only corrects the estimate the last settle used, so it
-      // lands where it should at once: animated, every card arriving on
-      // screen set the cards beside it sliding, and the board never sat still.
-      settleBoardLinks(animated: false)
+      settleBoardLinks()
     }
   }
 
-  /// Lets in the space the links need: animated when the links themselves
-  /// changed, so gaps grow and close rather than jump, and plainly under
-  /// Reduce Motion or when only a measurement moved.
-  func settleBoardLinks(animated: Bool = true) {
+  /// Lets in the space the links need, in one step. It used to animate, and
+  /// a card moved into a link's path slid down from the top of its column
+  /// while every card below it slid after: the card is new to the column, so
+  /// there is no gap to grow from, only a jump to make look like one.
+  func settleBoardLinks() {
     let layout = BoardLinkLayout.solve(boardLinks, metrics: boardLinkMetrics)
     guard layout != boardLinkLayout else { return }
-    if animated {
-      WorkspaceMotion.animate { boardLinkLayout = layout }
-    } else {
-      boardLinkLayout = layout
-    }
+    boardLinkLayout = layout
   }
 }

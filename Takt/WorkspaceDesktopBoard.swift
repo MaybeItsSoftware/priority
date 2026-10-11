@@ -115,7 +115,6 @@ private struct WorkspaceKanbanColumnStrip: View {
             ForEach(Array(model.boardColumns.enumerated()), id: \.element.id) { index, column in
               WorkspaceKanbanColumnView(
                 column: column,
-                columnIndex: index,
                 width: columnWidth,
                 height: viewport.size.height,
                 hasKeyboard: tasksHaveKeyboard && activeColumnID == column.id,
@@ -170,8 +169,6 @@ struct WorkspaceKanbanColumnView: View {
     WorkspaceTaskDraftRow(isCard: true)
   }
   let column: WorkspaceKanbanColumn
-  /// The column's place on the board, which the link layout counts by.
-  let columnIndex: Int
   let width: CGFloat
   let height: CGFloat
   /// Whether the arrow keys are in this column.
@@ -235,7 +232,6 @@ struct WorkspaceKanbanColumnView: View {
                 task: task, column: column,
                 selectedRowID: task.id == selectedCardID ? selectedRowID : nil,
                 hasKeyboard: tasksHaveKeyboard && task.id == selectedCardID,
-                measuresLinks: measuresLinks,
                 spaceAboveRows: spaceAboveRows(on: task.id),
                 selectedLinkID: selectedLink.flatMap {
                   $0.childID == task.id || $0.sourceCardID == task.id ? $0.childID : nil
@@ -315,12 +311,6 @@ struct WorkspaceKanbanColumnView: View {
     .accessibilityHint("Drop a task here to move it to \(column.title)")
   }
 
-  /// Whether this column's cards report their heights: only where a link
-  /// starts or ends do they move one.
-  private var measuresLinks: Bool {
-    model.boardLinks.measuredColumns.contains(columnIndex)
-  }
-
   private func cardGap(above cardID: String) -> CGFloat {
     guard let gap = linkLayout.gapAbove[cardID], gap >= 0.5 else { return 0 }
     return CGFloat(gap)
@@ -375,9 +365,6 @@ struct WorkspaceKanbanCard: View {
   let selectedRowID: String?
   /// Whether the keyboard is on this card or a row of its tree.
   let hasKeyboard: Bool
-  /// Whether the card reports its height for the link layout: only in a
-  /// column a link starts or ends in.
-  var measuresLinks = false
   /// The space let in above each linked row, to draw it level with the card
   /// it stands for in a later column.
   var spaceAboveRows: [String: CGFloat] = [:]
@@ -458,12 +445,14 @@ struct WorkspaceKanbanCard: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .coordinateSpace(cardSpace)
     // Less the space the links let in, so the layout reads the card's own
-    // height and never its own answer back. Zero, and so never reported,
-    // in a column no link touches.
+    // height and never its own answer back. Every card, linked or not, so a
+    // card moved into a link's path is already measured when the link
+    // appears and the layout settles once rather than guessing and then
+    // correcting itself a frame later.
     .onGeometryChange(for: CGFloat.self) { proxy in
-      measuresLinks ? proxy.size.height - inside : 0
+      proxy.size.height - inside
     } action: { height in
-      if measuresLinks { model.reportBoardCardHeight(task.id, Double(height)) }
+      model.reportBoardCardHeight(task.id, Double(height))
     }
     // A bordered row on the page, not a raised card: the column is already the
     // surface, and a second tone inside it was a card on a well. Square, like
@@ -593,17 +582,13 @@ struct WorkspaceKanbanCard: View {
           .accessibilityHidden(true)
       }
     }
-    .onGeometryChange(for: CGFloat.self) { [reportsHeading, cardSpace] proxy in
-      reportsHeading ? proxy.frame(in: cardSpace).midY : 0
+    // Every card's, for the same reason as its height: a subtask moved
+    // into a column of its own is met at a heading the layout already knows.
+    .onGeometryChange(for: CGFloat.self) { [cardSpace] proxy in
+      proxy.frame(in: cardSpace).midY
     } action: { mid in
       if mid > 0 { model.reportBoardHeadingMid(task.id, Double(mid)) }
     }
-  }
-
-  /// Whether a levelled link meets or leaves this card's heading, so the
-  /// layout needs to know where its middle is.
-  private var reportsHeading: Bool {
-    measuresLinks && model.boardLinks.headingCards.contains(task.id)
   }
 
   /// The subtask a levelled link meets at this card's heading, because the
@@ -764,8 +749,11 @@ struct WorkspaceKanbanCard: View {
     }
     .font(theme.captionFont)
     .padding(.vertical, theme.space.xxs)
+    // Every row, not only the ones a link leaves from: moving a subtask to a
+    // column of its own turns its row into a link's end, and a row measured
+    // only from then on was guessed at for a frame first.
     .onGeometryChange(for: CGRect.self) { proxy in
-      leadsOut && measuresLinks ? proxy.frame(in: cardSpace) : .zero
+      proxy.frame(in: cardSpace)
     } action: { frame in
       guard frame != .zero else { return }
       model.reportBoardRow(
