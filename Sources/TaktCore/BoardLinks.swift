@@ -4,9 +4,11 @@
 /// A subtask filed in a column of its own becomes a card there, and is still
 /// a row on its parent's card. The board ties the two together: the card in
 /// the later column sits level with the row that stands for it, a hairline
-/// running from one to the other. Getting them level takes space — a gap
-/// above the card, or above the row inside the parent's card — and
-/// `BoardLinkLayout` works out how much from the cards' measured heights.
+/// running from one to the other. Where the card sits above the row it
+/// drops to meet it, a gap let in above it; where it sits below, the card
+/// stays where it is and the hairline steps down to it, since the parent's
+/// card keeps its own height. `BoardLinkLayout` works out which from the
+/// cards' measured heights.
 ///
 /// This half is the structure, worked out once per board read and once per
 /// fold: who links to whom, the order the links are levelled in, and which
@@ -35,8 +37,8 @@ public struct BoardLinks: Equatable, Sendable {
     public var pointsForward: Bool { childColumn > sourceColumn }
   }
 
-  /// Where space can be let into a column: above a card (`slot` 0), or above
-  /// the `slot`-th linked row drawn on it.
+  /// Where a link meets a column: a card's heading (`slot` 0), or the
+  /// `slot`-th linked row drawn on it.
   struct Point: Hashable, Comparable {
     let column: Int
     let card: Int
@@ -314,22 +316,27 @@ public struct BoardLinkLayout: Equatable, Sendable {
   public struct Column: Equatable, Sendable {
     /// Space above a card, by card id.
     public var gapAbove: [String: Double] = [:]
-    /// Space above a linked row inside a card.
-    public var spaceAboveRow: [BoardRowKey: Double] = [:]
     /// Links passing through on their way to a later column.
     public var passingLines: [PassingLine] = []
+    /// Links arriving higher than their card, which step down to it.
+    public var steps: [Step] = []
 
     public init() {}
+  }
 
-    /// The space let into a card, above its rows: what its measured height
-    /// carries on top of its own.
-    public func spaceInside(card: String, rows: [String]) -> Double {
-      rows.reduce(0) { $0 + (spaceAboveRow[BoardRowKey(card: card, row: $1)] ?? 0) }
-    }
+  /// A link stepping down in its subtask's column: in at the height it left
+  /// its source at, down the column's edge, and across to the card's title.
+  public struct Step: Equatable, Sendable, Identifiable {
+    public let childID: String
+    /// From the top of the column's cards.
+    public let fromY: Double
+    public let toY: Double
+    public var id: String { childID }
   }
 
   public var columns: [Int: Column] = [:]
-  /// Where each levelled link's hairline runs, from the top of the cards.
+  /// Where each levelled link's hairline leaves its source, from the top of
+  /// the cards: level with the subtask's card, or above it where it steps.
   public var lineY: [String: Double] = [:]
 
   public static let empty = BoardLinkLayout()
@@ -340,9 +347,12 @@ public struct BoardLinkLayout: Equatable, Sendable {
 
   /// Lets in the least space that draws every levelled link level.
   ///
-  /// Space only ever opens downwards: a link whose row sits higher than its
-  /// card opens a gap above the row, inside the parent's card; one whose card
-  /// sits higher opens a gap above the card. Links are settled in
+  /// Space only ever opens above a subtask's card, never inside or above
+  /// the card it hangs from: a card that sits higher than its row drops to
+  /// meet it, and one that sits lower stays where it is, the hairline
+  /// stepping down to it at the edge of its column. The parent's card keeps
+  /// its own height — letting space in above the row left a tall empty band
+  /// on it with the row at the bottom. Links are settled in
   /// `BoardLinks`' order, every one below everything settled before it in
   /// both its columns, so a column's space so far is a running total and the
   /// whole pass is linear in the cards of the columns that hold a link.
@@ -392,15 +402,10 @@ public struct BoardLinkLayout: Equatable, Sendable {
         layout.columns[childPoint.column, default: Column()].gapAbove[link.childID, default: 0] += gap
         inserted[childPoint.column, default: 0] += gap
       } else if childY > sourceY {
-        let gap = childY - sourceY
-        if link.meetsRow {
-          layout.columns[sourcePoint.column, default: Column()].spaceAboveRow[rowKey, default: 0] += gap
-        } else {
-          layout.columns[sourcePoint.column, default: Column()].gapAbove[link.sourceCardID, default: 0] += gap
-        }
-        inserted[sourcePoint.column, default: 0] += gap
+        layout.columns[childPoint.column, default: Column()].steps.append(
+          Step(childID: link.childID, fromY: sourceY, toY: childY))
       }
-      let y = max(sourceY, childY)
+      let y = sourceY
       layout.lineY[link.childID] = y
       for column in (link.sourceColumn + 1)..<link.childColumn {
         layout.columns[column, default: Column()].passingLines.append(PassingLine(childID: link.childID, y: y))

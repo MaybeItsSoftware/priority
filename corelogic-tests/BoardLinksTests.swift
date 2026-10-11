@@ -99,12 +99,14 @@ final class BoardLinksTests: XCTestCase {
       rows: [BoardRowKey(card: "p", row: "x"): (top: 50, mid: 60)]))
     XCTAssertEqual(layout.column(1).gapAbove["x"], 45)
     XCTAssertEqual(layout.lineY["x"], 60)
-    XCTAssertTrue(layout.column(0).spaceAboveRow.isEmpty)
+    XCTAssertTrue(layout.column(1).steps.isEmpty)
+    XCTAssertTrue(layout.column(0).gapAbove.isEmpty)
   }
 
-  /// When the card is already lower than its row, the row moves down inside
-  /// its parent's card instead.
-  func testTheRowDropsToItsCard() {
+  /// When the card is already lower than its row, nothing moves: the
+  /// parent's card keeps its own height, and the hairline steps down to the
+  /// card. Letting space in above the row left a tall empty band on the card.
+  func testTheLinkStepsDownToACardBelowItsRow() {
     let links = BoardLinks(
       columns: [[(id: "p", rowIDs: ["x"])], [(id: "q", rowIDs: []), (id: "x", rowIDs: [])]],
       sources: ["x": "p"])
@@ -112,15 +114,15 @@ final class BoardLinksTests: XCTestCase {
     let layout = BoardLinkLayout.solve(links, metrics: metrics(
       heights: ["p": 60, "q": 100, "x": 30], headings: ["p": 15, "x": 15],
       rows: [key: (top: 30, mid: 40)]))
-    XCTAssertEqual(layout.column(0).spaceAboveRow[key], 75)
+    XCTAssertTrue(layout.column(0).gapAbove.isEmpty)
     XCTAssertNil(layout.column(1).gapAbove["x"])
-    XCTAssertEqual(layout.lineY["x"], 115)
-    XCTAssertEqual(layout.column(0).spaceInside(card: "p", rows: ["x"]), 75)
+    XCTAssertEqual(layout.column(1).steps, [.init(childID: "x", fromY: 40, toY: 115)])
+    XCTAssertEqual(layout.lineY["x"], 40)
   }
 
   /// Two subtasks moved on together: their cards are taller than their rows,
-  /// so the second row opens a gap inside the parent to meet its card.
-  func testSiblingRowsSpreadToMeetTheirCards() {
+  /// so the second card ends up below its row and the link steps down to it.
+  func testSiblingRowsMeetTheirCardsWithoutOpeningTheParent() {
     let links = BoardLinks(
       columns: [[(id: "p", rowIDs: ["x", "y"])], [(id: "x", rowIDs: []), (id: "y", rowIDs: [])]],
       sources: ["x": "p", "y": "p"])
@@ -130,12 +132,12 @@ final class BoardLinksTests: XCTestCase {
       heights: ["p": 70, "x": 40, "y": 40], headings: ["p": 15, "x": 15, "y": 15],
       rows: [x: (top: 30, mid: 40), y: (top: 50, mid: 60)]))
     // x's card drops 25 to its row at 40; y's card is then at 65, its
-    // heading at 80, its row at 60, so the row opens 20 above itself.
+    // heading at 80, its row at 60, so the link steps from 60 down to 80.
     XCTAssertEqual(layout.column(1).gapAbove["x"], 25)
     XCTAssertEqual(layout.lineY["x"], 40)
-    XCTAssertEqual(layout.column(0).spaceAboveRow[y], 20)
-    XCTAssertEqual(layout.lineY["y"], 80)
-    XCTAssertNil(layout.column(0).spaceAboveRow[x])
+    XCTAssertEqual(layout.column(1).steps, [.init(childID: "y", fromY: 60, toY: 80)])
+    XCTAssertEqual(layout.lineY["y"], 60)
+    XCTAssertTrue(layout.column(0).gapAbove.isEmpty)
   }
 
   /// A link two columns on passes through the column between, at its height.

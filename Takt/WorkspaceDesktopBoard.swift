@@ -34,6 +34,12 @@ enum WorkspaceBoardMetrics {
     theme.space.sm
   }
 
+  /// Where in a column's margin a link arriving above its card runs down to
+  /// it: halfway in, clear of the rule between the columns.
+  static func linkRail(_ theme: Theme) -> CGFloat {
+    (columnPadding(theme) / 2).rounded()
+  }
+
   /// The inset before the first column and after the last: none. The board
   /// runs to the pane's edges the way Zed's panes do, and the hairlines
   /// between columns are all the division it needs.
@@ -232,7 +238,7 @@ struct WorkspaceKanbanColumnView: View {
                 task: task, column: column,
                 selectedRowID: task.id == selectedCardID ? selectedRowID : nil,
                 hasKeyboard: tasksHaveKeyboard && task.id == selectedCardID,
-                spaceAboveRows: spaceAboveRows(on: task.id),
+                linkStepsIn: linkLayout.steps.contains { $0.childID == task.id },
                 selectedLinkID: selectedLink.flatMap {
                   $0.childID == task.id || $0.sourceCardID == task.id ? $0.childID : nil
                 })
@@ -257,6 +263,7 @@ struct WorkspaceKanbanColumnView: View {
           }
           .scrollTargetLayout()
           .background(alignment: .topLeading) { passingLines }
+          .overlay(alignment: .topLeading) { steps }
           // Room for a link passing below the last card, so it can be
           // scrolled to.
           .frame(minHeight: passingLinesDepth, alignment: .top)
@@ -316,14 +323,32 @@ struct WorkspaceKanbanColumnView: View {
     return CGFloat(gap)
   }
 
-  /// The space let in above each linked row on a card, by row.
-  private func spaceAboveRows(on cardID: String) -> [String: CGFloat] {
-    guard let rows = model.boardLinks.linkedRows[cardID] else { return [:] }
-    var spaces: [String: CGFloat] = [:]
-    for row in rows {
-      if let space = linkLayout.spaceAboveRow[BoardRowKey(card: cardID, row: row)] { spaces[row] = CGFloat(space) }
+  /// Links arriving above the card they meet, stepping down to it in the
+  /// column's margin: in from the rule at the height they left their row,
+  /// then down to the card's heading, where the card's own stub carries on
+  /// to its title. Over the cards rather than behind them, since the cards
+  /// they pass on the way down would hide them.
+  @ViewBuilder private var steps: some View {
+    if !linkLayout.steps.isEmpty {
+      let rail = WorkspaceBoardMetrics.linkRail(theme)
+      let hairline = theme.hairline
+      ZStack(alignment: .topLeading) {
+        ForEach(linkLayout.steps) { step in
+          let colour = step.childID == selectedLink?.childID ? theme.primary : theme.border
+          Rectangle()
+            .fill(colour)
+            .frame(width: rail + hairline / 2, height: hairline)
+            .offset(y: CGFloat(step.fromY) - hairline / 2)
+          Rectangle()
+            .fill(colour)
+            .frame(width: hairline, height: CGFloat(step.toY - step.fromY) + hairline)
+            .offset(x: rail - hairline / 2, y: CGFloat(step.fromY) - hairline / 2)
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
     }
-    return spaces
   }
 
   /// Links on their way from an earlier column to a later one, drawn behind
@@ -365,9 +390,9 @@ struct WorkspaceKanbanCard: View {
   let selectedRowID: String?
   /// Whether the keyboard is on this card or a row of its tree.
   let hasKeyboard: Bool
-  /// The space let in above each linked row, to draw it level with the card
-  /// it stands for in a later column.
-  var spaceAboveRows: [String: CGFloat] = [:]
+  /// Whether this card's link arrives from higher up and steps down to it,
+  /// so its stub starts at the column's link rail rather than its edge.
+  var linkStepsIn = false
   /// The selected link, when this card is either end of it.
   var selectedLinkID: String?
 
@@ -421,7 +446,6 @@ struct WorkspaceKanbanCard: View {
   }
 
   private var cardSurface: some View {
-    let inside = spaceAboveRows.values.reduce(0, +)
     return VStack(alignment: .leading, spacing: theme.space.xs) {
       cardHeading
       linkHint
@@ -444,13 +468,12 @@ struct WorkspaceKanbanCard: View {
     .padding(.horizontal, WorkspaceBoardMetrics.columnPadding(theme))
     .frame(maxWidth: .infinity, alignment: .leading)
     .coordinateSpace(cardSpace)
-    // Less the space the links let in, so the layout reads the card's own
-    // height and never its own answer back. Every card, linked or not, so a
-    // card moved into a link's path is already measured when the link
-    // appears and the layout settles once rather than guessing and then
-    // correcting itself a frame later.
+    // Every card, linked or not, so a card moved into a link's path is
+    // already measured when the link appears and the layout settles once
+    // rather than guessing and then correcting itself a frame later. No link
+    // lets space into a card, so this is always the card's own height.
     .onGeometryChange(for: CGFloat.self) { proxy in
-      proxy.size.height - inside
+      proxy.size.height
     } action: { height in
       model.reportBoardCardHeight(task.id, Double(height))
     }
@@ -575,10 +598,12 @@ struct WorkspaceKanbanCard: View {
     .background(alignment: .leading) {
       if let link, link.isAligned {
         let margin = WorkspaceBoardMetrics.columnPadding(theme)
+        // One arriving from higher up comes down the rail and turns in there.
+        let start = linkStepsIn ? WorkspaceBoardMetrics.linkRail(theme) : 0
         Rectangle()
           .fill(linkColour(link.childID))
-          .frame(width: margin - theme.space.xxs, height: theme.hairline)
-          .offset(x: -margin)
+          .frame(width: margin - theme.space.xxs - start, height: theme.hairline)
+          .offset(x: start - margin)
           .accessibilityHidden(true)
       }
     }
@@ -630,16 +655,9 @@ struct WorkspaceKanbanCard: View {
       let limit = WorkspaceBoardMetrics.visibleSubtaskRows
       let parents = TaskOutlineFolding.parentIDs(model.descendants(of: task))
       let rows = model.boardTreeRows(of: task)
-      let spaceThrough = spaceThroughRows(rows)
       VStack(alignment: .leading, spacing: 0) {
         ForEach(rows) { item in
-          subtaskRow(
-            item, isFolded: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil,
-            spaceAbove: spaceThrough[item.id] ?? 0)
-            // Space let in above a row to draw it level with the card it
-            // stands for in a later column, as padding for the same reason
-            // as the column's gaps.
-            .padding(.top, spaceAboveRows[item.id] ?? 0)
+          subtaskRow(item, isFolded: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
         }
         if items.count > limit {
           Button {
@@ -659,22 +677,7 @@ struct WorkspaceKanbanCard: View {
     }
   }
 
-  /// The space let in above each linked row and every row before it, which
-  /// its measured top is taken less of.
-  private func spaceThroughRows(_ rows: [TaskOutlineItem]) -> [String: CGFloat] {
-    guard !spaceAboveRows.isEmpty else { return [:] }
-    var total: CGFloat = 0
-    var through: [String: CGFloat] = [:]
-    for row in rows {
-      total += spaceAboveRows[row.id] ?? 0
-      through[row.id] = total
-    }
-    return through
-  }
-
-  /// - Parameter spaceAbove: the space let in above the row and the rows
-  ///   before it, which its reported top is taken less of.
-  private func subtaskRow(_ item: TaskOutlineItem, isFolded: Bool?, spaceAbove: CGFloat) -> some View {
+  private func subtaskRow(_ item: TaskOutlineItem, isFolded: Bool?) -> some View {
     let isOpen = item.task.status == .open
     let step = Self.markWidth(theme)
     let isRowSelected = selectedRowID == item.task.id
@@ -758,7 +761,7 @@ struct WorkspaceKanbanCard: View {
       guard frame != .zero else { return }
       model.reportBoardRow(
         card: task.id, row: item.task.id,
-        top: Double(frame.minY - spaceAbove), mid: Double(frame.midY - spaceAbove))
+        top: Double(frame.minY), mid: Double(frame.midY))
     }
     // The same band as a card's selection, across the tree's width, so the
     // arrow keys can be seen stepping through a card's subtasks.

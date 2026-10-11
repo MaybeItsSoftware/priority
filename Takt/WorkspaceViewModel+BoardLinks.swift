@@ -37,7 +37,7 @@ extension WorkspaceViewModel {
     queueBoardLinkSettle()
   }
 
-  /// A card's height, less the space a link let into it.
+  /// A card's height: its own, since no link lets space into a card.
   func reportBoardCardHeight(_ cardID: String, _ height: Double) {
     update(&boardLinkMetrics.cardHeights, cardID, height)
   }
@@ -47,8 +47,7 @@ extension WorkspaceViewModel {
     update(&boardLinkMetrics.headingMids, cardID, mid)
   }
 
-  /// A linked row's top and middle on its card, less the space let in above
-  /// it.
+  /// A linked row's top and middle on its card.
   func reportBoardRow(card cardID: String, row rowID: String, top: Double, mid: Double) {
     let key = BoardRowKey(card: cardID, row: rowID)
     update(&boardLinkMetrics.rowTops, key, top)
