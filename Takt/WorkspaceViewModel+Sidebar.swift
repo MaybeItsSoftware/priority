@@ -1,4 +1,5 @@
 import Foundation
+import TaktCore
 import TaktWorkspace
 
 /// Managing the sidebar's own contents: lists, folders, archiving and
@@ -355,8 +356,17 @@ extension WorkspaceViewModel {
     pendingSidebarDeletion = item
   }
 
+  private var nestedListUnderSidebarCursor: WorkspaceTask? {
+    guard let row = sidebarCursorRow, case .nestedList(let id) = row.kind else { return nil }
+    return nestedLists.first { $0.task.id == id }?.task
+  }
+
   func requestDeletionOfSelectedSidebarItem() {
-    if let filter = selectedFilterList {
+    // On a nested list the selected list is the one it sits in, so asking
+    // that would offer to delete the wrong thing.
+    if keyboardFocusArea == .sidebar, let task = nestedListUnderSidebarCursor {
+      requestTaskDeletion(task)
+    } else if let filter = selectedFilterList {
       deleteFilterList(filter)
     } else if let folder = selectedFolder {
       requestDeletion(of: .folder(folder))

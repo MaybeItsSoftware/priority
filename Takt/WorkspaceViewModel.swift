@@ -597,6 +597,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// A list or folder being named in its row before it exists — `%` and `d`
   /// in the sidebar, as Zed's project panel does a new file.
   var sidebarDraft: WorkspaceSidebarDraft?
+  /// The sidebar row whose icon picker is open, by its outline id — a pinned
+  /// nested list is drawn twice, and the picker opens on the copy you chose.
+  var iconPickerRowID: String?
   /// Lists visited, most recent first, for ⌘P's ordering. Remembered across
   /// launches, since "the list I was in yesterday" is the common case.
   var recentListIDs: [String] = UserDefaults.standard.stringArray(forKey: "workspaceRecentListsV1") ?? []

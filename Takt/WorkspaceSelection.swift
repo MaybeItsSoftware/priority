@@ -107,7 +107,7 @@ struct WorkspaceTaskMarker: View {
   var body: some View {
     Group {
       if task.isList {
-        Image(systemName: model.itemSymbol(for: task)).foregroundStyle(theme.muted)
+        WorkspaceIconImage(name: model.itemSymbol(for: task)).foregroundStyle(theme.muted)
       } else if isHovered {
         Image(systemName: "circle").foregroundStyle(theme.muted)
       } else if isSubtask {

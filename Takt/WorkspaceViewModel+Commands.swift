@@ -202,6 +202,7 @@ extension WorkspaceViewModel {
       if !isListsPaneVisible { showLeftDock(.lists) }
       beginRenamingSelection()
     case .listSettings: showSelectedListSettings()
+    case .listIcon: chooseIconForSidebarCursor()
     case .listArchive: archiveSelectedList()
     case .listRestore: restoreMostRecentlyArchivedList()
     case .listComplete: toggleCurrentListCompletion()

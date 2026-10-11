@@ -49,7 +49,8 @@ directory. Its keys act on the sidebar row, never on a task behind it:
 | New file | `Cmd+N`, `%` (vim) | New list, beside the row you are on, named in its row: `Return` makes it, `Esc` leaves nothing behind |
 | New directory | `Cmd+Alt+N`, `d` (vim) | New folder, beside the row you are on, named in its row the same way |
 | Rename | `F2`, `Shift+R` (vim) | Rename the list or folder |
-| Trash / delete | `Delete`, `Cmd+Delete`, `Shift+D` (vim) | Delete the list or folder (it asks) |
+| Trash / delete | `Delete`, `Cmd+Delete`, `Shift+D` (vim) | Delete the list, folder or nested list (it asks) |
+| — | `Shift+I` | Choose the row's icon: a grid of symbols walked with the arrows (or `h` `j` `k` `l`) and chosen with `Return`, or an emoji for a list, nested list or folder |
 | Collapse / expand all | `Cmd+←` / `Cmd+→` | Every folder |
 | Collapse / expand | `←` `h` / `→` `l` | The folder; ← and `h` go up a level from a list |
 | Select parent | `-` (vim) | Up a level |
@@ -57,6 +58,13 @@ directory. Its keys act on the sidebar row, never on a task behind it:
 | First / last | `gg` / `Shift+G` (vim) | The sidebar's ends |
 | Previous / next directory | `{` / `}` (vim) | The previous / next folder |
 | Command palette | `:` (vim) | The palette |
+
+Right-clicking a row opens Zed's project panel menu — New List, New Folder;
+Rename, Icon…, the row's settings, Move Up / Down; what only that kind of row
+has, Archive, Delete; Expand All / Collapse All — with each item's sidebar key
+on its right. The keys are read from the keymap in force, so a rebound key is
+the one shown; a two-key sequence such as `oo` cannot be a menu's key, so its
+chord is shown instead.
 
 Because the sidebar has its own `d`, `h` and `l`, it does not hold them for
 the task sequence that begins with one (`dd`): a letter a surface

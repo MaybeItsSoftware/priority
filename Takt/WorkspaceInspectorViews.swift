@@ -408,7 +408,7 @@ struct LocalTaskInspector: View {
             get: { model.itemSymbol(for: task) },
             set: { model.setNestedListIcon($0, for: task) }
           ),
-          options: Self.iconOptions
+          options: Self.iconOptions(including: model.itemSymbol(for: task))
         )
         .inspectorStop("icon") { offset in
           let icon = Binding(get: { model.itemSymbol(for: task) }, set: { model.setNestedListIcon($0, for: task) })
@@ -452,6 +452,13 @@ struct LocalTaskInspector: View {
 
   static let iconOptions = WorkspaceViewModel.availableListIcons.map {
     ThemedPickerOption($0.label, value: $0.symbol, systemImage: $0.symbol)
+  }
+
+  /// The symbols, with an emoji the list already has at the top — chosen in
+  /// the sidebar's icon picker, and offered here so the picker can show it.
+  static func iconOptions(including current: String) -> [ThemedPickerOption<String>] {
+    guard WorkspaceListIconName.isEmoji(current) else { return iconOptions }
+    return [ThemedPickerOption(current, value: current)] + iconOptions
   }
 
   static let priorityNames = ["None", "Low", "Medium", "High", "Urgent"]
@@ -538,7 +545,7 @@ private struct ListSettingsEditor: View {
           TextField("Color (hex)", text: $colorHex, prompt: Text("#4F86C6"))
             .themedTextField()
         }
-        ThemedPicker("Icon", selection: $iconSymbol, options: LocalTaskInspector.iconOptions)
+        ThemedPicker("Icon", selection: $iconSymbol, options: LocalTaskInspector.iconOptions(including: iconSymbol))
           .focusable()
         ThemedPicker(
           "Folder", selection: $folderID,

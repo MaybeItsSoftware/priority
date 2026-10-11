@@ -62,7 +62,7 @@ struct WorkspaceListRowLabel: View {
       // A list's own colour is categorical identity. With none set the glyph
       // is muted like every other in the sidebar, rather than the system
       // accent, which does not follow a theme.
-      Image(systemName: model.icon(for: list))
+      WorkspaceIconImage(name: model.icon(for: list))
         .foregroundStyle(Color(priorityHex: list.colorHex, fallback: theme.muted))
         .frame(width: WorkspaceSidebarMetrics.iconWidth)
       if model.isRenaming(.list(list)) {

@@ -29,37 +29,8 @@ struct WorkspaceSidebarListRow: View {
         case .after: model.placeDroppedItem(payload, before: nil, inFolderID: list.folderId)
         }
       }
-      .contextMenu {
-        Menu("Choose icon") {
-          ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
-            Button { model.setIcon(icon.symbol, for: list) } label: {
-              Label(icon.label, systemImage: icon.symbol)
-            }
-          }
-        }
-        Button("Rename") { model.beginRenaming(.list(list)) }
-          .commandShortcut(.listRename)
-        Button("List settings…") { model.showSettings(for: list) }
-          .commandShortcut(.listSettings)
-        Button("New nested list…") {
-          model.selectList(list.id)
-          model.requestNestedListCreation()
-        }
-        // The Inbox can be renamed and refiled, but not taken away: quick
-        // capture has to have somewhere to land.
-        if !list.isSystemList {
-          Divider()
-          Button("Convert to task in Inbox") { model.convertListToTask(list) }
-            .commandShortcut(.taskConvertToList)
-          Button(list.completedAt == nil ? "Complete list" : "Reopen list") { model.toggleListCompletion(list) }
-            .commandShortcut(.listComplete)
-          Button("Archive") { model.archiveList(list) }
-            .commandShortcut(.listArchive)
-          Divider()
-          Button("Delete list and tasks", role: .destructive) { model.requestDeletion(of: .list(list)) }
-            .commandShortcut(.listDelete)
-        }
-      }
+      .contextMenu { WorkspaceSidebarContextMenu(target: .list(list), rowID: "list:\(list.id)") }
+      .workspaceIconPicker(rowID: "list:\(list.id)", target: .list(list))
   }
 }
 
@@ -108,7 +79,7 @@ struct WorkspaceNestedListRow: View {
 
   var body: some View {
     HStack(spacing: theme.space.sm) {
-      Image(systemName: model.itemSymbol(for: task))
+      WorkspaceIconImage(name: model.itemSymbol(for: task))
         .foregroundStyle(theme.muted)
         .frame(width: WorkspaceSidebarMetrics.iconWidth)
       Text(task.title)
@@ -129,7 +100,8 @@ struct WorkspaceNestedListRow: View {
     .focusable().focusEffectDisabled()
     .background(WorkspaceSidebarSelectionBackground(
       isCurrent: model.isCurrentSidebarRow(task.id), rowID: rowID))
-    .contextMenu { WorkspaceItemActions(task: task) }
+    .contextMenu { WorkspaceSidebarContextMenu(target: .nestedList(task), rowID: rowID) }
+    .workspaceIconPicker(rowID: rowID, target: .nestedList(task))
     .onDrag { WorkspaceTaskDrag.provider(for: task.id) }
     .background(
       isDropTargeted ? theme.selectionFill : .clear,
@@ -176,7 +148,7 @@ struct WorkspaceFolderRow: View {
         model.isFolderExpanded(folder)
           ? WorkspaceCommandHelpText.text(for: .motionSidebarCollapse, note: "Collapse folder")
           : WorkspaceCommandHelpText.text(for: .motionSidebarExpand, note: "Expand folder"))
-      Image(systemName: "folder")
+      WorkspaceIconImage(name: model.icon(forFolder: folder))
         .frame(width: WorkspaceSidebarMetrics.iconWidth)
       if model.isRenaming(.folder(folder)) {
         WorkspaceRenameField(
@@ -213,18 +185,7 @@ struct WorkspaceFolderRow: View {
       case .after: model.placeDroppedItem(payload, before: nil, inFolderID: folder.parentFolderId)
       }
     }
-    .contextMenu {
-      Button("Rename") { model.beginRenaming(.folder(folder)) }
-        .commandShortcut(.listRename)
-      Button("Folder settings…") { model.showSettings(for: folder) }
-        .commandShortcut(.listSettings)
-      Button("New list in folder") { model.beginSidebarDraft(.list, in: folder.id) }
-        .commandShortcut(.listNew)
-      Button("New subfolder") { model.beginSidebarDraft(.folder, in: folder.id) }
-        .commandShortcut(.folderNew)
-      Divider()
-      Button("Delete folder", role: .destructive) { model.requestDeletion(of: .folder(folder)) }
-        .commandShortcut(.listDelete)
-    }
+    .contextMenu { WorkspaceSidebarContextMenu(target: .folder(folder), rowID: "folder:\(folder.id)") }
+    .workspaceIconPicker(rowID: "folder:\(folder.id)", target: .folder(folder))
   }
 }

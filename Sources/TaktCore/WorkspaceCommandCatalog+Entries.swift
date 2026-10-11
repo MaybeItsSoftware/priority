@@ -306,6 +306,10 @@ public enum WorkspaceCommandCatalog {
       id: .listRename, title: "Rename the list or folder", group: "Lists", keys: [],
       surfaceKeys: [.sidebar: ["f2", "shift+r"]], note: "From a task pane, the list you are in"),
     .init(id: .listSettings, title: "Open list settings", group: "Lists", keys: ["oo", "cmd+option+i"]),
+    .init(
+      id: .listIcon, title: "Choose the sidebar row's icon", group: "Lists", keys: [],
+      surfaceKeys: [.sidebar: ["shift+i"]],
+      note: "A symbol or an emoji, for a list, nested list or folder; a symbol for a filter list"),
     .init(id: .listArchive, title: "Archive the current list", group: "Lists", keys: ["cmd+option+a"]),
     .init(
       id: .listRestore, title: "Restore the last archived list", group: "Lists",

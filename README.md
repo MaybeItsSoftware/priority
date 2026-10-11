@@ -125,9 +125,10 @@ In the sidebar the keys are Zed's project panel's, lists standing in for files
 and folders for directories: `Cmd+N` new list and `Cmd+Alt+N` new folder beside
 the row you are on, named in place in a field drawn where it will appear (`Return` makes it, `Esc` leaves nothing behind), `F2` rename, `Delete` delete (it asks), `Cmd+←` / `Cmd+→`
 collapse / expand every folder, `→` (or `l`) opens the row. On a folder that is already open, `→` **enters** it: its lists' tasks together on one board or outline, with the keyboard on them, so you can work through the folder without opening each list. On a list, `→` goes into its tasks the same way. `Return` is not "open" anywhere, the sidebar included — it adds a task to the list you are on, as it does everywhere else. Its vim panel's netrw
-keys work too: `d` new folder, `%` new list, `Shift+D` delete, `Shift+R`
+keys work too: `d` new folder, `%` new list, `Shift+D` delete, `Shift+I` icon (a symbol or an emoji), `Shift+R`
 rename, `h` / `l` / `-` collapse, expand and go up, `gg` / `Shift+G` the ends,
-`{` / `}` the previous / next folder and `:` the palette.
+`{` / `}` the previous / next folder and `:` the palette. Right-clicking a row
+opens the same panel's menu, each item with its sidebar key beside it.
 
 The palette, search, the list finder, the move picker, quick edits (`t`, `dd`,
 `ee`…), the reference and the new list / folder / column prompts all open in

@@ -404,27 +404,7 @@ struct WorkspaceFilterListRow: View {
         rowID: sidebarID))
     .accessibilityLabel("\(filter.name), filter list")
     .help(filter.definition.summary)
-    .contextMenu {
-      Button("Edit Filter List…") { model.requestEditFilterList(filter) }
-      Menu("Icon") {
-        ForEach(WorkspaceFilterList.iconOptions, id: \.symbol) { icon in
-          Button {
-            model.setIcon(icon.symbol, for: filter)
-          } label: {
-            Label(icon.label, systemImage: icon.symbol)
-          }
-        }
-      }
-      Divider()
-      if let index = model.filterLists.firstIndex(of: filter) {
-        Button("Move Up") { model.moveFilterList(filter, to: index - 1) }
-          .disabled(index == 0)
-        Button("Move Down") { model.moveFilterList(filter, to: index + 1) }
-          .disabled(index + 1 >= model.filterLists.count)
-      }
-      Divider()
-      Button("New Filter List…") { model.requestNewFilterList() }
-      Button("Delete Filter List", role: .destructive) { model.deleteFilterList(filter) }
-    }
+    .contextMenu { WorkspaceSidebarContextMenu(target: .filterList(filter), rowID: sidebarID) }
+    .workspaceIconPicker(rowID: sidebarID, target: .filterList(filter))
   }
 }
