@@ -299,6 +299,9 @@ struct WorkspaceTaskTitleField: View {
   @Environment(\.theme) private var theme
   let initialTitle: String
   var caret: WorkspaceTitleCaret = .selectAll
+  /// The row's own font: the body's in the outline and on a card, the
+  /// caption's on a subtask row drawn on a card.
+  var font: Font?
   let onCommit: (String) -> Void
   let onCancel: () -> Void
 
@@ -307,11 +310,12 @@ struct WorkspaceTaskTitleField: View {
   @FocusState private var isFocused: Bool
 
   init(
-    initialTitle: String, caret: WorkspaceTitleCaret = .selectAll,
+    initialTitle: String, caret: WorkspaceTitleCaret = .selectAll, font: Font? = nil,
     onCommit: @escaping (String) -> Void, onCancel: @escaping () -> Void
   ) {
     self.initialTitle = initialTitle
     self.caret = caret
+    self.font = font
     self.onCommit = onCommit
     self.onCancel = onCancel
     _text = State(initialValue: initialTitle)
@@ -327,7 +331,7 @@ struct WorkspaceTaskTitleField: View {
       TextField("Title", text: $text, axis: .vertical)
         .textFieldStyle(.plain)
         .lineLimit(1...6)
-        .font(theme.bodyFont())
+        .font(font ?? theme.bodyFont())
         .foregroundStyle(theme.ink)
         .focused($isFocused)
         .onSubmit { commit() }

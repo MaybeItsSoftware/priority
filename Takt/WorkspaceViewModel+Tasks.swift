@@ -25,10 +25,13 @@ extension WorkspaceViewModel {
 
   private func createRelativeTask(named title: String) {
     guard let store, let reference = taskInsertionReference else { return }
+    // A sibling of a subtask row is drawn on the same card: filed where the
+    // row is filed, which for most rows is nowhere — they follow the card.
+    let boardColumn = boardDraftIsSubtaskRow ? boardTaskColumns[reference.id] : column(for: reference)?.id
     perform {
       let task = try store.createTask(capturing: title, listId: reference.listId,
         parentTaskId: taskInsertionIsChild ? reference.id : reference.parentTaskId,
-        kanbanColumn: viewMode == .board ? column(for: reference)?.id : nil,
+        kanbanColumn: viewMode == .board ? boardColumn : nil,
         adjacentTaskId: taskInsertionIsChild ? nil : reference.id, above: taskInsertionAbove)
       // The board draws a subtask as a row on its parent's card, so it stays
       // put rather than opening the parent to show it.

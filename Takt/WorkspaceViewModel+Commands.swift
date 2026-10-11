@@ -337,6 +337,8 @@ extension WorkspaceViewModel {
     } else if viewMode == .matrix {
       // The matrix's order is its quadrants', not the outline's.
       moveSelectedTaskWithinQuadrant(by: offset)
+    } else if viewMode == .board, let task = selectedTask {
+      moveBoardTaskWithinSiblings(task, by: offset)
     } else if let task = selectedTask {
       moveTaskWithinSiblings(task, by: offset)
     }

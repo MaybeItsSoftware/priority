@@ -84,6 +84,30 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// ⌥↑/⌥↓ on the board: past the neighbour drawn beside it — the card above
+  /// or below in its column, or for a subtask row the row above or below on
+  /// its card. See `WorkspaceBoardShape.siblingStep`.
+  func moveBoardTaskWithinSiblings(_ task: WorkspaceTask, by offset: Int) {
+    guard let store else { return }
+    let column = boardColumns.first { $0.id == activeBoardColumnID }
+    let cards = column.map { tasks(in: $0) } ?? []
+    let drawn: [WorkspaceTask]
+    if cards.contains(where: { $0.id == task.id }) {
+      drawn = cards
+    } else if let cardID = boardCardID(owning: task.id), let card = self.task(withID: cardID) {
+      drawn = boardTreeRows(of: card).map(\.task)
+    } else {
+      return
+    }
+    let blocked = Set(drawn.filter { isBlocked($0) }.map(\.id))
+    guard let step = WorkspaceBoardShape.siblingStep(of: task.id, by: offset, drawn: drawn, blocked: blocked)
+    else { return }
+    perform {
+      try store.moveTaskBefore(id: step.moving, targetId: step.before)
+      reloadOutline(refreshSidebar: task.isList)
+    }
+  }
+
   /// Puts the task inside the one above it. On the board "above" is the card
   /// above in the same column: the store's own indent takes the previous
   /// sibling in the list's order, which there is as likely as not a card in

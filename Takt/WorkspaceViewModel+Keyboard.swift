@@ -110,10 +110,13 @@ extension WorkspaceViewModel {
   /// the card on the board and started it on Today; Return now opens the
   /// task everywhere.
   ///
-  /// On the board a subtask row is drawn on its card and has no draft row
-  /// of its own, so a subtask selected there puts the new card below the
-  /// card it is drawn on.
+  /// On the board a card adds a card below it, and a subtask row drawn on a
+  /// card adds a sibling subtask below that row, drawn on the same card.
   func addTaskBelowSelection() {
+    guard viewMode == .board else {
+      requestRelativeTaskComposerFocus(reference: nil)
+      return
+    }
     // The card the selected row is drawn on in the column the keys are in:
     // a subtask filed in a later column is a card there too, and the draft
     // belongs beside the row you are looking at, not over in that column.
@@ -121,8 +124,18 @@ extension WorkspaceViewModel {
     let cardID = selectedTaskID.flatMap { id in
       column.flatMap { boardRows(in: $0).cardByRow[id] } ?? boardCardID(owning: id)
     }
-    let card = viewMode == .board ? cardID.flatMap(task(withID:)) : nil
-    requestRelativeTaskComposerFocus(reference: card)
+    let reference = selectedTaskID.flatMap(task(withID:)) ?? cardID.flatMap(task(withID:))
+    requestRelativeTaskComposerFocus(reference: reference)
+  }
+
+  /// Whether the board's draft is a subtask row on a card rather than a card:
+  /// it was asked for beside a row that is not a card in the column the keys
+  /// are in.
+  var boardDraftIsSubtaskRow: Bool {
+    guard viewMode == .board, isDraftingTask, let reference = taskInsertionReference, !taskInsertionIsChild,
+      let column = boardColumns.first(where: { $0.id == activeBoardColumnID })
+    else { return false }
+    return !tasks(in: column).contains { $0.id == reference.id }
   }
 
   /// Escape, which means "back out one step" from wherever the keyboard is.
@@ -227,6 +240,10 @@ extension WorkspaceViewModel {
     if viewMode != .board, let task = selectedTask, isShowing(task.id) {
       editingTaskTitleCaret = caret
       editingTaskTitleID = task.id
+    } else if viewMode == .board, let task = selectedTask, isDrawnOnBoard(task.id) {
+      // On the board too: the card's title, or the subtask row's on a card.
+      editingTaskTitleCaret = caret
+      editingTaskTitleID = task.id
     } else {
       quickEdit(.title)
     }
@@ -238,6 +255,7 @@ extension WorkspaceViewModel {
   /// one undo step with the new title.
   func commitTaskTitleEdit(_ task: WorkspaceTask, text: String) {
     editingTaskTitleID = nil
+    returnKeyboardToBoardAfterTitleEdit()
     let capture = TaskCapture.parse(text)
     guard !capture.title.isEmpty else { return }
     guard capture.title != task.title || capture.hasDetails else { return }
@@ -256,6 +274,19 @@ extension WorkspaceViewModel {
 
   func cancelTaskTitleEdit() {
     editingTaskTitleID = nil
+    returnKeyboardToBoardAfterTitleEdit()
+  }
+
+  /// Whether a task is on the board: a card, or a subtask row drawn on one.
+  func isDrawnOnBoard(_ id: String) -> Bool {
+    boardVisibleTaskIDs.contains(id) || boardCardID(owning: id) != nil
+  }
+
+  /// The field held the keyboard; a card takes it back on a focus request,
+  /// so the arrows carry on from the row that was edited.
+  private func returnKeyboardToBoardAfterTitleEdit() {
+    guard viewMode == .board, keyboardFocusArea == .tasks else { return }
+    requestKeyboardFocus(.tasks)
   }
 
   func editTaskValues(_ change: (inout TaskEditorValues) -> Void) {

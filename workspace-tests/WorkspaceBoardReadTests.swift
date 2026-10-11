@@ -183,4 +183,35 @@ final class WorkspaceBoardReadTests: XCTestCase {
     XCTAssertEqual(try store.kanbanColumn(for: further.id), "waiting")
     XCTAssertEqual(try store.kanbanColumn(for: underFurther.id), "this-week")
   }
+
+  /// ⌥↓ on a board card swapped it with the next sibling in the list, which
+  /// was as likely as not a card in another column: nothing on screen moved.
+  /// The step is past the neighbour drawn in the same column.
+  func testAStepUpOrDownOnTheBoardPassesTheNeighbourInTheColumn() throws {
+    let list = try store.createList(workspaceId: workspaceID, name: "Birthday")
+    let first = try store.createTask(listId: list.id, title: "Venue")
+    let elsewhere = try store.createTask(listId: list.id, title: "Cake", kanbanColumn: "today")
+    let second = try store.createTask(listId: list.id, title: "Invites")
+    let blocked = try store.createTask(listId: list.id, title: "Send invites")
+    let column = [first, second, blocked]
+
+    // Down from the first card passes the second, not the card in Today.
+    let down = try XCTUnwrap(WorkspaceBoardShape.siblingStep(of: first.id, by: 1, drawn: column))
+    XCTAssertEqual(down.moving, second.id)
+    XCTAssertEqual(down.before, first.id)
+    try store.moveTaskBefore(id: down.moving, targetId: down.before)
+    XCTAssertEqual(try store.tasks(in: list.id).map(\.id), [second.id, first.id, elsewhere.id, blocked.id])
+
+    // Up from the top, and down into the blocked group, go nowhere.
+    XCTAssertNil(WorkspaceBoardShape.siblingStep(of: second.id, by: -1, drawn: [second, first, blocked]))
+    XCTAssertNil(
+      WorkspaceBoardShape.siblingStep(of: first.id, by: 1, drawn: [second, first, blocked], blocked: [blocked.id]))
+
+    // A subtask row steps among the rows on its card, not the cards.
+    let row1 = try store.createTask(listId: list.id, title: "Ask price", parentTaskId: first.id)
+    let row2 = try store.createTask(listId: list.id, title: "Book", parentTaskId: first.id)
+    let up = try XCTUnwrap(WorkspaceBoardShape.siblingStep(of: row2.id, by: -1, drawn: [row1, row2]))
+    XCTAssertEqual(up.moving, row2.id)
+    XCTAssertEqual(up.before, row1.id)
+  }
 }

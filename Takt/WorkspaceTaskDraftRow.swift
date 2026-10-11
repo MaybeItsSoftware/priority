@@ -29,6 +29,9 @@ struct WorkspaceTaskDraftRow: View {
   /// edge to edge between hairlines, and with no glyph column, since a card
   /// has none for its title to line up after.
   var isCard = false
+  /// Drawn as a subtask row on a card: the row's mark and caption type, the
+  /// band edge to edge across the card as a selected row's is.
+  var isSubtaskRow = false
 
   @FocusState private var isFocused: Bool
   /// Set while the row is taking the keyboard itself, so the caret goes back
@@ -42,7 +45,10 @@ struct WorkspaceTaskDraftRow: View {
     HStack(spacing: theme.space.sm) {
       // The glyph column left empty, so the text starts where a task's title
       // does; the selected band and the caret say it is a place to type.
-      if !isCard {
+      if isSubtaskRow {
+        WorkspaceSubtaskElbow()
+          .frame(width: theme.space.lg)
+      } else if !isCard {
         Color.clear
           .frame(width: WorkspaceRowMetrics.iconWidth, height: 1)
       } else if model.taskInsertionIsChild {
@@ -85,8 +91,8 @@ struct WorkspaceTaskDraftRow: View {
           .truncationMode(.tail)
       }
     }
-    .font(theme.bodyFont())
-    .modifier(DraftChrome(isCard: isCard, depth: depth))
+    .font(isSubtaskRow ? theme.captionFont : theme.bodyFont())
+    .modifier(DraftChrome(isCard: isCard, isSubtaskRow: isSubtaskRow, depth: depth))
     .help(keysHint)
     .onAppear { focusSoon() }
     .onChange(of: model.taskComposerFocusRequest) { _, _ in focusSoon() }
@@ -172,10 +178,21 @@ struct WorkspaceTaskDraftRow: View {
 private struct DraftChrome: ViewModifier {
   @Environment(\.theme) private var theme
   let isCard: Bool
+  var isSubtaskRow = false
   let depth: Int
 
   func body(content: Content) -> some View {
-    if isCard {
+    if isSubtaskRow {
+      // A selected subtask row's band: the row's own height, and edge to
+      // edge across the card rather than inset by the card's margin.
+      let margin = WorkspaceBoardMetrics.columnPadding(theme)
+      content
+        .padding(.vertical, theme.space.xxs)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+          WorkspaceSelectionBackground(isSelected: true, hasKeyboard: true, radius: 0)
+            .padding(.horizontal, -margin))
+    } else if isCard {
       // The same band a selected card draws, between the same rules, so the
       // card being typed reads as the card it will become.
       content

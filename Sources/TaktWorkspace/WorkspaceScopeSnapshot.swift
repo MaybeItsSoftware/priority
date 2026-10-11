@@ -105,6 +105,29 @@ public struct WorkspaceBoardShape: Sendable, Equatable {
   /// - Parameters:
   ///   - columns: each task's filed column, as the board read them.
   ///   - parents: each task beneath a card, to its parent.
+  /// What ⌥↑ or ⌥↓ swaps on the board: the task and the nearest sibling drawn
+  /// beside it — the column's cards, or the subtask rows on its card — as
+  /// "move `moving` before `before`". The store's own step counts every
+  /// sibling, most of them in other columns, so a press there could swap
+  /// the card with one out of sight and nothing on screen would move.
+  /// Blocked and open tasks are ordered apart, so only a neighbour in the
+  /// same group counts. Nil at either end.
+  ///
+  /// - Parameter drawn: the rows in the order they are drawn.
+  public static func siblingStep(
+    of taskID: String, by offset: Int, drawn: [WorkspaceTask], blocked: Set<String> = []
+  ) -> (moving: String, before: String)? {
+    guard offset != 0, let task = drawn.first(where: { $0.id == taskID }) else { return nil }
+    let isBlocked = blocked.contains(taskID)
+    let siblings = drawn.filter {
+      $0.listId == task.listId && $0.parentTaskId == task.parentTaskId && blocked.contains($0.id) == isBlocked
+    }
+    guard let index = siblings.firstIndex(where: { $0.id == taskID }) else { return nil }
+    let neighbour = index + (offset < 0 ? -1 : 1)
+    guard siblings.indices.contains(neighbour) else { return nil }
+    return offset < 0 ? (taskID, siblings[neighbour].id) : (siblings[neighbour].id, taskID)
+  }
+
   public static func tasksMovingWithColumnChange(
     of taskID: String, from column: String, columns: [String: String], parents: [String: String]
   ) -> [String] {
