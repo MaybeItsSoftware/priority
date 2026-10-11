@@ -178,6 +178,10 @@ private fun BoardColumnView(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(column.title, style = TaktTheme.type.label, color = TaktTheme.colors.mutedText, modifier = Modifier.weight(1f))
+            // Filled by its rules: a card dropped here is edited to match them.
+            if (column.isRuleColumn) {
+                MonoText("rules", style = TaktTheme.type.monoSmall, color = TaktTheme.colors.dimText, modifier = Modifier.padding(end = Metrics.sm))
+            }
             MonoText(column.cards.size.toString(), style = TaktTheme.type.monoSmall, color = TaktTheme.colors.dimText)
         }
         LazyColumn(

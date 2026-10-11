@@ -25,10 +25,13 @@ extension WorkspaceViewModel {
 
   private func createRelativeTask(named title: String) {
     guard let store, let reference = taskInsertionReference else { return }
+    // A sibling of a subtask row is drawn on the same card: filed where the
+    // row is filed, which for most rows is nowhere — they follow the card.
+    let boardColumn = boardDraftIsSubtaskRow ? boardTaskColumns[reference.id] : column(for: reference)?.id
     perform {
       let task = try store.createTask(capturing: title, listId: reference.listId,
         parentTaskId: taskInsertionIsChild ? reference.id : reference.parentTaskId,
-        kanbanColumn: viewMode == .board ? column(for: reference)?.id : nil,
+        kanbanColumn: viewMode == .board ? boardColumn : nil,
         adjacentTaskId: taskInsertionIsChild ? nil : reference.id, above: taskInsertionAbove)
       // The board draws a subtask as a row on its parent's card, so it stays
       // put rather than opening the parent to show it.
@@ -95,13 +98,32 @@ extension WorkspaceViewModel {
     return scopeTask?.title ?? selectedList?.name ?? "Board"
   }
 
-  /// Where leaving the opened task goes: its parent task, or the list it sits
-  /// in. The breadcrumb used to print the opened task's own title, which is
-  /// already the pane's title beside it.
-  var scopeExitTitle: String? {
-    guard let scope = scopeTask else { return nil }
-    if let parentID = scope.parentTaskId, let parent = task(withID: parentID) { return parent.title }
-    return list(for: scope)?.name ?? selectedList?.name
+  /// The way down to the opened task, outermost first: its list, then each
+  /// task above it. Empty at a list's own root. The header draws it before
+  /// the title as a breadcrumb — `Errands / Plan my Birthday` — where it used
+  /// to print only the parent, after the title, behind a back chevron.
+  var scopeTrail: [ScopeCrumb] {
+    guard let scope = scopeTask else { return [] }
+    var ancestors: [WorkspaceTask] = []
+    var visited: Set<String> = [scope.id]
+    var parentID = scope.parentTaskId
+    while let id = parentID, visited.insert(id).inserted, let parent = task(withID: id) {
+      ancestors.insert(parent, at: 0)
+      parentID = parent.parentTaskId
+    }
+    let list = list(for: scope) ?? selectedList
+    return (list.map { [ScopeCrumb(id: "list:\($0.id)", title: $0.name, task: nil)] } ?? [])
+      + ancestors.map { ScopeCrumb(id: $0.id, title: $0.title, task: $0) }
+  }
+
+  /// Goes to a crumb: a task opens as the board or outline it heads; the list
+  /// goes back to its root.
+  func openCrumb(_ crumb: ScopeCrumb) {
+    if let task = crumb.task {
+      enterTask(task)
+    } else {
+      while scopeTask != nil { leaveTaskScope() }
+    }
   }
 
   func tasks(in column: WorkspaceKanbanColumn) -> [WorkspaceTask] {
@@ -284,7 +306,10 @@ extension WorkspaceViewModel {
     boardVisibleTaskIDs.contains(task.id)
   }
 
+  /// The column a task is drawn in: where a rule column or an entered card's
+  /// floor puts it, else its filed column, else the first.
   func column(for task: WorkspaceTask) -> WorkspaceKanbanColumn? {
+    if let placed = boardColumnPlacements[task.id], let column = boardColumnsByID[placed] { return column }
     let id = boardTaskColumns[task.id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
     return boardColumnsByID[id] ?? boardColumns.first
   }
@@ -310,7 +335,8 @@ extension WorkspaceViewModel {
   /// was rather than sorting thousands of cards into columns again.
   func rebuildBoardIndex() {
     let key = boardShapeGeneration.map {
-      BoardIndexMemo.Key(generation: $0, columns: boardColumns, folded: foldedTaskIDs)
+      BoardIndexMemo.Key(
+        generation: $0, columns: boardColumns, placements: boardColumnPlacements, folded: foldedTaskIDs)
     }
     if let key, let memo = boardIndexMemos.last(where: { $0.key == key }) {
       // Already on screen: nothing moved.
@@ -356,6 +382,7 @@ extension WorkspaceViewModel {
   /// where the selection is without resolving the selected task.
   func boardColumnID(forTaskID id: String) -> String? {
     guard boardVisibleTaskIDs.contains(id) else { return nil }
+    if let placed = boardColumnPlacements[id], boardColumnsByID[placed] != nil { return placed }
     let columnID = boardTaskColumns[id] ?? WorkspaceKanbanColumn.blitzitDefaults[0].id
     return (boardColumnsByID[columnID] ?? boardColumns.first)?.id
   }
@@ -367,8 +394,11 @@ extension WorkspaceViewModel {
   func moveTask(_ task: WorkspaceTask, toKanbanColumn column: WorkspaceKanbanColumn) {
     guard let store else { return }
     let moving = tasksMovingWithColumnChange(of: task)
+    // Through the core, which edits a task dropped into a rule column to
+    // match it, and refuses a move the rules would put straight back.
+    let key = boardConfigurationKey
     perform {
-      try store.setKanbanColumn(column.id, for: moving)
+      try store.moveToBoardColumn(key: key, taskIDs: moving, columnID: column.id)
       reloadBoard()
     }
   }
@@ -386,44 +416,27 @@ extension WorkspaceViewModel {
       errorMessage = "To reorder these cards, they must be siblings in the same project. Drag to a column or list to move them."
       return
     }
-    let destination = column(for: target)?.id
+    let destinationColumn = column(for: target)
+    let destination = destinationColumn?.id
+    let changesColumn = destination.map { boardMoveColumn(for: task)?.id != $0 } ?? false
+    // A rule column is not filed into: the order is kept, and the core
+    // edits the task to match the column, or refuses.
+    if let destinationColumn, destinationColumn.isRuleColumn {
+      let key = boardConfigurationKey
+      perform {
+        try store.moveTaskBefore(id: task.id, targetId: target.id)
+        if changesColumn { try store.moveToBoardColumn(key: key, taskIDs: [task.id], columnID: destinationColumn.id) }
+        reloadBoard()
+      }
+      return
+    }
     // Dropped among another column's cards, the card takes the subtasks
     // drawn on it, as a move to the column does.
-    let carried = destination.flatMap { destination in
-      boardMoveColumn(for: task)?.id == destination ? nil : Array(tasksMovingWithColumnChange(of: task).dropFirst())
-    } ?? []
+    let carried = changesColumn ? Array(tasksMovingWithColumnChange(of: task).dropFirst()) : []
     perform {
       if !carried.isEmpty { try store.setKanbanColumn(destination, for: carried) }
       try store.moveTaskBefore(id: task.id, targetId: target.id, kanbanColumn: destination)
       reloadBoard()
-    }
-  }
-
-  func addKanbanColumn(named name: String) {
-    let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !title.isEmpty else { return }
-    guard let store else { return }
-    var columns = boardColumns
-    let baseID = title.lowercased()
-      .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
-      .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-    let id = uniqueColumnID(base: baseID.isEmpty ? "column" : baseID, in: columns)
-    columns.append(WorkspaceKanbanColumn(id: id, title: title))
-    perform {
-      try store.setKanbanBoardColumns(columns, for: boardConfigurationKey, label: "Add Board Column")
-      reloadOutline()
-    }
-  }
-
-  func removeKanbanColumn(_ column: WorkspaceKanbanColumn) {
-    guard boardColumns.count > 1 else { return }
-    let fallback = boardColumns.first { $0.id != column.id } ?? WorkspaceKanbanColumn.blitzitDefaults[0]
-    guard let store else { return }
-    let remaining = boardColumns.filter { $0.id != column.id }
-    perform {
-      try store.setKanbanBoardColumns(remaining, for: boardConfigurationKey,
-        movingTaskIDs: tasks(in: column).map(\.id), toColumn: fallback.id, label: "Remove Board Column")
-      reloadOutline()
     }
   }
 
@@ -475,4 +488,12 @@ extension WorkspaceViewModel {
       reloadBoard()
     }
   }
+}
+
+/// One step of the header's breadcrumb.
+struct ScopeCrumb: Identifiable, Equatable {
+  let id: String
+  let title: String
+  /// Nil for the list at the root of the trail.
+  let task: WorkspaceTask?
 }

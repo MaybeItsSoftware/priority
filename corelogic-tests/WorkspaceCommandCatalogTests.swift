@@ -57,7 +57,13 @@ final class WorkspaceCommandCatalogTests: XCTestCase {
     XCTAssertEqual(
       keyless,
       [
-        .focusManageConditions, .windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics,
+        .focusManageConditions,
+        // A column header's menu, done rarely: the palette and the header's
+        // right-click reach them.
+        .planBoardRenameColumn, .planBoardMoveColumnLeft, .planBoardMoveColumnRight,
+        .planBoardAddColumnLeft, .planBoardAddColumnRight, .planBoardEditColumnRules,
+        .planBoardMakeDefaultColumns, .planBoardResetColumns,
+        .windowOpenKeymap, .windowReloadKeymap, .windowShowDiagnostics,
         .windowOpenThemesFolder, .windowReloadThemes, .windowExportTheme,
       ])
   }

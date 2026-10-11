@@ -416,70 +416,7 @@ pub fn set_list_completed(
     Ok(())
 }
 
-/// One column of a board.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct BoardColumn {
-    pub id: String,
-    pub title: String,
-}
-
-/// Saves a board's columns, moving the cards in `moving_task_ids` to
-/// `to_column` in the same step, as removing a column does. An empty column
-/// list is ignored. `WorkspaceStore.setKanbanBoardColumns`.
-pub fn set_board_columns(
-    transaction: &Transaction,
-    key: &str,
-    columns: &[BoardColumn],
-    moving_task_ids: &[String],
-    to_column: Option<&str>,
-    now_ms: i64,
-) -> Result<(), CoreError> {
-    if columns.is_empty() {
-        return Ok(());
-    }
-    let mut moving = moving_task_ids.to_vec();
-    moving.sort();
-    moving.dedup();
-    for id in &moving {
-        let exists: bool = transaction.query_row(
-            "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = ?1)",
-            [id],
-            |row| row.get(0),
-        )?;
-        if !exists {
-            return Err(CoreError::MissingTask { id: id.clone() });
-        }
-        transaction.execute(
-            "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, kanbanColumn, updatedAt)
-             VALUES (?1, '[]', '[]', ?2, ?3)
-             ON CONFLICT(taskId) DO UPDATE SET kanbanColumn = excluded.kanbanColumn, updatedAt = excluded.updatedAt",
-            params![id, to_column, stored(now_ms)],
-        )?;
-    }
-    transaction.execute(
-        "INSERT INTO kanban_boards(id, columnsJSON) VALUES (?1, ?2)
-         ON CONFLICT(id) DO UPDATE SET columnsJSON = excluded.columnsJSON
-         WHERE columnsJSON != excluded.columnsJSON",
-        params![key, columns_json(columns)],
-    )?;
-    Ok(())
-}
-
-/// Columns as Swift's `JSONEncoder` wrote `[WorkspaceKanbanColumn]`: id then
-/// title, `/` escaped.
-pub(crate) fn columns_json(columns: &[BoardColumn]) -> String {
-    let items: Vec<String> = columns
-        .iter()
-        .map(|column| {
-            format!(
-                "{{\"id\":{},\"title\":{}}}",
-                serde_json::Value::from(column.id.clone()),
-                serde_json::Value::from(column.title.clone())
-            )
-        })
-        .collect();
-    format!("[{}]", items.join(",")).replace('/', "\\/")
-}
+pub use crate::board_columns::{BoardColumn, set_board_columns};
 
 #[cfg(test)]
 mod tests;

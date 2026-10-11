@@ -15,7 +15,7 @@ use crate::CoreError;
 use crate::board::{self, BoardRead};
 use crate::commitments::{self, Commitment, CommitmentDraft};
 use crate::conditions;
-use crate::conversions::{self, BoardColumn};
+use crate::conversions;
 use crate::dailies::{self, DailyEdit};
 use crate::dependencies;
 use crate::editor::{self, EditorMetadata, EditorSnapshot};
@@ -546,28 +546,6 @@ impl CoreWorkspace {
         };
         journal::journalled(&mut self.lock(), label, |tx| {
             conversions::set_list_completed(tx, &id, completed, now_ms)
-        })
-    }
-
-    /// Saves a board's columns, moving cards out of a removed one, as one step.
-    pub fn set_board_columns(
-        &self,
-        key: String,
-        columns: Vec<BoardColumn>,
-        moving_task_ids: Vec<String>,
-        to_column: Option<String>,
-        label: String,
-        now_ms: i64,
-    ) -> Result<(), CoreError> {
-        journal::journalled(&mut self.lock(), &label, |tx| {
-            conversions::set_board_columns(
-                tx,
-                &key,
-                &columns,
-                &moving_task_ids,
-                to_column.as_deref(),
-                now_ms,
-            )
         })
     }
 

@@ -7,6 +7,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import uk.co.maybeitsadam.takt.core.BlockedSection
+import uk.co.maybeitsadam.takt.core.BoardColumnsRead
 import uk.co.maybeitsadam.takt.core.MatrixGeometry
 import uk.co.maybeitsadam.takt.core.MatrixQuadrant
 import uk.co.maybeitsadam.takt.core.TaskMatrixPosition
@@ -34,7 +35,13 @@ data class BoardCard(
 }
 
 @Immutable
-data class BoardColumnModel(val id: String, val title: String, val cards: ImmutableList<BoardCard>) {
+data class BoardColumnModel(
+    val id: String,
+    val title: String,
+    val cards: ImmutableList<BoardCard>,
+    /** Filled by its rules rather than by filing: a card dropped here is edited to match. */
+    val isRuleColumn: Boolean = false,
+) {
     /** The card to draw the "Blocked" label above, if the column ends with blocked cards (they sink to its foot). */
     val blockedLabelId: String? =
         if (cards.none { it.row.isBlocked }) null
@@ -48,9 +55,9 @@ data class BoardShape(
     /** Matrix placement for every card. */
     val positions: Map<String, TaskMatrixPosition>,
     val isLoaded: Boolean,
+    /** The layout as an edit saves it, rules and hidden columns included; not the columns drawn. */
+    val layout: List<WorkspaceKanbanColumn> = emptyList(),
 ) {
-    val columnDefinitions: List<WorkspaceKanbanColumn> get() = columns.map { WorkspaceKanbanColumn(it.id, it.title) }
-
     fun columnOf(cardId: String): BoardColumnModel? = columns.firstOrNull { c -> c.cards.any { it.id == cardId } }
 
     companion object {
@@ -97,7 +104,9 @@ data class MatrixShape(
  * Port of the iOS `BoardSnapshot.load` and the Mac's `reloadBoardNow`: a
  * list's visible top level are the cards; Everything shows its actionable
  * tasks. A subtask nobody filed follows its parent's column; one filed
- * elsewhere is a card of its own there. Pure; tested on the JVM.
+ * elsewhere is a card of its own there. Which columns are drawn, and where a
+ * rule column or an entered card's floor puts a card, are the Rust core's
+ * ([BoardColumnsRead]). Pure; tested on the JVM.
  */
 object BoardShaping {
     const val EVERYTHING_KEY = "everything/root"
@@ -115,30 +124,16 @@ object BoardShaping {
             }
         }
 
-    /** The scope's own layout, plus any column a card here is filed under that the layout does not list. */
-    fun resolvedColumns(
-        key: String,
-        isEverything: Boolean,
-        configurations: Map<String, List<WorkspaceKanbanColumn>>,
-        listIds: List<String>,
-        usedColumnIds: Set<String>,
-    ): List<WorkspaceKanbanColumn> {
-        val columns = (configurations[key]?.takeIf { it.isNotEmpty() } ?: WorkspaceKanbanColumn.blitzitDefaults).toMutableList()
-        val extras = if (isEverything) {
-            listIds.flatMap { configurations["$it/root"].orEmpty() }
-        } else {
-            configurations[EVERYTHING_KEY].orEmpty() + WorkspaceKanbanColumn.blitzitDefaults
-        }
-        for (column in extras) {
-            if (column.id in usedColumnIds && columns.none { it.id == column.id }) columns += column
-        }
-        return columns
-    }
-
+    /**
+     * [read] is the core's answer for this scope's board: the columns drawn,
+     * and the cards a rule column or an entered card's floor places
+     * elsewhere than they are filed. Every other card stands in its filed
+     * column when that is drawn, else the first.
+     */
     fun shape(
         data: ListScopeData,
         isEverything: Boolean,
-        configurations: Map<String, List<WorkspaceKanbanColumn>>,
+        read: BoardColumnsRead,
         folded: Set<String>,
         hideCompleted: Boolean,
         zone: ZoneId,
@@ -174,16 +169,14 @@ object BoardShaping {
             column != effectiveColumn(parent)
         }
 
-        val columns = resolvedColumns(key, isEverything, configurations, data.lists.map { it.id }, filed.values.toSet())
-        val columnIds = columns.map { it.id }.toSet()
-        val firstColumn = columns.firstOrNull()?.id ?: fallback
+        val columns = read.columns.ifEmpty { WorkspaceKanbanColumn.blitzitDefaults }
+        val drawnRead = if (read.columns.isEmpty()) read.copy(columns = columns) else read
         val listNames = if (isEverything) data.allLists.associate { it.id to it.name } else emptyMap()
         val byColumn = LinkedHashMap<String, MutableList<BoardCard>>()
         columns.forEach { byColumn[it.id] = ArrayList() }
         val positions = HashMap<String, TaskMatrixPosition>()
         for (task in tasks + crossColumn) {
-            val wanted = filed[task.id] ?: fallback
-            val column = if (wanted in columnIds) wanted else firstColumn
+            val column = drawnRead.columnId(task.id, filed[task.id]) ?: fallback
             val isCross = task.id !in cardIds
             val subtasks = board.descendants[task.id].orEmpty().filter { !hideCompleted || it.task.status == TaskStatus.OPEN }
             val parents = TaskOutlineFolding.parentIDs(subtasks)
@@ -205,9 +198,12 @@ object BoardShaping {
         }
         return BoardShape(
             key = key,
-            columns = columns.map { BoardColumnModel(it.id, it.title, byColumn[it.id].orEmpty().toImmutableList()) }.toImmutableList(),
+            columns = columns.map {
+                BoardColumnModel(it.id, it.title, byColumn[it.id].orEmpty().toImmutableList(), isRuleColumn = it.isRuleColumn)
+            }.toImmutableList(),
             positions = positions,
             isLoaded = true,
+            layout = read.layout.ifEmpty { columns },
         )
     }
 

@@ -32,6 +32,9 @@ public enum CoreFailure: Equatable, Sendable {
   case invalidFilter(detail: String)
   /// A commitment's schedule the recurrence syntax cannot read.
   case invalidRecurrence(rule: String)
+  /// A board column edit or a drop into a column that cannot be made; the
+  /// message says why.
+  case columnRefused(detail: String)
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
   case other
@@ -65,6 +68,7 @@ extension Error {
     case .MissingFilterList(let id): return .missingFilterList(id: id)
     case .InvalidFilter(let detail): return .invalidFilter(detail: detail)
     case .InvalidRecurrence(let rule): return .invalidRecurrence(rule: rule)
+    case .ColumnRefused(let detail): return .columnRefused(detail: detail)
     case .NoJournal: return .noJournal
     default: return .other
     }

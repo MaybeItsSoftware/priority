@@ -52,7 +52,8 @@ extension WorkspaceViewModel {
   }
 
   var boardConfigurationKey: String {
-    if isEverythingSelected { return "everything/root" }
+    // A filter list is Everything narrowed, so it keeps Everything's columns.
+    if isEverythingSelected || selectedFilterListID != nil { return "everything/root" }
     if let selectedFolderID { return "folder:\(selectedFolderID)/root" }
     return "\(selectedListID ?? "none")/\(scopeTaskID ?? "root")"
   }
@@ -105,9 +106,7 @@ extension WorkspaceViewModel {
       if boardParentTaskID != nil { boardParentTaskID = nil }
       // The columns are kept, for the Today column a task can be filed in
       // from Today. Without the cards, only the layout's own.
-      if let columns = try? resolvedBoardColumns(usedColumnIDs: [], store: store), boardColumns != columns {
-        boardColumns = columns
-      }
+      if let read = try? readBoardColumns(store: store) { applyBoardColumns(read) }
       boardIsStale = true
       return
     }
@@ -123,14 +122,7 @@ extension WorkspaceViewModel {
           noteCompletionExpiry(shaped.expiry)
         }
       }
-      let used: Set<String>
-      if let generation, let memo = usedColumnIDsMemo, memo.generation == generation {
-        used = memo.ids
-      } else {
-        used = Set(shape.columns.values)
-        usedColumnIDsMemo = generation.map { (generation: $0, ids: used) }
-      }
-      let columns = try resolvedBoardColumns(usedColumnIDs: used, store: store)
+      let columnRead = try readBoardColumns(store: store)
       // The shape on screen already, kept: nothing to compare, nothing to
       // assign. Otherwise assigned only where it differs, so a refresh that
       // changed nothing on the board does not redraw every card.
@@ -144,7 +136,7 @@ extension WorkspaceViewModel {
         if boardCrossColumnTasks != shape.crossColumnTasks { boardCrossColumnTasks = shape.crossColumnTasks }
         if matrixPositions != shape.positions { matrixPositions = shape.positions }
       }
-      if boardColumns != columns { boardColumns = columns }
+      applyBoardColumns(columnRead)
       boardShapeGeneration = generation
     } catch {
       boardShapeGeneration = nil
@@ -203,43 +195,34 @@ extension WorkspaceViewModel {
     self.selectedTaskID = after ?? before
   }
 
-  /// The current scope's columns, plus any column a card on it is filed under
-  /// that the scope's own layout does not list.
-  private func resolvedBoardColumns(usedColumnIDs: Set<String>, store: WorkspaceStore) throws -> [WorkspaceKanbanColumn] {
-    let key = boardConfigurationKey
-    // The store call also seeds a layout for a scope that has none, so it is
-    // made again for a scope this cache has not seen.
-    if boardColumnConfigurations?[key] == nil {
+  /// The current scope's columns as the core resolves them: the board's own
+  /// layout, its list's or the default; less the columns an entered card
+  /// hides; plus any column a card here is filed under that the layout does
+  /// not list. With where rule columns and the floor put each task.
+  func readBoardColumns(store: WorkspaceStore) throws -> WorkspaceBoardColumns {
+    // The old preferences' layouts are imported once per load; the call
+    // also drops the stock copies older builds seeded for every scope.
+    if boardColumnConfigurations == nil {
       let legacy = UserDefaults.standard.dictionary(forKey: Self.kanbanColumnsKey) as? [String: Data] ?? [:]
-      boardColumnConfigurations = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: key)
+      boardColumnConfigurations = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: boardConfigurationKey)
     }
-    let configurations = boardColumnConfigurations ?? [:]
-    func decode(_ key: String) -> [WorkspaceKanbanColumn]? {
-      configurations[key].flatMap { try? JSONDecoder().decode([WorkspaceKanbanColumn].self, from: $0) }
+    return try store.boardColumns(key: boardConfigurationKey, listIDs: boardScopeListIDs)
+  }
+
+  /// The lists the board draws from.
+  var boardScopeListIDs: [String] {
+    switch currentScope {
+    case .list(let id): [id]
+    case .combined(let ids), .filter(_, let ids): ids
+    case nil: []
     }
-    var columns: [WorkspaceKanbanColumn]
-    if let decoded = decode(key), !decoded.isEmpty {
-      columns = decoded
-    } else {
-      columns = WorkspaceKanbanColumn.blitzitDefaults
-    }
-    if isEverythingSelected {
-      for list in lists {
-        guard let listColumns = decode("\(list.id)/root") else { continue }
-        for column in listColumns where usedColumnIDs.contains(column.id)
-          && !columns.contains(where: { $0.id == column.id }) {
-          columns.append(column)
-        }
-      }
-    } else {
-      let globalColumns = decode("everything/root") ?? []
-      for column in globalColumns + WorkspaceKanbanColumn.blitzitDefaults
-        where usedColumnIDs.contains(column.id)
-          && !columns.contains(where: { $0.id == column.id }) {
-        columns.append(column)
-      }
-    }
-    return columns
+  }
+
+  /// Assigns only what changed, as the rest of the board does.
+  func applyBoardColumns(_ read: WorkspaceBoardColumns) {
+    if boardColumnRead != read { boardColumnRead = read }
+    if boardColumns != read.columns { boardColumns = read.columns }
+    if boardColumnPlacements != read.placements { boardColumnPlacements = read.placements }
   }
 
   /// Some Checkvist imports have a single transport root repeating the list

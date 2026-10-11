@@ -260,10 +260,12 @@ fn completing_a_list_and_saving_a_board() {
         BoardColumn {
             id: "todo".into(),
             title: "To do".into(),
+            rules: None,
         },
         BoardColumn {
             id: "done".into(),
             title: "Done / shipped".into(),
+            rules: None,
         },
     ];
     let moving = ["o".to_string(), "p".to_string()];

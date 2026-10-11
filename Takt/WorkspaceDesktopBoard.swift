@@ -78,9 +78,6 @@ struct WorkspaceKanbanBoard: View {
           // The board said nowhere on its face which list it was showing, so
           // ⌘2 from the outline took the scope name off the screen.
           WorkspacePaneHeader(title: model.currentBoardScopeTitle, switchesList: true) {
-            if let exit = model.scopeExitTitle {
-              WorkspacePaneScopeExit(title: exit) { model.leaveTaskScope() }
-            }
           } trailing: {
             WorkspacePaneCount(count: model.boardColumns.reduce(0) { $0 + model.tasks(in: $1).count })
           }
@@ -216,13 +213,22 @@ struct WorkspaceKanbanColumnView: View {
         MicroLabel(column.title)
           .lineLimit(1)
           .truncationMode(.tail)
-          .help(column.title)
+          .help(column.rules.map { "\(column.title) — \($0.summary)" } ?? column.title)
+        if column.isRuleColumn {
+          // A rule column holds what its rules match, not what is filed in it.
+          Image(systemName: "line.3.horizontal.decrease")
+            .font(theme.monoCaptionFont)
+            .foregroundStyle(theme.dim)
+            .accessibilityLabel("Rule column")
+        }
         Text("\(tasks.count)")
           .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
           .monospacedDigit()
         Spacer()
       }
+      .contentShape(Rectangle())
+      .contextMenu { WorkspaceBoardColumnMenu(column: column).environment(model) }
 
       }
       .padding([.horizontal, .top], WorkspaceBoardMetrics.columnPadding(theme))
@@ -234,7 +240,7 @@ struct WorkspaceKanbanColumnView: View {
           // gap between.
           LazyVStack(alignment: .leading, spacing: -theme.hairline) {
             ForEach(tasks) { task in
-              if model.draftsBeside(task.id, above: true) { draftRow }
+              if !model.boardDraftIsSubtaskRow, model.draftsBeside(task.id, above: true) { draftRow }
               // The label over the column's blocked cards rides with the
               // first of them, so the card's gap and id carry both.
               VStack(alignment: .leading, spacing: 0) {
@@ -259,13 +265,11 @@ struct WorkspaceKanbanColumnView: View {
                 // flickered as the links settled.
                 .padding(.top, cardGap(above: task.id))
                 .id(task.id)
-              if model.draftsBeside(task.id, above: false) { draftRow }
+              if !model.boardDraftIsSubtaskRow, model.draftsBeside(task.id, above: false) { draftRow }
             }
             // A new card with no task to sit beside lands at the foot of the
             // column you are in, so that is where it is typed.
             if model.draftsAtEnd(ofColumn: column.id) { draftRow }
-
-
           }
           .scrollTargetLayout()
           .background(alignment: .topLeading) { passingLines }
@@ -313,6 +317,8 @@ struct WorkspaceKanbanColumnView: View {
         model.reportKeyboardFocus(.tasks)
       }
     })
+    // The column's empty space; a card's own menu is nearer and wins over it.
+    .contextMenu { WorkspacePaneContextMenu(surface: .board, column: column).environment(model) }
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
       WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
         guard let task = model.task(withID: taskID), model.isTaskVisibleOnBoard(task) else { return }
@@ -584,19 +590,35 @@ struct WorkspaceKanbanCard: View {
         .focusable()
         .commandHelp(.planEnterTask, note: "Open the list")
       }
-      Button(task.title) {
-        model.selectTask(task)
-        model.reportKeyboardFocus(.tasks)
+      if model.editingTaskTitleID == task.id {
+        // Edited in place, as the outline's rows are: Return saves with the
+        // add field's tokens read, Esc cancels, clicking away saves.
+        WorkspaceTaskTitleField(
+          initialTitle: task.title, caret: model.editingTaskTitleCaret,
+          onCommit: { model.commitTaskTitleEdit(task, text: $0) },
+          onCancel: { model.cancelTaskTitleEdit() })
+          .frame(maxWidth: .infinity, alignment: .leading)
+      } else {
+        Button(task.title) {
+          // A click on the card already selected edits its title in place,
+          // as the outline's rows do; the first click only selects.
+          if isSelected && model.keyboardFocusArea == .tasks {
+            model.editSelectedTaskTitle()
+          } else {
+            model.selectTask(task)
+            model.reportKeyboardFocus(.tasks)
+          }
+        }
+        .buttonStyle(.plain)
+        .font(theme.bodyFont())
+        .foregroundStyle(task.status == .open ? theme.ink : theme.muted)
+        .focusable()
+        .multilineTextAlignment(.leading)
+        .expandsWhenSelected(isSelected, lineLimit: 2)
+        .frame(maxWidth: headingLinkID == nil ? .infinity : nil, alignment: .leading)
+        .help(task.title)
+        .strikethrough(task.status != .open)
       }
-      .buttonStyle(.plain)
-      .font(theme.bodyFont())
-      .foregroundStyle(task.status == .open ? theme.ink : theme.muted)
-      .focusable()
-      .multilineTextAlignment(.leading)
-      .expandsWhenSelected(isSelected, lineLimit: 2)
-      .frame(maxWidth: headingLinkID == nil ? .infinity : nil, alignment: .leading)
-      .help(task.title)
-      .strikethrough(task.status != .open)
       if !model.descendants(of: task).isEmpty {
         Button {
           model.toggleFold(of: task)
@@ -678,7 +700,11 @@ struct WorkspaceKanbanCard: View {
       let rows = model.boardTreeRows(of: task)
       VStack(alignment: .leading, spacing: 0) {
         ForEach(rows) { item in
+          // A sibling being added beside a subtask row is drawn here, on the
+          // card it will be drawn on, not as a card below it.
+          if draftsRow(beside: item.id, above: true) { WorkspaceTaskDraftRow(isSubtaskRow: true) }
           subtaskRow(item, isFolded: parents.contains(item.id) ? model.foldedTaskIDs.contains(item.id) : nil)
+          if draftsRow(beside: item.id, above: false) { WorkspaceTaskDraftRow(isSubtaskRow: true) }
         }
         if items.count > limit {
           Button {
@@ -696,6 +722,13 @@ struct WorkspaceKanbanCard: View {
         }
       }
     }
+  }
+
+  /// Whether the board's draft is a subtask row beside `rowID` on this card,
+  /// in the column the keys are in.
+  private func draftsRow(beside rowID: String, above: Bool) -> Bool {
+    column.id == model.activeBoardColumnID && model.boardDraftIsSubtaskRow
+      && model.draftsBeside(rowID, above: above)
   }
 
   private func subtaskRow(_ item: TaskOutlineItem, isFolded: Bool?) -> some View {
@@ -747,10 +780,20 @@ struct WorkspaceKanbanCard: View {
         .buttonStyle(.plain)
         .accessibilityLabel(item.task.title)
         .help(item.task.title)
+      } else if model.editingTaskTitleID == item.task.id {
+        WorkspaceTaskTitleField(
+          initialTitle: item.task.title, caret: model.editingTaskTitleCaret, font: theme.captionFont,
+          onCommit: { model.commitTaskTitleEdit(item.task, text: $0) },
+          onCancel: { model.cancelTaskTitleEdit() })
+          .frame(maxWidth: .infinity, alignment: .leading)
       } else {
         Button(item.task.title) {
-          model.selectTask(item.task)
-          model.reportKeyboardFocus(.tasks)
+          if isRowSelected && model.keyboardFocusArea == .tasks {
+            model.editSelectedTaskTitle()
+          } else {
+            model.selectTask(item.task)
+            model.reportKeyboardFocus(.tasks)
+          }
         }
         .buttonStyle(.plain)
         .foregroundStyle(isOpen ? theme.ink : theme.muted)
@@ -793,8 +836,11 @@ struct WorkspaceKanbanCard: View {
       // A row that leads out to its card further on is selected as its
       // hairline, which turns the selection colour all the way across: a
       // band as well put a second box round the one line.
+      // Edge to edge across the card, as a selected card's band is: inset by
+      // the card's margin it read as a box inside the card.
       WorkspaceSelectionBackground(
         isSelected: isRowSelected && !leadsOut, hasKeyboard: hasKeyboard && isRowSelected && !leadsOut, radius: 0)
+        .padding(.horizontal, -WorkspaceBoardMetrics.columnPadding(theme))
     }
     .contentShape(Rectangle())
     .onDrag { WorkspaceTaskDrag.provider(for: item.task.id) }

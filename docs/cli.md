@@ -293,6 +293,12 @@ takt ws filter-new Done this week -s done --rules '[{"field":"due","op":"within"
 takt ws filter-edit <FILTER_ID> --name "Due soon" -r due:within:3   # rules replace the set
 takt ws filter-edit <FILTER_ID> --no-rules --icon ""                # every open task, no icon
 takt ws filter-rm <FILTER_ID>
+
+takt ws columns <LIST_ID>                     # a list's board columns; or everything, default
+takt ws column-set <LIST_ID> -t Review --position 2              # a new column
+takt ws column-set <LIST_ID> -c urgent -t Urgent -r tag:has:urgent   # a rule column
+takt ws column-set default -t Someday         # the columns a board without its own uses
+takt ws column-rm <LIST_ID> in-progress --to this-week   # its tasks move in the same step
 ```
 
 These write while the app is open. Each command is one step in the app's Undo

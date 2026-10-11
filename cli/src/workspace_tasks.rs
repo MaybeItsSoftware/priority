@@ -43,7 +43,9 @@ use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
+mod board;
 mod filters;
+pub use board::ColumnEdit;
 pub use filters::{FilterEdit, rule_catalog_text, rule_fields};
 
 /// The newest migration whose schema these writes are written against. An

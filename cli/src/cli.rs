@@ -472,6 +472,37 @@ pub enum WsCommand {
     },
     /// Delete a list and every task in it. Undoable from the app.
     RmList { list_id: String },
+    /// A board's columns: a list's (by id), everything's, or the default.
+    Columns { board: Option<String> },
+    /// Add a board column, or rename one / set its rules with --column.
+    ColumnSet {
+        /// A list id, everything or default.
+        board: String,
+        #[arg(long, short = 'c', value_name = "COLUMN_ID")]
+        column: Option<String>,
+        #[arg(long, short = 't', value_name = "TITLE")]
+        title: Option<String>,
+        /// all (every rule holds) or any (at least one does).
+        #[arg(long = "match", short = 'm', value_name = "all|any")]
+        match_mode: Option<String>,
+        /// A rule as FIELD:OP or FIELD:OP:VALUE; repeat for several.
+        #[arg(long = "rule", short = 'r', value_name = "FIELD:OP[:VALUE]")]
+        rules: Vec<String>,
+        /// Remove every rule, making it an ordinary column.
+        #[arg(long, conflicts_with = "rules")]
+        no_rules: bool,
+        /// Where a new column goes, from 0.
+        #[arg(long, value_name = "INDEX")]
+        position: Option<u64>,
+    },
+    /// Delete a board column; its tasks move to --to (default: the first).
+    ColumnRm {
+        /// A list id, everything or default.
+        board: String,
+        column_id: String,
+        #[arg(long, value_name = "COLUMN_ID")]
+        to: Option<String>,
+    },
 }
 
 /// A filter list's icon and definition, as `filter-new` and `filter-edit`
@@ -511,25 +542,28 @@ impl FilterArgs {
             }
             arguments.insert("rules".into(), rules);
         } else if !self.rules.is_empty() {
-            let rules = self
-                .rules
-                .iter()
-                .map(|raw| {
-                    let mut parts = raw.splitn(3, ':');
-                    match (parts.next(), parts.next(), parts.next()) {
-                        (Some(field), Some(op), value) if !field.is_empty() && !op.is_empty() => {
-                            Ok(json!({ "field": field, "op": op, "value": value.unwrap_or("") }))
-                        }
-                        _ => Err(ToolError::new(format!(
-                            "expected FIELD:OP or FIELD:OP:VALUE, got `{raw}`"
-                        ))),
-                    }
-                })
-                .collect::<Result<Vec<_>>>()?;
-            arguments.insert("rules".into(), json!(rules));
+            arguments.insert("rules".into(), json!(rule_args(&self.rules)?));
         }
         Ok(())
     }
+}
+
+/// `--rule FIELD:OP[:VALUE]` arguments as the tools' `{field, op, value}`.
+fn rule_args(raw_rules: &[String]) -> Result<Vec<Value>> {
+    raw_rules
+        .iter()
+        .map(|raw| {
+            let mut parts = raw.splitn(3, ':');
+            match (parts.next(), parts.next(), parts.next()) {
+                (Some(field), Some(op), value) if !field.is_empty() && !op.is_empty() => {
+                    Ok(json!({ "field": field, "op": op, "value": value.unwrap_or("") }))
+                }
+                _ => Err(ToolError::new(format!(
+                    "expected FIELD:OP or FIELD:OP:VALUE, got `{raw}`"
+                ))),
+            }
+        })
+        .collect()
 }
 
 #[derive(Args)]
@@ -1001,6 +1035,43 @@ fn resolve_workspace(
         WsCommand::RmList { list_id } => {
             arguments.insert("list_id".into(), json!(list_id));
             "workspace_list_delete"
+        }
+        WsCommand::Columns { board } => {
+            insert_if_some(arguments, "board", board.as_deref());
+            "workspace_board_columns"
+        }
+        WsCommand::ColumnSet {
+            board,
+            column,
+            title,
+            match_mode,
+            rules,
+            no_rules,
+            position,
+        } => {
+            arguments.insert("board".into(), json!(board));
+            insert_if_some(arguments, "column_id", column.as_deref());
+            insert_if_some(arguments, "title", title.as_deref());
+            insert_if_some(arguments, "match", match_mode.as_deref());
+            if *no_rules {
+                arguments.insert("rules".into(), json!([]));
+            } else if !rules.is_empty() {
+                arguments.insert("rules".into(), json!(rule_args(rules)?));
+            }
+            if let Some(position) = position {
+                arguments.insert("position".into(), json!(position));
+            }
+            "workspace_board_column_set"
+        }
+        WsCommand::ColumnRm {
+            board,
+            column_id,
+            to,
+        } => {
+            arguments.insert("board".into(), json!(board));
+            arguments.insert("column_id".into(), json!(column_id));
+            insert_if_some(arguments, "move_to", to.as_deref());
+            "workspace_board_column_delete"
         }
         WsCommand::Filters => "workspace_filter_lists",
         WsCommand::Filter { filter } => {

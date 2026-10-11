@@ -83,35 +83,51 @@ final class WorkspaceUndoTests: XCTestCase {
 
   func testBoardHistoryPersistsAndLegacyPreferencesDoNotOverwriteIt() throws {
     let key = "\(listID!)/root"
-    let baseline = WorkspaceKanbanColumn.blitzitDefaults
-    let legacy = [key: try JSONEncoder().encode(baseline)]
+    let baseline = [WorkspaceKanbanColumn(id: "todo", title: "To do"), WorkspaceKanbanColumn(id: "done", title: "Done")]
+    let legacy = [key: Data(#"[{"id":"todo","title":"To do"},{"id":"done","title":"Done"}]"#.utf8)]
     _ = try store.kanbanBoardConfigurations(legacy: legacy, currentKey: key)
+    XCTAssertEqual(try store.boardColumns(key: key, listIDs: [listID]).layout, baseline)
     let custom = baseline + [WorkspaceKanbanColumn(id: "custom", title: "Custom")]
     try store.setKanbanBoardColumns(custom, for: key, label: "Add Board Column")
     let reopened = try WorkspaceStore(databaseURL: directoryURL.appendingPathComponent("priority.sqlite"))
     XCTAssertEqual(try reopened.undo(), "Add Board Column")
-    let undone = try XCTUnwrap(reopened.kanbanBoardConfigurations(legacy: legacy, currentKey: key)[key])
-    XCTAssertEqual(try JSONDecoder().decode([WorkspaceKanbanColumn].self, from: undone), baseline)
+    _ = try reopened.kanbanBoardConfigurations(legacy: legacy, currentKey: key)
+    XCTAssertEqual(try reopened.boardColumns(key: key, listIDs: [listID]).layout, baseline)
     XCTAssertEqual(try reopened.redo(), "Add Board Column")
-    let redone = try XCTUnwrap(reopened.kanbanBoardConfigurations(legacy: legacy, currentKey: key)[key])
-    XCTAssertEqual(try JSONDecoder().decode([WorkspaceKanbanColumn].self, from: redone), custom)
+    XCTAssertEqual(try reopened.boardColumns(key: key, listIDs: [listID]).layout, custom)
   }
 
-  func testColumnRemovalAndItsCardsUndoTogether() throws {
+  func testDeletingAColumnMovesItsCardsInOneUndoStep() throws {
     let key = "\(listID!)/root"
-    let defaults = WorkspaceKanbanColumn.blitzitDefaults
-    _ = try store.kanbanBoardConfigurations(legacy: [:], currentKey: key)
-    let card = try store.createTask(listId: listID, title: "Today", kanbanColumn: "today")
-    let remaining = defaults.filter { $0.id != "today" }
-    try store.setKanbanBoardColumns(remaining, for: key, movingTaskIDs: [card.id], toColumn: "backlog", label: "Remove Board Column")
-    XCTAssertEqual(try store.undo(), "Remove Board Column")
-    let restored = try XCTUnwrap(store.kanbanBoardConfigurations(legacy: [:], currentKey: key)[key])
-    XCTAssertEqual(try JSONDecoder().decode([WorkspaceKanbanColumn].self, from: restored), defaults)
-    XCTAssertEqual(try store.kanbanColumn(for: card.id), "today")
-    try store.redo()
-    let redone = try XCTUnwrap(store.kanbanBoardConfigurations(legacy: [:], currentKey: key)[key])
-    XCTAssertEqual(try JSONDecoder().decode([WorkspaceKanbanColumn].self, from: redone), remaining)
-    XCTAssertEqual(try store.kanbanColumn(for: card.id), "backlog")
+    let card = try store.createTask(listId: listID, title: "Started", kanbanColumn: "in-progress")
+    let before = try store.boardColumns(key: key, listIDs: [listID])
+    XCTAssertEqual(before.source, .builtin)
+    XCTAssertEqual(before.layout, WorkspaceKanbanColumn.blitzitDefaults)
+    try store.deleteBoardColumn(key: key, listIDs: [listID], columnID: "in-progress", toColumn: "this-week")
+    let after = try store.boardColumns(key: key, listIDs: [listID])
+    XCTAssertEqual(after.source, .own)
+    XCTAssertFalse(after.columns.contains { $0.id == "in-progress" })
+    XCTAssertEqual(try store.kanbanColumn(for: card.id), "this-week")
+    XCTAssertEqual(try store.undo(), "Delete Column")
+    XCTAssertEqual(try store.boardColumns(key: key, listIDs: [listID]).source, .builtin)
+    XCTAssertEqual(try store.kanbanColumn(for: card.id), "in-progress")
+  }
+
+  func testARuleColumnHoldsItsMatchesAndADropEditsTheTask() throws {
+    let key = "\(listID!)/root"
+    let task = try store.createTask(listId: listID, title: "Ship it")
+    let rules = WorkspaceFilterDefinition(rules: [WorkspaceFilterRule(field: "tag", op: "has", value: "ship")])
+    let columns = WorkspaceKanbanColumn.blitzitDefaults + [WorkspaceKanbanColumn(id: "ship", title: "Ship", rules: rules)]
+    try store.setKanbanBoardColumns(columns, for: key)
+    let read = try store.boardColumns(key: key, listIDs: [listID])
+    XCTAssertEqual(read.layout.last?.rules?.rules.first?.value, "ship")
+    XCTAssertEqual(read.columnID(forTaskID: task.id, filed: nil), "backlog")
+    try store.moveToBoardColumn(key: key, taskIDs: [task.id], columnID: "ship")
+    XCTAssertEqual(try store.taskEditorMetadata(for: task.id).tags, ["ship"])
+    XCTAssertEqual(try store.boardColumns(key: key, listIDs: [listID]).placements[task.id], "ship")
+    XCTAssertThrowsError(try store.moveToBoardColumn(key: key, taskIDs: [task.id], columnID: "today")) { error in
+      guard case WorkspaceStoreError.columnRefused = error else { return XCTFail("\(error)") }
+    }
   }
 
   func testRelativeCreationPreservesSiblingOrderAndUndoesInOneStep() throws {

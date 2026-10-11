@@ -201,6 +201,8 @@ struct BoardIndexMemo {
     /// `WorkspaceScopeCache`'s number for the board shape.
     let generation: Int
     let columns: [WorkspaceKanbanColumn]
+    /// Where the rule columns and an entered card's floor put tasks.
+    let placements: [String: String]
     let folded: Set<String>
   }
 

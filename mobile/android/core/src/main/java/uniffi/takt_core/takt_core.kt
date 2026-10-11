@@ -695,6 +695,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_agent_write_tools(
     ): Int
+    external fun uniffi_takt_core_checksum_func_board_stock_columns(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_parse_board_columns(
+    ): Int
     external fun uniffi_takt_core_checksum_func_capture_date_time(
     ): Int
     external fun uniffi_takt_core_checksum_func_capture_detail_labels(
@@ -1025,6 +1029,18 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_syncpull_row_count(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_board_columns(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_delete_board_column(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_make_default_board_columns(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_to_board_column(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_reset_board_columns(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_set_board_columns(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_export_workspace(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_create_filter_list(
@@ -1305,8 +1321,6 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_search_tasks(
     ): Int
-    external fun uniffi_takt_core_checksum_method_coreworkspace_set_board_columns(
-    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_item_kind(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_set_kanban_column(
@@ -1447,6 +1461,18 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_takt_core_fn_method_coreworkspace_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,`listIds`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_delete_board_column(`ptr`: Long,`key`: RustBuffer.ByValue,`listIds`: RustBuffer.ByValue,`columnId`: RustBuffer.ByValue,`toColumn`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_make_default_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_to_board_column(`ptr`: Long,`key`: RustBuffer.ByValue,`taskIds`: RustBuffer.ByValue,`columnId`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_reset_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_set_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,`columns`: RustBuffer.ByValue,`movingTaskIds`: RustBuffer.ByValue,`toColumn`: RustBuffer.ByValue,`label`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_export_workspace(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`format`: RustBuffer.ByValue,`exportedAtMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_create_filter_list(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`icon`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,`definition`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1727,8 +1753,6 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_search_tasks(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`query`: RustBuffer.ByValue,`includingCompleted`: Byte,`includingArchivedLists`: Byte,`limit`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
-    external fun uniffi_takt_core_fn_method_coreworkspace_set_board_columns(`ptr`: Long,`key`: RustBuffer.ByValue,`columns`: RustBuffer.ByValue,`movingTaskIds`: RustBuffer.ByValue,`toColumn`: RustBuffer.ByValue,`label`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_item_kind(`ptr`: Long,`id`: RustBuffer.ByValue,`kind`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_set_kanban_column(`ptr`: Long,`taskIds`: RustBuffer.ByValue,`column`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1818,6 +1842,10 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_agent_read_only_tools(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_agent_write_tools(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_board_stock_columns(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_parse_board_columns(`json`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_capture_date_time(`text`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,`defaultHour`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2270,6 +2298,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_agent_write_tools() and 0xFFFF) != 8928) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_board_stock_columns() and 0xFFFF) != 23218) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_parse_board_columns() and 0xFFFF) != 22220) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_capture_date_time() and 0xFFFF) != 17198) {
@@ -2767,6 +2801,24 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_method_syncpull_row_count() and 0xFFFF) != 50030) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_board_columns() and 0xFFFF) != 666) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_board_column() and 0xFFFF) != 19190) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_make_default_board_columns() and 0xFFFF) != 63573) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_to_board_column() and 0xFFFF) != 5303) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_reset_board_columns() and 0xFFFF) != 30019) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() and 0xFFFF) != 22012) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_export_workspace() and 0xFFFF) != 22213) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -3185,9 +3237,6 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_search_tasks() and 0xFFFF) != 47825) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() and 0xFFFF) != 65113) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_set_item_kind() and 0xFFFF) != 55048) {
@@ -4273,6 +4322,37 @@ public object FfiConverterTypeCoreDayLog: FfiConverter<CoreDayLog, Long> {
 public interface CoreWorkspaceInterface {
     
     /**
+     * Board `key`'s columns over `list_ids`, and where its tasks are drawn.
+     */
+    fun `boardColumns`(`key`: kotlin.String, `listIds`: List<kotlin.String>, `nowMs`: kotlin.Long, `zone`: kotlin.String): BoardColumns
+    
+    /**
+     * Deletes a column, moving its tasks, as one "Delete Column" step.
+     */
+    fun `deleteBoardColumn`(`key`: kotlin.String, `listIds`: List<kotlin.String>, `columnId`: kotlin.String, `toColumn`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Makes a board's columns the default, as one "Make Default Columns" step.
+     */
+    fun `makeDefaultBoardColumns`(`key`: kotlin.String)
+    
+    /**
+     * Moves tasks into a column, editing the first to meet a rule column's
+     * rules, as one "Move Task" step.
+     */
+    fun `moveToBoardColumn`(`key`: kotlin.String, `taskIds`: List<kotlin.String>, `columnId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+    
+    /**
+     * Has a board follow the default columns again, as one "Reset Columns" step.
+     */
+    fun `resetBoardColumns`(`key`: kotlin.String)
+    
+    /**
+     * Saves a board's columns, moving cards out of a removed one, as one step.
+     */
+    fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
      * The workspace `workspace_id` written out as `format`, stamped
      * `exported_at_ms`; absent when there is no such workspace.
      */
@@ -5005,11 +5085,6 @@ public interface CoreWorkspaceInterface {
     fun `searchTasks`(`workspaceId`: kotlin.String, `query`: kotlin.String, `includingCompleted`: kotlin.Boolean, `includingArchivedLists`: kotlin.Boolean, `limit`: kotlin.Long): List<SearchHit>
     
     /**
-     * Saves a board's columns, moving cards out of a removed one, as one step.
-     */
-    fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
-    
-    /**
      * Makes an item a task or a nested list.
      */
     fun `setItemKind`(`id`: kotlin.String, `kind`: kotlin.String, `nowMs`: kotlin.Long)
@@ -5304,6 +5379,126 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
             UniffiLib.uniffi_takt_core_fn_clone_coreworkspace(handle, status)
         }
     }
+
+    
+    /**
+     * Board `key`'s columns over `list_ids`, and where its tasks are drawn.
+     */
+    @Throws(CoreException::class)override fun `boardColumns`(`key`: kotlin.String, `listIds`: List<kotlin.String>, `nowMs`: kotlin.Long, `zone`: kotlin.String): BoardColumns {
+            return FfiConverterTypeBoardColumns.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_board_columns(
+        it,
+        
+        FfiConverterString.lower(`key`),
+        FfiConverterSequenceString.lower(`listIds`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Deletes a column, moving its tasks, as one "Delete Column" step.
+     */
+    @Throws(CoreException::class)override fun `deleteBoardColumn`(`key`: kotlin.String, `listIds`: List<kotlin.String>, `columnId`: kotlin.String, `toColumn`: kotlin.String?, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_delete_board_column(
+        it,
+        
+        FfiConverterString.lower(`key`),
+        FfiConverterSequenceString.lower(`listIds`),
+        FfiConverterString.lower(`columnId`),
+        FfiConverterOptionalString.lower(`toColumn`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Makes a board's columns the default, as one "Make Default Columns" step.
+     */
+    @Throws(CoreException::class)override fun `makeDefaultBoardColumns`(`key`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_make_default_board_columns(
+        it,
+        
+        FfiConverterString.lower(`key`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Moves tasks into a column, editing the first to meet a rule column's
+     * rules, as one "Move Task" step.
+     */
+    @Throws(CoreException::class)override fun `moveToBoardColumn`(`key`: kotlin.String, `taskIds`: List<kotlin.String>, `columnId`: kotlin.String, `nowMs`: kotlin.Long, `zone`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_to_board_column(
+        it,
+        
+        FfiConverterString.lower(`key`),
+        FfiConverterSequenceString.lower(`taskIds`),
+        FfiConverterString.lower(`columnId`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Has a board follow the default columns again, as one "Reset Columns" step.
+     */
+    @Throws(CoreException::class)override fun `resetBoardColumns`(`key`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_reset_board_columns(
+        it,
+        
+        FfiConverterString.lower(`key`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Saves a board's columns, moving cards out of a removed one, as one step.
+     */
+    @Throws(CoreException::class)override fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_board_columns(
+        it,
+        
+        FfiConverterString.lower(`key`),
+        FfiConverterSequenceTypeBoardColumn.lower(`columns`),
+        FfiConverterSequenceString.lower(`movingTaskIds`),
+        FfiConverterOptionalString.lower(`toColumn`),
+        FfiConverterString.lower(`label`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
 
     
     /**
@@ -7980,28 +8175,6 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
-     * Saves a board's columns, moving cards out of a removed one, as one step.
-     */
-    @Throws(CoreException::class)override fun `setBoardColumns`(`key`: kotlin.String, `columns`: List<BoardColumn>, `movingTaskIds`: List<kotlin.String>, `toColumn`: kotlin.String?, `label`: kotlin.String, `nowMs`: kotlin.Long)
-        = 
-    callWithHandle {
-    uniffiRustCallWithError(CoreException) { _status ->
-    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_set_board_columns(
-        it,
-        
-        FfiConverterString.lower(`key`),
-        FfiConverterSequenceTypeBoardColumn.lower(`columns`),
-        FfiConverterSequenceString.lower(`movingTaskIds`),
-        FfiConverterOptionalString.lower(`toColumn`),
-        FfiConverterString.lower(`label`),
-        FfiConverterLong.lower(`nowMs`),_status)
-}
-    }
-    
-    
-
-    
-    /**
      * Makes an item a task or a nested list.
      */
     @Throws(CoreException::class)override fun `setItemKind`(`id`: kotlin.String, `kind`: kotlin.String, `nowMs`: kotlin.Long)
@@ -9407,6 +9580,12 @@ data class BoardColumn (
     var `id`: kotlin.String
     , 
     var `title`: kotlin.String
+    , 
+    /**
+     * The rules that fill it, for a rule column; `None` for one tasks are
+     * filed in.
+     */
+    var `rules`: FilterDefinition? = null 
     
 ){
     
@@ -9425,17 +9604,151 @@ public object FfiConverterTypeBoardColumn: FfiConverterRustBuffer<BoardColumn> {
         return BoardColumn(
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterOptionalTypeFilterDefinition.read(buf),
         )
     }
 
     override fun allocationSize(value: BoardColumn) = (
             FfiConverterString.allocationSize(value.`id`) +
-            FfiConverterString.allocationSize(value.`title`)
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterOptionalTypeFilterDefinition.allocationSize(value.`rules`)
     )
 
     override fun write(value: BoardColumn, buf: ByteBuffer) {
             FfiConverterString.write(value.`id`, buf)
             FfiConverterString.write(value.`title`, buf)
+            FfiConverterOptionalTypeFilterDefinition.write(value.`rules`, buf)
+    }
+}
+
+
+
+/**
+ * A task drawn somewhere other than its filed column says: by a rule
+ * column, or clamped into an entered task's column.
+ */
+data class BoardColumnPlacement (
+    var `taskId`: kotlin.String
+    , 
+    var `columnId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBoardColumnPlacement: FfiConverterRustBuffer<BoardColumnPlacement> {
+    override fun read(buf: ByteBuffer): BoardColumnPlacement {
+        return BoardColumnPlacement(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BoardColumnPlacement) = (
+            FfiConverterString.allocationSize(value.`taskId`) +
+            FfiConverterString.allocationSize(value.`columnId`)
+    )
+
+    override fun write(value: BoardColumnPlacement, buf: ByteBuffer) {
+            FfiConverterString.write(value.`taskId`, buf)
+            FfiConverterString.write(value.`columnId`, buf)
+    }
+}
+
+
+
+/**
+ * A board's columns as a client draws them.
+ */
+data class BoardColumns (
+    var `key`: kotlin.String
+    , 
+    /**
+     * The layout, as editing it saves: hidden columns included, columns
+     * drawn only for the cards filed in them not.
+     */
+    var `layout`: List<BoardColumn>
+    , 
+    /**
+     * Where the layout comes from: "own", "list" (an entered task's board
+     * using its list's), "default" or "builtin".
+     */
+    var `source`: kotlin.String
+    , 
+    /**
+     * The columns drawn, left to right: the layout less the hidden ones,
+     * then any column a card here is filed in that the layout lacks.
+     */
+    var `columns`: List<BoardColumn>
+    , 
+    /**
+     * Columns to the left of an entered task's own, hidden.
+     */
+    var `hiddenColumnIds`: List<kotlin.String>
+    , 
+    /**
+     * The entered task's column, when it hides any.
+     */
+    var `floorColumnId`: kotlin.String?
+    , 
+    /**
+     * Every task of the board's lists drawn somewhere other than where a
+     * client would put it by its filed column alone — that column if it is
+     * drawn, else the first drawn one.
+     */
+    var `placements`: List<BoardColumnPlacement>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBoardColumns: FfiConverterRustBuffer<BoardColumns> {
+    override fun read(buf: ByteBuffer): BoardColumns {
+        return BoardColumns(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeBoardColumn.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeBoardColumn.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceTypeBoardColumnPlacement.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BoardColumns) = (
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterSequenceTypeBoardColumn.allocationSize(value.`layout`) +
+            FfiConverterString.allocationSize(value.`source`) +
+            FfiConverterSequenceTypeBoardColumn.allocationSize(value.`columns`) +
+            FfiConverterSequenceString.allocationSize(value.`hiddenColumnIds`) +
+            FfiConverterOptionalString.allocationSize(value.`floorColumnId`) +
+            FfiConverterSequenceTypeBoardColumnPlacement.allocationSize(value.`placements`)
+    )
+
+    override fun write(value: BoardColumns, buf: ByteBuffer) {
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterSequenceTypeBoardColumn.write(value.`layout`, buf)
+            FfiConverterString.write(value.`source`, buf)
+            FfiConverterSequenceTypeBoardColumn.write(value.`columns`, buf)
+            FfiConverterSequenceString.write(value.`hiddenColumnIds`, buf)
+            FfiConverterOptionalString.write(value.`floorColumnId`, buf)
+            FfiConverterSequenceTypeBoardColumnPlacement.write(value.`placements`, buf)
     }
 }
 
@@ -19033,6 +19346,17 @@ sealed class CoreException: kotlin.Exception() {
             get() = "detail=${ `detail` }"
     }
     
+    /**
+     * A board column edit or a drop into a column that cannot be made.
+     */
+    class ColumnRefused(
+        
+        val `detail`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
     class InvalidRecurrence(
         
         val `rule`: kotlin.String
@@ -19119,10 +19443,13 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             26 -> CoreException.File(
                 FfiConverterString.read(buf),
                 )
-            27 -> CoreException.InvalidRecurrence(
+            27 -> CoreException.ColumnRefused(
                 FfiConverterString.read(buf),
                 )
-            28 -> CoreException.Checkvist(
+            28 -> CoreException.InvalidRecurrence(
+                FfiConverterString.read(buf),
+                )
+            29 -> CoreException.Checkvist(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -19242,6 +19569,11 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 + FfiConverterString.allocationSize(value.`detail`)
             )
             is CoreException.File -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is CoreException.ColumnRefused -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 + FfiConverterString.allocationSize(value.`detail`)
@@ -19376,13 +19708,18 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
-            is CoreException.InvalidRecurrence -> {
+            is CoreException.ColumnRefused -> {
                 buf.putInt(27)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is CoreException.InvalidRecurrence -> {
+                buf.putInt(28)
                 FfiConverterString.write(value.`rule`, buf)
                 Unit
             }
             is CoreException.Checkvist -> {
-                buf.putInt(28)
+                buf.putInt(29)
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
@@ -23092,6 +23429,38 @@ public object FfiConverterOptionalTypeDailyRow: FfiConverterRustBuffer<DailyRow?
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeFilterDefinition: FfiConverterRustBuffer<FilterDefinition?> {
+    override fun read(buf: ByteBuffer): FilterDefinition? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFilterDefinition.read(buf)
+    }
+
+    override fun allocationSize(value: FilterDefinition?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFilterDefinition.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FilterDefinition?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFilterDefinition.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeFilterListRow: FfiConverterRustBuffer<FilterListRow?> {
     override fun read(buf: ByteBuffer): FilterListRow? {
         if (buf.get().toInt() == 0) {
@@ -24130,6 +24499,34 @@ public object FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer<List<B
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeBoardColumn.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeBoardColumnPlacement: FfiConverterRustBuffer<List<BoardColumnPlacement>> {
+    override fun read(buf: ByteBuffer): List<BoardColumnPlacement> {
+        val len = buf.getInt()
+        return List<BoardColumnPlacement>(len) {
+            FfiConverterTypeBoardColumnPlacement.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<BoardColumnPlacement>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeBoardColumnPlacement.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<BoardColumnPlacement>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeBoardColumnPlacement.write(it, buf)
         }
     }
 }
@@ -26576,6 +26973,33 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_agent_write_tools(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * The stock columns, which a workspace with no default of its own uses.
+         */ fun `boardStockColumns`(): List<BoardColumn> {
+            return FfiConverterSequenceTypeBoardColumn.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_board_stock_columns(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * A layout's columns read from its stored JSON; empty if it is not one.
+         */ fun `parseBoardColumns`(`json`: kotlin.String): List<BoardColumn> {
+            return FfiConverterSequenceTypeBoardColumn.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_parse_board_columns(
+    
+        
+        FfiConverterString.lower(`json`),_status)
 }
     )
     }

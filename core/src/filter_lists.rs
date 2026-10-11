@@ -361,31 +361,35 @@ pub fn describe_filter_definition(definition: FilterDefinition) -> String {
     let parts: Vec<String> = definition
         .rules
         .iter()
-        .map(|rule| {
-            let field = catalog.iter().find(|spec| spec.field == rule.field);
-            let op = field.and_then(|spec| spec.ops.iter().find(|op| op.op == rule.op));
-            match (field, op) {
-                (Some(field), Some(op)) => {
-                    let label = op.label.split(" (").next().unwrap_or(&op.label);
-                    let mut text = format!("{} {}", field.label.to_lowercase(), label);
-                    if op.value_kind != "none" {
-                        text.push(' ');
-                        text.push_str(&rule.value);
-                        if op.value_kind == "days" {
-                            text.push_str(" days");
-                        } else if op.value_kind == "minutes" {
-                            text.push_str(" minutes");
-                        }
-                    }
-                    text
-                }
-                _ => format!("{} {} {}", rule.field, rule.op, rule.value)
-                    .trim()
-                    .to_string(),
-            }
-        })
+        .map(|rule| describe_rule(rule, &catalog))
         .collect();
     format!("{what} where {}", parts.join(joiner))
+}
+
+/// One rule in words, "due is within 7 days", as `describe_filter_definition`
+/// joins them.
+pub(crate) fn describe_rule(rule: &FilterRule, catalog: &[FilterFieldSpec]) -> String {
+    let field = catalog.iter().find(|spec| spec.field == rule.field);
+    let op = field.and_then(|spec| spec.ops.iter().find(|op| op.op == rule.op));
+    match (field, op) {
+        (Some(field), Some(op)) => {
+            let label = op.label.split(" (").next().unwrap_or(&op.label);
+            let mut text = format!("{} {}", field.label.to_lowercase(), label);
+            if op.value_kind != "none" {
+                text.push(' ');
+                text.push_str(&rule.value);
+                if op.value_kind == "days" {
+                    text.push_str(" days");
+                } else if op.value_kind == "minutes" {
+                    text.push_str(" minutes");
+                }
+            }
+            text
+        }
+        _ => format!("{} {} {}", rule.field, rule.op, rule.value)
+            .trim()
+            .to_string(),
+    }
 }
 
 pub(crate) fn validate(definition: &FilterDefinition) -> Result<FilterDefinition, CoreError> {
@@ -494,7 +498,7 @@ pub(crate) fn validate(definition: &FilterDefinition) -> Result<FilterDefinition
 }
 
 /// A tag as rules compare it: trimmed, without a leading `#`, lowercased.
-fn normalized_tag(tag: &str) -> String {
+pub(crate) fn normalized_tag(tag: &str) -> String {
     tag.trim().trim_start_matches('#').trim().to_lowercase()
 }
 
@@ -711,33 +715,38 @@ pub fn move_to(
 // MARK: - Evaluation
 
 /// What the rules read about one task.
-struct Facts {
-    id: String,
-    list_id: String,
-    title: String,
-    notes: String,
-    status: String,
-    due_at_ms: Option<i64>,
-    due_date: Option<NaiveDate>,
-    start_at_ms: Option<i64>,
-    estimate_seconds: Option<i64>,
-    priority: Option<i64>,
-    tags: Vec<String>,
-    column: Option<String>,
-    waiting_on: Option<String>,
+pub(crate) struct Facts {
+    pub(crate) parent_id: Option<String>,
+    pub(crate) id: String,
+    pub(crate) list_id: String,
+    pub(crate) title: String,
+    pub(crate) notes: String,
+    pub(crate) status: String,
+    pub(crate) due_at_ms: Option<i64>,
+    pub(crate) due_date: Option<NaiveDate>,
+    pub(crate) start_at_ms: Option<i64>,
+    pub(crate) estimate_seconds: Option<i64>,
+    pub(crate) priority: Option<i64>,
+    pub(crate) tags: Vec<String>,
+    pub(crate) column: Option<String>,
+    pub(crate) waiting_on: Option<String>,
 }
 
 /// What the rules read about the workspace: the clock, which tasks are
 /// blocked, and the folders each list sits inside.
-struct Context {
-    now_ms: i64,
-    zone: Tz,
-    today: NaiveDate,
-    blocked: HashSet<String>,
-    folders_of_list: HashMap<String, Vec<String>>,
+pub(crate) struct Context {
+    pub(crate) now_ms: i64,
+    pub(crate) zone: Tz,
+    pub(crate) today: NaiveDate,
+    pub(crate) blocked: HashSet<String>,
+    pub(crate) folders_of_list: HashMap<String, Vec<String>>,
 }
 
-fn context(connection: &Connection, now_ms: i64, zone: &str) -> Result<Context, CoreError> {
+pub(crate) fn context(
+    connection: &Connection,
+    now_ms: i64,
+    zone: &str,
+) -> Result<Context, CoreError> {
     let zone = periodic::zone(zone);
     let blocked = crate::dependencies::blocked_task_ids(connection)?
         .into_iter()
@@ -787,9 +796,38 @@ fn has_column(connection: &Connection, table: &str, column: &str) -> Result<bool
     )?)
 }
 
+/// Which tasks [`facts_in`] reads.
+pub(crate) enum FactScope<'a> {
+    Everything,
+    Lists(&'a [String]),
+    Task(&'a str),
+}
+
 /// Every task `show` admits, as the rules read it. List items are left out:
 /// a filter list shows tasks.
 fn facts(connection: &Connection, show: &str) -> Result<Vec<Facts>, CoreError> {
+    facts_in(connection, show, FactScope::Everything)
+}
+
+/// [`facts`], limited to `scope`.
+pub(crate) fn facts_in(
+    connection: &Connection,
+    show: &str,
+    scope: FactScope,
+) -> Result<Vec<Facts>, CoreError> {
+    let (within, values): (String, Vec<&str>) = match scope {
+        FactScope::Everything => (String::new(), Vec::new()),
+        FactScope::Lists(ids) => {
+            if ids.is_empty() {
+                return Ok(Vec::new());
+            }
+            (
+                format!(" AND t.listId IN ({})", vec!["?"; ids.len()].join(", ")),
+                ids.iter().map(String::as_str).collect(),
+            )
+        }
+        FactScope::Task(id) => (" AND t.id = ?".to_string(), vec![id]),
+    };
     let status = match show {
         "done" => "t.status <> 'open'",
         "all" => "1",
@@ -803,11 +841,12 @@ fn facts(connection: &Connection, show: &str) -> Result<Vec<Facts>, CoreError> {
     };
     let mut statement = connection.prepare(&format!(
         "SELECT t.id, t.listId, t.title, t.notes, t.status, t.dueAt, t.estimateSeconds,
-                m.priority, m.startAt, m.tagsJSON, m.kanbanColumn, m.planningJSON, {waiting}
+                m.priority, m.startAt, m.tagsJSON, m.kanbanColumn, m.planningJSON, {waiting},
+                t.parentTaskId
          FROM tasks t LEFT JOIN task_metadata m ON m.taskId = t.id
-         WHERE COALESCE(t.itemKind, 'task') <> 'list' AND {status}"
+         WHERE COALESCE(t.itemKind, 'task') <> 'list' AND {status}{within}"
     ))?;
-    let rows = statement.query_map([], |row| {
+    let rows = statement.query_map(rusqlite::params_from_iter(values), |row| {
         let planning = row
             .get::<_, Option<String>>(11)?
             .as_deref()
@@ -815,6 +854,7 @@ fn facts(connection: &Connection, show: &str) -> Result<Vec<Facts>, CoreError> {
             .unwrap_or_default();
         let start = optional_ms(row, 8)?.or(planning.start_at_ms);
         Ok(Facts {
+            parent_id: row.get(13)?,
             id: row.get(0)?,
             list_id: row.get(1)?,
             title: row.get::<_, String>(2)?.to_lowercase(),
@@ -848,7 +888,7 @@ fn facts(connection: &Connection, show: &str) -> Result<Vec<Facts>, CoreError> {
 
 impl Facts {
     /// The day the task is due on, from its deadline or its due date.
-    fn due_day(&self, zone: Tz) -> Option<NaiveDate> {
+    pub(crate) fn due_day(&self, zone: Tz) -> Option<NaiveDate> {
         self.due_at_ms
             .map(|at| local_day(at, zone))
             .into_iter()
@@ -877,7 +917,7 @@ fn days_from(today: NaiveDate, days: i64) -> NaiveDate {
 
 /// Whether `rule` holds for `task`; `None` for a rule this build does not
 /// know, which is skipped.
-fn holds(rule: &FilterRule, task: &Facts, context: &Context) -> Option<bool> {
+pub(crate) fn holds(rule: &FilterRule, task: &Facts, context: &Context) -> Option<bool> {
     let value = rule.value.as_str();
     let compare_day = |day: Option<NaiveDate>| -> Option<bool> {
         Some(match rule.op.as_str() {
@@ -970,7 +1010,7 @@ fn holds(rule: &FilterRule, task: &Facts, context: &Context) -> Option<bool> {
     })
 }
 
-fn matches(definition: &FilterDefinition, task: &Facts, context: &Context) -> bool {
+pub(crate) fn matches(definition: &FilterDefinition, task: &Facts, context: &Context) -> bool {
     let shown = match definition.show.as_str() {
         "done" => task.status != "open",
         "all" => true,

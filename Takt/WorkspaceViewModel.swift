@@ -240,8 +240,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// them. Held so the task cache can be rebuilt without reading them again.
   @ObservationIgnored var boardTreeTasks: [WorkspaceTask] = []
   /// Board column layouts by scope key, as `kanbanBoardConfigurations`
-  /// returned them. That call is a write transaction and a JSON decode per
-  /// scope, so it is made once per load and again only when a layout changes.
+  /// returned them when it imported the old preferences' layouts. Only
+  /// whether it has run this load is read now; the columns come from
+  /// `WorkspaceStore.boardColumns`.
   @ObservationIgnored var boardColumnConfigurations: [String: Data]?
 
   // The refresh machinery. See `WorkspaceViewModel+Refresh.swift`.
@@ -270,7 +271,6 @@ enum WorkspaceSidebarItem: Identifiable {
   /// The board shape on screen, as `WorkspaceScopeCache` numbers it; nil
   /// for a board that was emptied or not read through the cache.
   @ObservationIgnored var boardShapeGeneration: Int?
-  @ObservationIgnored var usedColumnIDsMemo: (generation: Int, ids: Set<String>)?
   /// The board indexes built for the shapes shown lately, and the one
   /// applied now. See `rebuildBoardIndex()`.
   @ObservationIgnored var boardIndexMemos: [BoardIndexMemo] = []
@@ -299,6 +299,16 @@ enum WorkspaceSidebarItem: Identifiable {
   var boardParentTaskID: String?
   var boardColumns: [WorkspaceKanbanColumn] = WorkspaceKanbanColumn.blitzitDefaults
   var boardTaskColumns: [String: String] = [:]
+  /// The board's columns as the core resolved them: the layout an edit
+  /// saves, where it came from, and what an entered card hides.
+  var boardColumnRead: WorkspaceBoardColumns?
+  /// Tasks a rule column or an entered card's floor draws somewhere other
+  /// than their filed column; see `column(for:)`.
+  var boardColumnPlacements: [String: String] = [:]
+  /// Where the next column added goes: beside a column, rather than last.
+  @ObservationIgnored var pendingColumnInsertion: (anchorID: String, after: Bool)?
+  /// A board column's rules sheet, when it is open.
+  var boardColumnRulesEditor: WorkspaceBoardColumnRulesRequest?
   var boardTasksByColumn: [String: [WorkspaceTask]] = [:]
   var boardColumnsByID: [String: WorkspaceKanbanColumn] = [:]
   var boardVisibleTaskIDs: Set<String> = []

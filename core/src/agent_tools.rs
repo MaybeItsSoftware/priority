@@ -29,6 +29,7 @@ pub const READ_ONLY_TOOLS: &[&str] = &[
     "workspace_task_dependencies",
     "workspace_filter_lists",
     "workspace_filter_list_tasks",
+    "workspace_board_columns",
 ];
 
 /// Every other tool the server declares. Each goes through the approval card.
@@ -62,6 +63,8 @@ pub const WRITE_TOOLS: &[&str] = &[
     "workspace_list_create",
     "workspace_list_move",
     "workspace_list_delete",
+    "workspace_board_column_set",
+    "workspace_board_column_delete",
 ];
 
 /// [`READ_ONLY_TOOLS`], for the apps.

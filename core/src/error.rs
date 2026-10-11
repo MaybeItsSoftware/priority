@@ -58,6 +58,9 @@ pub enum CoreError {
     InvalidFilter { detail: String },
     #[error("{detail}")]
     File { detail: String },
+    /// A board column edit or a drop into a column that cannot be made.
+    #[error("{detail}")]
+    ColumnRefused { detail: String },
     #[error(
         "“{rule}” is not a schedule. Try daily, weekdays, every friday, every 2 weeks or mon, wed, fri."
     )]

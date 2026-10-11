@@ -944,6 +944,37 @@ public func FfiConverterTypeCoreDayLog_lower(_ value: CoreDayLog) -> UInt64 {
 public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     
     /**
+     * Board `key`'s columns over `list_ids`, and where its tasks are drawn.
+     */
+    func boardColumns(key: String, listIds: [String], nowMs: Int64, zone: String) throws  -> BoardColumns
+    
+    /**
+     * Deletes a column, moving its tasks, as one "Delete Column" step.
+     */
+    func deleteBoardColumn(key: String, listIds: [String], columnId: String, toColumn: String?, nowMs: Int64) throws 
+    
+    /**
+     * Makes a board's columns the default, as one "Make Default Columns" step.
+     */
+    func makeDefaultBoardColumns(key: String) throws 
+    
+    /**
+     * Moves tasks into a column, editing the first to meet a rule column's
+     * rules, as one "Move Task" step.
+     */
+    func moveToBoardColumn(key: String, taskIds: [String], columnId: String, nowMs: Int64, zone: String) throws 
+    
+    /**
+     * Has a board follow the default columns again, as one "Reset Columns" step.
+     */
+    func resetBoardColumns(key: String) throws 
+    
+    /**
+     * Saves a board's columns, moving cards out of a removed one, as one step.
+     */
+    func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64) throws 
+    
+    /**
      * The workspace `workspace_id` written out as `format`, stamped
      * `exported_at_ms`; absent when there is no such workspace.
      */
@@ -1676,11 +1707,6 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func searchTasks(workspaceId: String, query: String, includingCompleted: Bool, includingArchivedLists: Bool, limit: Int64) throws  -> [SearchHit]
     
     /**
-     * Saves a board's columns, moving cards out of a removed one, as one step.
-     */
-    func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64) throws 
-    
-    /**
      * Makes an item a task or a nested list.
      */
     func setItemKind(id: String, kind: String, nowMs: Int64) throws 
@@ -1938,6 +1964,96 @@ public static func `open`(path: String)throws  -> CoreWorkspace  {
 }
     
 
+    
+    /**
+     * Board `key`'s columns over `list_ids`, and where its tasks are drawn.
+     */
+open func boardColumns(key: String, listIds: [String], nowMs: Int64, zone: String)throws  -> BoardColumns  {
+    return try  FfiConverterTypeBoardColumns_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_board_columns(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),
+        FfiConverterSequenceString.lower(listIds),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Deletes a column, moving its tasks, as one "Delete Column" step.
+     */
+open func deleteBoardColumn(key: String, listIds: [String], columnId: String, toColumn: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_delete_board_column(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),
+        FfiConverterSequenceString.lower(listIds),
+        FfiConverterString.lower(columnId),
+        FfiConverterOptionString.lower(toColumn),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Makes a board's columns the default, as one "Make Default Columns" step.
+     */
+open func makeDefaultBoardColumns(key: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_make_default_board_columns(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Moves tasks into a column, editing the first to meet a rule column's
+     * rules, as one "Move Task" step.
+     */
+open func moveToBoardColumn(key: String, taskIds: [String], columnId: String, nowMs: Int64, zone: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_to_board_column(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),
+        FfiConverterSequenceString.lower(taskIds),
+        FfiConverterString.lower(columnId),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Has a board follow the default columns again, as one "Reset Columns" step.
+     */
+open func resetBoardColumns(key: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_reset_board_columns(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Saves a board's columns, moving cards out of a removed one, as one step.
+     */
+open func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_set_board_columns(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),
+        FfiConverterSequenceTypeBoardColumn.lower(columns),
+        FfiConverterSequenceString.lower(movingTaskIds),
+        FfiConverterOptionString.lower(toColumn),
+        FfiConverterString.lower(label),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
     
     /**
      * The workspace `workspace_id` written out as `format`, stamped
@@ -3913,23 +4029,6 @@ open func searchTasks(workspaceId: String, query: String, includingCompleted: Bo
 }
     
     /**
-     * Saves a board's columns, moving cards out of a removed one, as one step.
-     */
-open func setBoardColumns(key: String, columns: [BoardColumn], movingTaskIds: [String], toColumn: String?, label: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
-        uniffiCallStatus in
-    uniffi_takt_core_fn_method_coreworkspace_set_board_columns(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(key),
-        FfiConverterSequenceTypeBoardColumn.lower(columns),
-        FfiConverterSequenceString.lower(movingTaskIds),
-        FfiConverterOptionString.lower(toColumn),
-        FfiConverterString.lower(label),
-        FfiConverterInt64.lower(nowMs),uniffiCallStatus
-    )
-}
-}
-    
-    /**
      * Makes an item a task or a nested list.
      */
 open func setItemKind(id: String, kind: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -5126,12 +5225,22 @@ public func FfiConverterTypeBoardBaseline_lower(_ value: BoardBaseline) -> RustB
 public struct BoardColumn: Equatable, Hashable {
     public var id: String
     public var title: String
+    /**
+     * The rules that fill it, for a rule column; `None` for one tasks are
+     * filed in.
+     */
+    public var rules: FilterDefinition?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: String, title: String) {
+    public init(id: String, title: String, 
+        /**
+         * The rules that fill it, for a rule column; `None` for one tasks are
+         * filed in.
+         */rules: FilterDefinition? = nil) {
         self.id = id
         self.title = title
+        self.rules = rules
     }
 
     
@@ -5151,13 +5260,15 @@ public struct FfiConverterTypeBoardColumn: FfiConverterRustBuffer {
         return
             try BoardColumn(
                 id: FfiConverterString.read(from: &buf), 
-                title: FfiConverterString.read(from: &buf)
+                title: FfiConverterString.read(from: &buf), 
+                rules: FfiConverterOptionTypeFilterDefinition.read(from: &buf)
         )
     }
 
     public static func write(_ value: BoardColumn, into buf: inout [UInt8]) {
         FfiConverterString.write(value.id, into: &buf)
         FfiConverterString.write(value.title, into: &buf)
+        FfiConverterOptionTypeFilterDefinition.write(value.rules, into: &buf)
     }
 }
 
@@ -5174,6 +5285,187 @@ public func FfiConverterTypeBoardColumn_lift(_ buf: RustBuffer) throws -> BoardC
 #endif
 public func FfiConverterTypeBoardColumn_lower(_ value: BoardColumn) -> RustBuffer {
     return FfiConverterTypeBoardColumn.lower(value)
+}
+
+
+/**
+ * A task drawn somewhere other than its filed column says: by a rule
+ * column, or clamped into an entered task's column.
+ */
+public struct BoardColumnPlacement: Equatable, Hashable {
+    public var taskId: String
+    public var columnId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskId: String, columnId: String) {
+        self.taskId = taskId
+        self.columnId = columnId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BoardColumnPlacement: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBoardColumnPlacement: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BoardColumnPlacement {
+        return
+            try BoardColumnPlacement(
+                taskId: FfiConverterString.read(from: &buf), 
+                columnId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BoardColumnPlacement, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.taskId, into: &buf)
+        FfiConverterString.write(value.columnId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardColumnPlacement_lift(_ buf: RustBuffer) throws -> BoardColumnPlacement {
+    return try FfiConverterTypeBoardColumnPlacement.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardColumnPlacement_lower(_ value: BoardColumnPlacement) -> RustBuffer {
+    return FfiConverterTypeBoardColumnPlacement.lower(value)
+}
+
+
+/**
+ * A board's columns as a client draws them.
+ */
+public struct BoardColumns: Equatable, Hashable {
+    public var key: String
+    /**
+     * The layout, as editing it saves: hidden columns included, columns
+     * drawn only for the cards filed in them not.
+     */
+    public var layout: [BoardColumn]
+    /**
+     * Where the layout comes from: "own", "list" (an entered task's board
+     * using its list's), "default" or "builtin".
+     */
+    public var source: String
+    /**
+     * The columns drawn, left to right: the layout less the hidden ones,
+     * then any column a card here is filed in that the layout lacks.
+     */
+    public var columns: [BoardColumn]
+    /**
+     * Columns to the left of an entered task's own, hidden.
+     */
+    public var hiddenColumnIds: [String]
+    /**
+     * The entered task's column, when it hides any.
+     */
+    public var floorColumnId: String?
+    /**
+     * Every task of the board's lists drawn somewhere other than where a
+     * client would put it by its filed column alone — that column if it is
+     * drawn, else the first drawn one.
+     */
+    public var placements: [BoardColumnPlacement]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(key: String, 
+        /**
+         * The layout, as editing it saves: hidden columns included, columns
+         * drawn only for the cards filed in them not.
+         */layout: [BoardColumn], 
+        /**
+         * Where the layout comes from: "own", "list" (an entered task's board
+         * using its list's), "default" or "builtin".
+         */source: String, 
+        /**
+         * The columns drawn, left to right: the layout less the hidden ones,
+         * then any column a card here is filed in that the layout lacks.
+         */columns: [BoardColumn], 
+        /**
+         * Columns to the left of an entered task's own, hidden.
+         */hiddenColumnIds: [String], 
+        /**
+         * The entered task's column, when it hides any.
+         */floorColumnId: String?, 
+        /**
+         * Every task of the board's lists drawn somewhere other than where a
+         * client would put it by its filed column alone — that column if it is
+         * drawn, else the first drawn one.
+         */placements: [BoardColumnPlacement]) {
+        self.key = key
+        self.layout = layout
+        self.source = source
+        self.columns = columns
+        self.hiddenColumnIds = hiddenColumnIds
+        self.floorColumnId = floorColumnId
+        self.placements = placements
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BoardColumns: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBoardColumns: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BoardColumns {
+        return
+            try BoardColumns(
+                key: FfiConverterString.read(from: &buf), 
+                layout: FfiConverterSequenceTypeBoardColumn.read(from: &buf), 
+                source: FfiConverterString.read(from: &buf), 
+                columns: FfiConverterSequenceTypeBoardColumn.read(from: &buf), 
+                hiddenColumnIds: FfiConverterSequenceString.read(from: &buf), 
+                floorColumnId: FfiConverterOptionString.read(from: &buf), 
+                placements: FfiConverterSequenceTypeBoardColumnPlacement.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BoardColumns, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterSequenceTypeBoardColumn.write(value.layout, into: &buf)
+        FfiConverterString.write(value.source, into: &buf)
+        FfiConverterSequenceTypeBoardColumn.write(value.columns, into: &buf)
+        FfiConverterSequenceString.write(value.hiddenColumnIds, into: &buf)
+        FfiConverterOptionString.write(value.floorColumnId, into: &buf)
+        FfiConverterSequenceTypeBoardColumnPlacement.write(value.placements, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardColumns_lift(_ buf: RustBuffer) throws -> BoardColumns {
+    return try FfiConverterTypeBoardColumns.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBoardColumns_lower(_ value: BoardColumns) -> RustBuffer {
+    return FfiConverterTypeBoardColumns.lower(value)
 }
 
 
@@ -16978,6 +17270,11 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     )
     case File(detail: String
     )
+    /**
+     * A board column edit or a drop into a column that cannot be made.
+     */
+    case ColumnRefused(detail: String
+    )
     case InvalidRecurrence(rule: String
     )
     /**
@@ -17062,10 +17359,13 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 26: return .File(
             detail: try FfiConverterString.read(from: &buf)
             )
-        case 27: return .InvalidRecurrence(
+        case 27: return .ColumnRefused(
+            detail: try FfiConverterString.read(from: &buf)
+            )
+        case 28: return .InvalidRecurrence(
             rule: try FfiConverterString.read(from: &buf)
             )
-        case 28: return .Checkvist(
+        case 29: return .Checkvist(
             detail: try FfiConverterString.read(from: &buf)
             )
 
@@ -17195,13 +17495,18 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             FfiConverterString.write(detail, into: &buf)
             
         
-        case let .InvalidRecurrence(rule):
+        case let .ColumnRefused(detail):
             writeInt(&buf, Int32(27))
+            FfiConverterString.write(detail, into: &buf)
+            
+        
+        case let .InvalidRecurrence(rule):
+            writeInt(&buf, Int32(28))
             FfiConverterString.write(rule, into: &buf)
             
         
         case let .Checkvist(detail):
-            writeInt(&buf, Int32(28))
+            writeInt(&buf, Int32(29))
             FfiConverterString.write(detail, into: &buf)
             
         }
@@ -20277,6 +20582,30 @@ fileprivate struct FfiConverterOptionTypeDailyRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeFilterDefinition: FfiConverterRustBuffer {
+    typealias SwiftType = FilterDefinition?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFilterDefinition.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFilterDefinition.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeFilterListRow: FfiConverterRustBuffer {
     typealias SwiftType = FilterListRow?
 
@@ -21095,6 +21424,31 @@ fileprivate struct FfiConverterSequenceTypeBoardColumn: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeBoardColumn.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeBoardColumnPlacement: FfiConverterRustBuffer {
+    typealias SwiftType = [BoardColumnPlacement]
+
+    public static func write(_ value: [BoardColumnPlacement], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBoardColumnPlacement.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [BoardColumnPlacement] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [BoardColumnPlacement]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBoardColumnPlacement.read(from: &buf))
         }
         return seq
     }
@@ -23238,6 +23592,27 @@ public func agentWriteTools() -> [String]  {
 })
 }
 /**
+ * The stock columns, which a workspace with no default of its own uses.
+ */
+public func boardStockColumns() -> [BoardColumn]  {
+    return try!  FfiConverterSequenceTypeBoardColumn.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_board_stock_columns(uniffiCallStatus
+    )
+})
+}
+/**
+ * A layout's columns read from its stored JSON; empty if it is not one.
+ */
+public func parseBoardColumns(json: String) -> [BoardColumn]  {
+    return try!  FfiConverterSequenceTypeBoardColumn.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_parse_board_columns(
+        FfiConverterString.lower(json),uniffiCallStatus
+    )
+})
+}
+/**
  * A day and a time of day, as the follow-up field reads them: the add
  * field's date words (`@fri`, `tomorrow`, `3d`, `2026-10-08`, each with or
  * without the `@`), a time (`9am`, `9:30pm`, `14:00`, `noon`), or both in
@@ -25248,6 +25623,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_agent_write_tools() != 8928) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_board_stock_columns() != 23218) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_parse_board_columns() != 22220) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_capture_date_time() != 17198) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -25743,6 +26124,24 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_method_syncpull_row_count() != 50030) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_method_coreworkspace_board_columns() != 666) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_delete_board_column() != 19190) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_make_default_board_columns() != 63573) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_to_board_column() != 5303) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_reset_board_columns() != 30019) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() != 22012) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_method_coreworkspace_export_workspace() != 22213) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -26161,9 +26560,6 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_search_tasks() != 47825) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_takt_core_checksum_method_coreworkspace_set_board_columns() != 65113) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_set_item_kind() != 55048) {

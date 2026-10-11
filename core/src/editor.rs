@@ -280,6 +280,33 @@ pub fn update_editor_metadata(
     Ok(())
 }
 
+/// Sets a task's due day (`yyyy-MM-dd`), or clears its due day and time:
+/// what dropping it into a board column whose rules ask for one does. A due
+/// day replaces a due time, as the editor's does.
+pub(crate) fn set_due_day(
+    transaction: &Transaction,
+    id: &str,
+    day: Option<&str>,
+    now_ms: i64,
+    zone: &str,
+) -> Result<(), CoreError> {
+    let previous = snapshot(transaction, id)?;
+    let mut edit = previous.clone();
+    edit.due_at_ms = None;
+    let mut planning = edit.planning.clone().unwrap_or_default();
+    planning.due_date = day.map(str::to_string);
+    edit.planning = planning.normalized();
+    update_planning(
+        transaction,
+        &edit,
+        previous.planning.as_ref(),
+        previous.due_at_ms,
+        now_ms,
+        zone,
+    )?;
+    update_task_record(transaction, &edit, now_ms)
+}
+
 /// Moves a task's start, or clears it. `WorkspaceStore.scheduleTask`.
 pub fn schedule_task(
     transaction: &Transaction,

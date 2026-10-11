@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -93,15 +94,23 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
                 val listName = combine(repo.observeTask(id), repo.observeLists(session.workspace.id, includingArchived = true)) { task, lists ->
                     task to (lists.firstOrNull { it.id == task?.listId }?.name ?: "")
                 }
+                // The board the task is a card on, as the core resolves it: its own
+                // layout, else its list's, the default or the stock five. Rule
+                // columns are left out, since nothing is filed in one.
+                val boardColumns = listName.map { (task, _) -> task?.let { "${it.listId}/${it.parentTaskId ?: "root"}" } }
+                    .distinctUntilChanged()
+                    .flatMapLatest { key ->
+                        if (key == null) flowOf(WorkspaceKanbanColumn.blitzitDefaults)
+                        else repo.observeBoardColumns(key, emptyList()).map { read -> read.layout.filter { !it.isRuleColumn } }
+                    }
                 combine(
                     listName,
                     repo.observeConditions(session.workspace.id),
-                    repo.observeKanbanBoards(),
+                    boardColumns,
                     repo.observeTaskInspectorFacts(id),
                     repo.observeTaskDependencies(id),
-                ) { (task, name), conditions, boards, facts, dependencies ->
-                    val columns = task?.let { boards["${it.listId}/${it.parentTaskId ?: "root"}"] ?: boards["${it.listId}/root"] }
-                        ?.takeIf { it.isNotEmpty() } ?: WorkspaceKanbanColumn.blitzitDefaults
+                ) { (task, name), conditions, filedColumns, facts, dependencies ->
+                    val columns = filedColumns.ifEmpty { WorkspaceKanbanColumn.blitzitDefaults }
                     InspectorSurroundings(
                         task = task,
                         listName = name,
@@ -235,7 +244,7 @@ class TaskInspectorViewModel(private val container: AppContainer) : ViewModel() 
     private fun message(error: Throwable): String = when (error) {
         is TaskEditorException -> error.error.message
         is TaskPlanningException -> error.error.message
-        is WorkspaceStoreException -> error.error.message
+        is WorkspaceStoreException -> error.text
         else -> error.message ?: "Couldn't save."
     }
 

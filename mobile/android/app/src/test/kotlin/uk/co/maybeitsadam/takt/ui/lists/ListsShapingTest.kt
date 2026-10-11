@@ -10,6 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import uk.co.maybeitsadam.takt.core.BoardColumnsRead
 import uk.co.maybeitsadam.takt.core.ListFolder
 import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.core.TaskListRole
@@ -25,6 +26,7 @@ import uk.co.maybeitsadam.takt.data.workspace.ListScopeData
 import uk.co.maybeitsadam.takt.data.workspace.SidebarData
 import uk.co.maybeitsadam.takt.data.workspace.TaskDecoration
 import uniffi.takt_core.FilterDefinition
+import uniffi.takt_core.FilterRule
 
 class ListsShapingTest {
     private val zone = ZoneOffset.UTC
@@ -64,6 +66,8 @@ class ListsShapingTest {
     )
 
     private val home = list("home")
+    /** The core's read of a board with no layout anywhere: the stock five, nothing placed. */
+    private val stock = BoardColumnsRead.builtin("home/root")
     private val tasks = listOf(
         task("a", "home"),
         task("a1", "home", parent = "a"),
@@ -109,7 +113,7 @@ class ListsShapingTest {
         assertEquals(listOf("a", "a1", "a2", "a2x", "b"), rows.map { it.id })
         assertEquals(setOf("a1", "b"), rows.filter { it.isBlocked }.map { it.id }.toSet())
 
-        val board = BoardShaping.shape(data, false, emptyMap(), emptySet(), false, zone, today)
+        val board = BoardShaping.shape(data, false, stock, emptySet(), false, zone, today)
         val cards = board.columns.flatMap { it.cards }
         assertTrue(cards.first { it.id == "b" }.row.isBlocked)
         assertFalse(cards.first { it.id == "a" }.row.isBlocked)
@@ -178,7 +182,7 @@ class ListsShapingTest {
 
     @Test fun unplacedCardsGoToTheFirstColumnAndSubtasksFollowTheirParent() {
         val decorations = mapOf("b" to TaskDecoration(kanbanColumn = "today"), "a1" to TaskDecoration(kanbanColumn = "today"))
-        val board = BoardShaping.shape(scope(listOf(home), tasks, decorations), false, emptyMap(), emptySet(), false, zone, today)
+        val board = BoardShaping.shape(scope(listOf(home), tasks, decorations), false, stock, emptySet(), false, zone, today)
         assertEquals("home/root", board.key)
         assertEquals(WorkspaceKanbanColumn.blitzitDefaults.map { it.id }, board.columns.map { it.id })
         val backlog = board.columns.first()
@@ -191,7 +195,7 @@ class ListsShapingTest {
     }
 
     @Test fun aFoldedCardDrawsNoSubtasks() {
-        val board = BoardShaping.shape(scope(listOf(home), tasks), false, emptyMap(), setOf("a"), false, zone, today)
+        val board = BoardShaping.shape(scope(listOf(home), tasks), false, stock, setOf("a"), false, zone, today)
         val card = board.columns.first().cards.first()
         assertTrue(card.subtasks.isEmpty())
         assertEquals(3, card.subtaskCount)
@@ -203,7 +207,7 @@ class ListsShapingTest {
             "b" to TaskDecoration(matrixUrgency = 0, matrixImportance = 0),
         )
         val board = BoardShaping.shape(
-            scope(listOf(home), tasks + task("c", "home"), decorations), false, emptyMap(), emptySet(), false, zone, today,
+            scope(listOf(home), tasks + task("c", "home"), decorations), false, stock, emptySet(), false, zone, today,
         )
         val matrix = BoardShaping.matrix(board)
         assertEquals(MatrixCell.DO_NOW, matrix.cellOf("a"))
@@ -218,16 +222,50 @@ class ListsShapingTest {
             "c" to TaskDecoration(matrixUrgency = 1, matrixImportance = 1, matrixRank = 0),
         )
         val board = BoardShaping.shape(
-            scope(listOf(home), tasks + task("c", "home"), decorations), false, emptyMap(), emptySet(), false, zone, today,
+            scope(listOf(home), tasks + task("c", "home"), decorations), false, stock, emptySet(), false, zone, today,
         )
         val doNow = BoardShaping.matrix(board).quadrants.first { it.cell == MatrixCell.DO_NOW }
         assertEquals(listOf("c", "b", "a"), doNow.cards.map { it.id })
     }
 
-    @Test fun resolvedColumnsKeepAColumnACardIsFiledUnder() {
-        val custom = listOf(WorkspaceKanbanColumn("now", "Now"))
-        val columns = BoardShaping.resolvedColumns("home/root", false, mapOf("home/root" to custom), listOf("home"), setOf("today"))
-        assertEquals(listOf("now", "today"), columns.map { it.id })
+    @Test fun theColumnsDrawnAreTheCoresAndACardFiledInAMissingOneGoesFirst() {
+        val read = BoardColumnsRead(
+            "home/root",
+            layout = listOf(WorkspaceKanbanColumn("now", "Now")),
+            source = "default",
+            columns = listOf(WorkspaceKanbanColumn("now", "Now"), WorkspaceKanbanColumn("today", "Today")),
+        )
+        val decorations = mapOf("a" to TaskDecoration(kanbanColumn = "today"), "b" to TaskDecoration(kanbanColumn = "gone"))
+        val board = BoardShaping.shape(scope(listOf(home), tasks, decorations), false, read, emptySet(), false, zone, today)
+        assertEquals(listOf("now", "today"), board.columns.map { it.id })
+        assertEquals(listOf("b"), board.columns.first().cards.map { it.id })
+        assertEquals(listOf("a"), board.columns.last().cards.map { it.id })
+        // Edits save the layout, not the columns drawn for cards filed elsewhere.
+        assertEquals(listOf("now"), board.layout.map { it.id })
+    }
+
+    @Test fun aPlacementOverridesTheFiledColumn() {
+        val rules = FilterDefinition("all", "all", listOf(FilterRule("tag", "has", "urgent")))
+        val urgent = WorkspaceKanbanColumn("urgent", "Urgent", rules)
+        val read = BoardColumnsRead(
+            "home/root",
+            layout = listOf(urgent) + WorkspaceKanbanColumn.blitzitDefaults,
+            source = "own",
+            columns = listOf(urgent) + WorkspaceKanbanColumn.blitzitDefaults,
+            // b matches the rule column; a is clamped to an entered card's floor.
+            placements = mapOf("b" to "urgent", "a" to "this-week"),
+        )
+        val decorations = mapOf("b" to TaskDecoration(kanbanColumn = "today"), "a" to TaskDecoration(kanbanColumn = "backlog"))
+        val board = BoardShaping.shape(scope(listOf(home), tasks, decorations), false, read, emptySet(), false, zone, today)
+        val byColumn = board.columns.associate { c -> c.id to c.cards.map { it.id } }
+        assertEquals(listOf("b"), byColumn["urgent"])
+        assertEquals(listOf("a"), byColumn["this-week"])
+        assertEquals(emptyList<String>(), byColumn["today"])
+        assertEquals(emptyList<String>(), byColumn["backlog"])
+        assertTrue(board.columns.first().isRuleColumn)
+        assertFalse(board.columns.last().isRuleColumn)
+        // Its unfiled subtasks stay on the card, wherever it is drawn.
+        assertEquals(listOf("a1", "a2", "a2x"), board.columns.first { it.id == "this-week" }.cards.single().subtasks.map { it.id })
     }
 
     @Test fun columnIdsAreSluggedAndUnique() {

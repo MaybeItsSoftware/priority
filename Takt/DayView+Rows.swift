@@ -154,10 +154,21 @@ struct DayTaskRow: View, Equatable {
       VStack(alignment: .leading, spacing: theme.space.xxs) {
         HStack(alignment: alignment, spacing: theme.space.sm) {
           marker
-          Text(task.title)
-            .font(theme.bodyFont())
-            .foregroundStyle(facts.isBlocked ? theme.muted : theme.ink)
-            .expandsWhenSelected(isExpanded)
+          // Edited in place, as in the outline; the focus panel's copy of the
+          // day stays read-only, so the one title is never two fields.
+          if !chrome.isPanel, model.editingTaskTitleID == task.id {
+            WorkspaceTaskTitleField(
+              initialTitle: task.title,
+              caret: model.editingTaskTitleCaret,
+              onCommit: { model.commitTaskTitleEdit(task, text: $0) },
+              onCancel: { model.cancelTaskTitleEdit() })
+              .frame(maxWidth: .infinity, alignment: .leading)
+          } else {
+            Text(task.title)
+              .font(theme.bodyFont())
+              .foregroundStyle(facts.isBlocked ? theme.muted : theme.ink)
+              .expandsWhenSelected(isExpanded)
+          }
           if facts.isDaily {
             DailyBadge(task: task, isDoneToday: facts.isDailyDone)
           }

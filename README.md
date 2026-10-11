@@ -104,7 +104,8 @@ something you already have to know.
 | `→` / `←` | In the outline, show a task's subtasks and step into them / hide them and step out — without opening the task. Elsewhere, open and leave it. At the top level of a list, `←` goes back to the list in the sidebar |
 | `za` / `Cmd+←` / `Cmd+→` | Fold or unfold the task you are on (outline or board) / fold / unfold the whole outline |
 | `.` / `,` | Grow the task you are on to show its subtasks / shrink it (on a task with none, folds the one it sits under) |
-| `Cmd+Shift+C` / `Cmd+Ctrl+C` | On the board, add a column / remove the one you are in |
+| `Cmd+Shift+C` / `Cmd+Ctrl+C` | On the board, add a column / delete the one you are in (it asks where its tasks go) |
+| `Alt+Up` / `Alt+Down` | Move the task up or down past its neighbour: on the board, the card above or below in its column, or the row above or below on its card |
 | `Cmd+N` / `Cmd+Shift+N` / `Cmd+Alt+N` | New task / list / folder |
 | `F2` / `Shift+R` | In the sidebar, rename the list or folder you are on |
 | `Shift+Return` / `Alt+Shift+Return` | New task above the selection (Checkvist's) / new subtask |
@@ -531,6 +532,49 @@ focus panel and the timeline are tabs in the right dock.
 `Cmd+0` shows **Everything** — every active list at once, rather than the one
 the sidebar has selected.
 
+### Board columns
+
+Each list has its own columns. A list that has never had its columns edited
+uses the **default columns** — Backlog, In progress, This week, Waiting on and
+Today until you set your own — and its first edit gives it columns of its own.
+Everything's board and a filter list's work the same way.
+
+Right-click a column's header to rename it, move it left or right, add a
+column beside it, edit its rules, delete it, make this board's columns the
+default, or reset this board to the default. The palette reaches each of them
+too, acting on the column you are in:
+
+| Command | Key |
+| --- | --- |
+| Add a board column | `Cmd+Shift+C` |
+| Delete this board column… | `Cmd+Ctrl+C` |
+| Rename / move left / move right / add left / add right / edit rules | palette |
+| Make these the default board columns / reset this board to the default | palette |
+
+Deleting a column asks where its tasks go — the remaining columns, the first
+already chosen — and the move and the deletion are one undo step. **Today**
+and **Waiting on** can be deleted from a board, but their tasks stay planned
+or waiting and show in the first column there.
+
+A column can carry **rules**, the same rules a filter list has, edited in the
+same sheet. Tasks its rules match are drawn in it whichever column they are
+filed in — the first rule column from the left wins — and a task matching
+none stays in the column it is filed in. Dropping a task into a rule column
+edits the task to match where one edit does (a tag is added, a priority or
+due date set, the task planned for today); where the rules do not say what to
+change, or the task would stay in an earlier rule column, the drop is refused
+and the status bar says why.
+
+Entering a card (`→` or `]`) shows its subtasks on a board of their own, with
+the columns to the left of the card's own hidden: a step is not at an earlier
+stage than the task it belongs to. Subtasks filed in a hidden column are drawn
+in the card's column, without being refiled, so leaving changes nothing.
+Waiting on and rule columns are not stages and stay.
+
+Right-clicking a pane's empty space offers a new task, a new column on the
+board, the other views and showing or hiding completed tasks; a task's own
+menu shows each action's key on the right, as bound.
+
 ### Filter lists
 
 Today, Everything and the Inbox are the stock lists at the top of the sidebar.
@@ -950,7 +994,7 @@ Every command is one of the MCP tools under a friendlier name, and the same bina
 
 ## MCP server
 
-Takt exposes **42 MCP tools** so an AI assistant can work with your lists directly: the workspace's folders, lists, tasks, blockers and filter lists, the local state Checkvist has no representation for (day log, dailies, priority ranks, recurrence, the matrix), and the Checkvist API. [`docs/mcp-server.md`](docs/mcp-server.md) lists them.
+Takt exposes **45 MCP tools** so an AI assistant can work with your lists directly: the workspace's folders, lists, tasks, blockers, filter lists and board columns, the local state Checkvist has no representation for (day log, dailies, priority ranks, recurrence, the matrix), and the Checkvist API. [`docs/mcp-server.md`](docs/mcp-server.md) lists them.
 
 All but one are reads or Checkvist writes. `task_matrix_set` places tasks on the Eisenhower matrix in bulk (`takt matrix <id>:<urgency>:<importance> …` from a terminal), and refuses while Takt is running — the app holds those coordinates in memory and would overwrite them. Quit Takt, let the assistant do a first pass over the whole list, then reopen and correct it by dragging.
 

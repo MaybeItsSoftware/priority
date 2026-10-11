@@ -88,6 +88,20 @@ private struct WorkspaceListSwitcherTitle: View {
   @State private var isHovered = false
 
   var body: some View {
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.xs) {
+      // Outermost first, as a path reads: where you came from, then where
+      // you are, which is the switcher.
+      ForEach(model.scopeTrail) { crumb in
+        WorkspaceScopeCrumb(crumb: crumb)
+        Text("/")
+          .font(theme.titleFont)
+          .foregroundStyle(theme.dim)
+      }
+      switcher
+    }
+  }
+
+  private var switcher: some View {
     Button { model.presentOverlay(.listNavigator) } label: {
       HStack(spacing: theme.space.xxs) {
         Text(title)
@@ -324,26 +338,28 @@ struct WorkspacePaneCount: View {
   }
 }
 
-/// The way out of a task you have opened as a list. It reads as a breadcrumb
-/// because that is what it is: the thing you were looking at before this one.
-struct WorkspacePaneScopeExit: View {
+/// A step of the header's breadcrumb: the list, or a task above the one
+/// opened, at the title's size but muted, so the trail reads as one line and
+/// the place you are stands out by colour rather than by size.
+private struct WorkspaceScopeCrumb: View {
+  @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
-  let title: String
-  let leave: () -> Void
+  let crumb: ScopeCrumb
+  @State private var isHovered = false
 
   var body: some View {
-    Button(action: leave) {
-      HStack(spacing: theme.space.xxs) {
-        Image(systemName: "chevron.left")
-        Text(title).lineLimit(1).truncationMode(.middle)
-      }
-      .font(theme.captionFont)
-      .foregroundStyle(theme.muted)
-      .contentShape(Rectangle())
+    Button { model.openCrumb(crumb) } label: {
+      Text(crumb.title)
+        .font(theme.titleFont)
+        .foregroundStyle(isHovered ? theme.ink : theme.muted)
+        .lineLimit(1)
+        .truncationMode(.middle)
+        .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
     .focusable()
-    .commandHelp(.planLeaveTask, note: "Back to \(title)")
+    .onHover { isHovered = $0 }
+    .commandHelp(.planLeaveTask, note: "Go to \(crumb.title)")
   }
 }
 

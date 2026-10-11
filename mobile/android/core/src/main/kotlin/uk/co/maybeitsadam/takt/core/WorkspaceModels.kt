@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import uniffi.takt_core.FilterDefinition
 
 // Port of Sources/TaktWorkspace/WorkspaceModels.swift (and the record types in
 // TaskPlanning.swift). `Date` becomes `Instant`; a Swift `Calendar` becomes the
@@ -133,8 +134,15 @@ data class TaskEditorMetadata(
     val externalLinks: List<String> = emptyList(),
 )
 
-/** A board column. The task's column is independent of its parent's column. */
-data class WorkspaceKanbanColumn(val id: String, val title: String) {
+/**
+ * A board column. The task's column is independent of its parent's column.
+ * [rules] make it a rule column: a task they match is drawn in it whatever
+ * column it is filed in, and nothing is filed in it (the Rust core's
+ * `board_columns`).
+ */
+data class WorkspaceKanbanColumn(val id: String, val title: String, val rules: FilterDefinition? = null) {
+    val isRuleColumn: Boolean get() = rules != null
+
     companion object {
         val blitzitDefaults = listOf(
             WorkspaceKanbanColumn("backlog", "Backlog"),
@@ -142,6 +150,37 @@ data class WorkspaceKanbanColumn(val id: String, val title: String) {
             WorkspaceKanbanColumn("this-week", "This week"),
             WorkspaceKanbanColumn("waiting-on", "Waiting on"),
             WorkspaceKanbanColumn("today", "Today"),
+        )
+    }
+}
+
+/**
+ * A board's columns as the Rust core resolves them (`board_columns`): the
+ * [layout] an edit saves, where it comes from ("own", "list", "default" or
+ * "builtin"), the [columns] drawn left to right, and the tasks drawn
+ * somewhere other than their filed column says, by a rule column or clamped
+ * to an entered card's [floorColumnId].
+ */
+data class BoardColumnsRead(
+    val key: String,
+    val layout: List<WorkspaceKanbanColumn>,
+    val source: String,
+    val columns: List<WorkspaceKanbanColumn>,
+    val hiddenColumnIds: Set<String> = emptySet(),
+    val floorColumnId: String? = null,
+    val placements: Map<String, String> = emptyMap(),
+) {
+    /** The column a task is drawn in: its placement, else its filed column when drawn, else the first. */
+    fun columnId(taskId: String, filed: String?): String? {
+        placements[taskId]?.let { placed -> if (columns.any { it.id == placed }) return placed }
+        val wanted = filed ?: WorkspaceKanbanColumn.blitzitDefaults[0].id
+        return if (columns.any { it.id == wanted }) wanted else columns.firstOrNull()?.id
+    }
+
+    companion object {
+        /** The stock columns, for a board not read from the core yet. */
+        fun builtin(key: String) = BoardColumnsRead(
+            key, WorkspaceKanbanColumn.blitzitDefaults, "builtin", WorkspaceKanbanColumn.blitzitDefaults,
         )
     }
 }
