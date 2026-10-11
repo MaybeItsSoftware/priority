@@ -25,9 +25,6 @@ struct WorkspaceOutlinePane: View {
       let tasksHaveKeyboard = model.keyboardFocusArea == .tasks && !model.isDraftingTask
       VStack(spacing: 0) {
         WorkspacePaneHeader(title: model.currentBoardScopeTitle, switchesList: true) {
-          if let exit = model.scopeExitTitle {
-            WorkspacePaneScopeExit(title: exit) { model.leaveTaskScope() }
-          }
         } trailing: {
           WorkspacePaneCount(count: model.outlineOpenCount)
         }

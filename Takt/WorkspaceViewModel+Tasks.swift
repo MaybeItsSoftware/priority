@@ -95,13 +95,32 @@ extension WorkspaceViewModel {
     return scopeTask?.title ?? selectedList?.name ?? "Board"
   }
 
-  /// Where leaving the opened task goes: its parent task, or the list it sits
-  /// in. The breadcrumb used to print the opened task's own title, which is
-  /// already the pane's title beside it.
-  var scopeExitTitle: String? {
-    guard let scope = scopeTask else { return nil }
-    if let parentID = scope.parentTaskId, let parent = task(withID: parentID) { return parent.title }
-    return list(for: scope)?.name ?? selectedList?.name
+  /// The way down to the opened task, outermost first: its list, then each
+  /// task above it. Empty at a list's own root. The header draws it before
+  /// the title as a breadcrumb — `Errands / Plan my Birthday` — where it used
+  /// to print only the parent, after the title, behind a back chevron.
+  var scopeTrail: [ScopeCrumb] {
+    guard let scope = scopeTask else { return [] }
+    var ancestors: [WorkspaceTask] = []
+    var visited: Set<String> = [scope.id]
+    var parentID = scope.parentTaskId
+    while let id = parentID, visited.insert(id).inserted, let parent = task(withID: id) {
+      ancestors.insert(parent, at: 0)
+      parentID = parent.parentTaskId
+    }
+    let list = list(for: scope) ?? selectedList
+    return (list.map { [ScopeCrumb(id: "list:\($0.id)", title: $0.name, task: nil)] } ?? [])
+      + ancestors.map { ScopeCrumb(id: $0.id, title: $0.title, task: $0) }
+  }
+
+  /// Goes to a crumb: a task opens as the board or outline it heads; the list
+  /// goes back to its root.
+  func openCrumb(_ crumb: ScopeCrumb) {
+    if let task = crumb.task {
+      enterTask(task)
+    } else {
+      while scopeTask != nil { leaveTaskScope() }
+    }
   }
 
   func tasks(in column: WorkspaceKanbanColumn) -> [WorkspaceTask] {
@@ -475,4 +494,12 @@ extension WorkspaceViewModel {
       reloadBoard()
     }
   }
+}
+
+/// One step of the header's breadcrumb.
+struct ScopeCrumb: Identifiable, Equatable {
+  let id: String
+  let title: String
+  /// Nil for the list at the root of the trail.
+  let task: WorkspaceTask?
 }
