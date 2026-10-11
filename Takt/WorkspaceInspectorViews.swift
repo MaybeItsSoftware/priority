@@ -8,10 +8,18 @@ struct LocalTaskInspector: View {
   let task: WorkspaceTask
   let focusRequest: Int
   let requestedFocusArea: WorkspaceFocusArea
-  @FocusState private var titleIsFocused: Bool
+  /// The dock's scroll view, so a stop below the fold comes into view as the
+  /// keyboard reaches it.
+  var scroll: ScrollViewProxy?
+  /// Which stop has the keyboard — see `inspectorStop`.
+  @FocusState private var focus: String?
+  /// Every stop on screen, top to bottom.
+  @State private var stops: [String] = []
 
   var body: some View {
-    Group {
+    // A stack, not a Group: a Group hands its modifiers to each child, and
+    // the stops have to be gathered once, over all of them.
+    VStack(alignment: .leading, spacing: theme.space.md) {
       if let draft = model.taskEditor.draft(for: task.id) {
         editor(draft)
       } else if let error = model.taskEditor.errors[task.id] {
@@ -20,15 +28,32 @@ struct LocalTaskInspector: View {
         ProgressView()
       }
     }
+    .environment(\.inspectorFocus, $focus)
+    .onPreferenceChange(InspectorStopsKey.self) { stops = $0 }
     .onAppear {
       model.openTaskEditor(task)
-      if requestedFocusArea == .inspector && model.inspectorFocusesTitle { titleIsFocused = true }
+      if requestedFocusArea == .inspector && model.inspectorFocusesTitle { focus = Self.titleStop }
     }
     .onChange(of: task.id) { _, _ in model.openTaskEditor(task) }
     .onChange(of: focusRequest) { _, _ in
-      if requestedFocusArea == .inspector && model.inspectorFocusesTitle { titleIsFocused = true }
+      if requestedFocusArea == .inspector && model.inspectorFocusesTitle { focus = Self.titleStop }
     }
+    .onChange(of: model.inspectorStepRequest) { _, _ in step(by: model.inspectorStepOffset) }
     .onDisappear { model.taskEditor.flush() }
+  }
+
+  static let titleStop = "title"
+
+  /// One stop on, or back, from wherever the keyboard is; from the pane
+  /// itself, the first or last. The ends stop rather than wrap: falling off
+  /// the bottom of a form onto its title is not a thing anyone means.
+  private func step(by offset: Int) {
+    guard !stops.isEmpty else { return }
+    let current = focus.flatMap { stops.firstIndex(of: $0) }
+    let next = current.map { $0 + offset } ?? (offset > 0 ? 0 : stops.count - 1)
+    guard stops.indices.contains(next) else { return }
+    focus = stops[next]
+    withAnimation(.easeOut(duration: 0.12)) { scroll?.scrollTo(stops[next]) }
   }
 
   /// The editor, in the order you actually work through a task.
@@ -60,7 +85,7 @@ struct LocalTaskInspector: View {
       .font(theme.titleFont)
       .foregroundStyle(theme.ink)
       .textFieldStyle(.plain)
-      .focused($titleIsFocused)
+      .inspectorField(Self.titleStop)
       .onSubmit { model.saveTaskEditor(task) }
       .help("Task title · ↩ or ⌘S saves")
     if draft.isDirty {
@@ -85,9 +110,9 @@ struct LocalTaskInspector: View {
         .foregroundStyle(theme.muted)
         HStack(spacing: theme.space.xs) {
           Button("Use saved") { model.taskEditor.resolve(task.id, field: field, useSaved: true) }
-            .keyboardFocusable()
+            .inspectorStop("conflict.\(field).saved")
           Button("Keep my edit") { model.taskEditor.resolve(task.id, field: field, useSaved: false) }
-            .keyboardFocusable()
+            .inspectorStop("conflict.\(field).mine")
         }
         .buttonStyle(FocusActionButtonStyle())
       }
@@ -113,13 +138,13 @@ struct LocalTaskInspector: View {
             Label("Add to queue", systemImage: "plus.circle")
           }
           .buttonStyle(FocusActionButtonStyle(prominent: true))
-          .keyboardFocusable()
+          .inspectorStop("focus.queue")
           .commandHelp(.taskStartFocus, note: "Add this task to the focus queue")
           Button("Open focus") { model.run(.goFocus) }
             .buttonStyle(.plain)
             .font(theme.captionFont)
             .foregroundStyle(theme.primary)
-            .keyboardFocusable()
+            .inspectorStop("focus.open")
             .commandHelp(.goFocus)
         }
       } else {
@@ -128,7 +153,7 @@ struct LocalTaskInspector: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(FocusActionButtonStyle(prominent: true))
-        .keyboardFocusable()
+        .inspectorStop("focus.start")
         .commandHelp(.taskStartFocus, note: "Start a block on this task")
       }
     }
@@ -146,6 +171,7 @@ struct LocalTaskInspector: View {
         .overlay(
           RoundedRectangle(cornerRadius: theme.controlRadius)
             .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
+        .inspectorField("notes")
         .commandHelp(.taskEditNotes)
     }
   }
@@ -154,11 +180,10 @@ struct LocalTaskInspector: View {
   private func planning(_ draft: TaskEditorDraft) -> some View {
     InspectorSection("Plan") {
       WorkspaceTaskPlanningEditor(task: task, values: draft.values)
-      ThemedPicker(
-        "Priority", selection: binding(\.priority, fallback: draft.values.priority),
-        options: Self.priorityNames.enumerated().map { ThemedPickerOption($0.element, value: $0.offset) }
-      )
-      .keyboardFocusable()
+      let priority = binding(\.priority, fallback: draft.values.priority)
+      let priorities = Self.priorityNames.enumerated().map { ThemedPickerOption($0.element, value: $0.offset) }
+      ThemedPicker("Priority", selection: priority, options: priorities)
+        .inspectorStop("priority") { priority.step(by: $0, through: priorities) }
       .commandHelp(.motionSetPriority)
       ThemedControlRow("Estimate") {
         TextField(
@@ -166,6 +191,7 @@ struct LocalTaskInspector: View {
           prompt: Text("Minutes")
         )
         .themedTextField()
+        .inspectorField("estimate")
         .commandHelp(.taskEditEstimate)
       }
       if let seconds = model.taskLoggedSeconds[task.id], seconds > 0 {
@@ -189,7 +215,7 @@ struct LocalTaskInspector: View {
     InspectorSection("When") {
       let hasDue = draft.values.dueAt != nil || draft.values.dueDate != nil
       ThemedOptionalRow(
-        "Due", isSet: hasDue,
+        "Due", isSet: hasDue, stop: "due",
         add: {
           model.taskEditor.edit(task.id) {
             $0.dueDate = $0.dueDate ?? TaskCalendarDate.string(.now)
@@ -208,7 +234,7 @@ struct LocalTaskInspector: View {
               selection: Binding(
                 get: { model.taskEditor.draft(for: task.id)?.values.dueAt ?? dueAt },
                 set: { date in model.taskEditor.edit(task.id) { $0.dueAt = date } }),
-              includesTime: true)
+              includesTime: true, stop: "due.date")
             .commandHelp(.taskEditDue)
           } else if let day = draft.values.dueDate {
             ThemedDateField(
@@ -222,7 +248,7 @@ struct LocalTaskInspector: View {
                     $0.dueDate = TaskCalendarDate.string(date)
                     $0.dueAt = nil
                   }
-                }))
+                }), stop: "due.date")
             .commandHelp(.taskEditDue)
           }
       })
@@ -245,18 +271,19 @@ struct LocalTaskInspector: View {
             })
         )
         .toggleStyle(.themedSwitch)
-        .keyboardFocusable()
+        .inspectorStop("due.exact")
       }
       ThemedControlRow("Repeat") {
         TextField(
           "Repeat", text: binding(\.recurrenceRule, fallback: draft.values.recurrenceRule),
           prompt: Text("Every Monday"))
         .themedTextField()
+        .inspectorField("repeat")
         .commandHelp(.taskEditRecurrence)
       }
       Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
         .toggleStyle(.themedSwitch)
-        .keyboardFocusable()
+        .inspectorStop("daily")
         .commandHelp(.taskToggleDaily, note: "Show this ongoing task in Dailies without completing the task itself")
     }
   }
@@ -267,6 +294,7 @@ struct LocalTaskInspector: View {
       ThemedControlRow("Tags") {
         TextField("Tags", text: binding(\.tags, fallback: draft.values.tags), prompt: Text("Work, launch"))
           .themedTextField()
+          .inspectorField("tags")
           .commandHelp(.taskEditTags)
       }
       ThemedMenu("Move to list", systemImage: "arrow.right", expands: true) {
@@ -274,14 +302,14 @@ struct LocalTaskInspector: View {
           Button(list.name) { model.moveTask(task, toListId: list.id) }
         }
       }
-      .keyboardFocusable()
+      .inspectorStop("move")
       .commandHelp(.taskMove)
       if !task.isList {
         Button { model.addTaskToGoogleCalendar(task) } label: {
           Label("Add to Google Calendar", systemImage: "calendar.badge.plus")
         }
         .buttonStyle(FocusActionButtonStyle())
-        .keyboardFocusable()
+        .inspectorStop("calendar")
         .help("Create a linked event using the task's due date or start time")
       }
     }
@@ -295,6 +323,7 @@ struct LocalTaskInspector: View {
         .overlay(
           RoundedRectangle(cornerRadius: theme.controlRadius)
             .strokeBorder(theme.inputBorder, lineWidth: theme.hairline))
+        .inspectorField("links")
         .commandHelp(.taskOpenLink, note: "One link per line; the first opens")
     }
   }
@@ -306,7 +335,7 @@ struct LocalTaskInspector: View {
     InspectorSection("Structure") {
       Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
         .buttonStyle(FocusActionButtonStyle())
-        .keyboardFocusable()
+        .inspectorStop("convert")
         .commandHelp(task.isList ? .taskPromoteList : .taskConvertToList)
       if task.isList {
         ThemedPicker(
@@ -317,17 +346,20 @@ struct LocalTaskInspector: View {
           ),
           options: Self.iconOptions
         )
-        .keyboardFocusable()
+        .inspectorStop("icon") { offset in
+          let icon = Binding(get: { model.itemSymbol(for: task) }, set: { model.setNestedListIcon($0, for: task) })
+          icon.step(by: offset, through: Self.iconOptions)
+        }
         HStack(spacing: theme.space.xs) {
           Button(task.isPromoted == true ? "Unpin from sidebar" : "Pin to sidebar") {
             model.toggleListPromotion(task)
           }
-          .keyboardFocusable()
+          .inspectorStop("pin")
           .commandHelp(.taskPromoteList)
           Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
-            .keyboardFocusable()
+            .inspectorStop("complete")
             .commandHelp(.taskComplete, note: task.status == .open ? "Complete the list" : "Reopen the list")
-          Button("Archive list") { model.archiveNestedList(task) }.keyboardFocusable()
+          Button("Archive list") { model.archiveNestedList(task) }.inspectorStop("archive")
         }
         .buttonStyle(FocusActionButtonStyle())
       }
@@ -341,14 +373,14 @@ struct LocalTaskInspector: View {
       Button("Save") { model.saveTaskEditor(task) }
         .buttonStyle(FocusActionButtonStyle(prominent: draft.isDirty))
         .keyboardShortcut("s", modifiers: .command)
-        .keyboardFocusable()
+        .inspectorStop("save")
         .help("Save · ⌘S")
         .disabled(
           !draft.isDirty || draft.isUnavailable || !draft.conflicts.isEmpty
             || draft.values.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
       Button("Revert") { model.revertTaskEditor(task) }
         .buttonStyle(FocusActionButtonStyle())
-        .keyboardFocusable()
+        .inspectorStop("revert")
         .disabled(!draft.isDirty)
       Spacer(minLength: 0)
     }

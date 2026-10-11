@@ -349,6 +349,8 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       // In the right dock ⌘{ ⌘} and [ ] change the dock's tab, Zed's previous
       // and next tab; on a task pane they change list and leave or open a task.
       "inspector:cmd+shift+{", "inspector:cmd+shift+}", "inspector:[", "inspector:]",
+      // The inspector's task keys step through its fields, not the tasks.
+      "inspector:down", "inspector:up", "inspector:j", "inspector:k",
       "done:cmd+shift+{", "done:cmd+shift+}", "done:[", "done:]",
       "timeline:cmd+shift+{", "timeline:cmd+shift+}", "timeline:[", "timeline:]",
       // Today is walked with the ordinary keys, but f queues behind a running

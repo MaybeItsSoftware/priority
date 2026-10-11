@@ -43,6 +43,92 @@ extension View {
   }
 }
 
+// MARK: - Inspector stops
+
+/// Where the inspector's keyboard is, by stop name, for the controls inside it.
+///
+/// The inspector moves its own keyboard rather than leaving it to Tab,
+/// because Tab only visits text fields unless Keyboard navigation is switched
+/// on in System Settings — so on most Macs ↓ from the title went straight to
+/// the notes, past every button, switch and picker between them, and stopped
+/// there for good. Every control names itself instead, and the names arrive
+/// in the order they are drawn (`InspectorStopsKey`), which is the order ↑
+/// and ↓ walk.
+extension EnvironmentValues {
+  @Entry var inspectorFocus: FocusState<String?>.Binding?
+}
+
+/// The inspector's stops, top to bottom. A preference collects them in the
+/// order the views are laid out, so the walk follows the layout with no
+/// second list to keep in step with it.
+struct InspectorStopsKey: PreferenceKey {
+  static let defaultValue: [String] = []
+  static func reduce(value: inout [String], nextValue: () -> [String]) { value += nextValue() }
+}
+
+private struct InspectorStop: ViewModifier {
+  @Environment(\.theme) private var theme
+  @Environment(\.inspectorFocus) private var focus
+  let id: String
+  let radius: CGFloat?
+  let isTextField: Bool
+  let adjust: ((Int) -> Void)?
+
+  func body(content: Content) -> some View {
+    if let focus {
+      Group {
+        // A text field takes the keyboard of its own accord; anything else
+        // has to be told it may.
+        if isTextField { content } else { content.focusable() }
+      }
+      .focused(focus, equals: id)
+      .focusEffectDisabled()
+      .overlay {
+        // A field's own frame says it has the caret; a control gets the ring.
+        if !isTextField {
+          RoundedRectangle(cornerRadius: radius ?? theme.controlRadius, style: .continuous)
+            .strokeBorder(focus.wrappedValue == id ? theme.focusRing : .clear, lineWidth: theme.focusRingWidth)
+            .allowsHitTesting(false)
+        }
+      }
+      .onKeyPress(keys: [.leftArrow, .rightArrow], phases: .down) { press in
+        guard let adjust, press.modifiers.isEmpty else { return .ignored }
+        adjust(press.key == .leftArrow ? -1 : 1)
+        return .handled
+      }
+      .id(id)
+      .preference(key: InspectorStopsKey.self, value: [id])
+    } else if isTextField {
+      content
+    } else {
+      content.keyboardFocusable(radius: radius)
+    }
+  }
+}
+
+extension View {
+  /// A control the inspector's ↑ and ↓ stop on, ringed while it has the
+  /// keyboard. `adjust`, for a picker, is what ← and → do to its value.
+  /// Outside the inspector it is `keyboardFocusable`.
+  func inspectorStop(_ id: String, radius: CGFloat? = nil, adjust: ((Int) -> Void)? = nil) -> some View {
+    modifier(InspectorStop(id: id, radius: radius, isTextField: false, adjust: adjust))
+  }
+
+  /// A text field or editor the inspector's ↑ and ↓ stop on.
+  func inspectorField(_ id: String) -> some View {
+    modifier(InspectorStop(id: id, radius: nil, isTextField: true, adjust: nil))
+  }
+}
+
+extension Binding where Value: Hashable {
+  /// Steps a picker's value through its options, stopping at the ends.
+  func step<Option>(by offset: Int, through options: [ThemedPickerOption<Option>]) where Option == Value {
+    guard let index = options.firstIndex(where: { $0.value == wrappedValue }) else { return }
+    let next = Swift.min(Swift.max(index + offset, 0), options.count - 1)
+    wrappedValue = options[next].value
+  }
+}
+
 /// A label on the left and its control on the right, one line high. Dense
 /// on purpose: the inspector is a panel you scan, not a form you fill in.
 struct ThemedControlRow<Control: View>: View {
@@ -303,6 +389,8 @@ struct ThemedDateField: View {
   @Environment(\.theme) private var theme
   @Binding var selection: Date
   var includesTime = false
+  /// Its name among the inspector's stops, when it is in the inspector.
+  var stop: String?
   @State private var isPicking = false
 
   private var title: String {
@@ -324,7 +412,7 @@ struct ThemedDateField: View {
     .buttonStyle(.plain)
     .fixedSize()
     .themedControlFrame()
-    .keyboardFocusable()
+    .inspectorStop(stop ?? "date")
     .popover(isPresented: $isPicking, arrowEdge: .bottom) {
       VStack(alignment: .leading, spacing: theme.space.sm) {
         DatePicker("", selection: $selection, displayedComponents: [.date])
@@ -378,13 +466,17 @@ struct ThemedOptionalRow<Value: View>: View {
   let isSet: Bool
   let add: () -> Void
   let clear: () -> Void
+  /// Its stops' names in the inspector: `stop` for Add, `stop.clear` for the
+  /// clear button. The value names its own.
+  var stop: String
   @ViewBuilder var value: Value
 
   init(
-    _ title: String, isSet: Bool, add: @escaping () -> Void, clear: @escaping () -> Void,
+    _ title: String, isSet: Bool, stop: String? = nil, add: @escaping () -> Void, clear: @escaping () -> Void,
     @ViewBuilder value: () -> Value
   ) {
     self.title = title
+    self.stop = stop ?? title.lowercased()
     self.isSet = isSet
     self.add = add
     self.clear = clear
@@ -404,7 +496,7 @@ struct ThemedOptionalRow<Value: View>: View {
               .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
-          .keyboardFocusable()
+          .inspectorStop("\(stop).clear")
           .help("Clear \(title.lowercased())")
           .accessibilityLabel("Clear \(title.lowercased())")
         }
@@ -414,7 +506,7 @@ struct ThemedOptionalRow<Value: View>: View {
             .labelStyle(.titleAndIcon)
         }
         .buttonStyle(FocusChipButtonStyle(isOn: false))
-        .keyboardFocusable()
+        .inspectorStop(stop)
         .accessibilityLabel("Add \(title.lowercased())")
       }
     }

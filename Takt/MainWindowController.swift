@@ -186,8 +186,11 @@ final class MainWindowController: NSObject, NSWindowDelegate {
       if self.workspace.activeOverlay != nil {
         self.workspace.desktopShortcutSequence.reset()
         // Nothing an overlay leaves unconsumed reaches the workspace behind
-        // it: it goes to the overlay's own field, or nowhere.
-        return self.workspace.handleOverlayKey(event) ? nil : event
+        // it: it goes to the overlay's own field, or nowhere. That includes
+        // the menu bar — ⌘⌫ in the waiting form's field is the field's
+        // delete-to-start-of-line, not the Task menu's Delete.
+        if self.workspace.handleOverlayKey(event) { return nil }
+        return self.keepInField(event, in: window) ? nil : event
       }
       // The agent panel is treated as a field as a whole, not only its text
       // view: an approval card holding the keyboard answers Return itself,
@@ -203,6 +206,14 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         } else {
           self.workspace.indentTaskDraft()
         }
+        return nil
+      }
+      // In the inspector a field is one stop in a column of them: ↑ and ↓
+      // leave a one-line field for the control above or below, and Tab
+      // leaves the notes rather than typing a tab into them (⌥Tab still
+      // does).
+      if self.workspace.commandSurface == .inspector, let forward = Self.inspectorFieldStep(event, in: window) {
+        self.workspace.stepInspectorField(forward: forward)
         return nil
       }
       if self.isEditingText(in: window) || self.workspace.agentHoldsKeyboard {
@@ -277,6 +288,24 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     else { return false }
     editor.keyDown(with: event)
     return true
+  }
+
+  /// Which way a key in an inspector text field leaves it, or `nil` when the
+  /// field keeps the key.
+  private static func inspectorFieldStep(_ event: NSEvent, in window: NSWindow) -> Bool? {
+    guard event.modifierFlags.isDisjoint(with: [.command, .option, .control]),
+      let editor = window.firstResponder as? NSTextView
+    else { return nil }
+    let shift = event.modifierFlags.contains(.shift)
+    if editor.isFieldEditor {
+      guard !shift else { return nil }
+      switch event.keyCode {
+      case 125: return true
+      case 126: return false
+      default: return nil
+      }
+    }
+    return event.keyCode == 48 ? !shift : nil
   }
 
   private func isEditingText(in window: NSWindow) -> Bool {

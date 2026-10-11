@@ -204,4 +204,12 @@ extension WorkspaceViewModel {
     taskInsertionAbove = false
     taskInsertionIsChild = true
   }
+
+  /// Moves the keyboard one stop down or up the inspector, from whatever
+  /// has it now: a control, a field, or the notes, where Tab would only type
+  /// a tab. The inspector walks its own stops (`inspectorStop`).
+  func stepInspectorField(forward: Bool) {
+    inspectorStepOffset = forward ? 1 : -1
+    inspectorStepRequest += 1
+  }
 }

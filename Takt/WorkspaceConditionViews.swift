@@ -166,14 +166,14 @@ struct WorkspaceTaskPlanningEditor: View {
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.sm) {
       ThemedOptionalRow(
-        "Start", isSet: values.startAt != nil,
+        "Start", isSet: values.startAt != nil, stop: "start",
         add: { edit { $0.startAt = $0.startAt ?? .now } },
         clear: { edit { $0.startAt = nil } },
         value: {
           if let start = values.startAt {
             ThemedDateField(
               selection: Binding(get: { current.startAt ?? start }, set: { date in edit { $0.startAt = date } }),
-              includesTime: true)
+              includesTime: true, stop: "start.date")
             .commandHelp(.taskEditStart)
           }
       })
@@ -192,7 +192,8 @@ struct WorkspaceTaskPlanningEditor: View {
               if group.count > 1 { Text("(either)").foregroundStyle(theme.muted) }
               Spacer()
               Button { remove(id, from: index) } label: { Image(systemName: "minus.circle") }
-                .buttonStyle(.plain).foregroundStyle(theme.muted).keyboardFocusable().help("Remove requirement")
+                .buttonStyle(.plain).foregroundStyle(theme.muted).inspectorStop("condition.\(index).\(id)")
+                .help("Remove requirement")
                 .accessibilityLabel("Remove requirement")
             }.font(theme.captionFont)
           }
@@ -200,7 +201,7 @@ struct WorkspaceTaskPlanningEditor: View {
             ForEach(model.focusConditions.filter { !$0.isArchived && !group.contains($0.id) }) { condition in
               Button(condition.name) { edit { $0.requirementGroups?[index].append(condition.id) } }
             }
-          }.font(theme.captionFont).keyboardFocusable()
+          }.font(theme.captionFont).inspectorStop("condition.\(index).or")
         }
       }
       ThemedMenu("Add required condition", systemImage: "plus", expands: true) {
@@ -210,17 +211,18 @@ struct WorkspaceTaskPlanningEditor: View {
           Button(condition.name) { edit { $0.requirementGroups = ($0.requirementGroups ?? []) + [[condition.id]] } }
         }
       }
-      .keyboardFocusable()
+      .inspectorStop("condition.add")
       Toggle("Must finish in one sitting", isOn: Binding(get: { current.requiresSingleSitting == true }, set: { enabled in
         edit { $0.requiresSingleSitting = enabled ? true : nil }
       }))
         .toggleStyle(.themedSwitch)
-        .keyboardFocusable()
+        .inspectorStop("single-sitting")
       ThemedControlRow("Minimum block") {
         TextField("Minimum useful block (minutes)", text: Binding(get: { current.minimumBlockMinutes ?? "" }, set: { raw in
           edit { $0.minimumBlockMinutes = raw.isEmpty ? nil : raw }
         }), prompt: Text("Minutes"))
         .themedTextField()
+        .inspectorField("minimum-block")
       }
       if let unavailable = model.blockedFocusTasks.first(where: { $0.id == task.id }) {
         Text(unavailable.reasons.map { model.unavailableDescription($0) }.joined(separator: " · "))
@@ -228,7 +230,7 @@ struct WorkspaceTaskPlanningEditor: View {
       }
       Button("Apply saved requirements and start to subtasks") { model.applyPlanningToDescendants(of: task) }
         .buttonStyle(FocusActionButtonStyle())
-        .keyboardFocusable()
+        .inspectorStop("apply-planning")
         .font(theme.captionFont).help("Copies saved conditions, start and block rules; keeps each subtask's own estimate and deadline")
     }
   }

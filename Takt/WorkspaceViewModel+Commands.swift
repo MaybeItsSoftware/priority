@@ -241,6 +241,8 @@ extension WorkspaceViewModel {
     case .motionSidebarExpand:
       if let key { activateSidebarCursor(expandOnly: key == "right" || key == "l", enters: key == "enter") }
     case .motionSidebarCollapse: if key != nil { collapseSidebarCursor() }
+    case .motionInspectorNext: if key != nil { stepInspectorField(forward: true) }
+    case .motionInspectorPrevious: if key != nil { stepInspectorField(forward: false) }
     case .motionBoardColumn: if let key { focusAdjacentBoardColumn(by: key == "right" ? 1 : -1) }
     case .motionOutlineUnfold: if key != nil { unfoldOrDescendSelection() }
     case .motionOutlineFold: if key != nil { foldOrAscendSelection() }

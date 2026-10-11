@@ -450,6 +450,18 @@ public enum WorkspaceCommandCatalog {
       id: .motionSidebarCollapse, title: "Collapse the folder, or go up a level",
       group: "Moving around", keys: ["left", "h", "-"], surface: .sidebar, kind: .motion,
       note: "Nothing to leave on Focus or the timeline, so it stays put. - is Zed's select parent"),
+    // The inspector is a column of controls, and Tab was the only way down
+    // it — which a notes field took for itself, so the keyboard got as far
+    // as the notes and no further. The task keys move through it instead,
+    // as they move through every other column of rows.
+    .init(
+      id: .motionInspectorNext, title: "Go to the next field", group: "Moving around",
+      keys: ["down", "j"], surface: .inspector, kind: .motion,
+      note: "In a one-line field ↓ moves on too; in the notes, Tab does"),
+    .init(
+      id: .motionInspectorPrevious, title: "Go to the previous field", group: "Moving around",
+      keys: ["up", "k"], surface: .inspector, kind: .motion,
+      note: "In a one-line field ↑ moves back too; in the notes, ⇧Tab does"),
     .init(
       id: .motionBoardColumn, title: "Focus the next or previous column",
       group: "Moving around", keys: ["left", "right"], surface: .board, kind: .motion),

@@ -114,17 +114,20 @@ struct WorkspaceInspectorPane: View {
         //
         // The editor is about twenty-five controls tall; on anything short of
         // a full-height window the last of them would be off the bottom.
-        ScrollView {
-          VStack(alignment: .leading, spacing: theme.space.md) {
-            LocalTaskInspector(
-              task: task,
-              focusRequest: model.focusRequest,
-              requestedFocusArea: model.requestedFocusArea)
-              .environment(model)
+        ScrollViewReader { proxy in
+          ScrollView {
+            VStack(alignment: .leading, spacing: theme.space.md) {
+              LocalTaskInspector(
+                task: task,
+                focusRequest: model.focusRequest,
+                requestedFocusArea: model.requestedFocusArea,
+                scroll: proxy)
+                .environment(model)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .focusSurfaceGutter()
+            .padding(.vertical, theme.space.md)
           }
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .focusSurfaceGutter()
-          .padding(.vertical, theme.space.md)
         }
       } else {
         // Said rather than vanished. The pane going away when nothing was

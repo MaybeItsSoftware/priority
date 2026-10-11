@@ -136,7 +136,7 @@ struct WorkspaceWaitingOverlay: View {
     var date: Date?
     if !followUpIsEmpty {
       guard let parsed = parsedFollowUp else {
-        error = "Write the follow-up as tomorrow 9am, @fri, 3d or 2026-10-08 14:00."
+        error = "Write the follow-up as tmrw 9am, fri afternoon, in 2h, next week or 2026-10-08 14:00."
         field = .followUp
         return
       }
@@ -187,8 +187,11 @@ struct WorkspaceWaitingInspectorSection: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
   let task: WorkspaceTask
+  @Environment(\.inspectorFocus) private var inspectorFocus
   @State private var tag = ""
-  @FocusState private var tagFocused: Bool
+
+  private static let tagStop = "waiting.tag"
+  private var tagFocused: Bool { inspectorFocus?.wrappedValue == Self.tagStop }
 
   private var details: TaskWaitingDetails? { model.waitingDetails[task.id] }
 
@@ -203,19 +206,20 @@ struct WorkspaceWaitingInspectorSection: View {
         ThemedControlRow("Who or what") {
           TextField("Waiting on", text: $tag, prompt: Text("Sam, Legal, invoice"))
             .themedTextField()
-            .focused($tagFocused)
+            .inspectorField(Self.tagStop)
             .onSubmit { saveTag() }
             .help("↩ saves")
             .onChange(of: tagFocused) { _, focused in if !focused { saveTag() } }
         }
         ThemedOptionalRow(
-          "Follow up", isSet: details?.followUpAt != nil,
+          "Follow up", isSet: details?.followUpAt != nil, stop: "waiting.follow-up",
           add: { save(followUpAt: Self.defaultFollowUp()) },
           clear: { save(followUpAt: nil) },
           value: {
             if let at = details?.followUpAt {
               ThemedDateField(
-                selection: Binding(get: { at }, set: { save(followUpAt: $0) }), includesTime: true)
+                selection: Binding(get: { at }, set: { save(followUpAt: $0) }), includesTime: true,
+                stop: "waiting.follow-up.date")
             }
           })
         .commandHelp(.taskWaiting, note: "Edit who and when to follow up in the Waiting on form")
@@ -224,7 +228,7 @@ struct WorkspaceWaitingInspectorSection: View {
           Label("Waiting on…", systemImage: "hourglass")
         }
         .buttonStyle(FocusActionButtonStyle())
-        .keyboardFocusable()
+        .inspectorStop("waiting.start")
         .commandHelp(.taskWaiting, note: "Move it to Waiting on, with who and when to follow up")
       }
       if let sourceId = details?.followUpOfTaskId, let source = model.task(withID: sourceId) {
@@ -235,7 +239,7 @@ struct WorkspaceWaitingInspectorSection: View {
         .buttonStyle(.plain)
         .font(theme.captionFont)
         .foregroundStyle(theme.muted)
-        .keyboardFocusable()
+        .inspectorStop("waiting.source")
       }
     }
     .onAppear { tag = details?.waitingOn ?? "" }
