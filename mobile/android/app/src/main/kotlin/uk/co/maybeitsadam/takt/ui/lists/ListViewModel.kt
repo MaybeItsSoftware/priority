@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,17 +14,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.app.AppContainer
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
 import uk.co.maybeitsadam.takt.app.FoldStore
+import uk.co.maybeitsadam.takt.core.BoardColumnsRead
 import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.core.TaskMatrixPosition
 import uk.co.maybeitsadam.takt.core.TaskStatus
@@ -107,16 +108,23 @@ class ListViewModel(
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), OutlineShape.Empty)
 
-    private val boards: Flow<Map<String, List<WorkspaceKanbanColumn>>> = container.withSession { session ->
-        flow {
-            // Seeds the defaults for a scope without a layout, as the Mac does, without an undo step.
-            runCatching { session.repository.kanbanBoardConfigurations(currentKey = boardKey) }
-            emitAll(session.repository.observeKanbanBoards())
-        }
+    /**
+     * Each snapshot with the core's read of its board, taken after it, so a
+     * card's rule-column placement never lags the card. A layout edit, which
+     * the snapshot does not watch, reads the board again too.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val boardInputs: Flow<Pair<ScopeSnapshot, BoardColumnsRead>> = container.withSession { session ->
+        combine(snapshot.filterNotNull(), session.repository.observeKanbanBoards()) { s, _ -> s }
+            .mapLatest { s ->
+                val read = runCatching { session.repository.boardColumns(boardKey, s.data.lists.map { it.id }) }
+                    .getOrElse { BoardColumnsRead.builtin(boardKey) }
+                s to read
+            }
     }
 
-    val board: StateFlow<BoardShape> = combine(snapshot.filterNotNull(), boards, folded, hideCompleted) { s, b, f, h ->
-        BoardShaping.shape(s.data, isEverything, b, f, h, ZoneId.systemDefault(), LocalDate.now())
+    val board: StateFlow<BoardShape> = combine(boardInputs, folded, hideCompleted) { (s, read), f, h ->
+        BoardShaping.shape(s.data, isEverything, read, f, h, ZoneId.systemDefault(), LocalDate.now())
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BoardShape.Empty)
 
@@ -249,9 +257,10 @@ class ListViewModel(
 
     // region Board and matrix
 
+    /** Through the core, which edits a card dropped into a rule column to match, or refuses with its reason. */
     fun moveCard(cardId: String, columnId: String) {
         if (board.value.columnOf(cardId)?.id == columnId) return
-        undo.perform { it.setKanbanColumn(columnId, cardId) }
+        undo.perform { it.moveToBoardColumn(boardKey, listOf(cardId), columnId) }
     }
 
     fun moveCardBy(cardId: String, offset: Int) {
@@ -264,21 +273,31 @@ class ListViewModel(
 
     fun addColumn(title: String) {
         val name = title.trim()
-        if (name.isEmpty()) return
-        val columns = board.value.columnDefinitions
-        val updated = columns + WorkspaceKanbanColumn(BoardShaping.uniqueColumnId(name, columns), name)
+        // The layout the core read, so its rule columns are saved back with their rules.
+        val shape = board.value
+        if (name.isEmpty() || !shape.isLoaded) return
+        val layout = shape.layout
+        val taken = layout + shape.columns.map { WorkspaceKanbanColumn(it.id, it.title) }
+        val updated = layout + WorkspaceKanbanColumn(BoardShaping.uniqueColumnId(name, taken), name)
         undo.perform { it.setKanbanBoardColumns(updated, boardKey, label = "Add Board Column") }
     }
 
-    /** Removes a column, moving its cards into the first remaining column in the same undo step. */
+    /**
+     * Removes a column, moving the cards filed in it into the first remaining
+     * column that is filed into, in the same undo step. A column drawn only
+     * because cards are filed in it is not in the layout: its cards move.
+     */
     fun removeColumn(columnId: String) {
         val shape = board.value
         if (shape.columns.size <= 1) return
-        val remaining = shape.columnDefinitions.filter { it.id != columnId }
-        val fallback = remaining.first()
-        val moving = shape.columns.firstOrNull { it.id == columnId }?.cards?.map { it.id }.orEmpty()
-        undo.perform {
-            it.setKanbanBoardColumns(remaining, boardKey, movingTaskIds = moving, toColumn = fallback.id, label = "Remove Board Column")
+        val fallback = shape.layout.firstOrNull { it.id != columnId && !it.isRuleColumn }?.id
+            ?: shape.columns.firstOrNull { it.id != columnId && !it.isRuleColumn }?.id
+        val listIds = snapshot.value?.data?.lists?.map { it.id } ?: listOfNotNull(listId)
+        if (shape.layout.any { it.id == columnId }) {
+            undo.perform { it.deleteBoardColumn(boardKey, listIds, columnId, fallback) }
+        } else {
+            val moving = shape.columns.firstOrNull { it.id == columnId }?.cards?.map { it.id }.orEmpty()
+            if (fallback != null && moving.isNotEmpty()) undo.perform { it.setKanbanColumn(fallback, moving) }
         }
     }
 

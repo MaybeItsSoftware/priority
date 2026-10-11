@@ -3,10 +3,7 @@ package uk.co.maybeitsadam.takt.data.workspace
 import java.text.Normalizer
 import java.time.Instant
 import java.util.Locale
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import uk.co.maybeitsadam.takt.core.BoardColumnsRead
 import uk.co.maybeitsadam.takt.core.ListFolder
 import uk.co.maybeitsadam.takt.core.TaskCondition
 import uk.co.maybeitsadam.takt.core.TaskList
@@ -95,16 +92,32 @@ internal fun normalizedVisibleRootName(name: String): String {
     return folded.trimmedWhitespace().replace(Regex("[^\\p{L}\\p{N}]+"), "")
 }
 
-/** `[WorkspaceKanbanColumn]` as Foundation's JSONEncoder writes it. */
+/** `[WorkspaceKanbanColumn]` as Foundation's JSONEncoder writes it, for seeding a legacy layout. */
 internal object KanbanColumnsCodec {
     fun encode(columns: List<WorkspaceKanbanColumn>): String = columns.joinToString(",", "[", "]") {
         "{\"id\":${jsonString(it.id)},\"title\":${jsonString(it.title)}}"
     }
-
-    fun decode(json: String): List<WorkspaceKanbanColumn>? = runCatching {
-        (Json.parseToJsonElement(json) as JsonArray).map { element ->
-            val obj = element as JsonObject
-            WorkspaceKanbanColumn(obj["id"]!!.jsonPrimitive.content, obj["title"]!!.jsonPrimitive.content)
-        }
-    }.getOrNull()
 }
+
+/** A stored layout, rules included, read by the Rust core (`parse_board_columns`); empty if it is not one. */
+internal fun decodeBoardColumns(json: String): List<WorkspaceKanbanColumn> =
+    uniffi.takt_core.parseBoardColumns(json).map { it.toModel() }
+
+/** The tables a board's columns and its rule columns' placements are read from. */
+internal val BOARD_TABLES: Set<String> =
+    setOf("tasks", "task_dependencies", "task_metadata", "dailies", "task_lists", "kanban_boards")
+
+internal fun uniffi.takt_core.BoardColumn.toModel() = WorkspaceKanbanColumn(id, title, rules)
+
+internal fun WorkspaceKanbanColumn.toCore() = uniffi.takt_core.BoardColumn(id, title, rules)
+
+internal fun uniffi.takt_core.BoardColumns.toRead() = BoardColumnsRead(
+    key = key,
+    layout = layout.map { it.toModel() },
+    source = source,
+    columns = columns.map { it.toModel() },
+    hiddenColumnIds = hiddenColumnIds.toSet(),
+    floorColumnId = floorColumnId,
+    // The first placement wins, as on the Mac.
+    placements = placements.reversed().associate { it.taskId to it.columnId },
+)

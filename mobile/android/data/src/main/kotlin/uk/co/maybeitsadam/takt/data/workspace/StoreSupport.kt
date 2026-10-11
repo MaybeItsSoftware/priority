@@ -11,8 +11,14 @@ import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
 import uk.co.maybeitsadam.takt.data.db.Db
 
-/** `WorkspaceStoreError`, as an exception the UI can switch on by [error]. */
-class WorkspaceStoreException(val error: WorkspaceStoreError) : Exception(error.message)
+/**
+ * `WorkspaceStoreError`, as an exception the UI can switch on by [error].
+ * [detail] is the core's own sentence, where it gives one (a refused column).
+ */
+class WorkspaceStoreException(val error: WorkspaceStoreError, val detail: String? = null) : Exception(detail ?: error.message) {
+    /** What to show: the core's sentence, else the case's. */
+    val text: String get() = detail ?: error.message
+}
 
 enum class WorkspaceStoreError(val message: String) {
     EMPTY_NAME("A workspace item needs a name."),
@@ -28,6 +34,8 @@ enum class WorkspaceStoreError(val message: String) {
     SYSTEM_LIST_IS_PERMANENT("The Inbox cannot be archived or deleted. You can rename it instead."),
     MISSING_FILTER_LIST("That filter list is no longer available."),
     INVALID_FILTER("That filter has a rule this version does not understand."),
+    /** A board edit the core refused, a drop a rule column cannot take among them; the core's sentence says why. */
+    COLUMN_REFUSED("That column cannot take it."),
     ;
 
     fun exception() = WorkspaceStoreException(this)

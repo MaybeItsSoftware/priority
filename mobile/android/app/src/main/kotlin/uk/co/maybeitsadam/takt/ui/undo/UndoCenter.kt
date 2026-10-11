@@ -135,7 +135,7 @@ class UndoCenter(private val container: AppContainer) {
 
     fun report(error: Throwable) {
         val text = when (error) {
-            is WorkspaceStoreException -> error.error.message
+            is WorkspaceStoreException -> error.text
             is TaskPlanningException -> error.error.message
             is TaskEditorException -> error.error.message
             else -> error.message ?: "Something went wrong."

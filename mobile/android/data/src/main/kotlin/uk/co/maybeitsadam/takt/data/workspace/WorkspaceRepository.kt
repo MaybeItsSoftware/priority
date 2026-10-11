@@ -5,6 +5,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
+import uk.co.maybeitsadam.takt.core.BoardColumnsRead
 import uk.co.maybeitsadam.takt.core.DailyContribution
 import uk.co.maybeitsadam.takt.core.DailyItem
 import uk.co.maybeitsadam.takt.core.DayBoundary
@@ -434,6 +435,7 @@ class WorkspaceRepository(
             is CoreException.DependencyCycle -> fail(WorkspaceStoreError.DEPENDENCY_CYCLE)
             is CoreException.MissingFilterList -> fail(WorkspaceStoreError.MISSING_FILTER_LIST)
             is CoreException.InvalidFilter -> fail(WorkspaceStoreError.INVALID_FILTER)
+            is CoreException.ColumnRefused -> throw WorkspaceStoreException(WorkspaceStoreError.COLUMN_REFUSED, error.detail)
             else -> throw error
         }
     }
@@ -498,16 +500,35 @@ class WorkspaceRepository(
         val boards = coreWrite {
             it.kanbanBoardBaseline(legacy.map { (key, json) -> uniffi.takt_core.BoardBaseline(key, json) }, currentKey)
         }
-        return boards.mapNotNull { board -> KanbanColumnsCodec.decode(board.columnsJson)?.let { board.key to it } }.toMap()
+        return boards.mapNotNull { board -> board.key to decodeBoardColumns(board.columnsJson) }
+            .filter { it.second.isNotEmpty() }.toMap()
     }
 
+    /** Every stored layout, rules included, re-read whenever one changes. */
     fun observeKanbanBoards(): Flow<Map<String, List<WorkspaceKanbanColumn>>> =
         database.observe(setOf("kanban_boards")) { db ->
-            db.core.kanbanBoards().mapNotNull { board -> KanbanColumnsCodec.decode(board.columnsJson)?.let { board.key to it } }
-                .toMap()
+            db.core.kanbanBoards().map { board -> board.key to decodeBoardColumns(board.columnsJson) }
+                .filter { it.second.isNotEmpty() }.toMap()
         }
 
-    /** A removed column and the cards moved out of it form one undo step: the Rust core's `conversions::set_board_columns`. */
+    /**
+     * Board [key]'s columns over [listIds] and where its tasks are drawn: the
+     * Rust core's `board_columns`, which resolves a board without a layout of
+     * its own to its list's, the default or the stock five, and places tasks
+     * a rule column catches or an entered card's floor clamps.
+     */
+    suspend fun boardColumns(key: String, listIds: List<String>, now: Instant = now()): BoardColumnsRead =
+        coreRead { it.boardColumns(key, listIds, now.toEpochMilli(), zone.id) }.toRead()
+
+    /** [boardColumns], re-read whenever a task, its metadata or a layout changes. */
+    fun observeBoardColumns(key: String, listIds: List<String>): Flow<BoardColumnsRead> =
+        database.observe(BOARD_TABLES) { db -> db.core.boardColumns(key, listIds, now().toEpochMilli(), zone.id).toRead() }
+
+    /**
+     * Saves a board's layout, moving [movingTaskIds] to [toColumn] in the same
+     * undo step: the Rust core's `set_board_columns`. A column's rules go with
+     * it, so pass the layout read from the core rather than rebuilt by title.
+     */
     suspend fun setKanbanBoardColumns(
         columns: List<WorkspaceKanbanColumn>,
         key: String,
@@ -517,8 +538,37 @@ class WorkspaceRepository(
         now: Instant = now(),
     ) {
         if (columns.isEmpty()) return
-        val core = columns.map { uniffi.takt_core.BoardColumn(it.id, it.title) }
+        val core = columns.map { it.toCore() }
         coreWrite { it.setBoardColumns(key, core, movingTaskIds, toColumn, label, now.toEpochMilli()) }
+    }
+
+    /**
+     * Deletes a column from board [key], which keeps a layout of its own from
+     * then on, moving the tasks of [listIds] filed in it to [toColumn], as one
+     * "Delete Column" step. A rule column, Today and Waiting on move nothing.
+     */
+    suspend fun deleteBoardColumn(key: String, listIds: List<String>, columnId: String, toColumn: String?, now: Instant = now()) {
+        coreWrite { it.deleteBoardColumn(key, listIds, columnId, toColumn, now.toEpochMilli()) }
+    }
+
+    /** Has board [key] follow its list's or the default columns again. */
+    suspend fun resetBoardColumns(key: String) {
+        coreWrite { it.resetBoardColumns(key) }
+    }
+
+    /** Makes board [key]'s columns the workspace's default, which it then follows. */
+    suspend fun makeDefaultBoardColumns(key: String) {
+        coreWrite { it.makeDefaultBoardColumns(key) }
+    }
+
+    /**
+     * Moves tasks into [columnId] on board [key]. Into a rule column the first
+     * is edited until the rules hold, or the move is refused with
+     * [WorkspaceStoreError.COLUMN_REFUSED] and the core's reason.
+     */
+    suspend fun moveToBoardColumn(key: String, taskIds: List<String>, columnId: String, now: Instant = now()) {
+        if (taskIds.isEmpty()) return
+        coreWrite { it.moveToBoardColumn(key, taskIds, columnId, now.toEpochMilli(), zone.id) }
     }
 
     // endregion
