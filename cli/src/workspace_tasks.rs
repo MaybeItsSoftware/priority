@@ -67,6 +67,10 @@ const WAITING_COLUMNS: &str = "m.waitingOn, m.waitingFollowUpAt, m.followUpOfTas
 const NO_WAITING_COLUMNS: &str = "NULL, NULL, NULL";
 const WAITING_MIGRATION: &str = "v20_waiting_follow_ups";
 
+/// What adds `task_dependencies`. Before it, the dependency reads come back
+/// empty and the dependency writes are refused.
+const DEPENDENCIES_MIGRATION: &str = "v21_task_dependencies";
+
 /// One task row with the metadata the tools show beside it.
 struct TaskRow {
     id: String,
@@ -408,12 +412,24 @@ impl Workspace {
                 .or_default()
                 .push(row);
         }
+        let blocked: HashSet<String> = takt_core::dependencies::blocked_task_ids(&connection)
+            .map_err(map_core_error)?
+            .into_iter()
+            .collect();
+        // A blocked task sorts after its unblocked siblings, otherwise keeping
+        // its place, as every client draws it (`dependencies::BLOCKED_LAST`).
+        for siblings in children.values_mut() {
+            siblings.sort_by_key(|row| blocked.contains(&row.id));
+        }
         let mut visited = HashSet::new();
         let mut shown = 0;
         let tree = build_tree(
             parent_task_id,
             &children,
-            include_closed,
+            &TreeOptions {
+                include_closed,
+                blocked: &blocked,
+            },
             &mut visited,
             &mut shown,
         );
@@ -824,6 +840,50 @@ impl Workspace {
         })
     }
 
+    // -- dependencies --------------------------------------------------------
+
+    /// What `task_id` waits on and what waits on it, and whether it is
+    /// blocked now. A database without the table answers with empty lists.
+    pub fn task_dependencies(&self, task_id: &str) -> Result<Value> {
+        dependencies_json(&self.open()?, task_id)
+    }
+
+    /// `dependencies::add_blocker`, as one "Add Blocker" step, the app's
+    /// label for the same edit. Adding an edge that is already there changes
+    /// nothing and leaves no undo step. A cycle is refused.
+    pub fn add_blocker(&self, task_id: &str, blocked_by_task_id: &str) -> Result<Value> {
+        self.journalled("Add Blocker", |tx, _now| {
+            require_dependencies(tx)?;
+            // The write is the Rust core's, shared with the apps.
+            let changed = takt_core::dependencies::add_blocker(
+                tx,
+                task_id,
+                blocked_by_task_id,
+                Utc::now().timestamp_millis(),
+            )
+            .map_err(map_core_error)?;
+            let mut value = dependencies_json(tx, task_id)?;
+            value["changed"] = json!(changed);
+            Ok(value)
+        })
+    }
+
+    /// `dependencies::remove_blocker`, as one "Remove Blocker" step. Removing
+    /// an edge that is not there changes nothing.
+    pub fn remove_blocker(&self, task_id: &str, blocked_by_task_id: &str) -> Result<Value> {
+        self.journalled("Remove Blocker", |tx, _now| {
+            require_dependencies(tx)?;
+            task_row(tx, task_id)?;
+            task_row(tx, blocked_by_task_id)?;
+            // The write is the Rust core's, shared with the apps.
+            let changed = takt_core::dependencies::remove_blocker(tx, task_id, blocked_by_task_id)
+                .map_err(map_core_error)?;
+            let mut value = dependencies_json(tx, task_id)?;
+            value["changed"] = json!(changed);
+            Ok(value)
+        })
+    }
+
     // -- the journal ---------------------------------------------------------
 
     /// Runs one write as one undoable step: `journalledWrite` in
@@ -892,22 +952,33 @@ impl Workspace {
 
 // -- row helpers --------------------------------------------------------------
 
+/// What [`build_tree`] needs besides the rows.
+struct TreeOptions<'a> {
+    include_closed: bool,
+    /// `dependencies::blocked_task_ids`: open tasks waiting on an open task.
+    blocked: &'a HashSet<String>,
+}
+
 fn build_tree(
     parent: Option<&str>,
     children: &HashMap<Option<&str>, Vec<&TaskRow>>,
-    include_closed: bool,
+    options: &TreeOptions,
     visited: &mut HashSet<String>,
     shown: &mut usize,
 ) -> Vec<Value> {
     let mut nodes = Vec::new();
     for row in children.get(&parent).map(Vec::as_slice).unwrap_or_default() {
         // A closed task hides its subtree, as the app's "hide completed" does.
-        if (!include_closed && row.status != "open") || !visited.insert(row.id.clone()) {
+        if (!options.include_closed && row.status != "open") || !visited.insert(row.id.clone()) {
             continue;
         }
         *shown += 1;
         let mut node = row.to_json();
-        let nested = build_tree(Some(&row.id), children, include_closed, visited, shown);
+        // Only when set, like the other flags.
+        if options.blocked.contains(&row.id) {
+            node["blocked"] = json!(true);
+        }
+        let nested = build_tree(Some(&row.id), children, options, visited, shown);
         if !nested.is_empty() {
             node["children"] = json!(nested);
         }
@@ -1023,6 +1094,63 @@ fn descendant_ids(connection: &Connection, task_id: &str) -> Result<HashSet<Stri
     Ok(ids)
 }
 
+/// A task's blockers and the tasks it blocks, each with its list's name.
+fn dependencies_json(connection: &Connection, task_id: &str) -> Result<Value> {
+    let task = task_row(connection, task_id)?;
+    let blockers =
+        takt_core::dependencies::blockers(connection, task_id).map_err(map_core_error)?;
+    let blocking =
+        takt_core::dependencies::blocked_by(connection, task_id).map_err(map_core_error)?;
+    let blocked =
+        takt_core::dependencies::is_blocked(connection, task_id).map_err(map_core_error)?;
+
+    let mut list_names: HashMap<String, String> = HashMap::new();
+    let mut summary = |row: &takt_core::records::TaskRow| -> Result<Value> {
+        if !list_names.contains_key(&row.list_id) {
+            let name = list_row(connection, &row.list_id)?.name;
+            list_names.insert(row.list_id.clone(), name);
+        }
+        Ok(json!({
+            "id": row.id,
+            "title": row.title,
+            "status": row.status,
+            "list_id": row.list_id,
+            "list_name": list_names[&row.list_id],
+        }))
+    };
+    let blockers = blockers
+        .iter()
+        .map(&mut summary)
+        .collect::<Result<Vec<_>>>()?;
+    let blocking = blocking
+        .iter()
+        .map(&mut summary)
+        .collect::<Result<Vec<_>>>()?;
+
+    let mut task_json = task.to_json();
+    if blocked {
+        task_json["blocked"] = json!(true);
+    }
+    Ok(json!({
+        "task": task_json,
+        "blocked": blocked,
+        "blocked_by": blockers,
+        "blocking": blocking,
+    }))
+}
+
+/// Refuses a dependency write on a database the app has not migrated to
+/// `task_dependencies` yet, rather than failing on the missing table.
+fn require_dependencies(connection: &Connection) -> Result<()> {
+    if has_migration(connection, DEPENDENCIES_MIGRATION)? {
+        return Ok(());
+    }
+    Err(ToolError::new(format!(
+        "This workspace predates task dependencies ({DEPENDENCIES_MIGRATION}). \
+         Open an up-to-date Takt once to migrate it."
+    )))
+}
+
 // -- values -------------------------------------------------------------------
 
 /// Whether the app has run `identifier` on this database.
@@ -1115,7 +1243,8 @@ fn map_core_error(error: takt_core::CoreError) -> ToolError {
             "No folder with id {id}. workspace_tree lists the folders and their ids."
         )),
         refused @ (takt_core::CoreError::InvalidFolderMove
-        | takt_core::CoreError::InvalidTaskMove) => ToolError::new(refused.to_string()),
+        | takt_core::CoreError::InvalidTaskMove
+        | takt_core::CoreError::DependencyCycle) => ToolError::new(refused.to_string()),
         permanent @ takt_core::CoreError::SystemListIsPermanent => {
             ToolError::new(permanent.to_string())
         }

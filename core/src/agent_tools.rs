@@ -26,6 +26,7 @@ pub const READ_ONLY_TOOLS: &[&str] = &[
     "focus_history",
     "workspace_tree",
     "workspace_tasks",
+    "workspace_task_dependencies",
 ];
 
 /// Every other tool the server declares. Each goes through the approval card.
@@ -50,6 +51,8 @@ pub const WRITE_TOOLS: &[&str] = &[
     "workspace_task_move",
     "workspace_task_to_list",
     "workspace_task_delete",
+    "workspace_task_blocker_add",
+    "workspace_task_blocker_remove",
     "workspace_folder_create",
     "workspace_list_create",
     "workspace_list_move",

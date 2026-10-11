@@ -14,7 +14,7 @@ Takt ships an MCP stdio server so an AI assistant can work directly with your Ch
 
 ## What It Can Do
 
-The server exposes 34 MCP tools, in three groups.
+The server exposes 37 MCP tools, in three groups.
 
 **Checkvist tools** — these reach the Checkvist API directly, so they work
 whether or not the app is running:
@@ -61,12 +61,15 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 | `focus_status` | What the focus timer is doing: the task, paused or running, elapsed and planned seconds, and the queue behind it | read |
 | `focus_history` | Focused time already recorded over the last N logical days, newest first | read |
 | `workspace_tree` | Folders, lists (with `folder_id`, open-task counts, visible root) and nested lists | read |
-| `workspace_tasks` | One list's task tree: ids, titles, notes, status, kind, kanban column, external links | read |
+| `workspace_tasks` | One list's task tree: ids, titles, notes, status, kind, kanban column, external links, `blocked: true` on a task waiting on an open task | read |
+| `workspace_task_dependencies` | What a task waits on (`blocked_by`) and what waits on it (`blocking`), each with id, title, status and list, and whether it is blocked now | read |
 | `workspace_task_add` | Create a task or nested list, at a list's top level or under a parent, with notes, links and a column | write |
 | `workspace_task_update` | Title, notes, links, status, column, kind (task ⇄ nested list), sidebar pin, `waiting_on` and `follow_up_at` (both file the task in Waiting on) | write |
 | `workspace_task_move` | Reparent (subtree follows, across lists too) and/or reorder by 1-based position | write |
 | `workspace_task_to_list` | Promote a task to a standalone list, optionally in a folder, keeping its subtasks | write |
 | `workspace_task_delete` | Delete a task and its subtree | write |
+| `workspace_task_blocker_add` | Make `task_id` wait on `blocked_by_task_id` (any list) until it is done; a cycle is refused | write |
+| `workspace_task_blocker_remove` | Stop `task_id` waiting on `blocked_by_task_id` | write |
 | `workspace_folder_create` | Create a folder, optionally inside another | write |
 | `workspace_list_create` | Create a list, optionally in a folder | write |
 | `workspace_list_move` | Move a list into a folder, or to the top level | write |
@@ -241,7 +244,7 @@ python3 scripts/mcp_smoke_check.py   # needs a Debug app build
 ```
 
 It drives both spellings above and checks they answer `initialize` and expose
-the same 34 tools — in particular that an old-style invocation, with
+the same 37 tools — in particular that an old-style invocation, with
 credentials in `env`, still reaches a working server. It reads no real data and
 needs no Checkvist credentials.
 

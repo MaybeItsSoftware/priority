@@ -1004,6 +1004,186 @@ fn reads_work_with_the_app_closed_and_still_cannot_write() {
     );
 }
 
+// -- dependencies -------------------------------------------------------------
+
+fn ids(tasks: &Value) -> Vec<String> {
+    tasks
+        .as_array()
+        .expect("array")
+        .iter()
+        .map(|task| task["id"].as_str().expect("id").to_string())
+        .collect()
+}
+
+#[test]
+fn a_blocker_is_added_listed_and_removed_across_lists() {
+    let fixture = Fixture::new();
+    let waiting = fixture.add(PROJECTS, "Write it up", None);
+    let free = fixture.add(PROJECTS, "Unrelated", None);
+    let blocker = fixture.add(INBOX, "Get the data", None);
+
+    let added = fixture.call(
+        "workspace_task_blocker_add",
+        json!({ "task_id": waiting, "blocked_by_task_id": blocker }),
+    );
+    assert_eq!(added["changed"], json!(true));
+    assert_eq!(added["blocked"], json!(true));
+    assert_eq!(added["task"]["blocked"], json!(true));
+    assert_eq!(added["blocked_by"][0]["id"], json!(blocker));
+    assert_eq!(added["blocked_by"][0]["title"], json!("Get the data"));
+    assert_eq!(added["blocked_by"][0]["status"], json!("open"));
+    assert_eq!(added["blocked_by"][0]["list_id"], json!(INBOX));
+    assert_eq!(added["blocked_by"][0]["list_name"], json!("Inbox"));
+
+    // The other end sees it too, and is not itself blocked.
+    let other = fixture.call("workspace_task_dependencies", json!({ "task_id": blocker }));
+    assert_eq!(other["blocked"], json!(false));
+    assert_eq!(ids(&other["blocking"]), vec![waiting.clone()]);
+    assert_eq!(other["blocked_by"], json!([]));
+
+    // The list read flags it, sinks it below its unblocked sibling, and
+    // leaves the sibling unflagged.
+    let tasks = fixture.call("workspace_tasks", json!({ "list_id": PROJECTS }));
+    assert_eq!(tasks["tasks"][0]["id"], json!(free));
+    assert_eq!(tasks["tasks"][0].get("blocked"), None);
+    assert_eq!(tasks["tasks"][1]["id"], json!(waiting));
+    assert_eq!(tasks["tasks"][1]["blocked"], json!(true));
+
+    // A second add is not an error, and not a step.
+    let steps = fixture.journal().len();
+    let again = fixture.call(
+        "workspace_task_blocker_add",
+        json!({ "task_id": waiting, "blocked_by_task_id": blocker }),
+    );
+    assert_eq!(again["changed"], json!(false));
+    assert_eq!(fixture.journal().len(), steps);
+
+    // A done blocker no longer holds it back, though the edge stays.
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": blocker, "status": "completed" }),
+    );
+    let after = fixture.call("workspace_task_dependencies", json!({ "task_id": waiting }));
+    assert_eq!(after["blocked"], json!(false));
+    assert_eq!(after["blocked_by"][0]["status"], json!("completed"));
+
+    let removed = fixture.call(
+        "workspace_task_blocker_remove",
+        json!({ "task_id": waiting, "blocked_by_task_id": blocker }),
+    );
+    assert_eq!(removed["changed"], json!(true));
+    assert_eq!(removed["blocked_by"], json!([]));
+    let again = fixture.call(
+        "workspace_task_blocker_remove",
+        json!({ "task_id": waiting, "blocked_by_task_id": blocker }),
+    );
+    assert_eq!(again["changed"], json!(false));
+}
+
+#[test]
+fn a_dependency_cycle_is_refused_and_leaves_nothing_behind() {
+    let fixture = Fixture::new();
+    let a = fixture.add(PROJECTS, "A", None);
+    let b = fixture.add(PROJECTS, "B", None);
+    let c = fixture.add(PROJECTS, "C", None);
+    fixture.call(
+        "workspace_task_blocker_add",
+        json!({ "task_id": a, "blocked_by_task_id": b }),
+    );
+    fixture.call(
+        "workspace_task_blocker_add",
+        json!({ "task_id": b, "blocked_by_task_id": c }),
+    );
+    let before = fixture.journal();
+
+    for (task, blocker) in [(&c, &a), (&b, &a), (&a, &a)] {
+        let error = fixture
+            .try_call(
+                "workspace_task_blocker_add",
+                json!({ "task_id": task, "blocked_by_task_id": blocker }),
+            )
+            .unwrap_err();
+        assert!(error.contains("cannot wait on itself"), "{error}");
+    }
+    let error = fixture
+        .try_call(
+            "workspace_task_blocker_add",
+            json!({ "task_id": a, "blocked_by_task_id": "MISSING" }),
+        )
+        .unwrap_err();
+    assert!(error.contains("MISSING"), "{error}");
+
+    assert_eq!(fixture.journal(), before);
+    let edges: i64 = fixture.scalar(
+        "SELECT COUNT(*) FROM task_dependencies WHERE taskId <> ?1",
+        "",
+    );
+    assert_eq!(edges, 2);
+}
+
+#[test]
+fn each_dependency_write_is_one_labelled_undo_step() {
+    let fixture = Fixture::new();
+    let task = fixture.add(PROJECTS, "Waits", None);
+    let blocker = fixture.add(PROJECTS, "First", None);
+    let steps = fixture.journal().len();
+    fixture.call(
+        "workspace_task_blocker_add",
+        json!({ "task_id": task, "blocked_by_task_id": blocker }),
+    );
+    fixture.call(
+        "workspace_task_blocker_remove",
+        json!({ "task_id": task, "blocked_by_task_id": blocker }),
+    );
+    let journal = fixture.journal();
+    assert_eq!(
+        journal[steps..],
+        [
+            ("MCP: Add Blocker".to_string(), 1),
+            ("MCP: Remove Blocker".to_string(), 1),
+        ]
+    );
+    let suppressed: i64 = fixture.scalar("SELECT suppressed FROM undo_control WHERE id = ?1", "0");
+    assert_eq!(suppressed, 1);
+}
+
+#[test]
+fn a_workspace_without_dependencies_reads_empty_and_refuses_writes() {
+    let fixture = Fixture::new();
+    let task = fixture.add(PROJECTS, "Old", None);
+    let other = fixture.add(PROJECTS, "Older", None);
+    fixture
+        .db()
+        .execute_batch(
+            "DROP TABLE task_dependencies;
+             DELETE FROM grdb_migrations WHERE identifier = 'v21_task_dependencies';",
+        )
+        .unwrap();
+
+    let read = fixture.call("workspace_task_dependencies", json!({ "task_id": task }));
+    assert_eq!(read["blocked"], json!(false));
+    assert_eq!(read["blocked_by"], json!([]));
+    assert_eq!(read["blocking"], json!([]));
+    let tasks = fixture.call("workspace_tasks", json!({ "list_id": PROJECTS }));
+    assert_eq!(tasks["task_count"], json!(2));
+
+    for tool in [
+        "workspace_task_blocker_add",
+        "workspace_task_blocker_remove",
+    ] {
+        let error = fixture
+            .try_call(
+                tool,
+                json!({ "task_id": task, "blocked_by_task_id": other }),
+            )
+            .unwrap_err();
+        assert!(
+            error.contains("predates task dependencies"),
+            "{tool}: {error}"
+        );
+    }
+}
+
 // -- the command line reaches the same tools ----------------------------------
 
 #[test]
@@ -1055,6 +1235,14 @@ fn the_ws_subcommands_resolve_to_the_workspace_tools() {
     assert_eq!(arguments.get("list_id"), None);
     assert_eq!(arguments["folder_id"], json!("F"));
 
+    let (name, arguments) = resolved(&["ws", "block", "T", "B"]);
+    assert_eq!(name, "workspace_task_blocker_add");
+    assert_eq!(arguments["task_id"], json!("T"));
+    assert_eq!(arguments["blocked_by_task_id"], json!("B"));
+    let (name, arguments) = resolved(&["ws", "unblock", "T", "B"]);
+    assert_eq!(name, "workspace_task_blocker_remove");
+    assert_eq!(arguments["blocked_by_task_id"], json!("B"));
+
     for (args, tool) in [
         (&["ws", "tree"][..], "workspace_tree"),
         (&["ws", "tasks", "L"][..], "workspace_tasks"),
@@ -1063,6 +1251,7 @@ fn the_ws_subcommands_resolve_to_the_workspace_tools() {
             "workspace_task_move",
         ),
         (&["ws", "rm", "T"][..], "workspace_task_delete"),
+        (&["ws", "deps", "T"][..], "workspace_task_dependencies"),
         (&["ws", "new-folder", "F"][..], "workspace_folder_create"),
         (&["ws", "new-list", "L"][..], "workspace_list_create"),
         (&["ws", "move-list", "L"][..], "workspace_list_move"),

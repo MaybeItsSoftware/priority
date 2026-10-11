@@ -461,6 +461,42 @@ impl Tools {
                 ))
             }
 
+            "workspace_task_dependencies" => {
+                let task_id = required_string(arguments, "task_id")?;
+                let payload = self.workspace.task_dependencies(&task_id)?;
+                let title = format!(
+                    "\"{}\": waits on {}, blocks {}",
+                    payload["task"]["title"].as_str().unwrap_or(&task_id),
+                    payload["blocked_by"].as_array().map_or(0, Vec::len),
+                    payload["blocking"].as_array().map_or(0, Vec::len),
+                );
+                Ok(outcome(title, payload))
+            }
+
+            "workspace_task_blocker_add" => {
+                let task_id = required_string(arguments, "task_id")?;
+                let blocker = required_string(arguments, "blocked_by_task_id")?;
+                let payload = self.workspace.add_blocker(&task_id, &blocker)?;
+                let title = if payload["changed"] == json!(true) {
+                    "Blocker added"
+                } else {
+                    "Already waiting on that task"
+                };
+                Ok(outcome(title, payload))
+            }
+
+            "workspace_task_blocker_remove" => {
+                let task_id = required_string(arguments, "task_id")?;
+                let blocker = required_string(arguments, "blocked_by_task_id")?;
+                let payload = self.workspace.remove_blocker(&task_id, &blocker)?;
+                let title = if payload["changed"] == json!(true) {
+                    "Blocker removed"
+                } else {
+                    "It was not waiting on that task"
+                };
+                Ok(outcome(title, payload))
+            }
+
             "workspace_folder_create" => {
                 let name = required_string(arguments, "name")?;
                 let parent = as_id(arguments.get("parent_folder_id"));

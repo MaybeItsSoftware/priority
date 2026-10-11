@@ -671,7 +671,7 @@ fn workspace_tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "workspace_tasks",
-            "description": "One local list's tasks as a tree: ids, titles, notes, status, kind (task or nested list), kanban column and external links. Open tasks only unless include_closed.",
+            "description": "One local list's tasks as a tree: ids, titles, notes, status, kind (task or nested list), kanban column and external links, with blocked: true on a task waiting on an open task (workspace_task_dependencies says which). Open tasks only unless include_closed.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -770,6 +770,42 @@ fn workspace_tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": { "task_id": id("From workspace_tasks.") },
                 "required": ["task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_dependencies",
+            "description": "What a local task waits on (blocked_by) and what waits on it (blocking), each with id, title, status and list, and whether it is blocked now: open and waiting on at least one open task. A blocked task sorts below its siblings and is skipped by next up.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "task_id": id("From workspace_tasks.") },
+                "required": ["task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_blocker_add",
+            "description": "Make a local task wait on another until that one is completed or cancelled. Blockers may be in any list. A task cannot wait on itself or on a task that already waits on it. Adding one that is already there changes nothing.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task_id": id("The task that waits. From workspace_tasks."),
+                    "blocked_by_task_id": id("The task it waits on."),
+                },
+                "required": ["task_id", "blocked_by_task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_task_blocker_remove",
+            "description": "Stop a local task waiting on another. Removing one that is not there changes nothing.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task_id": id("The task that waits. From workspace_task_dependencies."),
+                    "blocked_by_task_id": id("The task it waits on."),
+                },
+                "required": ["task_id", "blocked_by_task_id"],
                 "additionalProperties": false,
             },
         }),

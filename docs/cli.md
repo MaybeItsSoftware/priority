@@ -276,6 +276,9 @@ takt ws done <TASK_ID>
 takt ws move <TASK_ID> --parent <TASK_ID>       # the subtree comes too
 takt ws move <TASK_ID> --list <LIST_ID> --position 1
 takt ws to-list <TASK_ID> --folder <FOLDER_ID>  # promote to its own list
+takt ws block <TASK_ID> <BLOCKER_ID>          # TASK waits on BLOCKER until it is done
+takt ws unblock <TASK_ID> <BLOCKER_ID>
+takt ws deps <TASK_ID>                        # what it waits on, what waits on it
 takt ws new-folder Computer Science
 takt ws new-list Revision --folder <FOLDER_ID>
 takt ws move-list <LIST_ID> --folder <FOLDER_ID>
@@ -288,6 +291,9 @@ menu, labelled "MCP: …", and the app picks the change up within about a
 second. `docs/mcp-server.md` explains how that is made safe. Completing a
 repeating task writes its next occurrence, stepped in this machine's time
 zone, through the same Rust core code the app uses (`core/src/tasks.rs`).
+A blocked task — open, and waiting on a task that is still open — is marked
+`(blocked)` in `ws tasks` and listed after its unblocked siblings, as the app
+draws it; a dependency that would make a cycle is refused.
 
 ### The escape hatch
 

@@ -406,6 +406,21 @@ pub enum WsCommand {
         #[arg(long, short = 'f', value_name = "FOLDER_ID")]
         folder: Option<String>,
     },
+    /// What a task waits on, what waits on it, and whether it is blocked.
+    Deps { task_id: String },
+    /// Make a task wait on another until that one is done.
+    Block {
+        task_id: String,
+        /// The task it waits on.
+        #[arg(value_name = "BLOCKED_BY_TASK_ID")]
+        blocked_by: String,
+    },
+    /// Stop a task waiting on another.
+    Unblock {
+        task_id: String,
+        #[arg(value_name = "BLOCKED_BY_TASK_ID")]
+        blocked_by: String,
+    },
     /// Delete a task and its subtree.
     Rm { task_id: String },
     /// Create a folder.
@@ -856,6 +871,26 @@ fn resolve_workspace(command: &WsCommand, arguments: &mut Map<String, Value>) ->
             insert_if_some(arguments, "folder_id", folder.as_deref());
             "workspace_task_to_list"
         }
+        WsCommand::Deps { task_id } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            "workspace_task_dependencies"
+        }
+        WsCommand::Block {
+            task_id,
+            blocked_by,
+        }
+        | WsCommand::Unblock {
+            task_id,
+            blocked_by,
+        } => {
+            arguments.insert("task_id".into(), json!(task_id));
+            arguments.insert("blocked_by_task_id".into(), json!(blocked_by));
+            if matches!(command, WsCommand::Block { .. }) {
+                "workspace_task_blocker_add"
+            } else {
+                "workspace_task_blocker_remove"
+            }
+        }
         WsCommand::Rm { task_id } => {
             arguments.insert("task_id".into(), json!(task_id));
             "workspace_task_delete"
@@ -931,6 +966,9 @@ pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
         "workspace_task_add" | "workspace_task_update" | "workspace_task_move" => {
             render_workspace_task(payload, 0)
         }
+        "workspace_task_dependencies"
+        | "workspace_task_blocker_add"
+        | "workspace_task_blocker_remove" => render_workspace_dependencies(payload),
         _ => render_task(payload),
     }
 }
@@ -1372,9 +1410,14 @@ fn render_workspace_task(task: &Value, depth: usize) {
         .as_str()
         .map(|column| format!("  [{column}]"))
         .unwrap_or_default();
+    let blocked = if task["blocked"] == json!(true) {
+        "  (blocked)"
+    } else {
+        ""
+    };
     let indent = "  ".repeat(depth + 1);
     println!(
-        "{indent}{mark} {}{column}  {}",
+        "{indent}{mark} {}{column}{blocked}  {}",
         text_of(&task["title"]),
         text_of(&task["id"])
     );
@@ -1384,6 +1427,37 @@ fn render_workspace_task(task: &Value, depth: usize) {
     if let Some(notes) = task["notes"].as_str().filter(|notes| !notes.is_empty()) {
         for line in notes.lines() {
             println!("{indent}    {line}");
+        }
+    }
+}
+
+/// The task, then what it waits on and what waits on it, each with its list.
+fn render_workspace_dependencies(payload: &Value) {
+    if payload.get("task").is_none() {
+        return render_fallback(payload);
+    }
+    render_workspace_task(&payload["task"], 0);
+    for (heading, key) in [("Waits on", "blocked_by"), ("Blocks", "blocking")] {
+        let tasks = payload[key]
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        if tasks.is_empty() {
+            continue;
+        }
+        println!("\n  {heading}");
+        for task in tasks {
+            let mark = match task["status"].as_str() {
+                Some("completed") => "✓",
+                Some("cancelled") => "×",
+                _ => "·",
+            };
+            println!(
+                "    {mark} {}  [{}]  {}",
+                text_of(&task["title"]),
+                text_of(&task["list_name"]),
+                text_of(&task["id"])
+            );
         }
     }
 }
