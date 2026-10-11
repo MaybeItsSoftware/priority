@@ -325,6 +325,7 @@ extension WorkspaceViewModel {
     case .list(let id): lists.first { $0.id == id }?.name ?? ""
     case .nestedList(let id): nestedLists.first { $0.task.id == id }?.task.title ?? ""
     case .folder(let id): folders.first { $0.id == id }?.name ?? ""
+    case .filterList(let id): filterLists.first { $0.id == id }?.name ?? ""
     }
   }
 

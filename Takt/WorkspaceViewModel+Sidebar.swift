@@ -140,6 +140,7 @@ extension WorkspaceViewModel {
     // Today draws from every list, so whichever list is selected behind it
     // is not where you are: the Today row is.
     if viewMode == .today { return "priority:today" }
+    if let selectedFilterListID, isEverythingSelected { return Self.filterListSidebarID(selectedFilterListID) }
     if isEverythingSelected { return "priority:everything" }
     if let scope = scopeTask, scope.isList { return scope.id }
     return selectedListID
@@ -355,7 +356,9 @@ extension WorkspaceViewModel {
   }
 
   func requestDeletionOfSelectedSidebarItem() {
-    if let folder = selectedFolder {
+    if let filter = selectedFilterList {
+      deleteFilterList(filter)
+    } else if let folder = selectedFolder {
       requestDeletion(of: .folder(folder))
     } else if let list = selectedList, !list.isSystemList {
       requestDeletion(of: .list(list))
@@ -372,7 +375,9 @@ extension WorkspaceViewModel {
   }
 
   func showSelectedListSettings() {
-    if let folder = selectedFolder {
+    if let filter = selectedFilterList {
+      requestEditFilterList(filter)
+    } else if let folder = selectedFolder {
       showSettings(for: folder)
     } else if let scope = scopeTask, scope.isList {
       selectTask(scope)

@@ -313,6 +313,12 @@ public enum WorkspaceCommandCatalog {
       id: .folderNew, title: "Create a folder", group: "Lists", keys: ["cmd+option+n"],
       surfaceKeys: [.sidebar: ["d"]], note: "d in the sidebar, as in Zed's vim project panel"),
     .init(
+      id: .filterListNew, title: "Create a filter list", group: "Lists", keys: ["cmd+option+shift+n"],
+      note: "A saved set of rules over every task, under Today, Everything and the Inbox"),
+    .init(
+      id: .filterListEdit, title: "Edit the filter list", group: "Lists", keys: ["cmd+option+shift+e"],
+      note: "Its name, icon and rules; makes a new one when no filter list is open"),
+    .init(
       id: .folderCollapseAll, title: "Collapse every folder", group: "Lists",
       keys: ["cmd+left"], surface: .sidebar),
     .init(

@@ -496,6 +496,30 @@ focus panel and the timeline are tabs in the right dock.
 `Cmd+0` shows **Everything** — every active list at once, rather than the one
 the sidebar has selected.
 
+### Filter lists
+
+Today, Everything and the Inbox are the stock lists at the top of the sidebar.
+Under them sit your **filter lists**: saved, named rules asked of every task
+in every active list — "tagged work and due within 7 days", "priority at least
+3 and not blocked", "waiting on Sam". Selecting one shows Everything narrowed
+to its matches, on the board, the outline or the matrix. Its rules can test a
+tag, the due or start date, priority, the list or folder, whether it is
+planned for today, blocked or waiting, its estimate, its board column, or
+text in the title or notes, and combine by **every rule** or **any rule**;
+**Show** picks open, finished or all tasks. Today and Everything are the
+same kind of question, built in.
+
+| Key | Action |
+| --- | --- |
+| `Cmd+Option+Shift+N` | Create a filter list |
+| `Cmd+Option+Shift+E` | Edit the filter list in scope (or create one) |
+| `Cmd+Option+I` / `oo` on its row | Its sheet: name, icon and rules |
+| `Delete` on its row | Delete it (one undo step; no task is touched) |
+| `Cmd+Up` / `Cmd+Down` on its row | Move it up or down |
+
+The rules are evaluated in the Rust core, so the phones and `takt` show the
+same tasks for the same filter list.
+
 There used to be seven views instead, keyed `q` through `u`, inside a menu bar
 panel: All, Due, Tags, Priority, Kanban, Matrix and Daily. Due, Tags and
 Priority were filters over one list wearing the costume of separate places, and

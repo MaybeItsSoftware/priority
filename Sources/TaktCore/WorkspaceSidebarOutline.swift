@@ -15,6 +15,9 @@ public enum WorkspaceSidebarRowKind: Equatable, Hashable, Sendable {
   /// A list nested inside a task, addressed by the task's id.
   case nestedList(String)
   case folder(String)
+  /// A saved filter list, by its id: tasks from every list that match its
+  /// rules. Drawn under Today, Everything and the inbox.
+  case filterList(String)
 }
 
 public struct WorkspaceSidebarRow: Identifiable, Equatable, Hashable, Sendable {
@@ -40,7 +43,7 @@ public struct WorkspaceSidebarRow: Identifiable, Equatable, Hashable, Sendable {
   public var subjectID: String? {
     switch kind {
     case .everything, .today: nil
-    case .list(let id), .nestedList(let id), .folder(let id): id
+    case .list(let id), .nestedList(let id), .folder(let id), .filterList(let id): id
     }
   }
 }
@@ -94,16 +97,18 @@ public enum WorkspaceSidebarOutline {
     lists: [SidebarListDescriptor],
     folders: [SidebarFolderDescriptor],
     nestedLists: [SidebarNestedListDescriptor],
-    expandedFolderIDs: Set<String>
+    expandedFolderIDs: Set<String>,
+    filterListIDs: [String] = []
   ) -> [WorkspaceSidebarRow] {
     // The order is the Rust core's (`sidebar::outline`), which Android calls
     // too: Today first, as the screen the day starts on, then Everything, the
     // inbox, the pinned shortcuts, the folders and the loose lists. A row
     // crosses back as its kind and an index into what was passed, three
     // integers, and its id is spelled here from strings already held.
-    let rows = sidebarOutlineRows(
+    let rows = sidebarOutlineRowsWithFilterLists(
       inboxId: inbox?.id, lists: lists.map(\.core), folders: folders.map(\.core),
-      nestedLists: nestedLists.map(\.core), expandedFolderIds: Array(expandedFolderIDs), includeToday: true)
+      nestedLists: nestedLists.map(\.core), expandedFolderIds: Array(expandedFolderIDs), includeToday: true,
+      filterListCount: UInt32(filterListIDs.count))
     return rows.compactMap { row -> WorkspaceSidebarRow? in
       let index = Int(row.subject)
       let depth = Int(row.depth)
@@ -131,8 +136,8 @@ public enum WorkspaceSidebarOutline {
         let id = folders[index].id
         return WorkspaceSidebarRow(id: "folder:\(id)", kind: .folder(id), depth: depth)
       case .filterList:
-        // Never asked for: these rows are built with no filter lists.
-        return nil
+        let id = filterListIDs[index]
+        return WorkspaceSidebarRow(id: "filter:\(id)", kind: .filterList(id), depth: depth)
       }
     }
   }
@@ -153,9 +158,11 @@ public enum WorkspaceSidebarOutline {
   /// selected. Used when the cursor has no stored row yet — on launch, or
   /// after a click, which selects a list without going through the arrows.
   public static func rowMatching(
-    subjectID: String?, isEverything: Bool, isToday: Bool = false, in rows: [WorkspaceSidebarRow]
+    subjectID: String?, isEverything: Bool, isToday: Bool = false, filterListID: String? = nil,
+    in rows: [WorkspaceSidebarRow]
   ) -> WorkspaceSidebarRow? {
     if isToday { return rows.first { $0.kind == .today } }
+    if let filterListID { return rows.first { $0.kind == .filterList(filterListID) } }
     if isEverything { return rows.first { $0.kind == .everything } }
     guard let subjectID else { return nil }
     return rows.first { $0.subjectID == subjectID }

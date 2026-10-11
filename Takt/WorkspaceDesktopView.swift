@@ -154,6 +154,12 @@ struct WorkspaceDesktopView: View {
       WorkspaceSidebarEditorSheet(editor: editor)
         .environment(model)
     }
+    // A filter list's rules are a small form of their own, edited as often
+    // with the mouse as the keyboard: a sheet, like the list settings.
+    .sheet(item: Bindable(model).filterListEditor) { request in
+      WorkspaceFilterListEditor(request: request)
+        .environment(model)
+    }
     .confirmationDialog(
       model.pendingSidebarDeletion?.deletionTitle ?? "Delete item?",
       isPresented: Binding(

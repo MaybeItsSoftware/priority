@@ -403,6 +403,14 @@ enum WorkspaceSidebarItem: Identifiable {
   var dailyProgressRevision = 0
   var selectedListID: String?
   var selectedFolderID: String?
+  /// The filter list in scope, drawn over Everything: while it is set,
+  /// `isEverythingSelected` is too, and the pane shows only the tasks the
+  /// filter list's rules match. See `WorkspaceViewModel+FilterLists.swift`.
+  var selectedFilterListID: String?
+  /// The workspace's own filter lists, in sidebar order.
+  var filterLists: [WorkspaceFilterList] = [] { didSet { sidebarRowsMemo = nil } }
+  /// The filter list sheet, when it is open.
+  var filterListEditor: WorkspaceFilterListEditorRequest?
   /// Where the sidebar's keyboard cursor is, as a row id from
   /// `WorkspaceSidebarOutline`.
   ///
@@ -821,6 +829,13 @@ enum WorkspaceSidebarItem: Identifiable {
     folders = try store.folders(in: workspace.id)
     lists = try store.lists(in: workspace.id)
     archivedLists = try store.lists(in: workspace.id, includingArchived: true).filter(\.isArchived)
+    let loadedFilterLists = try store.filterLists(in: workspace.id)
+    if filterLists != loadedFilterLists { filterLists = loadedFilterLists }
+    if let selectedFilterListID, !filterLists.contains(where: { $0.id == selectedFilterListID }) {
+      // Deleted here, by undo or on another device: Everything is what it
+      // was drawn over.
+      self.selectedFilterListID = nil
+    }
     if isEverythingSelected {
       selectedListID = nil
       scopeTaskID = nil

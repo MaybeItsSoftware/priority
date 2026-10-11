@@ -29,6 +29,7 @@ extension WorkspaceViewModel {
     _ = folders
     _ = nestedLists
     _ = expandedFolderIDs
+    _ = filterLists
     if let memo = sidebarRowsMemo { return memo }
     let rows = sidebarRows(expandingEveryFolder: false)
     sidebarRowsMemo = rows
@@ -58,7 +59,8 @@ extension WorkspaceViewModel {
           depth: $0.depth,
           isPromoted: $0.task.isPromoted == true && $0.task.status == .open)
       },
-      expandedFolderIDs: expandingEveryFolder ? Set(folders.map(\.id)) : expandedFolderIDs)
+      expandedFolderIDs: expandingEveryFolder ? Set(folders.map(\.id)) : expandedFolderIDs,
+      filterListIDs: filterLists.map(\.id))
   }
 
   /// The row the cursor is on.
@@ -73,7 +75,8 @@ extension WorkspaceViewModel {
     // themselves when they are rebuilt.
     let key = SidebarCursorMemo.Key(
       cursorID: sidebarCursorID, folderID: selectedFolderID, currentID: currentSidebarID,
-      isEverything: isEverythingSelected, isToday: viewMode == .today)
+      isEverything: isEverythingSelected, isToday: viewMode == .today,
+      filterListID: isEverythingSelected ? selectedFilterListID : nil)
     if let memo = sidebarCursorMemo, memo.key == key { return memo.row }
     let row: WorkspaceSidebarRow?
     if let cursorID = key.cursorID, let match = rows.first(where: { $0.id == cursorID }) {
@@ -83,6 +86,7 @@ extension WorkspaceViewModel {
         subjectID: key.folderID ?? key.currentID,
         isEverything: key.folderID == nil && key.isEverything,
         isToday: key.isToday,
+        filterListID: key.filterListID,
         in: rows)
     }
     sidebarCursorMemo = SidebarCursorMemo(key: key, row: row)
@@ -107,6 +111,7 @@ extension WorkspaceViewModel {
     case .everything: return "priority:everything"
     case .today: return "priority:today"
     case .list(let id), .folder(let id): return id
+    case .filterList(let id): return Self.filterListSidebarID(id)
     case .nestedList(let id): return row.id.hasPrefix("pinned:") ? "promoted:\(id)" : id
     }
   }
@@ -143,6 +148,8 @@ extension WorkspaceViewModel {
       if let task = nestedLists.first(where: { $0.task.id == id })?.task { selectNestedList(task) }
     case .folder(let id):
       if let folder = folders.first(where: { $0.id == id }) { selectFolder(folder) }
+    case .filterList(let id):
+      if let filter = filterLists.first(where: { $0.id == id }) { selectFilterList(filter) }
     }
     // Last, because the selection calls above clear the cursor — that is how
     // a click puts it back under the row you clicked.
@@ -170,7 +177,7 @@ extension WorkspaceViewModel {
       } else {
         toggleFolderExpansion(folder)
       }
-    case .everything, .today, .list, .nestedList:
+    case .everything, .today, .list, .nestedList, .filterList:
       enterTaskSurfaceFromSidebar()
     }
   }
@@ -190,6 +197,9 @@ extension WorkspaceViewModel {
     switch row.kind {
     case .everything, .today:
       return false
+    case .filterList(let id):
+      guard let index = filterLists.firstIndex(where: { $0.id == id }) else { return false }
+      moveFilterList(filterLists[index], to: index + offset)
     case .folder(let id):
       guard let folder = folders.first(where: { $0.id == id }) else { return false }
       moveFolderWithinSiblings(folder, by: offset)
@@ -213,6 +223,7 @@ struct SidebarCursorMemo {
     let currentID: String?
     let isEverything: Bool
     let isToday: Bool
+    let filterListID: String?
   }
 
   let key: Key

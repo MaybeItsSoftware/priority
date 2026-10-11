@@ -205,6 +205,8 @@ extension WorkspaceViewModel {
     case .listComplete: toggleCurrentListCompletion()
     case .listDelete: requestDeletionOfSelectedSidebarItem()
     case .folderNew: requestFolderCreationForSelection()
+    case .filterListNew: requestNewFilterList()
+    case .filterListEdit: editSelectedFilterListOrCreate()
     case .folderMoveUp: if let folder = selectedFolder { moveFolderWithinSiblings(folder, by: -1) }
     case .folderMoveDown: if let folder = selectedFolder { moveFolderWithinSiblings(folder, by: 1) }
     case .folderSelectPrevious: moveFolderSelection(by: -1)

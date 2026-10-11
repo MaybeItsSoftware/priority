@@ -82,9 +82,17 @@ struct WorkspaceSidebarPane: View {
               rowID: "row:everything"))
           .accessibilityLabel("Everything, all lists")
           .commandHelp(.goEverything, note: "Everything, all lists")
+          .contextMenu {
+            Button("New Filter List…") { model.requestNewFilterList() }
+          }
           if let inbox = model.inboxList {
             sidebarListRow(inbox)
             WorkspaceNestedListRows(list: inbox, depth: 1)
+          }
+          // Yours, under the stock three: each a question asked of every
+          // task, drawn as Everything narrowed to the answer.
+          ForEach(model.filterLists) { filter in
+            WorkspaceFilterListRow(filter: filter)
           }
           listsHeader
           ForEach(model.promotedLists) { task in
@@ -520,5 +528,61 @@ private struct WorkspaceFolderTree: View {
           Button("Delete folder", role: .destructive) { model.requestDeletion(of: .folder(folder)) }
             .commandShortcut(.listDelete)
         }
+  }
+}
+
+/// A filter list in the sidebar: its icon and name, selected like a list,
+/// with its sheet, icon, order and deletion on the context menu.
+struct WorkspaceFilterListRow: View {
+  @Environment(WorkspaceViewModel.self) private var model
+  @Environment(\.theme) private var theme
+  let filter: WorkspaceFilterList
+
+  private var sidebarID: String { WorkspaceViewModel.filterListSidebarID(filter.id) }
+
+  var body: some View {
+    Button {
+      model.selectFilterList(filter)
+      model.reportKeyboardFocus(.sidebar)
+    } label: {
+      HStack(spacing: theme.space.sm) {
+        Image(systemName: filter.icon ?? WorkspaceFilterList.defaultIcon)
+          .foregroundStyle(theme.muted)
+          .frame(width: WorkspaceSidebarMetrics.iconWidth)
+        Text(filter.name)
+          .lineLimit(1)
+      }
+      .sidebarRowPadding(theme)
+    }
+    .buttonStyle(.plain)
+    .id(sidebarID)
+    .background(
+      WorkspaceSidebarSelectionBackground(
+        isCurrent: model.isCurrentSidebarRow(sidebarID),
+        rowID: sidebarID))
+    .accessibilityLabel("\(filter.name), filter list")
+    .help(filter.definition.summary)
+    .contextMenu {
+      Button("Edit Filter List…") { model.requestEditFilterList(filter) }
+      Menu("Icon") {
+        ForEach(WorkspaceFilterList.iconOptions, id: \.symbol) { icon in
+          Button {
+            model.setIcon(icon.symbol, for: filter)
+          } label: {
+            Label(icon.label, systemImage: icon.symbol)
+          }
+        }
+      }
+      Divider()
+      if let index = model.filterLists.firstIndex(of: filter) {
+        Button("Move Up") { model.moveFilterList(filter, to: index - 1) }
+          .disabled(index == 0)
+        Button("Move Down") { model.moveFilterList(filter, to: index + 1) }
+          .disabled(index + 1 >= model.filterLists.count)
+      }
+      Divider()
+      Button("New Filter List…") { model.requestNewFilterList() }
+      Button("Delete Filter List", role: .destructive) { model.deleteFilterList(filter) }
+    }
   }
 }

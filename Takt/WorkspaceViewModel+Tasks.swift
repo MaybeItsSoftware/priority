@@ -89,6 +89,7 @@ extension WorkspaceViewModel {
   }
 
   var currentBoardScopeTitle: String {
+    if let filter = selectedFilterList { return filter.name }
     if isEverythingSelected { return "Everything" }
     if let folder = scopedFolder { return folder.name }
     return scopeTask?.title ?? selectedList?.name ?? "Board"

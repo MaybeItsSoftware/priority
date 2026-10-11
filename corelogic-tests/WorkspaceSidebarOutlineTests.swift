@@ -46,6 +46,30 @@ final class WorkspaceSidebarOutlineTests: XCTestCase {
       ])
   }
 
+  /// Filter lists sit under the stock three — Today, Everything and the
+  /// inbox with its nested lists — ahead of the pinned shortcuts, and the
+  /// cursor finds the one in scope.
+  func testFilterListsFollowTheInboxAndTheCursorFindsTheOneInScope() {
+    let rows = WorkspaceSidebarOutline.rows(
+      inbox: SidebarListDescriptor(id: "inbox", folderID: nil),
+      lists: [SidebarListDescriptor(id: "loose", folderID: nil)], folders: [],
+      nestedLists: [SidebarNestedListDescriptor(id: "pin", listID: "inbox", depth: 0, isPromoted: true)],
+      expandedFolderIDs: [], filterListIDs: ["soon", "work"])
+    XCTAssertEqual(
+      rows.map(\.kind),
+      [
+        .today, .everything, .list("inbox"), .nestedList("pin"),
+        .filterList("soon"), .filterList("work"),
+        .nestedList("pin"), .list("loose"),
+      ])
+    XCTAssertEqual(rows.first { $0.kind == .filterList("work") }?.id, "filter:work")
+    XCTAssertEqual(
+      WorkspaceSidebarOutline.rowMatching(subjectID: nil, isEverything: true, filterListID: "work", in: rows)?.kind,
+      .filterList("work"))
+    XCTAssertEqual(
+      WorkspaceSidebarOutline.row(after: "filter:soon", by: 1, in: rows)?.kind, .filterList("work"))
+  }
+
   /// The bug this was written for. A pinned nested list is drawn twice, and
   /// both rows used to answer to the task's id, so the cursor could never get
   /// past the second one — looking up "where am I" always found the first.

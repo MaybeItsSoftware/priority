@@ -59,6 +59,7 @@ extension WorkspaceViewModel {
     taskEditor.flush()
     selectedFolderID = folder.id
     isEverythingSelected = false
+    selectedFilterListID = nil
     UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
     selectedListID = nil
     scopeTaskID = nil

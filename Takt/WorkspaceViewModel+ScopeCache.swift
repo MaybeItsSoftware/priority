@@ -35,6 +35,7 @@ extension WorkspaceViewModel {
   var currentScope: WorkspaceScope? {
     if isMultiListScope {
       let open = lists.filter { $0.completedAt == nil }
+      if let filter = selectedFilterList { return .filter(filter.id, open.map(\.id)) }
       guard let ids = folderScopeListIDs else { return .combined(open.map(\.id)) }
       let openIDs = Set(open.map(\.id))
       return .combined(ids.filter { openIDs.contains($0) })
@@ -46,7 +47,8 @@ extension WorkspaceViewModel {
     // A combined scope enters no task and has no wrapper root, so its shapes
     // are kept under one key whatever was last entered elsewhere.
     isMultiListScope
-      ? WorkspaceScopeShapeOptions(scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: hidesCompletedTasks)
+      ? WorkspaceScopeShapeOptions(
+        scopeTaskID: nil, registeredRootTaskID: nil, hidesCompletedTasks: scopeHidesCompletedTasks)
       : WorkspaceScopeShapeOptions(
         scopeTaskID: scopeTaskID, registeredRootTaskID: selectedList?.visibleRootTaskId,
         hidesCompletedTasks: hidesCompletedTasks)
@@ -54,7 +56,7 @@ extension WorkspaceViewModel {
 
   /// The cutoff a combined read leaves finished work out before.
   private func scopeReadCutoff(_ scope: WorkspaceScope, now: Date) -> Date? {
-    guard case .combined = scope, hidesCompletedTasks else { return nil }
+    guard scope.isCombined, scopeHidesCompletedTasks else { return nil }
     return now.addingTimeInterval(-Self.completedLingerInterval)
   }
 
@@ -64,13 +66,13 @@ extension WorkspaceViewModel {
     let stamp = try store.changeStamp()
     if let entry = scopeCache.entry(for: scope),
       // A read that left finished work in the core cannot show it.
-      entry.cutoff == nil || hidesCompletedTasks
+      entry.cutoff == nil || scopeHidesCompletedTasks
     {
       if entry.stamp == stamp {
         scopeCache.touch(scope)
         return
       }
-      if scopeReadMayBeStale, case .combined = scope {
+      if scopeReadMayBeStale, scope.isCombined {
         scopeCache.touch(scope)
         revalidateScope(scope, store: store)
         return
@@ -82,7 +84,7 @@ extension WorkspaceViewModel {
     // this thread follows a write, which has most likely changed it: shaped
     // afresh rather than compared first. A list's read is cheap to compare,
     // and a match keeps its shapes.
-    let combined = if case .combined = scope { true } else { false }
+    let combined = scope.isCombined
     scopeCache.store(read, for: scope, stamp: stamp, cutoff: cutoff, knownToDiffer: combined)
   }
 

@@ -16,6 +16,7 @@ extension WorkspaceViewModel {
     noteListVisit(leaving: isMultiListScope ? nil : selectedListID, arriving: id)
     taskEditor.flush()
     isEverythingSelected = false
+    selectedFilterListID = nil
     UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
     selectedListID = id
     newTaskListID = id
@@ -38,7 +39,18 @@ extension WorkspaceViewModel {
 
     taskEditor.flush()
     if let selectedListID { newTaskListID = selectedListID }
+    enterEverythingScope(filterListID: nil)
+    switchScope("Select Everything") {
+      viewMode = .board
+      reloadOutline(refreshSidebar: false)
+    }
+  }
+
+  /// Puts Everything in scope — narrowed to a filter list's matches when
+  /// one is given — without drawing it.
+  func enterEverythingScope(filterListID: String?) {
     isEverythingSelected = true
+    selectedFilterListID = filterListID
     UserDefaults.standard.set(true, forKey: Self.everythingScopeKey)
     selectedListID = nil
     selectedFolderID = nil
@@ -47,10 +59,6 @@ extension WorkspaceViewModel {
     taskInsertionReference = nil
     desktopShortcutSequence.reset()
     selectedTaskID = nil
-    switchScope("Select Everything") {
-      viewMode = .board
-      reloadOutline(refreshSidebar: false)
-    }
   }
 
   /// The sidebar's Today: the day across every list, so Everything behind it.
@@ -72,6 +80,7 @@ extension WorkspaceViewModel {
 
   func enterTask(_ task: WorkspaceTask) {
     taskEditor.flush()
+    selectedFilterListID = nil
     if isEverythingSelected {
       isEverythingSelected = false
       UserDefaults.standard.set(false, forKey: Self.everythingScopeKey)
