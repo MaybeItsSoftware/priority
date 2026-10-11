@@ -6,7 +6,7 @@ import TaktWorkspace
 @MainActor
 extension WorkspaceViewModel {
   func itemSymbol(for task: WorkspaceTask) -> String {
-    task.isList ? (listIcons[task.id] ?? "list.bullet") : (task.status == .open ? "circle" : "checkmark.circle.fill")
+    task.isList ? (listIcons[task.id] ?? "list.bullet") : "circle"
   }
 
   func setNestedListIcon(_ symbol: String, for task: WorkspaceTask) {

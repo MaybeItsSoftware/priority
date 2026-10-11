@@ -534,12 +534,12 @@ struct WorkspaceKanbanCard: View {
     // A selected card grows to its whole title, with the mark and the
     // buttons kept level with the title's first line. The card itself is the
     // drag source, so it carries no handle, and an open task keeps no blank
-    // slot for a check: space completes it, and only a list or a finished
-    // task has a mark worth the width.
+    // slot for a check: space completes it, and only a list has a mark worth
+    // the width.
     HStack(alignment: isSelected && headingLinkID == nil ? .firstTextBaseline : .center, spacing: theme.space.xs) {
-      if task.isList || task.status != .open {
+      if task.isList {
         Button {
-          if task.isList { model.openItemList(task) } else { model.toggleTask(task) }
+          model.openItemList(task)
         } label: {
           WorkspaceTaskMarker(task: task)
             .frame(width: theme.space.lg)
@@ -547,7 +547,7 @@ struct WorkspaceKanbanCard: View {
         }
         .buttonStyle(.plain)
         .focusable()
-        .commandHelp(task.isList ? .planEnterTask : .taskComplete, note: task.isList ? "Open the list" : nil)
+        .commandHelp(.planEnterTask, note: "Open the list")
       }
       Button(task.title) {
         model.selectTask(task)

@@ -91,11 +91,12 @@ extension View {
 
 /// What stands in a task row's glyph column.
 ///
-/// A ticked task shows its check until it lingers out. An open one shows
-/// nothing at the top level and `└` beneath a parent, so the column says how
-/// a row hangs rather than repeating an empty box down the page; the circle
-/// comes back under the pointer, where it is a button to tick. A list keeps
-/// its icon, since opening it is what the glyph does.
+/// A task, open or ticked, shows nothing at the top level and `└` beneath a
+/// parent, so the column says how a row hangs rather than repeating an empty
+/// box down the page; a ticked one is told apart by its struck-through title,
+/// not a check. The circle comes back under the pointer, where it is a button
+/// to tick or untick. A list keeps its icon, since opening it is what the
+/// glyph does.
 struct WorkspaceTaskMarker: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
@@ -107,8 +108,6 @@ struct WorkspaceTaskMarker: View {
     Group {
       if task.isList {
         Image(systemName: model.itemSymbol(for: task)).foregroundStyle(theme.muted)
-      } else if task.status != .open {
-        Image(systemName: "checkmark.circle.fill").foregroundStyle(theme.success)
       } else if isHovered {
         Image(systemName: "circle").foregroundStyle(theme.muted)
       } else if isSubtask {
