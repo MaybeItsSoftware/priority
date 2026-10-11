@@ -135,6 +135,7 @@ fun TodayScreen() {
                             onPause = vm::togglePause,
                             onLog = { vm.requestCompletion(completeTask = false) },
                             onDone = { vm.requestCompletion(completeTask = true) },
+                            onStop = vm::endSession,
                             onOpen = { vm.inspect(card) },
                             modifier = itemModifier,
                         )
@@ -360,6 +361,7 @@ private fun RunningDayCard(
     onPause: () -> Unit,
     onLog: () -> Unit,
     onDone: () -> Unit,
+    onStop: () -> Unit,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -402,6 +404,7 @@ private fun RunningDayCard(
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sm), verticalAlignment = Alignment.CenterVertically) {
             BlockIconButton(if (paused) Icons.Filled.PlayArrow else PIcons.Pause, if (paused) "Resume" else "Pause", onPause)
             BlockIconButton(PIcons.Timer, "Log and keep", onLog)
+            BlockIconButton(PIcons.Stop, "End session", onStop)
             Spacer(Modifier.weight(1f))
             PButton(
                 "Done",

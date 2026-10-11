@@ -182,6 +182,17 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         state.value.session?.let(focus::togglePause)
     }
 
+    /**
+     * Out of the block altogether, as the Focus screen's "End session": the
+     * time so far is logged without a score, the task stays open and the
+     * queue is dropped. A question already up about the block is let go.
+     */
+    fun endSession() {
+        val session = state.value.session ?: return
+        _pending.value = null
+        focus.endSession(session)
+    }
+
     fun requestCompletion(completeTask: Boolean) {
         if (_pending.value != null) return
         val day = state.value

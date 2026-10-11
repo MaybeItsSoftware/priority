@@ -75,7 +75,8 @@ struct TodayScreen: View {
           onPause: { today.togglePause(model: model) },
           onSkip: { today.requestCompletion(completeTask: false, model: model) },
           onLog: { today.requestCompletion(completeTask: false, model: model) },
-          onDone: { today.requestCompletion(completeTask: true, model: model) })
+          onDone: { today.requestCompletion(completeTask: true, model: model) },
+          onStop: { today.endSession(model: model) })
       } else {
         DayCardRow(
           card: card, index: index + 1, isSelected: isSelected, isBlocked: model.isBlocked(card.id),
@@ -339,6 +340,7 @@ struct RunningDayCard: View {
   let onSkip: () -> Void
   let onLog: () -> Void
   let onDone: () -> Void
+  let onStop: () -> Void
 
   private var isPaused: Bool { session.pausedAt != nil }
 
@@ -375,6 +377,8 @@ struct RunningDayCard: View {
           .disabled(!canSkip)
           .opacity(canSkip ? 1 : 0.4)
         control("clock.arrow.circlepath", "Log the time and keep the task open", action: onLog)
+        control("stop.fill", "End the session", action: onStop)
+          .accessibilityIdentifier("today.endSession")
         Spacer(minLength: 0)
         Button(action: onDone) {
           Label("Done", systemImage: "checkmark")

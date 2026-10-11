@@ -277,6 +277,31 @@ final class TodayModel {
     }
   }
 
+  /// Out of the block altogether, as the Focus screen's "End session": the
+  /// running block's time is logged without a score, the task stays open,
+  /// the queue is dropped, and a question already up about it is let go.
+  func endSession(model: WorkspaceModel, now: Date = .now) {
+    guard let session = day.session else { return }
+    let pending = model.pendingBlock
+    model.pendingBlock = nil
+    model.perform { store in
+      do {
+        if let pending {
+          _ = try store.completeActiveFocusTask(
+            sessionId: pending.sessionID, elapsedSeconds: pending.seconds, completeTask: false,
+            expectedBlockId: pending.blockID, context: pending.context)
+        } else if session.activeTaskId != nil {
+          _ = try store.completeActiveFocusTask(
+            sessionId: session.id, elapsedSeconds: session.elapsedSeconds(now: now), completeTask: false,
+            expectedBlockId: session.activeBlockId)
+        }
+      } catch WorkspaceStoreError.noActiveFocusTask {
+        // Already logged or advanced elsewhere; the session still ends.
+      }
+      try store.finishFocusSession(id: session.id, now: now)
+    }
+  }
+
   /// Stops the clock and asks how the block went — through the one prompt
   /// the root presents for every surface. Done closes the task; Log and Skip
   /// credit the time and leave it open — Skip because logging the block is

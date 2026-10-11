@@ -29,6 +29,7 @@ import uk.co.maybeitsadam.takt.R
 import uk.co.maybeitsadam.takt.appContainer
 import uk.co.maybeitsadam.takt.core.FocusSession
 import uk.co.maybeitsadam.takt.core.FocusSessionPhase
+import uk.co.maybeitsadam.takt.ui.focus.FocusActions
 import uk.co.maybeitsadam.takt.ui.ShellIntents
 import uk.co.maybeitsadam.takt.ui.theme.ResolvedTheme
 import uk.co.maybeitsadam.takt.core.theme.ThemeColorRole
@@ -59,6 +60,7 @@ class FocusService : LifecycleService() {
             ACTION_PAUSE -> act { session -> pauseOrResume(session, pause = true) }
             ACTION_RESUME -> act { session -> pauseOrResume(session, pause = false) }
             ACTION_DONE -> act { session -> done(session) }
+            ACTION_END -> act { session -> FocusActions(applicationContext.appContainer).endSession(session) }
         }
         watch()
         return START_STICKY
@@ -189,6 +191,9 @@ class FocusService : LifecycleService() {
             }
             builder.addAction(0, "Done", serviceAction(ACTION_DONE, 3))
         }
+        // Always, a break and a blocked queue included: the notification is
+        // where a running session is on screen, so it is a way out of it.
+        builder.addAction(0, "End", serviceAction(ACTION_END, 4))
         return builder.build()
     }
 
@@ -205,6 +210,7 @@ class FocusService : LifecycleService() {
         const val ACTION_PAUSE = "uk.co.maybeitsadam.priority.focus.PAUSE"
         const val ACTION_RESUME = "uk.co.maybeitsadam.priority.focus.RESUME"
         const val ACTION_DONE = "uk.co.maybeitsadam.priority.focus.DONE"
+        const val ACTION_END = "uk.co.maybeitsadam.priority.focus.END"
         private const val CHECKPOINT_MILLIS = 30_000L
 
         /** The low-importance "Focus block" channel: no sound, no peeking, just the ongoing row. */
