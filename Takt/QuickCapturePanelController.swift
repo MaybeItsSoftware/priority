@@ -101,10 +101,23 @@ final class QuickCapturePanelController: NSObject, NSWindowDelegate {
   private func position(_ panel: NSPanel) {
     let mouse = NSEvent.mouseLocation
     let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
-    guard let frame = screen?.visibleFrame else { panel.center(); return }
-    panel.setFrameOrigin(NSPoint(
-      x: frame.midX - Self.width / 2,
-      y: frame.maxY - frame.height * Self.verticalAnchor - Self.height))
+    // The size is set here, every time, not only at creation: handing the
+    // panel a hosting controller with no sizing options resized it to the
+    // hosting view's starting frame, which is zero. The field took the
+    // keyboard in a window nobody could see, so the hotkey looked dead.
+    let size = NSSize(width: Self.width, height: Self.height)
+    guard let frame = screen?.visibleFrame else {
+      panel.setContentSize(size)
+      panel.center()
+      return
+    }
+    panel.setFrame(
+      NSRect(
+        origin: NSPoint(
+          x: frame.midX - Self.width / 2,
+          y: frame.maxY - frame.height * Self.verticalAnchor - Self.height),
+        size: size),
+      display: false)
   }
 
   func windowDidResignKey(_ notification: Notification) {
