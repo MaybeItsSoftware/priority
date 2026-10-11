@@ -76,6 +76,7 @@ internal fun Row.toMetadata() = TaskMetadata(
     focusRank = intOrNull("focusRank"), updatedAt = instant("updatedAt"), planningJSON = stringOrNull("planningJSON"),
     waitingOn = stringOrNull("waitingOn"), waitingFollowUpAt = instantOrNull("waitingFollowUpAt"),
     waitingFollowUpTaskId = stringOrNull("waitingFollowUpTaskId"), followUpOfTaskId = stringOrNull("followUpOfTaskId"),
+    matrixRank = intOrNull("matrixRank"),
 )
 
 internal fun Row.toSession() = FocusSession(
@@ -179,7 +180,7 @@ internal fun MetadataRow.toMetadata() = TaskMetadata(
     kanbanColumn = kanbanColumn, externalLinksJSON = externalLinksJson, focusRank = focusRank?.toInt(),
     updatedAt = updatedAtMs.instant(), planningJSON = planningJson, waitingOn = waitingOn,
     waitingFollowUpAt = waitingFollowUpAtMs?.instant(), waitingFollowUpTaskId = waitingFollowUpTaskId,
-    followUpOfTaskId = followUpOfTaskId,
+    followUpOfTaskId = followUpOfTaskId, matrixRank = matrixRank?.toInt(),
 )
 
 internal fun SessionRow.toSession() = FocusSession(

@@ -18,6 +18,8 @@ data class TaskDecoration(
     val kanbanColumn: String? = null,
     val matrixUrgency: Int? = null,
     val matrixImportance: Int? = null,
+    /** Its place within its matrix quadrant, lowest first. */
+    val matrixRank: Int? = null,
     /** Who or what it waits on, while it is in `waiting-on`. */
     val waitingOn: String? = null,
     /** When to chase it. */
@@ -77,6 +79,7 @@ private fun Db.decorations(listIds: Collection<String>): Map<String, TaskDecorat
                 kanbanColumn = m.kanbanColumn,
                 matrixUrgency = m.matrixUrgency,
                 matrixImportance = m.matrixImportance,
+                matrixRank = m.matrixRank,
                 waitingOn = m.waitingOn,
                 followUpAt = m.waitingFollowUpAt,
             )

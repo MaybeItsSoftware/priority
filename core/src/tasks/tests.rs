@@ -323,6 +323,96 @@ fn a_matrix_placement_creates_or_updates_the_tasks_metadata() {
     assert_eq!(matrix(&connection, "c"), (None, None));
 }
 
+#[test]
+fn placing_in_a_quadrant_ranks_it_where_it_was_dropped() {
+    let mut connection = workspace();
+    for id in ["o", "c"] {
+        journalled(&mut connection, "Move Task", |tx| {
+            set_matrix_position(tx, id, Some(1), Some(1), NOW)
+        })
+        .unwrap();
+    }
+    // "p" comes in from unplaced, between the two already there.
+    let order = vec!["o".to_string(), "p".to_string(), "c".to_string()];
+    journalled(&mut connection, "Move Task", |tx| {
+        place_in_matrix(tx, "p", 1, 1, &order, NOW)
+    })
+    .unwrap();
+    assert_eq!(matrix(&connection, "p"), (Some(1), Some(1)));
+    assert_eq!(
+        ranks(&connection, &["o", "p", "c"]),
+        [Some(0), Some(1), Some(2)]
+    );
+
+    // Reordering within it: "c" to the top.
+    let order = vec!["c".to_string(), "o".to_string(), "p".to_string()];
+    journalled(&mut connection, "Move Task", |tx| {
+        place_in_matrix(tx, "c", 1, 1, &order, NOW)
+    })
+    .unwrap();
+    assert_eq!(
+        ranks(&connection, &["c", "o", "p"]),
+        [Some(0), Some(1), Some(2)]
+    );
+    undo(&mut connection).unwrap();
+    assert_eq!(
+        ranks(&connection, &["o", "p", "c"]),
+        [Some(0), Some(1), Some(2)]
+    );
+}
+
+#[test]
+fn a_rank_is_only_written_for_tasks_in_that_quadrant() {
+    let mut connection = workspace();
+    journalled(&mut connection, "Move Task", |tx| {
+        set_matrix_position(tx, "o", Some(0), Some(0), NOW)
+    })
+    .unwrap();
+    // "o" is in another quadrant and "c" on no quadrant at all; "p" is
+    // missing from the order, so it goes last.
+    let order = vec!["o".to_string(), "c".to_string()];
+    journalled(&mut connection, "Move Task", |tx| {
+        place_in_matrix(tx, "p", 1, 0, &order, NOW)
+    })
+    .unwrap();
+    assert_eq!(ranks(&connection, &["o", "p"]), [None, Some(2)]);
+    assert_eq!(matrix(&connection, "c"), (None, None));
+}
+
+#[test]
+fn changing_quadrant_without_a_place_drops_the_old_rank() {
+    let mut connection = workspace();
+    let order = vec!["o".to_string()];
+    journalled(&mut connection, "Move Task", |tx| {
+        place_in_matrix(tx, "o", 1, 1, &order, NOW)
+    })
+    .unwrap();
+    journalled(&mut connection, "Move Task", |tx| {
+        set_matrix_position(tx, "o", Some(1), Some(1), NOW)
+    })
+    .unwrap();
+    assert_eq!(ranks(&connection, &["o"]), [Some(0)]);
+    journalled(&mut connection, "Move Task", |tx| {
+        set_matrix_position(tx, "o", Some(0), Some(1), NOW)
+    })
+    .unwrap();
+    assert_eq!(ranks(&connection, &["o"]), [None]);
+}
+
+fn ranks(connection: &Connection, ids: &[&str]) -> Vec<Option<i64>> {
+    ids.iter()
+        .map(|id| {
+            connection
+                .query_row(
+                    "SELECT matrixRank FROM task_metadata WHERE taskId = ?1",
+                    [id],
+                    |row| row.get(0),
+                )
+                .unwrap()
+        })
+        .collect()
+}
+
 fn matrix(connection: &Connection, id: &str) -> (Option<i64>, Option<i64>) {
     connection
         .query_row(

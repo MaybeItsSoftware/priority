@@ -344,7 +344,8 @@ public final class WorkspaceStore: @unchecked Sendable {
     for record in try Self.mappingCoreErrors({ try handle.metadataForTasks(taskIds: taskIDs) }) {
       columns[record.taskId] = record.kanbanColumn
       positions[record.taskId] = TaskMatrixPosition(
-        urgency: record.matrixUrgency.map { Int($0) }, importance: record.matrixImportance.map { Int($0) })
+        urgency: record.matrixUrgency.map { Int($0) }, importance: record.matrixImportance.map { Int($0) },
+        rank: record.matrixRank.map { Int($0) })
     }
     return (columns, positions)
   }
@@ -366,7 +367,8 @@ public final class WorkspaceStore: @unchecked Sendable {
   public func matrixPosition(for taskId: String) throws -> TaskMatrixPosition {
     let metadata = try Self.mappingCoreErrors { try core.metadata(taskId: taskId) }
     return TaskMatrixPosition(
-      urgency: metadata?.matrixUrgency.map { Int($0) }, importance: metadata?.matrixImportance.map { Int($0) })
+      urgency: metadata?.matrixUrgency.map { Int($0) }, importance: metadata?.matrixImportance.map { Int($0) },
+      rank: metadata?.matrixRank.map { Int($0) })
   }
 
   /// Places a task on the priority matrix: the Rust core's `tasks::set_matrix_position`.
@@ -378,6 +380,19 @@ public final class WorkspaceStore: @unchecked Sendable {
     try coreWrite {
       try core.setMatrixPosition(
         id: taskId, urgency: position.urgency.map(Int64.init), importance: position.importance.map(Int64.init),
+        nowMs: now.coreMilliseconds)
+    }
+  }
+
+  /// Places a task in a matrix quadrant at a point: `order` is the quadrant
+  /// as it should now read, top to bottom, the task among it. The Rust
+  /// core's `tasks::place_in_matrix`, one "Move Task" step.
+  public func placeInMatrix(
+    taskId: String, urgency: Int, importance: Int, order: [String], now: Date = .now
+  ) throws {
+    try coreWrite {
+      try core.placeInMatrix(
+        id: taskId, urgency: Int64(urgency), importance: Int64(importance), order: order,
         nowMs: now.coreMilliseconds)
     }
   }

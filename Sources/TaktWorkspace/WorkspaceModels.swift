@@ -190,10 +190,20 @@ public struct WorkspaceKanbanColumn: Codable, Identifiable, Sendable, Equatable 
 public struct TaskMatrixPosition: Sendable, Equatable {
   public let urgency: Int?
   public let importance: Int?
+  /// Where the task sits within its quadrant, lowest first; nil for a task
+  /// never dropped at a point, which reads after the ranked ones
+  /// (`v22_matrix_order`).
+  public let rank: Int?
 
-  public init(urgency: Int?, importance: Int?) {
+  public init(urgency: Int?, importance: Int?, rank: Int? = nil) {
     self.urgency = urgency
     self.importance = importance
+    self.rank = rank
+  }
+
+  /// Whether two positions name the same quadrant, whatever their ranks.
+  public func isSameQuadrant(as other: TaskMatrixPosition) -> Bool {
+    urgency == other.urgency && importance == other.importance
   }
 }
 

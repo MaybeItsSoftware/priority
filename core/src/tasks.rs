@@ -7,6 +7,8 @@
 //! names the Swift `WorkspaceStore` method and the Kotlin
 //! `WorkspaceRepository` method it replaced.
 
+use std::collections::HashSet;
+
 use rusqlite::{OptionalExtension, Transaction, params};
 
 use crate::CoreError;
@@ -520,6 +522,10 @@ pub fn set_kanban_column(
 /// Places a task on the priority matrix by urgency and importance (either
 /// may be unset). Replaces `WorkspaceStore.setMatrixPosition` and its
 /// Kotlin copy.
+///
+/// A task that changes quadrant loses its place within the old one
+/// (`matrixRank`), so it lands after the ranked tasks of the new one; a
+/// task placed where it already is keeps it.
 pub fn set_matrix_position(
     transaction: &Transaction,
     id: &str,
@@ -532,11 +538,54 @@ pub fn set_matrix_position(
         "INSERT INTO task_metadata(taskId, tagsJSON, externalLinksJSON, matrixUrgency, matrixImportance, updatedAt)
          VALUES (?1, '[]', '[]', ?2, ?3, ?4)
          ON CONFLICT(taskId) DO UPDATE SET
+           matrixRank = CASE
+             WHEN matrixUrgency IS excluded.matrixUrgency AND matrixImportance IS excluded.matrixImportance
+             THEN matrixRank ELSE NULL END,
            matrixUrgency = excluded.matrixUrgency,
            matrixImportance = excluded.matrixImportance,
            updatedAt = excluded.updatedAt",
         params![id, urgency, importance, stored(now_ms)],
     )?;
+    Ok(())
+}
+
+/// Places a task in a matrix quadrant at a given point: `order` is the
+/// quadrant as it should now read, top to bottom, with `id` where it goes
+/// (it is put last when missing). Each task in it that is in that quadrant
+/// takes its index as its `matrixRank`; one in another quadrant, or not on
+/// the matrix, is left alone, and only ranks that change are written.
+///
+/// A client passes the quadrant as it draws it, which in a single list's
+/// scope is the whole quadrant. In a combined scope it is the whole of it
+/// too, since that matrix draws every list's cards; tasks it does not draw
+/// keep their ranks and sort among the drawn ones by them.
+pub fn place_in_matrix(
+    transaction: &Transaction,
+    id: &str,
+    urgency: i64,
+    importance: i64,
+    order: &[String],
+    now_ms: i64,
+) -> Result<(), CoreError> {
+    set_matrix_position(transaction, id, Some(urgency), Some(importance), now_ms)?;
+    let mut order: Vec<&str> = order.iter().map(String::as_str).collect();
+    if !order.contains(&id) {
+        order.push(id);
+    }
+    let mut statement = transaction.prepare(
+        "UPDATE task_metadata SET matrixRank = ?2, updatedAt = ?3
+         WHERE taskId = ?1 AND matrixUrgency = ?4 AND matrixImportance = ?5 AND matrixRank IS NOT ?2",
+    )?;
+    let now = stored(now_ms);
+    let mut seen = HashSet::new();
+    let mut rank: i64 = 0;
+    for task in order {
+        if !seen.insert(task) {
+            continue;
+        }
+        statement.execute(params![task, rank, now, urgency, importance])?;
+        rank += 1;
+    }
     Ok(())
 }
 

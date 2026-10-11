@@ -195,7 +195,7 @@ object BoardShaping {
                     .toImmutableList(),
                 subtaskCount = subtasks.size,
             )
-            positions[task.id] = TaskMatrixPosition(decoration?.matrixUrgency, decoration?.matrixImportance)
+            positions[task.id] = TaskMatrixPosition(decoration?.matrixUrgency, decoration?.matrixImportance, decoration?.matrixRank)
         }
         return BoardShape(
             key = key,
@@ -205,13 +205,18 @@ object BoardShaping {
         )
     }
 
-    /** The matrix over the board's own cards (not subtasks filed in another column). */
+    /**
+     * The matrix over the board's own cards (not subtasks filed in another column). Within a quadrant the
+     * cards arranged on the Mac come first, by rank (`v22_matrix_order`), then the rest in board order.
+     */
     fun matrix(board: BoardShape): MatrixShape {
         val cards = board.columns.flatMap { it.cards }.filter { it.parentTitle == null }
         val byCell = cards.groupBy { MatrixCell.of(board.positions[it.id]) }
+        // `sortedBy` is stable, so the unranked keep the board's order.
+        fun ranked(cell: MatrixCell) = byCell[cell].orEmpty().sortedBy { board.positions[it.id]?.rank ?: Int.MAX_VALUE }
         return MatrixShape(
             unplaced = byCell[null].orEmpty().toImmutableList(),
-            quadrants = MatrixCell.entries.map { MatrixQuadrantModel(it, byCell[it].orEmpty().toImmutableList()) }.toImmutableList(),
+            quadrants = MatrixCell.entries.map { MatrixQuadrantModel(it, ranked(it).toImmutableList()) }.toImmutableList(),
             isLoaded = board.isLoaded,
         )
     }

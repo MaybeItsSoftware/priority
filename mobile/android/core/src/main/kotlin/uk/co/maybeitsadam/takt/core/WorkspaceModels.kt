@@ -122,6 +122,8 @@ data class TaskMetadata(
     val waitingFollowUpTaskId: String? = null,
     /** On a follow-up task: the waiting task it chases. */
     val followUpOfTaskId: String? = null,
+    /** Its place within its matrix quadrant, lowest first (`v22_matrix_order`). */
+    val matrixRank: Int? = null,
 )
 
 data class TaskEditorMetadata(
@@ -144,7 +146,8 @@ data class WorkspaceKanbanColumn(val id: String, val title: String) {
     }
 }
 
-data class TaskMatrixPosition(val urgency: Int?, val importance: Int?)
+/** A task's matrix quadrant, and its place within it: [rank] lowest first, null after the ranked ones. */
+data class TaskMatrixPosition(val urgency: Int?, val importance: Int?, val rank: Int? = null)
 
 enum class FocusSessionPhase(val raw: String) {
     RUNNING("running"),

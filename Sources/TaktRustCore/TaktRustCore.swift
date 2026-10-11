@@ -1491,6 +1491,12 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func placeFolder(id: String, beforeId: String?, parentFolderId: String?, nowMs: Int64) throws 
     
     /**
+     * Places a task in a matrix quadrant at a point in its order as one
+     * "Move Task" step (`tasks::place_in_matrix`).
+     */
+    func placeInMatrix(id: String, urgency: Int64, importance: Int64, order: [String], nowMs: Int64) throws 
+    
+    /**
      * Drops a list before another, in a folder, as one "Reorder List" step.
      */
     func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int64) throws 
@@ -3320,6 +3326,23 @@ open func placeFolder(id: String, beforeId: String?, parentFolderId: String?, no
 }
     
     /**
+     * Places a task in a matrix quadrant at a point in its order as one
+     * "Move Task" step (`tasks::place_in_matrix`).
+     */
+open func placeInMatrix(id: String, urgency: Int64, importance: Int64, order: [String], nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_place_in_matrix(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterInt64.lower(urgency),
+        FfiConverterInt64.lower(importance),
+        FfiConverterSequenceString.lower(order),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
      * Drops a list before another, in a folder, as one "Reorder List" step.
      */
 open func placeList(id: String, beforeId: String?, folderId: String?, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -4885,17 +4908,25 @@ public struct BoardPlacement: Equatable, Hashable {
     public var kanbanColumn: String?
     public var matrixUrgency: Int64?
     public var matrixImportance: Int64?
+    /**
+     * Its place within its quadrant, lowest first.
+     */
+    public var matrixRank: Int64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(
         /**
          * An index into `BoardRead.rows`.
-         */row: UInt32, kanbanColumn: String?, matrixUrgency: Int64?, matrixImportance: Int64?) {
+         */row: UInt32, kanbanColumn: String?, matrixUrgency: Int64?, matrixImportance: Int64?, 
+        /**
+         * Its place within its quadrant, lowest first.
+         */matrixRank: Int64?) {
         self.row = row
         self.kanbanColumn = kanbanColumn
         self.matrixUrgency = matrixUrgency
         self.matrixImportance = matrixImportance
+        self.matrixRank = matrixRank
     }
 
     
@@ -4917,7 +4948,8 @@ public struct FfiConverterTypeBoardPlacement: FfiConverterRustBuffer {
                 row: FfiConverterUInt32.read(from: &buf), 
                 kanbanColumn: FfiConverterOptionString.read(from: &buf), 
                 matrixUrgency: FfiConverterOptionInt64.read(from: &buf), 
-                matrixImportance: FfiConverterOptionInt64.read(from: &buf)
+                matrixImportance: FfiConverterOptionInt64.read(from: &buf), 
+                matrixRank: FfiConverterOptionInt64.read(from: &buf)
         )
     }
 
@@ -4926,6 +4958,7 @@ public struct FfiConverterTypeBoardPlacement: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.kanbanColumn, into: &buf)
         FfiConverterOptionInt64.write(value.matrixUrgency, into: &buf)
         FfiConverterOptionInt64.write(value.matrixImportance, into: &buf)
+        FfiConverterOptionInt64.write(value.matrixRank, into: &buf)
     }
 }
 
@@ -11247,6 +11280,10 @@ public struct MetadataRow: Equatable, Hashable {
     public var recurrenceRule: String?
     public var matrixUrgency: Int64?
     public var matrixImportance: Int64?
+    /**
+     * The task's place within its matrix quadrant, lowest first.
+     */
+    public var matrixRank: Int64?
     public var kanbanColumn: String?
     public var externalLinksJson: String
     public var focusRank: Int64?
@@ -11259,7 +11296,10 @@ public struct MetadataRow: Equatable, Hashable {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(taskId: String, priority: Int64?, startAtMs: Int64?, tagsJson: String, recurrenceRule: String?, matrixUrgency: Int64?, matrixImportance: Int64?, kanbanColumn: String?, externalLinksJson: String, focusRank: Int64?, updatedAtMs: Int64, planningJson: String?, waitingOn: String?, waitingFollowUpAtMs: Int64?, waitingFollowUpTaskId: String?, followUpOfTaskId: String?) {
+    public init(taskId: String, priority: Int64?, startAtMs: Int64?, tagsJson: String, recurrenceRule: String?, matrixUrgency: Int64?, matrixImportance: Int64?, 
+        /**
+         * The task's place within its matrix quadrant, lowest first.
+         */matrixRank: Int64?, kanbanColumn: String?, externalLinksJson: String, focusRank: Int64?, updatedAtMs: Int64, planningJson: String?, waitingOn: String?, waitingFollowUpAtMs: Int64?, waitingFollowUpTaskId: String?, followUpOfTaskId: String?) {
         self.taskId = taskId
         self.priority = priority
         self.startAtMs = startAtMs
@@ -11267,6 +11307,7 @@ public struct MetadataRow: Equatable, Hashable {
         self.recurrenceRule = recurrenceRule
         self.matrixUrgency = matrixUrgency
         self.matrixImportance = matrixImportance
+        self.matrixRank = matrixRank
         self.kanbanColumn = kanbanColumn
         self.externalLinksJson = externalLinksJson
         self.focusRank = focusRank
@@ -11301,6 +11342,7 @@ public struct FfiConverterTypeMetadataRow: FfiConverterRustBuffer {
                 recurrenceRule: FfiConverterOptionString.read(from: &buf), 
                 matrixUrgency: FfiConverterOptionInt64.read(from: &buf), 
                 matrixImportance: FfiConverterOptionInt64.read(from: &buf), 
+                matrixRank: FfiConverterOptionInt64.read(from: &buf), 
                 kanbanColumn: FfiConverterOptionString.read(from: &buf), 
                 externalLinksJson: FfiConverterString.read(from: &buf), 
                 focusRank: FfiConverterOptionInt64.read(from: &buf), 
@@ -11321,6 +11363,7 @@ public struct FfiConverterTypeMetadataRow: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.recurrenceRule, into: &buf)
         FfiConverterOptionInt64.write(value.matrixUrgency, into: &buf)
         FfiConverterOptionInt64.write(value.matrixImportance, into: &buf)
+        FfiConverterOptionInt64.write(value.matrixRank, into: &buf)
         FfiConverterOptionString.write(value.kanbanColumn, into: &buf)
         FfiConverterString.write(value.externalLinksJson, into: &buf)
         FfiConverterOptionInt64.write(value.focusRank, into: &buf)
@@ -23412,6 +23455,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_place_folder() != 1445) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_place_in_matrix() != 65519) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_place_list() != 14409) {

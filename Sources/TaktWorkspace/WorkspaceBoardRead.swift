@@ -101,7 +101,8 @@ extension WorkspaceStore {
       let task = rows[Int(placement.row)]
       if let column = placement.kanbanColumn { columns[task.id] = column }
       positions[task.id] = TaskMatrixPosition(
-        urgency: placement.matrixUrgency.map { Int($0) }, importance: placement.matrixImportance.map { Int($0) })
+        urgency: placement.matrixUrgency.map { Int($0) }, importance: placement.matrixImportance.map { Int($0) },
+        rank: placement.matrixRank.map { Int($0) })
     }
     return WorkspaceBoardRead(
       cards: Self.unpacked(read.cards).map { rows[Int($0)] }, descendants: descendants, parentIDs: parentIDs,

@@ -37,6 +37,8 @@ pub struct BoardPlacement {
     pub kanban_column: Option<String>,
     pub matrix_urgency: Option<i64>,
     pub matrix_importance: Option<i64>,
+    /// Its place within its quadrant, lowest first.
+    pub matrix_rank: Option<i64>,
 }
 
 /// A combined scope's board.
@@ -218,13 +220,14 @@ pub fn combined_board(
         .iter()
         .enumerate()
         .filter_map(|(row, &index)| {
-            let (kanban_column, matrix_urgency, matrix_importance) =
+            let (kanban_column, matrix_urgency, matrix_importance, matrix_rank) =
                 placements.remove(&tasks[index].id)?;
             Some(BoardPlacement {
                 row: row as u32,
                 kanban_column,
                 matrix_urgency,
                 matrix_importance,
+                matrix_rank,
             })
         })
         .collect();
@@ -371,18 +374,21 @@ fn read_tasks(
     Ok((tasks, visible_roots))
 }
 
-type Placement = (Option<String>, Option<i64>, Option<i64>);
+type Placement = (Option<String>, Option<i64>, Option<i64>, Option<i64>);
 
 /// The column and matrix place of every task that has either.
 fn placements(connection: &Connection) -> Result<HashMap<String, Placement>, CoreError> {
     let mut statement = connection.prepare_cached(
-        "SELECT taskId, kanbanColumn, matrixUrgency, matrixImportance FROM task_metadata
+        "SELECT taskId, kanbanColumn, matrixUrgency, matrixImportance, matrixRank FROM task_metadata
          WHERE kanbanColumn IS NOT NULL OR matrixUrgency IS NOT NULL OR matrixImportance IS NOT NULL",
     )?;
     let mut rows = statement.query([])?;
     let mut result = HashMap::new();
     while let Some(row) = rows.next()? {
-        result.insert(row.get(0)?, (row.get(1)?, row.get(2)?, row.get(3)?));
+        result.insert(
+            row.get(0)?,
+            (row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?),
+        );
     }
     Ok(result)
 }

@@ -234,6 +234,21 @@ impl CoreWorkspace {
         })
     }
 
+    /// Places a task in a matrix quadrant at a point in its order as one
+    /// "Move Task" step (`tasks::place_in_matrix`).
+    pub fn place_in_matrix(
+        &self,
+        id: String,
+        urgency: i64,
+        importance: i64,
+        order: Vec<String>,
+        now_ms: i64,
+    ) -> Result<(), CoreError> {
+        journal::journalled(&mut self.lock(), "Move Task", |tx| {
+            tasks::place_in_matrix(tx, &id, urgency, importance, &order, now_ms)
+        })
+    }
+
     /// Deletes a task and its subtree as one "Delete Task" step.
     pub fn delete_task(&self, id: String) -> Result<DeletedTask, CoreError> {
         journal::journalled(&mut self.lock(), "Delete Task", |tx| {

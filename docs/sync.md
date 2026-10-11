@@ -88,6 +88,16 @@ removed. A client older than v21 skips the table's rows on pull, as it skips
 any table it does not know. The rules the clients draw from it live in
 `core/src/dependencies.rs`.
 
+`v22_matrix_order` adds `matrixRank INTEGER` to `task_metadata`: a task's
+place within its matrix quadrant, lowest first, and reinstalls the
+`task_metadata` journal and outbox triggers. A quadrant reads ranked tasks
+first, by rank, then the unranked in board order. Dropping a task at a point
+in a quadrant (`tasks::place_in_matrix`) renumbers the quadrant's tasks from
+0 in the order the client drew them, writing only the ranks that change;
+moving a task to another quadrant without a point clears its rank, so it
+lands after the ranked ones. A client older than v22 drops the column on
+pull, as it drops any column it does not know.
+
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the
 sync tables themselves. Day-log files stay per device. Theme *files* do

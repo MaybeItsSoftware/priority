@@ -61,12 +61,13 @@ class WorkspaceSchemaTest {
             assertTrue("missing: ${expected - present}", present.containsAll(expected))
 
             val migrations = workspace.database.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(21, migrations.size)
+            assertEquals(22, migrations.size)
             assertTrue("v17_sync" in migrations)
             assertTrue("v18_themes_and_preferences" in migrations)
             assertTrue("v19_habit_options" in migrations)
             assertTrue("v20_waiting_follow_ups" in migrations)
             assertTrue("v21_task_dependencies" in migrations)
+            assertTrue("v22_matrix_order" in migrations)
             assertEquals(listOf(0L to 0L), workspace.database.read { db ->
                 db.query("SELECT recording, applying FROM sync_control") { it.long("recording") to it.long("applying") }
             })
@@ -94,7 +95,17 @@ class WorkspaceSchemaTest {
     // install that lacks one migration lacks every later one too, since they
     // only ever apply in order, so each rewind takes the later ones off first.
 
+    private fun rewindV22(connection: SQLiteConnection) {
+        for (op in listOf("insert", "update", "delete")) {
+            connection.execSQL("DROP TRIGGER change_log_task_metadata_$op")
+            connection.execSQL("DROP TRIGGER sync_outbox_task_metadata_$op")
+        }
+        connection.execSQL("ALTER TABLE task_metadata DROP COLUMN matrixRank")
+        connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v22_matrix_order'")
+    }
+
     private fun rewindV21(connection: SQLiteConnection) {
+        rewindV22(connection)
         // Dropping the table drops its journal and outbox triggers with it.
         connection.execSQL("DROP TABLE task_dependencies")
         connection.execSQL("DELETE FROM grdb_migrations WHERE identifier = 'v21_task_dependencies'")
@@ -103,8 +114,8 @@ class WorkspaceSchemaTest {
     private fun rewindV20(connection: SQLiteConnection) {
         rewindV21(connection)
         for (op in listOf("insert", "update", "delete")) {
-            connection.execSQL("DROP TRIGGER change_log_task_metadata_$op")
-            connection.execSQL("DROP TRIGGER sync_outbox_task_metadata_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS change_log_task_metadata_$op")
+            connection.execSQL("DROP TRIGGER IF EXISTS sync_outbox_task_metadata_$op")
         }
         for (column in listOf("waitingOn", "waitingFollowUpAt", "waitingFollowUpTaskId", "followUpOfTaskId")) {
             connection.execSQL("ALTER TABLE task_metadata DROP COLUMN $column")
@@ -156,13 +167,17 @@ class WorkspaceSchemaTest {
         try {
             assertEquals(expected, upgraded.read { schema(it) })
             val migrations = upgraded.read { it.strings("SELECT identifier FROM grdb_migrations") }
-            assertEquals(21, migrations.size)
-            assertEquals(21, migrations.toSet().size)
+            assertEquals(22, migrations.size)
+            assertEquals(22, migrations.toSet().size)
         } finally {
             upgraded.close()
             dir.deleteRecursively()
         }
     }
+
+    /** A v21 database takes `matrixRank` on `task_metadata`. */
+    @Test
+    fun aV21DatabaseUpgradesToTheFixture() = assertUpgradesToTheFixture("v21", ::rewindV22)
 
     /** A v20 database takes `task_dependencies` and its triggers. */
     @Test

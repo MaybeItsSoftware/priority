@@ -187,6 +187,19 @@ class ListsShapingTest {
         assertEquals(listOf("c"), matrix.unplaced.map { it.id })
     }
 
+    @Test fun aQuadrantReadsRankedCardsFirstThenTheRestInBoardOrder() {
+        val decorations = mapOf(
+            "a" to TaskDecoration(matrixUrgency = 1, matrixImportance = 1),
+            "b" to TaskDecoration(matrixUrgency = 1, matrixImportance = 1, matrixRank = 1),
+            "c" to TaskDecoration(matrixUrgency = 1, matrixImportance = 1, matrixRank = 0),
+        )
+        val board = BoardShaping.shape(
+            scope(listOf(home), tasks + task("c", "home"), decorations), false, emptyMap(), emptySet(), false, zone, today,
+        )
+        val doNow = BoardShaping.matrix(board).quadrants.first { it.cell == MatrixCell.DO_NOW }
+        assertEquals(listOf("c", "b", "a"), doNow.cards.map { it.id })
+    }
+
     @Test fun resolvedColumnsKeepAColumnACardIsFiledUnder() {
         val custom = listOf(WorkspaceKanbanColumn("now", "Now"))
         val columns = BoardShaping.resolvedColumns("home/root", false, mapOf("home/root" to custom), listOf("home"), setOf("today"))

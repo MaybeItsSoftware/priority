@@ -1187,6 +1187,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_folder(
     ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_place_in_matrix(
+    ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_place_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_prepare_sync_push(
@@ -1578,6 +1580,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_method_coreworkspace_pin_task(`ptr`: Long,`taskId`: RustBuffer.ByValue,`index`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_folder(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`parentFolderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_place_in_matrix(`ptr`: Long,`id`: RustBuffer.ByValue,`urgency`: Long,`importance`: Long,`order`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_takt_core_fn_method_coreworkspace_place_list(`ptr`: Long,`id`: RustBuffer.ByValue,`beforeId`: RustBuffer.ByValue,`folderId`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -2852,6 +2856,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_folder() and 0xFFFF) != 1445) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_in_matrix() and 0xFFFF) != 65519) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_place_list() and 0xFFFF) != 14409) {
@@ -4545,6 +4552,12 @@ public interface CoreWorkspaceInterface {
      * Drops a folder before another, in a parent, as one "Reorder Folder" step.
      */
     fun `placeFolder`(`id`: kotlin.String, `beforeId`: kotlin.String?, `parentFolderId`: kotlin.String?, `nowMs`: kotlin.Long)
+    
+    /**
+     * Places a task in a matrix quadrant at a point in its order as one
+     * "Move Task" step (`tasks::place_in_matrix`).
+     */
+    fun `placeInMatrix`(`id`: kotlin.String, `urgency`: kotlin.Long, `importance`: kotlin.Long, `order`: List<kotlin.String>, `nowMs`: kotlin.Long)
     
     /**
      * Drops a list before another, in a folder, as one "Reorder List" step.
@@ -6939,6 +6952,28 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
 
     
     /**
+     * Places a task in a matrix quadrant at a point in its order as one
+     * "Move Task" step (`tasks::place_in_matrix`).
+     */
+    @Throws(CoreException::class)override fun `placeInMatrix`(`id`: kotlin.String, `urgency`: kotlin.Long, `importance`: kotlin.Long, `order`: List<kotlin.String>, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_place_in_matrix(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterLong.lower(`urgency`),
+        FfiConverterLong.lower(`importance`),
+        FfiConverterSequenceString.lower(`order`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Drops a list before another, in a folder, as one "Reorder List" step.
      */
     @Throws(CoreException::class)override fun `placeList`(`id`: kotlin.String, `beforeId`: kotlin.String?, `folderId`: kotlin.String?, `nowMs`: kotlin.Long)
@@ -8804,6 +8839,11 @@ data class BoardPlacement (
     var `matrixUrgency`: kotlin.Long?
     , 
     var `matrixImportance`: kotlin.Long?
+    , 
+    /**
+     * Its place within its quadrant, lowest first.
+     */
+    var `matrixRank`: kotlin.Long?
     
 ){
     
@@ -8824,6 +8864,7 @@ public object FfiConverterTypeBoardPlacement: FfiConverterRustBuffer<BoardPlacem
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
         )
     }
 
@@ -8831,7 +8872,8 @@ public object FfiConverterTypeBoardPlacement: FfiConverterRustBuffer<BoardPlacem
             FfiConverterUInt.allocationSize(value.`row`) +
             FfiConverterOptionalString.allocationSize(value.`kanbanColumn`) +
             FfiConverterOptionalLong.allocationSize(value.`matrixUrgency`) +
-            FfiConverterOptionalLong.allocationSize(value.`matrixImportance`)
+            FfiConverterOptionalLong.allocationSize(value.`matrixImportance`) +
+            FfiConverterOptionalLong.allocationSize(value.`matrixRank`)
     )
 
     override fun write(value: BoardPlacement, buf: ByteBuffer) {
@@ -8839,6 +8881,7 @@ public object FfiConverterTypeBoardPlacement: FfiConverterRustBuffer<BoardPlacem
             FfiConverterOptionalString.write(value.`kanbanColumn`, buf)
             FfiConverterOptionalLong.write(value.`matrixUrgency`, buf)
             FfiConverterOptionalLong.write(value.`matrixImportance`, buf)
+            FfiConverterOptionalLong.write(value.`matrixRank`, buf)
     }
 }
 
@@ -13789,6 +13832,11 @@ data class MetadataRow (
     , 
     var `matrixImportance`: kotlin.Long?
     , 
+    /**
+     * The task's place within its matrix quadrant, lowest first.
+     */
+    var `matrixRank`: kotlin.Long?
+    , 
     var `kanbanColumn`: kotlin.String?
     , 
     var `externalLinksJson`: kotlin.String
@@ -13829,6 +13877,7 @@ public object FfiConverterTypeMetadataRow: FfiConverterRustBuffer<MetadataRow> {
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterOptionalLong.read(buf),
@@ -13849,6 +13898,7 @@ public object FfiConverterTypeMetadataRow: FfiConverterRustBuffer<MetadataRow> {
             FfiConverterOptionalString.allocationSize(value.`recurrenceRule`) +
             FfiConverterOptionalLong.allocationSize(value.`matrixUrgency`) +
             FfiConverterOptionalLong.allocationSize(value.`matrixImportance`) +
+            FfiConverterOptionalLong.allocationSize(value.`matrixRank`) +
             FfiConverterOptionalString.allocationSize(value.`kanbanColumn`) +
             FfiConverterString.allocationSize(value.`externalLinksJson`) +
             FfiConverterOptionalLong.allocationSize(value.`focusRank`) +
@@ -13868,6 +13918,7 @@ public object FfiConverterTypeMetadataRow: FfiConverterRustBuffer<MetadataRow> {
             FfiConverterOptionalString.write(value.`recurrenceRule`, buf)
             FfiConverterOptionalLong.write(value.`matrixUrgency`, buf)
             FfiConverterOptionalLong.write(value.`matrixImportance`, buf)
+            FfiConverterOptionalLong.write(value.`matrixRank`, buf)
             FfiConverterOptionalString.write(value.`kanbanColumn`, buf)
             FfiConverterString.write(value.`externalLinksJson`, buf)
             FfiConverterOptionalLong.write(value.`focusRank`, buf)

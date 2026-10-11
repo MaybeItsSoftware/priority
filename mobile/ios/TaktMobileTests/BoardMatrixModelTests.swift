@@ -132,6 +132,21 @@ final class BoardMatrixModelTests: XCTestCase {
     XCTAssertEqual(matrix.unplaced.map(\.id), [task.id])
   }
 
+  /// The order a quadrant was arranged in on the Mac, ranked first.
+  func testAQuadrantReadsInItsRankedOrder() async throws {
+    let first = try XCTUnwrap(model.createTask("First", listID: list.id))
+    let second = try XCTUnwrap(model.createTask("Second", listID: list.id))
+    let third = try XCTUnwrap(model.createTask("Third", listID: list.id))
+    for task in [first, second, third] {
+      try model.store.setMatrixPosition(MatrixCell.doNow.position, for: task.id)
+    }
+    try model.store.placeInMatrix(taskId: third.id, urgency: 1, importance: 1, order: [third.id, first.id])
+    let matrix = MatrixModel(scope: .list(list.id))
+    await matrix.load(model)
+    XCTAssertEqual(matrix.cards(in: .doNow).map(\.id), [third.id, first.id, second.id])
+    XCTAssertEqual(matrix.cell(of: third.id), .doNow)
+  }
+
   func testMatrixCellsRoundTripTheirPositions() {
     for cell in MatrixCell.allCases {
       XCTAssertEqual(MatrixCell(cell.position), cell)

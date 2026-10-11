@@ -38,7 +38,7 @@ enum MatrixCell: String, CaseIterable, Identifiable, Hashable {
   }
 
   init?(_ position: TaskMatrixPosition) {
-    guard let cell = Self.allCases.first(where: { $0.position == position }) else { return nil }
+    guard let cell = Self.allCases.first(where: { $0.position.isSameQuadrant(as: position) }) else { return nil }
     self = cell
   }
 }
@@ -82,8 +82,15 @@ final class MatrixModel {
     positions[cardID].flatMap(MatrixCell.init)
   }
 
+  /// A quadrant's cards in the order the Mac draws them: those dropped at a
+  /// point first, by rank (`v22_matrix_order`), then the rest in board order.
   func cards(in cell: MatrixCell) -> [BoardCard] {
-    cards.filter { self.cell(of: $0.id) == cell }
+    let ranked = cards.enumerated().filter { self.cell(of: $0.element.id) == cell }
+    return ranked.sorted { lhs, rhs in
+      let left = positions[lhs.element.id]?.rank ?? .max
+      let right = positions[rhs.element.id]?.rank ?? .max
+      return left != right ? left < right : lhs.offset < rhs.offset
+    }.map(\.element)
   }
 
   var unplaced: [BoardCard] {

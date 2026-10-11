@@ -31,7 +31,9 @@ pub(super) fn apply(transaction: &Transaction, identifier: &str) -> Result<(), C
 /// column, so they are reinstalled from the schema as it now stands.
 pub(super) fn finish(transaction: &Transaction, identifier: &str) -> Result<(), CoreError> {
     match identifier {
-        "v21_task_dependencies" => Ok(super::triggers::reinstall(transaction)?),
+        "v21_task_dependencies" | "v22_matrix_order" => {
+            Ok(super::triggers::reinstall(transaction)?)
+        }
         _ => Ok(()),
     }
 }

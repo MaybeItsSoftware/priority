@@ -76,6 +76,8 @@ pub struct MetadataRow {
     pub recurrence_rule: Option<String>,
     pub matrix_urgency: Option<i64>,
     pub matrix_importance: Option<i64>,
+    /// The task's place within its matrix quadrant, lowest first.
+    pub matrix_rank: Option<i64>,
     pub kanban_column: Option<String>,
     pub external_links_json: String,
     pub focus_rank: Option<i64>,
@@ -245,6 +247,7 @@ impl MetadataRow {
             recurrence_rule: row.get("recurrenceRule")?,
             matrix_urgency: row.get("matrixUrgency")?,
             matrix_importance: row.get("matrixImportance")?,
+            matrix_rank: row.get("matrixRank")?,
             kanban_column: row.get("kanbanColumn")?,
             external_links_json: row.get("externalLinksJSON")?,
             focus_rank: row.get("focusRank")?,
