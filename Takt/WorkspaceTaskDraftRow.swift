@@ -45,6 +45,10 @@ struct WorkspaceTaskDraftRow: View {
       if !isCard {
         Color.clear
           .frame(width: WorkspaceRowMetrics.iconWidth, height: 1)
+      } else if model.taskInsertionIsChild {
+        // Tabbed inside the card above: drawn with the mark its row will
+        // have on that card.
+        Text("└").font(theme.monoCaptionFont).foregroundStyle(theme.dim)
       }
       TextField("New task", text: $model.taskDraftText)
         .textFieldStyle(.plain)
@@ -99,10 +103,10 @@ struct WorkspaceTaskDraftRow: View {
 
   /// The row's own keys, ahead of the capture syntax, in the tooltip rather
   /// than along the row: a hint line under every draft would be one more row
-  /// in a list of tasks. Tab only means something in the outline.
+  /// in a list of tasks. Tab only means something in the outline and on the board.
   private var keysHint: String {
     var keys = ["↩ add", "esc close"]
-    if model.viewMode == .outline { keys.append("⇥ ⇧⇥ indent, outdent") }
+    if model.viewMode == .outline || model.viewMode == .board { keys.append("⇥ ⇧⇥ indent, outdent") }
     keys.append("↑ ↓ back to the tasks")
     return "\(keys.joined(separator: " · ")). \(TaskCapturePreview.syntaxHint)"
   }

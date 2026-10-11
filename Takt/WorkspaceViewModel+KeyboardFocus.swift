@@ -146,9 +146,14 @@ extension WorkspaceViewModel {
 
 @MainActor
 extension WorkspaceViewModel {
-  /// Tab in a draft row: the task being typed goes inside the one it was
-  /// to follow. Only in the outline, where depth is something you can see.
+  /// Tab in a draft row: the task being typed goes inside the one above it.
+  /// In the outline that is the row it was to follow; on the board, the card
+  /// above it in its column, where it lands as a row on that card.
   func indentTaskDraft() {
+    if viewMode == .board {
+      indentBoardTaskDraft()
+      return
+    }
     guard viewMode == .outline, !taskInsertionAbove else { return }
     // A draft at the foot of the list follows the last row on screen, so Tab
     // there puts it inside that one.
@@ -162,6 +167,11 @@ extension WorkspaceViewModel {
   /// ⇧Tab: back out a level — from inside the task above to beside it, and
   /// from beside it to after its parent.
   func outdentTaskDraft() {
+    if viewMode == .board {
+      // A card has no level to back out to, only the card it went inside.
+      taskInsertionIsChild = false
+      return
+    }
     guard viewMode == .outline, let reference = taskInsertionReference else { return }
     if taskInsertionIsChild {
       taskInsertionIsChild = false
@@ -170,5 +180,28 @@ extension WorkspaceViewModel {
       taskInsertionReference = parent
       taskInsertionAbove = false
     }
+  }
+
+  /// The board's Tab: the card above the draft in its column — the one it
+  /// follows, the one before the card it precedes, or the column's last at
+  /// the foot — becomes the new task's parent. Nothing above, nothing to go
+  /// inside.
+  private func indentBoardTaskDraft() {
+    guard !taskInsertionIsChild else { return }
+    let parent: WorkspaceTask?
+    if let reference = taskInsertionReference {
+      if taskInsertionAbove {
+        let cards = column(for: reference).map { tasks(in: $0) } ?? []
+        parent = cards.firstIndex(where: { $0.id == reference.id }).flatMap { $0 > 0 ? cards[$0 - 1] : nil }
+      } else {
+        parent = reference
+      }
+    } else {
+      parent = boardColumns.first { $0.id == taskDraftBoardColumnID }.flatMap { tasks(in: $0).last }
+    }
+    guard let parent, !parent.isList else { return }
+    taskInsertionReference = parent
+    taskInsertionAbove = false
+    taskInsertionIsChild = true
   }
 }

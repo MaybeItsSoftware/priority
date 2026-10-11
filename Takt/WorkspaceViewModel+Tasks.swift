@@ -30,7 +30,9 @@ extension WorkspaceViewModel {
         parentTaskId: taskInsertionIsChild ? reference.id : reference.parentTaskId,
         kanbanColumn: viewMode == .board ? column(for: reference)?.id : nil,
         adjacentTaskId: taskInsertionIsChild ? nil : reference.id, above: taskInsertionAbove)
-      if taskInsertionIsChild { scopeTaskID = reference.id }
+      // The board draws a subtask as a row on its parent's card, so it stays
+      // put rather than opening the parent to show it.
+      if taskInsertionIsChild && viewMode != .board { scopeTaskID = reference.id }
       selectedTaskID = task.id
       taskInsertionReference = task
       taskInsertionAbove = false
