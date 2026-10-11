@@ -84,8 +84,25 @@ extension WorkspaceViewModel {
     }
   }
 
+  /// Puts the task inside the one above it. On the board "above" is the card
+  /// above in the same column: the store's own indent takes the previous
+  /// sibling in the list's order, which there is as likely as not a card in
+  /// another column, so a new card filed itself under a task you could not
+  /// see beside it.
   func indentTask(_ task: WorkspaceTask) {
     guard let store else { return }
+    if viewMode == .board, let column = column(for: task) {
+      let cards = tasks(in: column)
+      if let index = cards.firstIndex(where: { $0.id == task.id }) {
+        guard index > 0 else { return }
+        let parent = cards[index - 1]
+        perform {
+          try store.moveTask(id: task.id, toListId: parent.listId, parentTaskId: parent.id)
+          reloadOutline(refreshSidebar: task.isList)
+        }
+        return
+      }
+    }
     perform {
       try store.indentTask(id: task.id)
       reloadOutline(refreshSidebar: task.isList)
