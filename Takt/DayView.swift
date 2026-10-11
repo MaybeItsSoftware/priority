@@ -507,7 +507,7 @@ struct DayView: View {
           }
           Text(task.title)
             .font(theme.titleFont)
-            .foregroundStyle(theme.ink)
+            .foregroundStyle(facts.isBlocked ? theme.muted : theme.ink)
             .expandsWhenSelected(isExpanded, lineLimit: 2)
           Spacer(minLength: theme.space.sm)
           if let list = model.list(for: task) {
@@ -688,7 +688,7 @@ struct DayView: View {
         task: task, index: index, isActive: task.id == activeID,
         completion: daily.map { .daily(id: $0.daily.id) } ?? .workspaceTask(id: task.id),
         isDaily: isDaily, isDailyDone: isDaily && (daily?.isDoneToday ?? false),
-        cost: costText(for: task, logged: logged[task.id] ?? 0))
+        cost: costText(for: task, logged: logged[task.id] ?? 0), isBlocked: model.isBlocked(task))
     }
     if trimmed.isEmpty {
       let listNames = Dictionary(model.lists.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })

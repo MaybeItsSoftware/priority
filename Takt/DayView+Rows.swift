@@ -118,6 +118,8 @@ struct DayTaskFacts: Equatable {
   let isDailyDone: Bool
   /// "12m / 25m", "12m" or "25m"; nil when the task has neither.
   let cost: String?
+  /// Open and still waiting on an open task: drawn greyed.
+  var isBlocked = false
 }
 
 /// An ordinary row: what it is, what it should cost, what it has cost.
@@ -154,7 +156,7 @@ struct DayTaskRow: View, Equatable {
           marker
           Text(task.title)
             .font(theme.bodyFont())
-            .foregroundStyle(theme.ink)
+            .foregroundStyle(facts.isBlocked ? theme.muted : theme.ink)
             .expandsWhenSelected(isExpanded)
           if facts.isDaily {
             DailyBadge(task: task, isDoneToday: facts.isDailyDone)

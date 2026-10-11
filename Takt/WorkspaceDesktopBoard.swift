@@ -546,7 +546,7 @@ struct WorkspaceKanbanCard: View {
       }
       .buttonStyle(.plain)
       .font(theme.bodyFont())
-      .foregroundStyle(task.status == .open ? theme.ink : theme.muted)
+      .foregroundStyle(task.status == .open && !model.isBlocked(task) ? theme.ink : theme.muted)
       .focusable()
       .multilineTextAlignment(.leading)
       .expandsWhenSelected(isSelected, lineLimit: 2)
@@ -729,7 +729,7 @@ struct WorkspaceKanbanCard: View {
           model.reportKeyboardFocus(.tasks)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isOpen ? theme.ink : theme.muted)
+        .foregroundStyle(isOpen && !model.isBlocked(item.task) ? theme.ink : theme.muted)
         .strikethrough(!isOpen)
         .multilineTextAlignment(.leading)
         .expandsWhenSelected(isRowSelected)

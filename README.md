@@ -20,7 +20,7 @@ It works offline. It works from the terminal. And it exposes the whole surface t
 
 - [Install](#install) · [First run](#first-run)
 - [Keyboard flow](#keyboard-flow) · [Focus](#focus) · [Command palette](#command-palette)
-- [Views](#views) · [Waiting on](#waiting-on) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Themes](#themes) · [Diagnostics](#diagnostics)
+- [Views](#views) · [Waiting on](#waiting-on) · [Blocked by](#blocked-by) · [The menu bar](#the-menu-bar) · [The window](#the-window) · [Themes](#themes) · [Diagnostics](#diagnostics)
 - [Daily log](#daily-log) · [Obsidian daily notes](#obsidian-daily-notes) · [AFFiNE](#affine)
 - [Command line](#command-line) · [MCP server](#mcp-server) · [Plugins](#plugins)
 - [Build from source](#build-from-source) · [Where your data lives](#where-your-data-lives)
@@ -86,6 +86,7 @@ something you already have to know.
 | `Ctrl+T` | Plan the task for today, or take it off |
 | `gb` / `Cmd+Shift+H` | Make a habit from the task, or edit the habit it is — see [Habits](#habits) |
 | `ww` | Waiting on: who or what, and when to follow up — moves the task to Waiting on; see [Waiting on](#waiting-on) |
+| `bb` / `Cmd+Shift+B` | Blocked by: find a task this one waits on; see [Blocked by](#blocked-by) |
 | `Delete` / `Cmd+Delete` / `Cmd+Shift+K` | Delete the task — it asks, and `Return` confirms |
 | `Return` | **Always** add a task, as in Checkvist — below the selection — on the board, below the card a selected subtask is drawn on — and at the foot of the day on Today |
 | `Space` / `x` | **Always** complete the task (or reopen it) — unless you are typing |
@@ -516,6 +517,22 @@ The inspector edits both in place under **Waiting on**. From `takt`,
 `takt ws update <id> --waiting-on Sam --follow-up "2026-10-08 14:00"` does the
 same (the MCP tool takes `waiting_on` and `follow_up_at`); the app makes the
 follow-up when it next looks.
+
+## Blocked by
+
+A task can wait on other tasks, in any list. `bb` (or `Cmd+Shift+B`, or
+**Blocked by** in the palette) on a task opens a finder over every open task;
+`Return` makes the one you choose a blocker. Until every task it waits on is
+done or cancelled, the task is **blocked**: its title is greyed in the outline,
+on the board, in the matrix and on Today, it sinks below its unblocked
+siblings, and it is never offered as next up. Finishing the last blocker puts
+it back where it was.
+
+The inspector's **Blocked by** section lists what the task waits on — open or
+done, with the list when it is another — each with a button to stop waiting on
+it, and under **Blocks** the tasks waiting on this one. Adding and removing are
+each one undo step. A task cannot wait on itself, or on a task that already
+waits on it, however far round; the app says so rather than adding it.
 
 ## Repeating work
 

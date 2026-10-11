@@ -116,7 +116,8 @@ struct WorkspaceOutlinePane: View {
   ) -> some View {
     let isSelected = item.id == selectedID
     return WorkspaceOutlineRow(
-      item: item, isSelected: isSelected, hasKeyboard: isSelected && tasksHaveKeyboard, isFolded: fold)
+      item: item, isSelected: isSelected, hasKeyboard: isSelected && tasksHaveKeyboard, isFolded: fold,
+      isBlocked: model.isBlocked(item.task))
       .outlineRowChrome()
   }
 }
@@ -142,6 +143,8 @@ struct WorkspaceOutlineRow: View {
   let hasKeyboard: Bool
   /// Whether the row's subtasks are folded away; nil when it has none.
   let isFolded: Bool?
+  /// Open and still waiting on an open task: drawn greyed.
+  var isBlocked = false
 
   var body: some View {
     // The selected row grows to show its whole title and every badge line;
@@ -194,9 +197,12 @@ struct WorkspaceOutlineRow: View {
           .frame(maxWidth: .infinity, alignment: .leading)
           // Selected, the row shows its whole title already, and a second
           // click renames — so the tooltip says how to do that from the keys.
-          .help(isSelected ? WorkspaceCommandHelpText.text(for: .taskRename) : item.task.title)
+          .help(
+            isSelected
+              ? WorkspaceCommandHelpText.text(for: .taskRename)
+              : isBlocked ? "\(item.task.title) — waiting on another task" : item.task.title)
           .strikethrough(item.task.status != .open)
-          .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
+          .foregroundStyle(item.task.status == .open && !isBlocked ? theme.ink : theme.muted)
       }
       WorkspaceWaitingBadges(task: item.task)
       WorkspaceTaskPlanningBadges(task: item.task, isExpanded: isSelected)

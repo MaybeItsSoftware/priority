@@ -62,6 +62,8 @@ struct WorkspaceOverlayHost: View {
       WorkspaceHabitOverlay(overlayID: overlay.id, request: request)
     case .waiting(let request):
       WorkspaceWaitingOverlay(overlayID: overlay.id, request: request)
+    case .blocker(let request):
+      WorkspaceBlockerFinder(overlayID: overlay.id, request: request)
     case .create(let kind):
       WorkspaceNameOverlay(
         overlayID: overlay.id, title: kind.title, prompt: "Name",

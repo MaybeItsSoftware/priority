@@ -679,6 +679,9 @@ enum WorkspaceSidebarItem: Identifiable {
   /// What each waiting task waits on and when to chase it, for the chips on
   /// cards and rows. Reread with the task cache, when the file has changed.
   var waitingDetails: [String: TaskWaitingDetails] = [:]
+  /// The open tasks still waiting on an open task, drawn greyed. Read with
+  /// `waitingDetails`, at the same change stamp.
+  var blockedTaskIDs: Set<String> = []
   /// The store and its change stamp `waitingDetails` was read at. While both
   /// match, nothing has been written, and the reread is skipped: switching
   /// lists rebuilds the task cache but cannot change who waits on what.

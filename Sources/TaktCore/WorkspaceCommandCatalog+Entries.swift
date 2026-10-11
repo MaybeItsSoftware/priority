@@ -36,7 +36,10 @@ public enum WorkspaceCommandCatalog {
     [.taskIndent, .taskOutdent, .taskMoveUp, .taskMoveDown],
     [.taskMoveToPreviousList, .taskMoveToNextList, .taskMove],
     [.taskConvertToList, .taskPromoteList, .taskExtractBranch],
-    [.taskTogglePlannedToday, .taskToggleDaily, .taskHabit, .taskWaiting, .taskOpenLink, .taskShowProgress, .taskToggleInspector],
+    [
+      .taskTogglePlannedToday, .taskToggleDaily, .taskHabit, .taskWaiting, .taskAddBlocker, .taskOpenLink,
+      .taskShowProgress, .taskToggleInspector,
+    ],
   ]
 
   // MARK: - Go
@@ -150,6 +153,11 @@ public enum WorkspaceCommandCatalog {
       id: .taskWaiting, title: "Waiting on: who, and when to follow up", group: "Task",
       keys: ["ww"],
       note: "Moves the task to Waiting on. At the follow-up time, if it is still waiting, a follow-up lands in Today"),
+    // `b` was free too: `bb` for "blocked by", and a chord for the menu.
+    .init(
+      id: .taskAddBlocker, title: "Blocked by: wait on another task", group: "Task",
+      keys: ["bb", "cmd+shift+b"],
+      note: "Finds the task it waits on. Until that is done it is greyed, sinks below its siblings and is never next up"),
     // ⌃T rather than T: bare `t` starts `td`, `tm` and `tt`, and ⌘T goes to
     // Today.
     .init(

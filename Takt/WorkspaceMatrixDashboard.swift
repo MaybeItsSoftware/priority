@@ -210,7 +210,7 @@ struct WorkspaceMatrixTaskRow: View {
       }
       .buttonStyle(.plain)
       .font(theme.bodyFont())
-      .foregroundStyle(theme.ink)
+      .foregroundStyle(model.isBlocked(task) ? theme.muted : theme.ink)
       .focusable()
       .multilineTextAlignment(.leading)
       .expandsWhenSelected(isSelected)

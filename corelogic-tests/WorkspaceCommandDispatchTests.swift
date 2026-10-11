@@ -240,7 +240,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
       WorkspaceCommandCatalog.sequences(on: .outline),
       [
         "ee", "ea", "ei", "dd", "nn", "tt", "mm", "gl", "uu", "td", "tm", "cd", "cn", "ct",
-        "dr", "tc", "gb", "ww", "gh", "sd", "oo", "pc", "xx", "gg", "za", "gf", "gx",
+        "dr", "tc", "gb", "ww", "bb", "gh", "sd", "oo", "pc", "xx", "gg", "za", "gf", "gx",
       ])
     let written = Set(
       WorkspaceCommandCatalog.all.flatMap(\.allKeys).filter(WorkspaceCommandCatalog.isSequence))

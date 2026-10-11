@@ -25,9 +25,10 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// Rereads `waitingDetails` if anything has been written since it was last
-  /// read: a local write, undo, a sync pull or another process. Pure
-  /// navigation, which rebuilds the task cache too, skips it.
+  /// Rereads `waitingDetails` and `blockedTaskIDs` if anything has been
+  /// written since they were last read: a local write, undo, a sync pull or
+  /// another process. Pure navigation, which rebuilds the task cache too,
+  /// skips it.
   func reloadWaitingDetails() {
     guard let store else { return }
     // Read before the details, so a write landing in between makes the next
@@ -42,6 +43,9 @@ extension WorkspaceViewModel {
     guard let details = try? store.waitingDetails() else { return }
     waitingDetailsAreStale = false
     if waitingDetails != details { waitingDetails = details }
+    // Who waits on what task changes on the same writes — a blocker ticked
+    // off anywhere, here or on a phone — so it is read under the same stamp.
+    if let blocked = try? store.blockedTaskIds(), blockedTaskIDs != blocked { blockedTaskIDs = blocked }
     waitingDetailsStamp = stamp.map { (key, $0) }
   }
 

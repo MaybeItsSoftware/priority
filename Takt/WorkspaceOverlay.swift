@@ -23,6 +23,8 @@ enum WorkspaceOverlay: Identifiable {
   case habit(WorkspaceHabitRequest)
   /// Waiting on: who or what, and when to follow up.
   case waiting(WorkspaceWaitingRequest)
+  /// Blocked by: the finder for a task to wait on.
+  case blocker(WorkspaceBlockerRequest)
   /// A new list or folder. Where it goes is `creationParentFolderID` and
   /// `creationIsNested` on the model, set by whoever asked.
   case create(WorkspaceCreationKind)
@@ -38,6 +40,7 @@ enum WorkspaceOverlay: Identifiable {
     case .quickEdit(let request): "edit:\(request.id)"
     case .habit(let request): "habit:\(request.id)"
     case .waiting(let request): "waiting:\(request.id)"
+    case .blocker(let request): "blocker:\(request.id)"
     case .create(let kind): "create:\(kind.rawValue)"
     case .newBoardColumn: "column"
     }
