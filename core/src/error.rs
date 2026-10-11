@@ -52,6 +52,10 @@ pub enum CoreError {
     InvalidTaskMove,
     #[error("A task cannot wait on itself, or on a task that already waits on it.")]
     DependencyCycle,
+    #[error("No filter list with id {id}.")]
+    MissingFilterList { id: String },
+    #[error("{detail}")]
+    InvalidFilter { detail: String },
     #[error("{detail}")]
     File { detail: String },
 }

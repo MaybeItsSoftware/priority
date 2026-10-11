@@ -59,6 +59,8 @@ object WorkspaceSidebarOutline {
             val depth = row.depth.toInt()
             when (row.kind) {
                 uniffi.takt_core.SidebarRowKind.TODAY -> null
+                // Asked for only by `sidebarOutlineRowsWithFilterLists`.
+                uniffi.takt_core.SidebarRowKind.FILTER_LIST -> null
                 uniffi.takt_core.SidebarRowKind.EVERYTHING ->
                     WorkspaceSidebarRow("row:everything", WorkspaceSidebarRowKind.Everything, depth)
                 uniffi.takt_core.SidebarRowKind.INBOX -> inbox?.let {

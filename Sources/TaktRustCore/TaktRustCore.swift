@@ -950,6 +950,53 @@ public protocol CoreWorkspaceProtocol: AnyObject, Sendable {
     func exportWorkspace(workspaceId: String, format: ExportFormat, exportedAtMs: Int64) throws  -> String?
     
     /**
+     * Creates a filter list as one "New Filter List" step.
+     */
+    func createFilterList(workspaceId: String, name: String, icon: String?, colorHex: String?, definition: FilterDefinition, nowMs: Int64) throws  -> FilterListRow
+    
+    /**
+     * Deletes a filter list as one "Delete Filter List" step.
+     */
+    func deleteFilterList(id: String) throws 
+    
+    /**
+     * One filter list, stored or built in.
+     */
+    func filterList(id: String) throws  -> FilterListRow?
+    
+    /**
+     * A filter list's board over `list_ids`, as `combined_board` reads one.
+     */
+    func filterListBoard(definition: FilterDefinition, listIds: [String], hideCompletedBeforeMs: Int64?, nowMs: Int64, zone: String) throws  -> BoardRead
+    
+    /**
+     * The tasks `definition` shows across the workspace, in board order.
+     */
+    func filterListTasks(workspaceId: String, definition: FilterDefinition, nowMs: Int64, zone: String) throws  -> [TaskRow]
+    
+    /**
+     * The workspace's filter lists in sidebar order; not the built-in ones
+     * (`builtin_filter_lists`).
+     */
+    func filterLists(workspaceId: String) throws  -> [FilterListRow]
+    
+    /**
+     * Moves a filter list to `index` as one "Move Filter List" step.
+     */
+    func moveFilterList(id: String, index: UInt32, nowMs: Int64) throws 
+    
+    /**
+     * Renames a filter list as one "Rename Filter List" step.
+     */
+    func renameFilterList(id: String, name: String, nowMs: Int64) throws 
+    
+    /**
+     * Saves a filter list's name, icon, colour and rules as one "Edit Filter
+     * List" step.
+     */
+    func updateFilterList(id: String, name: String, icon: String?, colorHex: String?, definition: FilterDefinition, nowMs: Int64) throws  -> FilterListRow
+    
+    /**
      * Settles the session left paused when the app last went away: closes
      * it, crediting its seconds at the moment it was paused, as one "Log
      * Daily Progress" step, or discards it. `resolveStaleFocusSession`.
@@ -1878,6 +1925,143 @@ open func exportWorkspace(workspaceId: String, format: ExportFormat, exportedAtM
         FfiConverterString.lower(workspaceId),
         FfiConverterTypeExportFormat_lower(format),
         FfiConverterInt64.lower(exportedAtMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Creates a filter list as one "New Filter List" step.
+     */
+open func createFilterList(workspaceId: String, name: String, icon: String?, colorHex: String?, definition: FilterDefinition, nowMs: Int64)throws  -> FilterListRow  {
+    return try  FfiConverterTypeFilterListRow_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_create_filter_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterString.lower(name),
+        FfiConverterOptionString.lower(icon),
+        FfiConverterOptionString.lower(colorHex),
+        FfiConverterTypeFilterDefinition_lower(definition),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Deletes a filter list as one "Delete Filter List" step.
+     */
+open func deleteFilterList(id: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_delete_filter_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * One filter list, stored or built in.
+     */
+open func filterList(id: String)throws  -> FilterListRow?  {
+    return try  FfiConverterOptionTypeFilterListRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_filter_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A filter list's board over `list_ids`, as `combined_board` reads one.
+     */
+open func filterListBoard(definition: FilterDefinition, listIds: [String], hideCompletedBeforeMs: Int64?, nowMs: Int64, zone: String)throws  -> BoardRead  {
+    return try  FfiConverterTypeBoardRead_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_filter_list_board(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeFilterDefinition_lower(definition),
+        FfiConverterSequenceString.lower(listIds),
+        FfiConverterOptionInt64.lower(hideCompletedBeforeMs),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The tasks `definition` shows across the workspace, in board order.
+     */
+open func filterListTasks(workspaceId: String, definition: FilterDefinition, nowMs: Int64, zone: String)throws  -> [TaskRow]  {
+    return try  FfiConverterSequenceTypeTaskRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_filter_list_tasks(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),
+        FfiConverterTypeFilterDefinition_lower(definition),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The workspace's filter lists in sidebar order; not the built-in ones
+     * (`builtin_filter_lists`).
+     */
+open func filterLists(workspaceId: String)throws  -> [FilterListRow]  {
+    return try  FfiConverterSequenceTypeFilterListRow.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_filter_lists(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(workspaceId),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Moves a filter list to `index` as one "Move Filter List" step.
+     */
+open func moveFilterList(id: String, index: UInt32, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_move_filter_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterUInt32.lower(index),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Renames a filter list as one "Rename Filter List" step.
+     */
+open func renameFilterList(id: String, name: String, nowMs: Int64)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_rename_filter_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(name),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Saves a filter list's name, icon, colour and rules as one "Edit Filter
+     * List" step.
+     */
+open func updateFilterList(id: String, name: String, icon: String?, colorHex: String?, definition: FilterDefinition, nowMs: Int64)throws  -> FilterListRow  {
+    return try  FfiConverterTypeFilterListRow_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_method_coreworkspace_update_filter_list(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(name),
+        FfiConverterOptionString.lower(icon),
+        FfiConverterOptionString.lower(colorHex),
+        FfiConverterTypeFilterDefinition_lower(definition),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
     )
 })
 }
@@ -9088,6 +9272,383 @@ public func FfiConverterTypeEditorSnapshot_lower(_ value: EditorSnapshot) -> Rus
 
 
 /**
+ * What a filter list shows.
+ */
+public struct FilterDefinition: Equatable, Hashable {
+    /**
+     * "all" (every rule holds) or "any" (at least one does).
+     */
+    public var matchMode: String
+    /**
+     * "open", "done" (completed or cancelled) or "all".
+     */
+    public var show: String
+    public var rules: [FilterRule]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * "all" (every rule holds) or "any" (at least one does).
+         */matchMode: String, 
+        /**
+         * "open", "done" (completed or cancelled) or "all".
+         */show: String, rules: [FilterRule]) {
+        self.matchMode = matchMode
+        self.show = show
+        self.rules = rules
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FilterDefinition: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFilterDefinition: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FilterDefinition {
+        return
+            try FilterDefinition(
+                matchMode: FfiConverterString.read(from: &buf), 
+                show: FfiConverterString.read(from: &buf), 
+                rules: FfiConverterSequenceTypeFilterRule.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FilterDefinition, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.matchMode, into: &buf)
+        FfiConverterString.write(value.show, into: &buf)
+        FfiConverterSequenceTypeFilterRule.write(value.rules, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterDefinition_lift(_ buf: RustBuffer) throws -> FilterDefinition {
+    return try FfiConverterTypeFilterDefinition.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterDefinition_lower(_ value: FilterDefinition) -> RustBuffer {
+    return FfiConverterTypeFilterDefinition.lower(value)
+}
+
+
+/**
+ * A field a rule can test, and its operators.
+ */
+public struct FilterFieldSpec: Equatable, Hashable {
+    public var field: String
+    public var label: String
+    public var ops: [FilterOpSpec]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(field: String, label: String, ops: [FilterOpSpec]) {
+        self.field = field
+        self.label = label
+        self.ops = ops
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FilterFieldSpec: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFilterFieldSpec: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FilterFieldSpec {
+        return
+            try FilterFieldSpec(
+                field: FfiConverterString.read(from: &buf), 
+                label: FfiConverterString.read(from: &buf), 
+                ops: FfiConverterSequenceTypeFilterOpSpec.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FilterFieldSpec, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.field, into: &buf)
+        FfiConverterString.write(value.label, into: &buf)
+        FfiConverterSequenceTypeFilterOpSpec.write(value.ops, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterFieldSpec_lift(_ buf: RustBuffer) throws -> FilterFieldSpec {
+    return try FfiConverterTypeFilterFieldSpec.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterFieldSpec_lower(_ value: FilterFieldSpec) -> RustBuffer {
+    return FfiConverterTypeFilterFieldSpec.lower(value)
+}
+
+
+/**
+ * A row of `filter_lists`, its rules decoded; or a built-in definition,
+ * which has no row.
+ */
+public struct FilterListRow: Equatable, Hashable {
+    public var id: String
+    public var workspaceId: String
+    public var name: String
+    /**
+     * An SF Symbol name on Apple platforms; clients without it draw their
+     * own default.
+     */
+    public var icon: String?
+    public var colorHex: String?
+    public var definition: FilterDefinition
+    public var sortOrder: Int64
+    /**
+     * Today and Everything: shipped, not stored, and not editable.
+     */
+    public var isBuiltin: Bool
+    public var createdAtMs: Int64
+    public var updatedAtMs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, workspaceId: String, name: String, 
+        /**
+         * An SF Symbol name on Apple platforms; clients without it draw their
+         * own default.
+         */icon: String?, colorHex: String?, definition: FilterDefinition, sortOrder: Int64, 
+        /**
+         * Today and Everything: shipped, not stored, and not editable.
+         */isBuiltin: Bool, createdAtMs: Int64, updatedAtMs: Int64) {
+        self.id = id
+        self.workspaceId = workspaceId
+        self.name = name
+        self.icon = icon
+        self.colorHex = colorHex
+        self.definition = definition
+        self.sortOrder = sortOrder
+        self.isBuiltin = isBuiltin
+        self.createdAtMs = createdAtMs
+        self.updatedAtMs = updatedAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FilterListRow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFilterListRow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FilterListRow {
+        return
+            try FilterListRow(
+                id: FfiConverterString.read(from: &buf), 
+                workspaceId: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                icon: FfiConverterOptionString.read(from: &buf), 
+                colorHex: FfiConverterOptionString.read(from: &buf), 
+                definition: FfiConverterTypeFilterDefinition.read(from: &buf), 
+                sortOrder: FfiConverterInt64.read(from: &buf), 
+                isBuiltin: FfiConverterBool.read(from: &buf), 
+                createdAtMs: FfiConverterInt64.read(from: &buf), 
+                updatedAtMs: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FilterListRow, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.workspaceId, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterOptionString.write(value.icon, into: &buf)
+        FfiConverterOptionString.write(value.colorHex, into: &buf)
+        FfiConverterTypeFilterDefinition.write(value.definition, into: &buf)
+        FfiConverterInt64.write(value.sortOrder, into: &buf)
+        FfiConverterBool.write(value.isBuiltin, into: &buf)
+        FfiConverterInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterInt64.write(value.updatedAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterListRow_lift(_ buf: RustBuffer) throws -> FilterListRow {
+    return try FfiConverterTypeFilterListRow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterListRow_lower(_ value: FilterListRow) -> RustBuffer {
+    return FfiConverterTypeFilterListRow.lower(value)
+}
+
+
+/**
+ * One operator a field takes, and what kind of value it needs.
+ */
+public struct FilterOpSpec: Equatable, Hashable {
+    public var op: String
+    /**
+     * What an editor shows for it, after the field's label.
+     */
+    public var label: String
+    /**
+     * "none", "text", "tag", "number", "days", "minutes", "date"
+     * (`yyyy-MM-dd`), "lists" (list ids, comma separated), "folder" (a
+     * folder id) or "column" (a board column id).
+     */
+    public var valueKind: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(op: String, 
+        /**
+         * What an editor shows for it, after the field's label.
+         */label: String, 
+        /**
+         * "none", "text", "tag", "number", "days", "minutes", "date"
+         * (`yyyy-MM-dd`), "lists" (list ids, comma separated), "folder" (a
+         * folder id) or "column" (a board column id).
+         */valueKind: String) {
+        self.op = op
+        self.label = label
+        self.valueKind = valueKind
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FilterOpSpec: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFilterOpSpec: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FilterOpSpec {
+        return
+            try FilterOpSpec(
+                op: FfiConverterString.read(from: &buf), 
+                label: FfiConverterString.read(from: &buf), 
+                valueKind: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FilterOpSpec, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.op, into: &buf)
+        FfiConverterString.write(value.label, into: &buf)
+        FfiConverterString.write(value.valueKind, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterOpSpec_lift(_ buf: RustBuffer) throws -> FilterOpSpec {
+    return try FfiConverterTypeFilterOpSpec.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterOpSpec_lower(_ value: FilterOpSpec) -> RustBuffer {
+    return FfiConverterTypeFilterOpSpec.lower(value)
+}
+
+
+/**
+ * One condition: `field` compared by `op` with `value` (empty when the
+ * operator takes none). See [`filter_rule_catalog`].
+ */
+public struct FilterRule: Equatable, Hashable {
+    public var field: String
+    public var op: String
+    public var value: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(field: String, op: String, value: String) {
+        self.field = field
+        self.op = op
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension FilterRule: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFilterRule: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FilterRule {
+        return
+            try FilterRule(
+                field: FfiConverterString.read(from: &buf), 
+                op: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FilterRule, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.field, into: &buf)
+        FfiConverterString.write(value.op, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterRule_lift(_ buf: RustBuffer) throws -> FilterRule {
+    return try FfiConverterTypeFilterRule.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFilterRule_lower(_ value: FilterRule) -> RustBuffer {
+    return FfiConverterTypeFilterRule.lower(value)
+}
+
+
+/**
  * The circumstances a sitting is planned in: which conditions hold, when the
  * time available ends, and whether the aim is progress or finishing.
  */
@@ -15333,6 +15894,10 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     case Unavailable
     case InvalidTaskMove
     case DependencyCycle
+    case MissingFilterList(id: String
+    )
+    case InvalidFilter(detail: String
+    )
     case File(detail: String
     )
 
@@ -15402,7 +15967,13 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 21: return .Unavailable
         case 22: return .InvalidTaskMove
         case 23: return .DependencyCycle
-        case 24: return .File(
+        case 24: return .MissingFilterList(
+            id: try FfiConverterString.read(from: &buf)
+            )
+        case 25: return .InvalidFilter(
+            detail: try FfiConverterString.read(from: &buf)
+            )
+        case 26: return .File(
             detail: try FfiConverterString.read(from: &buf)
             )
 
@@ -15517,8 +16088,18 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(23))
         
         
-        case let .File(detail):
+        case let .MissingFilterList(id):
             writeInt(&buf, Int32(24))
+            FfiConverterString.write(id, into: &buf)
+            
+        
+        case let .InvalidFilter(detail):
+            writeInt(&buf, Int32(25))
+            FfiConverterString.write(detail, into: &buf)
+            
+        
+        case let .File(detail):
+            writeInt(&buf, Int32(26))
             FfiConverterString.write(detail, into: &buf)
             
         }
@@ -17455,6 +18036,11 @@ public enum SidebarRowKind: Equatable, Hashable {
      * `folders[subject]`.
      */
     case folder
+    /**
+     * The `subject`th filter list, as passed in its count. Drawn under the
+     * stock lists — Today, Everything and the inbox — and above yours.
+     */
+    case filterList
 
 
 
@@ -17490,6 +18076,8 @@ public struct FfiConverterTypeSidebarRowKind: FfiConverterRustBuffer {
         
         case 7: return .folder
         
+        case 8: return .filterList
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -17524,6 +18112,10 @@ public struct FfiConverterTypeSidebarRowKind: FfiConverterRustBuffer {
         
         case .folder:
             writeInt(&buf, Int32(7))
+        
+        
+        case .filterList:
+            writeInt(&buf, Int32(8))
         
         }
     }
@@ -18384,6 +18976,30 @@ fileprivate struct FfiConverterOptionTypeDailyRow: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeDailyRow.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeFilterListRow: FfiConverterRustBuffer {
+    typealias SwiftType = FilterListRow?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFilterListRow.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFilterListRow.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -19612,6 +20228,106 @@ fileprivate struct FfiConverterSequenceTypeDayLogRecord: FfiConverterRustBuffer 
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeDayLogRecord.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeFilterFieldSpec: FfiConverterRustBuffer {
+    typealias SwiftType = [FilterFieldSpec]
+
+    public static func write(_ value: [FilterFieldSpec], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFilterFieldSpec.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FilterFieldSpec] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FilterFieldSpec]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeFilterFieldSpec.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeFilterListRow: FfiConverterRustBuffer {
+    typealias SwiftType = [FilterListRow]
+
+    public static func write(_ value: [FilterListRow], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFilterListRow.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FilterListRow] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FilterListRow]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeFilterListRow.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeFilterOpSpec: FfiConverterRustBuffer {
+    typealias SwiftType = [FilterOpSpec]
+
+    public static func write(_ value: [FilterOpSpec], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFilterOpSpec.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FilterOpSpec] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FilterOpSpec]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeFilterOpSpec.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeFilterRule: FfiConverterRustBuffer {
+    typealias SwiftType = [FilterRule]
+
+    public static func write(_ value: [FilterRule], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFilterRule.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FilterRule] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FilterRule]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeFilterRule.read(from: &buf))
         }
         return seq
     }
@@ -21604,6 +22320,73 @@ public func dayLogWeeklyBuckets(events: [DayLogRecord], boundary: DayLogBoundary
 })
 }
 /**
+ * Today and Everything as definitions, in sidebar order.
+ */
+public func builtinFilterLists() -> [FilterListRow]  {
+    return try!  FfiConverterSequenceTypeFilterListRow.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_builtin_filter_lists(uniffiCallStatus
+    )
+})
+}
+/**
+ * A one-line reading of `definition`, for a subtitle or the CLI:
+ * "Open tasks where tag has work and due is within 7 days".
+ */
+public func describeFilterDefinition(definition: FilterDefinition) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_describe_filter_definition(
+        FfiConverterTypeFilterDefinition_lower(definition),uniffiCallStatus
+    )
+})
+}
+/**
+ * A definition as `rulesJSON` stores it.
+ */
+public func filterDefinitionJson(definition: FilterDefinition) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_filter_definition_json(
+        FfiConverterTypeFilterDefinition_lower(definition),uniffiCallStatus
+    )
+})
+}
+/**
+ * Every field a rule can test, in the order an editor offers them.
+ */
+public func filterRuleCatalog() -> [FilterFieldSpec]  {
+    return try!  FfiConverterSequenceTypeFilterFieldSpec.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_filter_rule_catalog(uniffiCallStatus
+    )
+})
+}
+/**
+ * A definition read from its stored JSON. Lenient about what it does not
+ * know (see the module notes), strict about JSON that is not a definition.
+ */
+public func parseFilterDefinition(json: String)throws  -> FilterDefinition  {
+    return try  FfiConverterTypeFilterDefinition_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_parse_filter_definition(
+        FfiConverterString.lower(json),uniffiCallStatus
+    )
+})
+}
+/**
+ * `definition` tidied — values trimmed, tags without `#`, list ids without
+ * blanks — or the first reason it cannot be saved.
+ */
+public func validateFilterDefinition(definition: FilterDefinition)throws  -> FilterDefinition  {
+    return try  FfiConverterTypeFilterDefinition_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_validate_filter_definition(
+        FfiConverterTypeFilterDefinition_lower(definition),uniffiCallStatus
+    )
+})
+}
+/**
  * Works out what has to happen for the two sides to agree.
  *
  * The ledger is `ledger_tasks` (keyed by local task id) and `ledger_lists`
@@ -22145,6 +22928,26 @@ public func sidebarOutlineRows(inboxId: String?, lists: [SidebarList], folders: 
         FfiConverterSequenceTypeSidebarNestedList.lower(nestedLists),
         FfiConverterSequenceString.lower(expandedFolderIds),
         FfiConverterBool.lower(includeToday),uniffiCallStatus
+    )
+})
+}
+/**
+ * [`sidebar_outline_rows`] with `filter_list_count` filter lists drawn
+ * after the inbox and its nested lists, before the pinned nested lists:
+ * with Today, Everything and the inbox they are the lists that gather tasks
+ * from others, and yours follow.
+ */
+public func sidebarOutlineRowsWithFilterLists(inboxId: String?, lists: [SidebarList], folders: [SidebarFolder], nestedLists: [SidebarNestedList], expandedFolderIds: [String], includeToday: Bool, filterListCount: UInt32) -> [SidebarOutlineRow]  {
+    return try!  FfiConverterSequenceTypeSidebarOutlineRow.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_sidebar_outline_rows_with_filter_lists(
+        FfiConverterOptionString.lower(inboxId),
+        FfiConverterSequenceTypeSidebarList.lower(lists),
+        FfiConverterSequenceTypeSidebarFolder.lower(folders),
+        FfiConverterSequenceTypeSidebarNestedList.lower(nestedLists),
+        FfiConverterSequenceString.lower(expandedFolderIds),
+        FfiConverterBool.lower(includeToday),
+        FfiConverterUInt32.lower(filterListCount),uniffiCallStatus
     )
 })
 }
@@ -22851,6 +23654,24 @@ private let initializationResult: InitializationResult = {
     if (uniffi_takt_core_checksum_func_day_log_weekly_buckets() != 50056) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_takt_core_checksum_func_builtin_filter_lists() != 21554) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_describe_filter_definition() != 4339) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_filter_definition_json() != 52581) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_filter_rule_catalog() != 39702) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_parse_filter_definition() != 49613) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_validate_filter_definition() != 53236) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_takt_core_checksum_func_google_tasks_plan() != 64663) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -22963,6 +23784,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_sidebar_outline_rows() != 1333) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_sidebar_outline_rows_with_filter_lists() != 41228) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_hlc_receive() != 32125) {
@@ -23143,6 +23967,33 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_export_workspace() != 22213) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_create_filter_list() != 60268) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_delete_filter_list() != 60338) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_filter_list() != 16288) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_filter_list_board() != 63752) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_filter_list_tasks() != 20098) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_filter_lists() != 8321) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_move_filter_list() != 1119) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_rename_filter_list() != 52607) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_method_coreworkspace_update_filter_list() != 10132) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session() != 39926) {

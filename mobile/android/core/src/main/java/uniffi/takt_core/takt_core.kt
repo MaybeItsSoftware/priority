@@ -783,6 +783,18 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_day_log_weekly_buckets(
     ): Int
+    external fun uniffi_takt_core_checksum_func_builtin_filter_lists(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_describe_filter_definition(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_filter_definition_json(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_filter_rule_catalog(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_parse_filter_definition(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_validate_filter_definition(
+    ): Int
     external fun uniffi_takt_core_checksum_func_google_tasks_plan(
     ): Int
     external fun uniffi_takt_core_checksum_func_task_planning_decode(
@@ -858,6 +870,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder(
     ): Int
     external fun uniffi_takt_core_checksum_func_sidebar_outline_rows(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_sidebar_outline_rows_with_filter_lists(
     ): Int
     external fun uniffi_takt_core_checksum_func_hlc_receive(
     ): Int
@@ -978,6 +992,24 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_takt_core_checksum_method_syncpull_row_count(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_export_workspace(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_create_filter_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_delete_filter_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_filter_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_filter_list_board(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_filter_list_tasks(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_filter_lists(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_move_filter_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_rename_filter_list(
+    ): Int
+    external fun uniffi_takt_core_checksum_method_coreworkspace_update_filter_list(
     ): Int
     external fun uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session(
     ): Int
@@ -1372,6 +1404,24 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_constructor_coreworkspace_open(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_takt_core_fn_method_coreworkspace_export_workspace(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`format`: RustBuffer.ByValue,`exportedAtMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_create_filter_list(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`icon`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,`definition`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_delete_filter_list(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_filter_list(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_filter_list_board(`ptr`: Long,`definition`: RustBuffer.ByValue,`listIds`: RustBuffer.ByValue,`hideCompletedBeforeMs`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_filter_list_tasks(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,`definition`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_filter_lists(`ptr`: Long,`workspaceId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_method_coreworkspace_move_filter_list(`ptr`: Long,`id`: RustBuffer.ByValue,`index`: Int,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_rename_filter_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_takt_core_fn_method_coreworkspace_update_filter_list(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`icon`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,`definition`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_method_coreworkspace_resolve_stale_focus_session(`ptr`: Long,`nowMs`: Long,`zone`: RustBuffer.ByValue,`rolloverHour`: Byte,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1803,6 +1853,18 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_log_weekly_buckets(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_builtin_filter_lists(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_describe_filter_definition(`definition`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_filter_definition_json(`definition`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_filter_rule_catalog(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_parse_filter_definition(`json`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_validate_filter_definition(`definition`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_google_tasks_plan(`localLists`: RustBuffer.ByValue,`localTasks`: RustBuffer.ByValue,`remoteLists`: RustBuffer.ByValue,`remoteTasks`: RustBuffer.ByValue,`ledgerTasks`: RustBuffer.ByValue,`ledgerLists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_task_planning_decode(`json`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1878,6 +1940,8 @@ internal object UniffiLib {
     external fun uniffi_takt_core_fn_func_sidebar_list_ids_in_folder(`folderId`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_sidebar_outline_rows(`inboxId`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`nestedLists`: RustBuffer.ByValue,`expandedFolderIds`: RustBuffer.ByValue,`includeToday`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_sidebar_outline_rows_with_filter_lists(`inboxId`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`nestedLists`: RustBuffer.ByValue,`expandedFolderIds`: RustBuffer.ByValue,`includeToday`: Byte,`filterListCount`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_hlc_receive(`clock`: RustBuffer.ByValue,`remote`: RustBuffer.ByValue,`wallMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2252,6 +2316,24 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_takt_core_checksum_func_day_log_weekly_buckets() and 0xFFFF) != 50056) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_takt_core_checksum_func_builtin_filter_lists() and 0xFFFF) != 21554) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_describe_filter_definition() and 0xFFFF) != 4339) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_filter_definition_json() and 0xFFFF) != 52581) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_filter_rule_catalog() and 0xFFFF) != 39702) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_parse_filter_definition() and 0xFFFF) != 49613) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_validate_filter_definition() and 0xFFFF) != 53236) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_takt_core_checksum_func_google_tasks_plan() and 0xFFFF) != 64663) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2364,6 +2446,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_sidebar_outline_rows() and 0xFFFF) != 1333) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_sidebar_outline_rows_with_filter_lists() and 0xFFFF) != 41228) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_hlc_receive() and 0xFFFF) != 32125) {
@@ -2544,6 +2629,33 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_export_workspace() and 0xFFFF) != 22213) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_create_filter_list() and 0xFFFF) != 60268) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_delete_filter_list() and 0xFFFF) != 60338) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_filter_list() and 0xFFFF) != 16288) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_filter_list_board() and 0xFFFF) != 63752) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_filter_list_tasks() and 0xFFFF) != 20098) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_filter_lists() and 0xFFFF) != 8321) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_move_filter_list() and 0xFFFF) != 1119) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_rename_filter_list() and 0xFFFF) != 52607) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_method_coreworkspace_update_filter_list() and 0xFFFF) != 10132) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_method_coreworkspace_resolve_stale_focus_session() and 0xFFFF) != 39926) {
@@ -4013,6 +4125,53 @@ public interface CoreWorkspaceInterface {
     fun `exportWorkspace`(`workspaceId`: kotlin.String, `format`: ExportFormat, `exportedAtMs`: kotlin.Long): kotlin.String?
     
     /**
+     * Creates a filter list as one "New Filter List" step.
+     */
+    fun `createFilterList`(`workspaceId`: kotlin.String, `name`: kotlin.String, `icon`: kotlin.String?, `colorHex`: kotlin.String?, `definition`: FilterDefinition, `nowMs`: kotlin.Long): FilterListRow
+    
+    /**
+     * Deletes a filter list as one "Delete Filter List" step.
+     */
+    fun `deleteFilterList`(`id`: kotlin.String)
+    
+    /**
+     * One filter list, stored or built in.
+     */
+    fun `filterList`(`id`: kotlin.String): FilterListRow?
+    
+    /**
+     * A filter list's board over `list_ids`, as `combined_board` reads one.
+     */
+    fun `filterListBoard`(`definition`: FilterDefinition, `listIds`: List<kotlin.String>, `hideCompletedBeforeMs`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String): BoardRead
+    
+    /**
+     * The tasks `definition` shows across the workspace, in board order.
+     */
+    fun `filterListTasks`(`workspaceId`: kotlin.String, `definition`: FilterDefinition, `nowMs`: kotlin.Long, `zone`: kotlin.String): List<TaskRow>
+    
+    /**
+     * The workspace's filter lists in sidebar order; not the built-in ones
+     * (`builtin_filter_lists`).
+     */
+    fun `filterLists`(`workspaceId`: kotlin.String): List<FilterListRow>
+    
+    /**
+     * Moves a filter list to `index` as one "Move Filter List" step.
+     */
+    fun `moveFilterList`(`id`: kotlin.String, `index`: kotlin.UInt, `nowMs`: kotlin.Long)
+    
+    /**
+     * Renames a filter list as one "Rename Filter List" step.
+     */
+    fun `renameFilterList`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
+    
+    /**
+     * Saves a filter list's name, icon, colour and rules as one "Edit Filter
+     * List" step.
+     */
+    fun `updateFilterList`(`id`: kotlin.String, `name`: kotlin.String, `icon`: kotlin.String?, `colorHex`: kotlin.String?, `definition`: FilterDefinition, `nowMs`: kotlin.Long): FilterListRow
+    
+    /**
      * Settles the session left paused when the app last went away: closes
      * it, crediting its seconds at the moment it was paused, as one "Log
      * Daily Progress" step, or discards it. `resolveStaleFocusSession`.
@@ -4981,6 +5140,188 @@ open class CoreWorkspace: Disposable, AutoCloseable, CoreWorkspaceInterface
         FfiConverterString.lower(`workspaceId`),
         FfiConverterTypeExportFormat.lower(`format`),
         FfiConverterLong.lower(`exportedAtMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Creates a filter list as one "New Filter List" step.
+     */
+    @Throws(CoreException::class)override fun `createFilterList`(`workspaceId`: kotlin.String, `name`: kotlin.String, `icon`: kotlin.String?, `colorHex`: kotlin.String?, `definition`: FilterDefinition, `nowMs`: kotlin.Long): FilterListRow {
+            return FfiConverterTypeFilterListRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_create_filter_list(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterString.lower(`name`),
+        FfiConverterOptionalString.lower(`icon`),
+        FfiConverterOptionalString.lower(`colorHex`),
+        FfiConverterTypeFilterDefinition.lower(`definition`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Deletes a filter list as one "Delete Filter List" step.
+     */
+    @Throws(CoreException::class)override fun `deleteFilterList`(`id`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_delete_filter_list(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * One filter list, stored or built in.
+     */
+    @Throws(CoreException::class)override fun `filterList`(`id`: kotlin.String): FilterListRow? {
+            return FfiConverterOptionalTypeFilterListRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_filter_list(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * A filter list's board over `list_ids`, as `combined_board` reads one.
+     */
+    @Throws(CoreException::class)override fun `filterListBoard`(`definition`: FilterDefinition, `listIds`: List<kotlin.String>, `hideCompletedBeforeMs`: kotlin.Long?, `nowMs`: kotlin.Long, `zone`: kotlin.String): BoardRead {
+            return FfiConverterTypeBoardRead.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_filter_list_board(
+        it,
+        
+        FfiConverterTypeFilterDefinition.lower(`definition`),
+        FfiConverterSequenceString.lower(`listIds`),
+        FfiConverterOptionalLong.lower(`hideCompletedBeforeMs`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The tasks `definition` shows across the workspace, in board order.
+     */
+    @Throws(CoreException::class)override fun `filterListTasks`(`workspaceId`: kotlin.String, `definition`: FilterDefinition, `nowMs`: kotlin.Long, `zone`: kotlin.String): List<TaskRow> {
+            return FfiConverterSequenceTypeTaskRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_filter_list_tasks(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),
+        FfiConverterTypeFilterDefinition.lower(`definition`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The workspace's filter lists in sidebar order; not the built-in ones
+     * (`builtin_filter_lists`).
+     */
+    @Throws(CoreException::class)override fun `filterLists`(`workspaceId`: kotlin.String): List<FilterListRow> {
+            return FfiConverterSequenceTypeFilterListRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_filter_lists(
+        it,
+        
+        FfiConverterString.lower(`workspaceId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Moves a filter list to `index` as one "Move Filter List" step.
+     */
+    @Throws(CoreException::class)override fun `moveFilterList`(`id`: kotlin.String, `index`: kotlin.UInt, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_move_filter_list(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterUInt.lower(`index`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Renames a filter list as one "Rename Filter List" step.
+     */
+    @Throws(CoreException::class)override fun `renameFilterList`(`id`: kotlin.String, `name`: kotlin.String, `nowMs`: kotlin.Long)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_rename_filter_list(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`name`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Saves a filter list's name, icon, colour and rules as one "Edit Filter
+     * List" step.
+     */
+    @Throws(CoreException::class)override fun `updateFilterList`(`id`: kotlin.String, `name`: kotlin.String, `icon`: kotlin.String?, `colorHex`: kotlin.String?, `definition`: FilterDefinition, `nowMs`: kotlin.Long): FilterListRow {
+            return FfiConverterTypeFilterListRow.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_method_coreworkspace_update_filter_list(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterString.lower(`name`),
+        FfiConverterOptionalString.lower(`icon`),
+        FfiConverterOptionalString.lower(`colorHex`),
+        FfiConverterTypeFilterDefinition.lower(`definition`),
+        FfiConverterLong.lower(`nowMs`),_status)
 }
     }
     )
@@ -12100,6 +12441,294 @@ public object FfiConverterTypeEditorSnapshot: FfiConverterRustBuffer<EditorSnaps
 
 
 /**
+ * What a filter list shows.
+ */
+data class FilterDefinition (
+    /**
+     * "all" (every rule holds) or "any" (at least one does).
+     */
+    var `matchMode`: kotlin.String
+    , 
+    /**
+     * "open", "done" (completed or cancelled) or "all".
+     */
+    var `show`: kotlin.String
+    , 
+    var `rules`: List<FilterRule>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFilterDefinition: FfiConverterRustBuffer<FilterDefinition> {
+    override fun read(buf: ByteBuffer): FilterDefinition {
+        return FilterDefinition(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeFilterRule.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FilterDefinition) = (
+            FfiConverterString.allocationSize(value.`matchMode`) +
+            FfiConverterString.allocationSize(value.`show`) +
+            FfiConverterSequenceTypeFilterRule.allocationSize(value.`rules`)
+    )
+
+    override fun write(value: FilterDefinition, buf: ByteBuffer) {
+            FfiConverterString.write(value.`matchMode`, buf)
+            FfiConverterString.write(value.`show`, buf)
+            FfiConverterSequenceTypeFilterRule.write(value.`rules`, buf)
+    }
+}
+
+
+
+/**
+ * A field a rule can test, and its operators.
+ */
+data class FilterFieldSpec (
+    var `field`: kotlin.String
+    , 
+    var `label`: kotlin.String
+    , 
+    var `ops`: List<FilterOpSpec>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFilterFieldSpec: FfiConverterRustBuffer<FilterFieldSpec> {
+    override fun read(buf: ByteBuffer): FilterFieldSpec {
+        return FilterFieldSpec(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeFilterOpSpec.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FilterFieldSpec) = (
+            FfiConverterString.allocationSize(value.`field`) +
+            FfiConverterString.allocationSize(value.`label`) +
+            FfiConverterSequenceTypeFilterOpSpec.allocationSize(value.`ops`)
+    )
+
+    override fun write(value: FilterFieldSpec, buf: ByteBuffer) {
+            FfiConverterString.write(value.`field`, buf)
+            FfiConverterString.write(value.`label`, buf)
+            FfiConverterSequenceTypeFilterOpSpec.write(value.`ops`, buf)
+    }
+}
+
+
+
+/**
+ * A row of `filter_lists`, its rules decoded; or a built-in definition,
+ * which has no row.
+ */
+data class FilterListRow (
+    var `id`: kotlin.String
+    , 
+    var `workspaceId`: kotlin.String
+    , 
+    var `name`: kotlin.String
+    , 
+    /**
+     * An SF Symbol name on Apple platforms; clients without it draw their
+     * own default.
+     */
+    var `icon`: kotlin.String?
+    , 
+    var `colorHex`: kotlin.String?
+    , 
+    var `definition`: FilterDefinition
+    , 
+    var `sortOrder`: kotlin.Long
+    , 
+    /**
+     * Today and Everything: shipped, not stored, and not editable.
+     */
+    var `isBuiltin`: kotlin.Boolean
+    , 
+    var `createdAtMs`: kotlin.Long
+    , 
+    var `updatedAtMs`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFilterListRow: FfiConverterRustBuffer<FilterListRow> {
+    override fun read(buf: ByteBuffer): FilterListRow {
+        return FilterListRow(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeFilterDefinition.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FilterListRow) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`workspaceId`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterOptionalString.allocationSize(value.`icon`) +
+            FfiConverterOptionalString.allocationSize(value.`colorHex`) +
+            FfiConverterTypeFilterDefinition.allocationSize(value.`definition`) +
+            FfiConverterLong.allocationSize(value.`sortOrder`) +
+            FfiConverterBoolean.allocationSize(value.`isBuiltin`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+    )
+
+    override fun write(value: FilterListRow, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`workspaceId`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterOptionalString.write(value.`icon`, buf)
+            FfiConverterOptionalString.write(value.`colorHex`, buf)
+            FfiConverterTypeFilterDefinition.write(value.`definition`, buf)
+            FfiConverterLong.write(value.`sortOrder`, buf)
+            FfiConverterBoolean.write(value.`isBuiltin`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
+    }
+}
+
+
+
+/**
+ * One operator a field takes, and what kind of value it needs.
+ */
+data class FilterOpSpec (
+    var `op`: kotlin.String
+    , 
+    /**
+     * What an editor shows for it, after the field's label.
+     */
+    var `label`: kotlin.String
+    , 
+    /**
+     * "none", "text", "tag", "number", "days", "minutes", "date"
+     * (`yyyy-MM-dd`), "lists" (list ids, comma separated), "folder" (a
+     * folder id) or "column" (a board column id).
+     */
+    var `valueKind`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFilterOpSpec: FfiConverterRustBuffer<FilterOpSpec> {
+    override fun read(buf: ByteBuffer): FilterOpSpec {
+        return FilterOpSpec(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FilterOpSpec) = (
+            FfiConverterString.allocationSize(value.`op`) +
+            FfiConverterString.allocationSize(value.`label`) +
+            FfiConverterString.allocationSize(value.`valueKind`)
+    )
+
+    override fun write(value: FilterOpSpec, buf: ByteBuffer) {
+            FfiConverterString.write(value.`op`, buf)
+            FfiConverterString.write(value.`label`, buf)
+            FfiConverterString.write(value.`valueKind`, buf)
+    }
+}
+
+
+
+/**
+ * One condition: `field` compared by `op` with `value` (empty when the
+ * operator takes none). See [`filter_rule_catalog`].
+ */
+data class FilterRule (
+    var `field`: kotlin.String
+    , 
+    var `op`: kotlin.String
+    , 
+    var `value`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFilterRule: FfiConverterRustBuffer<FilterRule> {
+    override fun read(buf: ByteBuffer): FilterRule {
+        return FilterRule(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FilterRule) = (
+            FfiConverterString.allocationSize(value.`field`) +
+            FfiConverterString.allocationSize(value.`op`) +
+            FfiConverterString.allocationSize(value.`value`)
+    )
+
+    override fun write(value: FilterRule, buf: ByteBuffer) {
+            FfiConverterString.write(value.`field`, buf)
+            FfiConverterString.write(value.`op`, buf)
+            FfiConverterString.write(value.`value`, buf)
+    }
+}
+
+
+
+/**
  * The circumstances a sitting is planned in: which conditions hold, when the
  * time available ends, and whether the aim is progress or finishing.
  */
@@ -17120,6 +17749,22 @@ sealed class CoreException: kotlin.Exception() {
             get() = ""
     }
     
+    class MissingFilterList(
+        
+        val `id`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "id=${ `id` }"
+    }
+    
+    class InvalidFilter(
+        
+        val `detail`: kotlin.String
+        ) : CoreException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
     class File(
         
         val `detail`: kotlin.String
@@ -17185,7 +17830,13 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             21 -> CoreException.Unavailable()
             22 -> CoreException.InvalidTaskMove()
             23 -> CoreException.DependencyCycle()
-            24 -> CoreException.File(
+            24 -> CoreException.MissingFilterList(
+                FfiConverterString.read(buf),
+                )
+            25 -> CoreException.InvalidFilter(
+                FfiConverterString.read(buf),
+                )
+            26 -> CoreException.File(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -17293,6 +17944,16 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             is CoreException.DependencyCycle -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
+            )
+            is CoreException.MissingFilterList -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`id`)
+            )
+            is CoreException.InvalidFilter -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
             )
             is CoreException.File -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
@@ -17404,8 +18065,18 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 buf.putInt(23)
                 Unit
             }
-            is CoreException.File -> {
+            is CoreException.MissingFilterList -> {
                 buf.putInt(24)
+                FfiConverterString.write(value.`id`, buf)
+                Unit
+            }
+            is CoreException.InvalidFilter -> {
+                buf.putInt(25)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is CoreException.File -> {
+                buf.putInt(26)
                 FfiConverterString.write(value.`detail`, buf)
                 Unit
             }
@@ -19822,7 +20493,12 @@ enum class SidebarRowKind {
     /**
      * `folders[subject]`.
      */
-    FOLDER;
+    FOLDER,
+    /**
+     * The `subject`th filter list, as passed in its count. Drawn under the
+     * stock lists — Today, Everything and the inbox — and above yours.
+     */
+    FILTER_LIST;
 
     
 
@@ -20921,6 +21597,38 @@ public object FfiConverterOptionalTypeDailyRow: FfiConverterRustBuffer<DailyRow?
         } else {
             buf.put(1)
             FfiConverterTypeDailyRow.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFilterListRow: FfiConverterRustBuffer<FilterListRow?> {
+    override fun read(buf: ByteBuffer): FilterListRow? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFilterListRow.read(buf)
+    }
+
+    override fun allocationSize(value: FilterListRow?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFilterListRow.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FilterListRow?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFilterListRow.write(value, buf)
         }
     }
 }
@@ -22409,6 +23117,118 @@ public object FfiConverterSequenceTypeDayLogRecord: FfiConverterRustBuffer<List<
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeDayLogRecord.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFilterFieldSpec: FfiConverterRustBuffer<List<FilterFieldSpec>> {
+    override fun read(buf: ByteBuffer): List<FilterFieldSpec> {
+        val len = buf.getInt()
+        return List<FilterFieldSpec>(len) {
+            FfiConverterTypeFilterFieldSpec.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FilterFieldSpec>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFilterFieldSpec.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FilterFieldSpec>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFilterFieldSpec.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFilterListRow: FfiConverterRustBuffer<List<FilterListRow>> {
+    override fun read(buf: ByteBuffer): List<FilterListRow> {
+        val len = buf.getInt()
+        return List<FilterListRow>(len) {
+            FfiConverterTypeFilterListRow.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FilterListRow>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFilterListRow.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FilterListRow>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFilterListRow.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFilterOpSpec: FfiConverterRustBuffer<List<FilterOpSpec>> {
+    override fun read(buf: ByteBuffer): List<FilterOpSpec> {
+        val len = buf.getInt()
+        return List<FilterOpSpec>(len) {
+            FfiConverterTypeFilterOpSpec.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FilterOpSpec>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFilterOpSpec.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FilterOpSpec>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFilterOpSpec.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFilterRule: FfiConverterRustBuffer<List<FilterRule>> {
+    override fun read(buf: ByteBuffer): List<FilterRule> {
+        val len = buf.getInt()
+        return List<FilterRule>(len) {
+            FfiConverterTypeFilterRule.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FilterRule>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFilterRule.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FilterRule>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFilterRule.write(it, buf)
         }
     }
 }
@@ -24761,6 +25581,93 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     
 
         /**
+         * Today and Everything as definitions, in sidebar order.
+         */ fun `builtinFilterLists`(): List<FilterListRow> {
+            return FfiConverterSequenceTypeFilterListRow.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_builtin_filter_lists(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * A one-line reading of `definition`, for a subtitle or the CLI:
+         * "Open tasks where tag has work and due is within 7 days".
+         */ fun `describeFilterDefinition`(`definition`: FilterDefinition): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_describe_filter_definition(
+    
+        
+        FfiConverterTypeFilterDefinition.lower(`definition`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A definition as `rulesJSON` stores it.
+         */ fun `filterDefinitionJson`(`definition`: FilterDefinition): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_filter_definition_json(
+    
+        
+        FfiConverterTypeFilterDefinition.lower(`definition`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Every field a rule can test, in the order an editor offers them.
+         */ fun `filterRuleCatalog`(): List<FilterFieldSpec> {
+            return FfiConverterSequenceTypeFilterFieldSpec.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_filter_rule_catalog(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * A definition read from its stored JSON. Lenient about what it does not
+         * know (see the module notes), strict about JSON that is not a definition.
+         */
+    @Throws(CoreException::class) fun `parseFilterDefinition`(`json`: kotlin.String): FilterDefinition {
+            return FfiConverterTypeFilterDefinition.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_parse_filter_definition(
+    
+        
+        FfiConverterString.lower(`json`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * `definition` tidied — values trimmed, tags without `#`, list ids without
+         * blanks — or the first reason it cannot be saved.
+         */
+    @Throws(CoreException::class) fun `validateFilterDefinition`(`definition`: FilterDefinition): FilterDefinition {
+            return FfiConverterTypeFilterDefinition.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_validate_filter_definition(
+    
+        
+        FfiConverterTypeFilterDefinition.lower(`definition`),_status)
+}
+    )
+    }
+    
+
+        /**
          * Works out what has to happen for the two sides to agree.
          *
          * The ledger is `ledger_tasks` (keyed by local task id) and `ledger_lists`
@@ -25416,6 +26323,29 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterSequenceTypeSidebarNestedList.lower(`nestedLists`),
         FfiConverterSequenceString.lower(`expandedFolderIds`),
         FfiConverterBoolean.lower(`includeToday`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * [`sidebar_outline_rows`] with `filter_list_count` filter lists drawn
+         * after the inbox and its nested lists, before the pinned nested lists:
+         * with Today, Everything and the inbox they are the lists that gather tasks
+         * from others, and yours follow.
+         */ fun `sidebarOutlineRowsWithFilterLists`(`inboxId`: kotlin.String?, `lists`: List<SidebarList>, `folders`: List<SidebarFolder>, `nestedLists`: List<SidebarNestedList>, `expandedFolderIds`: List<kotlin.String>, `includeToday`: kotlin.Boolean, `filterListCount`: kotlin.UInt): List<SidebarOutlineRow> {
+            return FfiConverterSequenceTypeSidebarOutlineRow.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_sidebar_outline_rows_with_filter_lists(
+    
+        
+        FfiConverterOptionalString.lower(`inboxId`),
+        FfiConverterSequenceTypeSidebarList.lower(`lists`),
+        FfiConverterSequenceTypeSidebarFolder.lower(`folders`),
+        FfiConverterSequenceTypeSidebarNestedList.lower(`nestedLists`),
+        FfiConverterSequenceString.lower(`expandedFolderIds`),
+        FfiConverterBoolean.lower(`includeToday`),
+        FfiConverterUInt.lower(`filterListCount`),_status)
 }
     )
     }

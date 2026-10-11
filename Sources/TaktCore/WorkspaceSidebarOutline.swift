@@ -130,6 +130,9 @@ public enum WorkspaceSidebarOutline {
       case .folder:
         let id = folders[index].id
         return WorkspaceSidebarRow(id: "folder:\(id)", kind: .folder(id), depth: depth)
+      case .filterList:
+        // Never asked for: these rows are built with no filter lists.
+        return nil
       }
     }
   }

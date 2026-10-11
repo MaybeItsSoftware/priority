@@ -216,6 +216,13 @@ fn two_ticks_of_one_daily_keep_the_smaller_id_and_the_most_time() {
 #[test]
 fn a_second_workspace_folds_into_the_canonical_one() {
     let mut connection = workspace();
+    connection
+        .execute(
+            "INSERT INTO filter_lists (id, workspaceId, name, rulesJSON, sortOrder, createdAt, updatedAt)
+             VALUES ('f', 'w', 'Mine', '{}', 0, ?1, ?1)",
+            [T],
+        )
+        .unwrap();
     let tx = connection.transaction().unwrap();
     begin(&tx, "d", "s").unwrap();
     let remote = vec![
@@ -260,6 +267,15 @@ fn a_second_workspace_folds_into_the_canonical_one() {
         .query_row("SELECT listId FROM tasks WHERE id = 'a'", [], |r| r.get(0))
         .unwrap();
     assert_eq!(list, "server-inbox");
+    // A filter list follows its workspace rather than going with it.
+    let filter: String = connection
+        .query_row(
+            "SELECT workspaceId FROM filter_lists WHERE id = 'f'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(filter, "server");
 }
 
 #[test]

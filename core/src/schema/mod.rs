@@ -110,6 +110,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "v22_matrix_order",
         include_str!("migrations/v22_matrix_order.sql"),
     ),
+    (
+        "v23_filter_lists",
+        include_str!("migrations/v23_filter_lists.sql"),
+    ),
 ];
 
 /// Brings the database at `path` up to date, creating it if it does not

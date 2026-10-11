@@ -48,6 +48,9 @@ pub enum SidebarRowKind {
     PinnedNestedList,
     /// `folders[subject]`.
     Folder,
+    /// The `subject`th filter list, as passed in its count. Drawn under the
+    /// stock lists — Today, Everything and the inbox — and above yours.
+    FilterList,
 }
 
 /// One sidebar row.
@@ -74,6 +77,31 @@ pub fn sidebar_outline_rows(
     expanded_folder_ids: Vec<String>,
     include_today: bool,
 ) -> Vec<SidebarOutlineRow> {
+    sidebar_outline_rows_with_filter_lists(
+        inbox_id,
+        lists,
+        folders,
+        nested_lists,
+        expanded_folder_ids,
+        include_today,
+        0,
+    )
+}
+
+/// [`sidebar_outline_rows`] with `filter_list_count` filter lists drawn
+/// after the inbox and its nested lists, before the pinned nested lists:
+/// with Today, Everything and the inbox they are the lists that gather tasks
+/// from others, and yours follow.
+#[uniffi::export]
+pub fn sidebar_outline_rows_with_filter_lists(
+    inbox_id: Option<String>,
+    lists: Vec<SidebarList>,
+    folders: Vec<SidebarFolder>,
+    nested_lists: Vec<SidebarNestedList>,
+    expanded_folder_ids: Vec<String>,
+    include_today: bool,
+    filter_list_count: u32,
+) -> Vec<SidebarOutlineRow> {
     let mut outline = Outline {
         lists: &lists,
         folders: &folders,
@@ -89,6 +117,9 @@ pub fn sidebar_outline_rows(
     if let Some(inbox) = inbox_id.as_deref() {
         outline.push(SidebarRowKind::Inbox, 0, 0);
         outline.nested_under(inbox, 0);
+    }
+    for index in 0..filter_list_count as usize {
+        outline.push(SidebarRowKind::FilterList, index, 0);
     }
     for (index, nested) in nested_lists.iter().enumerate() {
         if nested.is_promoted {

@@ -7,12 +7,21 @@ public enum WorkspaceScope: Hashable, Sendable {
   case list(String)
   /// The open lists of a combined scope, in sidebar order.
   case combined([String])
+  /// A filter list over the open lists, in sidebar order: a combined scope
+  /// whose cards are the tasks the filter list shows.
+  case filter(String, [String])
+
+  /// Whether the scope draws from several lists through the core's board.
+  public var isCombined: Bool {
+    if case .list = self { return false }
+    return true
+  }
 
   /// The lists the scope's read covers.
   public var listIDs: [String] {
     switch self {
     case .list(let id): [id]
-    case .combined(let ids): ids
+    case .combined(let ids), .filter(_, let ids): ids
     }
   }
 }
@@ -47,6 +56,8 @@ extension WorkspaceStore {
       return .list(tree: tree, columns: metadata.columns, positions: metadata.positions)
     case .combined(let ids):
       return .combined(try combinedBoard(listIds: ids, hidingCompletedBefore: cutoff, using: handle))
+    case .filter(let id, let ids):
+      return .combined(try filterListBoard(id: id, listIds: ids, hidingCompletedBefore: cutoff, using: handle))
     }
   }
 }

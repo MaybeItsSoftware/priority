@@ -32,6 +32,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     "v20_waiting_follow_ups",
     "v21_task_dependencies",
     "v22_matrix_order",
+    "v23_filter_lists",
   ]
 
   private var directoryURL: URL!

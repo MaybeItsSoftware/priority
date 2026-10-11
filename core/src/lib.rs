@@ -23,6 +23,7 @@ pub mod dependencies;
 pub mod editor;
 pub mod error;
 pub mod export;
+pub mod filter_lists;
 pub mod focus;
 pub mod google_tasks;
 pub mod habits;

@@ -52,6 +52,7 @@ fn outline(
             List => lists[index].id.clone(),
             NestedList | PinnedNestedList => nested_lists[index].id.clone(),
             Folder => folders[index].id.clone(),
+            FilterList => format!("filter{index}"),
         };
         (row.kind, subject, row.depth)
     })
@@ -231,4 +232,36 @@ fn a_cycle_in_the_parent_chain_terminates() {
     );
     found.sort();
     assert_eq!(found, ["one", "two"]);
+}
+
+#[test]
+fn filter_lists_follow_the_inbox_and_its_nested_lists() {
+    let lists = [list("inbox", None), list("a", None)];
+    let nested_lists = [nested("n", "inbox", 0, false), nested("p", "a", 0, true)];
+    let rows: Vec<(SidebarRowKind, u32)> = sidebar_outline_rows_with_filter_lists(
+        Some("inbox".into()),
+        lists[1..].to_vec(),
+        vec![],
+        nested_lists.to_vec(),
+        vec![],
+        true,
+        2,
+    )
+    .into_iter()
+    .map(|row| (row.kind, row.subject))
+    .collect();
+    assert_eq!(
+        rows,
+        [
+            (Today, 0),
+            (Everything, 0),
+            (Inbox, 0),
+            (NestedList, 0),
+            (FilterList, 0),
+            (FilterList, 1),
+            (PinnedNestedList, 1),
+            (List, 0),
+            (NestedList, 1),
+        ]
+    );
 }

@@ -30,6 +30,7 @@ Every row of these tables, keyed by the column shown:
 | `task_conditions` | `id` |
 | `task_dependencies` | `id` |
 | `kanban_boards` | `id` |
+| `filter_lists` | `id` |
 | `dailies` | `id` |
 | `daily_contributions` | `id` |
 | `focus_sessions` | `id` |
@@ -97,6 +98,20 @@ in a quadrant (`tasks::place_in_matrix`) renumbers the quadrant's tasks from
 moving a task to another quadrant without a point clears its rank, so it
 lands after the ranked ones. A client older than v22 drops the column on
 pull, as it drops any column it does not know.
+
+`v23_filter_lists` adds `filter_lists(id TEXT PRIMARY KEY, workspaceId,
+name, icon, colorHex, rulesJSON, sortOrder, createdAt, updatedAt)`: a saved,
+named rule set evaluated over every task (`core/src/filter_lists.rs`), which
+the sidebar draws under Today, Everything and the inbox. `rulesJSON` is
+`{"match":"all"|"any","show":"open"|"done"|"all","rules":[{"field","op","value"}]}`;
+a rule a client does not know is skipped when it evaluates rather than
+refused, so an older device shows a broader list than a newer one wrote, never
+an empty one. Ids are random; there is nothing to merge two devices' filter
+lists on. The table is journalled (creating, editing and deleting one is an
+undo step) and the migration ends by reinstalling every journal and outbox
+trigger, like v21. When two devices' workspaces are merged into the canonical
+one (`sync::adopt_workspaces`), filter lists move with the folders and lists.
+Today and Everything are definitions shipped in the core, not rows.
 
 The following are not synced: the undo journal (`undo_control`, `change_log`), the FTS index
 (rebuilt by its own triggers as synced rows land), `grdb_migrations`, and the

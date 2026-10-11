@@ -22,6 +22,8 @@ object WorkspaceSchema {
         "dailies" to "id",
         "daily_contributions" to "id",
         "kanban_boards" to "id",
+        // `v23_filter_lists`.
+        "filter_lists" to "id",
     )
 
     /** Every synced table and its key, parents first. */
@@ -34,6 +36,7 @@ object WorkspaceSchema {
         "task_conditions" to "id",
         "task_dependencies" to "id",
         "kanban_boards" to "id",
+        "filter_lists" to "id",
         "dailies" to "id",
         "daily_contributions" to "id",
         "focus_sessions" to "id",

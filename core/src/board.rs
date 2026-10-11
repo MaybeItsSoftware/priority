@@ -94,8 +94,22 @@ pub fn combined_board(
     list_ids: &[String],
     hide_completed_before_ms: Option<i64>,
 ) -> Result<BoardRead, CoreError> {
+    combined_board_of(connection, list_ids, hide_completed_before_ms, None)
+}
+
+/// [`combined_board`], its cards limited to `only` when given: a filter
+/// list's board (`filter_lists`). A task in `only` is a card whatever its
+/// status, so a filter that shows finished work draws it; it must still be
+/// one the board could draw — not a list item, not the list's visible root,
+/// not inside a closed or archived list item.
+pub fn combined_board_of(
+    connection: &Connection,
+    list_ids: &[String],
+    hide_completed_before_ms: Option<i64>,
+    only: Option<&HashSet<String>>,
+) -> Result<BoardRead, CoreError> {
     let (tasks, visible_roots) = read_tasks(connection, list_ids)?;
-    let Selection { outlines, cards } = select(&tasks, &visible_roots, list_ids);
+    let Selection { outlines, cards } = select(&tasks, &visible_roots, list_ids, only);
     let is_list = |task: &TaskRow| task.item_kind.as_deref() == Some("list");
     let is_open = |task: &TaskRow| !matches!(task.status.as_str(), "completed" | "cancelled");
 
@@ -251,11 +265,13 @@ struct Selection<'a> {
     cards: Vec<usize>,
 }
 
-/// Picks the cards of `list_ids` out of `tasks`, list by list.
+/// Picks the cards of `list_ids` out of `tasks`, list by list: the open
+/// ones, or those in `only` when it is given.
 fn select<'a>(
     tasks: &'a [TaskRow],
     visible_roots: &HashMap<String, Option<String>>,
     list_ids: &'a [String],
+    only: Option<&HashSet<String>>,
 ) -> Selection<'a> {
     // Children by list and parent ("" for a root), in sibling order.
     let mut children: HashMap<(&str, &str), Vec<usize>> = HashMap::with_capacity(tasks.len());
@@ -313,7 +329,7 @@ fn select<'a>(
             if !is_list(task)
                 && visible_root.as_deref() != Some(task.id.as_str())
                 && !inactive
-                && is_open(task)
+                && only.map_or_else(|| is_open(task), |only| only.contains(&task.id))
             {
                 cards.push(index);
             }
@@ -332,10 +348,26 @@ pub fn actionable_tasks(
     list_ids: &[String],
 ) -> Result<Vec<u8>, CoreError> {
     let (tasks, visible_roots) = read_tasks(connection, list_ids)?;
-    let selection = select(&tasks, &visible_roots, list_ids);
+    let selection = select(&tasks, &visible_roots, list_ids, None);
     Ok(pack_task_rows(
         selection.cards.iter().map(|&index| &tasks[index]),
     ))
+}
+
+/// The cards of `list_ids` in board order — the open ones, or those in
+/// `only` — as rows.
+pub(crate) fn cards_of(
+    connection: &Connection,
+    list_ids: &[String],
+    only: Option<&HashSet<String>>,
+) -> Result<Vec<TaskRow>, CoreError> {
+    let (tasks, visible_roots) = read_tasks(connection, list_ids)?;
+    let selection = select(&tasks, &visible_roots, list_ids, only);
+    Ok(selection
+        .cards
+        .iter()
+        .map(|&index| tasks[index].clone())
+        .collect())
 }
 
 /// Every task in the lists, in `tasks_in_lists`' order, and each list's

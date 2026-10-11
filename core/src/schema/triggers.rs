@@ -22,6 +22,7 @@ pub const JOURNALLED_TABLES: &[(&str, &str)] = &[
     ("dailies", "id"),
     ("daily_contributions", "id"),
     ("kanban_boards", "id"),
+    ("filter_lists", "id"),
 ];
 
 /// Every synced table and its key, parents first.
@@ -34,6 +35,8 @@ pub const SYNCED_TABLES: &[(&str, &str)] = &[
     ("task_conditions", "id"),
     ("task_dependencies", "id"),
     ("kanban_boards", "id"),
+    // `v23_filter_lists`: after `workspaces`, the one table it names.
+    ("filter_lists", "id"),
     ("dailies", "id"),
     ("daily_contributions", "id"),
     ("focus_sessions", "id"),

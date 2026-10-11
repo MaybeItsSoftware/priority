@@ -68,9 +68,13 @@ extension WorkspaceStore {
     // Rounded down, so a task the core leaves out finished strictly before
     // the cutoff.
     let cutoffMs = cutoff.map { Int64(($0.timeIntervalSince1970 * 1000).rounded(.down)) }
-    let read = try Self.mappingCoreErrors {
-      try handle.combinedBoard(listIds: listIds, hideCompletedBeforeMs: cutoffMs)
-    }
+    return try boardRead(
+      Self.mappingCoreErrors { try handle.combinedBoard(listIds: listIds, hideCompletedBeforeMs: cutoffMs) })
+  }
+
+  /// A board as the core read it, decoded: its packed rows and indexes
+  /// turned into tasks and maps keyed by id.
+  func boardRead(_ read: BoardRead) throws -> WorkspaceBoardRead {
     let rows = try PackedTaskRows.decode(read.rows)
     func id(_ node: Int) -> String {
       node < rows.count ? rows[node].id : read.otherIds[node - rows.count]

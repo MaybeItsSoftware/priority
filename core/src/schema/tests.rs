@@ -53,10 +53,10 @@ fn a_new_database_has_exactly_the_fixtures_schema() {
 fn every_migration_is_recorded_in_order_under_grdbs_identifiers() {
     let connection = migrated();
     assert_eq!(ledger(&connection), workspace_migrations());
-    assert_eq!(workspace_migrations().len(), 22);
+    assert_eq!(workspace_migrations().len(), 23);
     assert_eq!(
         workspace_migrations().last().map(String::as_str),
-        Some("v22_matrix_order")
+        Some("v23_filter_lists")
     );
 }
 
@@ -69,7 +69,7 @@ fn migrating_again_applies_nothing_and_keeps_the_work() {
         )
         .unwrap();
     let before = dump_schema(&connection).unwrap();
-    assert_eq!(migrate(&mut connection).unwrap(), "v22_matrix_order");
+    assert_eq!(migrate(&mut connection).unwrap(), "v23_filter_lists");
     assert_eq!(dump_schema(&connection).unwrap(), before);
     let count: i64 = connection
         .query_row("SELECT COUNT(*) FROM workspaces", [], |row| row.get(0))
@@ -96,9 +96,9 @@ fn a_file_database_is_created_and_closed_again() {
     std::fs::create_dir_all(&directory).unwrap();
     let path = directory.join("workspace.sqlite");
     let latest = migrate_workspace(path.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(latest, "v22_matrix_order");
+    assert_eq!(latest, "v23_filter_lists");
     let reopened = Connection::open(&path).unwrap();
-    assert_eq!(ledger(&reopened).len(), 22);
+    assert_eq!(ledger(&reopened).len(), 23);
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -373,7 +373,7 @@ fn triggers_match_the_fixture() {
         assert_eq!(statement, stored(&name), "trigger {name}");
         checked += 1;
     }
-    assert_eq!(checked, 9 * 3 + 16 * 3);
+    assert_eq!(checked, 10 * 3 + 17 * 3);
     let before = dump_schema(&connection).unwrap();
     super::triggers::reinstall(&connection).unwrap();
     let after = dump_schema(&connection).unwrap();

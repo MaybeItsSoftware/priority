@@ -27,6 +27,9 @@ public enum CoreFailure: Equatable, Sendable {
   case unavailable
   case invalidTaskMove
   case dependencyCycle
+  case missingFilterList(id: String)
+  /// A filter list's rules that cannot be saved; the message says why.
+  case invalidFilter(detail: String)
   case noJournal
   /// Anything a caller only reports; its message is the error's own.
   case other
@@ -57,6 +60,8 @@ extension Error {
     case .Unavailable: return .unavailable
     case .InvalidTaskMove: return .invalidTaskMove
     case .DependencyCycle: return .dependencyCycle
+    case .MissingFilterList(let id): return .missingFilterList(id: id)
+    case .InvalidFilter(let detail): return .invalidFilter(detail: detail)
     case .NoJournal: return .noJournal
     default: return .other
     }

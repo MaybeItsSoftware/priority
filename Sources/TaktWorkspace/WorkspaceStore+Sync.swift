@@ -24,6 +24,8 @@ extension WorkspaceStore {
     // `v21_task_dependencies`: after `tasks`, both of whose ends it names.
     ("task_dependencies", "id"),
     ("kanban_boards", "id"),
+    // `v23_filter_lists`: after `workspaces`, the one table it names.
+    ("filter_lists", "id"),
     ("dailies", "id"),
     ("daily_contributions", "id"),
     ("focus_sessions", "id"),

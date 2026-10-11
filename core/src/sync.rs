@@ -695,7 +695,7 @@ fn adopt_workspaces(transaction: &Transaction, now_ms: i64) -> Result<bool, Core
                 }
             }
         }
-        for table in ["list_folders", "task_lists"] {
+        for table in ["list_folders", "task_lists", "filter_lists"] {
             transaction.execute(
                 &format!(
                     "UPDATE {table} SET workspaceId = ?1, updatedAt = ?2 WHERE workspaceId = ?3"

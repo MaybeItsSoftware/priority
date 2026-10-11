@@ -2,7 +2,7 @@ import TestSQLite
 
 extension Database {
   /// Takes `v17_sync` back off a database, and `v18_themes_and_preferences`
-  /// and `v19_habit_options`, `v20_waiting_follow_ups`, `v21_task_dependencies` and `v22_matrix_order` with it since they come later, so a test can rewind to an older schema. Its triggers name every column of the synced tables, so like the
+  /// and `v19_habit_options`, `v20_waiting_follow_ups`, `v21_task_dependencies`, `v22_matrix_order` and `v23_filter_lists` with it since they come later, so a test can rewind to an older schema. Its triggers name every column of the synced tables, so like the
   /// undo journal's they have to come off before a column can be taken away.
   /// Reopening the store runs the migration again.
   func rollBackSyncMigration() throws {
@@ -24,11 +24,14 @@ extension Database {
     for column in ["waitingOn", "waitingFollowUpAt", "waitingFollowUpTaskId", "followUpOfTaskId", "matrixRank"] {
       try execute(sql: "ALTER TABLE task_metadata DROP COLUMN \(column)")
     }
-    // `v21_task_dependencies` comes later still: its table goes, triggers and all.
-    for table in ["task_dependencies", "sync_outbox", "sync_state", "sync_control", "themes", "preferences"] {
+    // `v21_task_dependencies` and `v23_filter_lists` come later still: their
+    // tables go, triggers and all.
+    for table in ["filter_lists", "task_dependencies", "sync_outbox", "sync_state", "sync_control", "themes", "preferences"] {
       try execute(sql: "DROP TABLE IF EXISTS \(table)")
     }
     try execute(
-      sql: "DELETE FROM grdb_migrations WHERE identifier IN ('v17_sync', 'v18_themes_and_preferences', 'v19_habit_options', 'v20_waiting_follow_ups', 'v21_task_dependencies', 'v22_matrix_order')")
+      sql: "DELETE FROM grdb_migrations WHERE identifier IN ('v17_sync', 'v18_themes_and_preferences', "
+        + "'v19_habit_options', 'v20_waiting_follow_ups', 'v21_task_dependencies', 'v22_matrix_order', "
+        + "'v23_filter_lists')")
   }
 }
