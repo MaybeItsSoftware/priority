@@ -11,6 +11,9 @@ struct WorkspaceStructure: Sendable, Equatable {
   var lists: [TaskList] = []
   var archivedLists: [TaskList] = []
   var sidebar = WorkspaceSidebarIndex(nestedLists: [], archivedNestedLists: [], taskCounts: [:])
+  /// The workspace's own filter lists, in sidebar order. Today and
+  /// Everything are not among them: the app draws those itself.
+  var filterLists: [WorkspaceFilterList] = []
 
   static let empty = WorkspaceStructure()
 
@@ -23,7 +26,8 @@ struct WorkspaceStructure: Sendable, Equatable {
       folders: try store.folders(in: workspaceId),
       lists: active,
       archivedLists: all.filter(\.isArchived),
-      sidebar: try store.sidebarIndex(lists: active))
+      sidebar: try store.sidebarIndex(lists: active),
+      filterLists: ((try? store.filterLists(in: workspaceId)) ?? []).filter { !$0.isBuiltin })
   }
 
   var inbox: TaskList? { lists.first { $0.systemRole == .inbox } }
@@ -31,6 +35,11 @@ struct WorkspaceStructure: Sendable, Equatable {
   func list(_ id: String?) -> TaskList? {
     guard let id else { return nil }
     return lists.first { $0.id == id } ?? archivedLists.first { $0.id == id }
+  }
+
+  func filterList(_ id: String?) -> WorkspaceFilterList? {
+    guard let id else { return nil }
+    return filterLists.first { $0.id == id }
   }
 
   func folder(_ id: String?) -> ListFolder? {

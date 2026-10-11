@@ -46,6 +46,7 @@ struct OutlineBase: Sendable, Equatable {
     store: WorkspaceStore, workspaceID: String, scope: ListScope, structure: WorkspaceStructure,
     hidesCompleted: Bool
   ) throws -> OutlineBase {
+    var hidesCompleted = hidesCompleted
     var base = OutlineBase()
     switch scope {
     case .list(let listID):
@@ -64,6 +65,14 @@ struct OutlineBase: Sendable, Equatable {
       base.isCombined = true
       base.items = try store.actionableTasks(in: workspaceID, limitedTo: structure.listIDs(inFolder: folderID))
         .map { TaskOutlineItem(task: $0, depth: 0) }
+    case .filter(let filterID):
+      base.isCombined = true
+      guard let filter = try store.filterList(id: filterID) else { break }
+      base.items = try store.filterListTasks(filter.definition, in: workspaceID)
+        .map { TaskOutlineItem(task: $0, depth: 0) }
+      // What the filter list asks for is what it shows: hiding finished work
+      // would empty a list made to show it.
+      hidesCompleted = hidesCompleted && filter.definition.show == .open
     }
     if hidesCompleted { base.items.removeAll { $0.task.status != .open } }
     let columns = try store.boardMetadata(for: base.items.map(\.id)).columns

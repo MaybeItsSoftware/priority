@@ -30,10 +30,13 @@ enum RootTab: String, CaseIterable, Identifiable, Hashable {
 }
 
 /// What a list screen shows: one list, a nested list inside one, a folder's
-/// lists combined, or every active list.
+/// lists combined, every active list, or a filter list.
 enum ListScope: Hashable, Codable, Sendable {
   case everything
   case folder(String)
+  /// A saved filter list, by its id: Everything narrowed to the tasks its
+  /// rules match, as the Mac draws it. The core decides which match.
+  case filter(String)
   case list(String)
   /// A task-backed list nested in `listID`, opened as a scope of its own.
   case nested(listID: String, taskID: String)
@@ -42,7 +45,7 @@ enum ListScope: Hashable, Codable, Sendable {
     switch self {
     case .list(let id): id
     case .nested(let listID, _): listID
-    case .everything, .folder: nil
+    case .everything, .folder, .filter: nil
     }
   }
 
@@ -50,10 +53,18 @@ enum ListScope: Hashable, Codable, Sendable {
   /// reorder) means something. Combined scopes are flat lists of doable work.
   var isSingleTree: Bool { listID != nil }
 
+  /// The filter list the scope shows, if it is one.
+  var filterListID: String? {
+    if case .filter(let id) = self { return id }
+    return nil
+  }
+
   /// Board layouts are stored by this key, the desktop's own.
   var boardKey: String {
     switch self {
-    case .everything: "everything/root"
+    // A filter list is Everything narrowed, so it keeps Everything's columns,
+    // as the Mac does.
+    case .everything, .filter: "everything/root"
     case .folder(let id): "folder:\(id)/root"
     case .list(let id): "\(id)/root"
     case .nested(let listID, let taskID): "\(listID)/\(taskID)"
@@ -65,6 +76,7 @@ enum ListScope: Hashable, Codable, Sendable {
     switch self {
     case .everything: "everything"
     case .folder(let id): "folder:\(id)"
+    case .filter(let id): "filter:\(id)"
     case .list(let id): "list:\(id)"
     case .nested(_, let taskID): "nested:\(taskID)"
     }

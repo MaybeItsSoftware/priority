@@ -20,6 +20,15 @@ struct ListScreen: View {
       .padding(.horizontal, theme.space.lg)
       .padding(.vertical, theme.space.sm)
       .accessibilityIdentifier("list.mode")
+      if let filter = model.structure.filterList(scope.filterListID) {
+        Text(filter.definition.summary)
+          .font(theme.type.footnote)
+          .foregroundStyle(theme.muted)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, theme.space.lg)
+          .padding(.bottom, theme.space.sm)
+          .accessibilityIdentifier("list.filterSummary")
+      }
       Hairline()
       content
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -123,6 +123,13 @@ struct ListsTreeRows: View {
       if let inbox = structure.inbox {
         listRow(inbox, depth: 0)
       }
+      // Filter lists sit under Everything and the Inbox, as on the Mac. Read
+      // only here: they are made and edited on the desktop.
+      ForEach(structure.filterLists) { filter in
+        scopeRow(
+          .filter(filter.id), title: filter.name, symbol: filter.icon ?? WorkspaceFilterList.defaultIcon,
+          count: nil, subtitle: filter.definition.summary)
+      }
       ForEach(structure.promotedLists) { task in
         scopeRow(.nested(listID: task.listId, taskID: task.id), title: task.title, symbol: "pin", count: structure.sidebar.taskCounts[task.id])
           .contextMenu {
@@ -232,17 +239,25 @@ struct ListsTreeRows: View {
 
   private func scopeRow(
     _ scope: ListScope, title: String, symbol: String, count: Int?, tint: Color? = nil, completed: Bool = false,
-    indent: CGFloat = 0
+    indent: CGFloat = 0, subtitle: String? = nil
   ) -> some View {
     let label = HStack(spacing: theme.space.sm) {
       Image(systemName: symbol)
         .foregroundStyle(tint ?? theme.muted)
         .frame(width: 22)
-      Text(title)
-        .font(theme.type.body)
-        .foregroundStyle(completed ? theme.muted : theme.ink)
-        .strikethrough(completed, color: theme.dim)
-        .lineLimit(1)
+      VStack(alignment: .leading, spacing: 1) {
+        Text(title)
+          .font(theme.type.body)
+          .foregroundStyle(completed ? theme.muted : theme.ink)
+          .strikethrough(completed, color: theme.dim)
+          .lineLimit(1)
+        if let subtitle {
+          Text(subtitle)
+            .font(theme.type.footnote)
+            .foregroundStyle(theme.muted)
+            .lineLimit(1)
+        }
+      }
       Spacer(minLength: theme.space.sm)
       if let count, count > 0 {
         Text("\(count)").font(theme.type.numeral).foregroundStyle(theme.muted)

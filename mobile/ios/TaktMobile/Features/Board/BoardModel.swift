@@ -70,6 +70,13 @@ struct BoardSnapshot: Equatable, Sendable {
       read = try store.scopeRead(
         .combined(structure.listIDs(inFolder: folderID).filter { openIDs.contains($0) }),
         hidingCompletedBefore: cutoff)
+    case .filter(let filterID):
+      // A filter list that asks for finished work shows it whatever the
+      // toggle says, as on the Mac.
+      let show = try store.filterList(id: filterID)?.definition.show
+      let hides = hidesCompleted && (show ?? .open) == .open
+      options.hidesCompletedTasks = hides
+      read = try store.scopeRead(.filter(filterID, open), hidingCompletedBefore: hides ? now : nil)
     case .list(let listID):
       options.registeredRootTaskID = structure.list(listID)?.visibleRootTaskId
       read = try store.scopeRead(.list(listID), hidingCompletedBefore: cutoff)
@@ -119,7 +126,7 @@ struct BoardSnapshot: Equatable, Sendable {
     }
     var columns = decode(scope.boardKey).flatMap { $0.isEmpty ? nil : $0 } ?? WorkspaceKanbanColumn.blitzitDefaults
     let extras: [WorkspaceKanbanColumn]
-    if scope == .everything {
+    if scope == .everything || scope.filterListID != nil {
       extras = structure.lists.flatMap { decode("\($0.id)/root") ?? [] }
     } else {
       extras = (decode("everything/root") ?? []) + WorkspaceKanbanColumn.blitzitDefaults
@@ -330,7 +337,7 @@ final class BoardModel {
     case .nested(let id, let taskID):
       listID = id
       parent = taskID
-    case .everything, .folder:
+    case .everything, .folder, .filter:
       listID = model.inbox?.id
       parent = nil
     }

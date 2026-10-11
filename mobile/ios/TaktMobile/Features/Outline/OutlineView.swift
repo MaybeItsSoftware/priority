@@ -49,7 +49,10 @@ struct OutlineView: View {
         VStack(spacing: theme.space.md) {
           EmptyState(
             title: outline.scope.isSingleTree ? "Nothing here yet" : "Nothing to do",
-            message: outline.scope.isSingleTree ? "Add a task to start the list." : "Every open task in these lists shows here.",
+            message: outline.scope.isSingleTree
+              ? "Add a task to start the list."
+              : outline.scope.filterListID != nil
+                ? "No task matches this filter list." : "Every open task in these lists shows here.",
             systemImage: "list.bullet")
           if outline.scope.isSingleTree {
             Button("Add a task") { startComposing() }

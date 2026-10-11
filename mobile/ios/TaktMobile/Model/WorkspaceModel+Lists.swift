@@ -101,6 +101,7 @@ extension WorkspaceModel {
   func title(for scope: ListScope) -> String {
     switch scope {
     case .everything: return "Everything"
+    case .filter(let id): return structure.filterList(id)?.name ?? "Filter"
     case .folder(let id): return structure.folder(id)?.name ?? "Folder"
     case .list(let id): return structure.list(id)?.name ?? "List"
     case .nested(_, let taskID):
