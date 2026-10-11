@@ -48,7 +48,7 @@ struct WorkspaceTaskDraftRow: View {
       } else if model.taskInsertionIsChild {
         // Tabbed inside the card above: drawn with the mark its row will
         // have on that card.
-        Text("└").font(theme.monoCaptionFont).foregroundStyle(theme.dim)
+        WorkspaceSubtaskElbow()
       }
       TextField("New task", text: $model.taskDraftText)
         .textFieldStyle(.plain)

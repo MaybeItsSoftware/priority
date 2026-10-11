@@ -111,7 +111,7 @@ struct WorkspaceTaskMarker: View {
       } else if isHovered {
         Image(systemName: "circle").foregroundStyle(theme.muted)
       } else if isSubtask {
-        Text("└").font(theme.monoCaptionFont).foregroundStyle(theme.dim)
+        WorkspaceSubtaskElbow()
       } else {
         // Held at the circle's size, so the row's height and the hover
         // target are the same whichever mark shows.
@@ -121,6 +121,19 @@ struct WorkspaceTaskMarker: View {
     .frame(maxWidth: .infinity)
     .contentShape(Rectangle())
     .onHover { isHovered = $0 }
+  }
+}
+
+/// The `└` a subtask's row hangs from, drawn rather than set as a glyph: a
+/// glyph's stroke and position were the font's, so it never met the board's
+/// link hairlines it sits beside. This is the board's own elbow in the colour
+/// those links take at rest, inside the box the glyph took, so no row moves.
+struct WorkspaceSubtaskElbow: View {
+  @Environment(\.theme) private var theme
+
+  var body: some View {
+    Text("└").font(theme.monoCaptionFont).hidden()
+      .overlay { WorkspaceBoardLinkElbow(colour: theme.border) }
   }
 }
 
