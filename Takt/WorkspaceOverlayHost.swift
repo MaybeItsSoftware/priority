@@ -60,6 +60,8 @@ struct WorkspaceOverlayHost: View {
       WorkspaceTaskQuickEditOverlay(overlayID: overlay.id, request: request)
     case .habit(let request):
       WorkspaceHabitOverlay(overlayID: overlay.id, request: request)
+    case .commitment(let request):
+      WorkspaceCommitmentOverlay(overlayID: overlay.id, request: request)
     case .waiting(let request):
       WorkspaceWaitingOverlay(overlayID: overlay.id, request: request)
     case .blocker(let request):

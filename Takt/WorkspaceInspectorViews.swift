@@ -286,11 +286,70 @@ struct LocalTaskInspector: View {
         .inspectorField("repeat")
         .commandHelp(.taskEditRecurrence)
       }
-      Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
-        .toggleStyle(.themedSwitch)
-        .inspectorStop("daily")
-        .commandHelp(.taskToggleDaily, note: "Show this ongoing task in Dailies without completing the task itself")
+      // A task that is a daily itself — the older "daily progress" — keeps its
+      // switch so it can be turned off; committing now makes a subtask.
+      if draft.values.dailyProgress && model.commitment(carriedBy: task) == nil && !model.isHabitTask(task) {
+        Toggle("Make daily progress", isOn: binding(\.dailyProgress, fallback: draft.values.dailyProgress))
+          .toggleStyle(.themedSwitch)
+          .inspectorStop("daily")
+          .commandHelp(.taskToggleDaily, note: "Show this ongoing task in Dailies without completing the task itself")
+      }
+      commitments
     }
+  }
+
+  /// The task's periodic commitments, each with a way to edit or stop it, and
+  /// the button that makes one. On a commitment's own subtask, the commitment
+  /// it carries.
+  @ViewBuilder
+  private var commitments: some View {
+    if let carried = model.commitment(carriedBy: task) {
+      commitmentRow(carried, committedTo: model.task(withID: carried.parentTaskId))
+    } else if !task.isList {
+      ForEach(model.commitments(for: task)) { commitment in
+        commitmentRow(commitment, committedTo: task)
+      }
+      Button { model.presentCommitmentForm(for: task, editing: nil) } label: {
+        Label("Commit periodically", systemImage: "repeat")
+      }
+      .buttonStyle(FocusActionButtonStyle())
+      .inspectorStop("commit")
+      .commandHelp(.taskToggleDaily, note: "Add a subtask that comes round in Dailies on its days until this is done")
+    }
+  }
+
+  private func commitmentRow(_ commitment: WorkspaceCommitment, committedTo parent: WorkspaceTask?) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: theme.space.sm) {
+      Image(systemName: "repeat")
+        .foregroundStyle(theme.muted)
+      VStack(alignment: .leading, spacing: theme.space.xxs) {
+        Text(commitment.title)
+          .font(theme.bodyFont())
+          .foregroundStyle(theme.ink)
+          .lineLimit(1)
+        Text(Self.commitmentSummary(commitment))
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+      }
+      Spacer(minLength: 0)
+      if let parent {
+        Button("Edit") { model.presentCommitmentForm(for: parent, editing: commitment) }
+          .buttonStyle(.plain)
+          .foregroundStyle(theme.primary)
+          .help("Change its name, schedule or end")
+      }
+      Button("Stop") { model.stopCommitment(commitment) }
+        .buttonStyle(.plain)
+        .foregroundStyle(theme.danger)
+        .help("Stop it coming round; what was logged is kept")
+    }
+    .inspectorStop("commitment.\(commitment.taskId)")
+  }
+
+  /// "Every friday · until Fri 31 Oct".
+  static func commitmentSummary(_ commitment: WorkspaceCommitment) -> String {
+    guard let last = commitment.lastDay() else { return "\(commitment.ruleLabel) · until the task is done" }
+    return "\(commitment.ruleLabel) · until \(last.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))"
   }
 
   @ViewBuilder

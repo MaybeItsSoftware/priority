@@ -789,6 +789,29 @@ hand is left where you put it. Completing the task a habit came from ends the
 habit straight away — undo brings it back — and the same is true when the
 task is completed from `takt` or an assistant.
 
+### Committing to a task periodically
+
+`Cmd+Shift+D`, or **Commit periodically** in the inspector's scheduling
+section, commits you to working on the selected task on a rhythm. It opens a
+small form rather than flipping a switch:
+
+| Row | What it sets |
+| --- | --- |
+| Name | What turns up in Dailies, prefilled as "Work on *task*" |
+| How often | **Every day**, **Weekdays**, **Weekly** (on a day you pick; `←` `→` or `1`–`7` for Mon–Sun) or **Custom**, in the repeat syntax: `every 2 weeks`, `every 3 days`, `every friday`, `mon, wed, fri` |
+| Ends | **When the task is done**, or **after a date**: type the last day it should appear, in the follow-up field's shorthands (`fri`, `3w`, `2026-12-31`) |
+
+Saving adds a subtask under the task, carrying a habit whose source is the
+task: it lands in Today on its days and appears in Dailies, where ticking it
+records the day's contribution and leaves both tasks open. A daily rhythm drops
+a missed day; a weekly one, or one day a week, is carried until you tick it.
+The task's inspector lists its commitments with **Edit** and **Stop**; stopping
+keeps what was logged and closes the subtask. Completing the task ends every
+commitment on it, whatever its end date, and closes their subtasks — undo
+brings them back. On a task that has a commitment, `Cmd+Shift+D` opens it for
+editing (`Cmd+Delete` in the form stops it); on a task that is still a daily
+itself, from before commitments, it stops that daily.
+
 ### What the day records
 
 - **Recording is always on and always local.** Completions, reopens, invalidations, finished focus sessions and the day's plan are appended to `~/Library/Application Support/Takt/daylog.jsonl` — one JSON object per line, so it stays readable with `tail`, and a torn write costs one event rather than the file.

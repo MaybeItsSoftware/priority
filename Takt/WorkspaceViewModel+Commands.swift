@@ -153,7 +153,7 @@ extension WorkspaceViewModel {
     case .taskClearTags: editTaskValues { $0.tags = "" }
     case .taskClearPriority: editTaskValues { $0.priority = 0 }
     case .taskToggleDaily:
-      if let task = selectedTask { setDailyProgressTask(task, enabled: !isDailyProgressTask(task)) }
+      if let task = selectedTask { toggleCommitment(task) }
     case .taskHabit: presentHabitForm()
     case .taskWaiting: presentWaitingForm()
     case .taskAddBlocker: presentBlockerFinder()

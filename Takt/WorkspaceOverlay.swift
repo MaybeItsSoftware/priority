@@ -21,6 +21,8 @@ enum WorkspaceOverlay: Identifiable {
   case quickEdit(WorkspaceTaskQuickEditRequest)
   /// The habit form, on a task, a habit, or nothing.
   case habit(WorkspaceHabitRequest)
+  /// Committing to a task periodically: a name, a schedule and an end.
+  case commitment(WorkspaceCommitmentRequest)
   /// Waiting on: who or what, and when to follow up.
   case waiting(WorkspaceWaitingRequest)
   /// Blocked by: the finder for a task to wait on.
@@ -39,6 +41,7 @@ enum WorkspaceOverlay: Identifiable {
     case .move(let request): "move:\(request.id)"
     case .quickEdit(let request): "edit:\(request.id)"
     case .habit(let request): "habit:\(request.id)"
+    case .commitment(let request): "commitment:\(request.id)"
     case .waiting(let request): "waiting:\(request.id)"
     case .blocker(let request): "blocker:\(request.id)"
     case .create(let kind): "create:\(kind.rawValue)"

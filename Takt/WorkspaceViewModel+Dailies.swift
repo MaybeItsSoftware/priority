@@ -37,6 +37,8 @@ extension WorkspaceViewModel {
       if dailyItems != items { dailyItems = items }
       dailyTaskIDs = Set(all.map(\.taskId))
       habitTaskIDs = Set(all.filter(\.isHabit).map(\.taskId))
+      let commitments = Dictionary(grouping: try store.allCommitments(), by: \.parentTaskId)
+      if commitmentsByTask != commitments { commitmentsByTask = commitments }
       dailyProgressRevision += 1
     } catch {
       errorMessage = error.localizedDescription
@@ -77,6 +79,74 @@ extension WorkspaceViewModel {
       reloadNextUp()
     }
     return failure
+  }
+
+  // MARK: - Commitments
+
+  /// The live periodic commitments on `task`.
+  func commitments(for task: WorkspaceTask) -> [WorkspaceCommitment] {
+    commitmentsByTask[task.id] ?? []
+  }
+
+  /// The commitment `task` carries, when it is one of another task's.
+  func commitment(carriedBy task: WorkspaceTask) -> WorkspaceCommitment? {
+    guard let parent = task.parentTaskId else { return nil }
+    return commitmentsByTask[parent]?.first { $0.taskId == task.id }
+  }
+
+  /// `⌘⇧D` and the inspector's "Commit periodically": on a commitment's own
+  /// subtask, or a task that has one, its form to edit; on a task that is a
+  /// plain daily itself (the older "daily progress"), stops it; otherwise the
+  /// form for a new commitment.
+  func toggleCommitment(_ task: WorkspaceTask) {
+    guard !task.isList else { return }
+    if let carried = commitment(carriedBy: task) {
+      guard let parent = self.task(withID: carried.parentTaskId) else { return }
+      presentCommitmentForm(for: parent, editing: carried)
+    } else if let first = commitments(for: task).first {
+      presentCommitmentForm(for: task, editing: first)
+    } else if isDailyProgressTask(task), !isHabitTask(task) {
+      setDailyProgressTask(task, enabled: false)
+    } else {
+      presentCommitmentForm(for: task, editing: nil)
+    }
+  }
+
+  /// The commitment form, for a new commitment to `task` or editing one.
+  func presentCommitmentForm(for task: WorkspaceTask, editing commitment: WorkspaceCommitment?) {
+    presentOverlay(.commitment(WorkspaceCommitmentRequest(task: task, editing: commitment)))
+  }
+
+  /// Saves the commitment form. Returns an error message, or nil once saved.
+  func saveCommitment(
+    _ draft: WorkspaceCommitmentDraft, to task: WorkspaceTask, editing commitment: WorkspaceCommitment?
+  ) -> String? {
+    guard let store else { return "The workspace is not open." }
+    var failure: String?
+    perform {
+      do {
+        try store.saveCommitment(taskId: task.id, draft: draft, commitmentTaskId: commitment?.taskId)
+      } catch {
+        failure = error.localizedDescription
+        throw error
+      }
+      reloadOutline(refreshSidebar: false)
+      reloadDailies()
+      reloadNextUp()
+    }
+    return failure
+  }
+
+  /// Stops a commitment: it leaves Dailies, keeps its history, and its
+  /// subtask is closed.
+  func stopCommitment(_ commitment: WorkspaceCommitment) {
+    guard let store else { return }
+    perform {
+      try store.stopCommitment(taskId: commitment.taskId)
+      reloadOutline(refreshSidebar: false)
+      reloadDailies()
+      reloadNextUp()
+    }
   }
 
   /// Attaching a daily to a task is what "make daily progress" now means: the

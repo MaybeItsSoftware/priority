@@ -143,8 +143,9 @@ public enum WorkspaceCommandCatalog {
       id: .taskClearPriority, title: "Clear the priority", group: "Task", keys: ["0"],
       note: "0 is Checkvist's spelling"),
     .init(
-      id: .taskToggleDaily, title: "Commit to this daily, or stop", group: "Task",
-      keys: ["cmd+shift+d"], note: "A requirement to contribute to it every day"),
+      id: .taskToggleDaily, title: "Commit to this periodically, or edit the commitment", group: "Task",
+      keys: ["cmd+shift+d"],
+      note: "Asks for a name, how often and an end, then adds a subtask that comes round in Dailies"),
     // `gb`, not Checkvist's `hh`: no sequence starts with `h`, so `h` leaves
     // a task's subtasks at once instead of waiting to see if a second follows.
     .init(
