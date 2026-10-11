@@ -23,14 +23,21 @@ struct OutlineView: View {
       if outline.composer?.anchorRowID == nil, outline.composer != nil {
         composerRow
       }
-      ForEach(outline.rows) { row in
-        rowView(row)
-        if outline.composer?.anchorRowID == row.id {
-          composerRow
+      let entries = OutlineEntry.entries(rows: outline.rows, blocked: model.blockedTaskIDs)
+      ForEach(entries) { entry in
+        switch entry {
+        case .row(let row):
+          rowView(row)
+          if outline.composer?.anchorRowID == row.id {
+            composerRow
+          }
+        case .blockedLabel(_, let depth):
+          blockedLabelRow(depth: depth)
         }
       }
       .onMove { source, destination in
-        outline.move(from: source, to: destination, model: model)
+        guard let move = OutlineEntry.rowMove(in: entries, source: source, destination: destination) else { return }
+        outline.move(from: move.source, to: move.destination, model: model)
       }
       .moveDisabled(!outline.scope.isSingleTree)
     }
@@ -119,6 +126,22 @@ struct OutlineView: View {
     var context = row.menuContext
     context.allowsStructure = outline.scope.isSingleTree
     return context
+  }
+
+  /// The label over a sibling group's blocked tail, its text in the title
+  /// column of the rows it heads: past their indent, disclosure and mark.
+  /// A row of its own that cannot be selected, dragged or swiped.
+  private func blockedLabelRow(depth: Int) -> some View {
+    BlockedDivider()
+      .padding(.leading, CGFloat(depth) * Metrics.indent + 22 + 32 + theme.space.xs * 3)
+      .padding(.top, theme.space.sm)
+      .padding(.bottom, theme.space.xxs)
+      .listRowInsets(EdgeInsets(top: 0, leading: theme.space.md, bottom: 0, trailing: theme.space.md))
+      .listRowBackground(theme.paper)
+      .listRowSeparator(.hidden)
+      .selectionDisabled()
+      .moveDisabled(true)
+      .deleteDisabled(true)
   }
 
   private var composerRow: some View {
@@ -246,7 +269,7 @@ struct OutlineRowView: View, Equatable {
   @Environment(\.isPadLayout) private var isPad
   let row: OutlineRow
   let isSelected: Bool
-  /// Open and still waiting on an open task: drawn greyed.
+  /// Open and still waiting on an open task: the whole row steps back.
   var isBlocked = false
   let onFold: () -> Void
 
@@ -272,7 +295,7 @@ struct OutlineRowView: View, Equatable {
       VStack(alignment: .leading, spacing: 1) {
         Text(row.title)
           .font(row.isList ? theme.type.bodyMedium : theme.type.body)
-          .foregroundStyle(row.status == .open && !isBlocked ? theme.ink : theme.muted)
+          .foregroundStyle(row.status == .open ? theme.ink : theme.muted)
           .strikethrough(row.status != .open, color: theme.dim)
           .lineLimit(3)
           .celebrationStrike(row.id)
@@ -297,6 +320,9 @@ struct OutlineRowView: View, Equatable {
         .accessibilityIdentifier("outline.details")
       }
     }
+    // Blocked, the whole row — mark, title and badges — steps back, not only
+    // its title's colour; the selection behind it keeps its weight.
+    .opacity(isBlocked ? Theme.disabledOpacity : 1)
     .celebrationRow(row.id)
   }
 

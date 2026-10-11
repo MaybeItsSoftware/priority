@@ -11,6 +11,10 @@ import UIKit
 /// the chosen theme changes, and the environment carries it to every view, so
 /// a change of theme redraws live.
 struct Theme {
+  /// How far something that cannot be acted on yet steps back — a blocked
+  /// task's whole row. The Mac's value, so the two read alike.
+  static let disabledOpacity = 0.45
+
   let specification: ThemeSpecification
   let structure: ThemeStructure
   let touchTarget: CGFloat

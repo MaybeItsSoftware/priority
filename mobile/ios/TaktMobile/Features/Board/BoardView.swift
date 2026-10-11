@@ -134,9 +134,19 @@ struct BoardColumnView: View {
       header
       Hairline(role: .borderMuted)
       ScrollView(.vertical) {
+        let blockedStart = BlockedSections.boardLabel(cards: cards, blocked: model.blockedTaskIDs)
         LazyVStack(spacing: theme.space.sm) {
           ForEach(cards) { card in
-            BoardCardView(card: card, board: board, column: column)
+            // The label over the column's blocked cards, which sink to its
+            // foot, rides with the first of them.
+            VStack(spacing: theme.space.sm) {
+              if card.id == blockedStart {
+                BlockedDivider()
+                  .padding(.top, theme.space.xs)
+                  .padding(.horizontal, theme.space.xxs)
+              }
+              BoardCardView(card: card, board: board, column: column)
+            }
           }
           composer
         }
@@ -242,6 +252,7 @@ struct BoardCardView: View {
   @State private var isTargeted = false
 
   private var isSelected: Bool { model.navigation.selectedTaskID == card.id }
+  private var isBlocked: Bool { model.isBlocked(card.id, status: card.status) }
 
   var body: some View {
     VStack(alignment: .leading, spacing: theme.space.xs) {
@@ -259,7 +270,7 @@ struct BoardCardView: View {
         .accessibilityLabel(card.status == .open ? "Complete \(card.title)" : "Reopen \(card.title)")
         Text(card.title)
           .font(card.isList ? theme.type.bodyMedium : theme.type.body)
-          .foregroundStyle(card.status == .open && !model.isBlocked(card.id) ? theme.ink : theme.muted)
+          .foregroundStyle(card.status == .open ? theme.ink : theme.muted)
           .strikethrough(card.status != .open, color: theme.dim)
           .celebrationStrike(card.id)
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -271,6 +282,9 @@ struct BoardCardView: View {
       badges
       subtasks
     }
+    // Blocked, the whole card steps back — mark, title, badges and the
+    // subtasks that wait with it — while its frame and selection keep theirs.
+    .opacity(isBlocked ? Theme.disabledOpacity : 1)
     .padding(theme.space.sm)
     .celebrationRow(card.id)
     .background(
@@ -357,8 +371,7 @@ struct BoardCardView: View {
             .accessibilityLabel(item.task.status == .open ? "Complete \(item.task.title)" : "Reopen \(item.task.title)")
             Text(item.task.title)
               .font(theme.type.callout)
-              .foregroundStyle(
-                item.task.status == .open && !model.isBlocked(item.task.id) ? theme.ink : theme.muted)
+              .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
               .strikethrough(item.task.status != .open, color: theme.dim)
               .lineLimit(2)
               .frame(maxWidth: .infinity, alignment: .leading)
@@ -368,6 +381,9 @@ struct BoardCardView: View {
               foldButton(item.id, title: item.task.title, folded: board.folded.contains(item.id))
             }
           }
+          // A blocked subtask on a card that is not: the row steps back as a
+          // blocked card does. On a blocked card it already has.
+          .opacity(model.isBlocked(item.task.id, status: item.task.status) && !isBlocked ? Theme.disabledOpacity : 1)
           .contextMenu {
             TaskContextMenu(context: TaskMenuContext(
               taskID: item.id, title: item.task.title, status: item.task.status, isList: item.task.isList,

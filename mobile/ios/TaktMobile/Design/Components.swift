@@ -24,6 +24,29 @@ struct SectionLabel: View {
   }
 }
 
+/// The quiet label over a group's blocked tasks — an outline parent's
+/// children, a board column's cards — which sink below the rest. A
+/// micro-label and a hairline, nothing to tap or focus: it is read as one
+/// static line and the tasks either side of it are reached as if it were not
+/// there.
+struct BlockedDivider: View {
+  @Environment(\.theme) private var theme
+
+  var body: some View {
+    HStack(spacing: theme.space.sm) {
+      Text("Blocked")
+        .microLabel()
+        .fixedSize()
+      Hairline()
+    }
+    .allowsHitTesting(false)
+    .focusable(false)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Blocked: these tasks wait on others")
+    .accessibilityAddTraits(.isStaticText)
+  }
+}
+
 extension View {
   /// Sets text as the theme's micro-label: its size, weight, tracking, case
   /// and colour role.
