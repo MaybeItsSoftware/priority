@@ -39,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
@@ -58,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
 import uk.co.maybeitsadam.takt.ui.commands.Chord
+import uk.co.maybeitsadam.takt.ui.components.BlockedDivider
 import uk.co.maybeitsadam.takt.ui.components.EmptyState
 import uk.co.maybeitsadam.takt.ui.components.Hairline
 import uk.co.maybeitsadam.takt.ui.components.MonoText
@@ -134,6 +136,7 @@ internal fun OutlinePane(vm: ListViewModel, actions: TaskActions, modifier: Modi
             items(shape.entries, key = { it.key }, contentType = { it.contentType }) { entry ->
                 when (entry) {
                     is OutlineEntry.Header -> ListHeaderRow(entry) { navigator.openList(entry.listId) }
+                    is OutlineEntry.BlockedLabel -> BlockedLabelRow(entry, Modifier.animateItem())
                     is OutlineEntry.Task -> {
                         val row = entry.row
                         val isDragging = drag.id == row.id
@@ -215,6 +218,21 @@ private fun ListHeaderRow(header: OutlineEntry.Header, onOpen: () -> Unit) {
     Hairline(color = TaktTheme.colors.borderMuted)
 }
 
+/** The label over a sibling group's blocked tail, its text in the title column of the rows it heads. */
+@Composable
+private fun BlockedLabelRow(label: OutlineEntry.BlockedLabel, modifier: Modifier = Modifier) {
+    BlockedDivider(
+        modifier
+            .background(TaktTheme.colors.paper)
+            .padding(
+                start = Metrics.xs + Metrics.indent * label.depth + 32.dp + Metrics.touchTarget,
+                end = Metrics.lg,
+                top = Metrics.sm,
+                bottom = Metrics.xxs,
+            ),
+    )
+}
+
 @Composable
 private fun OutlineRowView(
     row: OutlineRow,
@@ -249,6 +267,9 @@ private fun OutlineRowView(
                     .background(if (isSelected) colors.primary.copy(alpha = 0.10f) else colors.paper)
                     .heightIn(min = Metrics.rowHeight)
                     .combinedClickable(onClick = onTap, onLongClick = { menu = true }, onLongClickLabel = "Task actions")
+                    // Blocked, the whole row — mark, title and markers — steps
+                    // back, not only its title; the selection behind it keeps its weight.
+                    .alpha(if (row.isBlocked) TaktTheme.DISABLED_ALPHA else 1f)
                     .padding(start = Metrics.xs + Metrics.indent * row.depth, end = Metrics.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -265,7 +286,6 @@ private fun OutlineRowView(
                     row.title, row.status, celebration,
                     style = if (row.isList) TaktTheme.type.bodyStrong else TaktTheme.type.body,
                     modifier = Modifier.weight(1f, fill = true).padding(vertical = Metrics.xs),
-                    isBlocked = row.isBlocked,
                 )
                 RowMarkers(row, Modifier.padding(start = Metrics.xs).heightIn(min = 24.dp))
                 Box(

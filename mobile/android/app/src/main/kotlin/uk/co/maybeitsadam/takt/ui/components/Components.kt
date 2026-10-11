@@ -38,6 +38,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,6 +60,34 @@ import uk.co.maybeitsadam.takt.ui.theme.Metrics
 @Composable
 fun Hairline(modifier: Modifier = Modifier, color: Color = TaktTheme.colors.border) {
     Box(modifier.fillMaxWidth().height(Metrics.hairline).background(color))
+}
+
+/**
+ * The quiet label over a group's blocked tasks — an outline parent's
+ * children, a board column's cards — which sink below the rest. The theme's
+ * micro-label and a hairline, nothing to tap or focus: TalkBack reads it as
+ * one line and the keyboard walks the tasks either side as if it were not
+ * there.
+ */
+@Composable
+fun BlockedDivider(modifier: Modifier = Modifier) {
+    val label = TaktTheme.microLabel
+    Row(
+        modifier
+            .fillMaxWidth()
+            .focusProperties { canFocus = false }
+            .clearAndSetSemantics { contentDescription = "Blocked: these tasks wait on others" },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Metrics.sm),
+    ) {
+        Text(
+            if (label.uppercase) "BLOCKED" else "Blocked",
+            style = label.style,
+            color = TaktTheme.colors.role(label.role),
+            maxLines = 1,
+        )
+        Hairline(Modifier.weight(1f))
+    }
 }
 
 @Composable

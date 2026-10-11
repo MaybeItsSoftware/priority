@@ -35,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
@@ -47,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import uk.co.maybeitsadam.takt.app.CelebrationStyle
 import uk.co.maybeitsadam.takt.ui.commands.Chord
+import uk.co.maybeitsadam.takt.ui.components.BlockedDivider
 import uk.co.maybeitsadam.takt.ui.components.Card
 import uk.co.maybeitsadam.takt.ui.components.EmptyState
 import uk.co.maybeitsadam.takt.ui.components.Hairline
@@ -188,8 +190,16 @@ private fun BoardColumnView(
                     Text("No cards", style = TaktTheme.type.small, color = TaktTheme.colors.dimText, modifier = Modifier.padding(Metrics.sm))
                 }
             }
-            items(column.cards, key = { it.id }, contentType = { "card" }) { card ->
-                BoardCardView(card, card.id == selected, celebration, actions, vm, Modifier.animateItem())
+            for (card in column.cards) {
+                // The label over the column's blocked cards, which sink to its foot.
+                if (card.id == column.blockedLabelId) {
+                    item(key = "blocked:label", contentType = "blocked") {
+                        BlockedDivider(Modifier.animateItem().padding(start = Metrics.xs, top = Metrics.xs))
+                    }
+                }
+                item(key = card.id, contentType = "card") {
+                    BoardCardView(card, card.id == selected, celebration, actions, vm, Modifier.animateItem())
+                }
             }
         }
     }
@@ -212,11 +222,14 @@ private fun BoardCardView(
                 Modifier
                     .fillMaxWidth()
                     .combinedClickable(onClick = { actions.tap(row.id) }, onLongClick = { menu = true }, onLongClickLabel = "Card actions")
+                    // Blocked, the whole card steps back — mark, title, markers and the
+                    // subtasks that wait with it — while its frame and selection keep theirs.
+                    .alpha(if (row.isBlocked) TaktTheme.DISABLED_ALPHA else 1f)
                     .padding(end = Metrics.sm, bottom = Metrics.xs),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CelebratedCheck(row.status, row.isList, row.title, celebration) { actions.toggleComplete(row.id) }
-                    TaskTitle(row.title, row.status, celebration, Modifier.weight(1f).padding(vertical = Metrics.sm), maxLines = 3, isBlocked = row.isBlocked)
+                    TaskTitle(row.title, row.status, celebration, Modifier.weight(1f).padding(vertical = Metrics.sm), maxLines = 3)
                     if (row.hasChildren) FoldChevron(row.title, row.isFolded, onToggle = { actions.toggleFold(row.id) })
                 }
                 val detail = card.parentTitle?.let { "Under $it" } ?: card.listName
@@ -225,7 +238,7 @@ private fun BoardCardView(
                 }
                 Box(Modifier.padding(start = Metrics.touchTarget).heightIn(max = 24.dp)) { RowMarkers(row) }
                 for (sub in card.subtasks.take(VISIBLE_SUBTASK_ROWS)) {
-                    SubtaskRow(sub, celebration, actions)
+                    SubtaskRow(sub, celebration, actions, cardIsBlocked = row.isBlocked)
                 }
                 if (card.subtasks.size > VISIBLE_SUBTASK_ROWS) {
                     Text(
@@ -260,13 +273,18 @@ private fun BoardCardView(
 }
 
 @Composable
-private fun SubtaskRow(row: OutlineRow, celebration: CelebrationStyle, actions: TaskActions) {
+private fun SubtaskRow(row: OutlineRow, celebration: CelebrationStyle, actions: TaskActions, cardIsBlocked: Boolean) {
     Row(
-        Modifier.fillMaxWidth().padding(start = Metrics.lg + Metrics.indent * row.depth),
+        Modifier
+            .fillMaxWidth()
+            // A blocked subtask on a card that is not steps back as a blocked
+            // card does; on a blocked card it already has.
+            .alpha(if (row.isBlocked && !cardIsBlocked) TaktTheme.DISABLED_ALPHA else 1f)
+            .padding(start = Metrics.lg + Metrics.indent * row.depth),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CelebratedCheck(row.status, row.isList, row.title, celebration) { actions.toggleComplete(row.id) }
-        TaskTitle(row.title, row.status, celebration, Modifier.weight(1f), style = TaktTheme.type.small, maxLines = 2, isBlocked = row.isBlocked)
+        TaskTitle(row.title, row.status, celebration, Modifier.weight(1f), style = TaktTheme.type.small, maxLines = 2)
         if (row.hasChildren) {
             FoldChevron(row.title, row.isFolded, onToggle = { actions.toggleFold(row.id) })
         } else {

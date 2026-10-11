@@ -3,6 +3,8 @@ package uk.co.maybeitsadam.takt.ui.lists
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -108,6 +110,24 @@ class ListsShapingTest {
         assertTrue(cards.first { it.id == "b" }.row.isBlocked)
         assertFalse(cards.first { it.id == "a" }.row.isBlocked)
         assertTrue(cards.first { it.id == "a" }.subtasks.first { it.id == "a1" }.isBlocked)
+    }
+
+    @Test fun theBlockedLabelHeadsEachGroupsBlockedTail() {
+        val data = scope(listOf(home), tasks).copy(blockedTaskIds = setOf("a1", "b"))
+        val entries = OutlineShaping.shape(data, false, emptySet(), false, emptySet(), zone, today).entries
+        // b ends the roots blocked; a1 has its done sibling a2 after it, so it fades unlabelled.
+        assertEquals(listOf("a", "a1", "a2", "a2x", "blocked:b", "b"), entries.map { it.key })
+        assertEquals(OutlineEntry.BlockedLabel("b", 0), entries[4])
+
+        val column = BoardColumnModel(
+            "today", "Today",
+            OutlineShaping.shape(data, false, emptySet(), false, emptySet(), zone, today).rows
+                .filter { it.depth == 0 }
+                .map { BoardCard(it, null, null, persistentListOf(), 0) }
+                .toImmutableList(),
+        )
+        assertEquals("b", column.blockedLabelId)
+        assertNull(BoardColumnModel("x", "X", persistentListOf()).blockedLabelId)
     }
 
     @Test fun aWaitingRowShowsItsTagAndFollowUpOnlyWhileInWaitingOn() {

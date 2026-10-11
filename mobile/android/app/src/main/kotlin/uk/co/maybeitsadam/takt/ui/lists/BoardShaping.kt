@@ -6,6 +6,7 @@ import java.time.ZoneId
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import uk.co.maybeitsadam.takt.core.BlockedSection
 import uk.co.maybeitsadam.takt.core.MatrixGeometry
 import uk.co.maybeitsadam.takt.core.MatrixQuadrant
 import uk.co.maybeitsadam.takt.core.TaskMatrixPosition
@@ -33,7 +34,12 @@ data class BoardCard(
 }
 
 @Immutable
-data class BoardColumnModel(val id: String, val title: String, val cards: ImmutableList<BoardCard>)
+data class BoardColumnModel(val id: String, val title: String, val cards: ImmutableList<BoardCard>) {
+    /** The card to draw the "Blocked" label above, if the column ends with blocked cards (they sink to its foot). */
+    val blockedLabelId: String? =
+        if (cards.none { it.row.isBlocked }) null
+        else BlockedSection.labelledIds(cards.map { it.id to 0 }, cards.filter { it.row.isBlocked }.mapTo(HashSet()) { it.id }).firstOrNull()
+}
 
 @Immutable
 data class BoardShape(

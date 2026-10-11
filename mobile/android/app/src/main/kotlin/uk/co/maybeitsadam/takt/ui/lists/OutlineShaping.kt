@@ -7,6 +7,7 @@ import java.time.ZoneId
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import uk.co.maybeitsadam.takt.core.BlockedSection
 import uk.co.maybeitsadam.takt.core.NextUpSelector
 import uk.co.maybeitsadam.takt.core.TaskList
 import uk.co.maybeitsadam.takt.core.TaskOutlineFolding
@@ -45,7 +46,10 @@ data class OutlineRow(
     val waitingOn: String? = null,
     /** In Waiting on: `↻ Thu 14:00`, when it will be chased. */
     val followUp: String? = null,
-    /** Open and waiting on an open task: drawn greyed, below its unblocked siblings (the core's order). */
+    /**
+     * Open and waiting on an open task: the whole row fades, below its
+     * unblocked siblings (the core's order), under a "Blocked" label.
+     */
     val isBlocked: Boolean = false,
 )
 
@@ -65,6 +69,17 @@ sealed interface OutlineEntry {
     data class Task(val row: OutlineRow) : OutlineEntry {
         override val key = row.id
         override val contentType = "task"
+    }
+
+    /**
+     * The quiet label over a sibling group's blocked tail, drawn above the
+     * row [beforeId] at its [depth]. Not a row: nothing selects, drags or
+     * steps onto it.
+     */
+    @Immutable
+    data class BlockedLabel(val beforeId: String, val depth: Int) : OutlineEntry {
+        override val key = "blocked:$beforeId"
+        override val contentType = "blocked"
     }
 }
 
@@ -202,13 +217,26 @@ object OutlineShaping {
                     items.count { it.task.status == TaskStatus.OPEN && !it.task.isList },
                 )
             }
-            for (item in TaskOutlineFolding.visible(items, folded)) {
-                val row = row(item, data.decorations, data.dailyTaskIds, parents, folded, zone, today, data.blockedTaskIds)
+            val drawn = TaskOutlineFolding.visible(items, folded).map {
+                row(it, data.decorations, data.dailyTaskIds, parents, folded, zone, today, data.blockedTaskIds)
+            }
+            val labelled = blockedLabels(drawn)
+            for (row in drawn) {
+                if (row.id in labelled) entries += OutlineEntry.BlockedLabel(row.id, row.depth)
                 rows += row
                 entries += OutlineEntry.Task(row)
             }
         }
         return OutlineShape(entries.toImmutableList(), rows.toImmutableList(), allParents, isLoaded = true)
+    }
+
+    /** The rows to draw the "Blocked" label above: the first of each sibling group's blocked tail. */
+    fun blockedLabels(rows: List<OutlineRow>): Set<String> {
+        if (rows.none { it.isBlocked }) return emptySet()
+        return BlockedSection.labelledIds(
+            rows.map { it.id to "${it.listId}/${it.parentId.orEmpty()}" },
+            rows.filter { it.isBlocked }.mapTo(HashSet()) { it.id },
+        )
     }
 
     /** Every folded ancestor of [taskId], read from the unfolded sections. */

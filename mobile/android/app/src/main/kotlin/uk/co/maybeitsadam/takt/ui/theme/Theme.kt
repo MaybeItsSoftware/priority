@@ -331,6 +331,12 @@ object TaktTheme {
         @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.microLabel
     val touchTarget: Dp
         @Composable @ReadOnlyComposable get() = LocalPriorityTheme.current.touchTarget
+
+    /**
+     * How far something that cannot be acted on yet steps back — a blocked
+     * task's whole row. The Mac's `Theme.disabledOpacity`, so the two read alike.
+     */
+    const val DISABLED_ALPHA: Float = 0.45f
 }
 
 /**
