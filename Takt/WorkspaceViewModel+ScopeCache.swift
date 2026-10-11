@@ -209,4 +209,5 @@ struct BoardIndexMemo {
   let quadrants: MatrixQuadrantIndex<WorkspaceTask>
   let rowsByColumn: [String: BoardColumnRows]
   let links: BoardLinks
+  let headingSubtasks: [String: String]
 }

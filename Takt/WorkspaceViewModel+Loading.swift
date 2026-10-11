@@ -159,6 +159,7 @@ extension WorkspaceViewModel {
     boardTreeTasks = []
     if !boardTasks.isEmpty { boardTasks = [] }
     if !boardCrossColumnTasks.isEmpty { boardCrossColumnTasks = [] }
+    if !boardHeadingSubtasks.isEmpty { boardHeadingSubtasks = [:] }
     if !boardDescendants.isEmpty { boardDescendants = [:] }
     if !boardTaskParents.isEmpty { boardTaskParents = [:] }
     if !boardTaskColumns.isEmpty { boardTaskColumns = [:] }
