@@ -154,12 +154,11 @@ struct WorkspaceSidebarPane: View {
       }
   }
 
-  /// The "Lists" caption over the tree, which is also where a list is dropped
-  /// to make it top level. A row of its own rather than a List section header
-  /// now, on the rows' gutter so the caption starts where the names do.
+  /// The gap between the stock lists and yours, which is also where a list is
+  /// dropped to make it top level. It used to be captioned "Lists", over a
+  /// group of rows that were plainly lists already; a gap says the same.
   private var listsHeader: some View {
     HStack {
-      MicroLabel("Lists")
       Spacer()
       // The affordance only means anything while something is in the air,
       // so it only appears then. A permanent ↖ beside a section title is
@@ -170,8 +169,7 @@ struct WorkspaceSidebarPane: View {
           .foregroundStyle(theme.primary)
       }
     }
-    .padding(.top, theme.space.sm)
-    .padding(.bottom, theme.space.xxs)
+    .frame(height: theme.space.md)
     .padding(.horizontal, theme.listGutter)
     .frame(maxWidth: .infinity, alignment: .leading)
     .contentShape(Rectangle())
@@ -179,7 +177,7 @@ struct WorkspaceSidebarPane: View {
       isTopLevelDropTargeted ? theme.selectionFill : .clear,
       in: RoundedRectangle(cornerRadius: theme.rowRadius))
     .help("Drop a list here to make it a top level list")
-    .accessibilityLabel("Lists, drop here to move to top level")
+    .accessibilityLabel("Drop here to move to top level")
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isTopLevelDropTargeted) { providers in
       WorkspaceTaskDrag.readItemID(from: providers) { payload in
         model.moveDroppedItem(payload, toFolderID: nil)
