@@ -219,11 +219,12 @@ extension WorkspaceViewModel {
     }
   }
 
-  /// `ee`/F2: in the outline the title turns into a field in its own row,
-  /// the way Checkvist edits; elsewhere the quick-edit overlay does the job.
+  /// `ee`/F2: the title turns into a field in its own row, the way Checkvist
+  /// edits — in the outline, on Today and in the matrix. Where the task is not
+  /// on screen as a row the quick-edit overlay does the job.
   func editSelectedTaskTitle(caret: WorkspaceTitleCaret = .selectAll) {
     if keyboardFocusArea == .sidebar { beginRenamingSelection(); return }
-    if viewMode == .outline, let task = selectedTask, outlineRows.contains(where: { $0.id == task.id }) {
+    if viewMode != .board, let task = selectedTask, isShowing(task.id) {
       editingTaskTitleCaret = caret
       editingTaskTitleID = task.id
     } else {

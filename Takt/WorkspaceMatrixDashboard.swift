@@ -368,18 +368,33 @@ struct WorkspaceMatrixTaskRow: View {
     // The selected row grows to show its whole title and list name.
     let isSelected = task.id == model.selectedTaskID
     HStack(alignment: isSelected ? .firstTextBaseline : .center, spacing: theme.space.sm) {
-      Button(task.title) {
-        model.selectTask(task)
-        model.reportKeyboardFocus(.tasks)
+      if model.editingTaskTitleID == task.id {
+        WorkspaceTaskTitleField(
+          initialTitle: task.title,
+          caret: model.editingTaskTitleCaret,
+          onCommit: { model.commitTaskTitleEdit(task, text: $0) },
+          onCancel: { model.cancelTaskTitleEdit() })
+          .frame(maxWidth: .infinity, alignment: .leading)
+      } else {
+        Button(task.title) {
+          // A click on the row already selected edits its title in place,
+          // as in the outline; the first click only selects.
+          if isSelected && model.keyboardFocusArea == .tasks {
+            model.editSelectedTaskTitle()
+          } else {
+            model.selectTask(task)
+            model.reportKeyboardFocus(.tasks)
+          }
+        }
+        .buttonStyle(.plain)
+        .font(theme.bodyFont())
+        .foregroundStyle(model.isBlocked(task) ? theme.muted : theme.ink)
+        .focusable()
+        .multilineTextAlignment(.leading)
+        .expandsWhenSelected(isSelected)
+        .help(task.title)
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
-      .buttonStyle(.plain)
-      .font(theme.bodyFont())
-      .foregroundStyle(model.isBlocked(task) ? theme.muted : theme.ink)
-      .focusable()
-      .multilineTextAlignment(.leading)
-      .expandsWhenSelected(isSelected)
-      .help(task.title)
-      .frame(maxWidth: .infinity, alignment: .leading)
       if model.isMultiListScope, let list = model.list(for: task) {
         Text(list.name)
           .font(theme.captionFont)
