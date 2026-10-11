@@ -333,10 +333,13 @@ extension WorkspaceViewModel {
       column(for: task)?.id ?? ""
     }
     if boardTasksByColumn != grouped { boardTasksByColumn = grouped }
-    let quadrants = MatrixQuadrantIndex(boardTasks) { task in
-      let position = matrixPosition(for: task)
-      return (position.urgency, position.importance)
-    }
+    let quadrants = MatrixQuadrantIndex(
+      boardTasks,
+      position: { task in
+        let position = matrixPosition(for: task)
+        return (position.urgency, position.importance)
+      },
+      rank: { matrixPosition(for: $0).rank })
     if matrixQuadrants != quadrants { matrixQuadrants = quadrants }
     rebuildBoardRowIndex()
     appliedBoardIndexKey = key
@@ -412,6 +415,43 @@ extension WorkspaceViewModel {
     guard let store else { return }
     perform {
       try store.setMatrixPosition(position, for: task.id)
+      reloadBoard()
+    }
+  }
+
+  /// Files a task in a quadrant before `targetID`, or at its foot when that
+  /// is nil: a drop at a point, from the quadrant itself or from anywhere
+  /// else on the matrix. The quadrant is renumbered in the order it is
+  /// drawn, so the task stays where it was put.
+  func placeTaskInMatrix(
+    _ task: WorkspaceTask, in cell: MatrixQuadrantIndex<WorkspaceTask>.Cell, before targetID: String?
+  ) {
+    guard let store else { return }
+    let current = matrixQuadrants.items(in: cell).map(\.id)
+    let order = MatrixQuadrantOrder.moving(task.id, before: targetID, in: current)
+    let position = matrixPosition(for: task)
+    // Dropped back where it already was: nothing to write, and no undo step.
+    guard order != current || position.urgency != cell.urgency || position.importance != cell.importance
+    else { return }
+    perform {
+      try store.placeInMatrix(
+        taskId: task.id, urgency: cell.urgency, importance: cell.importance, order: order)
+      reloadBoard()
+    }
+  }
+
+  /// `⌥↑`/`⌥↓` on the matrix: the selection a place up or down its quadrant.
+  /// An unplaced task has no order of its own to move in, so it stays put.
+  func moveSelectedTaskWithinQuadrant(by offset: Int) {
+    guard let task = selectedTask, let store else { return }
+    let position = matrixPosition(for: task)
+    guard let urgency = position.urgency, let importance = position.importance else { return }
+    let cell = MatrixQuadrantIndex<WorkspaceTask>.Cell(urgency: urgency, importance: importance)
+    guard let order = MatrixQuadrantOrder.stepping(
+      task.id, by: offset, in: matrixQuadrants.items(in: cell).map(\.id))
+    else { return }
+    perform {
+      try store.placeInMatrix(taskId: task.id, urgency: urgency, importance: importance, order: order)
       reloadBoard()
     }
   }

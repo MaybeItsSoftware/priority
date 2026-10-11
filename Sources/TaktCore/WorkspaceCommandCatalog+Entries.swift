@@ -199,13 +199,14 @@ public enum WorkspaceCommandCatalog {
       keys: ["shift+tab", "option+left", "cmd+option+left"]),
     // ⌥↑ and ⌥↓ are Zed's move line; ⌘↑ and ⌘↓ go to the ends, as they do
     // in an editor.
-    // On Today there are no siblings to move among, so they arrange the day.
+    // On Today there are no siblings to move among, so they arrange the day;
+    // on the matrix they move the task within its quadrant.
     .init(
       id: .taskMoveUp, title: "Move the task up", group: "Task", keys: ["option+up"],
-      note: "On Today, earlier in the day you planned"),
+      note: "On Today, earlier in the day you planned; on the matrix, up its quadrant"),
     .init(
       id: .taskMoveDown, title: "Move the task down", group: "Task", keys: ["option+down"],
-      note: "On Today, later in the day you planned"),
+      note: "On Today, later in the day you planned; on the matrix, down its quadrant"),
     .init(
       id: .taskMoveToPreviousList, title: "Move the task to the list above", group: "Task",
       keys: ["option+shift+up"], note: "The list above its own in the sidebar. mm picks any list"),

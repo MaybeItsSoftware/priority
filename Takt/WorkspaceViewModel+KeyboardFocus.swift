@@ -139,7 +139,8 @@ extension WorkspaceViewModel {
     case .today: dayItems.map(\.task)
     case .outline: outlineRows.map(\.task)
     case .board: boardColumns.flatMap { tasks(in: $0) }
-    case .matrix: boardTasks
+    // As it is drawn: the unplaced column, then the quadrants in reading order.
+    case .matrix: matrixQuadrants.drawnOrder
     }
   }
 }

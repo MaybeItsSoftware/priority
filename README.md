@@ -489,7 +489,7 @@ focus panel and the timeline are tabs in the right dock.
 | **Today** | `Cmd+T` | The day as a numbered list of cards — see [Today](#today) |
 | **Board** | `Cmd+1` | Columns of cards, dragged between and within |
 | **Outline** | `Cmd+2` | The list as a tree, indented, with each branch folding in place |
-| **Matrix** | `Cmd+3` | Eisenhower quadrants by importance and urgency |
+| **Matrix** | `Cmd+3` | Eisenhower quadrants: urgent and not urgent across, important and not important down, with the unplaced tasks in a column beside them. Drag a task to the point in a quadrant it should sit at; `Option+1`–`Option+4` place the selection, and `Option+Up`/`Option+Down` move it within its quadrant |
 | **Focus** | `Cmd+8` | Raises the floating focus panel — the day, or the block that is running |
 | **Timeline** | `Cmd+9` | The day as elapsed time rather than as a list |
 
