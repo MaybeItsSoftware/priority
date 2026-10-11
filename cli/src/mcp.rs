@@ -647,6 +647,7 @@ pub fn tool_definitions() -> Vec<Value> {
 /// every write lands in the app's Undo menu as "MCP: …".
 fn workspace_tool_definitions() -> Vec<Value> {
     let id = |description: &str| json!({ "type": "string", "description": description });
+    let board_help = "A list id from workspace_tree, everything, or default (the columns a board without its own uses). Default: everything.";
     let links = json!({
         "type": "array",
         "items": { "type": "string" },
@@ -893,9 +894,9 @@ fn workspace_tool_definitions() -> Vec<Value> {
                     "filter_list_id": id("From workspace_filter_lists."),
                     "name": { "type": "string", "minLength": 1 },
                     "icon": icon,
-                    "match": match_mode,
+                    "match": match_mode.clone(),
                     "show": show,
-                    "rules": rules,
+                    "rules": rules.clone(),
                 },
                 "required": ["filter_list_id"],
                 "additionalProperties": false,
@@ -957,6 +958,45 @@ fn workspace_tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": { "list_id": id("From workspace_tree.") },
                 "required": ["list_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_board_columns",
+            "description": "A board's columns, left to right: a list's (its own, else the workspace default, else the stock five), Everything's, or the default itself. `source` says which. A column with rules holds the tasks its rules match, the first such column from the left winning; the others hold the tasks filed in them.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "board": id(board_help) },
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_board_column_set",
+            "description": format!("Add a board column, or rename one or set its rules (pass column_id). Rules are a filter list's (match all or any); an empty rules array makes it an ordinary column. A board following the default gets columns of its own. One undo step. {rule_help}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "board": id(board_help),
+                    "column_id": id("From workspace_board_columns. Omit to add a column."),
+                    "title": { "type": "string", "minLength": 1 },
+                    "match": match_mode,
+                    "rules": rules,
+                    "position": { "type": "integer", "minimum": 0, "description": "Where a new column goes among the board's, from 0. Default: last." },
+                },
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_board_column_delete",
+            "description": "Delete a board column. The tasks filed in it move to move_to (default: the first remaining ordinary column) in the same undo step. Deleting a rule column, Today or Waiting on moves nothing: their tasks stay planned or waiting.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "board": id(board_help),
+                    "column_id": id("From workspace_board_columns."),
+                    "move_to": id("A remaining column's id."),
+                },
+                "required": ["column_id"],
                 "additionalProperties": false,
             },
         }),

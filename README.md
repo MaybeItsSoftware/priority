@@ -950,7 +950,7 @@ Every command is one of the MCP tools under a friendlier name, and the same bina
 
 ## MCP server
 
-Takt exposes **42 MCP tools** so an AI assistant can work with your lists directly: the workspace's folders, lists, tasks, blockers and filter lists, the local state Checkvist has no representation for (day log, dailies, priority ranks, recurrence, the matrix), and the Checkvist API. [`docs/mcp-server.md`](docs/mcp-server.md) lists them.
+Takt exposes **45 MCP tools** so an AI assistant can work with your lists directly: the workspace's folders, lists, tasks, blockers, filter lists and board columns, the local state Checkvist has no representation for (day log, dailies, priority ranks, recurrence, the matrix), and the Checkvist API. [`docs/mcp-server.md`](docs/mcp-server.md) lists them.
 
 All but one are reads or Checkvist writes. `task_matrix_set` places tasks on the Eisenhower matrix in bulk (`takt matrix <id>:<urgency>:<importance> …` from a terminal), and refuses while Takt is running — the app holds those coordinates in memory and would overwrite them. Quit Takt, let the assistant do a first pass over the whole list, then reopen and correct it by dragging.
 

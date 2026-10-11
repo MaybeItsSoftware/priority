@@ -1184,6 +1184,74 @@ fn a_workspace_without_dependencies_reads_empty_and_refuses_writes() {
     }
 }
 
+// -- board columns ------------------------------------------------------------
+
+fn column_ids(payload: &Value) -> Vec<String> {
+    ids(&payload["columns"])
+}
+
+#[test]
+fn board_columns_are_read_added_ruled_and_deleted_with_their_tasks() {
+    let fixture = Fixture::new();
+    let read = fixture.call("workspace_board_columns", json!({ "board": PROJECTS }));
+    assert_eq!(read["source"], json!("builtin"));
+    assert_eq!(
+        column_ids(&read),
+        vec!["backlog", "in-progress", "this-week", "waiting-on", "today"]
+    );
+
+    let card = fixture.add(PROJECTS, "Draft", None);
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": card, "kanban_column": "in-progress" }),
+    );
+
+    let added = fixture.call(
+        "workspace_board_column_set",
+        json!({
+            "board": PROJECTS,
+            "title": "Urgent",
+            "position": 0,
+            "rules": [{ "field": "tag", "op": "has", "value": "urgent" }],
+        }),
+    );
+    assert_eq!(added["source"], json!("own"));
+    assert_eq!(added["column_id"], json!("urgent"));
+    assert_eq!(column_ids(&added)[0], "urgent");
+    assert_eq!(
+        added["columns"][0]["rules"]["rules"][0]["value"],
+        json!("urgent")
+    );
+
+    // The default is untouched: another board still follows it.
+    let everything = fixture.call("workspace_board_columns", json!({}));
+    assert_eq!(everything["source"], json!("builtin"));
+
+    let steps = fixture.journal().len();
+    let deleted = fixture.call(
+        "workspace_board_column_delete",
+        json!({ "board": PROJECTS, "column_id": "in-progress", "move_to": "this-week" }),
+    );
+    assert_eq!(deleted["moved_to"], json!("this-week"));
+    assert!(!column_ids(&deleted).contains(&"in-progress".to_string()));
+    assert_eq!(fixture.journal().len(), steps + 1);
+    let filed: String = fixture
+        .db()
+        .query_row(
+            "SELECT kanbanColumn FROM task_metadata WHERE taskId = ?1",
+            [&card],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(filed, "this-week");
+
+    let refused = fixture.try_call(
+        "workspace_board_column_delete",
+        json!({ "board": PROJECTS, "column_id": "nope" }),
+    );
+    assert!(refused.is_err());
+}
+
 // -- filter lists -------------------------------------------------------------
 
 fn filter_ids(payload: &Value) -> Vec<String> {

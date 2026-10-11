@@ -541,6 +541,53 @@ impl Tools {
                 ))
             }
 
+            "workspace_board_columns" => {
+                let payload = self
+                    .workspace
+                    .board_columns(as_string(arguments.get("board")).as_deref())?;
+                Ok(outcome(
+                    format!("Board columns ({})", payload["source"]),
+                    payload,
+                ))
+            }
+
+            "workspace_board_column_set" => {
+                let edit = crate::workspace_tasks::ColumnEdit {
+                    title: as_string(arguments.get("title")),
+                    match_mode: as_string(arguments.get("match")),
+                    rules: as_filter_rules(arguments.get("rules"))?,
+                    position: arguments
+                        .get("position")
+                        .and_then(Value::as_u64)
+                        .map(|position| position as usize),
+                };
+                let column_id = as_string(arguments.get("column_id"));
+                Ok(outcome(
+                    if column_id.is_some() {
+                        "Board column updated"
+                    } else {
+                        "Board column added"
+                    },
+                    self.workspace.set_board_column(
+                        as_string(arguments.get("board")).as_deref(),
+                        column_id.as_deref(),
+                        edit,
+                    )?,
+                ))
+            }
+
+            "workspace_board_column_delete" => {
+                let column_id = required_string(arguments, "column_id")?;
+                Ok(outcome(
+                    "Board column deleted",
+                    self.workspace.delete_board_column(
+                        as_string(arguments.get("board")).as_deref(),
+                        column_id.trim(),
+                        as_string(arguments.get("move_to")).as_deref(),
+                    )?,
+                ))
+            }
+
             "workspace_folder_create" => {
                 let name = required_string(arguments, "name")?;
                 let parent = as_id(arguments.get("parent_folder_id"));
