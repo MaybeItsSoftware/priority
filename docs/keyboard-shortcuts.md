@@ -245,7 +245,21 @@ The board keeps Left/Right for column navigation, including empty columns.
 Up/Down walk a column row by row, and a card's subtask rows are rows: the
 keys step onto each subtask the card is showing before the next card, and
 over a folded card's tree without stopping. Left/Right from a subtask leave
-from the column its card is in.
+from the column its card is in. On an entered card's board the columns left
+of the card's own are hidden, and neither the arrows nor `Cmd+←`/`Cmd+→`
+reach them.
+
+On the board, Return on a card adds a card below it, and on a subtask row
+adds a sibling subtask below that row on the same card (Shift+Return above).
+`ee`/F2 edits a card's or subtask row's title in place, as in the outline.
+`Alt+Up`/`Alt+Down` move a card past the card above or below in its column,
+and a subtask row past the row above or below on its card.
+
+Board columns are edited from the header's right-click menu, which shows
+each item's key: `Cmd+Shift+C` adds a column and `Cmd+Ctrl+C` deletes the
+one you are in, asking where its tasks go. Rename, move left/right, add
+left/right, edit rules, make these the default columns and reset to the
+default are keyless palette commands acting on the column you are in.
 
 ## Folding subtasks where they are
 
