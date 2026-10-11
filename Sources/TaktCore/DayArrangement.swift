@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// Arranging the day by hand: where the planned tasks go when one of them is
 /// moved up or down.
@@ -6,7 +7,8 @@ import Foundation
 /// Only the planned rows take part. A derived row — overdue, due today,
 /// starting today — is in the day because of a date, and its place follows
 /// from that date, so moving it would be arranging something the next read
-/// puts back.
+/// puts back. The rule is the Rust core's (`core/src/shaping.rs`), shared
+/// with Android.
 public enum DayArrangement {
   /// The planned order with `taskID` moved `offset` places, clamped at the
   /// ends. `nil` when the task is not in the order or cannot move that way,
@@ -16,13 +18,7 @@ public enum DayArrangement {
     by offset: Int,
     in order: [String]
   ) -> [String]? {
-    guard offset != 0, let index = order.firstIndex(of: taskID) else { return nil }
-    let target = min(max(index + offset, 0), order.count - 1)
-    guard target != index else { return nil }
-    var arranged = order
-    arranged.remove(at: index)
-    arranged.insert(taskID, at: target)
-    return arranged
+    dayArrangementMoving(taskId: taskID, offset: Int64(offset), order: order)
   }
 
   /// `plan` with its planned entries put in `order`, everything else where it
@@ -30,10 +26,10 @@ public enum DayArrangement {
   /// which is what keeps a second ⌥↓ pressed quickly moving the same task on
   /// from where the first left it.
   public static func applying(_ order: [String], to plan: [DayPlanEntry]) -> [DayPlanEntry] {
-    var remaining = order.makeIterator()
-    return plan.map { entry in
-      guard entry.reason == .planned, let next = remaining.next() else { return entry }
-      return DayPlanEntry(id: next, reason: .planned)
+    let ids = dayArrangementApplying(
+      order: order, ids: plan.map(\.id), planned: plan.map { $0.reason == .planned })
+    return zip(plan, ids).map { entry, id in
+      entry.reason == .planned ? DayPlanEntry(id: id, reason: .planned) : entry
     }
   }
 }

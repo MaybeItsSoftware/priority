@@ -1,4 +1,5 @@
 import Foundation
+import TaktRustCore
 
 /// How much of the day's plan is left and, if you worked straight through it,
 /// when you would be done.
@@ -8,6 +9,8 @@ import Foundation
 /// leave the sum to you. It is deliberately naive: no breaks, no calendar, no
 /// working hours. A finish time you can check in your head is worth more than
 /// a clever one you have to trust.
+///
+/// The sum is the Rust core's (`core/src/shaping.rs`), shared with Android.
 public struct DayForecast: Equatable, Sendable {
   /// One task on the day, as far as the forecast cares about it.
   public struct Entry: Equatable, Sendable {
@@ -40,24 +43,17 @@ public struct DayForecast: Equatable, Sendable {
   public let finishAt: Date?
 
   public init(entries: [Entry], now: Date) {
-    var estimated = 0
-    var logged = 0
-    var remaining = 0
-    var unestimated = 0
-    for entry in entries {
-      let spent = max(0, entry.loggedSeconds)
-      logged += spent
-      guard let estimate = entry.estimateSeconds, estimate > 0 else {
-        unestimated += 1
-        continue
-      }
-      estimated += estimate
-      remaining += max(0, estimate - spent)
-    }
-    estimatedSeconds = estimated
-    loggedSeconds = logged
-    remainingSeconds = remaining
-    unestimatedCount = unestimated
-    finishAt = remaining > 0 ? now.addingTimeInterval(TimeInterval(remaining)) : nil
+    let summary = dayForecast(
+      entries: entries.map {
+        DayForecastEntry(
+          estimateSeconds: $0.estimateSeconds.map(Int64.init), loggedSeconds: Int64($0.loggedSeconds))
+      },
+      nowMs: Int64((now.timeIntervalSince1970 * 1000).rounded()))
+    estimatedSeconds = Int(summary.estimatedSeconds)
+    loggedSeconds = Int(summary.loggedSeconds)
+    remainingSeconds = Int(summary.remainingSeconds)
+    unestimatedCount = Int(summary.unestimatedCount)
+    // From `now` itself, which keeps its sub-millisecond part.
+    finishAt = summary.finishAtMs == nil ? nil : now.addingTimeInterval(TimeInterval(summary.remainingSeconds))
   }
 }

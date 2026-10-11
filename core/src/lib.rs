@@ -46,6 +46,7 @@ pub mod rows;
 pub mod schema;
 pub mod search;
 pub mod setup;
+pub mod shaping;
 pub mod sidebar;
 mod swift_text;
 pub mod sync;

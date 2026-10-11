@@ -887,6 +887,20 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_workspace_migrations(
     ): Int
+    external fun uniffi_takt_core_checksum_func_blocked_section_labels(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_arrangement_applying(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_arrangement_moving(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_day_forecast(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_restore(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_context_toggle(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_focus_deferral_date(
+    ): Int
     external fun uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder(
     ): Int
     external fun uniffi_takt_core_checksum_func_sidebar_outline_rows(
@@ -1997,6 +2011,20 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_workspace_migrations(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_blocked_section_labels(`groups`: RustBuffer.ByValue,`blocked`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_arrangement_applying(`order`: RustBuffer.ByValue,`ids`: RustBuffer.ByValue,`planned`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_arrangement_moving(`taskId`: RustBuffer.ByValue,`offset`: Long,`order`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_day_forecast(`entries`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_restore(`saved`: RustBuffer.ByValue,`known`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_context_toggle(`conditionId`: RustBuffer.ByValue,`isLocation`: Byte,`current`: RustBuffer.ByValue,`locationIds`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_focus_deferral_date(`deferral`: RustBuffer.ByValue,`nowMs`: Long,`zone`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     external fun uniffi_takt_core_fn_func_sidebar_list_ids_in_folder(`folderId`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_sidebar_outline_rows(`inboxId`: RustBuffer.ByValue,`lists`: RustBuffer.ByValue,`folders`: RustBuffer.ByValue,`nestedLists`: RustBuffer.ByValue,`expandedFolderIds`: RustBuffer.ByValue,`includeToday`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -2530,6 +2558,27 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_workspace_migrations() and 0xFFFF) != 25592) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_blocked_section_labels() and 0xFFFF) != 39647) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_arrangement_applying() and 0xFFFF) != 46141) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_arrangement_moving() and 0xFFFF) != 36715) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_day_forecast() and 0xFFFF) != 48353) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_restore() and 0xFFFF) != 33473) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_context_toggle() and 0xFFFF) != 26054) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_focus_deferral_date() and 0xFFFF) != 35466) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder() and 0xFFFF) != 59863) {
@@ -12589,6 +12638,128 @@ public object FfiConverterTypeDayEntry: FfiConverterRustBuffer<DayEntry> {
 
 
 /**
+ * One task on the day, as far as the forecast cares.
+ */
+data class DayForecastEntry (
+    /**
+     * What the task was meant to cost, or nothing when nobody said.
+     */
+    var `estimateSeconds`: kotlin.Long?
+    , 
+    /**
+     * What it has cost so far, the running block's elapsed time included
+     * when this is the task being worked on.
+     */
+    var `loggedSeconds`: kotlin.Long
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayForecastEntry: FfiConverterRustBuffer<DayForecastEntry> {
+    override fun read(buf: ByteBuffer): DayForecastEntry {
+        return DayForecastEntry(
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayForecastEntry) = (
+            FfiConverterOptionalLong.allocationSize(value.`estimateSeconds`) +
+            FfiConverterLong.allocationSize(value.`loggedSeconds`)
+    )
+
+    override fun write(value: DayForecastEntry, buf: ByteBuffer) {
+            FfiConverterOptionalLong.write(value.`estimateSeconds`, buf)
+            FfiConverterLong.write(value.`loggedSeconds`, buf)
+    }
+}
+
+
+
+/**
+ * How much of the day's plan is left and, worked straight through, when it
+ * would be done. Deliberately naive: no breaks, no calendar, no hours.
+ */
+data class DayForecastSummary (
+    /**
+     * Every estimate on the day.
+     */
+    var `estimatedSeconds`: kotlin.Long
+    , 
+    /**
+     * Time logged against the day's tasks, estimated or not.
+     */
+    var `loggedSeconds`: kotlin.Long
+    , 
+    /**
+     * What the estimated tasks still owe. A task past its estimate owes
+     * nothing: an overrun on one buys no time back on the others.
+     */
+    var `remainingSeconds`: kotlin.Long
+    , 
+    /**
+     * Tasks that say nothing about their cost, each making the forecast
+     * optimistic.
+     */
+    var `unestimatedCount`: kotlin.Long
+    , 
+    /**
+     * `now` plus what is left, or nothing when nothing estimated is left.
+     */
+    var `finishAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDayForecastSummary: FfiConverterRustBuffer<DayForecastSummary> {
+    override fun read(buf: ByteBuffer): DayForecastSummary {
+        return DayForecastSummary(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DayForecastSummary) = (
+            FfiConverterLong.allocationSize(value.`estimatedSeconds`) +
+            FfiConverterLong.allocationSize(value.`loggedSeconds`) +
+            FfiConverterLong.allocationSize(value.`remainingSeconds`) +
+            FfiConverterLong.allocationSize(value.`unestimatedCount`) +
+            FfiConverterOptionalLong.allocationSize(value.`finishAtMs`)
+    )
+
+    override fun write(value: DayForecastSummary, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`estimatedSeconds`, buf)
+            FfiConverterLong.write(value.`loggedSeconds`, buf)
+            FfiConverterLong.write(value.`remainingSeconds`, buf)
+            FfiConverterLong.write(value.`unestimatedCount`, buf)
+            FfiConverterOptionalLong.write(value.`finishAtMs`, buf)
+    }
+}
+
+
+
+/**
  * Where logical days begin: at `rollover_hour` in `zone`, not at midnight,
  * so work finished at 01:30 belongs to the day that began the previous
  * morning. `first_weekday` is Foundation's numbering (1 = Sunday) and only
@@ -19939,6 +20110,57 @@ public object FfiConverterTypeExportFormat: FfiConverterRustBuffer<ExportFormat>
 
 
 
+/**
+ * When a deferred task comes back.
+ */
+
+enum class FocusDeferral {
+    
+    /**
+     * An hour from now.
+     */
+    AN_HOUR,
+    /**
+     * 14:00 today, or an hour from now once that has passed.
+     */
+    THIS_AFTERNOON,
+    /**
+     * 09:00 tomorrow.
+     */
+    TOMORROW,
+    /**
+     * 09:00 a week from today.
+     */
+    NEXT_WEEK;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFocusDeferral: FfiConverterRustBuffer<FocusDeferral> {
+    override fun read(buf: ByteBuffer) = try {
+        FocusDeferral.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FocusDeferral) = 4UL
+
+    override fun write(value: FocusDeferral, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
 
 enum class GoogleTasksConflictField {
     
@@ -23694,6 +23916,34 @@ public object FfiConverterSequenceLong: FfiConverterRustBuffer<List<kotlin.Long>
 /**
  * @suppress
  */
+public object FfiConverterSequenceBoolean: FfiConverterRustBuffer<List<kotlin.Boolean>> {
+    override fun read(buf: ByteBuffer): List<kotlin.Boolean> {
+        val len = buf.getInt()
+        return List<kotlin.Boolean>(len) {
+            FfiConverterBoolean.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.Boolean>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterBoolean.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.Boolean>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterBoolean.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
     override fun read(buf: ByteBuffer): List<kotlin.String> {
         val len = buf.getInt()
@@ -24468,6 +24718,34 @@ public object FfiConverterSequenceTypeDayEntry: FfiConverterRustBuffer<List<DayE
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeDayEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeDayForecastEntry: FfiConverterRustBuffer<List<DayForecastEntry>> {
+    override fun read(buf: ByteBuffer): List<DayForecastEntry> {
+        val len = buf.getInt()
+        return List<DayForecastEntry>(len) {
+            FfiConverterTypeDayForecastEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<DayForecastEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeDayForecastEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<DayForecastEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeDayForecastEntry.write(it, buf)
         }
     }
 }
@@ -27872,6 +28150,139 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
     UniffiLib.uniffi_takt_core_fn_func_workspace_migrations(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * Which rows get the "Blocked" label: in each group, the first of the run of
+         * blocked rows the group ends with.
+         *
+         * `groups[i]` is the group row `i` belongs to (an outline parent's
+         * children, a board column's cards) and `blocked[i]` whether it is drawn as
+         * blocked; the rows are in drawing order, and a group's rows need not be
+         * contiguous. A blocked row with an unblocked one after it in its group (a
+         * stale read, say) is not labelled, since a label there would head a
+         * section that is not all blocked. The answer is row indices, ascending.
+         */ fun `blockedSectionLabels`(`groups`: List<kotlin.UInt>, `blocked`: List<kotlin.Boolean>): List<kotlin.UInt> {
+            return FfiConverterSequenceUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_blocked_section_labels(
+    
+        
+        FfiConverterSequenceUInt.lower(`groups`),
+        FfiConverterSequenceBoolean.lower(`blocked`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The day with its planned slots filled from `order`, in turn, and every
+         * other slot as it was; `planned[i]` says whether slot `i` is planned and
+         * `ids[i]` is what it holds. Lets the day show a move at once rather than
+         * after the next read, which is what keeps a second move pressed quickly
+         * moving the same task on from where the first left it. A planned slot left
+         * over when `order` runs out keeps its id.
+         */ fun `dayArrangementApplying`(`order`: List<kotlin.String>, `ids`: List<kotlin.String>, `planned`: List<kotlin.Boolean>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_arrangement_applying(
+    
+        
+        FfiConverterSequenceString.lower(`order`),
+        FfiConverterSequenceString.lower(`ids`),
+        FfiConverterSequenceBoolean.lower(`planned`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The planned order with `task_id` moved `offset` places, clamped at the
+         * ends; nothing when the task is not in the order or cannot move that way,
+         * so a caller has nothing to write.
+         *
+         * Only planned rows take part. A derived row (overdue, due today, starting
+         * today) is in the day because of a date, and the next read would put it
+         * back wherever it was moved.
+         */ fun `dayArrangementMoving`(`taskId`: kotlin.String, `offset`: kotlin.Long, `order`: List<kotlin.String>): List<kotlin.String>? {
+            return FfiConverterOptionalSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_arrangement_moving(
+    
+        
+        FfiConverterString.lower(`taskId`),
+        FfiConverterLong.lower(`offset`),
+        FfiConverterSequenceString.lower(`order`),_status)
+}
+    )
+    }
+    
+ fun `dayForecast`(`entries`: List<DayForecastEntry>, `nowMs`: kotlin.Long): DayForecastSummary {
+            return FfiConverterTypeDayForecastSummary.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_day_forecast(
+    
+        
+        FfiConverterSequenceTypeDayForecastEntry.lower(`entries`),
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A saved context, less any condition that no longer exists (`known`).
+         * Archived ones stay: archiving hides a condition from new requirements,
+         * not from tasks that already need it. Sorted and without repeats.
+         */ fun `focusContextRestore`(`saved`: List<kotlin.String>, `known`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_restore(
+    
+        
+        FfiConverterSequenceString.lower(`saved`),
+        FfiConverterSequenceString.lower(`known`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The focus context's condition ids with `condition_id` flipped. You are
+         * in one place at a time, so turning a location on turns every other
+         * location (`location_ids`) off; capabilities ("Floor space", "Quiet")
+         * combine freely. Sorted, so the answer is the same however the set was
+         * held.
+         */ fun `focusContextToggle`(`conditionId`: kotlin.String, `isLocation`: kotlin.Boolean, `current`: List<kotlin.String>, `locationIds`: List<kotlin.String>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_context_toggle(
+    
+        
+        FfiConverterString.lower(`conditionId`),
+        FfiConverterBoolean.lower(`isLocation`),
+        FfiConverterSequenceString.lower(`current`),
+        FfiConverterSequenceString.lower(`locationIds`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The instant a task deferred `deferral` at `now_ms` comes back, with the
+         * wall-clock times read in `zone` (an IANA name).
+         */ fun `focusDeferralDate`(`deferral`: FocusDeferral, `nowMs`: kotlin.Long, `zone`: kotlin.String): kotlin.Long {
+            return FfiConverterLong.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_focus_deferral_date(
+    
+        
+        FfiConverterTypeFocusDeferral.lower(`deferral`),
+        FfiConverterLong.lower(`nowMs`),
+        FfiConverterString.lower(`zone`),_status)
 }
     )
     }

@@ -1,7 +1,10 @@
 package uk.co.maybeitsadam.takt.core
 
+import uniffi.takt_core.blockedSectionLabels
+
 /**
- * Where the "Blocked" label goes in a list of tasks. Port of
+ * Where the "Blocked" label goes in a list of tasks. The rule is the Rust
+ * core's (`core/src/shaping.rs`), shared with the Mac and iPhone's
  * `BlockedSection.swift`.
  *
  * Blocked tasks sink below their open siblings (the core's ordering), so each
@@ -18,19 +21,14 @@ object BlockedSection {
      *
      * [items] are the rows in drawing order, each with the group it belongs
      * to. A group's rows need not be contiguous: an outline draws a sibling's
-     * subtasks between it and the next sibling.
+     * subtasks between it and the next sibling. The groups are numbered here
+     * before they cross, so any key will do.
      */
     fun <G> labelledIds(items: List<Pair<String, G>>, blocked: Set<String>): Set<String> {
         if (blocked.isEmpty()) return emptySet()
-        // Walked from the end: a group's run is open until a row of it that is
-        // not blocked closes it.
-        val runStart = HashMap<G, String>()
-        val closed = HashSet<G>()
-        for (index in items.indices.reversed()) {
-            val (id, group) = items[index]
-            if (group in closed) continue
-            if (id in blocked) runStart[group] = id else closed += group
-        }
-        return runStart.values.toSet()
+        val numbers = HashMap<G, UInt>()
+        val groups = items.map { (_, group) -> numbers.getOrPut(group) { numbers.size.toUInt() } }
+        return blockedSectionLabels(groups, items.map { it.first in blocked })
+            .mapTo(HashSet()) { items[it.toInt()].first }
     }
 }

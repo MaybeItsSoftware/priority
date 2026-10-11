@@ -9284,6 +9284,181 @@ public func FfiConverterTypeDayEntry_lower(_ value: DayEntry) -> RustBuffer {
 
 
 /**
+ * One task on the day, as far as the forecast cares.
+ */
+public struct DayForecastEntry: Equatable, Hashable {
+    /**
+     * What the task was meant to cost, or nothing when nobody said.
+     */
+    public var estimateSeconds: Int64?
+    /**
+     * What it has cost so far, the running block's elapsed time included
+     * when this is the task being worked on.
+     */
+    public var loggedSeconds: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * What the task was meant to cost, or nothing when nobody said.
+         */estimateSeconds: Int64?, 
+        /**
+         * What it has cost so far, the running block's elapsed time included
+         * when this is the task being worked on.
+         */loggedSeconds: Int64) {
+        self.estimateSeconds = estimateSeconds
+        self.loggedSeconds = loggedSeconds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayForecastEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayForecastEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayForecastEntry {
+        return
+            try DayForecastEntry(
+                estimateSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                loggedSeconds: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayForecastEntry, into buf: inout [UInt8]) {
+        FfiConverterOptionInt64.write(value.estimateSeconds, into: &buf)
+        FfiConverterInt64.write(value.loggedSeconds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayForecastEntry_lift(_ buf: RustBuffer) throws -> DayForecastEntry {
+    return try FfiConverterTypeDayForecastEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayForecastEntry_lower(_ value: DayForecastEntry) -> RustBuffer {
+    return FfiConverterTypeDayForecastEntry.lower(value)
+}
+
+
+/**
+ * How much of the day's plan is left and, worked straight through, when it
+ * would be done. Deliberately naive: no breaks, no calendar, no hours.
+ */
+public struct DayForecastSummary: Equatable, Hashable {
+    /**
+     * Every estimate on the day.
+     */
+    public var estimatedSeconds: Int64
+    /**
+     * Time logged against the day's tasks, estimated or not.
+     */
+    public var loggedSeconds: Int64
+    /**
+     * What the estimated tasks still owe. A task past its estimate owes
+     * nothing: an overrun on one buys no time back on the others.
+     */
+    public var remainingSeconds: Int64
+    /**
+     * Tasks that say nothing about their cost, each making the forecast
+     * optimistic.
+     */
+    public var unestimatedCount: Int64
+    /**
+     * `now` plus what is left, or nothing when nothing estimated is left.
+     */
+    public var finishAtMs: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Every estimate on the day.
+         */estimatedSeconds: Int64, 
+        /**
+         * Time logged against the day's tasks, estimated or not.
+         */loggedSeconds: Int64, 
+        /**
+         * What the estimated tasks still owe. A task past its estimate owes
+         * nothing: an overrun on one buys no time back on the others.
+         */remainingSeconds: Int64, 
+        /**
+         * Tasks that say nothing about their cost, each making the forecast
+         * optimistic.
+         */unestimatedCount: Int64, 
+        /**
+         * `now` plus what is left, or nothing when nothing estimated is left.
+         */finishAtMs: Int64?) {
+        self.estimatedSeconds = estimatedSeconds
+        self.loggedSeconds = loggedSeconds
+        self.remainingSeconds = remainingSeconds
+        self.unestimatedCount = unestimatedCount
+        self.finishAtMs = finishAtMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DayForecastSummary: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDayForecastSummary: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DayForecastSummary {
+        return
+            try DayForecastSummary(
+                estimatedSeconds: FfiConverterInt64.read(from: &buf), 
+                loggedSeconds: FfiConverterInt64.read(from: &buf), 
+                remainingSeconds: FfiConverterInt64.read(from: &buf), 
+                unestimatedCount: FfiConverterInt64.read(from: &buf), 
+                finishAtMs: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DayForecastSummary, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.estimatedSeconds, into: &buf)
+        FfiConverterInt64.write(value.loggedSeconds, into: &buf)
+        FfiConverterInt64.write(value.remainingSeconds, into: &buf)
+        FfiConverterInt64.write(value.unestimatedCount, into: &buf)
+        FfiConverterOptionInt64.write(value.finishAtMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayForecastSummary_lift(_ buf: RustBuffer) throws -> DayForecastSummary {
+    return try FfiConverterTypeDayForecastSummary.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDayForecastSummary_lower(_ value: DayForecastSummary) -> RustBuffer {
+    return FfiConverterTypeDayForecastSummary.lower(value)
+}
+
+
+/**
  * Where logical days begin: at `rollover_hour` in `zone`, not at midnight,
  * so work finished at 01:30 belongs to the day that began the previous
  * morning. `first_weekday` is Foundation's numbering (1 = Sunday) and only
@@ -17812,6 +17987,101 @@ public func FfiConverterTypeExportFormat_lower(_ value: ExportFormat) -> RustBuf
 
 
 
+/**
+ * When a deferred task comes back.
+ */
+
+public enum FocusDeferral: Equatable, Hashable {
+    
+    /**
+     * An hour from now.
+     */
+    case anHour
+    /**
+     * 14:00 today, or an hour from now once that has passed.
+     */
+    case thisAfternoon
+    /**
+     * 09:00 tomorrow.
+     */
+    case tomorrow
+    /**
+     * 09:00 a week from today.
+     */
+    case nextWeek
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FocusDeferral: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFocusDeferral: FfiConverterRustBuffer {
+    typealias SwiftType = FocusDeferral
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FocusDeferral {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .anHour
+        
+        case 2: return .thisAfternoon
+        
+        case 3: return .tomorrow
+        
+        case 4: return .nextWeek
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FocusDeferral, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .anHour:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .thisAfternoon:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .tomorrow:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .nextWeek:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFocusDeferral_lift(_ buf: RustBuffer) throws -> FocusDeferral {
+    return try FfiConverterTypeFocusDeferral.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFocusDeferral_lower(_ value: FocusDeferral) -> RustBuffer {
+    return FfiConverterTypeFocusDeferral.lower(value)
+}
+
+
+
 
 public enum GoogleTasksConflictField: Equatable, Hashable {
     
@@ -20633,6 +20903,31 @@ fileprivate struct FfiConverterSequenceInt64: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceBool: FfiConverterRustBuffer {
+    typealias SwiftType = [Bool]
+
+    public static func write(_ value: [Bool], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterBool.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Bool] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Bool]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterBool.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -21325,6 +21620,31 @@ fileprivate struct FfiConverterSequenceTypeDayEntry: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeDayEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeDayForecastEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [DayForecastEntry]
+
+    public static func write(_ value: [DayForecastEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDayForecastEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DayForecastEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DayForecastEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDayForecastEntry.read(from: &buf))
         }
         return seq
     }
@@ -24191,6 +24511,118 @@ public func workspaceMigrations() -> [String]  {
 })
 }
 /**
+ * Which rows get the "Blocked" label: in each group, the first of the run of
+ * blocked rows the group ends with.
+ *
+ * `groups[i]` is the group row `i` belongs to (an outline parent's
+ * children, a board column's cards) and `blocked[i]` whether it is drawn as
+ * blocked; the rows are in drawing order, and a group's rows need not be
+ * contiguous. A blocked row with an unblocked one after it in its group (a
+ * stale read, say) is not labelled, since a label there would head a
+ * section that is not all blocked. The answer is row indices, ascending.
+ */
+public func blockedSectionLabels(groups: [UInt32], blocked: [Bool]) -> [UInt32]  {
+    return try!  FfiConverterSequenceUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_blocked_section_labels(
+        FfiConverterSequenceUInt32.lower(groups),
+        FfiConverterSequenceBool.lower(blocked),uniffiCallStatus
+    )
+})
+}
+/**
+ * The day with its planned slots filled from `order`, in turn, and every
+ * other slot as it was; `planned[i]` says whether slot `i` is planned and
+ * `ids[i]` is what it holds. Lets the day show a move at once rather than
+ * after the next read, which is what keeps a second move pressed quickly
+ * moving the same task on from where the first left it. A planned slot left
+ * over when `order` runs out keeps its id.
+ */
+public func dayArrangementApplying(order: [String], ids: [String], planned: [Bool]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_arrangement_applying(
+        FfiConverterSequenceString.lower(order),
+        FfiConverterSequenceString.lower(ids),
+        FfiConverterSequenceBool.lower(planned),uniffiCallStatus
+    )
+})
+}
+/**
+ * The planned order with `task_id` moved `offset` places, clamped at the
+ * ends; nothing when the task is not in the order or cannot move that way,
+ * so a caller has nothing to write.
+ *
+ * Only planned rows take part. A derived row (overdue, due today, starting
+ * today) is in the day because of a date, and the next read would put it
+ * back wherever it was moved.
+ */
+public func dayArrangementMoving(taskId: String, offset: Int64, order: [String]) -> [String]?  {
+    return try!  FfiConverterOptionSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_arrangement_moving(
+        FfiConverterString.lower(taskId),
+        FfiConverterInt64.lower(offset),
+        FfiConverterSequenceString.lower(order),uniffiCallStatus
+    )
+})
+}
+public func dayForecast(entries: [DayForecastEntry], nowMs: Int64) -> DayForecastSummary  {
+    return try!  FfiConverterTypeDayForecastSummary_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_day_forecast(
+        FfiConverterSequenceTypeDayForecastEntry.lower(entries),
+        FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+/**
+ * A saved context, less any condition that no longer exists (`known`).
+ * Archived ones stay: archiving hides a condition from new requirements,
+ * not from tasks that already need it. Sorted and without repeats.
+ */
+public func focusContextRestore(saved: [String], known: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_restore(
+        FfiConverterSequenceString.lower(saved),
+        FfiConverterSequenceString.lower(known),uniffiCallStatus
+    )
+})
+}
+/**
+ * The focus context's condition ids with `condition_id` flipped. You are
+ * in one place at a time, so turning a location on turns every other
+ * location (`location_ids`) off; capabilities ("Floor space", "Quiet")
+ * combine freely. Sorted, so the answer is the same however the set was
+ * held.
+ */
+public func focusContextToggle(conditionId: String, isLocation: Bool, current: [String], locationIds: [String]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_context_toggle(
+        FfiConverterString.lower(conditionId),
+        FfiConverterBool.lower(isLocation),
+        FfiConverterSequenceString.lower(current),
+        FfiConverterSequenceString.lower(locationIds),uniffiCallStatus
+    )
+})
+}
+/**
+ * The instant a task deferred `deferral` at `now_ms` comes back, with the
+ * wall-clock times read in `zone` (an IANA name).
+ */
+public func focusDeferralDate(deferral: FocusDeferral, nowMs: Int64, zone: String) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_focus_deferral_date(
+        FfiConverterTypeFocusDeferral_lower(deferral),
+        FfiConverterInt64.lower(nowMs),
+        FfiConverterString.lower(zone),uniffiCallStatus
+    )
+})
+}
+/**
  * Every list inside a folder, its sub-folders' included, in sidebar order:
  * the folder's own lists first, then each sub-folder's. A cycle in the
  * parent chain ends rather than hangs.
@@ -25102,6 +25534,27 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_workspace_migrations() != 25592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_blocked_section_labels() != 39647) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_arrangement_applying() != 46141) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_arrangement_moving() != 36715) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_day_forecast() != 48353) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_restore() != 33473) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_context_toggle() != 26054) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_focus_deferral_date() != 35466) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_sidebar_list_ids_in_folder() != 59863) {

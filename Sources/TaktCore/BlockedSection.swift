@@ -1,3 +1,5 @@
+import TaktRustCore
+
 /// Where the "Blocked" label goes in a list of tasks.
 ///
 /// Blocked tasks sink below their open siblings (the core's ordering), so
@@ -5,6 +7,9 @@
 /// cards — ends with its blocked ones. A quiet label above the first of them
 /// says what they are, once per group, rather than leaving the greying to say
 /// it alone.
+///
+/// The rule is the Rust core's (`core/src/shaping.rs`), shared with Android;
+/// this keeps the generic signature, numbering the groups before they cross.
 public enum BlockedSection {
   /// The ids to draw the label above: in each group, the first of the run of
   /// blocked tasks the group ends with. A blocked task with an unblocked one
@@ -20,17 +25,19 @@ public enum BlockedSection {
     _ items: [(id: String, group: Group)], blocked: Set<String>
   ) -> Set<String> {
     guard !blocked.isEmpty else { return [] }
-    // Walked from the end: a group's run is open until a row of it that is
-    // not blocked closes it.
-    var runStart: [Group: String] = [:]
-    var closed = Set<Group>()
-    for item in items.reversed() where !closed.contains(item.group) {
-      if blocked.contains(item.id) {
-        runStart[item.group] = item.id
+    var numbers: [Group: UInt32] = [:]
+    var groups: [UInt32] = []
+    groups.reserveCapacity(items.count)
+    for item in items {
+      if let number = numbers[item.group] {
+        groups.append(number)
       } else {
-        closed.insert(item.group)
+        let number = UInt32(numbers.count)
+        numbers[item.group] = number
+        groups.append(number)
       }
     }
-    return Set(runStart.values)
+    let labelled = blockedSectionLabels(groups: groups, blocked: items.map { blocked.contains($0.id) })
+    return Set(labelled.map { items[Int($0)].id })
   }
 }

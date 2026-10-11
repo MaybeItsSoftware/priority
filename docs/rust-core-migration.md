@@ -622,6 +622,27 @@ covered the old copies pass against it.
     dropped it. Checkvist's own `parse` stays the CLI's choice for its create
     and off everywhere else.
 
+    **The screens' small rules (done 2026-10-12).** `core/src/shaping.rs`
+    holds the rules each platform had written for itself: where the Blocked
+    label goes (`blocked_section_labels`, groups crossing as numbers and the
+    answer as row indices), moving a planned task up or down the day and
+    showing the move at once (`day_arrangement_moving`, `_applying`), the
+    day's forecast (`day_forecast`), turning a focus condition on or off with
+    one place at a time and restoring a saved context
+    (`focus_context_toggle`, `_restore`), and when a deferred task comes back
+    (`focus_deferral_date`, wall-clock times in the caller's zone, a skipped
+    hour resolved as `periodic.rs` does). Swift's `BlockedSection`,
+    `DayArrangement`, `DayForecast` and `FocusContextSelection` keep their
+    signatures and wrap it, and `FocusDeferralTime` joins them for the
+    iPhone, whose focus model now calls both instead of its own copies;
+    Android's `BlockedSection`, `DayArrangement`, `DayForecast.of`,
+    `FocusDeferral.date` and `toggleCondition` call it directly, and
+    `DayBoundary.kt` wraps the core's `day_boundary_*` as the Mac's does. The
+    Swift, iPhone and Kotlin suites run unchanged as the oracle. No answer
+    changed; the one difference the ports had is that Kotlin's day
+    rearrangement swapped in the planned card for an id and Swift the bare
+    id, which both still do over the core's ids.
+
 ## Risks
 
 - **App size and build time.** An app build already needs cargo for the
