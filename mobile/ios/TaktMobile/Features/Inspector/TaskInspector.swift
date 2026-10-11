@@ -36,6 +36,7 @@ struct TaskInspector: View {
             when(values)
             plan(task, values)
             placement
+            if !task.isList { BlockedBySection(task: task) }
             filing(values)
             actions(task)
           }
@@ -506,6 +507,78 @@ struct TaskInspector: View {
     Binding(
       get: { inspector.values?[keyPath: keyPath] ?? "" },
       set: { value in inspector.edit(model) { $0[keyPath: keyPath] = value } })
+  }
+}
+
+/// What the task waits on, each with a way to stop waiting on it, and the
+/// tasks waiting on it. Nothing when it has neither: dependencies are added
+/// on the Mac or through the CLI.
+private struct BlockedBySection: View {
+  @Environment(\.theme) private var theme
+  @Environment(WorkspaceModel.self) private var model
+  let task: WorkspaceTask
+  @State private var blockers: [WorkspaceTask] = []
+  @State private var blocking: [WorkspaceTask] = []
+
+  private struct ReloadKey: Hashable {
+    let taskID: String
+    let revision: Int
+  }
+
+  var body: some View {
+    Group {
+      if !blockers.isEmpty || !blocking.isEmpty {
+        InspectorSection("Blocked by") {
+          ForEach(blockers) { blocker in
+            HStack(spacing: theme.space.sm) {
+              row(blocker)
+              Button {
+                model.perform { store in try store.removeBlocker(blocker.id, from: task.id) }
+              } label: {
+                Image(systemName: "xmark")
+                  .font(theme.type.caption)
+                  .foregroundStyle(theme.muted)
+                  .frame(width: 44, height: 44)
+                  .contentShape(Rectangle())
+              }
+              .buttonStyle(.plain)
+              .accessibilityLabel("Stop waiting on \(blocker.title)")
+            }
+          }
+          if !blocking.isEmpty {
+            Text("Blocks").font(theme.type.callout).foregroundStyle(theme.muted)
+            ForEach(blocking) { waiting in row(waiting) }
+          }
+        }
+      }
+    }
+    .task(id: ReloadKey(taskID: task.id, revision: model.revision)) {
+      blockers = (try? model.store.blockers(of: task.id)) ?? []
+      blocking = (try? model.store.tasksBlocked(by: task.id)) ?? []
+    }
+  }
+
+  /// A task named in the section: open or done, and its list when it is
+  /// another one.
+  private func row(_ other: WorkspaceTask) -> some View {
+    let isOpen = other.status == .open
+    return HStack(spacing: theme.space.sm) {
+      Image(systemName: isOpen ? "circle" : "checkmark.circle")
+        .foregroundStyle(isOpen ? theme.muted : theme.success)
+      Text(other.title)
+        .font(theme.type.body)
+        .foregroundStyle(isOpen ? theme.ink : theme.muted)
+        .strikethrough(!isOpen, color: theme.dim)
+        .lineLimit(2)
+      Spacer(minLength: theme.space.sm)
+      if other.listId != task.listId {
+        Text(model.listName(for: other.listId))
+          .font(theme.type.footnote)
+          .foregroundStyle(theme.dim)
+          .lineLimit(1)
+      }
+    }
+    .accessibilityElement(children: .combine)
   }
 }
 

@@ -78,7 +78,7 @@ struct TodayScreen: View {
           onDone: { today.requestCompletion(completeTask: true, model: model) })
       } else {
         DayCardRow(
-          card: card, index: index + 1, isSelected: isSelected,
+          card: card, index: index + 1, isSelected: isSelected, isBlocked: model.isBlocked(card.id),
           onTick: { today.tickOff(card, model: model) },
           onStart: { today.start(card, model: model) },
           onOpen: { model.navigation.inspect(card.id, isPad: isPad) })
@@ -236,12 +236,15 @@ struct DayCardRow: View, Equatable {
   let card: DayCard
   let index: Int
   let isSelected: Bool
+  /// Waiting on an open task: drawn greyed.
+  var isBlocked = false
   let onTick: () -> Void
   let onStart: () -> Void
   let onOpen: () -> Void
 
   static func == (lhs: DayCardRow, rhs: DayCardRow) -> Bool {
     lhs.card == rhs.card && lhs.index == rhs.index && lhs.isSelected == rhs.isSelected
+      && lhs.isBlocked == rhs.isBlocked
   }
 
   var body: some View {
@@ -263,7 +266,7 @@ struct DayCardRow: View, Equatable {
         VStack(alignment: .leading, spacing: theme.space.xxs) {
           Text(card.title)
             .font(theme.type.body)
-            .foregroundStyle(theme.ink)
+            .foregroundStyle(isBlocked ? theme.muted : theme.ink)
             .lineLimit(2)
             .celebrationStrike(card.id)
             .frame(maxWidth: .infinity, alignment: .leading)

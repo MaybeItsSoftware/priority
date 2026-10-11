@@ -81,7 +81,9 @@ struct OutlineView: View {
       if outline.editingTaskID == row.id {
         renameRow(row)
       } else {
-        OutlineRowView(row: row, isSelected: isSelected) { outline.toggleFold(row.id) }
+        OutlineRowView(row: row, isSelected: isSelected, isBlocked: model.isBlocked(row.id, status: row.status)) {
+          outline.toggleFold(row.id)
+        }
           .equatable()
       }
     }
@@ -244,10 +246,12 @@ struct OutlineRowView: View, Equatable {
   @Environment(\.isPadLayout) private var isPad
   let row: OutlineRow
   let isSelected: Bool
+  /// Open and still waiting on an open task: drawn greyed.
+  var isBlocked = false
   let onFold: () -> Void
 
   static func == (lhs: OutlineRowView, rhs: OutlineRowView) -> Bool {
-    lhs.row == rhs.row && lhs.isSelected == rhs.isSelected
+    lhs.row == rhs.row && lhs.isSelected == rhs.isSelected && lhs.isBlocked == rhs.isBlocked
   }
 
   var body: some View {
@@ -268,7 +272,7 @@ struct OutlineRowView: View, Equatable {
       VStack(alignment: .leading, spacing: 1) {
         Text(row.title)
           .font(row.isList ? theme.type.bodyMedium : theme.type.body)
-          .foregroundStyle(row.status == .open ? theme.ink : theme.muted)
+          .foregroundStyle(row.status == .open && !isBlocked ? theme.ink : theme.muted)
           .strikethrough(row.status != .open, color: theme.dim)
           .lineLimit(3)
           .celebrationStrike(row.id)

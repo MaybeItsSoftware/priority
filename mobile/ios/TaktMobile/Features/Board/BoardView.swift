@@ -259,7 +259,7 @@ struct BoardCardView: View {
         .accessibilityLabel(card.status == .open ? "Complete \(card.title)" : "Reopen \(card.title)")
         Text(card.title)
           .font(card.isList ? theme.type.bodyMedium : theme.type.body)
-          .foregroundStyle(card.status == .open ? theme.ink : theme.muted)
+          .foregroundStyle(card.status == .open && !model.isBlocked(card.id) ? theme.ink : theme.muted)
           .strikethrough(card.status != .open, color: theme.dim)
           .celebrationStrike(card.id)
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -357,7 +357,8 @@ struct BoardCardView: View {
             .accessibilityLabel(item.task.status == .open ? "Complete \(item.task.title)" : "Reopen \(item.task.title)")
             Text(item.task.title)
               .font(theme.type.callout)
-              .foregroundStyle(item.task.status == .open ? theme.ink : theme.muted)
+              .foregroundStyle(
+                item.task.status == .open && !model.isBlocked(item.task.id) ? theme.ink : theme.muted)
               .strikethrough(item.task.status != .open, color: theme.dim)
               .lineLimit(2)
               .frame(maxWidth: .infinity, alignment: .leading)

@@ -145,7 +145,7 @@ struct MatrixRow: View {
       .accessibilityLabel(card.status == .open ? "Complete \(card.title)" : "Reopen \(card.title)")
       Text(card.title)
         .font(theme.type.callout)
-        .foregroundStyle(card.status == .open ? theme.ink : theme.muted)
+        .foregroundStyle(card.status == .open && !model.isBlocked(card.id) ? theme.ink : theme.muted)
         .strikethrough(card.status != .open, color: theme.dim)
         .lineLimit(2)
         .celebrationStrike(card.id)

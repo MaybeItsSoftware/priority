@@ -89,6 +89,9 @@ final class WorkspaceModel {
   private(set) var revision = 0
   private(set) var undoLabel: String?
   private(set) var redoLabel: String?
+  /// The open tasks still waiting on an open task, drawn greyed. Where they
+  /// sort is the core's; this only says which to dim. Read after every write.
+  private(set) var blockedTaskIDs: Set<String> = []
   var errorMessage: String?
   /// Moves when something is completed, so a view can play the haptic.
   private(set) var completionCount = 0
@@ -126,6 +129,7 @@ final class WorkspaceModel {
     // empty and then fill.
     structure = (try? WorkspaceStructure.load(store: store, workspaceId: workspace.id)) ?? .empty
     refreshHistoryLabels()
+    refreshBlockedTaskIDs()
   }
 
   /// Opens the workspace in the app group container. UI tests get a fresh,
@@ -177,6 +181,7 @@ final class WorkspaceModel {
   func didChange() {
     revision &+= 1
     refreshHistoryLabels()
+    refreshBlockedTaskIDs()
     reloadStructure()
     for observer in changeObservers { observer(self) }
   }
@@ -197,6 +202,17 @@ final class WorkspaceModel {
     let redo = (try? store.redoableLabel()) ?? nil
     if undoLabel != undo { undoLabel = undo }
     if redoLabel != redo { redoLabel = redo }
+  }
+
+  /// One small query: the ids of the blocked open tasks.
+  private func refreshBlockedTaskIDs() {
+    guard let blocked = try? store.blockedTaskIds(), blocked != blockedTaskIDs else { return }
+    blockedTaskIDs = blocked
+  }
+
+  /// Whether the task is open and still waiting on an open task.
+  func isBlocked(_ taskID: String, status: TaskStatus = .open) -> Bool {
+    status == .open && blockedTaskIDs.contains(taskID)
   }
 
   /// Reads the list tree off the main actor and lands it if nothing newer
