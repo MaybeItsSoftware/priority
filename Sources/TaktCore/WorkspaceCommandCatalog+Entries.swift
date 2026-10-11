@@ -281,9 +281,30 @@ public enum WorkspaceCommandCatalog {
       id: .planBoardMoveCardRight, title: "Move the card a column right", group: "Plan",
       keys: ["cmd+right", "option+shift+right"], surface: .board),
     .init(
-      id: .planBoardRemoveColumn, title: "Remove this board column", group: "Plan",
+      id: .planBoardRemoveColumn, title: "Delete this board column…", group: "Plan",
       keys: ["cmd+ctrl+c"], surface: .board,
-      note: "The column the selected card is in. ⇧⌘⌫ still deletes the list"),
+      note: "The column you are in; asks where its tasks go. ⇧⌘⌫ still deletes the list"),
+    // The rest of a column header's menu, keyless: the palette reaches them,
+    // and they act on the column you are in, as ⌃⌘C does.
+    .init(id: .planBoardRenameColumn, title: "Rename this board column", group: "Plan", keys: [], surface: .board),
+    .init(
+      id: .planBoardMoveColumnLeft, title: "Move this board column left", group: "Plan", keys: [], surface: .board),
+    .init(
+      id: .planBoardMoveColumnRight, title: "Move this board column right", group: "Plan", keys: [], surface: .board),
+    .init(
+      id: .planBoardAddColumnLeft, title: "Add a board column to the left", group: "Plan", keys: [], surface: .board),
+    .init(
+      id: .planBoardAddColumnRight, title: "Add a board column to the right", group: "Plan", keys: [],
+      surface: .board),
+    .init(
+      id: .planBoardEditColumnRules, title: "Edit this board column's rules…", group: "Plan", keys: [],
+      surface: .board, note: "Tasks the rules match show in the column; dropping one in edits it to match"),
+    .init(
+      id: .planBoardMakeDefaultColumns, title: "Make these the default board columns", group: "Plan", keys: [],
+      surface: .board, note: "Every board without columns of its own uses them"),
+    .init(
+      id: .planBoardResetColumns, title: "Reset this board to the default columns", group: "Plan", keys: [],
+      surface: .board),
     .init(
       id: .planMatrixPlace, title: "Place the task in a quadrant", group: "Plan",
       keys: ["option+1", "option+2", "option+3", "option+4"], surface: .matrix, kind: .motion,

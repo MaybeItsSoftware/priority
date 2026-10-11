@@ -38,6 +38,9 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   case planEnterTask, planLeaveTask, planHideCompleted
   case planBoardNewColumn, planBoardMoveCardLeft, planBoardMoveCardRight
   case planBoardRemoveColumn, planMatrixPlace
+  case planBoardRenameColumn, planBoardMoveColumnLeft, planBoardMoveColumnRight
+  case planBoardAddColumnLeft, planBoardAddColumnRight, planBoardEditColumnRules
+  case planBoardMakeDefaultColumns, planBoardResetColumns
   case planToggleFold, planGrowTask, planShrinkTask, planFoldAll, planUnfoldAll
 
   // Lists and folders

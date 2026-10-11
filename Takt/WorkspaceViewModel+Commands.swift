@@ -185,16 +185,21 @@ extension WorkspaceViewModel {
     case .planShrinkTask: shrinkSelectedTask()
     case .planFoldAll: setOutlineFolded(true)
     case .planUnfoldAll: setOutlineFolded(false)
-    case .planBoardNewColumn: presentOverlay(.newBoardColumn)
+    case .planBoardNewColumn: requestNewBoardColumn()
     case .planBoardMoveCardLeft: moveSelectedTaskToAdjacentColumn(by: -1)
     case .planBoardMoveCardRight: moveSelectedTaskToAdjacentColumn(by: 1)
-    case .planBoardRemoveColumn:
-      // The card you are on names the column, the way ⇧⌥← and ⇧⌥→ do. There is
-      // no separate "current column" to consult, and inventing one so a key
-      // could delete something would be worse than asking for a selection.
-      if boardColumns.count > 1, let task = selectedTask, let column = column(for: task) {
-        removeKanbanColumn(column)
-      }
+    // The column you are in — the selected card's, or the empty one the
+    // keyboard moved to. Deleting asks where its tasks go, so nothing is
+    // lost to a stray chord.
+    case .planBoardRemoveColumn: if let column = commandBoardColumn { requestDeleteBoardColumn(column) }
+    case .planBoardRenameColumn: if let column = commandBoardColumn { requestRenameBoardColumn(column) }
+    case .planBoardMoveColumnLeft: if let column = commandBoardColumn { moveKanbanColumn(column.id, by: -1) }
+    case .planBoardMoveColumnRight: if let column = commandBoardColumn { moveKanbanColumn(column.id, by: 1) }
+    case .planBoardAddColumnLeft: requestNewBoardColumn(beside: commandBoardColumn?.id, after: false)
+    case .planBoardAddColumnRight: requestNewBoardColumn(beside: commandBoardColumn?.id, after: true)
+    case .planBoardEditColumnRules: if let column = commandBoardColumn { requestEditBoardColumnRules(column) }
+    case .planBoardMakeDefaultColumns: makeBoardColumnsDefault()
+    case .planBoardResetColumns: resetBoardColumnsToDefault()
 
     // MARK: Lists and folders
     case .listNew: requestListCreationForSelection()

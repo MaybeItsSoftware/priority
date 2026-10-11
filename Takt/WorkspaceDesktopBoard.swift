@@ -213,13 +213,22 @@ struct WorkspaceKanbanColumnView: View {
         MicroLabel(column.title)
           .lineLimit(1)
           .truncationMode(.tail)
-          .help(column.title)
+          .help(column.rules.map { "\(column.title) — \($0.summary)" } ?? column.title)
+        if column.isRuleColumn {
+          // A rule column holds what its rules match, not what is filed in it.
+          Image(systemName: "line.3.horizontal.decrease")
+            .font(theme.monoCaptionFont)
+            .foregroundStyle(theme.dim)
+            .accessibilityLabel("Rule column")
+        }
         Text("\(tasks.count)")
           .font(theme.monoCaptionFont)
           .foregroundStyle(theme.dim)
           .monospacedDigit()
         Spacer()
       }
+      .contentShape(Rectangle())
+      .contextMenu { WorkspaceBoardColumnMenu(column: column).environment(model) }
 
       }
       .padding([.horizontal, .top], WorkspaceBoardMetrics.columnPadding(theme))
@@ -310,6 +319,8 @@ struct WorkspaceKanbanColumnView: View {
         model.reportKeyboardFocus(.tasks)
       }
     })
+    // The column's empty space; a card's own menu is nearer and wins over it.
+    .contextMenu { WorkspacePaneContextMenu(surface: .board, column: column).environment(model) }
     .onDrop(of: [WorkspaceTaskDrag.typeIdentifier], isTargeted: $isDropTargeted) { providers in
       WorkspaceTaskDrag.readTaskID(from: providers) { taskID in
         guard let task = model.task(withID: taskID), model.isTaskVisibleOnBoard(task) else { return }

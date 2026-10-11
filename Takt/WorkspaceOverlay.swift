@@ -31,6 +31,10 @@ enum WorkspaceOverlay: Identifiable {
   /// `creationIsNested` on the model, set by whoever asked.
   case create(WorkspaceCreationKind)
   case newBoardColumn
+  /// A board column's new name, by its id.
+  case renameBoardColumn(String)
+  /// Deleting a board column: where its tasks go, by its id.
+  case deleteBoardColumn(String)
 
   var id: String {
     switch self {
@@ -46,6 +50,8 @@ enum WorkspaceOverlay: Identifiable {
     case .blocker(let request): "blocker:\(request.id)"
     case .create(let kind): "create:\(kind.rawValue)"
     case .newBoardColumn: "column"
+    case .renameBoardColumn(let id): "column-rename:\(id)"
+    case .deleteBoardColumn(let id): "column-delete:\(id)"
     }
   }
 }

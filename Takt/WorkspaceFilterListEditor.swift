@@ -54,7 +54,8 @@ struct WorkspaceFilterListEditor: View {
         ThemedPicker("Match", selection: $definition.match, options: Self.matchOptions)
           .keyboardFocusable()
       }
-      rules
+      WorkspaceFilterRulesSection(
+        definition: $definition, emptyText: "No rules: every task the status above allows.")
       preview
       if let saveError {
         Text(saveError).font(theme.captionFont).foregroundStyle(theme.danger)
@@ -65,40 +66,6 @@ struct WorkspaceFilterListEditor: View {
     .frame(width: 560)
     .background(theme.raised)
     .onAppear { nameIsFocused = true }
-  }
-
-  // MARK: - Rules
-
-  private var rules: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text("Rules")
-        .font(theme.captionFont.weight(.bold))
-        .foregroundStyle(theme.muted)
-        .padding(.bottom, theme.space.xs)
-      Rectangle().fill(theme.border).frame(height: theme.hairline)
-      if definition.rules.isEmpty {
-        Text("No rules: every task the status above allows.")
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
-          .padding(.vertical, theme.space.sm)
-        Rectangle().fill(theme.border).frame(height: theme.hairline)
-      }
-      ForEach($definition.rules) { $rule in
-        WorkspaceFilterRuleRow(rule: $rule) {
-          definition.rules.removeAll { $0.id == rule.id }
-        }
-        Rectangle().fill(theme.border).frame(height: theme.hairline)
-      }
-      Button {
-        definition.rules.append(WorkspaceFilterRule(field: "due", op: "within", value: "7"))
-      } label: {
-        Label("Add rule", systemImage: "plus")
-      }
-      .buttonStyle(FocusActionButtonStyle())
-      .keyboardFocusable()
-      .padding(.top, theme.space.sm)
-      .help("Add another condition")
-    }
   }
 
   // MARK: - Preview
@@ -171,6 +138,47 @@ struct WorkspaceFilterListEditor: View {
     ThemedPickerOption("Every rule", value: .all),
     ThemedPickerOption("Any rule", value: .any),
   ]
+}
+
+/// The rules of a definition, one row each, and the button that adds one.
+/// Shared by the filter list sheet and a board column's rules sheet, which
+/// ask the same question of the same catalog.
+struct WorkspaceFilterRulesSection: View {
+  @Environment(\.theme) private var theme
+  @Binding var definition: WorkspaceFilterDefinition
+  let emptyText: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text("Rules")
+        .font(theme.captionFont.weight(.bold))
+        .foregroundStyle(theme.muted)
+        .padding(.bottom, theme.space.xs)
+      Rectangle().fill(theme.border).frame(height: theme.hairline)
+      if definition.rules.isEmpty {
+        Text(emptyText)
+          .font(theme.captionFont)
+          .foregroundStyle(theme.muted)
+          .padding(.vertical, theme.space.sm)
+        Rectangle().fill(theme.border).frame(height: theme.hairline)
+      }
+      ForEach($definition.rules) { $rule in
+        WorkspaceFilterRuleRow(rule: $rule) {
+          definition.rules.removeAll { $0.id == rule.id }
+        }
+        Rectangle().fill(theme.border).frame(height: theme.hairline)
+      }
+      Button {
+        definition.rules.append(WorkspaceFilterRule(field: "due", op: "within", value: "7"))
+      } label: {
+        Label("Add rule", systemImage: "plus")
+      }
+      .buttonStyle(FocusActionButtonStyle())
+      .keyboardFocusable()
+      .padding(.top, theme.space.sm)
+      .help("Add another condition")
+    }
+  }
 }
 
 /// One rule: field, comparison and value, then a button that removes it.

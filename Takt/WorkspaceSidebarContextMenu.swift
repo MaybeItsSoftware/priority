@@ -169,9 +169,15 @@ struct WorkspaceSidebarContextMenu: View {
 extension View {
   /// The key a sidebar context menu item shows: the command's sidebar key as
   /// bound, by `WorkspaceCommand.contextMenuKeyEquivalent(on:)`.
-  @ViewBuilder
   func sidebarMenuKey(_ id: WorkspaceCommandID) -> some View {
-    if let shortcut = WorkspaceCommandHelpText.sidebarMenuShortcut(for: id) {
+    menuKey(id, on: .sidebar)
+  }
+
+  /// The key a context menu item on `surface` shows — a board column's
+  /// header, a task card, the empty space of a pane — as bound.
+  @ViewBuilder
+  func menuKey(_ id: WorkspaceCommandID, on surface: WorkspaceCommandSurface) -> some View {
+    if let shortcut = WorkspaceCommandHelpText.menuShortcut(for: id, on: surface) {
       keyboardShortcut(shortcut)
     } else {
       self
@@ -181,9 +187,9 @@ extension View {
 
 extension WorkspaceCommandHelpText {
   @MainActor
-  static func sidebarMenuShortcut(for id: WorkspaceCommandID) -> KeyboardShortcut? {
+  static func menuShortcut(for id: WorkspaceCommandID, on surface: WorkspaceCommandSurface) -> KeyboardShortcut? {
     _ = WorkspaceKeymapStore.shared.revision
-    guard let equivalent = WorkspaceCommandCatalog.byID[id]?.contextMenuKeyEquivalent(on: .sidebar),
+    guard let equivalent = WorkspaceCommandCatalog.byID[id]?.contextMenuKeyEquivalent(on: surface),
       let key = keyEquivalent(equivalent.key)
     else { return nil }
     var modifiers: EventModifiers = []

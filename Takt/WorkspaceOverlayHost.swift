@@ -83,8 +83,19 @@ struct WorkspaceOverlayHost: View {
       }
     case .newBoardColumn:
       WorkspaceNameOverlay(
-        overlayID: overlay.id, title: "New board column", prompt: "Column name", context: nil
+        overlayID: overlay.id, title: "New board column", prompt: "Column name",
+        context: model.pendingColumnInsertion.flatMap { insertion in
+          model.boardColumnsByID[insertion.anchorID].map { "\(insertion.after ? "Right" : "Left") of \($0.title)" }
+        }
       ) { model.addKanbanColumn(named: $0) }
+    case .renameBoardColumn(let id):
+      WorkspaceNameOverlay(
+        overlayID: overlay.id, title: "Rename column", prompt: "Column name",
+        context: model.boardColumnsByID[id]?.title, initialName: model.boardColumnsByID[id]?.title ?? "",
+        submitHint: "↩ rename · esc cancel"
+      ) { model.renameKanbanColumn(id, to: $0) }
+    case .deleteBoardColumn(let id):
+      WorkspaceDeleteColumnOverlay(overlayID: overlay.id, columnID: id)
     }
   }
 
@@ -229,14 +240,17 @@ struct WorkspaceNameOverlay: View {
   let title: String
   let prompt: String
   let context: String?
+  var initialName = ""
+  var submitHint = "↩ create · esc cancel"
   let onSubmit: (String) -> Void
   @State private var name = ""
 
   var body: some View {
     VStack(spacing: 0) {
       WorkspaceOverlayField(symbol: "plus", prompt: "\(title) — \(prompt.lowercased())", text: $name, context: context)
-      WorkspaceOverlayFooter(hints: "↩ create · esc cancel")
+      WorkspaceOverlayFooter(hints: submitHint)
     }
+    .onAppear { if name.isEmpty { name = initialName } }
     .overlayKeys(model, id: overlayID) { key in
       guard key == "enter" else { return false }
       submit()

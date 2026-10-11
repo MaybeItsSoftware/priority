@@ -160,6 +160,11 @@ struct WorkspaceDesktopView: View {
       WorkspaceFilterListEditor(request: request)
         .environment(model)
     }
+    // A board column's rules are the same form's rules, so the same sheet.
+    .sheet(item: Bindable(model).boardColumnRulesEditor) { request in
+      WorkspaceBoardColumnRulesEditor(request: request)
+        .environment(model)
+    }
     .confirmationDialog(
       model.pendingSidebarDeletion?.deletionTitle ?? "Delete item?",
       isPresented: Binding(
@@ -193,17 +198,22 @@ struct WorkspaceDesktopView: View {
         .focusable()
         .focused($focusedArea, equals: .tasks)
         .focusEffectDisabled()
+        // Right-clicking the pane's empty space; a row's own menu wins.
+        .contextMenu { WorkspacePaneContextMenu(surface: .today).environment(model) }
     case .board:
+      // Each column carries its own, which knows where a new task goes.
       WorkspaceKanbanBoard()
         .environment(model)
     case .outline:
       WorkspaceOutlinePane()
+        .contextMenu { WorkspacePaneContextMenu(surface: .outline).environment(model) }
     case .matrix:
       WorkspaceMatrixDashboard()
         .environment(model)
         .focusable()
         .focused($focusedArea, equals: .tasks)
         .focusEffectDisabled()
+        .contextMenu { WorkspacePaneContextMenu(surface: .matrix).environment(model) }
     }
   }
 }
@@ -241,21 +251,38 @@ struct WorkspaceItemActions: View {
   @Environment(WorkspaceViewModel.self) private var model
   let task: WorkspaceTask
 
+  /// The pane the row is on, whose keys the menu shows: the key the pane
+  /// answers to rather than a chord that also reaches the command elsewhere.
+  private var surface: WorkspaceCommandSurface {
+    switch model.viewMode {
+    case .today: .today
+    case .board: .board
+    case .outline: .outline
+    case .matrix: .matrix
+    }
+  }
+
   var body: some View {
     Button(task.isList ? "Open list" : "Open subtasks") { model.openItemList(task) }
-    // The menu draws each item's chorded key from the catalogue. Those keys act
-    // on the selected task; in here they act on the row that was clicked.
+      .menuKey(.planEnterTask, on: surface)
+    // Each item shows its key as bound on this pane, read from the catalogue
+    // by `contextMenuKeyEquivalent(on:)`. Those keys act on the selected
+    // task; in here they act on the row that was clicked.
     Button("Rename…") { model.presentOverlay(.quickEdit(WorkspaceTaskQuickEditRequest(task: task, kind: .title))) }
-      .commandShortcut(.taskRename)
+      .menuKey(.taskRename, on: surface)
+    if !task.isList {
+      Button(task.status == .open ? "Complete" : "Reopen") { model.toggleTask(task) }
+        .menuKey(.taskComplete, on: surface)
+    }
     Button(task.isList ? "Convert to task" : "Convert to list") { model.convertItem(task) }
-      .commandShortcut(.taskConvertToList)
+      .menuKey(.taskConvertToList, on: surface)
     Button("Move to list or folder…") { model.requestMove(task) }
-      .commandShortcut(.taskMove)
+      .menuKey(.taskMove, on: surface)
     Button("New nested list…") { model.requestNestedListCreation(under: task) }
     if task.isList {
       Button("Move to top level") { model.moveDroppedItem(task.id, toFolderID: nil) }
       Button(task.isPromoted == true ? "Unpin from sidebar" : "Promote to sidebar") { model.toggleListPromotion(task) }
-        .commandShortcut(.taskPromoteList)
+        .menuKey(.taskPromoteList, on: surface)
       Menu("Choose icon") {
         ForEach(WorkspaceViewModel.availableListIcons, id: \.symbol) { icon in
           Button { model.setNestedListIcon(icon.symbol, for: task) } label: { Label(icon.label, systemImage: icon.symbol) }
@@ -263,6 +290,7 @@ struct WorkspaceItemActions: View {
       }
       Divider()
       Button(task.status == .open ? "Complete list" : "Reopen list") { model.toggleTask(task) }
+        .menuKey(.taskComplete, on: surface)
       Button("Archive list") { model.archiveNestedList(task) }
     }
   }
