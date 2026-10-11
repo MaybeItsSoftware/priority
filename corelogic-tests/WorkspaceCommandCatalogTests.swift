@@ -354,6 +354,13 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "inspector:down", "sidebar:shift+g", "sidebar:ctrl+u", "sidebar:ctrl+d", "inspector:up", "inspector:j", "inspector:k",
       "done:cmd+shift+{", "done:cmd+shift+}", "done:[", "done:]",
       "timeline:cmd+shift+{", "timeline:cmd+shift+}", "timeline:[", "timeline:]",
+      // The Conditions tab is a list of its own as well: the list keys walk
+      // it, Space turns a condition on or off, Return renames it, and the
+      // rest act on the row, never on a task behind it.
+      "conditions:down", "conditions:up", "conditions:j", "conditions:k", "conditions:home", "conditions:end",
+      "conditions:cmd+up", "conditions:cmd+down", "conditions:pageup", "conditions:pagedown",
+      "conditions:space", "conditions:enter", "conditions:f2", "conditions:cmd+n", "conditions:escape",
+      "conditions:left", "conditions:cmd+shift+{", "conditions:cmd+shift+}", "conditions:[", "conditions:]",
       // Today is walked with the ordinary keys, but f queues behind a running
       // block rather than replacing it, and ← has no task to leave so goes to
       // the sidebar.

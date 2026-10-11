@@ -31,10 +31,6 @@ enum WorkspaceOverlay: Identifiable {
   /// `creationIsNested` on the model, set by whoever asked.
   case create(WorkspaceCreationKind)
   case newBoardColumn
-  /// What is available now: the conditions that hold, toggled from the keys.
-  case availability
-  /// Adding, renaming and archiving conditions.
-  case conditions
 
   var id: String {
     switch self {
@@ -50,8 +46,6 @@ enum WorkspaceOverlay: Identifiable {
     case .blocker(let request): "blocker:\(request.id)"
     case .create(let kind): "create:\(kind.rawValue)"
     case .newBoardColumn: "column"
-    case .availability: "availability"
-    case .conditions: "conditions"
     }
   }
 }
@@ -71,7 +65,7 @@ extension WorkspaceViewModel {
   /// The chords that swap one overlay for another rather than closing it:
   /// ⌘K from search opens the palette.
   static let overlaySwitchingCommands: Set<WorkspaceCommandID> = [
-    .goCommandPalette, .goSearch, .goKeyboardReference, .goListNavigator, .focusSetAvailable,
+    .goCommandPalette, .goSearch, .goKeyboardReference, .goListNavigator,
   ]
 
   /// Asking for the overlay already up closes it, the way ⌘K twice does in

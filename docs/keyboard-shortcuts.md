@@ -118,10 +118,11 @@ The shape is Zed's: an array of blocks, each with an optional `context` and a
   other command that had it on the same surface. A `null` there removes the
   key from every command.
 - **With a `context`** it applies on that surface only: `today`, `board`,
-  `outline`, `matrix`, `sidebar`, `inspector`, `timeline` or `done`. A `null`
+  `outline`, `matrix`, `sidebar`, `inspector`, `timeline`, `done` or
+  `conditions`. A `null`
   there stops the key meaning anything on that surface unless the same file
   gives it a new job there. A command that belongs to one surface — the
-  timeline's, the done rail's — can only be bound in its own context. The
+  timeline's, the done rail's, the Conditions tab's — can only be bound in its own context. The
   retired focus pane's contexts (`focus`, `focusRunning`) and command ids are
   reported and skipped rather than failing the file.
 - Within a block the `null`s apply first, so unbinding a key and binding it
@@ -180,15 +181,24 @@ the timeline sits beside the work rather than over it. Chords the catalogue does
 reach the app. The palette knows this: it labels each command with the surface
 it belongs to and sorts the ones that apply where you are to the top.
 
-The sidebar, the done rail and the inspector hold a cursor or controls of their
-own, so the bare task keys — `Space`, `x`, `Delete`, the digits, `Tab` — do not
-reach through them to the selected task. They keep the chords, `/`, `?`, `i`
-and `Esc`, and the sidebar and done rail keep the two-letter sequences.
+The sidebar, the done rail, the Conditions tab and the inspector hold a cursor
+or controls of their own, so the bare task keys — `Space`, `x`, `Delete`, the
+digits, `Tab` — do not reach through them to the selected task. They keep the
+chords, `/`, `?`, `i` and `Esc`, and all but the inspector keep the two-letter
+sequences.
 
-The right dock's three tabs — the inspector, the done rail and the timeline —
-are changed with `Cmd+Shift+{` / `Cmd+Shift+}`, Zed's previous / next tab, and
+The Conditions tab's cursor walks both its halves — what is available now, and
+the conditions themselves. `Space` turns the condition on or off, `Return` or
+`F2` renames it in its row (on the new-condition row, puts the caret in its
+field, where `Return` makes it), `a` or `Cmd+N` goes to that row, `p` makes the
+condition a place or not, `e` archives or restores it, `c` clears what is
+available and `Shift+U` uses the last context again. In a name field `Return`
+saves and `Esc` gives up, both handing the keyboard back to the cursor.
+
+The right dock's four tabs — the inspector, the done rail, the timeline and the
+conditions — are changed with `Cmd+Shift+{` / `Cmd+Shift+}`, Zed's previous / next tab, and
 with `[` / `]` where no field would take them; the keyboard comes along to the
-new tab. On a task pane the same chords change list. `Esc` on any of the three
+new tab. On a task pane the same chords change list. `Esc` on any of them
 hands the keyboard back to the work and leaves the dock open — in the
 inspector that includes `Esc` from inside one of its fields — and `r` puts the
 dock away.

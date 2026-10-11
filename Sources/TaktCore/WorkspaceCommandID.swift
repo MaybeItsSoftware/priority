@@ -60,6 +60,10 @@ public enum WorkspaceCommandID: String, CaseIterable, Sendable {
   // Done rail
   case doneReveal, doneReopen, doneClose, motionDoneSelect
 
+  // Conditions tab
+  case conditionsToggle, conditionsEdit, conditionsNew, conditionsTogglePlace, conditionsArchive
+  case conditionsClear, conditionsUseAgain, conditionsClose, motionConditionsSelect
+
   // Motions
   case motionSelectNext, motionSelectPrevious, motionSelectEnds, motionSelectPage
   case motionFindForward, motionFindBackward, motionFindRepeat

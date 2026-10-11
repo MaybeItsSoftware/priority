@@ -46,6 +46,9 @@ enum WorkspaceFocusArea: Hashable {
   case done
   /// The timeline, as a tab of the right dock.
   case timeline
+  /// The right dock's Conditions tab: what is available now, and the
+  /// conditions themselves, walked by one cursor.
+  case conditions
 }
 
 /// Views of the same local task model, rather than separate applications.
@@ -940,9 +943,12 @@ enum WorkspaceSidebarItem: Identifiable {
   var taskPlanningByID: [String: TaskPlanning] = [:]
   var focusContext = FocusContext()
   var suggestedContextIDs: Set<String> = []
-  /// Moves when ⌥⌘8 is pressed in the focus panel, which opens its own
-  /// conditions popover rather than the window's overlay.
-  var panelContextRequest = 0
+  /// The Conditions tab's cursor; nil is its first row.
+  var conditionsCursor: WorkspaceConditionsStop?
+  /// The condition whose name is being edited in its row, if any.
+  var renamingConditionID: String?
+  /// Moves to put the caret in the Conditions tab's new-condition field.
+  var conditionsAddFieldRequest = 0
   var contextExpiresAt: Date?
   var availableUntil: Date?
   var blockedFocusTasks: [BlockedFocusTask] = []

@@ -122,6 +122,28 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   }
 
   /// The timeline's breakdown is walked and opened the way the done rail is.
+  /// The Conditions tab: one cursor down both halves, Space turns the
+  /// condition on or off, Return renames, Esc and ← go back to the work.
+  func testTheConditionsTabHasItsOwnKeys() {
+    for key in ["j", "k", "down", "up", "home", "end"] {
+      XCTAssertEqual(
+        WorkspaceCommandCatalog.command(forKey: key, on: .conditions)?.id, .motionConditionsSelect, key)
+    }
+    let expected: [String: WorkspaceCommandID] = [
+      "space": .conditionsToggle, "enter": .conditionsEdit, "f2": .conditionsEdit, "a": .conditionsNew,
+      "cmd+n": .conditionsNew, "p": .conditionsTogglePlace, "e": .conditionsArchive, "c": .conditionsClear,
+      "shift+u": .conditionsUseAgain, "escape": .conditionsClose, "left": .conditionsClose,
+    ]
+    for (key, id) in expected {
+      XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: .conditions)?.id, id, key)
+    }
+    // A bare key that acts on the selected task does not reach through it.
+    XCTAssertNil(WorkspaceCommandCatalog.command(forKey: "x", on: .conditions))
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "r", on: .conditions)?.id, .windowToggleRightDock)
+    // ⌥⌘8 and `ga` from inside the tab are the toggle that put it away.
+    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "ga", on: .conditions)?.id, .focusSetAvailable)
+  }
+
   func testTheTimelineWalksItsTasks() {
     for key in ["j", "k", "down", "up", "home", "end"] {
       XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: .timeline)?.id, .motionTimelineSelect, key)
@@ -135,7 +157,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   /// in the right dock its own tabs are, and `[` `]` do it where no field
   /// would take them.
   func testTheDocksTabsAreZedsPreviousAndNextTab() {
-    for surface: WorkspaceCommandSurface in [.inspector, .done, .timeline] {
+    for surface: WorkspaceCommandSurface in [.inspector, .done, .timeline, .conditions] {
       for key in ["cmd+shift+}", "]"] {
         XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: key, on: surface)?.id, .windowDockNextTab, "\(key) on \(surface)")
       }
@@ -164,7 +186,7 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
   func testEscapeLeavesTheInspectorsFieldsOnly() {
     XCTAssertTrue(WorkspaceCommandCatalog.reachesIntoTextField("escape", on: .inspector))
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "escape", on: .inspector)?.id, .motionDismiss)
-    for surface: WorkspaceCommandSurface in [.outline, .board, .today, .matrix, .sidebar, .done, .timeline] {
+    for surface: WorkspaceCommandSurface in [.outline, .board, .today, .matrix, .sidebar, .done, .timeline, .conditions] {
       XCTAssertFalse(WorkspaceCommandCatalog.reachesIntoTextField("escape", on: surface), "\(surface)")
     }
   }

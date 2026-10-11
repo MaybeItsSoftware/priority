@@ -336,9 +336,9 @@ extension WorkspaceViewModel {
 }
 
 /// Where a list-walking key moves a cursor. Shared by the sidebar, the
-/// done rail and the timeline, whose catalogue rows list the same keys — the sidebar adds
+/// done rail, the timeline and the Conditions tab, whose catalogue rows list the same keys — the sidebar adds
 /// `gg` and `⇧G`, the ends in Zed's vim project panel.
-private enum CursorStep {
+enum CursorStep {
   case by(Int), first, last
 
   init?(key: String) {

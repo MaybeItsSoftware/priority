@@ -77,7 +77,9 @@ struct WorkspaceStatusBar: View {
 
   private var rightDockToggles: some View {
     HStack(spacing: theme.space.xxs) {
-      ForEach(WorkspaceDockTab.allCases) { tab in
+      // Not the Conditions tab: the indicator beside the tally is its toggle,
+      // and says what is on besides.
+      ForEach(WorkspaceDockTab.allCases.filter { $0 != .conditions }) { tab in
         let isOn = model.isRightDockVisible && model.rightDockTab == tab
         WorkspacePaneIconButton(tab.symbolName, title: tab.title, command: tab.command, isOn: isOn) {
           if isOn { model.hideRightDock() } else { model.showRightDock(tab) }
@@ -93,6 +95,7 @@ struct WorkspaceStatusBar: View {
     case .inspector: "the inspector"
     case .done: "the done rail"
     case .timeline: "the timeline"
+    case .conditions: "the conditions"
     }
   }
 }
@@ -175,7 +178,7 @@ private struct WorkspaceStatusTrailing: View {
         FocusStopButton(compact: true)
       }
       // What is available now, which decides what the day and the panel
-      // offer. Click for the controls; ⌥⌘8 for the keyboard picker.
+      // offer. Click, or ⌥⌘8, for the right dock's Conditions tab.
       WorkspaceFocusContextIndicator()
       tally
       sync

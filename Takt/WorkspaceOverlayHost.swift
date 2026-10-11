@@ -81,10 +81,6 @@ struct WorkspaceOverlayHost: View {
         case .folder: model.createFolder(named: name, in: model.creationParentFolderID)
         }
       }
-    case .availability:
-      WorkspaceAvailabilityPicker(overlayID: overlay.id)
-    case .conditions:
-      WorkspaceConditionsManager(overlayID: overlay.id)
     case .newBoardColumn:
       WorkspaceNameOverlay(
         overlayID: overlay.id, title: "New board column", prompt: "Column name", context: nil

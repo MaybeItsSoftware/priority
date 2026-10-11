@@ -19,6 +19,7 @@ extension WorkspaceViewModel {
   var commandSurface: WorkspaceCommandSurface {
     if keyboardFocusArea == .timeline { return .timeline }
     if keyboardFocusArea == .done { return .done }
+    if keyboardFocusArea == .conditions { return .conditions }
     if keyboardFocusArea == .sidebar { return .sidebar }
     if keyboardFocusArea == .inspector { return .inspector }
     switch viewMode {
@@ -43,8 +44,8 @@ extension WorkspaceViewModel {
     switch id {
     case .focusFinish: finishFocusBlock()
     case .focusStop: stopFocusSession()
-    case .focusSetAvailable: presentOverlay(.availability)
-    case .focusManageConditions: presentOverlay(.conditions)
+    case .focusSetAvailable: toggleDockTab(.conditions)
+    case .focusManageConditions: openConditionsTab(onNewCondition: true)
     default: openFocusPanel()
     }
   }
@@ -248,6 +249,10 @@ extension WorkspaceViewModel {
     case .doneReveal: if let task = doneCursorTask { revealDoneTask(task) }
     case .doneReopen: if let task = doneCursorTask { reopenDoneTask(task) }
     case .doneClose: leaveDoneRail()
+
+    // MARK: Conditions tab
+    case .conditionsToggle, .conditionsEdit, .conditionsNew, .conditionsTogglePlace, .conditionsArchive,
+      .conditionsClear, .conditionsUseAgain, .conditionsClose, .motionConditionsSelect: runConditionsCommand(id, key: key)
 
     // MARK: Motions
     //

@@ -2,181 +2,22 @@ import TaktCore
 import TaktWorkspace
 import SwiftUI
 
-/// What is available now, in full: the conditions that hold, the time you
-/// have, what you want from it, and when to stop trusting the answer.
-///
-/// Shown in a popover from the status bar and from the focus panel's context
-/// line. ⌥⌘8 reaches the conditions alone, as a keyboard picker.
-struct WorkspaceFocusContextControls: View {
-  @Environment(\.theme) private var theme
-  @Environment(WorkspaceViewModel.self) private var model
-  /// Opens the conditions manager. The status bar presents the window's
-  /// overlay; the panel has to bring the window forward first.
-  let onManage: () -> Void
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: theme.space.md) {
-      HStack(spacing: theme.space.sm) {
-        MicroLabel("Available now")
-        Spacer(minLength: theme.space.sm)
-        if !model.focusContext.conditionIDs.isEmpty {
-          Button("Clear") { model.clearFocusConditions() }
-            .buttonStyle(.plain)
-            .font(theme.captionFont)
-            .foregroundStyle(theme.muted)
-            .help("Nothing beyond the laptop: only tasks with no conditions are offered")
-        }
-        Button("Manage…") { onManage() }
-          .buttonStyle(.plain)
-          .font(theme.captionFont)
-          .foregroundStyle(theme.primary)
-          .commandHelp(.focusManageConditions, note: "Add, rename or archive conditions")
-      }
-      if model.focusConditions.isEmpty {
-        Text(WorkspaceConditionCopy.explanation + " None yet: add one with Manage.")
-          .font(theme.captionFont)
-          .foregroundStyle(theme.muted)
-          .fixedSize(horizontal: false, vertical: true)
-      } else {
-        WorkspaceConditionChips()
-      }
-      if !model.suggestedContextIDs.isEmpty {
-        HStack(spacing: theme.space.sm) {
-          Text("Last context: " + model.suggestedContextIDs.sorted().map { id in
-            model.focusConditions.first(where: { $0.id == id })?.name ?? ""
-          }.joined(separator: ", ")).foregroundStyle(theme.muted)
-          Button("Use again") { model.confirmSuggestedContext() }
-            .buttonStyle(.plain)
-            .foregroundStyle(theme.primary)
-          Button("Dismiss") { model.suggestedContextIDs = [] }
-            .buttonStyle(.plain)
-            .foregroundStyle(theme.muted)
-        }
-        .font(theme.captionFont)
-      }
-      FocusRule()
-      HStack(spacing: theme.space.sm) {
-        ThemedMenu(model.availableUntil.map { "Until \($0.formatted(date: .omitted, time: .shortened))" } ?? "Available time") {
-          Button("No time limit") { model.availableUntil = nil; model.focusContextChanged() }
-          ForEach([15, 30, 60, 90], id: \.self) { minutes in
-            Button("\(minutes) minutes") { model.availableUntil = Date.now.addingTimeInterval(Double(minutes * 60)); model.focusContextChanged() }
-          }
-          Button("Choose end time") { model.availableUntil = Date.now.addingTimeInterval(1800); model.focusContextChanged() }
-        }
-        if let end = model.availableUntil {
-          ThemedDateField(
-            selection: Binding(get: { model.availableUntil ?? end }, set: { model.availableUntil = $0; model.focusContextChanged() }),
-            includesTime: true)
-        }
-      }
-      ThemedSegmentedPicker(
-        selection: Binding(get: { model.focusContext.mode }, set: { model.focusContext.mode = $0; model.focusContextChanged() }),
-        options: [
-          ThemedPickerOption("Make progress", value: FocusTimeMode.progress),
-          ThemedPickerOption("Finish something", value: FocusTimeMode.finish),
-        ])
-      .accessibilityLabel("Goal")
-      HStack(spacing: theme.space.sm) {
-        Toggle("Context expires", isOn: Binding(get: { model.contextExpiresAt != nil }, set: {
-          model.contextExpiresAt = $0 ? Date.now.addingTimeInterval(3600) : nil; model.focusContextChanged()
-        })).toggleStyle(.themedSwitch).fixedSize()
-        if let end = model.contextExpiresAt {
-          ThemedDateField(
-            selection: Binding(get: { model.contextExpiresAt ?? end }, set: { model.contextExpiresAt = $0; model.focusContextChanged() }),
-            includesTime: true)
-        }
-      }.font(theme.captionFont)
-    }
-  }
-}
-
-/// The selectable conditions as chips: on in the accent, off on a hairline.
-/// A location replaces the last location; anything else adds.
-struct WorkspaceConditionChips: View {
-  @Environment(\.theme) private var theme
-  @Environment(WorkspaceViewModel.self) private var model
-
-  var body: some View {
-    // Wraps rather than scrolls: a popover is narrow, and a chip scrolled out
-    // of sight is a condition you cannot see is on.
-    WorkspaceChipFlow(spacing: theme.space.xs) {
-      ForEach(model.selectableFocusConditions) { condition in
-        Button { model.toggleFocusCondition(condition) } label: {
-          Label(condition.name, systemImage: condition.isLocation ? "location" : "checkmark.circle")
-            .labelStyle(.titleAndIcon)
-        }
-        .buttonStyle(FocusChipButtonStyle(isOn: model.focusContext.conditionIDs.contains(condition.id)))
-        .help(condition.isLocation ? "A place: choosing it replaces the last one" : "A circumstance: combines with the rest")
-      }
-    }
-  }
-}
-
-/// Lays chips out left to right, onto a new line when the row is full.
-struct WorkspaceChipFlow: Layout {
-  var spacing: CGFloat
-
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    let rows = arrange(subviews, width: proposal.width ?? .infinity)
-    let width = rows.map(\.width).max() ?? 0
-    let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
-    return CGSize(width: width, height: height)
-  }
-
-  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-    var originY = bounds.minY
-    for row in arrange(subviews, width: bounds.width) {
-      var originX = bounds.minX
-      for index in row.indices {
-        let size = subviews[index].sizeThatFits(.unspecified)
-        subviews[index].place(at: CGPoint(x: originX, y: originY), proposal: ProposedViewSize(size))
-        originX += size.width + spacing
-      }
-      originY += row.height + spacing
-    }
-  }
-
-  private struct Row {
-    var indices: [Int] = []
-    var width: CGFloat = 0
-    var height: CGFloat = 0
-  }
-
-  private func arrange(_ subviews: Subviews, width: CGFloat) -> [Row] {
-    var rows: [Row] = []
-    var current = Row()
-    for index in subviews.indices {
-      let size = subviews[index].sizeThatFits(.unspecified)
-      if !current.indices.isEmpty, current.width + spacing + size.width > width {
-        rows.append(current)
-        current = Row()
-      }
-      current.width = current.indices.isEmpty ? size.width : current.width + spacing + size.width
-      current.height = max(current.height, size.height)
-      current.indices.append(index)
-    }
-    if !current.indices.isEmpty { rows.append(current) }
-    return rows
-  }
-}
-
-/// The words conditions are explained in, once, so the inspector, the
-/// popover and the overlays say the same thing.
+/// The words conditions are explained in, once, so the inspector and the
+/// Conditions tab say the same thing.
 enum WorkspaceConditionCopy {
   static let explanation = "Conditions are places or circumstances a task needs — Home, Campus, Floor space."
   static let none = "No conditions — available whenever"
 }
 
 /// The status bar's word on where you are: the conditions on, or "Anywhere".
-/// Click for the full controls; ⌥⌘8 for the keyboard picker.
+/// Click, or ⌥⌘8, for the right dock's Conditions tab.
 struct WorkspaceFocusContextIndicator: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
-  @State private var showsControls = false
 
   var body: some View {
     let summary = model.focusContextSummary
-    Button { showsControls.toggle() } label: {
+    Button { model.toggleDockTab(.conditions) } label: {
       HStack(spacing: theme.space.xs) {
         Image(systemName: summary == nil ? "location.slash" : "location.fill")
           .foregroundStyle(summary == nil ? theme.dim : theme.primary)
@@ -197,33 +38,26 @@ struct WorkspaceFocusContextIndicator: View {
       note: summary.map { "Available now: \($0). Click to change" }
         ?? "Nothing set as available: only tasks with no conditions are offered. Click to change")
     .accessibilityLabel(summary.map { "Available now: \($0)" } ?? "No conditions available")
-    .popover(isPresented: $showsControls, arrowEdge: .top) {
-      WorkspaceFocusContextControls {
-        showsControls = false
-        model.presentOverlay(.conditions)
-      }
-      .environment(model)
-      .padding(theme.space.lg)
-      .frame(width: 420)
-      .background(theme.raised)
-    }
   }
 }
 
 /// The focus panel's one line about where you are, above its field. Quiet
 /// until there are conditions to talk about: a workspace without any has
-/// nothing for it to say.
+/// nothing for it to say. Clicking it hands over to the window's Conditions
+/// tab, which is where they are set.
 struct FocusPanelContextLine: View {
   @Environment(WorkspaceViewModel.self) private var model
   @Environment(\.theme) private var theme
-  /// Hands the panel back so the window can take over, for Manage.
+  /// Hands the panel back so the window can take over.
   let onOpenWindow: () -> Void
-  @State private var showsControls = false
 
   var body: some View {
     if !model.focusConditions.isEmpty {
       let summary = model.focusContextSummary
-      Button { showsControls.toggle() } label: {
+      Button {
+        onOpenWindow()
+        model.openConditionsTab()
+      } label: {
         HStack(spacing: theme.space.xs) {
           Image(systemName: summary == nil ? "location.slash" : "location.fill")
             .foregroundStyle(summary == nil ? theme.dim : theme.primary)
@@ -244,21 +78,9 @@ struct FocusPanelContextLine: View {
       }
       .buttonStyle(.plain)
       .focusable(false)
-      .commandHelp(.focusSetAvailable, note: "What is available now: decides which tasks the day offers")
+      .commandHelp(.focusSetAvailable, note: "What is available now, in the window's Conditions tab")
       .padding(.horizontal, theme.space.lg)
       .padding(.bottom, theme.space.sm)
-      .onChange(of: model.panelContextRequest) { _, _ in showsControls.toggle() }
-      .popover(isPresented: $showsControls, arrowEdge: .bottom) {
-        WorkspaceFocusContextControls {
-          showsControls = false
-          onOpenWindow()
-          model.presentOverlay(.conditions)
-        }
-        .environment(model)
-        .padding(theme.space.lg)
-        .frame(width: 420)
-        .background(theme.raised)
-      }
     }
   }
 }

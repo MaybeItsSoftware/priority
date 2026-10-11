@@ -96,7 +96,7 @@ something you already have to know.
 | `gf` | Start a focus block on the task — on Today, queue it behind a running block |
 | `Cmd+Shift+Return` | Finish the running focus block — completes its task and asks how it went, as Done does. Works from anywhere in the window, inside a field too |
 | `Cmd+Shift+.` | Stop the running focus block — the time so far is logged unscored, the task stays open and the queue is dropped. Works from anywhere, the focus panel included |
-| `Cmd+Alt+8` / `ga` | Set what's available now — the conditions (Home, Campus, Floor space…) that hold here, which decide what the day offers. See [Conditions](#conditions) |
+| `Cmd+Alt+8` / `ga` | Set what's available now — the right dock's Conditions tab, with the keyboard in it: the conditions (Home, Campus, Floor space…) that hold here, which decide what the day offers. Again from inside it puts the dock away. See [Conditions](#conditions) |
 | `f` / `Shift+F` then a letter, `;` | Vim's find: the next / previous task (in the sidebar, list) whose title starts with that letter; `;` repeats it |
 | `gg` / `Shift+G`, `Ctrl+D` / `Ctrl+U` | First / last task, eight down / up (vim) |
 | `gx` / `Cmd+O` | Open the task's first link (vim's open-the-URL-under-the-cursor) |
@@ -114,7 +114,7 @@ something you already have to know.
 | `Cmd+Shift+A` | The left dock's Agent tab — Claude Code, asking before every change |
 | `Cmd+J` | The bottom dock: a graph of tasks done and added per day (Zed's bottom dock) |
 | `Cmd+R`, `r` or `Cmd+Alt+B` / `Cmd+Alt+Y` | The right dock, on the tab it was on and with the keyboard in it, or put it away / close all docks (Zed's) |
-| `Cmd+Shift+{` / `Cmd+Shift+}`, or `[` / `]` | In the right dock, its previous / next tab — Inspector, Done, Timeline — with the keyboard brought along (Zed's previous / next tab; on a task pane the same chords change list). `Ctrl+Tab` leaves it for the next region |
+| `Cmd+Shift+{` / `Cmd+Shift+}`, or `[` / `]` | In the right dock, its previous / next tab — Inspector, Done, Timeline, Conditions — with the keyboard brought along (Zed's previous / next tab; on a task pane the same chords change list). `Ctrl+Tab` leaves it for the next region |
 | `oo` / `Cmd+Alt+I` | List settings |
 | `Cmd+Z` / `Cmd+Shift+Z`, or `Ctrl+Z` / `Ctrl+Shift+Z`, or `uu` | Undo / redo |
 | `Cmd+Shift+P` / `Cmd+K` | The command palette — everything the workspace can do, and its key |
@@ -336,18 +336,28 @@ starting — *Home*, *Campus*, *Floor space*. A task that requires one stays out
 of the day and the panel (its badge says what it needs) until you say that
 condition holds; a task with no conditions is available whenever.
 
-- **Saying what's available now**: `Cmd+Alt+8` (or `ga`, or **Set what's
-  available now…** in the palette) opens a picker — `↑`/`↓` choose, `Space`
-  turns a condition on or off, `Return` is done, and `Cmd+Return` makes a new
-  one from what you typed. The status bar shows the active conditions (or
-  *Anywhere*); click it for the full controls, which add an available-time
-  window, a goal (make progress or finish something) and an expiry. The focus
-  panel has the same line above its field, and `Cmd+Alt+8` there opens it.
-  A **place** replaces the last place, since you are in one at a time; other
-  conditions combine. What you set is kept across relaunches; a context that
-  expires is offered back with **Use again**.
-- **Managing them**: **Manage conditions…** in the palette, or **Manage…** in
-  the controls, adds, renames (tasks keep their requirements) and archives.
+Both halves of the job live in the right dock's **Conditions** tab.
+`Cmd+Alt+8` (or `ga`, or **Set what's available now…** in the palette) opens
+it with the keyboard in it; so does clicking the status bar's indicator, which
+shows the active conditions (or *Anywhere*). The focus panel has the same line
+above its field: clicking it, or `Cmd+Alt+8` there, hands over to the window's
+tab.
+
+- **Available now**: the conditions as rows — a box for a circumstance, a
+  radio for a place. `Space` (or a click) turns one on or off. A **place**
+  replaces the last place, since you are in one at a time; other conditions
+  combine. `c` clears them all. Under the rows are an available-time window, a
+  goal (make progress or finish something) and an expiry. What you set is kept
+  across relaunches; a context that expires is offered back with **Use
+  again** (`Shift+U`).
+- **Conditions**: a new-condition row (`a` or `Cmd+N` puts the caret in it,
+  `Return` makes the condition, with a **Place** switch beside it), then every
+  condition with how many open tasks need it. `Return` or `F2` renames one in
+  its row (tasks keep their requirements), `p` makes it a place or not, `e`
+  archives or restores it. **Manage conditions…** in the palette opens the tab
+  on the new-condition row.
+- `↑`/`↓` (or `j`/`k`) walk both halves with one cursor; `Esc` or `←` hands
+  the keyboard back to the work and leaves the dock open, `r` puts it away.
 - **Requiring one**: in the inspector's Plan section, **Add required
   condition** — or **New condition…** at the foot of that menu, which makes it
   and requires it at once. **Or…** widens a requirement to either of two.
@@ -681,8 +691,8 @@ the bottom.
   the way back out of an opened task) and a count or a few glyph buttons on the
   right, then the mode's content. Panes carry no footers of their own: their
   key hints are in the reference (`Cmd+/`) and the palette (`Cmd+K`).
-- **Right dock** — the inspector and the done rail, as two tabs of one
-  resizable column, in a tab bar: the showing tab in ink with a rule under it,
+- **Right dock** — the inspector, the done rail, the timeline and the
+  conditions, as tabs of one resizable column, in a tab bar: the showing tab in ink with a rule under it,
   the done rail's tally and a close glyph at its right. Its visibility, width
   and tab are remembered, and it does not close itself when you navigate; with
   nothing selected the inspector says so.
@@ -696,7 +706,8 @@ the bottom.
   tooltip says which region has the keyboard); in the middle, a half-typed key sequence (`d…`), an error,
   or a passing message; on the right, the running block and its clock (click to
   return to it), today's time logged, points and tasks done (the week's in the
-  tooltip; click for the timeline), Google Tasks sync, and at the right edge
+  tooltip; click for the timeline), what is available now (click for the
+  Conditions tab), Google Tasks sync, and at the right edge
   the right dock's Inspector and Done toggles — each toggle on the side its
   pane opens on.
 

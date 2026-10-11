@@ -7,6 +7,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
   case inspector
   case done
   case timeline
+  case conditions
 
   var id: String { rawValue }
 
@@ -15,6 +16,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     case .inspector: "Inspector"
     case .done: "Done"
     case .timeline: "Timeline"
+    case .conditions: "Conditions"
     }
   }
 
@@ -23,6 +25,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     case .inspector: "sidebar.trailing"
     case .done: "checkmark.circle"
     case .timeline: "clock"
+    case .conditions: "location"
     }
   }
 
@@ -32,6 +35,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     case .inspector: .inspector
     case .done: .done
     case .timeline: .timeline
+    case .conditions: .conditions
     }
   }
 
@@ -41,6 +45,7 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     case .inspector: .windowToggleInspectorPane
     case .done: .windowToggleDoneRail
     case .timeline: .goTimeline
+    case .conditions: .focusSetAvailable
     }
   }
 
@@ -49,13 +54,14 @@ enum WorkspaceDockTab: String, CaseIterable, Identifiable {
     case .inspector: self = .inspector
     case .done: self = .done
     case .timeline: self = .timeline
+    case .conditions: self = .conditions
     case .sidebar, .tasks: return nil
     }
   }
 }
 
-/// The right dock: the inspector and the done rail as two tabs of one
-/// resizable column.
+/// The right dock: the inspector, the done rail, the timeline and the
+/// conditions as tabs of one resizable column.
 ///
 /// They were two columns, each with its own idea of when to be on screen. The
 /// inspector closed itself on about fifteen kinds of navigation — choosing a
@@ -89,7 +95,7 @@ extension WorkspaceViewModel {
     isRightDockVisible = false
     completedTasks = []
     completedTasksKey = nil
-    if keyboardFocusArea == .inspector || keyboardFocusArea == .done || keyboardFocusArea == .timeline {
+    if WorkspaceDockTab(area: keyboardFocusArea) != nil {
       requestKeyboardFocus(.tasks)
     }
   }

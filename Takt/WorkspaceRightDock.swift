@@ -3,7 +3,8 @@ import TaktCore
 import TaktWorkspace
 import SwiftUI
 
-/// The right dock: the inspector and the done rail as tabs of one column.
+/// The right dock: the inspector, the done rail, the timeline and the
+/// conditions as tabs of one column.
 ///
 /// See `WorkspaceViewModel+Dock.swift` for why it is one dock rather than two
 /// columns, and why it no longer closes itself on navigation.
@@ -32,6 +33,11 @@ struct WorkspaceRightDock: View {
           .focusable()
           .focusEffectDisabled()
           .focused(focusedArea, equals: .timeline)
+      case .conditions:
+        WorkspaceConditionsPane()
+          .focusable()
+          .focusEffectDisabled()
+          .focused(focusedArea, equals: .conditions)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

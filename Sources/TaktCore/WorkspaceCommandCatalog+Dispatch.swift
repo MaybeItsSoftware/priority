@@ -87,9 +87,10 @@ extension WorkspaceCommandCatalog {
   ///
   /// - The four planning panes take everything: `.anywhere` is written from
   ///   their point of view.
-  /// - The sidebar and the done rail hold a cursor of their own, so a bare key
-  ///   that acts on "the selected task" — Space, `x`, `⌫`, a digit — would act
-  ///   on a row in a pane that does not have the keyboard. They take chords
+  /// - The sidebar, the done rail and the conditions tab hold a cursor of
+  ///   their own, so a bare key that acts on "the selected task" — Space,
+  ///   `x`, `⌫`, a digit — would act on a row in a pane that does not have
+  ///   the keyboard. They take chords
   ///   (anything with `⌘` or `⌃`), the two-letter sequences, and
   ///   `regionBareKeys`.
   /// - The inspector is the same minus the sequences, because its controls
@@ -158,7 +159,7 @@ extension WorkspaceCommandCatalog {
       return true
     case .timeline:
       return reachableFromFullPaneScreens.contains(command.id)
-    case .sidebar, .done:
+    case .sidebar, .done, .conditions:
       return isChord(key) || isSequence(key) || regionBareKeys.contains(key)
     case .inspector:
       return isChord(key) || regionBareKeys.contains(key)

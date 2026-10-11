@@ -10,7 +10,7 @@ public enum WorkspaceCommandCatalog {
   /// The shipped keys. What is in force — these with any user keymap laid
   /// over them — is `all`; see `WorkspaceKeyBindings`.
   public static let defaults: [WorkspaceCommand] =
-    go + task + focus + plan + lists + window + timeline + done + motions
+    go + task + focus + plan + lists + window + timeline + done + conditions + motions
 
   public static var byID: [WorkspaceCommandID: WorkspaceCommand] { bindings.byID }
 
@@ -236,10 +236,10 @@ public enum WorkspaceCommandCatalog {
     // Beside ⌘8, which opens the panel these conditions decide what it offers.
     .init(
       id: .focusSetAvailable, title: "Set what's available now…", group: "Focus", keys: ["cmd+option+8", "ga"],
-      note: "The conditions that hold here — Home, Campus, Floor space. A task that needs one waits until it is on"),
+      note: "The right dock's Conditions tab, with the keyboard in it: the conditions that hold here — Home, Campus, Floor space. A task that needs one waits until it is on"),
     .init(
       id: .focusManageConditions, title: "Manage conditions…", group: "Focus", keys: [],
-      note: "Add, rename or archive the places and circumstances tasks can require"),
+      note: "The Conditions tab, on its new-condition row: add, rename or archive the places and circumstances tasks can require"),
   ]
 
   // MARK: - Plan
@@ -398,12 +398,14 @@ public enum WorkspaceCommandCatalog {
       id: .windowDockNextTab, title: "Next tab in the right dock", group: "Window", keys: [],
       surfaceKeys: [
         .inspector: ["cmd+shift+}", "]"], .done: ["cmd+shift+}", "]"], .timeline: ["cmd+shift+}", "]"],
+        .conditions: ["cmd+shift+}", "]"],
       ],
-      note: "Inspector, Done, Timeline, and round again, with the keyboard in it"),
+      note: "Inspector, Done, Timeline, Conditions, and round again, with the keyboard in it"),
     .init(
       id: .windowDockPreviousTab, title: "Previous tab in the right dock", group: "Window", keys: [],
       surfaceKeys: [
         .inspector: ["cmd+shift+{", "["], .done: ["cmd+shift+{", "["], .timeline: ["cmd+shift+{", "["],
+        .conditions: ["cmd+shift+{", "["],
       ]),
     .init(
       id: .windowOpenKeymap, title: "Open the keymap file", group: "Window", keys: [],
@@ -464,6 +466,41 @@ public enum WorkspaceCommandCatalog {
     .init(
       id: .doneClose, title: "Leave the rail", group: "Done", keys: ["escape", "left"],
       surface: .done, note: "Left, like leaving any pane on the right: back towards the work"),
+  ]
+
+  // MARK: - Conditions tab
+
+  /// The right dock's Conditions tab: what is available now, and the
+  /// conditions themselves. One cursor walks both sections.
+  private static let conditions: [WorkspaceCommand] = [
+    .init(
+      id: .motionConditionsSelect, title: "Move through the conditions", group: "Conditions",
+      keys: ["down", "up", "j", "k", "home", "end", "cmd+up", "cmd+down", "pageup", "pagedown"],
+      surface: .conditions, kind: .motion),
+    .init(
+      id: .conditionsToggle, title: "Turn the condition on or off", group: "Conditions", keys: ["space"],
+      surface: .conditions, note: "A place replaces the last place; anything else combines"),
+    .init(
+      id: .conditionsEdit, title: "Rename the condition", group: "Conditions", keys: ["enter", "f2", "shift+r"],
+      surface: .conditions, note: "On the new-condition row, puts the caret in its field: Return makes it"),
+    .init(
+      id: .conditionsNew, title: "New condition", group: "Conditions", keys: ["cmd+n", "a"],
+      surface: .conditions),
+    .init(
+      id: .conditionsTogglePlace, title: "Make it a place, or not", group: "Conditions", keys: ["p"],
+      surface: .conditions, note: "You are in one place at a time, so turning a place on turns the last one off"),
+    .init(
+      id: .conditionsArchive, title: "Archive or restore the condition", group: "Conditions", keys: ["e"],
+      surface: .conditions, note: "Archived ones are not offered for new requirements; tasks that need one keep it"),
+    .init(
+      id: .conditionsClear, title: "Clear what's available", group: "Conditions", keys: ["c"],
+      surface: .conditions, note: "Nothing beyond the laptop: only tasks with no conditions are offered"),
+    .init(
+      id: .conditionsUseAgain, title: "Use the last context again", group: "Conditions", keys: ["shift+u"],
+      surface: .conditions, note: "The conditions that held before the last one expired"),
+    .init(
+      id: .conditionsClose, title: "Leave the conditions", group: "Conditions", keys: ["escape", "left"],
+      surface: .conditions, note: "Back to the work, leaving the dock open; r puts it away"),
   ]
 
   // MARK: - Motions
