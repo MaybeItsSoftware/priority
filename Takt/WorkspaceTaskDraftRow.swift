@@ -91,6 +91,9 @@ struct WorkspaceTaskDraftRow: View {
     .onAppear { focusSoon() }
     .onChange(of: model.taskComposerFocusRequest) { _, _ in focusSoon() }
     .onChange(of: isFocused) { _, focused in
+      // Inside the outline's table the field editor paints its own text
+      // background, a dark box over the band the row already draws.
+      if focused { DispatchQueue.main.async { fieldEditor?.drawsBackground = false } }
       guard focused, restoresCaret else { return }
       restoresCaret = false
       restoreCaret()

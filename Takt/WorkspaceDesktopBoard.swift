@@ -97,7 +97,7 @@ private struct WorkspaceKanbanColumnStrip: View {
 
   var body: some View {
     let activeColumnID = model.activeBoardColumnID
-    let tasksHaveKeyboard = model.keyboardFocusArea == .tasks
+    let tasksHaveKeyboard = model.keyboardFocusArea == .tasks && !model.isDraftingTask
     let selectedID = model.selectedTaskID
     // The column the selection is drawn in — for a subtask row, the column
     // of the card it is drawn on.

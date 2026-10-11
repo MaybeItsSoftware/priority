@@ -19,7 +19,10 @@ struct WorkspaceOutlinePane: View {
   var body: some View {
     if model.isMultiListScope || model.selectedList != nil {
       let selectedID = model.selectedTaskID
-      let tasksHaveKeyboard = model.keyboardFocusArea == .tasks
+      // A draft row open takes the keyboard from the selection: the row being
+      // typed into carries the strong band, the task it hangs off only the
+      // resting one, so the two do not read as one block.
+      let tasksHaveKeyboard = model.keyboardFocusArea == .tasks && !model.isDraftingTask
       VStack(spacing: 0) {
         WorkspacePaneHeader(title: model.currentBoardScopeTitle, switchesList: true) {
           if let exit = model.scopeExitTitle {
