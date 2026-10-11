@@ -13,8 +13,8 @@
 //! than a change nobody saw.
 
 /// The tools that change nothing: the Checkvist reads, the local day log and
-/// dailies, the focus clock (opened read-only by the CLI) and the workspace
-/// tree.
+/// dailies, the focus clock (opened read-only by the CLI), the workspace
+/// tree and its filter lists.
 pub const READ_ONLY_TOOLS: &[&str] = &[
     "task_lists",
     "task_fetch",
@@ -27,6 +27,8 @@ pub const READ_ONLY_TOOLS: &[&str] = &[
     "workspace_tree",
     "workspace_tasks",
     "workspace_task_dependencies",
+    "workspace_filter_lists",
+    "workspace_filter_list_tasks",
 ];
 
 /// Every other tool the server declares. Each goes through the approval card.
@@ -53,6 +55,9 @@ pub const WRITE_TOOLS: &[&str] = &[
     "workspace_task_delete",
     "workspace_task_blocker_add",
     "workspace_task_blocker_remove",
+    "workspace_filter_list_create",
+    "workspace_filter_list_update",
+    "workspace_filter_list_delete",
     "workspace_folder_create",
     "workspace_list_create",
     "workspace_list_move",

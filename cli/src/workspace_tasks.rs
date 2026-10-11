@@ -43,6 +43,9 @@ use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
+mod filters;
+pub use filters::{FilterEdit, rule_catalog_text, rule_fields};
+
 /// The newest migration whose schema these writes are written against. An
 /// older database is missing columns they name; a newer one is fine, because
 /// `WorkspaceStore` only ever adds nullable columns.
@@ -1242,9 +1245,14 @@ fn map_core_error(error: takt_core::CoreError) -> ToolError {
         takt_core::CoreError::MissingFolder { id } => ToolError::new(format!(
             "No folder with id {id}. workspace_tree lists the folders and their ids."
         )),
+        takt_core::CoreError::MissingFilterList { id } => ToolError::new(format!(
+            "No filter list with id {id}. workspace_filter_lists lists them and their ids."
+        )),
+        takt_core::CoreError::InvalidFilter { detail } => ToolError::new(detail),
         refused @ (takt_core::CoreError::InvalidFolderMove
         | takt_core::CoreError::InvalidTaskMove
-        | takt_core::CoreError::DependencyCycle) => ToolError::new(refused.to_string()),
+        | takt_core::CoreError::DependencyCycle
+        | takt_core::CoreError::EmptyName) => ToolError::new(refused.to_string()),
         permanent @ takt_core::CoreError::SystemListIsPermanent => {
             ToolError::new(permanent.to_string())
         }

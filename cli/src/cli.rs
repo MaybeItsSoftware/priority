@@ -423,6 +423,33 @@ pub enum WsCommand {
     },
     /// Delete a task and its subtree.
     Rm { task_id: String },
+    /// Filter lists — Today, Everything and your own — with their rules.
+    Filters,
+    /// The tasks a filter list shows, by id or name.
+    Filter {
+        #[arg(required = true, num_args = 1.., value_name = "ID_OR_NAME")]
+        filter: Vec<String>,
+    },
+    /// Create a filter list. Without rules it shows every open task.
+    FilterNew {
+        #[arg(required = true, num_args = 1.., value_name = "NAME")]
+        name: Vec<String>,
+        #[command(flatten)]
+        definition: FilterArgs,
+    },
+    /// Change a filter list's name, icon, match, show or rules.
+    FilterEdit {
+        filter_list_id: String,
+        #[arg(long, short = 't', value_name = "NAME")]
+        name: Option<String>,
+        #[command(flatten)]
+        definition: FilterArgs,
+        /// Remove every rule.
+        #[arg(long, conflicts_with_all = ["rules", "rules_json"])]
+        no_rules: bool,
+    },
+    /// Delete a filter list. No task changes.
+    FilterRm { filter_list_id: String },
     /// Create a folder.
     NewFolder {
         #[arg(required = true, num_args = 1.., value_name = "NAME")]
@@ -445,6 +472,64 @@ pub enum WsCommand {
     },
     /// Delete a list and every task in it. Undoable from the app.
     RmList { list_id: String },
+}
+
+/// A filter list's icon and definition, as `filter-new` and `filter-edit`
+/// take them. `takt tools` prints the rule vocabulary.
+#[derive(Args)]
+pub struct FilterArgs {
+    /// An SF Symbol name. Empty clears it.
+    #[arg(long, value_name = "SYMBOL")]
+    icon: Option<String>,
+    /// all (every rule holds) or any (at least one does).
+    #[arg(long = "match", short = 'm', value_name = "all|any")]
+    match_mode: Option<String>,
+    /// open, done or all.
+    #[arg(long, short = 's', value_name = "open|done|all")]
+    show: Option<String>,
+    /// A rule as FIELD:OP or FIELD:OP:VALUE, e.g. tag:has:work or
+    /// due:within:7. Repeat for several; replaces the rules on an edit.
+    #[arg(long = "rule", short = 'r', value_name = "FIELD:OP[:VALUE]")]
+    rules: Vec<String>,
+    /// The rules as a JSON array of {"field", "op", "value"} objects.
+    #[arg(long = "rules", value_name = "JSON", conflicts_with = "rules")]
+    rules_json: Option<String>,
+}
+
+impl FilterArgs {
+    fn insert(&self, arguments: &mut Map<String, Value>) -> Result<()> {
+        insert_if_some(arguments, "icon", self.icon.as_deref());
+        insert_if_some(arguments, "match", self.match_mode.as_deref());
+        insert_if_some(arguments, "show", self.show.as_deref());
+        if let Some(json) = &self.rules_json {
+            let rules: Value = serde_json::from_str(json)
+                .map_err(|error| ToolError::new(format!("--rules is not JSON: {error}")))?;
+            if !rules.is_array() {
+                return Err(ToolError::new(
+                    "--rules must be a JSON array of {\"field\", \"op\", \"value\"} objects.",
+                ));
+            }
+            arguments.insert("rules".into(), rules);
+        } else if !self.rules.is_empty() {
+            let rules = self
+                .rules
+                .iter()
+                .map(|raw| {
+                    let mut parts = raw.splitn(3, ':');
+                    match (parts.next(), parts.next(), parts.next()) {
+                        (Some(field), Some(op), value) if !field.is_empty() && !op.is_empty() => {
+                            Ok(json!({ "field": field, "op": op, "value": value.unwrap_or("") }))
+                        }
+                        _ => Err(ToolError::new(format!(
+                            "expected FIELD:OP or FIELD:OP:VALUE, got `{raw}`"
+                        ))),
+                    }
+                })
+                .collect::<Result<Vec<_>>>()?;
+            arguments.insert("rules".into(), json!(rules));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Args)]
@@ -763,15 +848,18 @@ pub fn resolve(cli: &Cli) -> Result<(String, Map<String, Value>)> {
             // The global --list-id is a Checkvist list. Workspace commands
             // name their own, so it must not leak in as one of theirs.
             arguments.remove("list_id");
-            resolve_workspace(command, &mut arguments)
+            resolve_workspace(command, &mut arguments)?
         }
     };
 
     Ok((name.to_string(), arguments))
 }
 
-fn resolve_workspace(command: &WsCommand, arguments: &mut Map<String, Value>) -> &'static str {
-    match command {
+fn resolve_workspace(
+    command: &WsCommand,
+    arguments: &mut Map<String, Value>,
+) -> Result<&'static str> {
+    Ok(match command {
         WsCommand::Tree { archived } => {
             arguments.insert("include_archived".into(), json!(archived));
             "workspace_tree"
@@ -914,7 +1002,35 @@ fn resolve_workspace(command: &WsCommand, arguments: &mut Map<String, Value>) ->
             arguments.insert("list_id".into(), json!(list_id));
             "workspace_list_delete"
         }
-    }
+        WsCommand::Filters => "workspace_filter_lists",
+        WsCommand::Filter { filter } => {
+            arguments.insert("filter_list".into(), json!(filter.join(" ")));
+            "workspace_filter_list_tasks"
+        }
+        WsCommand::FilterNew { name, definition } => {
+            arguments.insert("name".into(), json!(name.join(" ")));
+            definition.insert(arguments)?;
+            "workspace_filter_list_create"
+        }
+        WsCommand::FilterEdit {
+            filter_list_id,
+            name,
+            definition,
+            no_rules,
+        } => {
+            arguments.insert("filter_list_id".into(), json!(filter_list_id));
+            insert_if_some(arguments, "name", name.as_deref());
+            definition.insert(arguments)?;
+            if *no_rules {
+                arguments.insert("rules".into(), json!([]));
+            }
+            "workspace_filter_list_update"
+        }
+        WsCommand::FilterRm { filter_list_id } => {
+            arguments.insert("filter_list_id".into(), json!(filter_list_id));
+            "workspace_filter_list_delete"
+        }
+    })
 }
 
 fn insert_if_some(arguments: &mut Map<String, Value>, key: &str, value: Option<&str>) {
@@ -969,6 +1085,15 @@ pub fn render(tool: &str, outcome: &ToolOutcome, as_json: bool) {
         "workspace_task_dependencies"
         | "workspace_task_blocker_add"
         | "workspace_task_blocker_remove" => render_workspace_dependencies(payload),
+        "workspace_filter_lists" => {
+            for filter in payload["filter_lists"].as_array().into_iter().flatten() {
+                render_filter_list(filter);
+            }
+        }
+        "workspace_filter_list_create" | "workspace_filter_list_update" => {
+            render_filter_list(payload)
+        }
+        "workspace_filter_list_tasks" => render_filter_list_tasks(payload),
         _ => render_task(payload),
     }
 }
@@ -1459,6 +1584,40 @@ fn render_workspace_dependencies(payload: &Value) {
                 text_of(&task["id"])
             );
         }
+    }
+}
+
+/// Name, id and the core's one-line reading of the rules.
+fn render_filter_list(filter: &Value) {
+    if filter.get("id").is_none() {
+        return render_fallback(filter);
+    }
+    let builtin = if filter["builtin"] == json!(true) {
+        "  (built in)"
+    } else {
+        ""
+    };
+    println!(
+        "  {}{builtin}  {}",
+        text_of(&filter["name"]),
+        text_of(&filter["id"])
+    );
+    println!("      {}", text_of(&filter["summary"]));
+}
+
+/// The filter's reading, then its tasks under a heading per list.
+fn render_filter_list_tasks(payload: &Value) {
+    if payload.get("filter_list").is_none() {
+        return render_fallback(payload);
+    }
+    println!("  {}", text_of(&payload["filter_list"]["summary"]));
+    let mut list = None;
+    for task in payload["tasks"].as_array().into_iter().flatten() {
+        if list != task["list_id"].as_str() {
+            list = task["list_id"].as_str();
+            println!("\n  {}", text_of(&task["list_name"]));
+        }
+        render_workspace_task(task, 1);
     }
 }
 

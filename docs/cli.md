@@ -284,6 +284,15 @@ takt ws new-list Revision --folder <FOLDER_ID>
 takt ws move-list <LIST_ID> --folder <FOLDER_ID>
 takt ws rm <TASK_ID>
 takt ws rm-list <LIST_ID>                     # the list and its tasks
+
+takt ws filters                               # Today, Everything and your filter lists
+takt ws filter Today                          # what one shows now, by id or name
+takt ws filter-new Due work -r tag:has:work -r due:within:7
+takt ws filter-new Stuck -m any -r blocked:is -r waiting:is
+takt ws filter-new Done this week -s done --rules '[{"field":"due","op":"within","value":"7"}]'
+takt ws filter-edit <FILTER_ID> --name "Due soon" -r due:within:3   # rules replace the set
+takt ws filter-edit <FILTER_ID> --no-rules --icon ""                # every open task, no icon
+takt ws filter-rm <FILTER_ID>
 ```
 
 These write while the app is open. Each command is one step in the app's Undo
@@ -294,6 +303,15 @@ zone, through the same Rust core code the app uses (`core/src/tasks.rs`).
 A blocked task — open, and waiting on a task that is still open — is marked
 `(blocked)` in `ws tasks` and listed after its unblocked siblings, as the app
 draws it; a dependency that would make a cycle is refused.
+
+A filter list is a saved question asked of every task rather than a place
+tasks live. Its rules are `FIELD:OP` or `FIELD:OP:VALUE` (everything after the
+second colon is the value), all of which must hold, or any one with
+`-m any`; `-s` picks open, done or all tasks. The rules are evaluated by the
+Rust core (`core/src/filter_lists.rs`), the same code the apps use, in this
+machine's time zone. The fields and their operators are listed in the
+`workspace_filter_list_create` line of `takt tools`. Today and Everything are
+built in and cannot be edited.
 
 ### The escape hatch
 

@@ -1184,6 +1184,270 @@ fn a_workspace_without_dependencies_reads_empty_and_refuses_writes() {
     }
 }
 
+// -- filter lists -------------------------------------------------------------
+
+fn filter_ids(payload: &Value) -> Vec<String> {
+    ids(&payload["filter_lists"])
+}
+
+#[test]
+fn a_filter_list_is_created_listed_edited_and_deleted() {
+    let fixture = Fixture::new();
+    let before = fixture.call("workspace_filter_lists", json!({}));
+    assert_eq!(
+        filter_ids(&before),
+        vec!["builtin:today", "builtin:everything"]
+    );
+    assert_eq!(before["filter_lists"][0]["builtin"], json!(true));
+
+    let steps = fixture.journal().len();
+    let created = fixture.call(
+        "workspace_filter_list_create",
+        json!({
+            "name": "  Reports  ",
+            "icon": "doc.text",
+            "rules": [{ "field": "text", "op": "contains", "value": " report " }],
+        }),
+    );
+    let id = created["id"].as_str().expect("id").to_string();
+    assert_eq!(created["name"], json!("Reports"));
+    assert_eq!(created["icon"], json!("doc.text"));
+    assert_eq!(created["builtin"], json!(false));
+    assert_eq!(created["match"], json!("all"));
+    assert_eq!(created["show"], json!("open"));
+    // The core tidies the value it stores.
+    assert_eq!(created["rules"][0]["value"], json!("report"));
+    assert_eq!(
+        created["summary"],
+        json!("Open tasks where title or notes contains report")
+    );
+
+    let listed = fixture.call("workspace_filter_lists", json!({}));
+    assert_eq!(listed["count"], json!(3));
+    assert_eq!(filter_ids(&listed)[2], id);
+
+    // Only what is named changes; the rules replace the whole set.
+    let edited = fixture.call(
+        "workspace_filter_list_update",
+        json!({
+            "filter_list_id": id,
+            "match": "any",
+            "rules": [
+                { "field": "list", "op": "in", "value": PROJECTS },
+                { "field": "priority", "op": "at-least", "value": 2 },
+            ],
+        }),
+    );
+    assert_eq!(edited["name"], json!("Reports"));
+    assert_eq!(edited["icon"], json!("doc.text"));
+    assert_eq!(edited["match"], json!("any"));
+    assert_eq!(edited["rules"].as_array().map(Vec::len), Some(2));
+    assert_eq!(edited["rules"][1]["value"], json!("2"));
+
+    // A present-but-empty icon clears it.
+    let cleared = fixture.call(
+        "workspace_filter_list_update",
+        json!({ "filter_list_id": id, "icon": "" }),
+    );
+    assert_eq!(cleared["icon"], Value::Null);
+
+    let deleted = fixture.call(
+        "workspace_filter_list_delete",
+        json!({ "filter_list_id": id }),
+    );
+    assert_eq!(deleted["deleted"], json!(id));
+    assert_eq!(deleted["name"], json!("Reports"));
+    assert_eq!(
+        filter_ids(&fixture.call("workspace_filter_lists", json!({}))).len(),
+        2
+    );
+
+    let journal = fixture.journal();
+    assert_eq!(
+        journal[steps..]
+            .iter()
+            .map(|(label, _)| label.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "MCP: New Filter List",
+            "MCP: Edit Filter List",
+            "MCP: Edit Filter List",
+            "MCP: Delete Filter List",
+        ]
+    );
+}
+
+#[test]
+fn a_filter_list_shows_the_tasks_its_rules_match_across_lists() {
+    let fixture = Fixture::new();
+    let report = fixture.add(PROJECTS, "Write the report", None);
+    let milk = fixture.add(PROJECTS, "Buy milk", None);
+    let inbox = fixture.add(INBOX, "Report back", None);
+    fixture.call(
+        "workspace_filter_list_create",
+        json!({
+            "name": "Reports",
+            "rules": [{ "field": "text", "op": "contains", "value": "report" }],
+        }),
+    );
+
+    // By name, in any case; the inbox's tasks come first.
+    let shown = fixture.call(
+        "workspace_filter_list_tasks",
+        json!({ "filter_list": "reports" }),
+    );
+    assert_eq!(shown["filter_list"]["name"], json!("Reports"));
+    assert_eq!(shown["task_count"], json!(2));
+    assert_eq!(ids(&shown["tasks"]), vec![inbox.clone(), report.clone()]);
+    assert_eq!(shown["tasks"][0]["list_name"], json!("Inbox"));
+    assert_eq!(shown["tasks"][1]["list_name"], json!("Projects"));
+    assert_eq!(shown["tasks"][1]["title"], json!("Write the report"));
+
+    // A finished task drops out of an open filter, and is back under all.
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": report, "status": "completed" }),
+    );
+    let shown = fixture.call(
+        "workspace_filter_list_tasks",
+        json!({ "filter_list": "Reports" }),
+    );
+    assert_eq!(ids(&shown["tasks"]), vec![inbox.clone()]);
+
+    // The built-in lists are evaluated the same way, by id or name.
+    let everything = fixture.call(
+        "workspace_filter_list_tasks",
+        json!({ "filter_list": "builtin:everything" }),
+    );
+    assert_eq!(ids(&everything["tasks"]), vec![inbox.clone(), milk.clone()]);
+    fixture.call(
+        "workspace_task_update",
+        json!({ "task_id": milk, "kanban_column": "today" }),
+    );
+    let today = fixture.call(
+        "workspace_filter_list_tasks",
+        json!({ "filter_list": "Today" }),
+    );
+    assert_eq!(today["filter_list"]["id"], json!("builtin:today"));
+    assert_eq!(ids(&today["tasks"]), vec![milk]);
+
+    let error = fixture
+        .try_call(
+            "workspace_filter_list_tasks",
+            json!({ "filter_list": "Nowhere" }),
+        )
+        .unwrap_err();
+    assert!(error.contains("No filter list \"Nowhere\""), "{error}");
+}
+
+#[test]
+fn a_bad_filter_list_write_is_refused_and_leaves_nothing_behind() {
+    let fixture = Fixture::new();
+    let created = fixture.call("workspace_filter_list_create", json!({ "name": "Kept" }));
+    let id = created["id"].as_str().expect("id").to_string();
+    let before = fixture.journal();
+
+    for (arguments, expected) in [
+        (
+            json!({ "name": "X", "rules": [{ "field": "colour", "op": "is", "value": "red" }] }),
+            "There is no filter field \"colour\"",
+        ),
+        (
+            json!({ "name": "X", "rules": [{ "field": "due", "op": "within" }] }),
+            "needs a whole number",
+        ),
+        (json!({ "name": "X", "match": "some" }), "is not all or any"),
+        (
+            json!({ "name": "X", "rules": "tag:has:work" }),
+            "rules must be an array",
+        ),
+        (json!({ "name": "   " }), "name"),
+    ] {
+        let error = fixture
+            .try_call("workspace_filter_list_create", arguments)
+            .unwrap_err();
+        assert!(error.contains(expected), "{expected}: {error}");
+    }
+    for (tool, arguments, expected) in [
+        (
+            "workspace_filter_list_update",
+            json!({ "filter_list_id": "builtin:today", "name": "Mine" }),
+            "built in",
+        ),
+        (
+            "workspace_filter_list_delete",
+            json!({ "filter_list_id": "builtin:everything" }),
+            "built in",
+        ),
+        (
+            "workspace_filter_list_update",
+            json!({ "filter_list_id": "MISSING", "name": "Mine" }),
+            "No filter list with id MISSING",
+        ),
+        (
+            "workspace_filter_list_delete",
+            json!({ "filter_list_id": "MISSING" }),
+            "No filter list with id MISSING",
+        ),
+        (
+            "workspace_filter_list_update",
+            json!({ "filter_list_id": id, "show": "later" }),
+            "is not open, done or all",
+        ),
+        (
+            "workspace_filter_list_update",
+            json!({ "filter_list_id": id }),
+            "No updates provided",
+        ),
+    ] {
+        let error = fixture.try_call(tool, arguments).unwrap_err();
+        assert!(error.contains(expected), "{tool} {expected}: {error}");
+    }
+
+    assert_eq!(fixture.journal(), before);
+    let rows: i64 = fixture.scalar("SELECT COUNT(*) FROM filter_lists WHERE id <> ?1", "");
+    assert_eq!(rows, 1);
+}
+
+#[test]
+fn a_workspace_without_filter_lists_reads_the_built_ins_and_refuses_writes() {
+    let fixture = Fixture::new();
+    let task = fixture.add(PROJECTS, "Old", None);
+    fixture
+        .db()
+        .execute_batch(
+            "DROP TABLE filter_lists;
+             DELETE FROM grdb_migrations WHERE identifier = 'v23_filter_lists';",
+        )
+        .unwrap();
+
+    let listed = fixture.call("workspace_filter_lists", json!({}));
+    assert_eq!(
+        filter_ids(&listed),
+        vec!["builtin:today", "builtin:everything"]
+    );
+    let everything = fixture.call(
+        "workspace_filter_list_tasks",
+        json!({ "filter_list": "Everything" }),
+    );
+    assert_eq!(ids(&everything["tasks"]), vec![task]);
+
+    for (tool, arguments) in [
+        ("workspace_filter_list_create", json!({ "name": "New" })),
+        (
+            "workspace_filter_list_update",
+            json!({ "filter_list_id": "ANY", "name": "New" }),
+        ),
+        (
+            "workspace_filter_list_delete",
+            json!({ "filter_list_id": "ANY" }),
+        ),
+    ] {
+        let error = fixture.try_call(tool, arguments).unwrap_err();
+        assert!(error.contains("predates filter lists"), "{tool}: {error}");
+    }
+}
+
 // -- the command line reaches the same tools ----------------------------------
 
 #[test]
@@ -1243,7 +1507,70 @@ fn the_ws_subcommands_resolve_to_the_workspace_tools() {
     assert_eq!(name, "workspace_task_blocker_remove");
     assert_eq!(arguments["blocked_by_task_id"], json!("B"));
 
+    let (name, arguments) = resolved(&[
+        "ws",
+        "filter-new",
+        "Due",
+        "work",
+        "-m",
+        "any",
+        "-r",
+        "tag:has:work",
+        "-r",
+        "due:within:7",
+        "-r",
+        "text:contains:a:b",
+        "-r",
+        "due:overdue",
+    ]);
+    assert_eq!(name, "workspace_filter_list_create");
+    assert_eq!(arguments["name"], json!("Due work"));
+    assert_eq!(arguments["match"], json!("any"));
+    assert_eq!(
+        arguments["rules"],
+        json!([
+            { "field": "tag", "op": "has", "value": "work" },
+            { "field": "due", "op": "within", "value": "7" },
+            { "field": "text", "op": "contains", "value": "a:b" },
+            { "field": "due", "op": "overdue", "value": "" },
+        ])
+    );
+    let (_, arguments) = resolved(&[
+        "ws",
+        "filter-new",
+        "J",
+        "--rules",
+        r#"[{"field":"tag","op":"any"}]"#,
+    ]);
+    assert_eq!(arguments["rules"], json!([{ "field": "tag", "op": "any" }]));
+
+    let (name, arguments) = resolved(&["ws", "filter-edit", "F", "--no-rules", "-s", "all"]);
+    assert_eq!(name, "workspace_filter_list_update");
+    assert_eq!(arguments["filter_list_id"], json!("F"));
+    assert_eq!(arguments["rules"], json!([]));
+    assert_eq!(arguments["show"], json!("all"));
+    assert_eq!(arguments.get("name"), None);
+
+    let (name, arguments) = resolved(&["ws", "filter", "Due", "work"]);
+    assert_eq!(name, "workspace_filter_list_tasks");
+    assert_eq!(arguments["filter_list"], json!("Due work"));
+
+    for bad in [
+        &["ws", "filter-new", "X", "-r", "tag"][..],
+        &["ws", "filter-new", "X", "--rules", "{}"][..],
+        &["ws", "filter-new", "X", "--rules", "nope"][..],
+    ] {
+        let cli = Cli::try_parse_from(std::iter::once("priority").chain(bad.iter().copied()))
+            .expect("parses");
+        assert!(resolve(&cli).is_err(), "{bad:?}");
+    }
+
     for (args, tool) in [
+        (&["ws", "filters"][..], "workspace_filter_lists"),
+        (
+            &["ws", "filter-rm", "F"][..],
+            "workspace_filter_list_delete",
+        ),
         (&["ws", "tree"][..], "workspace_tree"),
         (&["ws", "tasks", "L"][..], "workspace_tasks"),
         (

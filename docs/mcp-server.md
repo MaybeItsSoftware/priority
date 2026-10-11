@@ -14,7 +14,7 @@ Takt ships an MCP stdio server so an AI assistant can work directly with your Ch
 
 ## What It Can Do
 
-The server exposes 37 MCP tools, in three groups.
+The server exposes 42 MCP tools, in three groups.
 
 **Checkvist tools** — these reach the Checkvist API directly, so they work
 whether or not the app is running:
@@ -70,6 +70,11 @@ workspace's uppercase UUIDs, not Checkvist's integers:
 | `workspace_task_delete` | Delete a task and its subtree | write |
 | `workspace_task_blocker_add` | Make `task_id` wait on `blocked_by_task_id` (any list) until it is done; a cycle is refused | write |
 | `workspace_task_blocker_remove` | Stop `task_id` waiting on `blocked_by_task_id` | write |
+| `workspace_filter_lists` | Filter lists (saved rule sets over every task): built-in Today and Everything first, then the user's, each with id, name, icon, a one-line summary, `match`, `show` and `rules` | read |
+| `workspace_filter_list_tasks` | The tasks a filter list (by id, `builtin:today` included, or name) shows now, evaluated by the Rust core in this machine's time zone, list by list | read |
+| `workspace_filter_list_create` | Create a filter list from a name, optional icon, `match` (all/any), `show` (open/done/all) and `rules` (`{field, op, value}`; the description lists the vocabulary) | write |
+| `workspace_filter_list_update` | Change a filter list's name, icon, match, show or rules (replaced whole); the built-ins are refused | write |
+| `workspace_filter_list_delete` | Delete a filter list; no task changes | write |
 | `workspace_folder_create` | Create a folder, optionally inside another | write |
 | `workspace_list_create` | Create a list, optionally in a folder | write |
 | `workspace_list_move` | Move a list into a folder, or to the top level | write |
@@ -244,7 +249,7 @@ python3 scripts/mcp_smoke_check.py   # needs a Debug app build
 ```
 
 It drives both spellings above and checks they answer `initialize` and expose
-the same 37 tools — in particular that an old-style invocation, with
+the same 42 tools — in particular that an old-style invocation, with
 credentials in `env`, still reaches a working server. It reads no real data and
 needs no Checkvist credentials.
 

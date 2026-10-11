@@ -656,6 +656,44 @@ fn workspace_tool_definitions() -> Vec<Value> {
         "type": ["string", "null"],
         "description": "Kanban column id, e.g. backlog, in-progress, this-week, waiting-on, today (the defaults). Null or \"\" clears it, which puts the card in the board's first column.",
     });
+    // Filter lists. The rule vocabulary is the Rust core's catalog, written
+    // out here so an assistant can build rules without a lookup first.
+    let rule_help = format!(
+        "Each rule is {{field, op, value}}; value is left out where the op takes none. \
+         Fields and their ops: {}. Value kinds: tag without #; days, minutes and number \
+         are whole numbers (due within 0 means due by today, overdue included); date is \
+         yyyy-mm-dd; lists is comma-separated list ids and folder a folder id, both from \
+         workspace_tree; column a kanban column id; text matches title or notes. \
+         Example: tagged work and due within a week is \
+         [{{\"field\":\"tag\",\"op\":\"has\",\"value\":\"work\"}},\
+         {{\"field\":\"due\",\"op\":\"within\",\"value\":\"7\"}}].",
+        crate::workspace_tasks::rule_catalog_text()
+    );
+    let icon = json!({
+        "type": ["string", "null"],
+        "description": "An SF Symbol name, e.g. line.3.horizontal.decrease. Null or \"\" clears it.",
+    });
+    let match_mode = json!({
+        "type": "string", "enum": ["all", "any"],
+        "description": "all: every rule must hold (the default). any: at least one.",
+    });
+    let show = json!({
+        "type": "string", "enum": ["open", "done", "all"],
+        "description": "Which tasks by status: open (the default), done (completed or cancelled) or all.",
+    });
+    let rules = json!({
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "field": { "type": "string", "enum": crate::workspace_tasks::rule_fields() },
+                "op": { "type": "string" },
+                "value": { "type": ["string", "integer"] },
+            },
+            "required": ["field", "op"],
+            "additionalProperties": false,
+        },
+    });
 
     vec![
         json!({
@@ -806,6 +844,70 @@ fn workspace_tool_definitions() -> Vec<Value> {
                     "blocked_by_task_id": id("The task it waits on."),
                 },
                 "required": ["task_id", "blocked_by_task_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_filter_lists",
+            "description": "Takt's filter lists (smart lists): saved rule sets asked of every task rather than places tasks live. The built-in Today (open tasks planned for today or due by today) and Everything (every open task) come first, then the user's own in sidebar order, each with id, name, icon, a one-line summary, match, show and rules.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_filter_list_tasks",
+            "description": "The tasks a filter list shows right now, evaluated by the Rust core as the app does in this machine's time zone: open lists only, list by list in outline order, each task with its list_name and blocked: true where it waits on an open task.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "filter_list": id("An id from workspace_filter_lists (builtin:today and builtin:everything included), or a filter list's name."),
+                },
+                "required": ["filter_list"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_filter_list_create",
+            "description": format!("Create a filter list at the end of the sidebar's. It shows the tasks whose status `show` admits and whose rules hold: every rule with match all, at least one with any; no rules shows every task `show` admits. {rule_help}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "minLength": 1 },
+                    "icon": icon.clone(),
+                    "match": match_mode.clone(),
+                    "show": show.clone(),
+                    "rules": rules.clone(),
+                },
+                "required": ["name"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_filter_list_update",
+            "description": format!("Change a filter list's name, icon, match, show or rules (rules replaces the whole set). Fields left out are unchanged; one call is one undo step. Today and Everything are built in and cannot be edited. {rule_help}"),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "filter_list_id": id("From workspace_filter_lists."),
+                    "name": { "type": "string", "minLength": 1 },
+                    "icon": icon,
+                    "match": match_mode,
+                    "show": show,
+                    "rules": rules,
+                },
+                "required": ["filter_list_id"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
+            "name": "workspace_filter_list_delete",
+            "description": "Delete a filter list. No task changes: a filter list never held any. Today and Everything cannot be deleted. Undoable from Takt's Undo menu.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "filter_list_id": id("From workspace_filter_lists.") },
+                "required": ["filter_list_id"],
                 "additionalProperties": false,
             },
         }),

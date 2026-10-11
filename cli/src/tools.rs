@@ -497,6 +497,50 @@ impl Tools {
                 Ok(outcome(title, payload))
             }
 
+            "workspace_filter_lists" => {
+                let payload = self.workspace.filter_lists()?;
+                Ok(outcome(
+                    format!("Filter lists ({})", payload["count"]),
+                    payload,
+                ))
+            }
+
+            "workspace_filter_list_tasks" => {
+                let key = required_string(arguments, "filter_list")?;
+                let payload = self.workspace.filter_list_tasks(&key)?;
+                let title = format!(
+                    "\"{}\" ({} task(s))",
+                    payload["filter_list"]["name"].as_str().unwrap_or(&key),
+                    payload["task_count"]
+                );
+                Ok(outcome(title, payload))
+            }
+
+            "workspace_filter_list_create" => {
+                required_string(arguments, "name")?;
+                Ok(outcome(
+                    "Filter list created",
+                    self.workspace.create_filter_list(filter_edit(arguments)?)?,
+                ))
+            }
+
+            "workspace_filter_list_update" => {
+                let id = required_string(arguments, "filter_list_id")?;
+                Ok(outcome(
+                    "Filter list updated",
+                    self.workspace
+                        .update_filter_list(id.trim(), filter_edit(arguments)?)?,
+                ))
+            }
+
+            "workspace_filter_list_delete" => {
+                let id = required_string(arguments, "filter_list_id")?;
+                Ok(outcome(
+                    "Filter list deleted",
+                    self.workspace.delete_filter_list(id.trim())?,
+                ))
+            }
+
             "workspace_folder_create" => {
                 let name = required_string(arguments, "name")?;
                 let parent = as_id(arguments.get("parent_folder_id"));
@@ -567,6 +611,58 @@ pub fn as_string_list(value: Option<&Value>) -> Result<Option<Vec<String>>> {
             type_name(other)
         ))),
     }
+}
+
+/// A filter list's name, icon and definition from a create or update call.
+/// A present-but-null or empty icon clears it; absent leaves it.
+fn filter_edit(arguments: &Map<String, Value>) -> Result<crate::workspace_tasks::FilterEdit> {
+    Ok(crate::workspace_tasks::FilterEdit {
+        name: as_string(arguments.get("name")),
+        icon: arguments.get("icon").map(|value| as_id(Some(value))),
+        match_mode: as_string(arguments.get("match")),
+        show: as_string(arguments.get("show")),
+        rules: as_filter_rules(arguments.get("rules"))?,
+    })
+}
+
+/// An array of `{field, op, value}` objects. `value` may be a number, and
+/// may be left out for an operator that takes none.
+fn as_filter_rules(
+    value: Option<&Value>,
+) -> Result<Option<Vec<takt_core::filter_lists::FilterRule>>> {
+    let items = match value {
+        None | Some(Value::Null) => return Ok(None),
+        Some(Value::Array(items)) => items,
+        Some(other) => {
+            return Err(ToolError::new(format!(
+                "rules must be an array of {{field, op, value}} objects, got {}.",
+                type_name(other)
+            )));
+        }
+    };
+    items
+        .iter()
+        .map(|item| {
+            let Value::Object(rule) = item else {
+                return Err(ToolError::new(format!(
+                    "Each rule must be a {{field, op, value}} object, got {}.",
+                    type_name(item)
+                )));
+            };
+            let part = |key: &str| {
+                as_string(rule.get(key))
+                    .map(|text| text.trim().to_string())
+                    .filter(|text| !text.is_empty())
+                    .ok_or_else(|| ToolError::new(format!("A rule is missing its {key}.")))
+            };
+            Ok(takt_core::filter_lists::FilterRule {
+                field: part("field")?.to_lowercase(),
+                op: part("op")?.to_lowercase(),
+                value: as_string(rule.get("value")).unwrap_or_default(),
+            })
+        })
+        .collect::<Result<Vec<_>>>()
+        .map(Some)
 }
 
 fn outcome(title: impl Into<String>, payload: Value) -> ToolOutcome {

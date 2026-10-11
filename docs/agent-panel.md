@@ -106,15 +106,16 @@ to the assistant and not shown in the transcript.
 ## Tool policy
 
 Classified in `core/src/agent_tools.rs`, which the CLI's tests hold to its
-whole tool table (37 tools):
+whole tool table (42 tools):
 
 **Read-only, pre-allowed** — shown as one muted line each (`task_search · milk`):
 
 `task_lists`, `task_fetch`, `task_search`, `task_metadata`, `daily_log_fetch`,
 `dailies_list`, `focus_status`, `focus_history`, `workspace_tree`,
-`workspace_tasks`, `workspace_task_dependencies`
+`workspace_tasks`, `workspace_task_dependencies`, `workspace_filter_lists`,
+`workspace_filter_list_tasks`
 
-**Writes, asked every time** — the other 26:
+**Writes, asked every time** — the other 29:
 
 `task_add`, `task_update`, `task_note_add`, `task_move`, `task_reparent`,
 `project_move`, `task_complete`, `task_reopen`, `task_invalidate`,
@@ -122,7 +123,8 @@ whole tool table (37 tools):
 `daily_tick`, `workspace_task_add`, `workspace_task_update`,
 `workspace_task_move`, `workspace_task_to_list`, `workspace_task_delete`,
 `workspace_task_blocker_add`, `workspace_task_blocker_remove`,
-`workspace_folder_create`, `workspace_list_create`, `workspace_list_move`,
+`workspace_filter_list_create`, `workspace_filter_list_update`,
+`workspace_filter_list_delete`, `workspace_folder_create`, `workspace_list_create`, `workspace_list_move`,
 `workspace_list_delete`
 
 The CLI's `every_declared_tool_is_classified_as_a_read_or_a_write` test holds
