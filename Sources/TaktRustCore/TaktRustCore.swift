@@ -10264,6 +10264,240 @@ public func FfiConverterTypeDeletedTask_lower(_ value: DeletedTask) -> RustBuffe
 
 
 /**
+ * The estimate's own check: the minutes shown can read the same while the
+ * seconds underneath differ, so an edited estimate is held to the seconds.
+ */
+public struct EditorEstimateCheck: Equatable, Hashable {
+    /**
+     * Which of the comparisons is the estimate.
+     */
+    public var fieldIndex: UInt32
+    public var draftText: String
+    public var savedText: String
+    public var baselineSeconds: Int64?
+    public var savedSeconds: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Which of the comparisons is the estimate.
+         */fieldIndex: UInt32, draftText: String, savedText: String, baselineSeconds: Int64?, savedSeconds: Int64?) {
+        self.fieldIndex = fieldIndex
+        self.draftText = draftText
+        self.savedText = savedText
+        self.baselineSeconds = baselineSeconds
+        self.savedSeconds = savedSeconds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditorEstimateCheck: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditorEstimateCheck: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditorEstimateCheck {
+        return
+            try EditorEstimateCheck(
+                fieldIndex: FfiConverterUInt32.read(from: &buf), 
+                draftText: FfiConverterString.read(from: &buf), 
+                savedText: FfiConverterString.read(from: &buf), 
+                baselineSeconds: FfiConverterOptionInt64.read(from: &buf), 
+                savedSeconds: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditorEstimateCheck, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.fieldIndex, into: &buf)
+        FfiConverterString.write(value.draftText, into: &buf)
+        FfiConverterString.write(value.savedText, into: &buf)
+        FfiConverterOptionInt64.write(value.baselineSeconds, into: &buf)
+        FfiConverterOptionInt64.write(value.savedSeconds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorEstimateCheck_lift(_ buf: RustBuffer) throws -> EditorEstimateCheck {
+    return try FfiConverterTypeEditorEstimateCheck.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorEstimateCheck_lower(_ value: EditorEstimateCheck) -> RustBuffer {
+    return FfiConverterTypeEditorEstimateCheck.lower(value)
+}
+
+
+/**
+ * One field of an open draft, compared by the platform holding it.
+ */
+public struct EditorFieldComparison: Equatable, Hashable {
+    /**
+     * The draft's value equals the newly saved one.
+     */
+    public var draftMatchesSaved: Bool
+    /**
+     * The draft's value equals the one it was opened from.
+     */
+    public var draftMatchesBaseline: Bool
+    /**
+     * The saved value equals the one the draft was opened from.
+     */
+    public var savedMatchesBaseline: Bool
+    /**
+     * The field is already marked as conflicting.
+     */
+    public var inConflict: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The draft's value equals the newly saved one.
+         */draftMatchesSaved: Bool, 
+        /**
+         * The draft's value equals the one it was opened from.
+         */draftMatchesBaseline: Bool, 
+        /**
+         * The saved value equals the one the draft was opened from.
+         */savedMatchesBaseline: Bool, 
+        /**
+         * The field is already marked as conflicting.
+         */inConflict: Bool) {
+        self.draftMatchesSaved = draftMatchesSaved
+        self.draftMatchesBaseline = draftMatchesBaseline
+        self.savedMatchesBaseline = savedMatchesBaseline
+        self.inConflict = inConflict
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditorFieldComparison: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditorFieldComparison: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditorFieldComparison {
+        return
+            try EditorFieldComparison(
+                draftMatchesSaved: FfiConverterBool.read(from: &buf), 
+                draftMatchesBaseline: FfiConverterBool.read(from: &buf), 
+                savedMatchesBaseline: FfiConverterBool.read(from: &buf), 
+                inConflict: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditorFieldComparison, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.draftMatchesSaved, into: &buf)
+        FfiConverterBool.write(value.draftMatchesBaseline, into: &buf)
+        FfiConverterBool.write(value.savedMatchesBaseline, into: &buf)
+        FfiConverterBool.write(value.inConflict, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorFieldComparison_lift(_ buf: RustBuffer) throws -> EditorFieldComparison {
+    return try FfiConverterTypeEditorFieldComparison.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorFieldComparison_lower(_ value: EditorFieldComparison) -> RustBuffer {
+    return FfiConverterTypeEditorFieldComparison.lower(value)
+}
+
+
+/**
+ * What to do with one field when a save lands.
+ */
+public struct EditorFieldOutcome: Equatable, Hashable {
+    /**
+     * Take the saved value: the field was untouched in the draft.
+     */
+    public var followSaved: Bool
+    /**
+     * Mark the field conflicting (`true`), clear it (`false`), or leave it.
+     */
+    public var conflict: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Take the saved value: the field was untouched in the draft.
+         */followSaved: Bool, 
+        /**
+         * Mark the field conflicting (`true`), clear it (`false`), or leave it.
+         */conflict: Bool?) {
+        self.followSaved = followSaved
+        self.conflict = conflict
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditorFieldOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditorFieldOutcome: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditorFieldOutcome {
+        return
+            try EditorFieldOutcome(
+                followSaved: FfiConverterBool.read(from: &buf), 
+                conflict: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditorFieldOutcome, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.followSaved, into: &buf)
+        FfiConverterOptionBool.write(value.conflict, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorFieldOutcome_lift(_ buf: RustBuffer) throws -> EditorFieldOutcome {
+    return try FfiConverterTypeEditorFieldOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditorFieldOutcome_lower(_ value: EditorFieldOutcome) -> RustBuffer {
+    return FfiConverterTypeEditorFieldOutcome.lower(value)
+}
+
+
+/**
  * The parts of a task's metadata the editor shows.
  */
 public struct EditorMetadata: Equatable, Hashable {
@@ -17283,6 +17517,11 @@ enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
      */
     case Checkvist(detail: String
     )
+    /**
+     * An estimate or minimum block typed in minutes that does not read as
+     * one (`editor_draft.rs`).
+     */
+    case InvalidEstimate
 
     
 
@@ -17368,6 +17607,7 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
         case 29: return .Checkvist(
             detail: try FfiConverterString.read(from: &buf)
             )
+        case 30: return .InvalidEstimate
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -17509,6 +17749,10 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(29))
             FfiConverterString.write(detail, into: &buf)
             
+        
+        case .InvalidEstimate:
+            writeInt(&buf, Int32(30))
+        
         }
     }
 }
@@ -20582,6 +20826,30 @@ fileprivate struct FfiConverterOptionTypeDailyRow: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeEditorEstimateCheck: FfiConverterRustBuffer {
+    typealias SwiftType = EditorEstimateCheck?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEditorEstimateCheck.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEditorEstimateCheck.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeFilterDefinition: FfiConverterRustBuffer {
     typealias SwiftType = FilterDefinition?
 
@@ -22074,6 +22342,56 @@ fileprivate struct FfiConverterSequenceTypeDayLogRecord: FfiConverterRustBuffer 
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeDayLogRecord.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeEditorFieldComparison: FfiConverterRustBuffer {
+    typealias SwiftType = [EditorFieldComparison]
+
+    public static func write(_ value: [EditorFieldComparison], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEditorFieldComparison.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EditorFieldComparison] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EditorFieldComparison]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEditorFieldComparison.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeEditorFieldOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = [EditorFieldOutcome]
+
+    public static func write(_ value: [EditorFieldOutcome], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEditorFieldOutcome.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EditorFieldOutcome] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EditorFieldOutcome]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEditorFieldOutcome.read(from: &buf))
         }
         return seq
     }
@@ -24275,6 +24593,49 @@ public func dayLogWeeklyBuckets(events: [DayLogRecord], boundary: DayLogBoundary
 })
 }
 /**
+ * A stored number of seconds as the editor shows it in minutes: a whole
+ * number of minutes plainly when `whole_minutes_plainly` (`45`), and
+ * otherwise as Swift prints the quotient (`1.5`, `2.0`, `0.25`).
+ */
+public func editorMinutesText(seconds: Int64, wholeMinutesPlainly: Bool) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_editor_minutes_text(
+        FfiConverterInt64.lower(seconds),
+        FfiConverterBool.lower(wholeMinutesPlainly),uniffiCallStatus
+    )
+})
+}
+/**
+ * Minutes as typed (`45`, `1.5`, `.25`), to whole seconds rounded half away
+ * from zero; nothing when blank. Refuses anything else, a negative or a
+ * value too large to hold.
+ */
+public func editorParseMinutes(raw: String)throws  -> Int64?  {
+    return try  FfiConverterOptionInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_editor_parse_minutes(
+        FfiConverterString.lower(raw),uniffiCallStatus
+    )
+})
+}
+/**
+ * Folds a save into an open draft, field by field: a field that now agrees
+ * with the save is settled; one the draft changed (or that already
+ * conflicted) conflicts if the save changed it too; any other follows the
+ * save. An edited estimate whose seconds the save changed conflicts unless
+ * what was typed reads as exactly the saved seconds.
+ */
+public func editorReconcile(fields: [EditorFieldComparison], estimate: EditorEstimateCheck?) -> [EditorFieldOutcome]  {
+    return try!  FfiConverterSequenceTypeEditorFieldOutcome.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_takt_core_fn_func_editor_reconcile(
+        FfiConverterSequenceTypeEditorFieldComparison.lower(fields),
+        FfiConverterOptionTypeEditorEstimateCheck.lower(estimate),uniffiCallStatus
+    )
+})
+}
+/**
  * Today and Everything as definitions, in sidebar order.
  */
 public func builtinFilterLists() -> [FilterListRow]  {
@@ -25780,6 +26141,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_day_log_weekly_buckets() != 50056) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_editor_minutes_text() != 55346) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_editor_parse_minutes() != 37150) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_takt_core_checksum_func_editor_reconcile() != 52223) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_takt_core_checksum_func_builtin_filter_lists() != 21554) {

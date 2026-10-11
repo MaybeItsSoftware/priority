@@ -24,6 +24,7 @@ pub mod dailies;
 pub mod day_log;
 pub mod dependencies;
 pub mod editor;
+pub mod editor_draft;
 pub mod error;
 pub mod export;
 pub mod filter_lists;

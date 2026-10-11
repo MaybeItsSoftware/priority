@@ -643,6 +643,27 @@ covered the old copies pass against it.
     rearrangement swapped in the planned card for an id and Swift the bare
     id, which both still do over the core's ids.
 
+    **The task editor's draft (done 2026-10-12).** `core/src/editor_draft.rs`
+    holds the rules both drafts had written out: an estimate or minimum
+    block typed in minutes read to whole seconds (`editor_parse_minutes`,
+    the same pattern, rounding and range refusal), seconds shown back as
+    minutes the way Swift prints a `Double` (`editor_minutes_text`), and
+    the three-way reconcile a save underneath an open draft goes through
+    (`editor_reconcile`): each field crosses as four booleans the platform
+    worked out with its own equality, plus the estimate's texts and
+    seconds for the rule that a dirty estimate whose text matches but whose
+    seconds moved still conflicts, and each field comes back as follow the
+    save or not and set, clear or keep its conflict. Swift's and Kotlin's
+    `TaskEditorDraft` keep their types and fields and call it; Kotlin's
+    `swiftDouble` is gone. The save's own shaping (trimming the title,
+    normalising tags and links, the planning record) stays in the drafts,
+    because it ends in the core's `save_editor`, which normalises the same
+    values again; Android's `InspectorValidation` stays native as per-field
+    wording under a text field. The dead Kotlin store helpers left from
+    before step 4 (`moveSubtree`, `normalizedVisibleRootName`,
+    `persistTaskOrder`, `taskDescendantIDs`, `encodeStringArray`) are
+    deleted; `upsertKanbanColumn` waits for the board pass.
+
 ## Risks
 
 - **App size and build time.** An app build already needs cargo for the

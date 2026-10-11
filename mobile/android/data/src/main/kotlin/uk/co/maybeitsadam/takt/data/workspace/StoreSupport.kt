@@ -1,6 +1,5 @@
 package uk.co.maybeitsadam.takt.data.workspace
 
-import java.time.Instant
 import java.util.Locale
 import java.util.UUID
 import kotlinx.serialization.json.Json
@@ -94,33 +93,10 @@ internal fun jsonString(value: String): String = buildString {
     append('"')
 }
 
-internal fun encodeStringArray(values: List<String>): String = values.joinToString(",", "[", "]") { jsonString(it) }
-
 // The store's static helpers.
 
 internal fun Db.nextOrder(table: String, whereSQL: String, vararg args: Any?): Int =
     int("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM $table WHERE $whereSQL", *args) ?: 0
-
-internal fun Db.persistTaskOrder(tasks: List<WorkspaceTask>, now: Instant) {
-    tasks.forEachIndexed { index, task -> update(task.copy(sortOrder = index, updatedAt = now)) }
-}
-
-internal fun Db.taskDescendantIDs(taskId: String): Set<String> = descendantIDs("tasks", "parentTaskId", taskId)
-
-private fun Db.descendantIDs(table: String, parentColumn: String, rootId: String): Set<String> {
-    val descendants = LinkedHashSet<String>()
-    var frontier = listOf(rootId)
-    while (frontier.isNotEmpty()) {
-        val children = frontier.chunked(500).flatMap { chunk ->
-            strings(
-                "SELECT id FROM $table WHERE $parentColumn IN (${chunk.joinToString(",") { "?" }})",
-                *chunk.toTypedArray(),
-            )
-        }
-        frontier = children.filter { descendants.add(it) }
-    }
-    return descendants
-}
 
 /** Swift's `nilIfEmpty` after trimming. */
 internal fun String?.trimmedOrNull(): String? = this?.trimmedWhitespace()?.takeIf { it.isNotEmpty() }

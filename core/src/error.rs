@@ -69,6 +69,10 @@ pub enum CoreError {
     /// not read (`checkvist.rs`).
     #[error("{detail}")]
     Checkvist { detail: String },
+    /// An estimate or minimum block typed in minutes that does not read as
+    /// one (`editor_draft.rs`).
+    #[error("Enter a non-negative number of minutes within the supported range.")]
+    InvalidEstimate,
 }
 
 impl From<rusqlite::Error> for CoreError {

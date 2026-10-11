@@ -801,6 +801,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_takt_core_checksum_func_day_log_weekly_buckets(
     ): Int
+    external fun uniffi_takt_core_checksum_func_editor_minutes_text(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_editor_parse_minutes(
+    ): Int
+    external fun uniffi_takt_core_checksum_func_editor_reconcile(
+    ): Int
     external fun uniffi_takt_core_checksum_func_builtin_filter_lists(
     ): Int
     external fun uniffi_takt_core_checksum_func_describe_filter_definition(
@@ -1949,6 +1955,12 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_day_log_weekly_buckets(`events`: RustBuffer.ByValue,`boundary`: RustBuffer.ByValue,`endingOnMs`: Long,`weeks`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_editor_minutes_text(`seconds`: Long,`wholeMinutesPlainly`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_editor_parse_minutes(`raw`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_takt_core_fn_func_editor_reconcile(`fields`: RustBuffer.ByValue,`estimate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_builtin_filter_lists(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_takt_core_fn_func_describe_filter_definition(`definition`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2457,6 +2469,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_day_log_weekly_buckets() and 0xFFFF) != 50056) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_editor_minutes_text() and 0xFFFF) != 55346) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_editor_parse_minutes() and 0xFFFF) != 37150) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_takt_core_checksum_func_editor_reconcile() and 0xFFFF) != 52223) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_takt_core_checksum_func_builtin_filter_lists() and 0xFFFF) != 21554) {
@@ -13469,6 +13490,176 @@ public object FfiConverterTypeDeletedTask: FfiConverterRustBuffer<DeletedTask> {
 
 
 /**
+ * The estimate's own check: the minutes shown can read the same while the
+ * seconds underneath differ, so an edited estimate is held to the seconds.
+ */
+data class EditorEstimateCheck (
+    /**
+     * Which of the comparisons is the estimate.
+     */
+    var `fieldIndex`: kotlin.UInt
+    , 
+    var `draftText`: kotlin.String
+    , 
+    var `savedText`: kotlin.String
+    , 
+    var `baselineSeconds`: kotlin.Long?
+    , 
+    var `savedSeconds`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEditorEstimateCheck: FfiConverterRustBuffer<EditorEstimateCheck> {
+    override fun read(buf: ByteBuffer): EditorEstimateCheck {
+        return EditorEstimateCheck(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EditorEstimateCheck) = (
+            FfiConverterUInt.allocationSize(value.`fieldIndex`) +
+            FfiConverterString.allocationSize(value.`draftText`) +
+            FfiConverterString.allocationSize(value.`savedText`) +
+            FfiConverterOptionalLong.allocationSize(value.`baselineSeconds`) +
+            FfiConverterOptionalLong.allocationSize(value.`savedSeconds`)
+    )
+
+    override fun write(value: EditorEstimateCheck, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`fieldIndex`, buf)
+            FfiConverterString.write(value.`draftText`, buf)
+            FfiConverterString.write(value.`savedText`, buf)
+            FfiConverterOptionalLong.write(value.`baselineSeconds`, buf)
+            FfiConverterOptionalLong.write(value.`savedSeconds`, buf)
+    }
+}
+
+
+
+/**
+ * One field of an open draft, compared by the platform holding it.
+ */
+data class EditorFieldComparison (
+    /**
+     * The draft's value equals the newly saved one.
+     */
+    var `draftMatchesSaved`: kotlin.Boolean
+    , 
+    /**
+     * The draft's value equals the one it was opened from.
+     */
+    var `draftMatchesBaseline`: kotlin.Boolean
+    , 
+    /**
+     * The saved value equals the one the draft was opened from.
+     */
+    var `savedMatchesBaseline`: kotlin.Boolean
+    , 
+    /**
+     * The field is already marked as conflicting.
+     */
+    var `inConflict`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEditorFieldComparison: FfiConverterRustBuffer<EditorFieldComparison> {
+    override fun read(buf: ByteBuffer): EditorFieldComparison {
+        return EditorFieldComparison(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EditorFieldComparison) = (
+            FfiConverterBoolean.allocationSize(value.`draftMatchesSaved`) +
+            FfiConverterBoolean.allocationSize(value.`draftMatchesBaseline`) +
+            FfiConverterBoolean.allocationSize(value.`savedMatchesBaseline`) +
+            FfiConverterBoolean.allocationSize(value.`inConflict`)
+    )
+
+    override fun write(value: EditorFieldComparison, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`draftMatchesSaved`, buf)
+            FfiConverterBoolean.write(value.`draftMatchesBaseline`, buf)
+            FfiConverterBoolean.write(value.`savedMatchesBaseline`, buf)
+            FfiConverterBoolean.write(value.`inConflict`, buf)
+    }
+}
+
+
+
+/**
+ * What to do with one field when a save lands.
+ */
+data class EditorFieldOutcome (
+    /**
+     * Take the saved value: the field was untouched in the draft.
+     */
+    var `followSaved`: kotlin.Boolean
+    , 
+    /**
+     * Mark the field conflicting (`true`), clear it (`false`), or leave it.
+     */
+    var `conflict`: kotlin.Boolean?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEditorFieldOutcome: FfiConverterRustBuffer<EditorFieldOutcome> {
+    override fun read(buf: ByteBuffer): EditorFieldOutcome {
+        return EditorFieldOutcome(
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EditorFieldOutcome) = (
+            FfiConverterBoolean.allocationSize(value.`followSaved`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`conflict`)
+    )
+
+    override fun write(value: EditorFieldOutcome, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`followSaved`, buf)
+            FfiConverterOptionalBoolean.write(value.`conflict`, buf)
+    }
+}
+
+
+
+/**
  * The parts of a task's metadata the editor shows.
  */
 data class EditorMetadata (
@@ -19377,6 +19568,16 @@ sealed class CoreException: kotlin.Exception() {
             get() = "detail=${ `detail` }"
     }
     
+    /**
+     * An estimate or minimum block typed in minutes that does not read as
+     * one (`editor_draft.rs`).
+     */
+    class InvalidEstimate(
+        ) : CoreException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -19452,6 +19653,7 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             29 -> CoreException.Checkvist(
                 FfiConverterString.read(buf),
                 )
+            30 -> CoreException.InvalidEstimate()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -19588,6 +19790,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
                 4UL
                 + FfiConverterString.allocationSize(value.`detail`)
             )
+            is CoreException.InvalidEstimate -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -19721,6 +19927,10 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
             is CoreException.Checkvist -> {
                 buf.putInt(29)
                 FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is CoreException.InvalidEstimate -> {
+                buf.putInt(30)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -23429,6 +23639,38 @@ public object FfiConverterOptionalTypeDailyRow: FfiConverterRustBuffer<DailyRow?
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeEditorEstimateCheck: FfiConverterRustBuffer<EditorEstimateCheck?> {
+    override fun read(buf: ByteBuffer): EditorEstimateCheck? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeEditorEstimateCheck.read(buf)
+    }
+
+    override fun allocationSize(value: EditorEstimateCheck?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeEditorEstimateCheck.allocationSize(value)
+        }
+    }
+
+    override fun write(value: EditorEstimateCheck?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeEditorEstimateCheck.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeFilterDefinition: FfiConverterRustBuffer<FilterDefinition?> {
     override fun read(buf: ByteBuffer): FilterDefinition? {
         if (buf.get().toInt() == 0) {
@@ -25227,6 +25469,62 @@ public object FfiConverterSequenceTypeDayLogRecord: FfiConverterRustBuffer<List<
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeDayLogRecord.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeEditorFieldComparison: FfiConverterRustBuffer<List<EditorFieldComparison>> {
+    override fun read(buf: ByteBuffer): List<EditorFieldComparison> {
+        val len = buf.getInt()
+        return List<EditorFieldComparison>(len) {
+            FfiConverterTypeEditorFieldComparison.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<EditorFieldComparison>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeEditorFieldComparison.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<EditorFieldComparison>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeEditorFieldComparison.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeEditorFieldOutcome: FfiConverterRustBuffer<List<EditorFieldOutcome>> {
+    override fun read(buf: ByteBuffer): List<EditorFieldOutcome> {
+        val len = buf.getInt()
+        return List<EditorFieldOutcome>(len) {
+            FfiConverterTypeEditorFieldOutcome.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<EditorFieldOutcome>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeEditorFieldOutcome.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<EditorFieldOutcome>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeEditorFieldOutcome.write(it, buf)
         }
     }
 }
@@ -27824,6 +28122,59 @@ public object FfiConverterMapStringTypeSyncValue: FfiConverterRustBuffer<Map<kot
         FfiConverterTypeDayLogBoundary.lower(`boundary`),
         FfiConverterLong.lower(`endingOnMs`),
         FfiConverterLong.lower(`weeks`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * A stored number of seconds as the editor shows it in minutes: a whole
+         * number of minutes plainly when `whole_minutes_plainly` (`45`), and
+         * otherwise as Swift prints the quotient (`1.5`, `2.0`, `0.25`).
+         */ fun `editorMinutesText`(`seconds`: kotlin.Long, `wholeMinutesPlainly`: kotlin.Boolean): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_editor_minutes_text(
+    
+        
+        FfiConverterLong.lower(`seconds`),
+        FfiConverterBoolean.lower(`wholeMinutesPlainly`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Minutes as typed (`45`, `1.5`, `.25`), to whole seconds rounded half away
+         * from zero; nothing when blank. Refuses anything else, a negative or a
+         * value too large to hold.
+         */
+    @Throws(CoreException::class) fun `editorParseMinutes`(`raw`: kotlin.String): kotlin.Long? {
+            return FfiConverterOptionalLong.lift(
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_editor_parse_minutes(
+    
+        
+        FfiConverterString.lower(`raw`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Folds a save into an open draft, field by field: a field that now agrees
+         * with the save is settled; one the draft changed (or that already
+         * conflicted) conflicts if the save changed it too; any other follows the
+         * save. An edited estimate whose seconds the save changed conflicts unless
+         * what was typed reads as exactly the saved seconds.
+         */ fun `editorReconcile`(`fields`: List<EditorFieldComparison>, `estimate`: EditorEstimateCheck?): List<EditorFieldOutcome> {
+            return FfiConverterSequenceTypeEditorFieldOutcome.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_takt_core_fn_func_editor_reconcile(
+    
+        
+        FfiConverterSequenceTypeEditorFieldComparison.lower(`fields`),
+        FfiConverterOptionalTypeEditorEstimateCheck.lower(`estimate`),_status)
 }
     )
     }
