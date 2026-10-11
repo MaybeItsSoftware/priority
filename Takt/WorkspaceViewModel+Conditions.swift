@@ -17,21 +17,33 @@ extension WorkspaceViewModel {
     return FocusContext(conditionIDs: focusContext.conditionIDs, endsAt: end, mode: focusContext.mode)
   }
 
-  func restoreSuggestedContext() {
-    guard let workspace else { return }
-    suggestedContextIDs = Set(UserDefaults.standard.stringArray(forKey: "focus-context-\(workspace.id)") ?? [])
-      .intersection(Set(focusConditions.map(\.id)))
+  private var focusContextKey: String? { workspace.map { "focus-context-\($0.id)" } }
+
+  /// Puts back the conditions that held when the app last quit, as the phones
+  /// do. The ranking has to have run once first, so the conditions are known
+  /// and one deleted since is not carried forward.
+  func restoreFocusContext() {
+    guard let key = focusContextKey else { return }
+    let restored = FocusContextSelection.restoring(
+      UserDefaults.standard.stringArray(forKey: key) ?? [], known: Set(focusConditions.map(\.id)))
+    guard restored != focusContext.conditionIDs else { return }
+    focusContext.conditionIDs = restored
+    reloadNextUpNow()
   }
 
   func toggleFocusCondition(_ condition: TaskCondition) {
-    if focusContext.conditionIDs.contains(condition.id) { focusContext.conditionIDs.remove(condition.id) } else {
-      if condition.isLocation {
-        focusContext.conditionIDs.subtract(focusConditions.filter(\.isLocation).map(\.id))
-      }
-      focusContext.conditionIDs.insert(condition.id)
-    }
+    focusContext.conditionIDs = FocusContextSelection.toggling(
+      condition.id, isLocation: condition.isLocation, in: focusContext.conditionIDs,
+      locationIDs: Set(focusConditions.filter(\.isLocation).map(\.id)))
     suggestedContextIDs = []
-    saveCurrentContext()
+    focusContextChanged()
+  }
+
+  /// Nothing available beyond the laptop.
+  func clearFocusConditions() {
+    guard !focusContext.conditionIDs.isEmpty else { return }
+    focusContext.conditionIDs = []
+    suggestedContextIDs = []
     focusContextChanged()
   }
 
@@ -41,19 +53,47 @@ extension WorkspaceViewModel {
     focusContextChanged()
   }
 
+  /// Every change to the context goes through here: it is saved, so the next
+  /// launch starts where this one left off, and the ladder is ranked again.
   func focusContextChanged() {
     allowsQueueResume = true
+    saveCurrentContext()
     reloadNextUp()
   }
 
   private func saveCurrentContext() {
-    guard let workspace else { return }
-    UserDefaults.standard.set(Array(focusContext.conditionIDs).sorted(), forKey: "focus-context-\(workspace.id)")
+    guard let key = focusContextKey else { return }
+    UserDefaults.standard.set(Array(focusContext.conditionIDs).sorted(), forKey: key)
   }
 
-  func createCondition(name: String, isLocation: Bool) {
-    guard let store, let workspace else { return }
-    perform { _ = try store.createCondition(workspaceId: workspace.id, name: name, isLocation: isLocation); reloadNextUp() }
+  /// The conditions you can say are true right now: every live one, plus any
+  /// archived one that is either on or still required by a task, so it can be
+  /// turned off or satisfied.
+  var selectableFocusConditions: [TaskCondition] {
+    focusConditions.filter { condition in
+      !condition.isArchived || focusContext.conditionIDs.contains(condition.id)
+        || taskPlanningByID.values.contains { plan in
+          (plan.requirementGroups ?? []).contains { $0.contains(condition.id) }
+        }
+    }
+  }
+
+  /// The active conditions' names, or nil with none on.
+  var focusContextSummary: String? {
+    FocusContextSelection.summary(focusContext.conditionIDs, names: focusConditions.map { ($0.id, $0.name) })
+  }
+
+  /// - Returns: the new condition, or nil if it could not be made (the
+  ///   error is in `errorMessage`).
+  @discardableResult
+  func createCondition(name: String, isLocation: Bool) -> TaskCondition? {
+    guard let store, let workspace else { return nil }
+    var created: TaskCondition?
+    perform {
+      created = try store.createCondition(workspaceId: workspace.id, name: name, isLocation: isLocation)
+      reloadNextUpNow()
+    }
+    return created
   }
 
   func saveCondition(_ condition: TaskCondition, name: String, isLocation: Bool, isArchived: Bool) {
@@ -161,6 +201,9 @@ extension WorkspaceViewModel {
   /// checkpoint, and the prompt when a block reaches its planned length.
   func tickFocusMonitor(now: Date) {
     if let expiry = contextExpiresAt, expiry <= now {
+      // Set aside rather than forgotten: offered back with "Use again", as
+      // on the phones.
+      if !focusContext.conditionIDs.isEmpty { suggestedContextIDs = focusContext.conditionIDs }
       focusContext.conditionIDs = []; contextExpiresAt = nil; saveCurrentContext(); reloadNextUp()
     }
     let clockJump = synchroniseFocusClock(now: now)

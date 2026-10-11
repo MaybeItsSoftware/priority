@@ -760,7 +760,7 @@ enum WorkspaceSidebarItem: Identifiable {
       // Ranked here rather than in the background: the first screen is the
       // day, and it should not paint empty and then fill.
       reloadNextUpNow()
-      restoreSuggestedContext()
+      restoreFocusContext()
       watchForExternalWrites()
       startSync()
       startFocusMonitor()
