@@ -317,7 +317,7 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
     let expected: Set<String> = [
       // The timeline is a day at a time, so ←/→ and h/l step days rather than
       // entering and leaving a task.
-      "timeline:left", "timeline:right", "timeline:h", "timeline:l", "timeline:escape",
+      "timeline:left", "timeline:right", "timeline:escape",
       // In the sidebar the arrows walk rows and open folders, rename acts on the
       // row, ⌥↑/⌥↓ reorder the row rather than a task, and ⌘↑/⌘↓ go to the
       // sidebar's own ends.
@@ -329,7 +329,7 @@ final class WorkspaceCommandCollisionTests: XCTestCase {
       "sidebar:home", "sidebar:end", "sidebar:pageup", "sidebar:pagedown",
       // The sidebar is Zed's project panel: ⌘N and ⌫ act on the row,
       // and so do the vim panel's h, l and gg, never on a task behind it.
-      "sidebar:cmd+n", "sidebar:delete", "sidebar:cmd+delete", "sidebar:h", "sidebar:l",
+      "sidebar:cmd+n", "sidebar:delete", "sidebar:cmd+delete", 
       "sidebar:gg",
       // On the board ←/→ change column instead of entering and leaving a task.
       "board:left", "board:right",

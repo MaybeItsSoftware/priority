@@ -142,8 +142,8 @@ second list. A letter is held only where some sequence on the current surface
 begins with it, and a held letter is never lost: if the next key does not
 complete a sequence, the held letter runs its own binding first and the new
 key is then handled as usual (it may start a sequence of its own); if no key
-follows within 1.2 seconds, the held letter runs then. So `x`, `l` and `h`
-still complete, enter and leave — after the wait, or at once with Shift held,
+follows within 1.2 seconds, the held letter runs then. So `x` still
+completes — after the wait, or at once with Shift held,
 which is the way to skip it. A hold is dropped without running when focus
 moves or text editing begins, because the key no longer means what it did.
 
@@ -213,9 +213,9 @@ They mean the same thing on every task surface:
   instead — it stopped mattering, rather than got done. On Today, starting a
   card — a task on the day *is* a block to run — is `gf`, and `gf` again on
   the running card finishes it.
-- **`→`, `l` and `]` open the task** — its subtasks as a board of their own
+- **`→` and `]` open the task** — its subtasks as a board of their own
   on the board and the matrix; in the outline `→` folds and unfolds instead
-  (below). `←`, `h` and `[` leave again.
+  (below). `←` and `[` leave again.
 
 The outline used to add a task on Return and a subtask on Shift-Return, while
 Today started and ticked. One key meaning two things depending on the pane is

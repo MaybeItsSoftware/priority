@@ -219,11 +219,11 @@ public enum WorkspaceCommandCatalog {
   private static let plan: [WorkspaceCommand] = [
     .init(
       id: .planEnterTask, title: "Open the task", group: "Plan",
-      keys: ["right", "shift+right", "l", "]"],
+      keys: ["right", "shift+right", "]"],
       note: "Its subtasks, as a board"),
     .init(
       id: .planLeaveTask, title: "Leave the task's subtasks", group: "Plan",
-      keys: ["left", "shift+left", "h", "["],
+      keys: ["left", "shift+left", "["],
       note: "With nothing left to leave, hands the keyboard back to the sidebar"),
     .init(id: .planHideCompleted, title: "Hide or show completed tasks", group: "Plan", keys: ["tc"]),
     // Checkvist folds a branch where it stands, so a task's subtasks can be

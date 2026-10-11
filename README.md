@@ -97,7 +97,7 @@ something you already have to know.
 | `f` / `Shift+F` then a letter, `;` | Vim's find: the next / previous task (in the sidebar, list) whose title starts with that letter; `;` repeats it |
 | `gg` / `Shift+G`, `Ctrl+D` / `Ctrl+U` | First / last task, eight down / up (vim) |
 | `gx` / `Cmd+O` | Open the task's first link (vim's open-the-URL-under-the-cursor) |
-| `l` / `]` | Open the task's subtasks |
+| `]` / `[` | Open the task's subtasks / leave them |
 | `→` / `←` | In the outline, show a task's subtasks and step into them / hide them and step out — without opening the task. Elsewhere, open and leave it. At the top level of a list, `←` goes back to the list in the sidebar |
 | `za` / `Cmd+←` / `Cmd+→` | Fold or unfold the task you are on (outline or board) / fold / unfold the whole outline |
 | `.` / `,` | Grow the task you are on to show its subtasks / shrink it (on a task with none, folds the one it sits under) |
@@ -211,8 +211,7 @@ are on in the outline or on a board card, and every row with subtasks has a
 chevron. Folds are shared by the outline and the board and kept across
 launches — see [`docs/keyboard-shortcuts.md`](docs/keyboard-shortcuts.md#folding-subtasks-where-they-are).
 
-Checkvist's `ll`, `hc` and `hh` are `gl`, `tc` and `gb` here, so that `l` and
-`h` — open a task's subtasks and leave them — never wait. A letter that begins a
+Checkvist's `ll`, `hc` and `hh` are `gl`, `tc` and `gb` here. A letter that begins a
 sequence and also means something on its own, which leaves only `x` (complete,
 or `xx`), waits up to 1.2 seconds for a second letter, then does its own job. Any other
 key ends the wait at once, and holding Shift (`⇧X`) skips it. A letter that

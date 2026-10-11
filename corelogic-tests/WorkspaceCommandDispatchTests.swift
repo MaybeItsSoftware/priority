@@ -53,8 +53,9 @@ final class WorkspaceCommandDispatchTests: XCTestCase {
       WorkspaceCommandCatalog.command(forKey: "cmd+ctrl+c", on: .board)?.id, .planBoardRemoveColumn)
     // Each the first letter of a sequence, and so swallowed by it.
     XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "x", on: .outline)?.id, .taskComplete)
-    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "l", on: .outline)?.id, .planEnterTask)
-    XCTAssertEqual(WorkspaceCommandCatalog.command(forKey: "h", on: .outline)?.id, .planLeaveTask)
+    // [ and ] open and leave; h and l are left free on the task panes.
+    XCTAssertNil(WorkspaceCommandCatalog.command(forKey: "l", on: .outline))
+    XCTAssertNil(WorkspaceCommandCatalog.command(forKey: "h", on: .outline))
   }
 
   func testTheOutlineArrowsFoldAndTheOtherPanesStillEnter() {
