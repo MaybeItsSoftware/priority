@@ -68,8 +68,14 @@ struct LocalTaskInspector: View {
   /// changes that turn it into something else.
   @ViewBuilder
   private func editor(_ draft: TaskEditorDraft) -> some View {
-    title(draft)
-    primaryAction
+    // The title and the action under it are one group: what the task is,
+    // and the thing you came to do with it.
+    VStack(alignment: .leading, spacing: theme.space.md) {
+      title(draft)
+      primaryAction
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .inspectorBand()
     notes(draft)
     planning(draft)
     scheduling(draft)
@@ -448,6 +454,7 @@ struct LocalTaskInspector: View {
         .disabled(!draft.isDirty)
       Spacer(minLength: 0)
     }
+    .inspectorBand()
   }
 
   static let iconOptions = WorkspaceViewModel.availableListIcons.map {

@@ -120,6 +120,38 @@ extension View {
   }
 }
 
+/// The band behind the inspector section that has the keyboard: the same
+/// fill a selected task or list row draws, edge to edge across the dock.
+///
+/// The rings on single controls said which button the keys would press but
+/// not where you were in a column of twenty-odd of them; the band says that,
+/// as the task panes and the sidebar do. A section knows it has the keyboard
+/// when the stop that has it is one of its own, which it learns from the same
+/// preference the inspector walks.
+private struct InspectorBand: ViewModifier {
+  @Environment(\.theme) private var theme
+  @Environment(\.inspectorFocus) private var focus
+  @State private var stops: [String] = []
+
+  func body(content: Content) -> some View {
+    let isActive = focus?.wrappedValue.map(stops.contains) ?? false
+    content
+      .onPreferenceChange(InspectorStopsKey.self) { stops = $0 }
+      .padding(.vertical, theme.space.xs)
+      .padding(.horizontal, theme.paneGutter)
+      .background(WorkspaceSelectionBackground(isSelected: isActive, hasKeyboard: isActive))
+      .padding(.horizontal, -theme.paneGutter)
+  }
+}
+
+extension View {
+  /// Bands the group of inspector controls it wraps while one of them has
+  /// the keyboard. Outside the inspector it changes nothing but its padding.
+  func inspectorBand() -> some View {
+    modifier(InspectorBand())
+  }
+}
+
 extension Binding where Value: Hashable {
   /// Steps a picker's value through its options, stopping at the ends.
   func step<Option>(by offset: Int, through options: [ThemedPickerOption<Option>]) where Option == Value {
