@@ -43,6 +43,13 @@ sealed interface TreeRow {
         override val key: String = "list:$id",
     ) : TreeRow
 
+    /** A saved filter list: a question asked of every task, not a place they live. */
+    @Immutable
+    data class FilterListRow(val id: String, val name: String, val summary: String) : TreeRow {
+        override val key = "filter:$id"
+        override val depth = 0
+    }
+
     /** A list nested inside a task, addressed by the task's id. */
     @Immutable
     data class NestedRow(
@@ -152,10 +159,12 @@ object ListsTreeShaping {
                 SidebarNestedListDescriptor(it.id, it.task.listId, it.depth, it.task.isPromoted == true)
             },
             expandedFolderIDs = expanded,
+            filterListIDs = data.filterLists.map { it.id },
         )
         val listsById = active.associateBy { it.id }
         val foldersById = data.folders.associateBy { it.id }
         val nestedById = index.nestedLists.associateBy { it.id }
+        val filterListsById = data.filterLists.associateBy { it.id }
         val listSiblings = others.groupBy { it.folderId }
         val folderSiblings = data.folders.groupBy { it.parentFolderId }
 
@@ -174,6 +183,10 @@ object ListsTreeShaping {
                         folderId = list.folderId,
                         canMoveUp = position > 0, canMoveDown = position >= 0 && position < siblings.size - 1,
                     )
+                }
+                is WorkspaceSidebarRowKind.FilterList -> {
+                    val filterList = filterListsById[kind.id] ?: continue
+                    rows += TreeRow.FilterListRow(filterList.id, filterList.name, filterList.summary)
                 }
                 is WorkspaceSidebarRowKind.NestedList -> {
                     val nested = nestedById[kind.id] ?: continue

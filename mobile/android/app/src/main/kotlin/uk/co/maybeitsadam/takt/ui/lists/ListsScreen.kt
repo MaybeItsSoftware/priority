@@ -79,11 +79,24 @@ private sealed interface ListsDialog {
     data class MoveFolder(val id: String, val name: String, val parentId: String?) : ListsDialog
 }
 
-/** What the detail pane shows: a list (or Everything) and a task to reveal, as one saveable string. */
+/**
+ * What the detail pane shows, as one saveable string: a list (or Everything)
+ * and a task to reveal, or a filter list.
+ */
 internal object DetailKey {
     private const val EVERYTHING = "*"
+    private const val FILTER = "filter:"
 
     fun encode(listId: String?, revealTaskId: String? = null): String = "${listId ?: EVERYTHING}|${revealTaskId.orEmpty()}"
+
+    /** A filter list's key; also what the tree compares a filter list row against. */
+    fun filterKey(id: String): String = "$FILTER$id"
+
+    /** The filter list a key shows, or null for a list. */
+    fun filterListId(key: String): String? = if (key.startsWith(FILTER)) key.removePrefix(FILTER) else null
+
+    /** What the tree highlights for [key]: a list's id, "" for Everything, or a filter list's key. */
+    fun selection(key: String): String = if (filterListId(key) != null) key else decode(key).listId ?: ""
 
     fun decode(key: String): ListRoute {
         val (list, reveal) = key.split('|', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
@@ -100,7 +113,11 @@ internal object DetailKey {
 fun ListsScreen() {
     val shell = LocalShell.current
     if (!shell.layout.isWide) {
-        ListsTree(selectedKey = null, onOpen = { listId, reveal -> shell.navigator.openList(listId, reveal) })
+        ListsTree(
+            selectedKey = null,
+            onOpen = { listId, reveal -> shell.navigator.openList(listId, reveal) },
+            onOpenFilterList = { shell.navigator.openFilterList(it) },
+        )
         return
     }
     val directive = calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(currentWindowAdaptiveInfo())
@@ -112,9 +129,12 @@ fun ListsScreen() {
         listPane = {
             AnimatedPane {
                 ListsTree(
-                    selectedKey = current?.let { DetailKey.decode(it).listId ?: "" },
+                    selectedKey = current?.let { DetailKey.selection(it) },
                     onOpen = { listId, reveal ->
                         scope.launch { navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, DetailKey.encode(listId, reveal)) }
+                    },
+                    onOpenFilterList = { id ->
+                        scope.launch { navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, DetailKey.filterKey(id)) }
                     },
                     trailingRule = true,
                 )
@@ -129,8 +149,12 @@ fun ListsScreen() {
                         EmptyState("Choose a list", detail = "Its outline, board and matrix open here.")
                     }
                 } else {
-                    val route = DetailKey.decode(key)
-                    ListContent(route, showBack = false, onClose = { scope.launch { navigator.navigateBack() } })
+                    val filterListId = DetailKey.filterListId(key)
+                    if (filterListId != null) {
+                        FilterListContent(filterListId, showBack = false)
+                    } else {
+                        ListContent(DetailKey.decode(key), showBack = false, onClose = { scope.launch { navigator.navigateBack() } })
+                    }
                 }
             }
         },
@@ -138,14 +162,15 @@ fun ListsScreen() {
 }
 
 /**
- * The tree: Inbox, Everything, pinned nested lists, folders (collapsible)
- * with their lists, each list's nested lists beneath it, and an Archived
- * section. Long-press a row for its menu.
+ * The tree: Everything, Inbox, the saved filter lists, pinned nested lists,
+ * folders (collapsible) with their lists, each list's nested lists beneath
+ * it, and an Archived section. Long-press a row for its menu.
  */
 @Composable
 private fun ListsTree(
     selectedKey: String?,
     onOpen: (listId: String?, revealTaskId: String?) -> Unit,
+    onOpenFilterList: (id: String) -> Unit,
     trailingRule: Boolean = false,
 ) {
     val container = LocalShell.current.container
@@ -182,7 +207,7 @@ private fun ListsTree(
             }
             LazyColumn(Modifier.fillMaxSize().testTag("lists_tree")) {
                 items(state.rows, key = { it.key }, contentType = { it::class.simpleName }) { row ->
-                    TreeRowView(row, selectedKey, vm, onOpen) { dialog = it }
+                    TreeRowView(row, selectedKey, vm, onOpen, onOpenFilterList) { dialog = it }
                 }
             }
         }
@@ -198,12 +223,17 @@ private fun TreeRowView(
     selectedKey: String?,
     vm: ListsViewModel,
     onOpen: (String?, String?) -> Unit,
+    onOpenFilterList: (String) -> Unit,
     show: (ListsDialog) -> Unit,
 ) {
     when (row) {
         is TreeRow.Everything -> TreeLine(
             title = "Everything", icon = ListIcons.Everything, depth = 0, count = row.openCount,
             selected = selectedKey == "", onClick = { onOpen(null, null) },
+        )
+        is TreeRow.FilterListRow -> TreeLine(
+            title = row.name, icon = ListIcons.Filter, depth = row.depth, count = null,
+            selected = selectedKey == DetailKey.filterKey(row.id), onClick = { onOpenFilterList(row.id) },
         )
         is TreeRow.ListRow -> {
             var menu by remember { mutableStateOf(false) }

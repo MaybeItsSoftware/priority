@@ -7,6 +7,8 @@ sealed interface WorkspaceSidebarRowKind {
     /** A list nested inside a task, addressed by the task's id. */
     data class NestedList(val id: String) : WorkspaceSidebarRowKind
     data class Folder(val id: String) : WorkspaceSidebarRowKind
+    /** A saved filter list, by its id. */
+    data class FilterList(val id: String) : WorkspaceSidebarRowKind
 }
 
 data class WorkspaceSidebarRow(
@@ -23,6 +25,7 @@ data class WorkspaceSidebarRow(
             is WorkspaceSidebarRowKind.List -> kind.id
             is WorkspaceSidebarRowKind.NestedList -> kind.id
             is WorkspaceSidebarRowKind.Folder -> kind.id
+            is WorkspaceSidebarRowKind.FilterList -> kind.id
         }
 }
 
@@ -46,21 +49,24 @@ object WorkspaceSidebarOutline {
         folders: List<SidebarFolderDescriptor>,
         nestedLists: List<SidebarNestedListDescriptor>,
         expandedFolderIDs: Set<String>,
+        /** The workspace's filter lists' ids, in their order: drawn after the inbox. */
+        filterListIDs: List<String> = emptyList(),
     ): List<WorkspaceSidebarRow> {
         // The Rust core's order (`sidebar::outline`), as the Mac's. The phone
         // has no Today place in its tree (Today is a tab), so it asks without
         // one. Rows cross back as a kind and an index into what was passed.
-        val rows = uniffi.takt_core.sidebarOutlineRows(
+        val rows = uniffi.takt_core.sidebarOutlineRowsWithFilterLists(
             inbox?.id, lists.map { it.core }, folders.map { it.core }, nestedLists.map { it.core },
-            expandedFolderIDs.toList(), false,
+            expandedFolderIDs.toList(), false, filterListIDs.size.toUInt(),
         )
         return rows.mapNotNull { row ->
             val index = row.subject.toInt()
             val depth = row.depth.toInt()
             when (row.kind) {
                 uniffi.takt_core.SidebarRowKind.TODAY -> null
-                // Asked for only by `sidebarOutlineRowsWithFilterLists`.
-                uniffi.takt_core.SidebarRowKind.FILTER_LIST -> null
+                uniffi.takt_core.SidebarRowKind.FILTER_LIST -> filterListIDs[index].let {
+                    WorkspaceSidebarRow("filter:$it", WorkspaceSidebarRowKind.FilterList(it), depth)
+                }
                 uniffi.takt_core.SidebarRowKind.EVERYTHING ->
                     WorkspaceSidebarRow("row:everything", WorkspaceSidebarRowKind.Everything, depth)
                 uniffi.takt_core.SidebarRowKind.INBOX -> inbox?.let {

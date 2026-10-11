@@ -35,6 +35,26 @@ class WorkspaceSidebarOutlineTest {
         )
     }
 
+    @Test fun filterListsSitUnderTheInboxAndAboveThePinnedLists() {
+        val rows = WorkspaceSidebarOutline.rows(
+            inbox = SidebarListDescriptor("inbox", null),
+            lists = listOf(SidebarListDescriptor("loose", null)),
+            folders = emptyList(),
+            nestedLists = listOf(SidebarNestedListDescriptor("pin", "loose", 0, true)),
+            expandedFolderIDs = emptySet(),
+            filterListIDs = listOf("calls", "errands"),
+        )
+        assertEquals(
+            listOf(
+                K.Everything, K.List("inbox"), K.FilterList("calls"), K.FilterList("errands"),
+                K.NestedList("pin"), K.List("loose"), K.NestedList("pin"),
+            ),
+            rows.map { it.kind },
+        )
+        assertEquals("calls", rows[2].subjectID)
+        assertEquals(rows.size, rows.map { it.id }.toSet().size)
+    }
+
     @Test fun aPinnedListAppearsTwiceWithTwoDistinctRowIDs() {
         val rows = outline(nested = listOf(SidebarNestedListDescriptor("pin", "inbox", 0, true)))
         val pinned = rows.filter { it.kind == K.NestedList("pin") }

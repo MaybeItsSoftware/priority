@@ -432,6 +432,8 @@ class WorkspaceRepository(
             is CoreException.Unavailable -> planningFail(TaskPlanningError.UNAVAILABLE)
             is CoreException.InvalidTaskMove -> fail(WorkspaceStoreError.INVALID_TASK_MOVE)
             is CoreException.DependencyCycle -> fail(WorkspaceStoreError.DEPENDENCY_CYCLE)
+            is CoreException.MissingFilterList -> fail(WorkspaceStoreError.MISSING_FILTER_LIST)
+            is CoreException.InvalidFilter -> fail(WorkspaceStoreError.INVALID_FILTER)
             else -> throw error
         }
     }

@@ -17,6 +17,9 @@ import kotlinx.serialization.Serializable
  */
 @Serializable data class ListRoute(val listId: String? = null, val revealTaskId: String? = null)
 
+/** A saved filter list: its matching tasks, read-only. */
+@Serializable data class FilterListRoute(val id: String)
+
 @Serializable data object FocusRoute
 
 @Serializable data object ReviewRoute
@@ -41,6 +44,7 @@ enum class Tab(val title: String, private val iconProvider: () -> ImageVector, v
 interface AppNavigator {
     fun openTab(tab: Tab)
     fun openList(listId: String?, revealTaskId: String? = null)
+    fun openFilterList(id: String)
     fun openSettings()
     fun back()
 }

@@ -26,6 +26,8 @@ enum class WorkspaceStoreError(val message: String) {
     DEPENDENCY_CYCLE("A task cannot wait on itself, or on a task that already waits on it."),
     INVALID_FOLDER_MOVE("A folder cannot be moved into itself or one of its subfolders."),
     SYSTEM_LIST_IS_PERMANENT("The Inbox cannot be archived or deleted. You can rename it instead."),
+    MISSING_FILTER_LIST("That filter list is no longer available."),
+    INVALID_FILTER("That filter has a rule this version does not understand."),
     ;
 
     fun exception() = WorkspaceStoreException(this)

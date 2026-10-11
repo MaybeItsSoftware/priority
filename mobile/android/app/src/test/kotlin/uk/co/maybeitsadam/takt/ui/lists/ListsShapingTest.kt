@@ -18,9 +18,13 @@ import uk.co.maybeitsadam.takt.core.WorkspaceItemKind
 import uk.co.maybeitsadam.takt.core.WorkspaceKanbanColumn
 import uk.co.maybeitsadam.takt.core.WorkspaceListTree
 import uk.co.maybeitsadam.takt.core.WorkspaceTask
+import uk.co.maybeitsadam.takt.data.workspace.FilterList
+import uk.co.maybeitsadam.takt.data.workspace.FilterListMatch
+import uk.co.maybeitsadam.takt.data.workspace.FilterListScope
 import uk.co.maybeitsadam.takt.data.workspace.ListScopeData
 import uk.co.maybeitsadam.takt.data.workspace.SidebarData
 import uk.co.maybeitsadam.takt.data.workspace.TaskDecoration
+import uniffi.takt_core.FilterDefinition
 
 class ListsShapingTest {
     private val zone = ZoneOffset.UTC
@@ -255,5 +259,51 @@ class ListsShapingTest {
         val collapsed = ListsTreeShaping.shape(data, setOf("f"), showArchived = false)
         assertFalse(collapsed.rows.any { it.key == "list:x" })
         assertFalse(collapsed.rows.any { it.key == "archived:z" })
+    }
+
+    private fun filterList(id: String, name: String = id) = FilterList(
+        id = id, workspaceId = "w", name = name, icon = null, colorHex = null,
+        definition = FilterDefinition("all", "open", emptyList()), summary = "Open tasks", sortOrder = 0, isBuiltin = false,
+    )
+
+    @Test fun filterListsSitUnderTheInboxAboveYourLists() {
+        val inbox = list("inbox", "Inbox", role = TaskListRole.INBOX)
+        val loose = list("y", "Y")
+        val data = SidebarData(
+            emptyList(),
+            listOf(inbox, loose),
+            listOf(inbox, loose).associate { it.id to WorkspaceListTree(it.id, emptyList()) },
+            filterLists = listOf(filterList("b", "Calls"), filterList("a", "Errands")),
+        )
+        val state = ListsTreeShaping.shape(data, emptySet(), showArchived = false)
+        assertEquals(listOf("row:everything", "list:inbox", "filter:b", "filter:a", "list:y"), state.rows.map { it.key })
+        val calls = state.rows[2] as TreeRow.FilterListRow
+        assertEquals("Calls", calls.name)
+        assertEquals("Open tasks", calls.summary)
+    }
+
+    @Test fun aFilterListsMatchesAreGroupedByListInTheirOrder() {
+        val work = list("work", "Work")
+        val home = list("home", "Home")
+        val scope = FilterListScope(
+            filterList("calls", "Calls"),
+            listOf(FilterListMatch(task("a", "work"), work), FilterListMatch(task("b", "work"), work), FilterListMatch(task("c", "home"), home)),
+            blockedTaskIds = setOf("b"),
+        )
+        val state = FilterListShaping.shape(scope)
+        assertEquals(listOf("Work", "Home"), state.sections.map { it.list.name })
+        assertEquals(listOf("a", "b"), state.sections[0].tasks.map { it.id })
+        assertEquals(3, state.count)
+        assertEquals(setOf("b"), state.blockedTaskIds)
+        assertTrue(FilterListShaping.shape(FilterListScope(null)).isMissing)
+    }
+
+    @Test fun theDetailKeyTellsAFilterListFromAList() {
+        val key = DetailKey.filterKey("F1")
+        assertEquals("F1", DetailKey.filterListId(key))
+        assertEquals(key, DetailKey.selection(key))
+        assertNull(DetailKey.filterListId(DetailKey.encode("L1", "T1")))
+        assertEquals("L1", DetailKey.selection(DetailKey.encode("L1", "T1")))
+        assertEquals("", DetailKey.selection(DetailKey.encode(null)))
     }
 }

@@ -56,6 +56,8 @@ data class SidebarData(
     val lists: List<TaskList>,
     val trees: Map<String, WorkspaceListTree> = emptyMap(),
     val summary: SidebarSummary? = null,
+    /** The workspace's own filter lists, drawn under the inbox. */
+    val filterLists: List<FilterList> = emptyList(),
 )
 
 /** The nested lists the sidebar draws, with their depth among lists, and each list's and nested list's open count. */
@@ -132,11 +134,16 @@ internal fun readSidebar(db: Db, workspaceId: String): SidebarData {
             openCounts = index.openCounts.associate { it.listId to it.count.toInt() },
         )
     }
-    return SidebarData(foldersIn(db, workspaceId), lists, summary = summary)
+    return SidebarData(
+        foldersIn(db, workspaceId),
+        lists,
+        summary = summary,
+        filterLists = db.core.filterLists(workspaceId).map { it.toFilterList() },
+    )
 }
 
-/** The folders and lists tree, re-read when folders, lists or tasks change. */
+/** The folders and lists tree, re-read when folders, lists, filter lists or tasks change. */
 fun WorkspaceRepository.observeSidebar(workspaceId: String): Flow<SidebarData> =
-    database.observe(setOf("tasks", "task_lists", "list_folders")) { readSidebar(it, workspaceId) }
+    database.observe(setOf("tasks", "task_lists", "list_folders", "filter_lists")) { readSidebar(it, workspaceId) }
 
 suspend fun WorkspaceRepository.sidebar(workspaceId: String): SidebarData = database.read { readSidebar(it, workspaceId) }

@@ -63,6 +63,7 @@ import uk.co.maybeitsadam.takt.ui.theme.PIcons
 internal object ListIcons {
     val Pin by lazy { PIcons.icon("Pin", "M16,9V4h1c0.55,0 1,-0.45 1,-1s-0.45,-1 -1,-1H7C6.45,2 6,2.45 6,3s0.45,1 1,1h1v5c0,1.66 -1.34,3 -3,3v2h5.97v7l1,1 1,-1v-7H19v-2c-1.66,0 -3,-1.34 -3,-3z") }
     val Everything by lazy { PIcons.icon("Everything", "M3,3h18v4H3zM3,10h18v4H3zM3,17h18v4H3z") }
+    val Filter by lazy { PIcons.icon("Filter", "M10,18h4v-2h-4v2zM3,6v2h18V6H3zM6,13h12v-2H6v2z") }
     val Nested by lazy { PIcons.icon("Nested", "M4,5h2v2H4zM9,5h11v2H9zM8,11h2v2H8zM13,11h7v2h-7zM8,17h2v2H8zM13,17h7v2h-7z") }
     val Restore by lazy { PIcons.icon("Restore", "M13,3c-4.97,0 -9,4.03 -9,9H1l4,4 4,-4H6c0,-3.87 3.13,-7 7,-7s7,3.13 7,7 -3.13,7 -7,7c-1.93,0 -3.68,-0.79 -4.94,-2.06l-1.42,1.42C8.27,19.99 10.51,21 13,21c4.97,0 9,-4.03 9,-9s-4.03,-9 -9,-9z") }
 }

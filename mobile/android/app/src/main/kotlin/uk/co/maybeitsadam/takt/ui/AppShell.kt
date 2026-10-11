@@ -83,10 +83,12 @@ import uk.co.maybeitsadam.takt.ui.components.VerticalHairline
 import uk.co.maybeitsadam.takt.ui.focus.FocusScreen
 import uk.co.maybeitsadam.takt.ui.history.HistorySheet
 import uk.co.maybeitsadam.takt.ui.inspector.TaskInspector
+import uk.co.maybeitsadam.takt.ui.lists.FilterListScreen
 import uk.co.maybeitsadam.takt.ui.lists.ListScreen
 import uk.co.maybeitsadam.takt.ui.lists.ListsScreen
 import uk.co.maybeitsadam.takt.ui.navigation.AppNavigator
 import uk.co.maybeitsadam.takt.ui.navigation.FocusRoute
+import uk.co.maybeitsadam.takt.ui.navigation.FilterListRoute
 import uk.co.maybeitsadam.takt.ui.navigation.ListRoute
 import uk.co.maybeitsadam.takt.ui.navigation.ListsRoute
 import uk.co.maybeitsadam.takt.ui.navigation.LocalShell
@@ -129,6 +131,10 @@ private class NavControllerNavigator(private val nav: NavHostController) : AppNa
 
     override fun openList(listId: String?, revealTaskId: String?) {
         nav.navigate(ListRoute(listId, revealTaskId)) { launchSingleTop = true }
+    }
+
+    override fun openFilterList(id: String) {
+        nav.navigate(FilterListRoute(id)) { launchSingleTop = true }
     }
 
     override fun openSettings() {
@@ -248,7 +254,7 @@ fun AppShell(container: AppContainer, pendingIntent: Intent?, onIntentHandled: (
             val backStack by nav.currentBackStackEntryAsState()
             val destination = backStack?.destination
             val currentTab = Tab.entries.firstOrNull { tab -> destination?.hasRoute(tab.route::class) == true }
-                ?: if (destination?.hasRoute(ListRoute::class) == true) Tab.LISTS else null
+                ?: if (destination?.hasRoute(ListRoute::class) == true || destination?.hasRoute(FilterListRoute::class) == true) Tab.LISTS else null
             val showFab = currentTab == Tab.TODAY || currentTab == Tab.LISTS
 
             val content: @Composable (Modifier) -> Unit = { modifier ->
@@ -370,6 +376,7 @@ private fun AppNavHost(nav: NavHostController) {
         composable<TodayRoute> { TodayScreen() }
         composable<ListsRoute> { ListsScreen() }
         composable<ListRoute> { entry -> ListScreen(route = entry.toRoute()) }
+        composable<FilterListRoute> { entry -> FilterListScreen(route = entry.toRoute()) }
         composable<FocusRoute> { FocusScreen() }
         composable<ReviewRoute> { ReviewScreen() }
         composable<SearchRoute> { SearchScreen() }
